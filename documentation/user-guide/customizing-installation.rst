@@ -97,6 +97,10 @@ correspond to the similarly-named kickstart option.
     If specified, Beah will function in IPv4 only mode even if IPv6
     connectivity is possible.
 
+``bootloader_type``
+    Specify an alternative bootloader. It is passed on to the ``bootloader``
+    kickstart command.
+
 ``dhcp_networks=<device>[;<device>...]``
     Configure additional network devices to start on boot with DHCP activation. 
     The device should be given as a kernel device name (for example, ``em1``) 
@@ -214,6 +218,12 @@ correspond to the similarly-named kickstart option.
     data collection. If this variable is set, Beaker omits the snippet which 
     disables readahead collection.
 
+``ostree_repo_url``
+    Specify the repo location for rpm-ostree. See ``has_rpmostree`` below.
+
+``ostree_ref``
+    Specify the remote ref for rpm-ostree. See ``has_rpmostree`` below.
+
 ``packages=<package>:<package>``
     Colon-separated list of package names to be installed during provisioning. 
     If this variable is set, it replaces any packages defined by default in the 
@@ -264,9 +274,13 @@ correspond to the similarly-named kickstart option.
 
 .. _kickstart-metadata-distro-features:
 
-The following variables are used to test for installer or distro features. 
-Beaker populates these variables automatically by inspecting the distro name 
-and version. They can be overridden if necessary for custom distros.
+Distro features
+~~~~~~~~~~~~~~~
+
+The following kickstart metadata variables are used to test for
+installer or distro features. Beaker populates these variables
+automatically by inspecting the distro name and version. They can be
+overridden if necessary for custom distros.
 
 ``docker_package``
     The package name for Docker container engine is ``docker-io`` on
@@ -291,6 +305,18 @@ and version. They can be overridden if necessary for custom distros.
 
 ``has_repo_cost``
     Indicates that the ``repo`` command accepts a ``--cost`` option.
+
+``has_rpmostree``
+    If specified, Beaker assumes that the specified distribution is 
+    `rpm-ostree <http://www.projectatomic.io/docs/os-updates/>`__
+    based (an `Atomic host <http://www.projectatomic.io/>`__, for
+    example). The test harness is run inside a Docker container and
+    the tests are run inside it instead of the host system. The OSTree
+    location and ref must be specified using ``ostree_repo_url`` and
+    ``ostree_ref`` respectively.
+
+    Also, see ``harness_docker_base_image`` and
+    ``contained_harness_entrypoint`` above.
 
 ``has_systemd``
     Indicates that the distro uses systemd rather than SysV init.

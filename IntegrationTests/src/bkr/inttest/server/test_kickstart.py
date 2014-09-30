@@ -232,6 +232,18 @@ class KickstartTest(unittest.TestCase):
             cls.frawhide_x86_64.repos[:] = [
                 DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
             ]
+
+            cls.atomic = data_setup.create_distro(name=u'Atomic-Host',
+                osmajor=u'AtomicHost', osminor=u'0')
+            cls.atomic_x86_64 = data_setup.create_distro_tree(
+                distro=cls.atomic, variant=u'', arch=u'x86_64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/atomic/images/PXE/'])
+
+            atomic_osmajor = cls.atomic_x86_64.distro.osversion.osmajor
+            OSMajorInstallOptions(osmajor=atomic_osmajor, arch=cls.atomic_x86_64.arch,
+                ks_meta=u'has_rpmostree bootloader_type=extlinux')
+
         # This forces any subsequent access of the above ORM objects to retrieve
         # the data from the DB, thus ensuring that relationships are ordered correctly.
         # Correct ordering of relationships are needed to ensure that the kickstarts
@@ -2765,3 +2777,23 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
         ks = recipe.rendered_kickstart.kickstart
         self.assertNotIn('disable systemd-readahead-collect', ks)
         self.assertNotIn('READAHEAD_COLLECT="no"', ks)
+
+    def test_provision_rpmostree(self):
+        recipe = self.provision_recipe('''
+        <job>
+            <whiteboard/>
+            <recipeSet>
+                <recipe ks_meta="ostree_repo_url=http://foo/bar/repo ostree_ref=my/remote/ref harness_docker_base_image=registry.hub.docker.com/fedora:20 selinux=--disabled">
+                   <repos> <repo name="restraint" url="http://my/repo/"/> </repos>2728
+                   <distroRequires>
+                       <distro_name op="=" value="Atomic-Host" />
+                       <distro_arch op="=" value="x86_64" />
+                   </distroRequires>
+                   <hostRequires/>
+                  <task name="/distribution/install" />
+                </recipe>
+            </recipeSet>
+        </job>
+        ''', self.system)
+        compare_expected('AtomicHost-defaults', recipe.id,
+                    recipe.rendered_kickstart.kickstart)
