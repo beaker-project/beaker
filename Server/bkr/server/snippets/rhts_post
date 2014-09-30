@@ -76,13 +76,13 @@ fetch {{ yum }} http://{{ lab_controller.fqdn }}/beaker/{{ yum }}
 popd
 {% endif %}
 
-{% if taskrepo and contained_harness is not defined%}
+{% if taskrepo and contained_harness is not defined and has_rpmostree is not defined %}
 #Add Task Repo
 {% snippet 'taskrepo' %}
 {% endif %}
 
 
-{% if harnessrepo and contained_harness is not defined%}
+{% if harnessrepo and contained_harness is not defined and has_rpmostree is not defined %}
 # Add Harness Repo
 {% set reponame, repourl = harnessrepo.split(',', 1) %}
 cat <<"EOF" >/etc/yum.repos.d/{{ reponame }}.repo
@@ -98,7 +98,7 @@ EOF
 {{ snippet('print_repos') }}
 
 {% if recipe %}
-{% if contained_harness is defined%}
+{% if contained_harness is defined or has_rpmostree is defined%}
 {% snippet 'docker_harness' %}
 {% else %}
 # fill the yum cache and redirect output to /dev/null
