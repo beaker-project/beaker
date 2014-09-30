@@ -149,14 +149,14 @@ def extract_arg(arg, kernel_options):
     else:
         return (None, kernel_options)
 
-def configure_grub2(fqdn, default_config_loc, rel_loc, 
+def configure_grub2(fqdn, default_config_loc,
                     config_file, kernel_options, devicetree=''):
     config = """\
-linux  %s/images/%s/kernel %s netboot_method=grub2
-initrd %s/images/%s/initrd
+linux  /images/%s/kernel %s netboot_method=grub2
+initrd /images/%s/initrd
 %s
 boot
-""" % (rel_loc, fqdn, kernel_options, rel_loc, fqdn, devicetree)
+""" % (fqdn, kernel_options, fqdn, devicetree)
     with atomically_replaced_file(config_file) as f:
         f.write(config)
     # We also ensure a default config exists that exits
@@ -183,7 +183,7 @@ def configure_aarch64(fqdn, kernel_options):
     basename = "grub.cfg-%s" % pxe_basename(fqdn)
     logger.debug('Writing aarch64 config for %s as %s', fqdn, basename)
     grub_cfg_file = os.path.join(pxe_base, basename)
-    configure_grub2(fqdn, pxe_base, '..', grub_cfg_file, kernel_options, devicetree)
+    configure_grub2(fqdn, pxe_base, grub_cfg_file, kernel_options, devicetree)
 
 def clear_aarch64(fqdn):
     """
@@ -485,7 +485,7 @@ def configure_ppc64(fqdn, kernel_options):
 
     grub_cfg_file = os.path.join(ppc_dir, "grub.cfg-%s" % pxe_basename(fqdn))
     logger.debug('Writing grub2/ppc64 config for %s as %s', fqdn, grub_cfg_file)
-    configure_grub2(fqdn, ppc_dir, "..", grub_cfg_file, kernel_options)
+    configure_grub2(fqdn, ppc_dir, grub_cfg_file, kernel_options)
 
     grub2_symlink = '%s-grub2' % pxe_basename(fqdn).lower()
     logger.debug('Creating grub2 symlink for %s as %s', fqdn, grub2_symlink)
