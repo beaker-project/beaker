@@ -2708,3 +2708,61 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
         self.assertIn('\ndocker\n',
                       recipe.rendered_kickstart.kickstart)
 
+    def test_disable_readahead_collection(self):
+        # RHEL6, readahead collection disabled by default
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>''')
+        ks = recipe.rendered_kickstart.kickstart
+        self.assertIn('READAHEAD_COLLECT="no"', ks)
+
+        # RHEL7, readahead collection disabled by default
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>''')
+        ks = recipe.rendered_kickstart.kickstart
+        self.assertIn('disable systemd-readahead-collect', ks)
+
+        # no_disable_readahead
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="no_disable_readahead">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>''')
+        ks = recipe.rendered_kickstart.kickstart
+        self.assertNotIn('disable systemd-readahead-collect', ks)
+        self.assertNotIn('READAHEAD_COLLECT="no"', ks)

@@ -208,6 +208,12 @@ correspond to the similarly-named kickstart option.
     Omits additional packages and scripts which ensure the system clock is 
     synchronized after installation.
 
+``no_disable_readahead``
+    By default Beaker disables readahead collection, because it is not 
+    generally useful in Beaker recipes and the harness interferes with normal 
+    data collection. If this variable is set, Beaker omits the snippet which 
+    disables readahead collection.
+
 ``packages=<package>:<package>``
     Colon-separated list of package names to be installed during provisioning. 
     If this variable is set, it replaces any packages defined by default in the 

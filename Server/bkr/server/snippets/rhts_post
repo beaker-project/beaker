@@ -15,9 +15,14 @@ fi
 
 # Enable post-install boot notification
 {% snippet 'post_anamon' %}
+{% if no_disable_readahead is undefined %}
 if [ -f /etc/sysconfig/readahead ] ; then
 {% snippet 'readahead_sysconfig' %}
 fi
+{% if has_systemd is defined %}
+systemctl disable systemd-readahead-collect
+{% endif %}
+{% endif %}
 {% snippet 'linkdelay' %}
 
 {# We normally want to make sure the system time is accurate, in case 

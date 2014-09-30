@@ -186,6 +186,7 @@ READAHEAD_COLLECT="no"
 READAHEAD_COLLECT_ON_RPM="no"
 EOF
 fi
+systemctl disable systemd-readahead-collect
 
 if [ -e /etc/sysconfig/ntpdate ] ; then
     systemctl enable ntpdate
