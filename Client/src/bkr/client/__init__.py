@@ -188,7 +188,7 @@ class BeakerWorkflow(BeakerCommand):
             "--tag",
             action="append",
             default=[],
-            help="Use latest distro tagged with TAG [default: STABLE]",
+            help="Use latest distro tagged with TAG",
         )
         distro_options.add_option(
             "--distro",
@@ -414,7 +414,7 @@ class BeakerWorkflow(BeakerCommand):
 
     def getOsMajors(self, *args, **kwargs):
         """ Get all OsMajors, optionally filter by tag """ 
-        tags = kwargs.get("tag", []) or ['STABLE']
+        tags = kwargs.get("tag", [])
         if not hasattr(self,'hub'):
             self.set_hub(**kwargs)
         return self.hub.distros.get_osmajors(tags)
@@ -422,7 +422,7 @@ class BeakerWorkflow(BeakerCommand):
     def getSystemOsMajorArches(self, *args, **kwargs):
         """ Get all OsMajors/arches that apply to this system, optionally filter by tag """
         fqdn = kwargs.get("machine", '')
-        tags = kwargs.get("tag", []) or ['STABLE']
+        tags = kwargs.get("tag", [])
         if not hasattr(self,'hub'):
             self.set_hub(**kwargs)
         return self.hub.systems.get_osmajor_arches(fqdn, tags)
@@ -710,7 +710,7 @@ class BeakerRecipeBase(BeakerBase):
         ks_meta = kwargs.get("ks_meta", "")
         kernel_options = kwargs.get("kernel_options", '')
         kernel_options_post = kwargs.get("kernel_options_post", '')
-        tags = kwargs.get("tag", []) or ['STABLE']
+        tags = kwargs.get("tag", [])
         repos = kwargs.get("repo", [])
         postrepos = kwargs.get("repo_post", [])
         ignore_panic = kwargs.get("ignore_panic", False)
