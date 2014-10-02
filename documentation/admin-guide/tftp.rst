@@ -90,7 +90,7 @@ removes them once the installation is complete.
     with the IPv4 address of the test system, represented as 8
     hexadecimal digits (using lowercase letters).
 
-:file:`ppc/grub.cfg-{0A1043DE}`
+:file:`ppc/grub.cfg-{0A1043DE}`; :file:`boot/grub2/grub.cfg-{0A1043DE}`; :file:`grub.cfg-{0A1043DE}`
     Configuration for GRUB2 for PowerPC (PPC64) systems. The filename
     is suffixed with the IPv4 address of the test system, represented
     as 8 hexadecimal digits (using uppercase letters).

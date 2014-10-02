@@ -479,11 +479,34 @@ def configure_ppc64(fqdn, kernel_options):
     <get_tftp_root()>/ppc/grub.cfg
     <get_tftp_root()>/ppc/<pxe_basename(fqdn).lower()-grub2> -> ../boot/grub2/powerpc-ieee1275/core.elf
 
+    # Hacks, see the note below
+    <get_tftp_root()>grub.cfg-<pxe_basename(fqdn)>
+    <get_tftp_root()>boot/grub2/grub.cfg-<pxe_basename(fqdn)>
+
+
     """
     ppc_dir = os.path.join(get_tftp_root(), 'ppc')
     makedirs_ignore(ppc_dir, mode=0755)
 
     grub_cfg_file = os.path.join(ppc_dir, "grub.cfg-%s" % pxe_basename(fqdn))
+    logger.debug('Writing grub2/ppc64 config for %s as %s', fqdn, grub_cfg_file)
+    configure_grub2(fqdn, ppc_dir, grub_cfg_file, kernel_options)
+
+    # The following two hacks are to accommodate the differences in behavior
+    # among various power configurations and grub2 versions
+    # Remove them once they are sorted out (also see the relevant
+    # code in clear_ppc64())
+    # Ref: https://bugzilla.redhat.com/show_bug.cgi?id=1144106
+
+    # hack for older grub
+    grub2_conf_dir = os.path.join(get_tftp_root(), 'boot', 'grub2')
+    makedirs_ignore(grub2_conf_dir, mode=0755)
+    grub_cfg_file = os.path.join(grub2_conf_dir, "grub.cfg-%s" % pxe_basename(fqdn))
+    logger.debug('Writing grub2/ppc64 config for %s as %s', fqdn, grub_cfg_file)
+    configure_grub2(fqdn, grub2_conf_dir, grub_cfg_file, kernel_options)
+
+    # hack for power VMs
+    grub_cfg_file = os.path.join(get_tftp_root(), "grub.cfg-%s" % pxe_basename(fqdn))
     logger.debug('Writing grub2/ppc64 config for %s as %s', fqdn, grub_cfg_file)
     configure_grub2(fqdn, ppc_dir, grub_cfg_file, kernel_options)
 
@@ -504,6 +527,16 @@ def clear_ppc64(fqdn):
     grub2_symlink = '%s-grub2' % pxe_basename(fqdn).lower()
     logger.debug('Removing grub2 symlink for %s as %s', fqdn, grub2_symlink)
     clear_grub2(os.path.join(ppc_dir, grub2_symlink))
+
+    # clear the files which were created as a result of the hacks
+    # mentioned in configure_ppc64()
+    grub2_conf_dir = os.path.join(get_tftp_root(), 'boot', 'grub2')
+    grub2_config = "grub.cfg-%s" % pxe_basename(fqdn)
+    logger.debug('Removing grub2/ppc64 config for %s as %s', fqdn, grub2_config)
+    clear_grub2(os.path.join(grub2_conf_dir, grub2_config))
+    grub2_config = "grub.cfg-%s" % pxe_basename(fqdn)
+    logger.debug('Removing grub2/ppc64 config for %s as %s', fqdn, grub2_config)
+    clear_grub2(os.path.join(get_tftp_root(), grub2_config))
 
 # Mass configuration
 
