@@ -575,6 +575,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/beaker-pxemenu
 %{_bindir}/beaker-expire-distros
 %{_bindir}/beaker-clear-netboot
+%{_mandir}/man8/beaker-import.8.gz
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/beaker-lab-controller.conf
 %attr(-,apache,root) %dir %{_datadir}/bkr
 %attr(-,apache,root) %{_datadir}/bkr/lab-controller
@@ -605,6 +606,8 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %defattr(-,root,root,-)
 %{_var}/lib/%{name}/addDistro.sh
 %{_var}/lib/%{name}/addDistro.d/*
+%else
+%exclude %{_mandir}/man8/beaker-import.8.gz
 %endif
 
 %changelog

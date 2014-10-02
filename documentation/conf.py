@@ -33,6 +33,8 @@ man_pages = [
     ('admin-guide/man/beaker-create-ipxe-image', 'beaker-create-ipxe-image',
         'Generate and upload iPXE boot image to Glance',
         [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 8),
+    ('admin-guide/man/beaker-import', 'beaker-import', 'Import distros',
+        [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 8),
     ('admin-guide/man/beaker-repo-update', 'beaker-repo-update',
         'Update cached harness packages',
         [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 8),

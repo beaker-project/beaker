@@ -19,6 +19,12 @@ Distros must be imported separately on each lab controller, and you can import
 from a different set of URLs in each lab. This allows you to import distros 
 from the nearest mirror in each lab.
 
+Normally a distro will have a :file:`.composeinfo` or :file:`.treeinfo` file, which
+provides metadata required by :program:`beaker-import`. If those files are not available
+you can perform a "naked" import by specifying ``--family``,
+``--version``, ``--name``, ``--arch``, ``--kernel``, ``--initrd``. See
+:doc:`beaker-import <man/beaker-import>` for more details.
+
 You can check that the distros were added successfully by browsing the Distros 
 page (see :ref:`distros`).
 
