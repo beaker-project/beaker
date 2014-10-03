@@ -658,7 +658,6 @@ class KickstartTest(unittest.TestCase):
             </job>''')
         guest = recipe.guests[0]
         ks = guest.rendered_kickstart.kickstart
-        self.assertIn(r'''bootloader --location=mbr  --append="console=ttyS0,115200 console=ttyS1,115200"''', ks.splitlines())
         self.assertIn('if [ -d /etc/init ] ; then\n'
             '    cat << EOF >/etc/init/ttyS0.conf\n'
             '# start ttyS0\nstart on runlevel [2345]\n'
