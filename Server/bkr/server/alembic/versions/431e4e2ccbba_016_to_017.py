@@ -54,7 +54,8 @@ def upgrade():
     op.drop_index('email_address', 'tg_user')
     # add index email_address
     op.create_index('email_address', 'tg_user', ['email_address'])
-    op.create_unique_constraint('uc_user_id', 'lab_controller', ['user_id'])
+    op.execute("ALTER TABLE lab_controller "
+            "DROP KEY user_id, ADD UNIQUE KEY user_id (user_id)")
     op.execute("ALTER TABLE job "
                "ADD ntasks INT AFTER ttasks,"
                "MODIFY status ENUM('New', 'Processed', 'Queued', 'Scheduled',"
@@ -83,7 +84,7 @@ def downgrade():
     op.drop_index('email_address', 'tg_user')
     op.create_unique_constraint('email_address', 'tg_user', ['email_address'])
     op.execute("ALTER TABLE lab_controller "
-               "DROP INDEX uc_user_id, ADD INDEX user_id (user_id);")
+               "DROP KEY user_id, ADD KEY user_id (user_id)")
     op.execute("ALTER TABLE job "
                "DROP ntasks,"
                "MODIFY status ENUM('New', 'Processed', 'Queued', 'Scheduled',"
