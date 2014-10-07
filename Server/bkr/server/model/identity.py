@@ -77,7 +77,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     user_id = Column(Integer, primary_key=True)
     user_name = Column(Unicode(255), unique=True)
-    email_address = Column(Unicode(255))
+    email_address = Column(Unicode(255), index=True)
     display_name = Column(Unicode(255))
     _password = Column('password', UnicodeText, nullable=True, default=None)
     _root_password = Column('root_password', String(255), nullable=True, default=None)
