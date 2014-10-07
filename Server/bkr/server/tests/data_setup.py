@@ -13,7 +13,7 @@ import uuid
 import itertools
 from sqlalchemy.orm.exc import NoResultFound
 import turbogears.config, turbogears.database
-from turbogears.database import session
+from turbogears.database import session, metadata
 from bkr.server.bexceptions import DatabaseLookupError
 from bkr.server.model import LabController, User, Group, UserGroup, Distro, DistroTree, Arch, \
         OSMajor, OSVersion, SystemActivity, Task, MachineRecipe, System, \
@@ -46,7 +46,7 @@ def setup_model(override=True):
     connection.invalidate() # can't reuse this one
     del connection
     log.info('Initialising model')
-    init_db(user_name=ADMIN_USER, password=ADMIN_PASSWORD,
+    init_db(metadata, user_name=ADMIN_USER, password=ADMIN_PASSWORD,
             user_email_address=ADMIN_EMAIL_ADDRESS)
 
 _counter = itertools.count()

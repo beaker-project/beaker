@@ -41,6 +41,7 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
+    load_config_or_exit()
     engine = get_engine()
 
     connection = engine.connect()

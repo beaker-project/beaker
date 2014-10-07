@@ -22,12 +22,8 @@ from bkr.server.util import load_config_or_exit
 from turbogears.database import session
 from os.path import dirname, exists, join
 from os import getcwd
-import turbogears
-from turbogears.database import metadata, get_engine
 from optparse import OptionParser
-from alembic import config as alembic_config
-from alembic import command as alembic_command
-from alembic import util as alembic_util
+import alembic.config, alembic.script, alembic.environment
 
 __version__ = '0.1'
 __description__ = 'Command line tool for initializing Beaker DB'
@@ -35,9 +31,16 @@ __description__ = 'Command line tool for initializing Beaker DB'
 def dummy():
     pass
 
-def init_db(user_name=None, password=None, user_display_name=None, user_email_address=None):
-    get_engine()
+def init_db(metadata, user_name=None, password=None, user_display_name=None, user_email_address=None):
     metadata.create_all()
+
+    def stamp(rev, context):
+        current = context._current_rev()
+        head = context.script.get_revision('head')
+        context._update_current_rev(current, head.revision)
+        return []
+    run_alembic_operation(metadata, stamp)
+
     session.begin()
 
     try:
@@ -187,6 +190,31 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
     session.commit()
     session.close()
 
+def upgrade_db(metadata):
+    def upgrade(rev, context):
+        return context.script._upgrade_revs('head', rev)
+    run_alembic_operation(metadata, upgrade)
+
+def downgrade_db(metadata, version):
+    def downgrade(rev, context):
+        return context.script._downgrade_revs(version, rev)
+    run_alembic_operation(metadata, downgrade)
+
+def run_alembic_operation(metadata, func):
+    # We intentionally *don't* run inside the normal Alembic env.py so that we 
+    # can force the use of the SA metadata we are given, rather than using the 
+    # normal global TurboGears metadata instance. Ultimately this is to make 
+    # the migration testable.
+    config = alembic.config.Config()
+    config.set_main_option('script_location', 'bkr.server:alembic')
+    script = alembic.script.ScriptDirectory.from_config(config)
+
+    env_context = alembic.environment.EnvironmentContext(config=config,
+            script=script, fn=func)
+    connection = metadata.bind.connect()
+    env_context.configure(connection=connection, target_metadata=metadata)
+    env_context.run_migrations()
+
 def get_parser():
     usage = "usage: %prog [options]"
     parser = OptionParser(usage, description=__description__,
@@ -208,33 +236,24 @@ def get_parser():
                      help="Downgrade database to a previous version")
     return parser
 
-def do_alembic_command(config, cmd, *args, **kwargs):
-    try:
-        getattr(alembic_command, cmd)(config, *args, **kwargs)
-    except alembic_util.CommandError as e:
-        # alembic_util.err() will call sys.exit(-1) to exit
-        alembic_util.err(str(e))
-
 def main():
     parser = get_parser()
     opts, args = parser.parse_args()
     load_config_or_exit(opts.configfile)
     log_to_stream(sys.stderr)
-    alembic_config_ = alembic_config.Config()
-    alembic_config_.set_main_option('script_location', 'bkr.server:alembic')
-    alembic_config_.set_main_option('sqlalchemy.url',
-                                   turbogears.config.get("sqlalchemy.dburi"))
+
+    from turbogears.database import metadata, bind_metadata
+    bind_metadata()
     if opts.downgrade:
-        do_alembic_command(alembic_config_, 'downgrade', opts.downgrade)
+        downgrade_db(metadata, opts.downgrade)
     else:
         # if database is empty then initialize it
-        if not get_engine().table_names():
-            init_db(user_name=opts.user_name, password=opts.password,
+        if not metadata.bind.table_names():
+            init_db(metadata, user_name=opts.user_name, password=opts.password,
                     user_display_name=opts.display_name, user_email_address=opts.email_address)
-            do_alembic_command(alembic_config_, 'stamp', 'head')
         else:
             # upgrade to the latest DB version
-            do_alembic_command(alembic_config_, 'upgrade', 'head')
+            upgrade_db(metadata)
 
 if __name__ == "__main__":
     main()
