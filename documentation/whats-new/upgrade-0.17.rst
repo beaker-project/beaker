@@ -85,24 +85,24 @@ statements.
         ADD ntasks INT AFTER ttasks,
         MODIFY status ENUM('New', 'Processed', 'Queued', 'Scheduled',
             'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted', 
-            'Reserved');
+            'Reserved') NOT NULL;
 
     ALTER TABLE recipe_set
         ADD ntasks INT AFTER ttasks,
         MODIFY status ENUM('New', 'Processed', 'Queued', 'Scheduled',
             'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted', 
-            'Reserved');
+            'Reserved') NOT NULL;
 
     ALTER TABLE recipe
         ADD ntasks INT AFTER ttasks,
         MODIFY status ENUM('New', 'Processed', 'Queued', 'Scheduled',
             'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted', 
-            'Reserved');
+            'Reserved') NOT NULL;
 
     ALTER TABLE recipe_task
         MODIFY status ENUM('New', 'Processed', 'Queued', 'Scheduled',
             'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted', 
-            'Reserved');
+            'Reserved') NOT NULL;
 
 To roll back, run the following SQL. If duplicate user email addresses have 
 been entered since the upgrade, you must first manually adjust them before 
@@ -128,21 +128,25 @@ restoring the UNIQUE constraint.
     ALTER TABLE job
         DROP ntasks,
         MODIFY status ENUM('New', 'Processed', 'Queued', 'Scheduled',
-            'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted');
+            'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted')
+            NOT NULL;
 
     ALTER TABLE recipe_set
         DROP ntasks,
         MODIFY status ENUM('New', 'Processed', 'Queued', 'Scheduled',
-            'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted');
+            'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted')
+            NOT NULL;
 
     ALTER TABLE recipe
         DROP ntasks,
         MODIFY status ENUM('New', 'Processed', 'Queued', 'Scheduled',
-            'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted');
+            'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted')
+            NOT NULL;
 
     ALTER TABLE recipe_task
         MODIFY status ENUM('New', 'Processed', 'Queued', 'Scheduled',
-            'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted');
+            'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted')
+            NOT NULL;
 
     DROP TABLE job_activity;
 

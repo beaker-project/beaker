@@ -58,18 +58,18 @@ def upgrade():
     op.execute("ALTER TABLE job "
                "ADD ntasks INT AFTER ttasks,"
                "MODIFY status ENUM('New', 'Processed', 'Queued', 'Scheduled',"
-               "'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted', 'Reserved');")
+               "'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted', 'Reserved') NOT NULL")
     op.execute("ALTER TABLE recipe_set "
                "ADD ntasks INT AFTER ttasks,"
                "MODIFY status ENUM('New', 'Processed', 'Queued', 'Scheduled',"
-               "'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted', 'Reserved');")
+               "'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted', 'Reserved') NOT NULL")
     op.execute("ALTER TABLE recipe "
                "ADD ntasks INT AFTER ttasks,"
                "MODIFY status ENUM('New', 'Processed', 'Queued', 'Scheduled',"
-               "'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted', 'Reserved');")
+               "'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted', 'Reserved') NOT NULL")
     op.alter_column('recipe_task', u'status',
-               existing_type=sa.Enum(u'New', u'Processed', u'Queued', u'Scheduled', u'Waiting', u'Running', u'Completed', u'Cancelled', u'Aborted', u'Reserved'),
-               nullable=True)
+               type_=sa.Enum(u'New', u'Processed', u'Queued', u'Scheduled', u'Waiting', u'Running', u'Completed', u'Cancelled', u'Aborted', u'Reserved'),
+               nullable=False)
 
 def downgrade():
     op.drop_table('recipe_reservation')
@@ -87,15 +87,15 @@ def downgrade():
     op.execute("ALTER TABLE job "
                "DROP ntasks,"
                "MODIFY status ENUM('New', 'Processed', 'Queued', 'Scheduled',"
-               "'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted')")
+               "'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted') NOT NULL")
     op.execute("ALTER TABLE recipe_set "
                "DROP ntasks,"
                "MODIFY status ENUM('New', 'Processed', 'Queued', 'Scheduled',"
-               "'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted')")
+               "'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted') NOT NULL")
     op.execute("ALTER TABLE recipe "
                "DROP ntasks,"
                "MODIFY status ENUM('New', 'Processed', 'Queued', 'Scheduled',"
-               "'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted')")
+               "'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted') NOT NULL")
     op.alter_column('recipe_task', u'status',
                existing_type=sa.Enum(u'New', u'Processed', u'Queued', u'Scheduled', u'Waiting', u'Running', u'Completed', u'Cancelled', u'Aborted'),
-               nullable=True)
+               nullable=False)
