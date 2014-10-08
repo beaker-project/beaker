@@ -1,0 +1,96 @@
+[addon-HighAvailability]
+id = HighAvailability
+name = Hight Availability
+packages = HighAvailability
+repository = HighAvailability
+type = addon
+uid = Server-HighAvailability
+
+[addon-LoadBalancer]
+id = LoadBalancer
+name = Load Balancer
+packages = LoadBalancer
+repository = LoadBalancer
+type = addon
+uid = Server-LoadBalancer
+
+[addon-ResilientStorage]
+id = ResilientStorage
+name = Resilient Storage
+packages = ResilientStorage
+repository = ResilientStorage
+type = addon
+uid = Server-ResilientStorage
+
+[addon-ScalableFileSystem]
+id = ScalableFileSystem
+name = Scalable Filesystem Support
+packages = ScalableFileSystem
+repository = ScalableFileSystem
+type = addon
+uid = Server-ScalableFileSystem
+
+[checksums]
+HighAvailability/repodata/repomd.xml = sha256:fc687ee0ad4ffd5e45d1febb1a5988f77d44907d498793c556577de571e2f838
+LoadBalancer/repodata/repomd.xml = sha256:97d76f333a4b697c520933fe89f99ef244f5cee0afd9163f87e234e0be8b823d
+ResilientStorage/repodata/repomd.xml = sha256:411bf7ac2970a5ccefe69337ebb6c3034d1dec40f19a9bc0d404f7c74072d986
+ScalableFileSystem/repodata/repomd.xml = sha256:d59eede97fa7a7c1c228ac38625507762268fc5fe73f04777224809cf3ec70a4
+Server/repodata/repomd.xml = sha256:b30f14162d19e088a7d484faa633bb3492d94b5525cc024e741678e5be45360e
+images/boot.iso = sha256:6d1ea6ef31ef79806fb3e9a997ebd81ae09b55d651ce0828c93ce02857a38cd1
+images/install.img = sha256:20fc5878c5951730e5ff927ef4fd54aafe6d00a4344671dc10747cd9ef18fab5
+images/product.img = sha256:f0bd00d49b4a669219724c9a24714b7fe5cf0420eacde4cb027ad8ddf126b985
+images/pxeboot/initrd.img = sha256:7a4b137778d01a5f9a4c0fea222edf8b3d2da3328e5eb89c044271739073eb0e
+images/pxeboot/vmlinuz = sha256:794dcb24210dcb14e2123c6016ab4a1b8bbd47fa5c4c1e3a053e1605e70adc11
+
+[general]
+; WARNING.0 = THIS SECTION IS KEPT ONLY FOR COMPATIBILITY REASONS
+; WARNING.1 = Consider using other sections (product, base_product, tree, variant-*) instead
+arch = x86_64
+family = Red Hat Enterprise Linux
+name = Red Hat Enterprise Linux 6.6
+packagedir = Packages
+platforms = x86_64,xen
+repository = Server
+timestamp = 1411608781
+variant = Server
+variants = Server
+version = 6.6
+
+[header]
+rhel6_compat = True
+version = 0.3
+
+[images-x86_64]
+boot.iso = images/boot.iso
+initrd = images/pxeboot/initrd.img
+kernel = images/pxeboot/vmlinuz
+product.img = images/product.img
+
+[images-xen]
+initrd = images/pxeboot/initrd.img
+kernel = images/pxeboot/vmlinuz
+product.img = images/product.img
+
+[product]
+name = Red Hat Enterprise Linux
+short = RHEL
+version = 6.6
+
+[stage2]
+mainimage = images/install.img
+
+[tree]
+arch = x86_64
+build_timestamp = 1411608781
+platforms = x86_64,xen
+variants = Server
+
+[variant-Server]
+addons = HighAvailability,LoadBalancer,ResilientStorage,ScalableFileSystem
+id = Server
+name = Server
+packages = Packages
+repository = Server
+type = variant
+uid = Server
+

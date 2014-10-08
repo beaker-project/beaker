@@ -36,8 +36,7 @@ class JobCancelTest(unittest.TestCase):
                     self.job.recipesets[0].recipes[0].t_id])
             self.fail('should raise')
         except ClientError, e:
-            self.assertEquals(e.status, 1)
-            self.assert_('Task type R is not stoppable'
+            self.assert_('Taskspec type must be one of'
                     in e.stderr_output, e.stderr_output)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=595512

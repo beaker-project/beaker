@@ -187,3 +187,28 @@ Beaker 0.18.1
 * :issue:`1127509`, :issue:`1129020`: Expanded the documentation for job result
   waivers (ack/nak) and external watchdog scripts. (Contributed by Dan 
   Callaghan)
+
+Beaker 0.18.2
+~~~~~~~~~~~~~
+
+* :issue:`1144106`: The :program:`beaker-provision` daemon now writes GRUB2
+  netboot configuration files for PowerPC in a number of different locations to 
+  work around inconsistencies in GRUB2 behaviour. (Contributed by Amit Saha)
+* :issue:`1148943`: Beaker no longer appends extra kernel options for serial
+  consoles in guest kickstarts. This corrects a regression preventing RHEL7 
+  guest recipes from running on Xen hosts. (Contributed by Dan Callaghan)
+* :issue:`1140999`: The :program:`beaker-import` command now sets distro tags
+  based on the labels found in :file:`.composeinfo`, in addition to 
+  :file:`.treeinfo`. (Contributed by Dan Callaghan)
+* :issue:`1140995`: The :program:`beaker-import` command will ignore repos
+  which are defined in :file:`.composeinfo` but which do not exist on disk. 
+  This matches the existing behaviour for non-existent repos defined in 
+  :file:`.treeinfo`. (Contributed by Dan Callaghan)
+* :issue:`867561`: The :program:`bkr job-cancel` command shows a more
+  informative usage message. (Contributed by Dan Callaghan)
+
+Version 4.0-85 of the ``/distribution/virt/install`` task has also been 
+released. The task has been updated to unconditionally set up a second serial 
+port for KVM guests, instead of checking for the ``console=ttyS1`` kernel 
+option in the guest kickstart (which has been removed as part of fixing 
+:issue:`1148943`).

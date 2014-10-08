@@ -420,10 +420,13 @@ class Grub2PPC64Test(NetBootTestCase):
     def test_configure_then_clear(self):
         netboot.configure_ppc64(TEST_FQDN,
                 'console=ttyS0,115200 ks=http://lol/')
-        grub2_config_path = os.path.join(self.tftp_root, 'boot', 'grub2','grub.cfg-7F0000FF')
-        self.assertEquals(open(grub2_config_path).read(), """\
-linux  ../../images/fqdn.example.invalid/kernel console=ttyS0,115200 ks=http://lol/ netboot_method=grub2
-initrd ../../images/fqdn.example.invalid/initrd
+        grub2_configs_path = [os.path.join(self.tftp_root, 'ppc', 'grub.cfg-7F0000FF'),
+                              os.path.join(self.tftp_root, 'boot', 'grub2', 'grub.cfg-7F0000FF'),
+                              os.path.join(self.tftp_root, 'grub.cfg-7F0000FF')]
+        for path in grub2_configs_path:
+            self.assertEquals(open(path).read(), """\
+linux  /images/fqdn.example.invalid/kernel console=ttyS0,115200 ks=http://lol/ netboot_method=grub2
+initrd /images/fqdn.example.invalid/initrd
 
 boot
 """)
@@ -431,7 +434,8 @@ boot
         self.assertEquals(os.readlink(grub2_symlink_path), '../boot/grub2/powerpc-ieee1275/core.elf')
 
         netboot.clear_ppc64(TEST_FQDN)
-        self.assert_(not os.path.exists(grub2_config_path))
+        for path in grub2_configs_path:
+            self.assert_(not os.path.exists(path))
         self.assert_(not os.path.exists(grub2_symlink_path))
 
 class Aarch64Test(NetBootTestCase):
@@ -442,8 +446,8 @@ class Aarch64Test(NetBootTestCase):
         grub_config_path = os.path.join(self.tftp_root, 'aarch64', 'grub.cfg-7F0000FF')
         grub_default_path = os.path.join(self.tftp_root, 'aarch64', 'grub.cfg')
         self.assertEquals(open(grub_config_path).read(), """\
-linux  ../images/fqdn.example.invalid/kernel console=ttyS0,115200 ks=http://lol/ netboot_method=grub2
-initrd ../images/fqdn.example.invalid/initrd
+linux  /images/fqdn.example.invalid/kernel console=ttyS0,115200 ks=http://lol/ netboot_method=grub2
+initrd /images/fqdn.example.invalid/initrd
 
 boot
 """)
@@ -458,8 +462,8 @@ boot
                 'devicetree=custom.dtb ks=http://lol/')
         grub_config_path = os.path.join(self.tftp_root, 'aarch64', 'grub.cfg-7F0000FF')
         self.assertEquals(open(grub_config_path).read(), """\
-linux  ../images/fqdn.example.invalid/kernel ks=http://lol/ netboot_method=grub2
-initrd ../images/fqdn.example.invalid/initrd
+linux  /images/fqdn.example.invalid/kernel ks=http://lol/ netboot_method=grub2
+initrd /images/fqdn.example.invalid/initrd
 devicetree custom.dtb
 boot
 """)

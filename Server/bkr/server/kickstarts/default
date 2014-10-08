@@ -14,7 +14,7 @@ ignoredisk --interactive
 auth {{ auth }}
 {% endif %}
 # System bootloader configuration
-bootloader --location={{ boot_loc|default("mbr") }}{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}{% if recipe.systemtype == 'Virtual' %}  --append="console=ttyS0,115200 console=ttyS1,115200"{% endif %}{% if distro_tree is arch('ppc', 'ppc64') and has_leavebootorder is defined %} --leavebootorder{% endif %}
+bootloader --location={{ boot_loc|default("mbr") }}{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}{% if distro_tree is arch('ppc', 'ppc64') and has_leavebootorder is defined %} --leavebootorder{% endif %}
 
 {{ mode|default('text') }}
 {% snippet 'network' %}
