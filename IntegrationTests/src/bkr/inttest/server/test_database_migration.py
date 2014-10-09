@@ -64,7 +64,6 @@ class MigrationTest(unittest.TestCase):
         connection = self.migration_metadata.bind.connect()
         connection.execute(pkg_resources.resource_string('bkr.inttest.server',
                 'database-dumps/0.12.sql'))
-        self.stamp('442672570b8f')
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
@@ -72,7 +71,6 @@ class MigrationTest(unittest.TestCase):
         connection = self.migration_metadata.bind.connect()
         connection.execute(pkg_resources.resource_string('bkr.inttest.server',
                 'database-dumps/0.13.sql'))
-        self.stamp('41aa3372239e')
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
@@ -80,7 +78,6 @@ class MigrationTest(unittest.TestCase):
         connection = self.migration_metadata.bind.connect()
         connection.execute(pkg_resources.resource_string('bkr.inttest.server',
                 'database-dumps/0.14.sql'))
-        self.stamp('057b088bfb32')
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
@@ -88,7 +85,6 @@ class MigrationTest(unittest.TestCase):
         connection = self.migration_metadata.bind.connect()
         connection.execute(pkg_resources.resource_string('bkr.inttest.server',
                 'database-dumps/0.15.sql'))
-        self.stamp('49a4a1e3779a')
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
@@ -96,7 +92,6 @@ class MigrationTest(unittest.TestCase):
         connection = self.migration_metadata.bind.connect()
         connection.execute(pkg_resources.resource_string('bkr.inttest.server',
                 'database-dumps/0.16.sql'))
-        self.stamp('2f38ab976d17')
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
@@ -104,17 +99,8 @@ class MigrationTest(unittest.TestCase):
         connection = self.migration_metadata.bind.connect()
         connection.execute(pkg_resources.resource_string('bkr.inttest.server',
                 'database-dumps/0.17.sql'))
-        self.stamp('431e4e2ccbba')
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
-
-    def stamp(self, version):
-        connection = self.migration_metadata.bind.connect()
-        # The admin is expected to run this by hand when upgrading. The release 
-        # notes describe which alembic_version to stamp according to which 
-        # Beaker version they were running.
-        connection.execute("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)")
-        connection.execute("INSERT INTO alembic_version VALUES ('%s')" % version)
 
     def check_migrated_schema(self):
         """

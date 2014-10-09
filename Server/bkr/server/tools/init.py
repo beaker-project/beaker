@@ -13,6 +13,8 @@
 __requires__ = ['CherryPy < 3.0']
 
 import sys
+import logging
+from sqlalchemy.inspection import inspect
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.log import log_to_stream
@@ -28,8 +30,7 @@ import alembic.config, alembic.script, alembic.environment
 __version__ = '0.1'
 __description__ = 'Command line tool for initializing Beaker DB'
 
-def dummy():
-    pass
+logger = logging.getLogger(__name__)
 
 def init_db(metadata, user_name=None, password=None, user_display_name=None, user_email_address=None):
     metadata.create_all()
@@ -192,6 +193,40 @@ def init_db(metadata, user_name=None, password=None, user_display_name=None, use
 
 def upgrade_db(metadata):
     def upgrade(rev, context):
+        if rev is None:
+            # This means the database is not stamped. Normally Alembic treats 
+            # that as the "base" revision (for us that's Beaker 0.11) but 
+            # actually the db could be anything from 0.11 to 0.18 (or even 
+            # earlier, though we refuse to handle that). We can check for some 
+            # indicative tables/columns to figure out what the current version 
+            # really is.
+            logger.info('Database has no Alembic version, '
+                    'inspecting schema to determine current version')
+            inspector = inspect(context.bind)
+            table_names = inspector.get_table_names()
+            if 'recipe_reservation' in table_names:
+                rev = '431e4e2ccbba' # 0.17/0.18
+            elif any(col['name'] == 'name' for col in
+                    inspector.get_columns('recipe_task')):
+                rev = '2f38ab976d17' # 0.16
+            elif 'system_access_policy' in table_names:
+                rev = '49a4a1e3779a' # 0.15
+            elif 'submission_delegate' in table_names:
+                rev = '057b088bfb32' # 0.14
+            elif any(col['name'] == 'ldap' for col in
+                    inspector.get_columns('tg_group')):
+                rev = '41aa3372239e' # 0.13
+            elif 'disk' in table_names:
+                rev = '442672570b8f' # 0.12
+            elif any(col['name'] == 'rebooted' for col in
+                    inspector.get_columns('recipe_resource')):
+                rev = None # 0.11 (base)
+            else:
+                raise RuntimeError('Database has no Alembic version and '
+                        'is not recognised as a valid Beaker 0.11-0.18 schema '
+                        '(you must manually migrate old databases '
+                        'up to 0.11 before running beaker-init)')
+            logger.info('Treating unstamped database as version %s' % rev)
         return context.script._upgrade_revs('head', rev)
     run_alembic_operation(metadata, upgrade)
 
