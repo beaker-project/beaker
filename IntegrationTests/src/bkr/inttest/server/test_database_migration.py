@@ -45,7 +45,7 @@ class MigrationTest(unittest.TestCase):
     def test_full_upgrade(self):
         connection = self.migration_metadata.bind.connect()
         connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                'database-dumps/0.16.sql'))
+                'database-dumps/0.11.sql'))
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
@@ -54,9 +54,49 @@ class MigrationTest(unittest.TestCase):
         # by then upgrading again and making sure we still have a correct schema.
         connection = self.migration_metadata.bind.connect()
         connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                'database-dumps/0.16.sql'))
+                'database-dumps/0.11.sql'))
         upgrade_db(self.migration_metadata)
         downgrade_db(self.migration_metadata, 'base')
+        upgrade_db(self.migration_metadata)
+        self.check_migrated_schema()
+
+    def test_from_012(self):
+        connection = self.migration_metadata.bind.connect()
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/0.12.sql'))
+        self.stamp('442672570b8f')
+        upgrade_db(self.migration_metadata)
+        self.check_migrated_schema()
+
+    def test_from_013(self):
+        connection = self.migration_metadata.bind.connect()
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/0.13.sql'))
+        self.stamp('41aa3372239e')
+        upgrade_db(self.migration_metadata)
+        self.check_migrated_schema()
+
+    def test_from_014(self):
+        connection = self.migration_metadata.bind.connect()
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/0.14.sql'))
+        self.stamp('057b088bfb32')
+        upgrade_db(self.migration_metadata)
+        self.check_migrated_schema()
+
+    def test_from_015(self):
+        connection = self.migration_metadata.bind.connect()
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/0.15.sql'))
+        self.stamp('49a4a1e3779a')
+        upgrade_db(self.migration_metadata)
+        self.check_migrated_schema()
+
+    def test_from_016(self):
+        connection = self.migration_metadata.bind.connect()
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/0.16.sql'))
+        self.stamp('2f38ab976d17')
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
@@ -64,11 +104,17 @@ class MigrationTest(unittest.TestCase):
         connection = self.migration_metadata.bind.connect()
         connection.execute(pkg_resources.resource_string('bkr.inttest.server',
                 'database-dumps/0.17.sql'))
-        # The admin is expected to run this by hand when upgrading
-        connection.execute("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)")
-        connection.execute("INSERT INTO alembic_version VALUES ('431e4e2ccbba')")
+        self.stamp('431e4e2ccbba')
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
+
+    def stamp(self, version):
+        connection = self.migration_metadata.bind.connect()
+        # The admin is expected to run this by hand when upgrading. The release 
+        # notes describe which alembic_version to stamp according to which 
+        # Beaker version they were running.
+        connection.execute("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)")
+        connection.execute("INSERT INTO alembic_version VALUES ('%s')" % version)
 
     def check_migrated_schema(self):
         """
@@ -97,6 +143,17 @@ class MigrationTest(unittest.TestCase):
                     actual_columns.remove('system_name')
                 if 'mac_address' in actual_columns:
                     actual_columns.remove('mac_address')
+            elif table_name == 'system':
+                # may be left over from 0.15
+                if 'private' in actual_columns:
+                    actual_columns.remove('private')
+                # may be left over from 0.14
+                if 'shared' in actual_columns:
+                    actual_columns.remove('shared')
+            elif table_name == 'system_group':
+                # may be left over from 0.14
+                if 'admin' in actual_columns:
+                    actual_columns.remove('admin')
             self.assertItemsEqual(expected_columns, actual_columns)
             for column_name in metadata.tables[table_name].columns.keys():
                 self.assert_columns_equivalent(
@@ -194,7 +251,20 @@ class MigrationTest(unittest.TestCase):
                 '%r should%s be nullable' % (actual,
                 '' if expected.nullable else ' not'))
         self.assertEquals(actual.primary_key, expected.primary_key)
-        self.assertEquals(actual.server_default, expected.server_default)
+        if expected.server_default:
+            self.assertEquals(actual.server_default, expected.server_default,
+                    '%r has incorrect database default' % actual)
+        else:
+            if not actual.nullable and actual.server_default:
+                # MySQL forces non-NULLable columns to have a default even if 
+                # we don't want to specify one, so we just ignore those.
+                default_text = str(actual.server_default.arg)
+                if default_text not in ["''", "'0'", "0"]:
+                    raise AssertionError('%r should not have database default %s'
+                            % (actual, default_text))
+            else:
+                self.assertIsNone(actual.server_default,
+                        '%r should not have a database default' % actual)
         actual_fk_targets = set(fk.target_fullname for fk in actual.foreign_keys)
         expected_fk_targets = set(fk.target_fullname for fk in expected.foreign_keys)
         self.assertItemsEqual(actual_fk_targets, expected_fk_targets)

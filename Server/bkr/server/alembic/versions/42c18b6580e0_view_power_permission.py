@@ -17,33 +17,13 @@ down_revision = '50bc9c21974b'
 
 from alembic import op
 import sqlalchemy as sa
+from bkr.server.alembic.migration_utils import add_enum_value, drop_enum_value
 
 def upgrade():
-    # Blerg... we need to find the order of the existing enum values, to make 
-    # sure we preserve that when we are adding our new 'view_power' value. The 
-    # order will be different depending on whether the db was originally 
-    # upgraded through version 0.16 or was created after that.
-    column_info, = [info for info in
-            sa.inspect(op.get_bind()).get_columns('system_access_policy_rule')
-            if info['name'] == 'permission']
-    existing_enum_values = column_info['type'].enums
-    new_enum_values = existing_enum_values + ('view_power',)
-    op.alter_column('system_access_policy_rule', 'permission',
-            existing_type=column_info['type'],
-            type_=sa.Enum(*new_enum_values),
-            nullable=False)
+    add_enum_value('system_access_policy_rule', 'permission',
+            'view_power', nullable=False)
 
 def downgrade():
     op.execute("DELETE FROM system_access_policy_rule WHERE permission = 'view_power'")
-    # As above we need to preserve the order of enum values, just dropping 
-    # view_power from the final position.
-    column_info, = [info for info in
-            sa.inspect(op.get_bind()).get_columns('system_access_policy_rule')
-            if info['name'] == 'permission']
-    existing_enum_values = column_info['type'].enums
-    assert existing_enum_values[-1] == 'view_power'
-    new_enum_values = existing_enum_values[:-1]
-    op.alter_column('system_access_policy_rule', 'permission',
-            existing_type=column_info['type'],
-            type_=sa.Enum(*new_enum_values),
-            nullable=True)
+    drop_enum_value('system_access_policy_rule', 'permission',
+            'view_power', nullable=True)

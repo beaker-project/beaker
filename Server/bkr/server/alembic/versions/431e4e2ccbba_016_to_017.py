@@ -6,14 +6,14 @@
 """migrate from 0.16 to 0.17
 
 Revision ID: 431e4e2ccbba
-Revises: None
+Revises: 2f38ab976d17
 Create Date: 2014-08-04 10:24:42.194910
 
 """
 
 # revision identifiers, used by Alembic.
 revision = '431e4e2ccbba'
-down_revision = None
+down_revision = '2f38ab976d17'
 
 from alembic import op
 import sqlalchemy as sa
