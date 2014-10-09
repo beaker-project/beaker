@@ -115,7 +115,8 @@ def upgrade():
     op.drop_table('visit_identity')
 
     # Group name length
-    op.alter_column('tg_group', 'group_name', type_=sa.Unicode(255))
+    op.alter_column('tg_group', 'group_name',
+            type_=sa.Unicode(255), nullable=False)
 
     # Task RPM filename
     op.alter_column('task', 'rpm', type_=sa.Unicode(255))
