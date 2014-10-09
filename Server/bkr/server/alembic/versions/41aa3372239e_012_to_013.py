@@ -27,7 +27,7 @@ def upgrade():
             ADD COLUMN root_password VARCHAR(255) AFTER display_name
         """)
     op.add_column('user_group', sa.Column('is_owner', sa.Boolean,
-            server_default=sa.text('FALSE')))
+            nullable=False))
     op.execute("""
         ALTER TABLE job
         ADD COLUMN group_id int(11) default NULL AFTER owner_id,
