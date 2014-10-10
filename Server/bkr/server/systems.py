@@ -435,8 +435,11 @@ def update_system(fqdn):
         if 'power_type' in data:
             new_power_type = PowerType.by_name(data['power_type'])
             if new_power_type != system.power.power_type:
-                record_activity(u'power_type', system.power.power_type.name,
-                        new_power_type.name)
+                if not system.power.power_type:
+                    old_power_type = ''
+                else:
+                    old_power_type = system.power.power_type.name
+                record_activity(u'power_type', old_power_type, new_power_type.name)
                 system.power.power_type = new_power_type
                 changed = True
         if 'power_address' in data:

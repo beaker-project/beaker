@@ -511,6 +511,37 @@ class SystemViewTestWD(WebDriverTestCase):
             if activities_to_find:
                 raise AssertionError('Could not find activity entries for %s' % ' '.join(activities_to_find))
 
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1145867
+    def test_new_power_settings(self):
+        with session.begin():
+            lc = data_setup.create_labcontroller()
+            system = data_setup.create_system(lab_controller=lc, 
+                                              with_power=False)
+
+        b = self.browser
+        login(b)
+        self.go_to_system_view(system=system, tab='Power Settings')
+        tab = b.find_element_by_id('power-settings')
+        BootstrapSelect(tab.find_element_by_name('power_type'))\
+            .select_by_visible_text('virsh')
+        tab.find_element_by_name('power_address').send_keys \
+            ('qemu+ssh:10.10.10.10')
+        tab.find_element_by_name('power_user').send_keys('root')
+        tab.find_element_by_name('power_id').send_keys(system.fqdn)
+        tab.find_element_by_tag_name('form').submit()
+
+        # check activity records
+        power_fields_changed = {'power_type': 'virsh',
+                                'power_address': 'qemu+ssh:10.10.10.1',
+                                'power_user': 'root',
+                                'power_id': system.fqdn,
+                                'power_quiescent_period': 5}
+        with session.begin():
+            session.refresh(system)
+            for activity in system.activity:
+                self.assertEquals(activity.new_value,
+                                  power_fields_changed[activity])
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1059535
     def test_activity_is_not_logged_when_leaving_power_settings_empty(self):
         # The bug was that we were recording a change to power_user or 
