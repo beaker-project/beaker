@@ -569,19 +569,21 @@ class UserGroup(DeclarativeMappedObject):
     __tablename__ = 'user_group'
     __table_args__ = {'mysql_engine': 'InnoDB'}
     user_id = Column(Integer, ForeignKey('tg_user.user_id',
-            onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)
+            onupdate='CASCADE', ondelete='CASCADE'),
+            primary_key=True, index=True)
     user = relationship(User, backref=backref('group_user_assocs', cascade='all, delete-orphan'))
     group_id = Column(Integer, ForeignKey('tg_group.group_id',
-            onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)
+            onupdate='CASCADE', ondelete='CASCADE'),
+            primary_key=True, index=True)
     group = relationship(Group, backref=backref('user_group_assocs', cascade='all, delete-orphan'))
     is_owner = Column(Boolean, nullable=False, default=False)
 
 
 group_permission_table = Table('group_permission', DeclarativeMappedObject.metadata,
     Column('group_id', Integer, ForeignKey('tg_group.group_id',
-        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True, index=True),
     Column('permission_id', Integer, ForeignKey('permission.permission_id',
-        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True, index=True),
     mysql_engine='InnoDB',
 )
 
@@ -617,9 +619,9 @@ class SystemGroup(DeclarativeMappedObject):
     __tablename__ = 'system_group'
     __table_args__ = {'mysql_engine': 'InnoDB'}
     system_id = Column(Integer, ForeignKey('system.id',
-        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True, index=True)
     group_id = Column(Integer, ForeignKey('tg_group.group_id',
-        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True, index=True)
     group = relationship(Group, backref=backref('system_assocs', cascade='all, delete-orphan'))
 
 class SSHPubKey(DeclarativeMappedObject):

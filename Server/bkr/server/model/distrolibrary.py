@@ -31,10 +31,10 @@ xmldoc = xml.dom.minidom.Document()
 osversion_arch_map = Table('osversion_arch_map', DeclarativeMappedObject.metadata,
     Column('osversion_id', Integer,
            ForeignKey('osversion.id'),
-           primary_key=True),
+           primary_key=True, index=True),
     Column('arch_id', Integer,
            ForeignKey('arch.id'),
-           primary_key=True),
+           primary_key=True, index=True),
     mysql_engine='InnoDB',
 )
 

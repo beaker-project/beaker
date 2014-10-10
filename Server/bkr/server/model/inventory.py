@@ -186,20 +186,20 @@ class SystemStatusDuration(DeclarativeMappedObject):
 system_device_map = Table('system_device_map', DeclarativeMappedObject.metadata,
     Column('system_id', Integer,
            ForeignKey('system.id', onupdate='CASCADE', ondelete='CASCADE'),
-           primary_key=True),
+           primary_key=True, index=True),
     Column('device_id', Integer,
            ForeignKey('device.id'),
-           primary_key=True),
+           primary_key=True, index=True),
     mysql_engine='InnoDB',
 )
 
 system_arch_map = Table('system_arch_map', DeclarativeMappedObject.metadata,
     Column('system_id', Integer,
            ForeignKey('system.id', onupdate='CASCADE', ondelete='CASCADE'),
-           primary_key=True),
+           primary_key=True, index=True),
     Column('arch_id', Integer,
            ForeignKey('arch.id'),
-           primary_key=True),
+           primary_key=True, index=True),
     mysql_engine='InnoDB',
 )
 
