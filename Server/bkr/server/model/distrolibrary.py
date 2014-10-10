@@ -373,7 +373,7 @@ class OSVersion(DeclarativeMappedObject):
         {'mysql_engine': 'InnoDB'}
     )
     id = Column(Integer, autoincrement=True, primary_key=True)
-    osmajor_id = Column(Integer, ForeignKey('osmajor.id'))
+    osmajor_id = Column(Integer, ForeignKey('osmajor.id'), index=True)
     osminor = Column(Unicode(255))
     osmajor = relationship(OSMajor, backref=backref('osversions', order_by=[osminor]))
     arches = relationship(Arch, secondary=osversion_arch_map)
