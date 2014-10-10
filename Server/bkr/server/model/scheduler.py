@@ -1288,8 +1288,8 @@ class RetentionTag(BeakerTag):
     id = Column(Integer, ForeignKey('beaker_tag.id', onupdate='CASCADE',
             ondelete='CASCADE'), primary_key=True)
     is_default = Column('default_', Boolean)
-    expire_in_days = Column(Integer, default=0)
-    needs_product = Column(Boolean)
+    expire_in_days = Column(Integer, default=0, nullable=False)
+    needs_product = Column(Boolean, nullable=False)
     __mapper_args__ = {'polymorphic_identity': u'retention_tag'}
 
     def __init__(self, tag, is_default=False, needs_product=False, expire_in_days=None, *args, **kw):
@@ -1748,7 +1748,7 @@ class Recipe(TaskBase, DeclarativeMappedObject):
     role = Column(Unicode(255))
     panic = Column(Unicode(20))
     _partitions = Column(UnicodeText())
-    autopick_random = Column(Boolean, default=False)
+    autopick_random = Column(Boolean, nullable=False, default=False)
     log_server = Column(Unicode(255), index=True)
     virt_status = Column(RecipeVirtStatus.db_type(), index=True,
             nullable=False, default=RecipeVirtStatus.possible)

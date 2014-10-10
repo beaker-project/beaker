@@ -325,7 +325,7 @@ class Task(DeclarativeMappedObject):
     version = Column(Unicode(256))
     license = Column(Unicode(256))
     priority = Column(Unicode(256))
-    valid = Column(Boolean, default=True)
+    valid = Column(Boolean, default=True, nullable=False)
     types = relationship('TaskType', secondary=task_type_map, backref='tasks')
     excluded_osmajor = relationship('TaskExcludeOSMajor', backref='task')
     excluded_arch = relationship('TaskExcludeArch', backref='task')
