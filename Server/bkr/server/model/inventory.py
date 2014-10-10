@@ -1909,7 +1909,7 @@ class Device(DeclarativeMappedObject):
     __table_args__ = (
         UniqueConstraint('vendor_id', 'device_id', 'subsys_device_id',
                'subsys_vendor_id', 'bus', 'driver', 'description',
-               name='device_uix_1'),
+               'device_class_id', name='device_uix_1'),
         {'mysql_engine': 'InnoDB'}
     )
     id = Column(Integer, autoincrement=True, primary_key=True)
