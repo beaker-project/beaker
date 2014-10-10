@@ -102,6 +102,15 @@ class MigrationTest(unittest.TestCase):
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
+    def test_already_upgraded(self):
+        connection = self.migration_metadata.bind.connect()
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/0.17.sql'))
+        upgrade_db(self.migration_metadata)
+        # Upgrading an already-upgraded database should be a no-op.
+        upgrade_db(self.migration_metadata)
+        self.check_migrated_schema()
+
     # These schema dumps are derived from actual dumps from the Red Hat 
     # production Beaker instance at various points in time, which makes 
     # them a more realistic test case than the synthetically generated 

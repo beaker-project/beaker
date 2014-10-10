@@ -227,6 +227,7 @@ def upgrade_db(metadata):
                         '(you must manually migrate old databases '
                         'up to 0.11 before running beaker-init)')
             logger.info('Treating unstamped database as version %s' % rev)
+            context._update_current_rev(None, rev)
         return context.script._upgrade_revs('head', rev)
     run_alembic_operation(metadata, upgrade)
 
