@@ -1720,7 +1720,7 @@ class Recipe(TaskBase, DeclarativeMappedObject):
     status = Column(TaskStatus.db_type(), nullable=False,
             default=TaskStatus.new, index=True)
     reservation_request = relationship(RecipeReservationRequest, uselist=False)
-    start_time = Column(DateTime)
+    start_time = Column(DateTime, index=True)
     finish_time = Column(DateTime)
     _host_requires = Column(UnicodeText())
     _distro_requires = Column(UnicodeText())
