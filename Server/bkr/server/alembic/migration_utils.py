@@ -11,6 +11,12 @@ Utility functions for use in Alembic migration scripts.
 from alembic import op
 import sqlalchemy as sa
 
+def create_fk_if_absent(source_table, dest_table, source_columns, dest_columns):
+    fks = sa.inspect(op.get_bind()).get_foreign_keys(source_table)
+    if not any(fk['constrained_columns'] == source_columns for fk in fks):
+        op.create_foreign_key(None, source_table, dest_table,
+                source_columns, dest_columns)
+
 # When altering a MySQL ENUM column to add a new value, we can only add it at 
 # the end. Similarly values can only be removed from the end. The enum values 
 # must not be re-ordered, otherwise it will change the data stored in the 
