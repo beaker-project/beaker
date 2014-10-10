@@ -269,13 +269,15 @@ def get_parser():
                       dest="display_name", help="Full name of Admin account")
     parser.add_option("--downgrade", type="string", metavar='REVISION_IDENTIFIER',
                      help="Downgrade database to a previous version")
+    parser.add_option('--debug', action='store_true',
+            help='Show detailed progress information')
     return parser
 
 def main():
     parser = get_parser()
     opts, args = parser.parse_args()
     load_config_or_exit(opts.configfile)
-    log_to_stream(sys.stderr)
+    log_to_stream(sys.stderr, level=logging.DEBUG if opts.debug else logging.WARNING)
 
     from turbogears.database import metadata, bind_metadata
     bind_metadata()
