@@ -54,8 +54,13 @@ def upgrade():
     op.drop_index('email_address', 'tg_user')
     # add index email_address
     op.create_index('email_address', 'tg_user', ['email_address'])
+    # Need to replace the user_id index with a unique index, however its name 
+    # might be user_id or lab_controller_user_id...
+    old_index_name, = [index['name'] for index in
+            sa.inspect(op.get_bind()).get_indexes('lab_controller')
+            if index['column_names'] == ['user_id']]
     op.execute("ALTER TABLE lab_controller "
-            "DROP KEY user_id, ADD UNIQUE KEY user_id (user_id)")
+            "DROP KEY %s, ADD UNIQUE KEY user_id (user_id)" % old_index_name)
     op.execute("ALTER TABLE job "
                "ADD ntasks INT AFTER ttasks,"
                "MODIFY status ENUM('New', 'Processed', 'Queued', 'Scheduled',"

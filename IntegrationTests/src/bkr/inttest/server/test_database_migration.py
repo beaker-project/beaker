@@ -102,6 +102,46 @@ class MigrationTest(unittest.TestCase):
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
+    # These schema dumps are derived from actual dumps from the Red Hat 
+    # production Beaker instance at various points in time, which makes 
+    # them a more realistic test case than the synthetically generated 
+    # schemas used in the cases above.
+
+    def test_redhat_production_20140820(self):
+        connection = self.migration_metadata.bind.connect()
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/redhat-production-20140820.sql'))
+        upgrade_db(self.migration_metadata)
+        self.check_migrated_schema()
+        downgrade_db(self.migration_metadata, 'base')
+
+    def test_redhat_production_20140109(self):
+        connection = self.migration_metadata.bind.connect()
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/redhat-production-20140109.sql'))
+        upgrade_db(self.migration_metadata)
+        # This one won't pass the check, due to a snafu with task.rpm
+        #self.check_migrated_schema()
+        downgrade_db(self.migration_metadata, 'base')
+
+    def test_redhat_production_20130304(self):
+        connection = self.migration_metadata.bind.connect()
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/redhat-production-20130304.sql'))
+        upgrade_db(self.migration_metadata)
+        self.check_migrated_schema()
+        downgrade_db(self.migration_metadata, 'base')
+
+    def test_redhat_production_20120216(self):
+        connection = self.migration_metadata.bind.connect()
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/redhat-production-20120216.sql'))
+        raise unittest.SkipTest('Database migrations are not implemented '
+                'far enough into the past yet')
+        upgrade_db(self.migration_metadata)
+        self.check_migrated_schema()
+        downgrade_db(self.migration_metadata, 'base')
+
     def check_migrated_schema(self):
         """
         Compares the schema in the migrated db (self.migration_metadata) 
@@ -153,6 +193,21 @@ class MigrationTest(unittest.TestCase):
                 if 'ix_virt_resource_mac_address' in actual_indexes:
                     # may be left over from 0.16
                     del actual_indexes['ix_virt_resource_mac_address']
+            # These may exist for unknown hysterical raisins (commit 520b4ddd)
+            if table_name == 'log_recipe':
+                if 'recipe_id_id' in actual_indexes:
+                    del actual_indexes['recipe_id_id']
+            if table_name == 'log_recipe_task':
+                if 'recipe_task_id_id' in actual_indexes:
+                    del actual_indexes['recipe_task_id_id']
+            if table_name == 'log_recipe_task_result':
+                if 'recipe_task_result_id_id' in actual_indexes:
+                    del actual_indexes['recipe_task_result_id_id']
+            # This was accidentally created in 0.7.1 upgrade (commit 75a9bea9) 
+            # but it serves no purpose so we aren't adding it
+            if table_name == 'task':
+                if 'priority' in actual_indexes:
+                    del actual_indexes['priority']
             # For now, we are ignoring differences in index names. That's 
             # because we have a lot of cases where the SA generated name is 
             # ix_<table>_<col> and that will appear in a fresh schema, but an 
@@ -230,7 +285,8 @@ class MigrationTest(unittest.TestCase):
                     'Actual type %r should be equivalent to expected type %r'
                     % (actual.type, expected.type))
         if hasattr(expected.type, 'length'):
-            self.assertEquals(actual.type.length, expected.type.length)
+            self.assertEquals(actual.type.length, expected.type.length,
+                    '%r has wrong length' % actual)
         if hasattr(expected.type, 'enums'):
             self.assertItemsEqual(actual.type.enums, expected.type.enums)
         self.assertEquals(actual.nullable, expected.nullable,
@@ -253,7 +309,8 @@ class MigrationTest(unittest.TestCase):
                         '%r should not have a database default' % actual)
         actual_fk_targets = set(fk.target_fullname for fk in actual.foreign_keys)
         expected_fk_targets = set(fk.target_fullname for fk in expected.foreign_keys)
-        self.assertItemsEqual(actual_fk_targets, expected_fk_targets)
+        self.assertItemsEqual(actual_fk_targets, expected_fk_targets,
+                '%r has incorrect FK targets' % actual)
 
     def assert_indexes_equivalent(self, expected, actual):
         self.assertEquals(expected.name, actual.name)
