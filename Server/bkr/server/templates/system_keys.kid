@@ -23,7 +23,7 @@
       name='${key_name.name}' />
      <input type='hidden' id='${name}_${key_value.name}_hidden'
       name='${key_value.name}' />
-     <button class="btn btn-primary" type="submit"><i class="icon-plus"/> Add</button>
+     <button class="btn btn-primary" type="submit"><i class="fa fa-plus"/> Add</button>
    </form>
    </td>
   </tr>

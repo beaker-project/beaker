@@ -42,7 +42,7 @@ window.RecipeTasksView = Backbone.View.extend({
     },
     load_results: function () {
         var $pane = this.$('.results-pane');
-        $pane.html('<i class="icon-spinner icon-spin"></i> Loading&hellip;');
+        $pane.html('<i class="fa fa-spinner fa-spin"></i> Loading&hellip;');
         return $.ajax({
             url: '../tasks/do_search?tasks_tgp_order=id&tasks_tgp_limit=0&recipe_id=' + this.recipe_id,
             dataType: 'html',
@@ -52,7 +52,7 @@ window.RecipeTasksView = Backbone.View.extend({
     },
     load_failed: function () {
         var $pane = this.$('.failed-pane');
-        $pane.html('<i class="icon-spinner icon-spin"></i> Loading&hellip;');
+        $pane.html('<i class="fa fa-spinner fa-spin"></i> Loading&hellip;');
         return $.ajax({
             url: '../tasks/do_search?tasks_tgp_order=id&tasks_tgp_limit=0&is_failed=1&recipe_id=' + this.recipe_id,
             dataType: 'html',

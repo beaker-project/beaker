@@ -52,7 +52,7 @@ window.SystemHardwareEssentialsView = Backbone.View.extend({
     },
     submit: function (evt) {
         if (this.request_in_progress) return false;
-        this.$('.sync-status').html('<i class="icon-spinner icon-spin"></i> Saving&hellip;');
+        this.$('.sync-status').html('<i class="fa fa-spinner fa-spin"></i> Saving&hellip;');
         var attributes = _.object(_.map(this.$('input, select'),
                 function (elem) { return [elem.name, $(elem).val()]; }));
         this.model.save(attributes, {patch: true, wait: true});
@@ -109,7 +109,7 @@ var SystemHardwareDetailsEdit = Backbone.View.extend({
     submit: function (evt) {
         this.$('button').prop('disabled', true);
         this.$('button[type=submit]').html(
-                '<i class="icon-spinner icon-spin"></i> Saving&hellip;');
+                '<i class="fa fa-spinner fa-spin"></i> Saving&hellip;');
         var attributes = _.object(_.map(this.$('input, select'),
                 function (elem) { return [elem.name, $(elem).val()]; }));
         this.model.save(

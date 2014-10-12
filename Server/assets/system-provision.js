@@ -37,7 +37,7 @@ window.SystemProvisionView = Backbone.View.extend({
     submit: function (evt) {
         evt.preventDefault();
         this.request_in_progress = true;
-        this.$('.submit-status').html('<i class="icon-spinner icon-spin"></i> ' +
+        this.$('.submit-status').html('<i class="fa fa-spinner fa-spin"></i> ' +
                 'Provisioning&hellip;');
         this.update_button_state();
         bootbox.confirm_as_promise('Are you sure you want to provision the system?')

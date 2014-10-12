@@ -122,10 +122,10 @@ class Users(AdminPage):
     def make_remove_link(self, user):
         if user.removed is not None:
             return XML('<a class="btn" href="unremove?id=%s">'
-                    '<i class="icon-plus"/> Re-Add</a>' % user.user_id)
+                    '<i class="fa fa-plus"/> Re-Add</a>' % user.user_id)
         else:
             return XML('<a class="btn" href="remove?id=%s">'
-                    '<i class="icon-remove"/> Remove</a>' % user.user_id)
+                    '<i class="fa fa-times"/> Remove</a>' % user.user_id)
 
     @expose(template="bkr.server.templates.admin_grid")
     @paginate('list', default_order='user_name',limit=20)

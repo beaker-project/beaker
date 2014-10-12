@@ -141,7 +141,7 @@ class RetentionTag(AdminPage):
         def show_delete(x):
             if x.can_delete():
                 return XML('<a class="btn" href="./delete/%s">'
-                        '<i class="icon-remove"/> Delete</a>' % x.id)
+                        '<i class="fa fa-times"/> Delete</a>' % x.id)
             else:
                 return None
 

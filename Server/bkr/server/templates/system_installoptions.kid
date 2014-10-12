@@ -28,7 +28,7 @@
       <td colspan="4">${display_field_for("prov_koptionspost")}</td>
       <td>
        ${display_field_for("id")}
-       <a class="btn btn-primary" href="javascript:document.${name}.submit();"><i class="icon-plus"/> Add</a>
+       <a class="btn btn-primary" href="javascript:document.${name}.submit();"><i class="fa fa-plus"/> Add</a>
       </td>
     </tr>
   </table>

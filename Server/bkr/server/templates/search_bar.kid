@@ -68,7 +68,7 @@
 
     <td>
         <a class="btn"
-        href="javascript:SearchBarForm.removeItem('${field_id}_${repetition}')"><i class="icon-remove"/> Remove</a>
+        href="javascript:SearchBarForm.removeItem('${field_id}_${repetition}')"><i class="fa fa-times"/> Remove</a>
     </td>
     </tr>
     </tbody>
@@ -80,7 +80,7 @@
     <tr>
     <td colspan="2">
       <a id="doclink" class="btn"
-         href="javascript:SearchBarForm.addItem('${field_id}');"><i class="icon-plus"/> Add</a>
+         href="javascript:SearchBarForm.addItem('${field_id}');"><i class="fa fa-plus"/> Add</a>
     </td>
     </tr>
     </table>

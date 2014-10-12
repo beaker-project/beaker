@@ -2,7 +2,7 @@
   The system is owned by
   <a href="mailto:<%- owner.get('email_address') %>" title="<%- owner.get('display_name') %> &lt;<%- owner.get('email_address') %>&gt;"><%- owner.get('user_name') %></a>.
   <% if (can_change_owner) { %>
-    <button type="button" class="btn change"><i class="icon-edit"></i> Change</button>
+    <button type="button" class="btn change"><i class="fa fa-pencil-square-o"></i> Change</button>
   <% } %>
 </p>
 <p>
@@ -13,7 +13,7 @@
       <li>
         <%- cc_email %>
         <% if (can_change_notify_cc) { %>
-          <a href="#" class="cc-remove" data-cc="<%- cc_email %>" title="Remove"><i class="icon-remove-sign"></i></a>
+          <a href="#" class="cc-remove" data-cc="<%- cc_email %>" title="Remove"><i class="fa fa-times-circle-o"></i></a>
         <% } %>
       </li>
     <% }) %>

@@ -172,7 +172,7 @@ from bkr.server.reports import Reports
 
     <div class="alert flash" py:if="value_of('tg_flash', None)">
         ${tg_flash}
-        <a class="close" data-dismiss="alert" href="#"><i class="icon-remove" /></a>
+        <a class="close" data-dismiss="alert" href="#"><i class="fa fa-times" /></a>
     </div>
 
     <div py:replace="[item.text]+item[:]"/>

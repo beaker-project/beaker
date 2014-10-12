@@ -26,7 +26,7 @@ def make_edit_link(power):
 def make_remove_link(power):
     # make a remove link
     return XML('<a class="btn" href="remove?id=%s">'
-            '<i class="icon-remove"/> Remove</a>' % power.id)
+            '<i class="fa fa-times"/> Remove</a>' % power.id)
 
 def get_power_type(power):
     # return powertype name

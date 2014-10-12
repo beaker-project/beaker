@@ -90,7 +90,7 @@
                 <input type="hidden" name="distro_tree_id" value="${value.id}" />
                 <input type="hidden" id="url_hidden" name="url" />
                 <input type="hidden" id="lab_controller_id_hidden" name="lab_controller_id" />
-                <button class="btn btn-primary" type="submit"><i class="icon-plus"/> Add</button>
+                <button class="btn btn-primary" type="submit"><i class="fa fa-plus"/> Add</button>
                 </form>
             </td>
         </tr>

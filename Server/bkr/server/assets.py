@@ -137,9 +137,9 @@ def list_asset_sources(source_dir):
     # font-awesome is currently not managed by webassets because webassets 
     # breaks on non-UTF8 input files
     paths.extend([
-        'font-awesome/font/fontawesome-webfont.eot',
-        'font-awesome/font/fontawesome-webfont.svg',
-        'font-awesome/font/fontawesome-webfont.ttf',
-        'font-awesome/font/fontawesome-webfont.woff',
+        'font-awesome/fonts/fontawesome-webfont.eot',
+        'font-awesome/fonts/fontawesome-webfont.svg',
+        'font-awesome/fonts/fontawesome-webfont.ttf',
+        'font-awesome/fonts/fontawesome-webfont.woff',
     ])
     return paths

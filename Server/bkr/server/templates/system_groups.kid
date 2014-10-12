@@ -20,7 +20,7 @@
      <input type="hidden"
       id="${name}_${group.name}_${group.text_field.name}_hidden"
       name="${group.name}.text" />
-     <button class="btn btn-primary" type="submit"><i class="icon-plus"/> Add</button>
+     <button class="btn btn-primary" type="submit"><i class="fa fa-plus"/> Add</button>
     </form>
       </td>
     </tr>

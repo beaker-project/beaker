@@ -36,7 +36,7 @@ var SystemCommandsToolbar = Backbone.View.extend({
     },
     confirmed: function (command) {
         this.$('.sync-status').html(
-                '<i class="icon-spinner icon-spin"></i> Submitting command&hellip;');
+                '<i class="fa fa-spinner fa-spin"></i> Submitting command&hellip;');
         if (command == 'reboot') {
             // reboot is a special case, it is actually two commands: off then on
             this.model.command_queue.create(

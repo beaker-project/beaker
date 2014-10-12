@@ -89,7 +89,7 @@ window.SystemPowerSettingsView = Backbone.View.extend({
     },
     submit: function (evt) {
         if (this.request_in_progress) return false;
-        this.$('.sync-status').html('<i class="icon-spinner icon-spin"></i> Saving&hellip;');
+        this.$('.sync-status').html('<i class="fa fa-spinner fa-spin"></i> Saving&hellip;');
         var form_values = this.$('form').serializeArray();
         var attributes = _.object(_.pluck(form_values, 'name'), _.pluck(form_values, 'value'));
         // reprovision_distro_tree needs special treatment

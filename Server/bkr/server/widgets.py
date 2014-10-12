@@ -274,7 +274,7 @@ class DeleteLinkWidgetForm(Form, DeleteLinkWidget):
           py:replace="field.display()"/>
             <a href="#" onclick="javascript:job_delete(this.parentNode);return false;" 
                class="btn">
-              <i class="icon-remove" py:if="show_icon"/> ${action_text}
+              <i class="fa fa-times" py:if="show_icon"/> ${action_text}
             </a>
       </form>
     </span>
@@ -295,7 +295,7 @@ class DeleteLinkWidgetAJAX(DeleteLinkWidget):
     template="""<a xmlns:py='http://purl.org/kid/ns#' class="btn" href="#"
         onclick="javascript:do_and_confirm_ajax('${action}', ${data}, ${callback},
         '${msg}', '${action_type}');return false">
-            <i class="icon-remove" py:if="show_icon"/> ${action_text}
+            <i class="fa fa-times" py:if="show_icon"/> ${action_text}
         </a>"""
     params = ['data', 'callback', 'action_type']
 

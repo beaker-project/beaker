@@ -4,7 +4,7 @@
     <form name="${name}" action="${action}" method="${method}" py:if="not readonly">
    ${display_field_for("note")}
    ${display_field_for("id")}
-   <a class="btn btn-primary" href="javascript:document.${name}.submit();"><i class="icon-plus"/> Add</a>
+   <a class="btn btn-primary" href="javascript:document.${name}.submit();"><i class="fa fa-plus"/> Add</a>
     </form>
   <table class="table table-striped">
     <thead>

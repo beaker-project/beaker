@@ -26,7 +26,7 @@ window.SystemReportProblemModal = Backbone.View.extend({
         evt.preventDefault();
         this.$('button').prop('disabled', true);
         this.$('button[type=submit]').html(
-                '<i class="icon-spinner icon-spin"></i> Sending&hellip;');
+                '<i class="fa fa-spinner fa-spin"></i> Sending&hellip;');
         this.model.report_problem(
             this.$('[name=message]').val(),
             {success: _.bind(this.save_success, this),

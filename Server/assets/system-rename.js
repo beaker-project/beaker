@@ -27,7 +27,7 @@ var SystemRenameModal = Backbone.View.extend({
         evt.preventDefault();
         this.$('button').prop('disabled', true);
         this.$('button[type=submit]').html(
-                '<i class="icon-spinner icon-spin"></i> Renaming&hellip;');
+                '<i class="fa fa-spinner fa-spin"></i> Renaming&hellip;');
         this.model.save({fqdn: this.$('input[name=fqdn]').val()},
             {patch: true, wait: true})
             .done(_.bind(this.save_success, this))
@@ -57,7 +57,7 @@ window.SystemRenameButton = Backbone.View.extend({
         this.render();
     },
     render: function () {
-        this.$el.html('<i class="icon-edit"></i> Rename')
+        this.$el.html('<i class="fa fa-pencil-square-o"></i> Rename')
     },
     click: function () {
         new SystemRenameModal({model: this.model});

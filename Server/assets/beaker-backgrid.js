@@ -151,7 +151,7 @@ window.BeakerGrid = Backbone.View.extend({
         if (this.grid.body.$el.width()) {
             // Show semi-transparent overlay over the existing data while the 
             // new data loads.
-            var overlay = $('<div class="loading-overlay"><p><i class="icon-spinner icon-spin icon-4x"/></p></div>')
+            var overlay = $('<div class="loading-overlay"><p><i class="fa fa-spinner fa-spin fa-4x"/></p></div>')
                 .width(this.grid.body.$el.width())
                 .height(this.grid.body.$el.height())
                 .prependTo(this.grid.body.el);
@@ -160,7 +160,7 @@ window.BeakerGrid = Backbone.View.extend({
             // element has not been inserted to the DOM yet. We can't use an 
             // overlay in this case, we just show the spinner as a block-level 
             // element instead.
-            var div = $('<div class="backgrid-initial-loading-indicator"><i class="icon-spinner icon-spin icon-4x"/></div>')
+            var div = $('<div class="backgrid-initial-loading-indicator"><i class="fa fa-spinner fa-spin fa-4x"/></div>')
                 .insertAfter(this.grid.el);
         }
     },

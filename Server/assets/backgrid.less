@@ -16,16 +16,16 @@
     th.sortable:after {
         margin-left: 0.3em;
         text-decoration: none;
-        .icon(@sort);
-        .icon-muted;
+        content: @fa-var-sort;
+        color: @grayLighter;
     }
     th.sortable.ascending:after {
-        .icon(@sort-up);
-        .icon-dark;
+        content: @fa-var-sort-asc;
+        color: @textColor;
     }
     th.sortable.descending:after {
-        .icon(@sort-down);
-        .icon-dark;
+        content: @fa-var-sort-desc;
+        color: @textColor;
     }
 
     .number-cell, .integer-cell {
@@ -69,7 +69,7 @@
         padding-left: 2*@baseFontSize;
     }
     &:before {
-        content: @search;
+        content: @fa-var-search;
         font-family: "FontAwesome";
         opacity: 0.6;
         z-index: 200; // input-append uses z-index hackery

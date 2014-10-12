@@ -62,7 +62,7 @@ window.SystemSchedulerSettingsView = Backbone.View.extend({
     },
     submit: function (evt) {
         if (this.request_in_progress) return false;
-        this.$('.sync-status').html('<i class="icon-spinner icon-spin"></i> Saving&hellip;');
+        this.$('.sync-status').html('<i class="fa fa-spinner fa-spin"></i> Saving&hellip;');
         var attributes = _.object(_.map(this.$('textarea, select').filter(':enabled'),
                 function (elem) { return [elem.name, $(elem).val()]; }));
         this.model.save(attributes, {patch: true, wait: true});

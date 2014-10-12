@@ -83,7 +83,7 @@ window.SystemAccessPolicyView = Backbone.View.extend({
     submit: function (evt) {
         evt.preventDefault();
         if (this.request_in_progress) return false;
-        this.$('.sync-status').html('<i class="icon-spinner icon-spin"></i> Saving&hellip;');
+        this.$('.sync-status').html('<i class="fa fa-spinner fa-spin"></i> Saving&hellip;');
         this.sync_started();
         this.model.save_access_policy({
                 success: _.bind(this.sync_complete, this),
@@ -92,7 +92,7 @@ window.SystemAccessPolicyView = Backbone.View.extend({
     reset: function (evt) {
         evt.preventDefault();
         if (this.request_in_progress) return false;
-        this.$('.sync-status').html('<i class="icon-spinner icon-spin"></i> Loading&hellip;');
+        this.$('.sync-status').html('<i class="fa fa-spinner fa-spin"></i> Loading&hellip;');
         this.model.get('access_policy').fetch({
                 success: _.bind(this.render, this),
                 error: _.bind(this.sync_error, this)});

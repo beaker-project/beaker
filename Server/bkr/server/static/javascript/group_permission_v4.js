@@ -14,7 +14,7 @@ function add_group_permission_success (result) {
     var added_permission_tr = $("<tr></tr>");
     var td_permission = $("<td></td>").text(added_permission_name)
     var a_remove = $("<a></a>").attr('id', 'remove_permission_' + added_permission_id)
-    a_remove.html('<i class="icon-remove"></i> Remove');
+    a_remove.html('<i class="fa fa-times"></i> Remove');
     a_remove.addClass('btn');
     var td_remove = $("<td></td>").html(a_remove)
     added_permission_tr.append(td_permission).append(td_remove)

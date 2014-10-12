@@ -28,7 +28,7 @@ $(document).ready(function() {
         var this_link = this;
 
         var jqxhr = $.post(post_url,{}, function() {
-            $(this_link).html('<i class="icon-remove"></i> Remove')
+            $(this_link).html('<i class="fa fa-times"></i> Remove')
                 .removeClass('change_ownership_add')
                 .addClass('change_ownership_remove')
                 .attr('href', post_url.replace('grant_owner', 'revoke_owner'));
@@ -53,7 +53,7 @@ $(document).ready(function() {
             }
             else
             {
-                $(this_link).html('<i class="icon-plus"></i> Add')
+                $(this_link).html('<i class="fa fa-plus"></i> Add')
                     .removeClass('change_ownership_remove')
                     .addClass('change_ownership_add')
                     .attr('href', post_url.replace('revoke_owner', 'grant_owner'));

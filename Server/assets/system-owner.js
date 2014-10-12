@@ -28,7 +28,7 @@ window.SystemOwnerView = Backbone.View.extend({
     },
     remove_cc: function (evt) {
         $(evt.currentTarget).after(
-                ' <i class="icon-spinner icon-spin"></i> Removing&hellip;');
+                ' <i class="fa fa-spinner fa-spin"></i> Removing&hellip;');
         this.model.remove_cc($(evt.currentTarget).data('cc'),
             {error: _.bind(this.remove_cc_error, this)});
         evt.preventDefault();
@@ -72,7 +72,7 @@ var SystemAddCcForm = Backbone.View.extend({
             this.saving = true;
             this.$('button[type=submit]')
                 .prop('disabled', true)
-                .html('<i class="icon-spinner icon-spin"></i> Adding&hellip;');
+                .html('<i class="fa fa-spinner fa-spin"></i> Adding&hellip;');
             this.model.add_cc(new_cc, {error: _.bind(this.error, this)});
         }
         evt.preventDefault();
@@ -103,7 +103,7 @@ var SystemOwnerChangeModal = Backbone.View.extend({
     submit: function (evt) {
         this.$('button').prop('disabled', true);
         this.$('button[type=submit]').html(
-                '<i class="icon-spinner icon-spin"></i> Saving&hellip;');
+                '<i class="fa fa-spinner fa-spin"></i> Saving&hellip;');
         this.model.save(
             {owner: {user_name: this.$('input[name=user_name]').val()}},
             {patch: true, wait: true,

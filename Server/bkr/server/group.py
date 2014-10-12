@@ -198,12 +198,12 @@ class Groups(AdminPage):
                 if is_owner:
                     return XML('<a class="btn change_ownership_remove" '
                             'href="revoke_owner?group_id=%s&amp;id=%s">'
-                            '<i class="icon-remove"/> Remove</a>'
+                            '<i class="fa fa-times"/> Remove</a>'
                             % (group.group_id, member.user_id))
                 else:
                     return XML('<a class="btn change_ownership_add" '
                             'href="grant_owner?group_id=%s&amp;id=%s">'
-                            '<i class="icon-plus"/> Add</a>'
+                            '<i class="fa fa-plus"/> Add</a>'
                             % (group.group_id, member.user_id))
             else:
                 is_owner = 'Yes' if is_owner else 'No'
@@ -211,7 +211,7 @@ class Groups(AdminPage):
 
         def remove_button(member):
             return XML('<a class="btn" href="removeUser?group_id=%s&amp;id=%s">'
-                    '<i class="icon-remove"/> Remove</a>' % (group.group_id, member.user_id))
+                    '<i class="fa fa-times"/> Remove</a>' % (group.group_id, member.user_id))
 
         user_fields = [
             ('User', lambda x: x.user.user_name)
@@ -280,7 +280,7 @@ class Groups(AdminPage):
         if can_edit:
             permissions_fields.append((' ', lambda x: XML(
                     '<a class="btn" href="#" id="remove_permission_%s">'
-                    '<i class="icon-remove"/> Remove</a>' % x.permission_id)))
+                    '<i class="fa fa-times"/> Remove</a>' % x.permission_id)))
         group_permissions_grid = BeakerDataGrid(name='group_permission_grid',
                 fields=permissions_fields)
         group_permissions = GroupPermissions()

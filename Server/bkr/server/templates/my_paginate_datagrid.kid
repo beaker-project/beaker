@@ -55,10 +55,10 @@
     </tbody>
   </table>
   <div py:if="add_action" style="float: left;">
-    <a class="btn btn-primary" href="${tg.url(add_action)}"><i class="icon-plus"/> Add</a>
+    <a class="btn btn-primary" href="${tg.url(add_action)}"><i class="fa fa-plus"/> Add</a>
   </div>
   <div py:if="add_script" style="float: left;">
-    <a class="btn btn-primary" href="#" onclick="${add_script}; return false;"><i class="icon-plus"/> Add</a>
+    <a class="btn btn-primary" href="#" onclick="${add_script}; return false;"><i class="fa fa-plus"/> Add</a>
   </div>
   <div class="pagination pagination-right">
     <div class="pagination-beside">

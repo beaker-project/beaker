@@ -87,7 +87,7 @@ window.SystemQuickUsage = Backbone.View.extend({
         if (this.request_in_progress) return;
         this.request_in_progress = true;
         $(evt.currentTarget).addClass('disabled')
-            .html('<i class="icon-spinner icon-spin"></i> Taking&hellip;');
+            .html('<i class="fa fa-spinner fa-spin"></i> Taking&hellip;');
         this.model.take({
             success: _.bind(this.success, this),
             error: _.bind(this.error, this),
@@ -98,7 +98,7 @@ window.SystemQuickUsage = Backbone.View.extend({
         if (this.request_in_progress) return;
         this.request_in_progress = true;
         $(evt.currentTarget).addClass('disabled')
-            .html('<i class="icon-spinner icon-spin"></i> Returning&hellip;');
+            .html('<i class="fa fa-spinner fa-spin"></i> Returning&hellip;');
         this.model.return({
             success: _.bind(this.success, this),
             error: _.bind(this.error, this),
@@ -109,7 +109,7 @@ window.SystemQuickUsage = Backbone.View.extend({
         if (this.request_in_progress) return;
         this.request_in_progress = true;
         $(evt.currentTarget).addClass('disabled')
-            .html('<i class="icon-spinner icon-spin"></i> Borrowing&hellip;');
+            .html('<i class="fa fa-spinner fa-spin"></i> Borrowing&hellip;');
         this.model.borrow({
             success: _.bind(this.success, this),
             error: _.bind(this.error, this),
@@ -125,7 +125,7 @@ window.SystemQuickUsage = Backbone.View.extend({
         if (this.request_in_progress) return;
         this.request_in_progress = true;
         $(evt.currentTarget).addClass('disabled')
-            .html('<i class="icon-spinner icon-spin"></i> Returning loan&hellip;');
+            .html('<i class="fa fa-spinner fa-spin"></i> Returning loan&hellip;');
         this.model.return_loan({
             success: _.bind(this.success, this),
             error: _.bind(this.error, this),

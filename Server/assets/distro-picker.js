@@ -61,7 +61,7 @@ window.DistroPicker = Backbone.View.extend({
         if (this.get_distros_xhr)
             this.get_distros_xhr.abort();
         if (this.$('select[name=osmajor]').val()) {
-            var loading = $('<span><i class="icon-spinner icon-spin"></i> Loading&hellip;</span>');
+            var loading = $('<span><i class="fa fa-spinner fa-spin"></i> Loading&hellip;</span>');
             this.$('select[name=distro]').after(loading);
             var xhr = this.get_distros_xhr = $.ajax({
                 url: beaker_url_prefix +
@@ -88,7 +88,7 @@ window.DistroPicker = Backbone.View.extend({
         if (this.get_distro_trees_xhr)
             this.get_distro_trees_xhr.abort();
         if (this.$('select[name=distro]').val()) {
-            var loading = $('<span><i class="icon-spinner icon-spin"></i> Loading&hellip;</span>');
+            var loading = $('<span><i class="fa fa-spinner fa-spin"></i> Loading&hellip;</span>');
             this.$('select[name=distro_tree_id]').after(loading);
             var xhr = this.get_distro_trees_xhr = $.ajax({
                 url: beaker_url_prefix +

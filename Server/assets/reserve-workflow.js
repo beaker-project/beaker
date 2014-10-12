@@ -81,7 +81,7 @@ window.ReserveWorkflow = Backbone.View.extend({
             traditional: true,
         });
         this.request_in_progress = true;
-        this.$('.submit-status').html('<i class="icon-spinner icon-spin"></i> Submitting&hellip;');
+        this.$('.submit-status').html('<i class="fa fa-spinner fa-spin"></i> Submitting&hellip;');
         this.update_button_state();
         this.$('.form-actions .alert-error').remove();
         xhr.done(function (result) {

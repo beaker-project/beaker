@@ -467,10 +467,10 @@ class LabControllers(RPCRoot):
     def make_lc_remove_link(self, lc):
         if lc.removed is not None:
             return XML('<a class="btn" href="unremove?id=%s">'
-                    '<i class="icon-plus"/> Re-Add</a>' % lc.id)
+                    '<i class="fa fa-plus"/> Re-Add</a>' % lc.id)
         else:
             return XML('<a class="btn" href="#" onclick="has_watchdog(\'%s\')">'
-                    '<i class="icon-remove"/> Remove</a>' % lc.id)
+                    '<i class="fa fa-times"/> Remove</a>' % lc.id)
 
     @identity.require(identity.in_group("admin"))
     @expose(template="bkr.server.templates.grid")

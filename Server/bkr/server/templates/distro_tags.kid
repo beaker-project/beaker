@@ -7,7 +7,7 @@
    <form name="${name}" action="${tg.url(action)}" method="POST">
     ${display_field_for("id")}
     <input type='hidden' id="${name}_${tag.name}_${tag.text_field.name}_hidden" name="${tag.name}.text" />
-    <a class="btn" href="javascript:document.${name}.submit();" onclick="populate_form_elements(this.parentNode); return true;"><i class="icon-plus"/> Add</a>
+    <a class="btn" href="javascript:document.${name}.submit();" onclick="populate_form_elements(this.parentNode); return true;"><i class="fa fa-plus"/> Add</a>
     </form>
       </td>
     </tr>

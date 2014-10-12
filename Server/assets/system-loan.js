@@ -24,7 +24,7 @@ window.SystemLoanView = Backbone.View.extend({
     borrow: function () {
         this.$('button').prop('disabled', true);
         this.$('.sync-status').html(
-                '<i class="icon-spinner icon-spin"></i> Borrowing&hellip;');
+                '<i class="fa fa-spinner fa-spin"></i> Borrowing&hellip;');
         this.model.borrow({error: _.bind(this.error, this)});
     },
     lend: function () {
@@ -33,7 +33,7 @@ window.SystemLoanView = Backbone.View.extend({
     'return': function () {
         this.$('button').prop('disabled', true);
         this.$('.sync-status').html(
-                '<i class="icon-spinner icon-spin"></i> Returning&hellip;');
+                '<i class="fa fa-spinner fa-spin"></i> Returning&hellip;');
         this.model.return_loan({error: _.bind(this.error, this)});
     },
     request_loan: function () {
@@ -65,7 +65,7 @@ var SystemLendModal = Backbone.View.extend({
     submit: function (evt) {
         this.$('button').prop('disabled', true);
         this.$('button[type=submit]').html(
-                '<i class="icon-spinner icon-spin"></i> Saving&hellip;');
+                '<i class="fa fa-spinner fa-spin"></i> Saving&hellip;');
         this.model.lend(
             this.$('input[name=recipient]').val(),
             this.$('textarea[name=comment]').val(),
@@ -103,7 +103,7 @@ window.SystemLoanRequestModal = Backbone.View.extend({
         evt.preventDefault();
         this.$('button').prop('disabled', true);
         this.$('button[type=submit]').html(
-                '<i class="icon-spinner icon-spin"></i> Sending&hellip;');
+                '<i class="fa fa-spinner fa-spin"></i> Sending&hellip;');
         this.model.request_loan(
             this.$('[name=message]').val(),
             {success: _.bind(this.save_success, this),
