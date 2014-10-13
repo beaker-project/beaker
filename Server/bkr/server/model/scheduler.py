@@ -801,8 +801,10 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
                         lab_controller=lab_controller).count():
                     raise BX(_(u'No available systems compatible with %s on %s'
                             % (distro_tree, lab_controller)))
-                recipe.host_requires = ("""<and><labcontroller op="=" value="%s" />"""
-                        """<system_type op="=" value="Machine" /></and>"""
+                recipe.host_requires = (u'<hostRequires>'
+                        u'<labcontroller op="=" value="%s" />'
+                        u'<system_type op="=" value="Machine" />'
+                        u'</hostRequires>'
                         % lab_controller.fqdn)
                 recipeSet.lab_controller = lab_controller
             else:

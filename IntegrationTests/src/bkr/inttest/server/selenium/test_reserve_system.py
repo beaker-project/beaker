@@ -200,6 +200,32 @@ class ReserveWorkflow(WebDriverTestCase):
             self.assertEquals(recipe.host_requires,
                     u'<hostRequires><system_type value="Machine"/></hostRequires>')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1144205
+    def test_preserves_lab_requirement(self):
+        login(self.browser)
+        b = self.browser
+        b.get(get_server_base() + 'reserveworkflow')
+        Select(b.find_element_by_name('osmajor'))\
+            .select_by_visible_text(self.distro.osversion.osmajor.osmajor)
+        Select(b.find_element_by_name('distro')).select_by_visible_text(self.distro.name)
+        Select(b.find_element_by_name('distro_tree_id'))\
+            .select_by_visible_text('%s Server i386' % self.distro.name)
+        b.find_element_by_xpath(
+                '//label[contains(string(.), "Any system from lab:")]'
+                '/input[@type="radio"]').click()
+        Select(b.find_element_by_name('lab')).select_by_visible_text(self.lc.fqdn)
+        b.find_element_by_xpath('//button[normalize-space(text())="Submit job"]').click()
+        # should end up on the job page
+        job_id = b.find_element_by_xpath('//td[preceding-sibling::th/text()="Job ID"]/a').text
+        with session.begin():
+            job = TaskBase.get_by_t_id(job_id)
+            cloned_job_xml = job.to_xml(clone=True).toxml() # cloning re-parses hostRequires
+            self.assertIn(
+                    u'<hostRequires><labcontroller op="=" value="%s"/>'
+                    u'<system_type op="=" value="Machine"/></hostRequires>'
+                    % self.lc.fqdn,
+                    cloned_job_xml)
+
 def go_to_reserve_systems(browser, distro_tree=None):
     b = browser
     b.get(get_server_base() + 'reserveworkflow/')
