@@ -40,7 +40,14 @@ window.SystemProvisionView = Backbone.View.extend({
         this.$('.submit-status').html('<i class="fa fa-spinner fa-spin"></i> ' +
                 'Provisioning&hellip;');
         this.update_button_state();
-        bootbox.confirm_as_promise('Are you sure you want to provision the system?')
+        var msg = '<p>Are you sure you want to provision the system?</p>';
+        if (this.model.get('current_reservation') &&
+                this.model.get('current_reservation').get('user').get('user_name')
+                != window.beaker_current_user.get('user_name')) {
+            msg += ('<p><strong>You are not the current user of the system. '
+                   + 'This action may interfere with another user.</strong></p>');
+        }
+        bootbox.confirm_as_promise(msg)
             .fail(_.bind(this.submit_cancelled, this))
             .done(_.bind(this.submit_confirmed, this));
     },

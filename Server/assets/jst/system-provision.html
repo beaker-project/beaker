@@ -15,16 +15,15 @@
   <% } %>
   </p>
 <% } else { %>
-  <div class="alert alert-warning">
-    <h4><i class="fa fa-exclamation-triangle"></i> Caution</h4>
-    Provisioning this system will install a new operating system as soon as the 
-    system is rebooted, and <em>all data stored on the system will be lost</em>.
-    <% if (status == "Automated") { %>
+  <% if (current_reservation && current_reservation.get('type') == 'recipe') { %>
+    <div class="alert alert-warning">
+      <i class="fa fa-exclamation-triangle"></i>
       The currently running job will be interrupted.
       To reserve this system through the scheduler, use the
-      <a href="<%- beaker_url_prefix %>reserveworkflow/?system=<%- fqdn %>">Reserve Workflow</a>.
-    <% } %>
-  </div>
+      <a href="<%- beaker_url_prefix %>reserveworkflow/?system=<%- fqdn %>">Reserve Workflow</a>
+      instead.
+    </div>
+  <% } %>
   <form class="form-horizontal system-provision">
     <fieldset>
       <legend>Distro</legend>
