@@ -4,8 +4,8 @@
   <p>System must be associated to a lab controller in order to provision.</p>
 <% } else if (_.isEmpty(arches)) { %>
   <p>System must have at least one supported architecture defined in order to provision.</p>
-<% } else if (!can_power) { %>
-  <p>You do not have access to control this system.
+<% } else if (!can_configure_netboot) { %>
+  <p>You do not have access to provision this system.
   <% if (status == "Automated" && can_reserve) { %>
     To reserve this system through the scheduler, use the
     <a href="<%- beaker_url_prefix %>reserveworkflow/?system=<%- fqdn %>">Reserve Workflow</a>.

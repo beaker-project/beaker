@@ -879,7 +879,7 @@ def delete_system_access_policy_rules(fqdn):
 @app.route('/systems/<fqdn>/installations/', methods=['POST'])
 def provision_system(fqdn):
     system = _get_system_by_FQDN(fqdn)
-    if not system.can_power(identity.current.user):
+    if not system.can_configure_netboot(identity.current.user):
         raise Forbidden403('Cannot provision system')
     data = read_json_request(request)
     with convert_internal_errors():

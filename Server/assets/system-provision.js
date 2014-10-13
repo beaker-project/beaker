@@ -19,7 +19,7 @@ window.SystemProvisionView = Backbone.View.extend({
             options: options.distro_picker_options,
         });
         this.listenTo(this.model,
-                'change:lab_controller_id change:arches change:status change:can_power',
+                'change:lab_controller_id change:arches change:status change:can_configure_netboot',
                 this.render);
         this.listenTo(this.distro_picker.selection, 'change', this.update_button_state);
         this.render();

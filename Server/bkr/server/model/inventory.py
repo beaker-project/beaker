@@ -495,6 +495,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['can_change_power'] = self.can_edit(u)
             data['can_view_power'] = self.can_view_power(u)
             data['can_power'] = self.can_power(u)
+            data['can_configure_netboot'] = self.can_configure_netboot(u)
             data['can_take'] = self.is_free(u) and self.can_reserve_manually(u)
             data['can_return'] = (self.open_reservation is not None
                     and self.open_reservation.type != 'recipe'
@@ -515,6 +516,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['can_change_power'] = False
             data['can_view_power'] = False
             data['can_power'] = False
+            data['can_configure_netboot'] = False
             data['can_take'] = False
             data['can_return'] = False
             data['can_borrow'] = False
@@ -917,6 +919,24 @@ class System(DeclarativeMappedObject, ActivityMixin):
         """
         Does the given user have permission to run power/netboot commands on 
         this system?
+        The 'configure_netboot' command is treated specially, check the 
+        can_configure_netboot method for that instead.
+        """
+        self._ensure_user_is_authenticated(user)
+        if self.can_configure_netboot(user):
+            return True
+        # Anyone else needs the "control_system" permission
+        if (self.custom_access_policy and
+            self.custom_access_policy.grants(user, SystemPermission.control_system)):
+            return True
+        return False
+
+    def can_configure_netboot(self, user):
+        """
+        Does the given user have permission to configure netboot (i.e. install 
+        a new operating system) for this system?
+        We treat this separately from other power commands because it's even 
+        more destructive (will typically wipe all disks).
         """
         self._ensure_user_is_authenticated(user)
         # Current user can always control the system
@@ -927,10 +947,6 @@ class System(DeclarativeMappedObject, ActivityMixin):
             return True
         # Beaker admins can control any system
         if user.is_admin():
-            return True
-        # Anyone else needs the "control_system" permission
-        if (self.custom_access_policy and
-            self.custom_access_policy.grants(user, SystemPermission.control_system)):
             return True
         return False
 

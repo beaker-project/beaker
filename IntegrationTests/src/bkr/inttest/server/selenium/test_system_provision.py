@@ -5,15 +5,18 @@
 # (at your option) any later version.
 
 import datetime
+import unittest2 as unittest
+import requests
 from selenium.webdriver.support.ui import Select
 from bkr.server.model import SystemStatus, SSHPubKey, RenderedKickstart, \
-        ConfigItem, User, Provision
+        ConfigItem, User, Provision, SystemPermission
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest.server.requests_utils import post_json
 from turbogears.database import session
 from bkr.inttest import data_setup, get_server_base
 
-class SystemProvisionTest(WebDriverTestCase):
+class SystemProvisionWebUITest(WebDriverTestCase):
 
     def setUp(self):
         self.browser = self.get_browser()
@@ -69,7 +72,15 @@ class SystemProvisionTest(WebDriverTestCase):
         login(self.browser, user=user.user_name, password='testing')
         provision = self.go_to_provision_tab(system)
         provision.find_element_by_xpath('.//p[normalize-space(text())='
-                '"You do not have access to control this system."]')
+                '"You do not have access to provision this system."]')
+        # 'control_system' permission does not grant permission to provision
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1144196
+        with session.begin():
+            system.custom_access_policy.add_rule(everybody=True,
+                    permission=SystemPermission.control_system)
+        provision = self.go_to_provision_tab(system)
+        provision.find_element_by_xpath('.//p[normalize-space(text())='
+                '"You do not have access to provision this system."]')
 
     def test_provision(self):
         with session.begin():
@@ -155,3 +166,23 @@ class SystemProvisionTest(WebDriverTestCase):
         self.assertEquals(system.command_queue[2].action, 'configure_netboot')
         self.assert_(u'key1=value1 key1=value2 key2=value key3' in \
                          system.command_queue[2].kernel_options)
+
+class SystemProvisionHTTPTest(unittest.TestCase):
+
+    def setUp(self):
+        self.system = data_setup.create_system(shared=True)
+        self.system.custom_access_policy.add_rule(everybody=True,
+                permission=SystemPermission.control_system)
+
+    def test_no_permission(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': user.user_name,
+                'password': 'password'}).raise_for_status()
+        response = post_json(get_server_base() +
+                'systems/%s/installations/' % self.system.fqdn,
+                session=s, data={'distro_tree': {'id': -1}})
+        self.assertEquals(response.status_code, 403)
+        self.assertEquals(response.text,
+                'Insufficient permissions: Cannot provision system')

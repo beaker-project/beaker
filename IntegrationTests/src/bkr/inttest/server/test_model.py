@@ -364,6 +364,7 @@ class SystemPermissionsTest(DatabaseTestCase):
         self.assertRaises(RuntimeError, self.system.can_reserve_manually, None)
         self.assertRaises(RuntimeError, self.system.can_unreserve, None)
         self.assertRaises(RuntimeError, self.system.can_power, None)
+        self.assertRaises(RuntimeError, self.system.can_configure_netboot, None)
 
     def test_can_change_owner(self):
         self.assertTrue(self.system.can_change_owner(self.owner))
@@ -572,6 +573,23 @@ class SystemPermissionsTest(DatabaseTestCase):
         self.assertFalse(self.system.can_power(self.unprivileged))
         self.policy.add_rule(SystemPermission.control_system, user=self.unprivileged)
         self.assertTrue(self.system.can_power(self.unprivileged))
+
+    def test_can_configure_netboot(self):
+        # owner
+        self.assertTrue(self.system.can_configure_netboot(self.owner))
+        # admin
+        self.assertTrue(self.system.can_configure_netboot(self.admin))
+        # system's current user
+        user = data_setup.create_user()
+        self.assertFalse(self.system.can_configure_netboot(user))
+        self.system.user = user
+        self.assertTrue(self.system.can_configure_netboot(user))
+        # 'control_system' permission DOES NOT grant access to configure_netboot.
+        # This is mainly for historical reasons: in the past all Beaker users 
+        # had access to power any system, but not to "provision" it.
+        self.assertFalse(self.system.can_configure_netboot(self.unprivileged))
+        self.policy.add_rule(SystemPermission.control_system, user=self.unprivileged)
+        self.assertFalse(self.system.can_configure_netboot(self.unprivileged))
 
 class TestBrokenSystemDetection(DatabaseTestCase):
 
