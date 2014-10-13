@@ -796,11 +796,20 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
                 if not distro_tree.url_in_lab(lab_controller):
                     raise BX(_(u'%s is not available on %s'
                             % (distro_tree, lab_controller)))
+                if not MachineRecipe.hypothetical_candidate_systems(job.owner,
+                        distro_tree=distro_tree,
+                        lab_controller=lab_controller).count():
+                    raise BX(_(u'No available systems compatible with %s on %s'
+                            % (distro_tree, lab_controller)))
                 recipe.host_requires = ("""<and><labcontroller op="=" value="%s" />"""
                         """<system_type op="=" value="Machine" /></and>"""
                         % lab_controller.fqdn)
                 recipeSet.lab_controller = lab_controller
             else:
+                if not MachineRecipe.hypothetical_candidate_systems(job.owner,
+                        distro_tree=distro_tree).count():
+                    raise BX(_(u'No available systems compatible with %s'
+                            % distro_tree))
                 pass # leave hostrequires completely unset
             if kw.get('ks_meta'):
                 recipe.ks_meta = kw.get('ks_meta')
@@ -2656,7 +2665,7 @@ class MachineRecipe(Recipe):
         return systems
 
     @classmethod
-    def hypothetical_candidate_systems(cls, user, distro_tree=None):
+    def hypothetical_candidate_systems(cls, user, distro_tree=None, lab_controller=None):
         """
         If a recipe were constructed according to the given arguments, what 
         would its candidate systems be?
@@ -2672,6 +2681,8 @@ class MachineRecipe(Recipe):
         if distro_tree:
             systems = systems.filter(System.compatible_with_distro_tree(distro_tree))
             systems = systems.filter(System.in_lab_with_distro_tree(distro_tree))
+        if lab_controller:
+            systems = systems.filter(System.lab_controller == lab_controller)
         systems = System.scheduler_ordering(user, query=systems)
         return systems
 

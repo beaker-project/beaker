@@ -104,6 +104,33 @@ class ReserveWorkflow(WebDriverTestCase):
                     % (self.distro.name, self.lc.fqdn),
                 b.find_element_by_class_name('alert-error').text)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1062086
+    def test_no_matching_systems(self):
+        with session.begin():
+            data_setup.create_distro_tree(osmajor=u'Fedora21',
+                    distro_name=u'Fedora-21', variant=u'Server',
+                    arch=u'aarch64', lab_controllers=[self.lc])
+        login(self.browser)
+        b = self.browser
+        b.get(get_server_base() + 'reserveworkflow/')
+        Select(b.find_element_by_name('osmajor')).select_by_visible_text('Fedora21')
+        Select(b.find_element_by_name('distro')).select_by_visible_text('Fedora-21')
+        Select(b.find_element_by_name('distro_tree_id')).select_by_visible_text(
+                'Fedora-21 Server aarch64')
+        b.find_element_by_xpath(
+                '//label[contains(string(.), "Any system from lab:")]'
+                '/input[@type="radio"]').click()
+        Select(b.find_element_by_name('lab')).select_by_visible_text(self.lc.fqdn)
+        b.find_element_by_xpath('//button[text()="Submit job"]').click()
+        self.assertIn('No available systems',
+                b.find_element_by_class_name('alert-error').text)
+        b.find_element_by_xpath(
+                '//label[normalize-space(string(.))="Any system"]'
+                '/input[@type="radio"]').click()
+        b.find_element_by_xpath('//button[text()="Submit job"]').click()
+        self.assertIn('No available systems',
+                b.find_element_by_class_name('alert-error').text)
+
     def test_reserve_multiple_arch_tag_got_distro(self):
         with session.begin():
             self.distro.tags.append(u'FOO')
