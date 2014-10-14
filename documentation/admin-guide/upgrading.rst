@@ -70,6 +70,26 @@ To update your Beaker server's copy of the harness packages, run the
 Downgrading
 -----------
 
-The procedure for downgrading to an earlier version of Beaker is similar to 
-upgrading: use ``yum downgrade`` instead of ``yum upgrade``, and follow the 
-rollback instructions in the release notes if applicable.
+The procedure for downgrading to an earlier version of Beaker is similar to the 
+upgrade procedures described above, with the following differences:
+
+* Use ``yum downgrade`` instead of ``yum upgrade``, naming the specific package
+  version you are downgrading to.
+
+* If you are downgrading to an earlier release series, run
+  ``beaker-init --downgrade=<version>`` to downgrade the database schema 
+  *before* downgrading any packages. The table below lists the database version 
+  corresponding to each Beaker release series.
+
+==============  ================
+Beaker release  Database version
+==============  ================
+19              TBA
+0.18            ``431e4e2ccbba``
+0.17            ``431e4e2ccbba``
+0.16            ``2f38ab976d17``
+0.15            ``49a4a1e3779a``
+0.14            ``057b088bfb32``
+0.13            ``41aa3372239e``
+0.12            ``442672570b8f``
+==============  ================
