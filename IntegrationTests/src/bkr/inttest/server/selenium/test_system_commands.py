@@ -75,7 +75,7 @@ class SystemCommandsTest(WebDriverTestCase):
         modal.find_element_by_xpath('.//strong[text()='
                 '"You are not the current user of the system. '
                 'This action may interfere with another user."]')
-        modal.find_element_by_xpath('.//a[text()="OK"]').click()
+        modal.find_element_by_xpath('.//button[text()="OK"]').click()
         pane.find_element_by_xpath('.//table/tbody/tr[1]/td[4][text()="on"]')
         with session.begin():
             self.assertEquals(system.command_queue[0].action, 'on')
@@ -91,7 +91,7 @@ class SystemCommandsTest(WebDriverTestCase):
         modal.find_element_by_xpath('.//strong[text()='
                 '"You are not the current user of the system. '
                 'This action may interfere with another user."]')
-        modal.find_element_by_xpath('.//a[text()="OK"]').click()
+        modal.find_element_by_xpath('.//button[text()="OK"]').click()
         pane.find_element_by_xpath('.//table/tbody/tr[1]/td[4][text()="clear_netboot"]')
         with session.begin():
             self.assertEquals(system.command_queue[0].action, 'clear_netboot')

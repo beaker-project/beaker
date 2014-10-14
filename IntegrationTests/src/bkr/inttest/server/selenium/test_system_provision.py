@@ -83,7 +83,7 @@ class SystemProvisionTest(WebDriverTestCase):
         self.select_distro_tree(self.distro_tree)
         provision.find_element_by_xpath('.//button[text()="Provision"]').click()
         b.find_element_by_xpath(
-                './/div[contains(@class, "modal")]//a[text()="OK"]').click()
+                './/div[contains(@class, "modal")]//button[text()="OK"]').click()
         b.find_element_by_xpath('//div[contains(@class, "alert-success")]'
                 '/h4[text()="Provisioning successful"]')
         with session.begin():
@@ -106,7 +106,7 @@ class SystemProvisionTest(WebDriverTestCase):
         self.select_distro_tree(self.distro_tree)
         provision.find_element_by_xpath('.//button[text()="Provision"]').click()
         b.find_element_by_xpath(
-                './/div[contains(@class, "modal")]//a[text()="OK"]').click()
+                './/div[contains(@class, "modal")]//button[text()="OK"]').click()
         b.find_element_by_xpath('//div[contains(@class, "alert-success")]'
                 '/h4[text()="Provisioning successful"]')
         with session.begin():
@@ -129,7 +129,7 @@ class SystemProvisionTest(WebDriverTestCase):
         self.select_distro_tree(self.distro_tree)
         provision.find_element_by_xpath('.//button[text()="Provision"]').click()
         b.find_element_by_xpath(
-                './/div[contains(@class, "modal")]//a[text()="OK"]').click()
+                './/div[contains(@class, "modal")]//button[text()="OK"]').click()
         self.assertIn('root password has expired',
                 provision.find_element_by_class_name('alert-error').text)
 
@@ -149,7 +149,7 @@ class SystemProvisionTest(WebDriverTestCase):
         self.select_distro_tree(self.distro_tree)
         provision.find_element_by_xpath('.//button[text()="Provision"]').click()
         b.find_element_by_xpath(
-                './/div[contains(@class, "modal")]//a[text()="OK"]').click()
+                './/div[contains(@class, "modal")]//button[text()="OK"]').click()
         b.find_element_by_xpath('//div[contains(@class, "alert-success")]'
                 '/h4[text()="Provisioning successful"]')
         self.assertEquals(system.command_queue[2].action, 'configure_netboot')

@@ -51,7 +51,7 @@ Source7:        https://github.com/silviomoreto/bootstrap-select/archive/c0c9009
 Source8:        https://github.com/wyuenho/backgrid/archive/ff4b033d6f33b3af543e735869b225f4ac984acf/backgrid-ff4b033d6f33b3af543e735869b225f4ac984acf.tar.gz
 Source9:        https://github.com/wyuenho/backbone-pageable/archive/61912d577bb5289a80654e89deeb8dc505f283bd/backbone-pageable-61912d577bb5289a80654e89deeb8dc505f283bd.tar.gz
 Source10:        https://github.com/medialize/URI.js/archive/40a89137c5bc297f73467290c39ca596f891dcb9/URI.js-40a89137c5bc297f73467290c39ca596f891dcb9.tar.gz
-Source11:        https://github.com/makeusabrew/bootbox/archive/a557eb187a72ab375ef34970f4f231739de2b40d/bootbox-a557eb187a72ab375ef34970f4f231739de2b40d.tar.gz
+Source11:        https://github.com/makeusabrew/bootbox/archive/ed5c62a02ab1eb512c38f4be1d0f6774c51a85c6/bootbox-ed5c62a02ab1eb512c38f4be1d0f6774c51a85c6.tar.gz
 Source12:        https://github.com/ifightcrime/bootstrap-growl/archive/eba6d7685c842f83764290c9ab5e82f7d4ffea22/bootstrap-growl-eba6d7685c842f83764290c9ab5e82f7d4ffea22.tar.gz
 Source13:       https://github.com/eternicode/bootstrap-datepicker/archive/b374f23971817d507bded0dc16892e87a6d2fe42/bootstrap-datepicker-b374f23971817d507bded0dc16892e87a6d2fe42.tar.gz
 
