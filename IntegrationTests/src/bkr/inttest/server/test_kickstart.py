@@ -2719,6 +2719,26 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
         self.assertIn('\ndocker\n',
                       recipe.rendered_kickstart.kickstart)
 
+        # different harness
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="contained_harness harness=beah selinux=--disabled">
+                        <repos> <repo name="restraint" url="http://my/repo/"/> </repos>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-18" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        compare_expected('Fedora18-harness-contained-beah', recipe.id,
+                         recipe.rendered_kickstart.kickstart)
+
     def test_provision_rpmostree(self):
         recipe = self.provision_recipe('''
         <job>
