@@ -515,7 +515,7 @@ def mark_job_complete(job, finish_time=None, only=False, **kwargs):
             recipe.finish_time = finish_time
 
 def mark_recipe_waiting(recipe, start_time=None, system=None,
-        lab_controller=None, virt=False, **kwargs):
+        lab_controller=None, virt=False, instance_id=None, **kwargs):
     if start_time is None:
         start_time = datetime.datetime.utcnow()
     recipe.process()
@@ -526,7 +526,9 @@ def mark_recipe_waiting(recipe, start_time=None, system=None,
             if virt:
                 if not lab_controller:
                     lab_controller = create_labcontroller(fqdn=u'dummylab.example.invalid')
-                recipe.resource = VirtResource(uuid.uuid4(), lab_controller)
+                if not instance_id:
+                    instance_id = uuid.uuid4()
+                recipe.resource = VirtResource(instance_id, lab_controller)
                 recipe.recipeset.lab_controller = lab_controller
             else:
                 if not system:

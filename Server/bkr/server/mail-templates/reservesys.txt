@@ -1,0 +1,31 @@
+**  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **
+                 This System is reserved by {{ job.owner.email_address }}
+
+ To return this system early, you can click on 'Release System' against this recipe
+ from the Web UI. Ensure you have your logs off the system before returning to
+ Beaker.
+  {{ absolute_url('/recipes/%s' % recipe.id) }}
+{% if recipe.resource.system is defined %}
+
+ For ssh, kvm, serial and power control operations please look here:
+  {{ absolute_url(recipe.resource.system.href) }}
+{% elif recipe.resource.href %}
+
+ For system details, see:
+  {{ recipe.resource.href }}
+{% endif %}
+
+ For the default root password, see:
+  {{ absolute_url('/prefs') }}
+
+      Beaker Test information:
+                         HOSTNAME={{ recipe.resource.fqdn }}
+                            JOBID={{ job.id }}
+                         RECIPEID={{ recipe.id }}
+                           DISTRO={{ recipe.distro_tree }}
+                     ARCHITECTURE={{ recipe.distro_tree.arch }}
+
+      Job Whiteboard: {{ job.whiteboard }}
+
+      Recipe Whiteboard: {{ recipe.whiteboard }}
+**  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **

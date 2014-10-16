@@ -183,7 +183,7 @@ def group_membership_notify(user, group, agent, action):
                            ('X-Beaker-Group', group.group_name),
                            ('X-Beaker-Group-Action',action)])
 
-def reservesys_notify(recipe, system):
+def reservesys_notify(recipe):
     """ Send a system reservation notification to 
     job owner, and to job CC list if any. """
 
@@ -193,37 +193,10 @@ def reservesys_notify(recipe, system):
     if not sender:
         log.warning("beaker_email not defined in app.cfg; unable to send mail")
         return
-    send_mail(sender=sender, to=owner, cc=job.cc,
-              subject='[Beaker System Reservation] System: %s' % system,
-              body= u'''
-**  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **
-                 This System is reserved by %s.
-
- To return this system early, you can click on 'Release System' against this recipe
- from the Web UI. Ensure you have your logs off the system before returning to 
- Beaker.
-
- For ssh, kvm, serial and power control operations please look here:
-  %s
-
- For the default root password, see:
- %s
-
-      Beaker Test information:
-                         HOSTNAME=%s
-                            JOBID=%s
-                         RECIPEID=%s
-                           DISTRO=%s
-                     ARCHITECTURE=%s
-
-      Job Whiteboard: %s
-
-      Recipe Whiteboard: %s
-**  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **
-''' % (owner, absolute_url('/view/%s' % system),
-       absolute_url('/prefs'),
-       system, job.id, recipe.id, recipe.distro_tree,
-       recipe.distro_tree.arch, job.whiteboard, recipe.whiteboard),
+    subject = '[Beaker System Reserved] %s' % recipe.resource.fqdn
+    template = template_env.get_template('reservesys.txt')
+    body = template.render(recipe=recipe, job=job, absolute_url=absolute_url)
+    send_mail(sender=sender, to=owner, cc=job.cc, subject=subject, body=body,
               headers=[('X-Beaker-Notification', 'system-reservation'),
                        ('X-Beaker-Job-ID', job.id)])
 

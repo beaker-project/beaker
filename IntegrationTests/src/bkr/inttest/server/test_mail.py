@@ -6,6 +6,7 @@
 
 import email
 import re
+import uuid
 from turbogears.database import session
 from bkr.server.model import Arch, TaskResult
 from bkr.server.util import absolute_url
@@ -64,6 +65,8 @@ class BrokenSystemNotificationTest(DatabaseTestCase):
 
 class SystemReservationNotificationTest(DatabaseTestCase):
 
+    maxDiff = None
+
     def setUp(self):
         self.mail_capture = mail_capture.MailCaptureThread()
         self.mail_capture.start()
@@ -71,59 +74,113 @@ class SystemReservationNotificationTest(DatabaseTestCase):
 
     def test_system_reserved_notification(self):
         with session.begin():
-            owner = data_setup.create_user()
-            job = data_setup.create_running_job(owner=owner)
+            owner = data_setup.create_user(
+                    email_address=u'lizlemon@kabletown.com')
+            system = data_setup.create_system(fqdn=u'funcooker.ge.invalid')
+            distro_tree = data_setup.create_distro_tree(distro_name=u'MicrowaveOS',
+                    variant=u'ThreeHeats', arch=u'x86_64')
+            job = data_setup.create_running_job(owner=owner, system=system,
+                    distro_tree=distro_tree,
+                    whiteboard=u'Chain Reaction of Mental Anguish',
+                    recipe_whiteboard=u'Christmas Attack Zone')
+            recipe = job.recipesets[0].recipes[0]
 
-        system = job.recipesets[0].recipes[0].resource.fqdn
         with session.begin():
-            bkr.server.mail.reservesys_notify(job.recipesets[0].recipes[0], system)
+            bkr.server.mail.reservesys_notify(job.recipesets[0].recipes[0])
         self.assertEqual(len(self.mail_capture.captured_mails), 1)
         sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
         self.assertEqual(rcpts, [owner.email_address])
         msg = email.message_from_string(raw_msg)
         self.assertEqual(msg['To'], owner.email_address)
         self.assertEqual(msg['Subject'],
-                '[Beaker System Reservation] System: %s' % system)
+                '[Beaker System Reserved] funcooker.ge.invalid')
         self.assertEqual(msg['X-Beaker-Notification'], 'system-reservation')
 
-        recipe = job.recipesets[0].recipes[0]
-        system = recipe.resource.fqdn
-        owner = job.owner.email_address
-        expected_mail_body = u"""
+        expected_mail_body = u"""\
 **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **
-                 This System is reserved by %s.
+                 This System is reserved by lizlemon@kabletown.com
 
  To return this system early, you can click on 'Release System' against this recipe
- from the Web UI. Ensure you have your logs off the system before returning to 
+ from the Web UI. Ensure you have your logs off the system before returning to
  Beaker.
+  %(base)srecipes/%(recipeid)s
 
  For ssh, kvm, serial and power control operations please look here:
-  %s
+  %(base)sview/funcooker.ge.invalid
 
  For the default root password, see:
- %s
+  %(base)sprefs
 
       Beaker Test information:
-                         HOSTNAME=%s
-                            JOBID=%s
-                         RECIPEID=%s
-                           DISTRO=%s
-                     ARCHITECTURE=%s
+                         HOSTNAME=funcooker.ge.invalid
+                            JOBID=%(jobid)s
+                         RECIPEID=%(recipeid)s
+                           DISTRO=MicrowaveOS ThreeHeats x86_64
+                     ARCHITECTURE=x86_64
 
-      Job Whiteboard: %s
+      Job Whiteboard: Chain Reaction of Mental Anguish
 
-      Recipe Whiteboard: %s
+      Recipe Whiteboard: Christmas Attack Zone
 **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **""" \
-        % (owner,
-           absolute_url('/view/%s' % system),
-           absolute_url('/prefs'),
-           system, job.id,
-           recipe.id, recipe.distro_tree,
-           recipe.distro_tree.arch,
-           job.whiteboard,
-           recipe.whiteboard)
+            % dict(base=get_server_base(), recipeid=recipe.id, jobid=job.id)
         actual_mail_body = msg.get_payload(decode=True)
         self.assertEqual(actual_mail_body, expected_mail_body)
+
+    def test_reserved_openstack_instance(self):
+        with session.begin():
+            owner = data_setup.create_user(
+                    email_address=u'jackdonaghy@kabletown.com')
+            distro_tree = data_setup.create_distro_tree(distro_name=u'MicrowaveOS',
+                    variant=u'ThreeHeats', arch=u'x86_64')
+            job = data_setup.create_running_job(owner=owner,
+                    virt=True, instance_id=uuid.UUID('00000000-1111-2222-3333-444444444444'),
+                    distro_tree=distro_tree,
+                    whiteboard=u'Operation Righteous Cowboy Lightning',
+                    recipe_whiteboard=u'Everything Sunny All the Time Always')
+            recipe = job.recipesets[0].recipes[0]
+            data_setup.mark_recipe_installation_finished(recipe,
+                    fqdn=u'bitenuker.ge.invalid')
+
+        with session.begin():
+            bkr.server.mail.reservesys_notify(recipe)
+        self.assertEqual(len(self.mail_capture.captured_mails), 1)
+        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        self.assertEqual(rcpts, [owner.email_address])
+        msg = email.message_from_string(raw_msg)
+        self.assertEqual(msg['To'], owner.email_address)
+        self.assertEqual(msg['Subject'],
+                '[Beaker System Reserved] bitenuker.ge.invalid')
+        self.assertEqual(msg['X-Beaker-Notification'], 'system-reservation')
+
+        expected_mail_body = u"""\
+**  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **
+                 This System is reserved by jackdonaghy@kabletown.com
+
+ To return this system early, you can click on 'Release System' against this recipe
+ from the Web UI. Ensure you have your logs off the system before returning to
+ Beaker.
+  %(base)srecipes/%(recipeid)s
+
+ For system details, see:
+  http://openstack.example.invalid/dashboard/project/instances/00000000-1111-2222-3333-444444444444/
+
+ For the default root password, see:
+  %(base)sprefs
+
+      Beaker Test information:
+                         HOSTNAME=bitenuker.ge.invalid
+                            JOBID=%(jobid)s
+                         RECIPEID=%(recipeid)s
+                           DISTRO=MicrowaveOS ThreeHeats x86_64
+                     ARCHITECTURE=x86_64
+
+      Job Whiteboard: Operation Righteous Cowboy Lightning
+
+      Recipe Whiteboard: Everything Sunny All the Time Always
+**  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **""" \
+            % dict(base=get_server_base(), recipeid=recipe.id, jobid=job.id)
+        actual_mail_body = msg.get_payload(decode=True)
+        self.assertMultiLineEqual(actual_mail_body, expected_mail_body)
 
 class JobCompletionNotificationTest(DatabaseTestCase):
 

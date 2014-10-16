@@ -2239,7 +2239,7 @@ class Recipe(TaskBase, DeclarativeMappedObject):
             if self.status == TaskStatus.running and self.reservation_request:
                 min_status = TaskStatus.reserved
                 self.extend(self.reservation_request.duration)
-                mail.reservesys_notify(self, self.resource.fqdn)
+                mail.reservesys_notify(self)
                 log.debug('%s moved to Reserved', self.t_id)
             elif self.status == TaskStatus.reserved and self.status_watchdog() > 0:
                 min_status = TaskStatus.reserved
@@ -3475,16 +3475,24 @@ class VirtResource(RecipeResource):
         if self.fqdn:
             span.text += self.fqdn + u' '
         span.text += u'(OpenStack instance '
-        # don't hyperlink it if the instance is deleted
-        if self.recipe.is_finished():
+        if not self.href:
             span.text += unicode(self.instance_id) + u')'
         else:
-            url = urlparse.urljoin(get('openstack.dashboard_url'),
-                    'project/instances/%s/' % self.instance_id)
-            a = make_link(url=url, text=unicode(self.instance_id))
+            a = make_link(url=self.href, text=unicode(self.instance_id))
             a.tail = u')'
             span.append(a)
         return span
+
+    @property
+    def href(self):
+        """
+        Returns the URL to the Horizon dashboard for this instance.
+        """
+        # don't hyperlink it if the instance is deleted
+        if self.recipe.is_finished():
+            return None
+        return urlparse.urljoin(get('openstack.dashboard_url'),
+                'project/instances/%s/' % self.instance_id)
 
     def install_options(self, distro_tree):
         yield InstallOptions.from_strings('no_clock_sync', u'console=tty0 console=ttyS0,115200n8', '')
