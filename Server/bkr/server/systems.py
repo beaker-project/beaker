@@ -443,7 +443,9 @@ def update_system(fqdn):
                 system.power.power_type = new_power_type
                 changed = True
         if 'power_address' in data:
-            new_power_address = data['power_address'] or u''
+            new_power_address = data['power_address']
+            if not new_power_address:
+                raise ValueError('Power address is required')
             if new_power_address != system.power.power_address:
                 record_activity(u'power_address', system.power.power_address,
                         data['power_address'])

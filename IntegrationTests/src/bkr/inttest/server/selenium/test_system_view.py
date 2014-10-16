@@ -437,19 +437,24 @@ class SystemViewTestWD(WebDriverTestCase):
         # we can't actually check the HTML5 validation error
         tab.find_element_by_css_selector('input[name=power_quiescent_period]:invalid')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1070561
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1152887
     def test_add_power_with_blank_address(self):
         with session.begin():
             lc = data_setup.create_labcontroller()
             system = data_setup.create_system(lab_controller=lc, with_power=False)
         b = self.browser
         login(b)
-        self.go_to_system_view(tab='Power Settings')
+        self.go_to_system_view(system, tab='Power Settings')
         tab = b.find_element_by_id('power-settings')
         BootstrapSelect(tab.find_element_by_name('power_type'))\
             .select_by_visible_text('ilo')
-        self.assertEqual(tab.find_element_by_name('power_address').text, '')
+        self.assertEqual(
+                tab.find_element_by_name('power_address').get_attribute('value'),
+                '')
         tab.find_element_by_tag_name('form').submit()
-        tab.find_element_by_xpath('.//span[@class="sync-status" and not(text())]')
+        # we can't actually check the HTML5 validation error
+        tab.find_element_by_css_selector('input[name=power_address]:invalid')
 
     def test_update_power(self):
         orig_date_modified = self.system.date_modified
