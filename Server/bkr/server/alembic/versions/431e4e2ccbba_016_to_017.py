@@ -18,6 +18,7 @@ down_revision = '2f38ab976d17'
 from alembic import op
 import sqlalchemy as sa
 from bkr.server.model import UUID
+from bkr.server.alembic.migration_utils import find_unique
 
 def upgrade():
     op.create_table('openstack_region',
@@ -88,8 +89,13 @@ def downgrade():
     op.drop_column('tg_user', 'openstack_username')
     op.drop_index('email_address', 'tg_user')
     op.create_unique_constraint('email_address', 'tg_user', ['email_address'])
+    # We want to replace the unique constraint on lab_controller.user_id with 
+    # an ordinary index. The constraint will be called 'uc_user_id' if it was 
+    # created by following the original 0.17 upgrade notes, otherise it will be 
+    # called 'user_id'.
+    unique_name = find_unique('lab_controller', ['user_id'])
     op.execute("ALTER TABLE lab_controller "
-               "DROP KEY user_id, ADD KEY user_id (user_id)")
+               "DROP KEY %s, ADD KEY user_id (user_id)" % unique_name)
     op.execute("ALTER TABLE job "
                "DROP ntasks,"
                "MODIFY status ENUM('New', 'Processed', 'Queued', 'Scheduled',"

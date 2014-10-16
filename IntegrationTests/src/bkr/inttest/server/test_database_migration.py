@@ -124,15 +124,6 @@ class MigrationTest(unittest.TestCase):
         self.check_migrated_schema()
         downgrade_db(self.migration_metadata, 'base')
 
-    def test_redhat_production_20140109(self):
-        connection = self.migration_metadata.bind.connect()
-        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                'database-dumps/redhat-production-20140109.sql'))
-        upgrade_db(self.migration_metadata)
-        # This one won't pass the check, due to a snafu with task.rpm
-        #self.check_migrated_schema()
-        downgrade_db(self.migration_metadata, 'base')
-
     def test_redhat_production_20130304(self):
         connection = self.migration_metadata.bind.connect()
         connection.execute(pkg_resources.resource_string('bkr.inttest.server',

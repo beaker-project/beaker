@@ -17,11 +17,10 @@ down_revision = '218cc5b1c361'
 
 from alembic import op
 import sqlalchemy as sa
+from bkr.server.alembic.migration_utils import create_unique_if_absent
 
 def upgrade():
-    uniques = sa.inspect(op.get_bind()).get_unique_constraints('beaker_tag')
-    if not any(unique['column_names'] == ['tag', 'type'] for unique in uniques):
-        op.create_unique_constraint('tag', 'beaker_tag', ['tag', 'type'])
+    create_unique_if_absent('tag', 'beaker_tag', ['tag', 'type'])
 
 def downgrade():
     pass # no downgrade because we are fixing a mistake in an upgrade

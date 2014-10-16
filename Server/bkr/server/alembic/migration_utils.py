@@ -17,6 +17,25 @@ def create_fk_if_absent(source_table, dest_table, source_columns, dest_columns):
         op.create_foreign_key(None, source_table, dest_table,
                 source_columns, dest_columns)
 
+def find_unique(table, columns):
+    """
+    Returns the string name of the unique constraint which applies to the given 
+    columns, or None if no matching constraint exists.
+    """
+    unique_info = None
+    for info in sa.inspect(op.get_bind()).get_unique_constraints(table):
+        if info['column_names'] == columns:
+            unique_info = info
+            break
+    if unique_info:
+        return unique_info['name']
+    else:
+        return None
+
+def create_unique_if_absent(name, table, columns):
+    if find_unique(table, columns) is None:
+        op.create_unique_constraint(name, table, columns)
+
 # When altering a MySQL ENUM column to add a new value, we can only add it at 
 # the end. Similarly values can only be removed from the end. The enum values 
 # must not be re-ordered, otherwise it will change the data stored in the 
