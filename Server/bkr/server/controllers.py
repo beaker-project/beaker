@@ -353,10 +353,11 @@ class Root(RPCRoot):
                 redirect(url('/reserveworkflow/', **kw))
         else:
             distro_tree = None
-        # XXX add force here when we support it
         query = MachineRecipe.hypothetical_candidate_systems(
-                identity.current.user, distro_tree)\
+                identity.current.user, distro_tree, force=True)\
                 .order_by(None)
+        # filter out broken systems for now
+        query = query.filter(System.status != SystemStatus.broken)
         warn = None
         if query.count() < 1:
             warn = u'No Systems compatible with %s' % distro_tree

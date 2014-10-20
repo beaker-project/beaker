@@ -9,7 +9,7 @@ from bkr.inttest.server.webdriver_utils import login, logout, \
         search_for_system, check_system_search_results
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.server.model import Arch, ExcludeOSMajor, SystemType, \
-        LabControllerDistroTree, SystemPermission, TaskBase
+        LabControllerDistroTree, SystemPermission, TaskBase, SystemStatus
 from selenium.webdriver.support.ui import Select
 import unittest, time, re, os
 from turbogears.database import session
@@ -225,6 +225,36 @@ class ReserveWorkflow(WebDriverTestCase):
                     u'<system_type op="=" value="Machine"/></hostRequires>'
                     % self.lc.fqdn,
                     cloned_job_xml)
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1093226
+    def test_can_reserve_manual_system(self):
+        with session.begin():
+            broken_system = data_setup.create_system(arch=u'i386', shared=True,
+                                                     status=SystemStatus.broken,
+                                                     lab_controller=self.lc)
+            manual_system = data_setup.create_system(arch=u'i386', shared=True,
+                                                     status=SystemStatus.manual,
+                                                     lab_controller=self.lc)
+        b = self.browser
+        login(b)
+        # broken system should not be present
+        go_to_reserve_systems(b, distro_tree=self.distro_tree_i386)
+        search_for_system(b, broken_system)
+        check_system_search_results(b, absent=[broken_system])
+        # provision manual system
+        go_to_reserve_systems(b, distro_tree=self.distro_tree_i386)
+        search_for_system(b, manual_system)
+        row = b.find_element_by_xpath('//tr[normalize-space(string(td))="%s"]' % manual_system.fqdn)
+        row.find_element_by_link_text('Reserve Now').click()
+        b.find_element_by_xpath('//button[normalize-space(text())="Submit job"]').click()
+        # should end up on the job page
+        job_id = b.find_element_by_xpath('//td[preceding-sibling::th/text()="Job ID"]/a').text
+        with session.begin():
+            job = TaskBase.get_by_t_id(job_id)
+            cloned_job_xml = job.to_xml(clone=True).toxml() # cloning re-parses hostRequires
+            self.assertIn(
+                u'<hostRequires force="%s"/>' % manual_system.fqdn,
+                cloned_job_xml)
 
 def go_to_reserve_systems(browser, distro_tree=None):
     b = browser

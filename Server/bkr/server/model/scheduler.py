@@ -778,9 +778,8 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
             if pick == 'fqdn':
                 system = kw.get('system')
                 # Some extra sanity checks, to help out the user
-                # XXX update this if/when force="" is used
-                if system.status != SystemStatus.automated:
-                    raise BX(_(u'%s cannot be reserved through the scheduler' % system))
+                if system.status == SystemStatus.removed:
+                    raise BX(_(u'%s is removed' % system))
                 if not system.can_reserve(job.owner):
                     raise BX(_(u'You do not have access to reserve %s' % system))
                 if not system.in_lab_with_distro_tree(distro_tree):
@@ -789,7 +788,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
                 if not system.compatible_with_distro_tree(distro_tree):
                     raise BX(_(u'%s does not support %s' % (system, distro_tree)))
                 # Inlcude the XML definition so that cloning this job will act as expected.
-                recipe.host_requires = system.to_xml().toxml()
+                recipe.host_requires = u'<hostRequires force="%s" />' % system.fqdn
                 recipe.systems.append(system)
             elif pick == 'lab':
                 lab_controller = kw.get('lab')
@@ -811,7 +810,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
                 if not MachineRecipe.hypothetical_candidate_systems(job.owner,
                         distro_tree=distro_tree).count():
                     raise BX(_(u'No available systems compatible with %s'
-                            % distro_tree))
+                               % distro_tree))
                 pass # leave hostrequires completely unset
             if kw.get('ks_meta'):
                 recipe.ks_meta = kw.get('ks_meta')
@@ -2667,7 +2666,8 @@ class MachineRecipe(Recipe):
         return systems
 
     @classmethod
-    def hypothetical_candidate_systems(cls, user, distro_tree=None, lab_controller=None):
+    def hypothetical_candidate_systems(cls, user, distro_tree=None, lab_controller=None, 
+                                       force=False):
         """
         If a recipe were constructed according to the given arguments, what 
         would its candidate systems be?
@@ -2678,8 +2678,11 @@ class MachineRecipe(Recipe):
         systems = XmlHost.from_string('<hostRequires><system_type value="%s"/></hostRequires>' %
                                       cls.systemtype).apply_filter(systems)
         systems = systems.filter(System.can_reserve(user))
-        # XXX adjust this condition when we have force=""
-        systems = systems.filter(System.status == SystemStatus.automated)
+        if not force:
+            systems = systems.filter(System.status == SystemStatus.automated)
+        else:
+            systems = systems.filter(System.status != SystemStatus.removed)
+
         if distro_tree:
             systems = systems.filter(System.compatible_with_distro_tree(distro_tree))
             systems = systems.filter(System.in_lab_with_distro_tree(distro_tree))
