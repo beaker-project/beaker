@@ -422,6 +422,8 @@ class Root(RPCRoot):
         return return_dict
  
     def _systems(self, systems, title, *args, **kw):
+        extra_hiddens = {}
+
         # To exclude search on System/Status for the "Removed" Systems
         # page
         if kw.get('exclude_status', None):
@@ -432,8 +434,9 @@ class Root(RPCRoot):
         # Added for group.get_systems()
         if kw.has_key('group_id'):
             extra_hiddens={'group_id':kw['group_id']}
-        else:
-            extra_hiddens = {}
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1154887
+        if kw.has_key('distro_tree_id'):
+            extra_hiddens['distro_tree_id'] = kw['distro_tree_id']
 
         search_bar = SearchBar(name='systemsearch',
                                label=_(u'System Search'),

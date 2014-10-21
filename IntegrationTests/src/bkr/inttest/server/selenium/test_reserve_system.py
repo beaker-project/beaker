@@ -319,6 +319,8 @@ class ReserveSystem(WebDriverTestCase):
         login(self.browser)
         b = self.browser
         go_to_reserve_systems(b, self.distro_tree)
+        #https://bugzilla.redhat.com/show_bug.cgi?id=1154887
+        search_for_system(b, self.system)
         b.find_element_by_xpath('//tr[normalize-space(string(td[1]))="%s"]'
                 '/td/a[text()="Reserve Now"]' % self.system.fqdn).click()
         b.find_element_by_name('whiteboard').send_keys(unicode(self.distro_tree))
