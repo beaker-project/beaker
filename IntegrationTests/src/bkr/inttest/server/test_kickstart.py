@@ -654,6 +654,7 @@ class KickstartTest(unittest.TestCase):
                         <guestrecipe guestargs="--ram=1024 vcpus=1">
                             <distroRequires>
                                 <distro_name op="=" value="RHEL-6.2" />
+                                <distro_arch op="=" value="x86_64" />
                             </distroRequires>
                             <hostRequires/>
                             <task name="/distribution/install" />
@@ -661,25 +662,18 @@ class KickstartTest(unittest.TestCase):
                         </guestrecipe>
                         <distroRequires>
                             <distro_name op="=" value="RHEL-6.2" />
+                            <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
                         <task name="/distribution/install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
-            </job>''')
+            </job>''', self.system)
         guest = recipe.guests[0]
         ks = guest.rendered_kickstart.kickstart
-        self.assertIn('if [ -d /etc/init ] ; then\n'
-            '    cat << EOF >/etc/init/ttyS0.conf\n'
-            '# start ttyS0\nstart on runlevel [2345]\n'
-            'stop on runlevel [S016]\ninstance ttyS0\n'
-            'respawn\npre-start exec /sbin/securetty ttyS0\n'
-            'exec /sbin/agetty /dev/ttyS0 115200 vt100-nav\nEOF\n'
-            '\n    cat << EOF >/etc/init/ttyS1.conf\n'
-            '# start ttyS1\nstart on runlevel [2345]\nstop on runlevel [S016]\n'
-            'instance ttyS1\nrespawn\npre-start exec /sbin/securetty ttyS1\n'
-            'exec /sbin/agetty /dev/ttyS1 115200 vt100-nav\nEOF\n', ks)
+        compare_expected('RedHatEnterpriseLinux6-scheduler-guest', guest.id,
+                         ks)
 
     def test_rhel6_autopart_type_ignored(self):
         recipe = self.provision_recipe('''
