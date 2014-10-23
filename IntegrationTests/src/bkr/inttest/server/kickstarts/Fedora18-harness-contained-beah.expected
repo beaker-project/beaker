@@ -1,0 +1,425 @@
+nfs --server lab.test-kickstart.invalid --dir /distros/F-18/GOLD/Fedora/x86_64/os/
+#url --url=nfs://lab.test-kickstart.invalid:/distros/F-18/GOLD/Fedora/x86_64/os/
+
+# System bootloader configuration
+bootloader --location=mbr
+text
+# no specific network configuration
+
+repo --name=fedora-updates --mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=updates-released-f18&arch=x86_64
+repo --name=beaker-debug --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/F-18/GOLD/Fedora/x86_64/debug
+repo --name=restraint --cost=100 --baseurl=http://my/repo/
+
+firewall --disabled
+# Run the Setup Agent on first boot
+firstboot --disable
+# System keyboard
+keyboard us
+# System language
+lang en_US.UTF-8
+
+reboot
+#Root password
+rootpw --iscrypted $1$beaker$yMeLK4p1IVkFa80RyTkpE.
+# SELinux configuration
+selinux --disabled
+
+
+# System timezone
+timezone America/New_York
+# Install OS instead of upgrade
+install
+
+zerombr
+clearpart --all --initlabel
+
+autopart
+# no snippet data for Fedora18
+# no snippet data for Fedora
+# no snippet data for system
+
+%packages --ignoremissing
+docker-io
+# no snippet data for packages
+chrony
+%end
+
+
+
+%pre --log=/dev/console
+set -x
+# Some distros have curl in their minimal install set, others have wget.
+# We define a wrapper function around the best available implementation
+# so that the rest of the script can use that for making HTTP requests.
+if command -v curl >/dev/null ; then
+    # Older curl versions lack --retry
+    if curl --help 2>&1 | grep -q .*--retry ; then
+        function fetch() {
+            curl --retry 20 --remote-time -o "$1" "$2"
+        }
+    else
+        function fetch() {
+            curl --remote-time -o "$1" "$2"
+        }
+    fi
+elif command -v wget >/dev/null ; then
+    # In Anaconda images wget is actually busybox
+    if wget --help 2>&1 | grep -q BusyBox ; then
+        function fetch() {
+            wget -O "$1" "$2"
+        }
+    else
+        function fetch() {
+            wget --tries 20 -O "$1" "$2"
+        }
+    fi
+else
+    echo "No HTTP client command available!"
+    function fetch() {
+        false
+    }
+fi
+
+# Check in with Beaker Server
+fetch - http://lab.test-kickstart.invalid:8000/install_start/@RECIPEID@
+
+fetch /tmp/anamon http://lab.test-kickstart.invalid/beaker/anamon
+python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstart.invalid:8000/RPC2'
+# no snippet data for Fedora18_pre
+# no snippet data for Fedora_pre
+# no snippet data for system_pre
+%end
+
+%post --log=/dev/console
+set -x
+# Some distros have curl in their minimal install set, others have wget.
+# We define a wrapper function around the best available implementation
+# so that the rest of the script can use that for making HTTP requests.
+if command -v curl >/dev/null ; then
+    # Older curl versions lack --retry
+    if curl --help 2>&1 | grep -q .*--retry ; then
+        function fetch() {
+            curl --retry 20 --remote-time -o "$1" "$2"
+        }
+    else
+        function fetch() {
+            curl --remote-time -o "$1" "$2"
+        }
+    fi
+elif command -v wget >/dev/null ; then
+    # In Anaconda images wget is actually busybox
+    if wget --help 2>&1 | grep -q BusyBox ; then
+        function fetch() {
+            wget -O "$1" "$2"
+        }
+    else
+        function fetch() {
+            wget --tries 20 -O "$1" "$2"
+        }
+    fi
+else
+    echo "No HTTP client command available!"
+    function fetch() {
+        false
+    }
+fi
+
+# Check in with Beaker Server, let it know our hostname, and
+# record our install time.
+
+# We will try a number of different places to figure out the system's FQDN.
+# In all cases we will only accept a real FQDN (no "localhost", and must have
+# a domain portion). DNS is our preferred source, otherwise the installer
+# should have stored a hostname in /etc based on the kickstart or DHCP info.
+# As a last resort we will use the system's first IP address.
+function find_fqdn() {
+    local fqdn=
+    # hostname -f is the most future-proof approach, but it isn't always reliable
+    fqdn=$(hostname -f)
+    if [[ "$fqdn" == *.* && "$fqdn" != localhost.* ]] ; then echo "$fqdn" ; return ; fi
+    # Preferred fallback if the OS is recent enough to provide it
+    fqdn=$(cat /etc/hostname)
+    if [[ "$fqdn" == *.* && "$fqdn" != localhost.* ]] ; then echo "$fqdn" ; return ; fi
+    # Red Hat-based systems prior to systemd will have this
+    fqdn=$(grep ^HOSTNAME= /etc/sysconfig/network | cut -f2- -d=)
+    if [[ "$fqdn" == *.* && "$fqdn" != localhost.* ]] ; then echo "$fqdn" ; return ; fi
+    # Getting desperate... pick the first local IP address
+    hostname -I | cut -d' ' -f1
+}
+REPORTED_FQDN=$(find_fqdn)
+fetch - "http://lab.test-kickstart.invalid:8000/install_done/@RECIPEID@/$REPORTED_FQDN"
+fetch - http://lab.test-kickstart.invalid:8000/nopxe/test01.test-kickstart.invalid
+echo @RECIPEID@ > /root/RECIPE.TXT
+
+# If netboot_method= is found in /proc/cmdline record it to /root
+netboot_method=$(perl -n -e'/netboot_method=([^\s]+)/ && print $1' /proc/cmdline)
+if [ -n "$netboot_method" ]; then
+echo $netboot_method >/root/NETBOOT_METHOD.TXT
+fi
+
+# Enable post-install boot notification
+
+fetch /usr/local/sbin/anamon http://lab.test-kickstart.invalid/beaker/anamon
+fetch /etc/rc.d/init.d/anamon http://lab.test-kickstart.invalid/beaker/anamon.init
+
+chmod 755 /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
+if selinuxenabled &>/dev/null ; then
+    restorecon /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
+fi
+
+chkconfig --add anamon
+
+cat << __EOT__ > /etc/sysconfig/anamon
+XMLRPC_URL="http://lab.test-kickstart.invalid:8000/RPC2"
+RECIPE_ID="@RECIPEID@"
+LOGFILES="/var/log/boot.log /var/log/messages /var/log/dmesg"
+__EOT__
+
+if [ -f /etc/sysconfig/readahead ] ; then
+    cat >>/etc/sysconfig/readahead <<EOF
+
+# readahead conflicts with auditd, see bug 561486 for detailed explanation.
+#
+# Should a task need to change these settings, it must revert to this state
+# when test is done.
+
+READAHEAD_COLLECT="no"
+READAHEAD_COLLECT_ON_RPM="no"
+EOF
+fi
+systemctl disable systemd-readahead-collect
+
+if [ -e /etc/sysconfig/ntpdate ] ; then
+    systemctl enable ntpdate
+fi
+if [ -e "/etc/sysconfig/ntpd" ]; then
+    systemctl enable ntpd
+    GOT_G=$(/bin/cat /etc/sysconfig/ntpd | grep -E '^OPTIONS' | grep '\-g')
+
+    if [ -z "$GOT_G" ]; then
+        /bin/sed -i -r 's/(^OPTIONS\s*=\s*)(['\''|"])(.+)$/\1\2\-x \3 /' /etc/sysconfig/ntpd
+    fi
+fi
+if [ -e /etc/chrony.conf ] ; then
+    cp /etc/chrony.conf{,.orig}
+    # use only DHCP-provided time servers, no default pool servers
+    sed -i '/^server /d' /etc/chrony.conf
+    cp /etc/sysconfig/network{,.orig}
+    # setting iburst should speed up initial sync
+    # https://bugzilla.redhat.com/show_bug.cgi?id=787042#c12
+    echo NTPSERVERARGS=iburst >>/etc/sysconfig/network
+    systemctl disable ntpd
+    systemctl disable ntpdate
+    systemctl enable chronyd
+    systemctl enable chrony-wait
+fi
+
+if efibootmgr &>/dev/null ; then
+    # The installer should have added a new boot entry for the OS
+    # at the top of the boot order. We move it to the end of the order
+    # and set it as BootNext instead.
+    boot_order=$(efibootmgr | awk '/BootOrder/ { print $2 }')
+    os_boot_entry=$(cut -d, -f1 <<<"$boot_order")
+    new_boot_order=$(cut -d, -f2- <<<"$boot_order"),"$os_boot_entry"
+    efibootmgr -o "$new_boot_order"
+    efibootmgr -n "$os_boot_entry"
+    # save the boot entry for later, so that rhts-reboot can set BootNext as well
+    echo "$os_boot_entry" >/root/EFI_BOOT_ENTRY.TXT
+fi
+
+
+
+
+
+# Add distro and custom Repos
+cat <<"EOF" >/etc/yum.repos.d/beaker-debug.repo
+[beaker-debug]
+name=beaker-debug
+baseurl=http://lab.test-kickstart.invalid/distros/F-18/GOLD/Fedora/x86_64/debug
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+cat <<"EOF" >/etc/yum.repos.d/restraint.repo
+[restraint]
+name=restraint
+baseurl=http://my/repo/
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+
+
+# Create a file which will be read by the test harness
+# to communicate with Beaker (fetch recipe, report results, etc)
+cat <<"EOF" >/root/beaker-harness-env.sh
+export BEAKER_LAB_CONTROLLER_URL="http://lab.test-kickstart.invalid:8000/"
+export BEAKER_LAB_CONTROLLER=lab.test-kickstart.invalid
+export BEAKER_RECIPE_ID=@RECIPEID@
+export BEAKER_HUB_URL="@BEAKER@"
+EOF
+
+cat >> /root/task-overrides-rhts.sh <<END
+export RHTS_OPTION_COMPATIBLE=
+export RHTS_OPTION_COMPAT_SERVICE=
+END
+cat << EOF > /root/beah_beaker.conf
+
+[DEFAULT]
+# LAB_CONTROLLER: URI of Beaker's XML-RPC handler
+LAB_CONTROLLER=http://lab.test-kickstart.invalid:8000
+#
+# HOSTNAME: Pretend to be machine with given name.
+# NOTE: This is mostly pointless as usually correct name is assigned by DHCP.
+HOSTNAME=test01.test-kickstart.invalid
+RECIPEID=@RECIPEID@
+
+# Turn on hard limits on upload sizes:
+FILE_SIZE_LIMIT=200000000
+TASK_SIZE_LIMIT=800000000
+
+# XXX: disable IPv6 by default while running in the container
+IPV6_DISABLED=True
+EOF
+
+cat << EOF > /root/beah.conf
+
+[DEFAULT]
+# Turn on more verbose logging and redirect to console. This is useful for
+# debugging harness' problems.
+LOG=Info
+CONSOLE_LOG=Console
+# To turn on debug logging uncomment the following line. Warning: this is
+# rather verbose! This also requires LOG to be Debug.
+#DEVEL=True
+# XXX: disable IPv6 by default while running in the container
+IPV6_DISABLED=True
+[TASK]
+INTERFACE=
+
+EOF
+# Add "traditional" Beaker task repo so that tasks from the
+# central task repository can be executed as well.
+cat <<"EOF" >/etc/yum.repos.d/beaker-tasks.repo
+[beaker-tasks]
+name=beaker-tasks
+baseurl=@REPOS@@RECIPEID@
+enabled=1
+gpgcheck=0
+EOF
+cp /etc/yum.repos.d/beaker-tasks.repo /root/
+
+# Add all custom repositories (defined using <repo/> elements)
+mkdir /root/customrepos
+cat <<"EOF" >/root/customrepos/restraint.repo
+[restraint]
+name=restraint
+baseurl=http://my/repo/
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+
+# Create the Dockerfile for the container
+cat << EOF > /root/Dockerfile
+
+FROM registry.hub.docker.com/fedora:18
+MAINTAINER Beaker Developers <beaker-devel@lists.fedoraproject.org>
+ADD beaker-tasks.repo /etc/yum.repos.d/
+ADD customrepos/ /etc/yum.repos.d/
+ADD beaker-harness-env.sh /etc/profile.d/beaker-harness-env.sh
+ADD beah_beaker.conf /etc/beah_beaker.conf
+ADD beah.conf /etc/beah.conf
+# XXX: always disable rhts-compat assuming we will run systemd distros
+# in the container
+ADD task-overrides-rhts.sh /etc/profile.d/task-overrides-rhts.sh
+RUN yum -y update; yum clean all
+
+# We assume that if the contained harness entrypoint is not
+# defined, we are relying on systemd to start the harness
+# for us
+# Reference: http://developerblog.redhat.com/2014/05/05/running-systemd-within-docker-container/
+RUN yum -y remove fakesystemd || true
+RUN yum -y install systemd; \
+(cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ "\$i" == systemd-tmpfiles-setup.service ] || rm -f "\$i"; done); \
+rm -f /lib/systemd/system/multi-user.target.wants/*;\
+rm -f /etc/systemd/system/*.wants/*;\
+rm -f /lib/systemd/system/local-fs.target.wants/*; \
+rm -f /lib/systemd/system/sockets.target.wants/*udev*; \
+rm -f /lib/systemd/system/sockets.target.wants/*initctl*; \
+rm -f /lib/systemd/system/basic.target.wants/*;\
+rm -f /lib/systemd/system/anaconda.target.wants/*;
+VOLUME [ "/sys/fs/cgroup" ]
+
+# Install the harness
+RUN yum -y install beah
+RUN yum -y install rhts-test-env beakerlib
+# This may fail if you are outside of Red Hat.
+RUN yum -y install beakerlib-redhat || true
+RUN systemctl enable beah-srv beah-beaker-backend beah-fwd-backend
+CMD ["/usr/sbin/init"]
+EOF
+
+cat << EOF > /etc/systemd/system/beaker-harness-docker.service
+[Unit]
+Description=Beaker test harness in a container
+After=network.target docker.service NetworkManager-wait-online.service
+
+[Service]
+Type=simple
+WorkingDirectory=/root
+ExecStartPre=/usr/bin/docker build -t beaker-harness .
+# Specify the local time and time zone to be the same as that on the host
+# See: https://github.com/docker/docker/issues/3359
+# Mount the host /mnt at /mnt so that the test data is preserved
+# post container exit
+ExecStart=/usr/bin/docker run --privileged -d -v /etc/localtime:/etc/localtime:ro -v /etc/timezone:/etc/timezone:ro -v /mnt:/mnt -t beaker-harness
+User=root
+Group=root
+TimeoutStartSec=0
+
+[Install]
+WantedBy=default.target
+EOF
+
+systemctl enable docker beaker-harness-docker
+mkdir -p /mnt/testarea /mnt/scratchspace
+
+#Add test user account
+useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
+cat <<"EOF" >/etc/profile.d/beaker.sh
+export BEAKER="@BEAKER@"
+export BEAKER_JOB_WHITEBOARD=''
+export BEAKER_RECIPE_WHITEBOARD=''
+EOF
+cat <<"EOF" >/etc/profile.d/beaker.csh
+setenv BEAKER "@BEAKER@"
+setenv BEAKER_JOB_WHITEBOARD ''
+setenv BEAKER_RECIPE_WHITEBOARD ''
+EOF
+
+cat << EOF > /etc/profile.d/rh-env.sh
+export LAB_CONTROLLER=lab.test-kickstart.invalid
+export DUMPSERVER=netdump.test-kickstart.invalid
+export NFSSERVERS="RHEL3,rhel3-nfs.test-kickstart.invalid:/export/home RHEL4,rhel4-nfs.test-kickstart.invalid:/export/home RHEL5,rhel5-nfs.test-kickstart.invalid:/export/home RHEL6,rhel6-nfs.test-kickstart.invalid:/export/home NETAPP, SOLARIS,"
+export LOOKASIDE=http://download.test-kickstart.invalid/lookaside/
+export BUILDURL=http://download.test-kickstart.invalid
+EOF
+cat << EOF > /etc/profile.d/rh-env.csh
+setenv LAB_CONTROLLER lab.test-kickstart.invalid
+setenv DUMPSERVER netdump.test-kickstart.invalid
+setenv NFSSERVERS "RHEL3,rhel3-nfs.test-kickstart.invalid:/export/home RHEL4,rhel4-nfs.test-kickstart.invalid:/export/home RHEL5,rhel5-nfs.test-kickstart.invalid:/export/home RHEL6,rhel6-nfs.test-kickstart.invalid:/export/home NETAPP, SOLARIS,"
+setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
+setenv BUILDURL http://download.test-kickstart.invalid
+EOF
+# Check in with Beaker Server, record our postinstall time.
+fetch - http://lab.test-kickstart.invalid:8000/postinstall_done/@RECIPEID@
+# Disable rhts-compat for Fedora15/RHEL7 and newer.
+cat >> /etc/profile.d/task-overrides-rhts.sh <<END
+export RHTS_OPTION_COMPATIBLE=
+export RHTS_OPTION_COMPAT_SERVICE=
+END
+# no snippet data for Fedora18_post
+# no snippet data for Fedora_post
+# no snippet data for system_post
+%end

@@ -73,6 +73,12 @@ installer does not support ``autopart --type`` or ``bootloader
 
     !has_systemd !has_chrony !has_autopart_type !has_leavebootorder
 
+Support for Project Atomic distros
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To enable :ref:`atomic-host`, two install options must be set for Project Atomic
+distros: ``has_rpmostree`` and ``bootloader_type=extlinux``.
+
 Refer to the documentation about :ref:`kickstart metadata  
 <kickstart-metadata-distro-features>` for a complete list of variables relating 
 to distro features.

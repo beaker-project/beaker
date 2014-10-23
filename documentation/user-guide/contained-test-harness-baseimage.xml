@@ -1,0 +1,26 @@
+<recipeSet priority="Normal">
+<recipe kernel_options="" kernel_options_post="" ks_meta="contained_harness harness_docker_base_image=registry.hub.docker.com/centos:centos7 selinux=--disabled" role="None" whiteboard="">
+    <autopick random="false"/>
+    <watchdog panic="ignore"/>
+    <packages/>
+    <ks_appends/>
+    <repos>
+      <repo name="restraint" url="http://10.64.41.123/localrepo/"/>
+    </repos>
+    <distroRequires>
+      <and>
+        <distro_family op="=" value="Fedora20"/>
+        <distro_variant op="=" value="Fedora"/>
+        <distro_name op="=" value="Fedora-20"/>
+        <distro_arch op="=" value="x86_64"/>
+      </and>
+    </distroRequires>
+    <hostRequires>
+      <system_type value="Machine"/>
+    </hostRequires>
+    <partitions/>
+    <task name="/restraint/true" role="None">
+      <fetch url="git://git.beaker-project.org/~asaha/restraint_tasks?master#true"/>
+    </task>
+  </recipe>
+</recipeSet>

@@ -212,3 +212,27 @@ released. The task has been updated to unconditionally set up a second serial
 port for KVM guests, instead of checking for the ``console=ttyS1`` kernel 
 option in the guest kickstart (which has been removed as part of fixing 
 :issue:`1148943`).
+
+Beaker 0.18.3
+~~~~~~~~~~~~~
+
+* :issue:`1131388`, :issue:`1148673`: Beaker now has experimental support for
+  running tests inside a Docker container and provisioning Project Atomic 
+  distros based on rpm-ostree. (Contributed by Amit Saha)
+* :issue:`1142533`: The :program:`beaker-provision` daemon logs a traceback if
+  an unhandled exception occurs during early startup. (Contributed by Dan 
+  Callaghan)
+
+Version 0.7.7 of the Beah test harness has also been released:
+
+* :issue:`1149988`: The ``beah`` SELinux policy module is now built and
+  installed on RHEL7. This fixes an intermittent AVC denial triggered by the 
+  harness on RHEL7 distros with selinux-policy 3.1.13. (Contributed by Dan 
+  Callaghan)
+
+Version 4.65 of the ``rhts`` test development and execution library has also 
+been released:
+
+* :issue:`1136963`: A more informative error is shown if the user runs
+  ``make rpm`` on a task which is tracked in git but has never been tagged. 
+  (Contributed by Dan Callaghan)

@@ -289,7 +289,11 @@ def main():
         with daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(
                 pid_file, acquire_timeout=0),detach_process=True):
             log_to_syslog('beaker-provision')
-            main_loop(poller=poller, conf=conf)
+            try:
+                main_loop(poller=poller, conf=conf)
+            except Exception:
+                logger.exception('Unhandled exception in main_loop')
+                raise
 
 if __name__ == '__main__':
     main()

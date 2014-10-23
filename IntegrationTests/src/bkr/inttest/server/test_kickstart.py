@@ -654,6 +654,7 @@ class KickstartTest(unittest.TestCase):
                         <guestrecipe guestargs="--ram=1024 vcpus=1">
                             <distroRequires>
                                 <distro_name op="=" value="RHEL-6.2" />
+                                <distro_arch op="=" value="x86_64" />
                             </distroRequires>
                             <hostRequires/>
                             <task name="/distribution/install" />
@@ -661,25 +662,18 @@ class KickstartTest(unittest.TestCase):
                         </guestrecipe>
                         <distroRequires>
                             <distro_name op="=" value="RHEL-6.2" />
+                            <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
                         <task name="/distribution/install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
-            </job>''')
+            </job>''', self.system)
         guest = recipe.guests[0]
         ks = guest.rendered_kickstart.kickstart
-        self.assertIn('if [ -d /etc/init ] ; then\n'
-            '    cat << EOF >/etc/init/ttyS0.conf\n'
-            '# start ttyS0\nstart on runlevel [2345]\n'
-            'stop on runlevel [S016]\ninstance ttyS0\n'
-            'respawn\npre-start exec /sbin/securetty ttyS0\n'
-            'exec /sbin/agetty /dev/ttyS0 115200 vt100-nav\nEOF\n'
-            '\n    cat << EOF >/etc/init/ttyS1.conf\n'
-            '# start ttyS1\nstart on runlevel [2345]\nstop on runlevel [S016]\n'
-            'instance ttyS1\nrespawn\npre-start exec /sbin/securetty ttyS1\n'
-            'exec /sbin/agetty /dev/ttyS1 115200 vt100-nav\nEOF\n', ks)
+        compare_expected('RedHatEnterpriseLinux6-scheduler-guest', guest.id,
+                         ks)
 
     def test_rhel6_autopart_type_ignored(self):
         recipe = self.provision_recipe('''
@@ -2719,6 +2713,26 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
         self.assertIn('\ndocker\n',
                       recipe.rendered_kickstart.kickstart)
 
+        # different harness
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="contained_harness harness=beah selinux=--disabled">
+                        <repos> <repo name="restraint" url="http://my/repo/"/> </repos>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-18" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        compare_expected('Fedora18-harness-contained-beah', recipe.id,
+                         recipe.rendered_kickstart.kickstart)
+
     def test_disable_readahead_collection(self):
         # RHEL6, readahead collection disabled by default
         recipe = self.provision_recipe('''
@@ -2777,6 +2791,7 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
         ks = recipe.rendered_kickstart.kickstart
         self.assertNotIn('disable systemd-readahead-collect', ks)
         self.assertNotIn('READAHEAD_COLLECT="no"', ks)
+
 
     def test_provision_rpmostree(self):
         recipe = self.provision_recipe('''
