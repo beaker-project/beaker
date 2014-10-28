@@ -186,11 +186,11 @@ class TestSystem(DatabaseTestCase):
     def test_distros(self):
         lc = data_setup.create_labcontroller()
         excluded_osmajor = OSMajor.lazy_create(
-                osmajor=data_setup.unique_name('osmajor_test_distros%s'))
+                osmajor=data_setup.unique_name(u'osmajor_test_distros%s'))
         tree_excluded = data_setup.create_distro_tree(arch=u'i386',
                 osmajor=excluded_osmajor.osmajor)
         included_osmajor = OSMajor.lazy_create(
-                osmajor=data_setup.unique_name('osmajor_test_distros%s'))
+                osmajor=data_setup.unique_name(u'osmajor_test_distros%s'))
         tree_not_in_lab = data_setup.create_distro_tree(arch=u'i386',
                 osmajor=included_osmajor.osmajor, lab_controllers=[])
         tree_in_lab = data_setup.create_distro_tree(arch=u'i386',
@@ -1803,10 +1803,10 @@ class TaskTest(DatabaseTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=915549
     def test_duplicate_task(self):
 
-        task = data_setup.create_task(name='Task1')
-        task = data_setup.create_task(name='Task1')
+        task = data_setup.create_task(name=u'Task1')
+        task = data_setup.create_task(name=u'Task1')
 
-        tasks = Task.query.filter(Task.name == 'Task1').all()
+        tasks = Task.query.filter(Task.name == u'Task1').all()
         self.assertEquals(len(tasks), 1)
 
 class TaskLibraryTest(DatabaseTestCase):
@@ -1875,17 +1875,29 @@ class TaskLibraryTest(DatabaseTestCase):
 
 class RecipeTaskTest(DatabaseTestCase):
 
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.rollback()
+
     def test_version_in_xml(self):
         task = data_setup.create_task(name=u'/distribution/install')
         recipe = data_setup.create_recipe(task_list=[task])
         data_setup.create_job_for_recipes([recipe])
         data_setup.mark_recipe_running(recipe)
         rt = recipe.tasks[0]
-        rt.version = '1.2-3'
+        rt.version = u'1.2-3'
         root = lxml.etree.fromstring(rt.to_xml(clone=False).toxml())
-        self.assertEquals(root.get('version'), '1.2-3')
+        self.assertEquals(root.get('version'), u'1.2-3')
 
 class RecipeTaskResultTest(DatabaseTestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.rollback()
 
     def test_short_path(self):
         task = data_setup.create_task(name=u'/distribution/install')

@@ -400,7 +400,7 @@ class Task(DeclarativeMappedObject):
     def create_from_taskinfo(cls, raw_taskinfo):
         """Create a new task object based on details retrieved from an RPM"""
 
-        tinfo = testinfo.parse_string(raw_taskinfo['desc'])
+        tinfo = testinfo.parse_string(raw_taskinfo['desc'].decode('utf8'))
 
         if len(tinfo.test_name) > 255:
             raise BX(_("Task name should be <= 255 characters"))

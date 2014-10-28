@@ -1239,9 +1239,9 @@ class System(DeclarativeMappedObject, ActivityMixin):
         # Tempting to use exists() here but it will not work due to the inner 
         # query also joining to distro, so we cannot correlate... instead we 
         # must join against the distro_tree subquery
-        trees_subquery = self.distro_trees().statement\
-                .with_only_columns([Distro.id.distinct().label('inner_distro_id')])\
-                .alias('inner_distro_trees')
+        trees_subquery = self.distro_trees()\
+                .with_entities(Distro.id.distinct().label('inner_distro_id'))\
+                .subquery('inner_distro_trees')
         query = query.join((trees_subquery, trees_subquery.c.inner_distro_id == Distro.id))
         return query
 
