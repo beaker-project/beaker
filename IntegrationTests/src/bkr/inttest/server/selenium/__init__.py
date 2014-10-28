@@ -64,7 +64,7 @@ processes = []
 
 def setup_package():
     processes.extend([
-        Process('Xvfb', args=['Xvfb', ':4', '-extension', 'GLX',
+        Process('Xvfb', args=['Xvfb', ':4', '-extension', 'GLX', '-noreset',
                 '-screen', '0', '1920x1200x24'], listen_port=6004),
     ])
     try:
