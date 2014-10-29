@@ -4,14 +4,13 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
 from turbogears.database import session
 from bkr.server.model import User
 from bkr.inttest import data_setup
-from bkr.inttest.client import run_client, ClientError, create_client_config
+from bkr.inttest.client import run_client, ClientError, create_client_config, \
+        ClientTestCase
 
-
-class UserModifyTest(unittest.TestCase):
+class UserModifyTest(ClientTestCase):
 
     def test_add_invalid_submission_delegate(self):
         with session.begin():

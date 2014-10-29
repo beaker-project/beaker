@@ -4,12 +4,11 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
 from turbogears.database import session
 from bkr.inttest import data_setup
-from bkr.inttest.client import run_client, ClientError
+from bkr.inttest.client import run_client, ClientError, ClientTestCase
 
-class WatchdogsExtend(unittest.TestCase):
+class WatchdogsExtend(ClientTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=906803
     def test_watchdogs_extend(self):

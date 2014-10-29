@@ -4,16 +4,15 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
 import xmltramp
 import pkg_resources
 from turbogears.database import session
 from bkr.server.model import RecipeSet
 from bkr.server.jobxml import XmlJob
 from bkr.server.bexceptions import BX
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, DatabaseTestCase
 
-class TestTasks(unittest.TestCase):
+class TestTasks(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -42,7 +41,6 @@ class TestTasks(unittest.TestCase):
 
     def tearDown(self):
         session.rollback()
-        session.close()
 
     def test_enable_task(self):
         self.task.valid=True

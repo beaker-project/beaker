@@ -4,14 +4,13 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
 import json
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
-from bkr.inttest.client import run_client, ClientError
+from bkr.inttest.client import run_client, ClientError, ClientTestCase
 from bkr.server.model import LabControllerDistroTree
 
-class DistrosListTest(unittest.TestCase):
+class DistrosListTest(ClientTestCase):
 
     @with_transaction
     def setUp(self):

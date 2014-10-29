@@ -4,14 +4,13 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest2 as unittest
 from datetime import datetime, timedelta
 from turbogears.database import session
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, DatabaseTestCase
 from bkr.server.tools.usage_reminder import BeakerUsage
 from bkr.server.util import absolute_url
 
-class TestUsageReminder(unittest.TestCase):
+class TestUsageReminder(DatabaseTestCase):
     def setUp(self):
         self.user = data_setup.create_user()
         self.reservation_expiry = 24

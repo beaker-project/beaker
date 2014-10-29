@@ -8,9 +8,11 @@ import os
 import subprocess
 import tempfile
 import logging
-from bkr.inttest import get_server_base, data_setup
+from bkr.inttest import get_server_base, data_setup, DatabaseTestCase
 
 log = logging.getLogger(__name__)
+
+class ClientTestCase(DatabaseTestCase): pass
 
 def create_client_config(username=data_setup.ADMIN_USER,
                          password=data_setup.ADMIN_PASSWORD, hub_url=None,

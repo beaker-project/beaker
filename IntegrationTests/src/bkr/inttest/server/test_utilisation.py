@@ -4,15 +4,14 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
 import datetime
 from turbogears.database import session
 from bkr.server.model import SystemStatus, SystemStatusDuration, System, Arch
 from bkr.server.utilisation import system_utilisation, \
         system_utilisation_counts, system_utilisation_counts_by_group
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, DatabaseTestCase
 
-class SystemUtilisationTest(unittest.TestCase):
+class SystemUtilisationTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()

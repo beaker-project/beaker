@@ -4,13 +4,13 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest2 as unittest
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
-from bkr.inttest.client import run_client, create_client_config, ClientError
+from bkr.inttest.client import run_client, create_client_config, ClientError, \
+        ClientTestCase
 import json
 
-class JobListTest(unittest.TestCase):
+class JobListTest(ClientTestCase):
 
     @with_transaction
     def setUp(self):

@@ -4,7 +4,6 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest2 as unittest
 import pkg_resources
 import datetime
 from decimal import Decimal
@@ -13,9 +12,9 @@ from bkr.server import dynamic_virt
 from bkr.server.model import System, RecipeTask, Cpu, SystemStatus, \
     SystemActivity, TaskPriority, RecipeSetActivity, VirtResource, \
     GuestResource
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, DatabaseTestCase
 
-class ReportingQueryTest(unittest.TestCase):
+class ReportingQueryTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()

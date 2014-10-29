@@ -6,13 +6,12 @@
 
 import datetime
 from collections import namedtuple
-import unittest2 as unittest
 from bkr.server.model import session, System, SystemType, SystemStatus, Cpu, \
         Arch, Numa, Key, Key_Value_String, Key_Value_Int, Disk
 from bkr.server.needpropertyxml import XmlHost
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, DatabaseTestCase
 
-class SystemFilteringTest(unittest.TestCase):
+class SystemFilteringTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -868,7 +867,7 @@ class SystemFilteringTest(unittest.TestCase):
 
 FakeFlavor = namedtuple('FakeFlavor', ['disk', 'ram', 'vcpus'])
 
-class OpenstackFlavorFilteringTest(unittest.TestCase):
+class OpenstackFlavorFilteringTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -1053,7 +1052,7 @@ class OpenstackFlavorFilteringTest(unittest.TestCase):
             """,
             present=[small_flavor], absent=[medium_flavor, large_flavor])
 
-class VirtualisabilityTestCase(unittest.TestCase):
+class VirtualisabilityTestCase(DatabaseTestCase):
 
     def setUp(self):
         session.begin()

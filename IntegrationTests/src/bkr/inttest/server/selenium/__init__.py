@@ -10,12 +10,11 @@ import re
 import logging
 import subprocess
 from selenium import webdriver
-import unittest2 as unittest
 import xmlrpclib
 from urlparse import urljoin
 from bkr.common.xmlrpc import CookieTransport, SafeCookieTransport
 from datetime import datetime
-from bkr.inttest import data_setup, get_server_base, Process
+from bkr.inttest import data_setup, get_server_base, Process, DatabaseTestCase
 from bkr.inttest.assertions import wait_for_condition
 from bkr.server.bexceptions import BX
 from time import sleep
@@ -29,7 +28,7 @@ log = logging.getLogger(__name__)
 # so that at the end we can check if any were leaked.
 _spawned_browsers = []
 
-class WebDriverTestCase(unittest.TestCase):
+class WebDriverTestCase(DatabaseTestCase):
 
     def get_browser(self):
         """
@@ -49,7 +48,7 @@ class WebDriverTestCase(unittest.TestCase):
         b.set_window_size(1920, 1200)
         return b
 
-class XmlRpcTestCase(unittest.TestCase):
+class XmlRpcTestCase(DatabaseTestCase):
 
     @classmethod
     def get_server(cls):

@@ -6,12 +6,12 @@
 
 import sys
 import os
-import unittest2 as unittest
 import subprocess
 import json
 import pkg_resources
 from copy import copy, deepcopy
 from bkr.inttest import Process
+from bkr.inttest.labcontroller import LabControllerTestCase
 from bkr.server.model import OSMajor
 from turbogears.database import session
 
@@ -33,7 +33,7 @@ class TreeImportError(Exception):
         self.status = status
         self.stderr_output = stderr_output
 
-class DistroImportTest(unittest.TestCase):
+class DistroImportTest(LabControllerTestCase):
 
     maxDiff = None
 

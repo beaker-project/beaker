@@ -4,12 +4,11 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest2 as unittest
 from bkr.server.model import session, SystemPermission
 from bkr.inttest import data_setup
-from bkr.inttest.client import run_client, ClientError
+from bkr.inttest.client import run_client, ClientError, ClientTestCase
 
-class PolicyGrantTest(unittest.TestCase):
+class PolicyGrantTest(ClientTestCase):
 
     def setUp(self):
         with session.begin():

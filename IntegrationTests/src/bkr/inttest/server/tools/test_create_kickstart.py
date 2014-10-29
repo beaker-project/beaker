@@ -9,10 +9,9 @@ import sys
 import tempfile
 import shutil
 import subprocess
-import unittest2 as unittest
 from cStringIO import StringIO
 from turbogears.database import session
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, DatabaseTestCase
 from bkr.inttest.kickstart_helpers import create_rhel62, create_rhel62_server_x86_64, \
     create_lab_controller, create_x86_64_automated, compare_expected, \
     jinja_choice_loader, create_user
@@ -20,7 +19,7 @@ from bkr.server.tools import create_kickstart
 from bkr.server.kickstart import template_env
 from bkr.server.model import Task, User, Recipe, Provision, Arch, OSMajorInstallOptions
 
-class CreateKickstartTest(unittest.TestCase):
+class CreateKickstartTest(DatabaseTestCase):
 
     def setUp(self):
         pass

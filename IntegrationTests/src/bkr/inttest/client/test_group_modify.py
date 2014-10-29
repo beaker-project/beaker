@@ -4,15 +4,15 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest2 as unittest
 import email
 import crypt
 from bkr.inttest import data_setup, with_transaction, mail_capture
-from bkr.inttest.client import run_client, ClientError, create_client_config
+from bkr.inttest.client import run_client, ClientError, create_client_config, \
+        ClientTestCase
 from bkr.server.model import Group, Activity, User
 from turbogears.database import session
 
-class GroupModifyTest(unittest.TestCase):
+class GroupModifyTest(ClientTestCase):
 
     def setUp(self):
         with session.begin():

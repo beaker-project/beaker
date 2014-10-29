@@ -4,17 +4,16 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest2 as unittest
 import xmltramp
 import pkg_resources
 from turbogears import testutil
 from turbogears.database import session
 from bkr.server.jobxml import XmlJob
 from bkr.server.bexceptions import BX
-from bkr.inttest import data_setup, with_transaction
+from bkr.inttest import data_setup, with_transaction, DatabaseTestCase
 from bkr.server.model import Distro
 
-class TestJobsController(unittest.TestCase):
+class TestJobsController(DatabaseTestCase):
 
     maxDiff = None
 
@@ -65,7 +64,6 @@ class TestJobsController(unittest.TestCase):
             self.assertRaises(BX, lambda: self.controller.process_xmljob(xmljob, self.user))
         finally:
             session.rollback()
-            session.close()
 
     def test_job_xml_can_be_roundtripped(self):
         # Ideally the logic for parsing job XML into a Job instance would live in model code,

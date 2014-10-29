@@ -1,11 +1,10 @@
-import unittest2 as unittest
 import pkg_resources
 from turbogears.database import session
 from bkr.inttest import data_setup
-from bkr.inttest.client import run_client
+from bkr.inttest.client import run_client, ClientTestCase
 
 
-class WorkflowInstallerTest(unittest.TestCase):
+class WorkflowInstallerTest(ClientTestCase):
 
     def setUp(self):
         self.template_file_name = pkg_resources. \

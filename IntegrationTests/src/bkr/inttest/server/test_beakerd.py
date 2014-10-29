@@ -4,7 +4,6 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest2 as unittest
 import datetime
 import os
 import threading
@@ -22,7 +21,7 @@ from sqlalchemy.sql import not_
 from turbogears.database import session, get_engine
 import xmltramp
 from bkr.server.jobxml import XmlJob
-from bkr.inttest import data_setup, fix_beakerd_repodata_perms
+from bkr.inttest import data_setup, fix_beakerd_repodata_perms, DatabaseTestCase
 from bkr.inttest.assertions import assert_datetime_within, \
         assert_durations_not_overlapping
 from bkr.server.tools import beakerd
@@ -33,7 +32,7 @@ from bkr.inttest.assertions import assert_datetime_within
 # check anything in particular
 from bkr.inttest.mail_capture import MailCaptureThread
 
-class TestBeakerd(unittest.TestCase):
+class TestBeakerd(DatabaseTestCase):
 
     def setUp(self):
         with session.begin():
@@ -1730,7 +1729,7 @@ class FakeMetrics():
     def measure(self, *args):
         self.calls.append(args)
 
-class TestBeakerdMetrics(unittest.TestCase):
+class TestBeakerdMetrics(DatabaseTestCase):
 
     def setUp(self):
         self.original_metrics = beakerd.metrics

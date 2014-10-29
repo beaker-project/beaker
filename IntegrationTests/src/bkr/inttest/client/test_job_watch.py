@@ -4,14 +4,14 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest2 as unittest
 from turbogears.database import session
 from bkr.inttest import data_setup
-from bkr.inttest.client import start_client, run_client, ClientError
+from bkr.inttest.client import start_client, run_client, ClientError, \
+        ClientTestCase
 import time
 from nose.plugins.skip import SkipTest
 
-class JobWatchTest(unittest.TestCase):
+class JobWatchTest(ClientTestCase):
 
     def test_watch_job(self):
         with session.begin():

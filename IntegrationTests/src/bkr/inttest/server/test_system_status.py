@@ -4,16 +4,15 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
 import logging
 from threading import Thread, Event
 from turbogears.database import session
 from bkr.server.model import System, SystemStatus
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, DatabaseTestCase
 
 log = logging.getLogger(__name__)
 
-class SystemStatusTest(unittest.TestCase):
+class SystemStatusTest(DatabaseTestCase):
 
     def check_status_durations(self, system):
         # The crucial invariant is that there is exactly one row with NULL 

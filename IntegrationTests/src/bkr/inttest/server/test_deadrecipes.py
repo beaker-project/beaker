@@ -4,22 +4,21 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
 import xmltramp
-
 from time import sleep
 import time
 from bkr.server.model import TaskStatus, Job, LabControllerDistroTree, Distro
 import sqlalchemy.orm
 from turbogears.database import session
-from bkr.inttest import data_setup, with_transaction, fix_beakerd_repodata_perms
+from bkr.inttest import data_setup, with_transaction, fix_beakerd_repodata_perms, \
+        DatabaseTestCase
 from bkr.server.tools import beakerd
 from bkr.server.jobxml import XmlJob
 from bkr.server.jobs import Jobs
 
 import threading
 
-class TestBeakerd(unittest.TestCase):
+class TestBeakerd(DatabaseTestCase):
 
     @with_transaction
     def setUp(cls):

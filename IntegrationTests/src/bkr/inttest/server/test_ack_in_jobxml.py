@@ -4,14 +4,13 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
 from turbogears.database import session
-from bkr.inttest import data_setup, with_transaction
+from bkr.inttest import data_setup, with_transaction, DatabaseTestCase
 from bkr.server.model import Job, Response, RecipeSetResponse
 import xmltramp
 from bkr.server.jobxml import XmlJob
 
-class TestAckJobXml(unittest.TestCase):
+class TestAckJobXml(DatabaseTestCase):
 
     @with_transaction
     def setUp(self):

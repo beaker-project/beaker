@@ -4,7 +4,6 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest2 as unittest
 import pkg_resources
 import datetime
 import os
@@ -16,7 +15,7 @@ import subprocess
 import sys
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server.model import LogRecipe, TaskBase, Job, Recipe, RenderedKickstart
-from bkr.inttest import data_setup, with_transaction, Process
+from bkr.inttest import data_setup, with_transaction, Process, DatabaseTestCase
 from bkr.server.tools import log_delete
 from turbogears.database import session
 from turbogears import config
@@ -28,7 +27,7 @@ def setUpModule():
     for job, _ in Job.expired_logs():
         job.delete()
 
-class LogDelete(unittest.TestCase):
+class LogDelete(DatabaseTestCase):
 
     @with_transaction
     def setUp(self):
@@ -155,7 +154,7 @@ class LogDelete(unittest.TestCase):
             self.assertEqual(Recipe.by_id(recipe.id).rendered_kickstart, None)
             self.assertRaises(NoResultFound, RenderedKickstart.by_id, ks.id)
 
-class RemoteLogDeletionTest(unittest.TestCase):
+class RemoteLogDeletionTest(DatabaseTestCase):
 
     def setUp(self):
         # XXX We should eventually configure these redirect tests

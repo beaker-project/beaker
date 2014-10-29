@@ -4,12 +4,11 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest2 as unittest
 from turbogears.database import session
 from bkr.inttest import data_setup
-from bkr.inttest.client import run_client, ClientError
+from bkr.inttest.client import run_client, ClientError, ClientTestCase
 
-class TaskListTest(unittest.TestCase):
+class TaskListTest(ClientTestCase):
 
     def test_prints_names(self):
         with session.begin():

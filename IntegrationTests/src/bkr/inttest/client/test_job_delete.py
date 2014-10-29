@@ -5,14 +5,14 @@
 # (at your option) any later version.
 
 import os
-import unittest2 as unittest
 from nose.plugins.skip import SkipTest
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction, start_process, \
     stop_process, CONFIG_FILE, edit_file
-from bkr.inttest.client import run_client, create_client_config, ClientError
+from bkr.inttest.client import run_client, create_client_config, ClientError, \
+    ClientTestCase
 
-class JobDeleteTest(unittest.TestCase):
+class JobDeleteTest(ClientTestCase):
 
     @with_transaction
     def setUp(self):

@@ -4,10 +4,9 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
-from bkr.inttest.client import run_client, ClientError
+from bkr.inttest.client import run_client, ClientError, ClientTestCase
 
-class WatchdogExtend(unittest.TestCase):
+class WatchdogExtend(ClientTestCase):
 
     def test_watchdog_extend(self):
 

@@ -6,10 +6,10 @@
 
 import unittest
 from bkr.server.model import session, SystemPermission
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, DatabaseTestCase
 from bkr.inttest.client import run_client
 
-class PolicyGrantTest(unittest.TestCase):
+class PolicyGrantTest(DatabaseTestCase):
 
     def setUp(self):
         with session.begin():

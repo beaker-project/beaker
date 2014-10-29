@@ -4,12 +4,11 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
-from bkr.inttest.client import run_client, ClientError
+from bkr.inttest.client import run_client, ClientError, ClientTestCase
 
-class DistroTreesVerifyTest(unittest.TestCase):
+class DistroTreesVerifyTest(ClientTestCase):
 
     @with_transaction
     def setUp(self):

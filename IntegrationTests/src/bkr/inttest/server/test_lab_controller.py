@@ -4,16 +4,15 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
 import xmltramp
 import pkg_resources
 from turbogears.database import session
 from bkr.server.model import TaskStatus, RecipeSet, LabController, System
 from bkr.server.jobxml import XmlJob
 from bkr.server.bexceptions import BX
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, DatabaseTestCase
 
-class TestLabController(unittest.TestCase):
+class TestLabController(DatabaseTestCase):
 
     def setUp(self):
         self.lc_fqdn = u'lab.domain.com'

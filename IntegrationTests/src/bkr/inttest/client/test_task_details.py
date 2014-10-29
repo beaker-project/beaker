@@ -5,14 +5,13 @@
 # (at your option) any later version.
 
 import re
-import unittest2 as unittest
 import lxml.etree
 from turbogears.database import session
 from bkr.inttest import data_setup
-from bkr.inttest.client import run_client, ClientError
+from bkr.inttest.client import run_client, ClientError, ClientTestCase
 
 
-class TaskDetailsTest(unittest.TestCase):
+class TaskDetailsTest(ClientTestCase):
 
     def test_task_details_xml(self):
         with session.begin():

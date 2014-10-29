@@ -6,17 +6,15 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest2 as unittest
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
-from bkr.inttest.client import run_client, ClientError
+from bkr.inttest.client import run_client, ClientError, ClientTestCase
 
-class JobCloneTest(unittest.TestCase):
+class JobCloneTest(ClientTestCase):
 
-    @classmethod
-    @with_transaction
-    def setupClass(cls):
-        cls.job = data_setup.create_completed_job()
+    def setUp(self):
+        with session.begin():
+            self.job = data_setup.create_completed_job()
 
     def test_can_clone_job(self):
         out = run_client(['bkr', 'job-clone', self.job.t_id])

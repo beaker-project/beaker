@@ -6,14 +6,13 @@
 
 import textwrap
 import re
-import unittest2 as unittest
 from turbogears.database import session
 from bkr.server.model import SystemStatus, Recipe
 from bkr.client.json_compat import loads
 from bkr.inttest import data_setup
-from bkr.inttest.client import run_client, ClientError
+from bkr.inttest.client import run_client, ClientError, ClientTestCase
 
-class SystemStatusTest(unittest.TestCase):
+class SystemStatusTest(ClientTestCase):
 
     def test_unknown_fqdn(self):
         try:

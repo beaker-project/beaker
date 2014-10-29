@@ -4,12 +4,12 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest2 as unittest
 from bkr.server.model import session
 from bkr.inttest import data_setup
-from bkr.inttest.client import run_client, create_client_config, ClientError
+from bkr.inttest.client import run_client, create_client_config, ClientError, \
+        ClientTestCase
 
-class WhoAmITest(unittest.TestCase):
+class WhoAmITest(ClientTestCase):
 
     def test_whoami(self):
         out = run_client(['bkr', 'whoami'])

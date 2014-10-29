@@ -4,11 +4,10 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest2 as unittest
 import requests
 from bkr.server.model import session, SystemAccessPolicy, SystemPermission, \
         Group
-from bkr.inttest import data_setup, get_server_base
+from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login
 from bkr.inttest.server.requests_utils import put_json
@@ -214,7 +213,7 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
         pane.find_element_by_xpath('.//span[@class="sync-status" and '
             'contains(string(.), "No such user")]')
 
-class SystemAccessPolicyHTTPTest(unittest.TestCase):
+class SystemAccessPolicyHTTPTest(DatabaseTestCase):
     """
     Directly tests the HTTP interface used by the access policy widget.
     """

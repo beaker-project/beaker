@@ -4,17 +4,16 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
 from decimal import Decimal
 from turbogears.database import session
-from bkr.inttest import data_setup, get_server_base
+from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
 from bkr.server.model import Cpu, Arch
 from rdflib.term import URIRef, Literal
 from rdflib.graph import Graph
 
 from bkr.server.rdf import INV, describe_system
 
-class SystemRDFTest(unittest.TestCase):
+class SystemRDFTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()

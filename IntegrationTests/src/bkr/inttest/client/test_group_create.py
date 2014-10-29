@@ -4,13 +4,13 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest2 as unittest
 from turbogears.database import session
 from bkr.server.model import Group, User
 from bkr.inttest import data_setup
-from bkr.inttest.client import run_client, ClientError, create_client_config
+from bkr.inttest.client import run_client, ClientError, create_client_config, \
+        ClientTestCase
 
-class GroupCreateTest(unittest.TestCase):
+class GroupCreateTest(ClientTestCase):
 
     def test_group_create(self):
         group_name = data_setup.unique_name('group%s')

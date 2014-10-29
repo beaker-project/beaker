@@ -4,14 +4,13 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
 from threading import Thread, Event
 import xmltramp
 import pkg_resources
 from turbogears.database import session
 from bkr.server.jobxml import XmlJob
 from bkr.server.bexceptions import BX, StaleTaskStatusException
-from bkr.inttest import data_setup, fix_beakerd_repodata_perms
+from bkr.inttest import data_setup, fix_beakerd_repodata_perms, DatabaseTestCase
 from bkr.server.model import TaskStatus, TaskResult, Watchdog, RecipeSet, Distro, \
         Job, Recipe, System, SystemResource, RecipeTaskResult, Task
 from bkr.server.tools import beakerd
@@ -22,7 +21,7 @@ def watchdogs_for_job(job):
            Watchdog.query.join('recipetask', 'recipe', 'recipeset', 'job')\
             .filter(RecipeSet.job == job).all()
 
-class TestUpdateStatus(unittest.TestCase):
+class TestUpdateStatus(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -34,7 +33,6 @@ class TestUpdateStatus(unittest.TestCase):
 
     def tearDown(self):
         session.commit()
-        session.close()
 
     def test_abort_recipe_bubbles_status_to_job(self):
         xmljob = XmlJob(xmltramp.parse('''
@@ -200,7 +198,7 @@ class TestUpdateStatus(unittest.TestCase):
         # No watchdog's should exist when the job is complete
         self.assertEquals(len(watchdogs_for_job(job)), 0)
 
-class TestUpdateStatusReserved(unittest.TestCase):
+class TestUpdateStatusReserved(DatabaseTestCase):
 
     def test_recipe_running_then_cancelled(self):
         """ This tests the case where the recipe is running, has a valid
@@ -326,7 +324,7 @@ class TestUpdateStatusReserved(unittest.TestCase):
             self.assertEqual(job.recipesets[0].recipes[0].status,
                              TaskStatus.aborted)
 
-class ConcurrentUpdateTest(unittest.TestCase):
+class ConcurrentUpdateTest(DatabaseTestCase):
 
     @classmethod
     def tearDownClass(cls):
@@ -473,7 +471,7 @@ class ConcurrentUpdateTest(unittest.TestCase):
             self.assertEquals(job.recipesets[0].recipes[0].watchdog, None)
             self.assertEquals(system.open_reservation, None)
 
-class RecoveryTest(unittest.TestCase):
+class RecoveryTest(DatabaseTestCase):
 
     # These tests assert that the update_status method can recover the various 
     # bad states that have been observed in the past due to race conditions in 

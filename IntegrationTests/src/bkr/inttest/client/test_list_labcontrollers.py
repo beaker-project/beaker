@@ -4,13 +4,12 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest2 as unittest
 from datetime import datetime
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
-from bkr.inttest.client import run_client
+from bkr.inttest.client import run_client, ClientTestCase
 
-class ListLabcontrollersTest(unittest.TestCase):
+class ListLabcontrollersTest(ClientTestCase):
 
     @with_transaction
     def setUp(self):

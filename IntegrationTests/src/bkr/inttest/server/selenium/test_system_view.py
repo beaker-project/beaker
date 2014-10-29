@@ -6,7 +6,6 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
 import datetime
 import logging
 import time
@@ -17,7 +16,7 @@ import rdflib.graph
 from turbogears.database import session
 
 from bkr.inttest import data_setup, get_server_base, \
-        assertions, with_transaction
+        assertions, with_transaction, DatabaseTestCase
 from bkr.server.model import Arch, Key, Key_Value_String, Key_Value_Int, System, \
         Provision, ProvisionFamily, ProvisionFamilyUpdate, Hypervisor, \
         SystemStatus, LabInfo, ReleaseAction, PowerType
@@ -863,7 +862,7 @@ class SystemViewTestWD(WebDriverTestCase):
             self.assertEquals(self.system.activity[1].action, u'Removed')
             self.assertEquals(self.system.activity[1].old_value, u'roy.baty@pkd.com')
 
-class TestSystemViewRDF(unittest.TestCase):
+class TestSystemViewRDF(DatabaseTestCase):
 
     @with_transaction
     def setUp(self):
@@ -886,7 +885,7 @@ class TestSystemViewRDF(unittest.TestCase):
         graph.parse(location=rdf_url, format='xml')
         self.assert_(len(graph) >= 9)
 
-class SystemStatusHTTPTest(unittest.TestCase):
+class SystemStatusHTTPTest(DatabaseTestCase):
     """
     Directly tests the HTTP interface used by bkr system-status.
     """

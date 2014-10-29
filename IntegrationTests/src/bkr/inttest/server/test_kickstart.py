@@ -22,6 +22,8 @@ from bkr.inttest.kickstart_helpers import create_rhel62, create_rhel62_server_x8
     create_x86_64_automated, create_lab_controller, compare_expected, \
     jinja_choice_loader, create_user
 
+# Not inheriting from DatabaseTestCase here because we have class-level setup,
+# so we don't want to expunge it from the session after each case
 class KickstartTest(unittest.TestCase):
 
     maxDiff = None
@@ -259,6 +261,7 @@ class KickstartTest(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        session.close()
         dynamic_virt.VirtManager = cls.orig_VirtManager
         template_env.loader = cls.orig_template_loader
 

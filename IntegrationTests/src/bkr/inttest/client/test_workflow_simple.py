@@ -5,7 +5,6 @@
 # (at your option) any later version.
 
 import os
-import unittest2 as unittest
 import pkg_resources
 import re
 import textwrap
@@ -13,10 +12,10 @@ from threading import Thread
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client, start_client, \
-    create_client_config, ClientError
+    create_client_config, ClientError, ClientTestCase
 from bkr.server.model import Job, Arch
 
-class WorkflowSimpleTest(unittest.TestCase):
+class WorkflowSimpleTest(ClientTestCase):
 
     @with_transaction
     def setUp(self):

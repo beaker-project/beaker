@@ -5,11 +5,10 @@
 # (at your option) any later version.
 
 import re
-import unittest
 from bkr.inttest import get_server_base
-from bkr.inttest.client import run_client, create_client_config
+from bkr.inttest.client import run_client, create_client_config, ClientTestCase
 
-class CommonOptionsTest(unittest.TestCase):
+class CommonOptionsTest(ClientTestCase):
 
     def test_hub(self):
         # wrong hub in config, correct one passed on the command line

@@ -6,17 +6,17 @@
 
 import email
 import re
-import unittest2 as unittest
 from turbogears.database import session
 from bkr.server.model import Arch, TaskResult
 from bkr.server.util import absolute_url
-from bkr.inttest import data_setup, mail_capture, get_server_base
+from bkr.inttest import data_setup, mail_capture, get_server_base, \
+        DatabaseTestCase
 import bkr.server.mail
 from datetime import datetime, timedelta
 from bkr.server.tools.usage_reminder import BeakerUsage
 
 
-class BrokenSystemNotificationTest(unittest.TestCase):
+class BrokenSystemNotificationTest(DatabaseTestCase):
 
     def setUp(self):
         self.mail_capture = mail_capture.MailCaptureThread()
@@ -62,7 +62,7 @@ class BrokenSystemNotificationTest(unittest.TestCase):
                 'Power id: 42'
                 % get_server_base())
 
-class SystemReservationNotificationTest(unittest.TestCase):
+class SystemReservationNotificationTest(DatabaseTestCase):
 
     def setUp(self):
         self.mail_capture = mail_capture.MailCaptureThread()
@@ -125,7 +125,7 @@ class SystemReservationNotificationTest(unittest.TestCase):
         actual_mail_body = msg.get_payload(decode=True)
         self.assertEqual(actual_mail_body, expected_mail_body)
 
-class JobCompletionNotificationTest(unittest.TestCase):
+class JobCompletionNotificationTest(DatabaseTestCase):
 
     def setUp(self):
         self.mail_capture = mail_capture.MailCaptureThread()
@@ -214,7 +214,7 @@ class JobCompletionNotificationTest(unittest.TestCase):
         msg = email.message_from_string(raw_msg)
         self.assertNotIn('Distro(', msg.get_payload(decode=True))
 
-class GroupMembershipNotificationTest(unittest.TestCase):
+class GroupMembershipNotificationTest(DatabaseTestCase):
 
     def setUp(self):
         self.mail_capture = mail_capture.MailCaptureThread()
@@ -247,7 +247,7 @@ class GroupMembershipNotificationTest(unittest.TestCase):
             self.assert_('Unknown action' in str(e))
 
 
-class UsageReminderTest(unittest.TestCase):
+class UsageReminderTest(DatabaseTestCase):
 
     def setUp(self):
         self.mail_capture = mail_capture.MailCaptureThread()

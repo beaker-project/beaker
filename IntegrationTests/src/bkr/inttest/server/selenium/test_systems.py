@@ -6,7 +6,6 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
 import logging
 from urlparse import urljoin
 from urllib import urlencode, urlopen
@@ -18,7 +17,7 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support.ui import Select
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction, \
-        DummyVirtManager
+        DummyVirtManager, DatabaseTestCase
 from bkr.inttest.assertions import assert_sorted
 from bkr.server import dynamic_virt
 from bkr.server.model import Cpu, Key, Key_Value_String, System, SystemStatus
@@ -171,7 +170,7 @@ class TestSystemsGridSorting(WebDriverTestCase):
 
     # XXX also test with custom column selections
 
-class TestSystemsAtomFeed(unittest.TestCase):
+class TestSystemsAtomFeed(DatabaseTestCase):
 
     def feed_contains_system(self, feed, fqdn):
         xpath = atom_xpath('/atom:feed/atom:entry/atom:title[text()="%s"]' % fqdn)
@@ -307,7 +306,7 @@ class SystemsBrowseTest(WebDriverTestCase):
         self.assertEqual(
             b.find_element_by_class_name('item-count').text, 'Items found: 1')
 
-class IpxeScriptHTTPTest(unittest.TestCase):
+class IpxeScriptHTTPTest(DatabaseTestCase):
 
     def setUp(self):
         with session.begin():

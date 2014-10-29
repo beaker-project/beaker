@@ -4,12 +4,11 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
 from turbogears.database import session
 from bkr.inttest import data_setup
-from bkr.inttest.client import run_client, ClientError
+from bkr.inttest.client import run_client, ClientError, ClientTestCase
 
-class DistrosUntagTest(unittest.TestCase):
+class DistrosUntagTest(ClientTestCase):
 
     def test_untag_distro(self):
         with session.begin():

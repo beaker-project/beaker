@@ -4,15 +4,14 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
 import re
 import datetime
 from turbogears.database import session
 from bkr.inttest import data_setup
-from bkr.inttest.client import run_client
+from bkr.inttest.client import run_client, ClientTestCase
 from bkr.server.model import RecipeTask
 
-class WatchdogShowTest(unittest.TestCase):
+class WatchdogShowTest(ClientTestCase):
 
     def test_watchdog_show_running_task(self):
         with session.begin():

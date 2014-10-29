@@ -1,9 +1,8 @@
-import unittest2 as unittest
-from bkr.inttest.client import run_client
+from bkr.inttest.client import run_client, ClientTestCase
 from bkr.inttest import data_setup, with_transaction
 from bkr.server.model import Arch
 
-class HarnessTest(unittest.TestCase):
+class HarnessTest(ClientTestCase):
 
     @with_transaction
     def setUp(self):

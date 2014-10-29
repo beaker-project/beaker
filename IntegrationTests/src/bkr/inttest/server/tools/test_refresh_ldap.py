@@ -4,12 +4,11 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
 from turbogears.database import session
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, DatabaseTestCase
 from bkr.server.model import Group, User
 
-class RefreshLdapTest(unittest.TestCase):
+class RefreshLdapTest(DatabaseTestCase):
 
     def test_refresh_ldap_group_membership(self):
         with session.begin():

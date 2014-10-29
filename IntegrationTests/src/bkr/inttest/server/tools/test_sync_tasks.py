@@ -5,21 +5,20 @@
 # (at your option) any later version.
 
 import sys
-import unittest2 as unittest
 import os
 import subprocess
 from bkr.inttest import Process
 from turbogears.database import session
 from bkr.server.tools.sync_tasks import TaskLibrarySync
 from bkr.server.model import Task
-from bkr.inttest import get_server_base
+from bkr.inttest import get_server_base, DatabaseTestCase
 import pkg_resources
 
 _beaker_sync_tasks = pkg_resources.resource_filename('bkr.server.tools', 'sync_tasks.py')
 _sync_tasks_dir = pkg_resources.resource_filename('bkr.inttest.server', 'task-rpms')
 _http_server = pkg_resources.resource_filename('bkr.inttest', 'http_server.py')
 _current_dir = os.path.dirname(__file__)
-class TestTaskLibrarySync(unittest.TestCase):
+class TestTaskLibrarySync(DatabaseTestCase):
 
     @classmethod
     def setupClass(cls):

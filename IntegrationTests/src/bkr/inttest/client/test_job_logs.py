@@ -6,16 +6,15 @@
 
 import sys
 import os
-import unittest2 as unittest
 import urlparse
 import shutil
 import tempfile
 import pkg_resources
 from bkr.server.model import session, LogRecipe, LogRecipeTask, LogRecipeTaskResult
 from bkr.inttest import data_setup, Process
-from bkr.inttest.client import run_client, ClientError
+from bkr.inttest.client import run_client, ClientError, ClientTestCase
 
-class JobLogsTest(unittest.TestCase):
+class JobLogsTest(ClientTestCase):
 
     def setUp(self):
         # set up a directory for our dummy job logs, with an HTTP server

@@ -20,6 +20,7 @@ import re
 from StringIO import StringIO
 import logging, logging.config
 import signal
+import unittest2 as unittest
 import cherrypy
 import turbogears
 from turbogears.database import session
@@ -35,6 +36,29 @@ import turbogears.testutil
 os.chdir(orig_cwd)
 
 CONFIG_FILE = os.environ.get('BEAKER_CONFIG_FILE')
+
+class DatabaseTestCase(unittest.TestCase):
+
+    """
+    Tests which touch the database in any way (session.begin()) should inherit 
+    from this, so that the session is cleaned up at the end of each test. This 
+    prevents ORM objects from accumulating in memory during the test run.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(DatabaseTestCase, self).__init__(*args, **kwargs)
+        # Putting this in __init__ instead of setUp is kind of cheating, but it 
+        # lets us avoid calling super() in every setUp.
+        self.addCleanup(self._cleanup_session)
+
+    def _cleanup_session(self):
+        # We clear __dict__ as a kind of hack, to try and drop references to 
+        # ORM instances which the test has stored as attributes on itself 
+        # (TestCase instances are kept for the life of the test runner!)
+        for name in self.__dict__.keys():
+            if not name.startswith('_'):
+                del self.__dict__[name]
+        session.close()
 
 # workaround for delayed log formatting in nose
 # https://groups.google.com/forum/?fromgroups=#!topic/nose-users/5uZVDfDf1ZI

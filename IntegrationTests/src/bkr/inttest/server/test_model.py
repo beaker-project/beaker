@@ -32,7 +32,7 @@ from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
 from sqlalchemy.exc import OperationalError
 import netaddr
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, DatabaseTestCase
 from nose.plugins.skip import SkipTest
 import turbogears
 import os
@@ -41,7 +41,7 @@ import yum
 def serialize_kid_element(elem):
     return kid.XHTMLSerializer().serialize(kid.ElementStream(elem), fragment=True)
 
-class SchemaSanityTest(unittest.TestCase):
+class SchemaSanityTest(DatabaseTestCase):
 
     def test_all_tables_use_innodb(self):
         engine = DeclarativeMappedObject.metadata.bind
@@ -53,7 +53,7 @@ class SchemaSanityTest(unittest.TestCase):
                     'WHERE table_schema = DATABASE() AND table_name = %s',
                     table), 'InnoDB')
 
-class ModelInitializationTest(unittest.TestCase):
+class ModelInitializationTest(DatabaseTestCase):
 
     # We are testing the database creation done by bkr.server.tools.init. 
     # However do not actually invoke that here, because it would be too 
@@ -65,7 +65,7 @@ class ModelInitializationTest(unittest.TestCase):
         admin_group = Group.by_name(u'admin')
         self.assertTrue(admin_group.has_owner(admin_user))
 
-class ActivityMixinTest(unittest.TestCase):
+class ActivityMixinTest(DatabaseTestCase):
 
     def test_field_names_correct(self):
         # Ensure ActivityMixin._fields stays in sync with the parameters
@@ -85,14 +85,13 @@ class ActivityMixinTest(unittest.TestCase):
             self.assert_(('%s=%r' % (name, value)) in text, text)
 
 
-class TestSystem(unittest.TestCase):
+class TestSystem(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
 
     def tearDown(self):
         session.rollback()
-        session.close()
 
     def test_create_system_params(self):
         owner = data_setup.create_user()
@@ -203,7 +202,7 @@ class TestSystem(unittest.TestCase):
         self.assertNotIn(tree_not_in_lab.distro, distros)
         self.assertIn(tree_in_lab.distro, distros)
 
-class SystemFilterMethodsTest(unittest.TestCase):
+class SystemFilterMethodsTest(DatabaseTestCase):
     """
     Test cases for the hybrid methods/properties used to build system queries.
     """
@@ -310,14 +309,13 @@ class SystemFilterMethodsTest(unittest.TestCase):
                 included=[owned, loaned, shared],
                 excluded=[not_shared])
 
-class TestSystemKeyValue(unittest.TestCase):
+class TestSystemKeyValue(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
 
     def tearDown(self):
         session.rollback()
-        session.close()
 
     def test_removing_key_type_cascades_to_key_value(self):
         # https://bugzilla.redhat.com/show_bug.cgi?id=647566
@@ -338,7 +336,7 @@ class TestSystemKeyValue(unittest.TestCase):
         self.assertEqual(reloaded_system.key_values_string, [])
         self.assertEqual(reloaded_system.key_values_int, [])
 
-class SystemPermissionsTest(unittest.TestCase):
+class SystemPermissionsTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -574,7 +572,7 @@ class SystemPermissionsTest(unittest.TestCase):
         self.policy.add_rule(SystemPermission.control_system, user=self.unprivileged)
         self.assertTrue(self.system.can_power(self.unprivileged))
 
-class TestBrokenSystemDetection(unittest.TestCase):
+class TestBrokenSystemDetection(DatabaseTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=637260
     # The 1-second sleeps here are so that the various timestamps
@@ -644,7 +642,7 @@ class TestBrokenSystemDetection(unittest.TestCase):
         self.assertEqual(self.system.status, SystemStatus.broken)
         self.assert_(self.system.date_modified > orig_date_modified)
 
-class SystemAccessPolicyTest(unittest.TestCase):
+class SystemAccessPolicyTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -718,7 +716,7 @@ class SystemAccessPolicyTest(unittest.TestCase):
                 .filter(SystemAccessPolicy.grants(user, perm)).count())
 
 
-class SystemReleaseAction(unittest.TestCase):
+class SystemReleaseAction(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -732,7 +730,7 @@ class SystemReleaseAction(unittest.TestCase):
         self.assertEqual(system.release_action, ReleaseAction.power_off)
 
 
-class TestJob(unittest.TestCase):
+class TestJob(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -847,7 +845,7 @@ class TestJob(unittest.TestCase):
                                 33.333, 66.667, 0, 0, 0)
 
 
-class DistroTreeByFilterTest(unittest.TestCase):
+class DistroTreeByFilterTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -963,7 +961,7 @@ class DistroTreeByFilterTest(unittest.TestCase):
         self.assert_(excluded not in distro_trees)
         self.assert_(included in distro_trees)
 
-class WatchdogTest(unittest.TestCase):
+class WatchdogTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -1000,7 +998,7 @@ class WatchdogTest(unittest.TestCase):
         self.assertNotIn(guestrecipe.watchdog, expired_watchdogs)
 
 
-class DistroTreeTest(unittest.TestCase):
+class DistroTreeTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -1039,7 +1037,7 @@ class DistroTreeTest(unittest.TestCase):
         self.assertRaises(ValueError, lambda: self.distro_tree.url_in_lab(
                 self.lc, scheme=['http', 'nfs'], required=True))
 
-class OSMajorTest(unittest.TestCase):
+class OSMajorTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -1067,7 +1065,7 @@ class OSMajorTest(unittest.TestCase):
         self.assertEquals(o.install_options_by_arch[ia64].kernel_options,
                 u'serial')
 
-class UserTest(unittest.TestCase):
+class UserTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -1098,7 +1096,7 @@ class UserTest(unittest.TestCase):
         self.assertRaises(ValueError, lambda: User(user_name=u'extra  space'))
         self.assertRaises(ValueError, lambda: User(user_name=u'extra\t tab'))
 
-class GroupTest(unittest.TestCase):
+class GroupTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -1228,7 +1226,7 @@ class GroupTest(unittest.TestCase):
         self.assertEquals(group.activity[1].service, u'LDAP')
 
 
-class TaskTypeTest(unittest.TestCase):
+class TaskTypeTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -1244,7 +1242,7 @@ class TaskTypeTest(unittest.TestCase):
         self.assertEquals(TaskType.query.filter_by(type=u'CookieMonster').count(), 1)
 
 
-class RecipeTest(unittest.TestCase):
+class RecipeTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -1358,7 +1356,7 @@ class RecipeTest(unittest.TestCase):
                     u'<system_type value="Prototype"/>'
                 u'</hostRequires>')
 
-class CheckDynamicVirtTest(unittest.TestCase):
+class CheckDynamicVirtTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -1439,7 +1437,7 @@ class CheckDynamicVirtTest(unittest.TestCase):
         self.assertVirtPrecluded(recipe, 'force="" should preclude virt')
 
 
-class MachineRecipeTest(unittest.TestCase):
+class MachineRecipeTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -1519,7 +1517,7 @@ class MachineRecipeTest(unittest.TestCase):
         _check_queue_stats(expected_stats)
 
 
-class GuestRecipeTest(unittest.TestCase):
+class GuestRecipeTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -1556,7 +1554,7 @@ class GuestRecipeTest(unittest.TestCase):
         self.assert_(u'guestname=""' in guestxml_1, guestxml_1)
         self.assert_(u'guestname="blueguest"' in guestxml_2, guestxml_2)
 
-class MACAddressAllocationTest(unittest.TestCase):
+class MACAddressAllocationTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -1629,7 +1627,7 @@ class MACAddressAllocationTest(unittest.TestCase):
         self.assertEquals(RecipeResource._lowest_free_mac(),
                 netaddr.EUI('52:54:00:00:00:00'))
 
-class VirtResourceTest(unittest.TestCase):
+class VirtResourceTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -1657,7 +1655,7 @@ class VirtResourceTest(unittest.TestCase):
                 '<span>my-openstack-instance (OpenStack instance {0})</span>'
                 .format(recipe.resource.instance_id))
 
-class LogRecipeTest(unittest.TestCase):
+class LogRecipeTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -1726,7 +1724,7 @@ class LogRecipeTest(unittest.TestCase):
         self.assert_(lr1 is lr2, (lr1, lr2))
 
 
-class TaskPackageTest(unittest.TestCase):
+class TaskPackageTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -1741,7 +1739,7 @@ class TaskPackageTest(unittest.TestCase):
         self.assert_(first is second)
         self.assertEquals(TaskPackage.query.filter_by(package=u'beaker').count(), 1)
 
-class DeviceClassTest(unittest.TestCase):
+class DeviceClassTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -1756,7 +1754,7 @@ class DeviceClassTest(unittest.TestCase):
         self.assert_(first is second)
         self.assertEquals(DeviceClass.query.filter_by(device_class=u'washing_machine').count(), 1)
 
-class DeviceTest(unittest.TestCase):
+class DeviceTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -1777,7 +1775,7 @@ class DeviceTest(unittest.TestCase):
         self.assert_(first is second)
         self.assertEquals(Device.query.filter_by(**params).count(), 1)
 
-class TaskTest(unittest.TestCase):
+class TaskTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -1810,7 +1808,7 @@ class TaskTest(unittest.TestCase):
         tasks = Task.query.filter(Task.name == 'Task1').all()
         self.assertEquals(len(tasks), 1)
 
-class TaskLibraryTest(unittest.TestCase):
+class TaskLibraryTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
@@ -1823,7 +1821,6 @@ class TaskLibraryTest(unittest.TestCase):
 
     def tearDown(self):
         session.rollback()
-        session.close()
 
     def query_task_repo(self, task_name):
 
@@ -1873,7 +1870,7 @@ class TaskLibraryTest(unittest.TestCase):
         self.assertIn('1.1-0', vr_list)
         self.assertIn('2.1-0', vr_list)
 
-class RecipeTaskTest(unittest.TestCase):
+class RecipeTaskTest(DatabaseTestCase):
 
     def test_version_in_xml(self):
         task = data_setup.create_task(name=u'/distribution/install')
@@ -1885,7 +1882,7 @@ class RecipeTaskTest(unittest.TestCase):
         root = lxml.etree.fromstring(rt.to_xml(clone=False).toxml())
         self.assertEquals(root.get('version'), '1.2-3')
 
-class RecipeTaskResultTest(unittest.TestCase):
+class RecipeTaskResultTest(DatabaseTestCase):
 
     def test_short_path(self):
         task = data_setup.create_task(name=u'/distribution/install')

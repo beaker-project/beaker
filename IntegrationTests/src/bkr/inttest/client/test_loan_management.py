@@ -5,13 +5,13 @@
 # (at your option) any later version.
 
 import contextlib
-import unittest2 as unittest
 from turbogears.database import session
 from bkr.server.model import System, SystemAccessPolicy, SystemPermission
 from bkr.inttest import data_setup, with_transaction
-from bkr.inttest.client import run_client, create_client_config, ClientError
+from bkr.inttest.client import run_client, create_client_config, ClientError, \
+        ClientTestCase
 
-class SystemLoanTest(unittest.TestCase):
+class SystemLoanTest(ClientTestCase):
     # This test checks the loan management CLI is wired up correctly
     # It doesn't check all the access policy variations, since that's
     # covered by the access policy unit tests - these tests are just about

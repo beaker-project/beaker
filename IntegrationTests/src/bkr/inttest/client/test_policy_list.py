@@ -4,15 +4,14 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest2 as unittest
 from bkr.server.model import session, SystemPermission, User
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError,\
-    create_client_config
+    create_client_config, ClientTestCase
 import bkr.client.json_compat as json
 from prettytable import PrettyTable
 
-class PolicyListTest(unittest.TestCase):
+class PolicyListTest(ClientTestCase):
 
     def setUp(self):
 
