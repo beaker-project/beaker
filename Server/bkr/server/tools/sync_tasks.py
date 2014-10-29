@@ -106,7 +106,7 @@ class TaskLibrarySync:
         load_config()
 
         # setup, sanity checks
-        self.task_dir = turbogears.config.get("basepath.rpms", "/var/www/beaker/rpms")
+        self.task_dir = turbogears.config.get("basepath.rpms")
 
         self._setup_logging()
 

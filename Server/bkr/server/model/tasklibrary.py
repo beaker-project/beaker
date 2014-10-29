@@ -84,7 +84,7 @@ class TaskLibrary(object):
     @property
     def rpmspath(self):
         # Lazy lookup so module can be imported prior to configuration
-        return get("basepath.rpms", "/var/www/beaker/rpms")
+        return get("basepath.rpms")
 
     def get_rpm_path(self, rpm_name):
         return os.path.join(self.rpmspath, rpm_name)

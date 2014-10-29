@@ -346,7 +346,7 @@ class TaskBase(object):
 
     @property
     def logspath(self):
-        return get('basepath.logs', '/var/www/beaker/logs')
+        return get('basepath.logs')
 
     @classmethod
     def get_by_t_id(cls, t_id, *args, **kw):
@@ -1800,11 +1800,11 @@ class Recipe(TaskBase, DeclarativeMappedObject):
 
     @property
     def harnesspath(self):
-        return get('basepath.harness', '/var/www/beaker/harness')
+        return get('basepath.harness')
 
     @property
     def repopath(self):
-        return get('basepath.repos', '/var/www/beaker/repos')
+        return get('basepath.repos')
 
     def is_owner(self,user):
         return self.recipeset.job.owner == user

@@ -136,7 +136,7 @@ def main():
     if opts.basepath:
         basepath = opts.basepath
     else:
-        basepath = get("basepath.harness", "/var/www/beaker/harness")
+        basepath = get("basepath.harness")
     sys.exit(update_repos(baseurl=baseurl, basepath=basepath))
 
 if __name__ == '__main__':
