@@ -10,8 +10,8 @@ from turbogears.database import session
 from bkr.server.model import Group, User, Activity, UserGroup
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction, mail_capture
-from bkr.inttest.server.webdriver_utils import login, logout, is_text_present, \
-        wait_for_animation, delete_and_confirm
+from bkr.inttest.server.webdriver_utils import login, logout, \
+        wait_for_animation, delete_and_confirm, check_group_search_results
 from bkr.inttest.assertions import wait_for_condition
 import email
 
@@ -391,7 +391,7 @@ class TestGroupsWD(WebDriverTestCase):
 
         # admin should not be in groups/mine
         b.get(get_server_base() + 'groups/mine')
-        self.assertTrue(not is_text_present(b, 'admin'))
+        check_group_search_results(b, absent=[Group.by_name(u'admin')])
         logout(b)
 
         # login as admin
