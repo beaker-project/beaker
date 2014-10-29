@@ -10,6 +10,7 @@ import time
 import datetime
 import unittest2 as unittest
 import pkg_resources
+import shutil
 import lxml.etree
 import email
 import inspect
@@ -1827,11 +1828,13 @@ class TaskLibraryTest(DatabaseTestCase):
         task_dir = turbogears.config.get('basepath.rpms')
         yb = yum.YumBase()
         yb.preconf.init_plugins = False
-        if not yb.setCacheDir(os.path.join(task_dir, 'cache')):
-            sys.exit(1)
+        if not yb.setCacheDir(force=True, reuse=False):
+            self.fail('Failed to set yum cache dir')
+        cachedir = os.path.dirname(os.path.dirname(yb.conf.cachedir))
+        self.assert_(cachedir.startswith('/var/tmp/yum-'), cachedir)
+        self.addCleanup(shutil.rmtree, cachedir)
         yb.repos.disableRepo('*')
-        yb.add_enable_repo('myrepo',
-                           ['file://' + task_dir])
+        yb.add_enable_repo('myrepo', ['file://' + os.path.abspath(task_dir)])
         return [''.join([pkg.version, '-', pkg.rel]) for pkg, _ in
                 yb.searchGenerator(['name'], [task_name])]
 

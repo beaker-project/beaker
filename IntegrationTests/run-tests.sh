@@ -17,10 +17,6 @@ fi
 
 set -x
 
-# Ensure legacy tmp files from previous runs are cleared
-rm -rf /tmp/beaker-*
-rm -rf /tmp/bkr-*
-
 # If you want to run unittests for beaker client, in your env set BEAKER_CLIENT_TEST_QPID=1,
 # and also set BEAKER_CLIENT_TEST_QPID_BROKER to something reasonable.
 

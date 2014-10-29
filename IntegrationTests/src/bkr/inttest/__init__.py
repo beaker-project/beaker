@@ -224,17 +224,15 @@ class CommunicateThread(threading.Thread):
         del self.captured
         return result
 
+slapd_config_dir = None
+slapd_data_dir = None
+
 def setup_slapd():
-    config_dir = '/tmp/beaker-tests-slapd-config'
-    data_dir = '/tmp/beaker-tests-slapd-data'
-    if os.path.exists(config_dir):
-        shutil.rmtree(config_dir)
-    if os.path.exists(data_dir):
-        shutil.rmtree(data_dir)
-    os.mkdir(config_dir)
-    os.mkdir(data_dir)
+    global slapd_config_dir, slapd_data_dir
+    slapd_config_dir = tempfile.mkdtemp(prefix='beaker-tests-slapd-config')
+    slapd_data_dir = tempfile.mkdtemp(prefix='beaker-tests-slapd-data')
     log.info('Populating slapd config')
-    slapadd = subprocess.Popen(['slapadd', '-F', config_dir, '-n0'],
+    slapadd = subprocess.Popen(['slapadd', '-F', slapd_config_dir, '-n0'],
             stdin=subprocess.PIPE)
     slapadd.communicate("""
 dn: cn=config
@@ -263,14 +261,18 @@ olcSuffix: dc=example,dc=invalid
 olcDbDirectory: %s
 olcDbIndex: objectClass eq
 olcAccess: to * by * read
-""" % data_dir)
+""" % slapd_data_dir)
     assert slapadd.returncode == 0
     log.info('Populating slapd data')
-    subprocess.check_call(['slapadd', '-F', config_dir, '-n1', '-l',
+    subprocess.check_call(['slapadd', '-F', slapd_config_dir, '-n1', '-l',
             pkg_resources.resource_filename('bkr.inttest', 'ldap-data.ldif')],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
-processes = []
+def cleanup_slapd():
+    shutil.rmtree(slapd_data_dir, ignore_errors=True)
+    shutil.rmtree(slapd_config_dir, ignore_errors=True)
+
+processes = None
 
 def edit_file(file, old_text, new_text):
     with open(file, 'r') as f:
@@ -327,6 +329,8 @@ def setup_package():
     turbogears.testutil.make_app(Root)
     turbogears.testutil.start_server()
 
+    global processes
+    processes = []
     if 'BEAKER_SERVER_BASE_URL' not in os.environ:
         # need to start the server ourselves
         # Usual pkg_resources ugliness is needed to ensure gunicorn doesn't
@@ -342,7 +346,7 @@ def setup_package():
                 listen_port=turbogears.config.get('server.socket_port')),
         ])
     processes.extend([
-        Process('slapd', args=['slapd', '-d0', '-F/tmp/beaker-tests-slapd-config',
+        Process('slapd', args=['slapd', '-d0', '-F' + slapd_config_dir,
                 '-hldap://127.0.0.1:3899/'],
                 listen_port=3899, stop_signal=signal.SIGINT),
     ])
@@ -359,3 +363,5 @@ def teardown_package():
         process.stop()
 
     turbogears.testutil.stop_server()
+
+    cleanup_slapd()

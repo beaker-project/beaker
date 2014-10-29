@@ -39,7 +39,7 @@ def _image_name():
             datetime.date.today().strftime('%Y%m%d'))
 
 def generate_image():
-    f = tempfile.NamedTemporaryFile(suffix='.beaker-ipxe-image', delete=False)
+    f = tempfile.NamedTemporaryFile(suffix='.beaker-ipxe-image')
     log.debug('Generating image in %s', f.name)
     f.truncate(4 * 1024 * 1024) # 4MB
     subprocess.check_call(['mkdosfs', f.name], stdout=open('/dev/null', 'a'))

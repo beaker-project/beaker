@@ -22,3 +22,10 @@ documentation/man/subcommands.rst
 selenium.log
 /Tasks/distribution/beaker/dogfood/selenium-server-standalone-*.jar
 /rpmbuild-output/
+/IntegrationTests/test-consoles/
+/IntegrationTests/test-harnessdir/
+/IntegrationTests/test-logs/
+/IntegrationTests/test-tftpboot/
+/IntegrationTests/test-repos/
+/IntegrationTests/test-rpms/
+/IntegrationTests/test-server-joblogs/
