@@ -61,19 +61,17 @@ class ConditionalInsertTest(unittest.TestCase):
 class TaskLibraryTest(unittest.TestCase):
 
     def setUp(self):
-        self.tasklibrary = TaskLibrary()
+        test_rpmspath = mkdtemp(prefix='beaker-task-library-test-rpms')
+        self.addCleanup(rmtree, test_rpmspath)
+        # hack to override descriptor for rpmspath
+        class TestTaskLibrary(TaskLibrary):
+            rpmspath = test_rpmspath
+        self.tasklibrary = TestTaskLibrary()
+        self.assertEquals(self.tasklibrary.rpmspath, test_rpmspath)
 
     def tearDown(self):
         # Make sure sane value is left after test run
         update({'beaker.createrepo_command': 'createrepo'})
-
-    def _create_clean_dir(self, dir):
-        """Creates an empty directory"""
-        if not os.path.exists(dir):
-            os.mkdir(dir)
-        else:
-            rmtree(dir)
-            os.mkdir(dir)
 
     def _hash_repodata_file(self, content, total=0):
         """Returns an int type representation of the XML contents.
@@ -103,117 +101,84 @@ class TaskLibraryTest(unittest.TestCase):
 
     def test_createrepo_c_command(self):
         update({'beaker.createrepo_command': 'createrepo_c'})
-        basepath = self.tasklibrary.rpmspath
-        self._create_clean_dir(basepath)
+        rpm_file = pkg_resources.resource_filename('bkr.server.tests', \
+            'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
+        copy(rpm_file, self.tasklibrary.rpmspath)
         try:
-            rpm_file = pkg_resources.resource_filename('bkr.server.tests', \
-                'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
-            copy(rpm_file, basepath)
-            try:
-                self.tasklibrary.update_repo()
-            except OSError, e:
-                if e.errno is errno.ENOENT:
-                    raise SkipTest('Could not find createrepo_c')
-        finally:
-            rmtree(basepath)
+            self.tasklibrary.update_repo()
+        except OSError, e:
+            if e.errno is errno.ENOENT:
+                raise SkipTest('Could not find createrepo_c')
 
     def test_invalid_createrepo_command_fail(self):
         update({'beaker.createrepo_command': 'iamnotarealcommand'})
-        basepath = self.tasklibrary.rpmspath
-        self._create_clean_dir(basepath)
-        try:
-            rpm_file = pkg_resources.resource_filename('bkr.server.tests', \
-                'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
-            copy(rpm_file, basepath)
-            with self.assertRaises(OSError):
-                self.tasklibrary.update_repo()
-        finally:
-            rmtree(basepath)
+        rpm_file = pkg_resources.resource_filename('bkr.server.tests', \
+            'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
+        copy(rpm_file, self.tasklibrary.rpmspath)
+        with self.assertRaises(OSError):
+            self.tasklibrary.update_repo()
 
     def test_update_repo(self):
-        basepath = self.tasklibrary.rpmspath
-        self._create_clean_dir(basepath)
-        try:
-            rpm_file = pkg_resources.resource_filename('bkr.server.tests', \
-                'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
-            copy(rpm_file, basepath)
-            self.tasklibrary.update_repo()
-        finally:
-            rmtree(basepath)
+        rpm_file = pkg_resources.resource_filename('bkr.server.tests', \
+            'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
+        copy(rpm_file, self.tasklibrary.rpmspath)
+        self.tasklibrary.update_repo()
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1101402
     def test_update_repo_cleans_stale_dot_repodata(self):
         # createrepo_c refuses to run if .repodata exists
         update({'beaker.createrepo_command': 'createrepo_c'})
-        basepath = self.tasklibrary.rpmspath
-        self._create_clean_dir(basepath)
-        self.addCleanup(rmtree, basepath)
-        os.mkdir(os.path.join(basepath, '.repodata'))
+        os.mkdir(os.path.join(self.tasklibrary.rpmspath, '.repodata'))
         self.tasklibrary.update_repo()
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1101402
     def test_update_repo_cleans_stale_dot_olddata(self):
         # createrepo refuses to run if .olddata exists
         update({'beaker.createrepo_command': 'createrepo'})
-        basepath = self.tasklibrary.rpmspath
-        self._create_clean_dir(basepath)
-        self.addCleanup(rmtree, basepath)
-        os.mkdir(os.path.join(basepath, '.olddata'))
+        os.mkdir(os.path.join(self.tasklibrary.rpmspath, '.olddata'))
         self.tasklibrary.update_repo()
 
     def test_unlink_rpm(self):
-        basepath = self.tasklibrary.rpmspath
-        self._create_clean_dir(basepath)
-        try:
-            rpm_file = pkg_resources.resource_filename('bkr.server.tests',
-                'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
-            copy(rpm_file, basepath)
-            self.tasklibrary. \
-                unlink_rpm('tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
-            self.assertTrue(not os.path.exists(
-                os.path.join(basepath,
-                    'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')))
-            # This tests that it does not throw an exception
-            # if the file has been removed
-            self.tasklibrary.unlink_rpm('tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
-        finally:
-            rmtree(basepath)
+        rpm_file = pkg_resources.resource_filename('bkr.server.tests',
+            'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
+        copy(rpm_file, self.tasklibrary.rpmspath)
+        self.tasklibrary. \
+            unlink_rpm('tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
+        self.assertTrue(not os.path.exists(
+            os.path.join(self.tasklibrary.rpmspath,
+                'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')))
+        # This tests that it does not throw an exception
+        # if the file has been removed
+        self.tasklibrary.unlink_rpm('tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
 
     def test_make_snapshot_repo(self):
-        basepath = self.tasklibrary.rpmspath
-        recipe_repo_parent = os.path.join(
-                get('basepath.repos', '/var/www/beaker/repos'),
-                'test_make_snapshot_repo')
-        self._create_clean_dir(basepath)
-        try:
-            rpm_file = pkg_resources.resource_filename('bkr.server.tests', \
-                'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
-            copy(rpm_file, basepath)
-            repo_dir = os.path.join(basepath, 'repodata')
-            # Assert we don't already have a repodata folder
-            self.assertFalse(os.path.exists(repo_dir))
-            self.tasklibrary.make_snapshot_repo(recipe_repo_parent)
-            # It should now be there in the rpmspath
-            self.assertTrue(os.path.exists(repo_dir))
-            repo_dir_list = os.listdir(repo_dir)
-            recipe_repo_dir = os.path.join(recipe_repo_parent, 'repodata')
-            recipe_repo_dir_list = os.listdir(recipe_repo_dir)
-            # Assert the contents at least appear to be the same
-            self.assertItemsEqual(recipe_repo_dir_list, repo_dir_list)
-            # Now test the actual content
-            for filename in repo_dir_list:
-                if filename.endswith(".gz"):
-                    open_file = gzip.open
-                elif filename.endswith(".xml"):
-                    open_file = open
-                else:
-                    raise AssertionError('Expected gzip or xml, not %r' %
-                                                                     filename)
-                repo_filename = os.path.join(repo_dir, filename)
-                recipe_repo_filename = os.path.join(recipe_repo_dir, filename)
-                repo_file = open_file(repo_filename)
-                recipe_repo_file = open_file(recipe_repo_filename)
-                self._assert_xml_equivalence(repo_file, recipe_repo_file)
-        finally:
-            rmtree(basepath)
-            rmtree(recipe_repo_parent)
+        recipe_repo_parent = mkdtemp(prefix='beaker-test_make_snapshot_repo')
+        self.addCleanup(rmtree, recipe_repo_parent)
+        rpm_file = pkg_resources.resource_filename('bkr.server.tests', \
+            'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
+        copy(rpm_file, self.tasklibrary.rpmspath)
+        repo_dir = os.path.join(self.tasklibrary.rpmspath, 'repodata')
+        # Assert we don't already have a repodata folder
+        self.assertFalse(os.path.exists(repo_dir))
+        self.tasklibrary.make_snapshot_repo(recipe_repo_parent)
+        # It should now be there in the rpmspath
+        self.assertTrue(os.path.exists(repo_dir))
+        repo_dir_list = os.listdir(repo_dir)
+        recipe_repo_dir = os.path.join(recipe_repo_parent, 'repodata')
+        recipe_repo_dir_list = os.listdir(recipe_repo_dir)
+        # Assert the contents at least appear to be the same
+        self.assertItemsEqual(recipe_repo_dir_list, repo_dir_list)
+        # Now test the actual content
+        for filename in repo_dir_list:
+            if filename.endswith(".gz"):
+                open_file = gzip.open
+            elif filename.endswith(".xml"):
+                open_file = open
+            else:
+                raise AssertionError('Expected gzip or xml, not %r' %
+                                                                 filename)
+            repo_filename = os.path.join(repo_dir, filename)
+            recipe_repo_filename = os.path.join(recipe_repo_dir, filename)
+            repo_file = open_file(repo_filename)
+            recipe_repo_file = open_file(recipe_repo_filename)
+            self._assert_xml_equivalence(repo_file, recipe_repo_file)

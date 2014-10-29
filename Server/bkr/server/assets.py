@@ -5,6 +5,8 @@
 # (at your option) any later version.
 
 import os
+import tempfile
+import shutil
 import webassets
 from webassets.bundle import get_all_bundle_files
 from webassets.filter.jst import JST
@@ -125,21 +127,24 @@ def list_asset_sources(source_dir):
     # We aren't going to produce any generated files so output_dir is unused 
     # and cache can be discarded.
     source_dir = os.path.abspath(source_dir)
-    env = _create_env(source_dir=source_dir, output_dir='/unused',
-            cache='/tmp/beaker-build-assets-cache',
-            debug=False, auto_build=False)
-    paths = []
-    for bundle in env:
-        for path in get_all_bundle_files(bundle, env):
-            paths.append(os.path.relpath(path, source_dir))
-    # site.less should be skipped because it's a symlink
-    paths.remove('site.less')
-    # font-awesome is currently not managed by webassets because webassets 
-    # breaks on non-UTF8 input files
-    paths.extend([
-        'font-awesome/fonts/fontawesome-webfont.eot',
-        'font-awesome/fonts/fontawesome-webfont.svg',
-        'font-awesome/fonts/fontawesome-webfont.ttf',
-        'font-awesome/fonts/fontawesome-webfont.woff',
-    ])
-    return paths
+    cache_dir = tempfile.mkdtemp(prefix='beaker-build-assets-cache')
+    try:
+        env = _create_env(source_dir=source_dir, output_dir='/unused',
+                cache=cache_dir, debug=False, auto_build=False)
+        paths = []
+        for bundle in env:
+            for path in get_all_bundle_files(bundle, env):
+                paths.append(os.path.relpath(path, source_dir))
+        # site.less should be skipped because it's a symlink
+        paths.remove('site.less')
+        # font-awesome is currently not managed by webassets because webassets 
+        # breaks on non-UTF8 input files
+        paths.extend([
+            'font-awesome/fonts/fontawesome-webfont.eot',
+            'font-awesome/fonts/fontawesome-webfont.svg',
+            'font-awesome/fonts/fontawesome-webfont.ttf',
+            'font-awesome/fonts/fontawesome-webfont.woff',
+        ])
+        return paths
+    finally:
+        shutil.rmtree(cache_dir, ignore_errors=True)

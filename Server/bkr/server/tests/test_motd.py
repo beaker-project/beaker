@@ -11,7 +11,7 @@ from bkr.server.motd import _load_motd
 class MotdTest(unittest.TestCase):
 
     def test_nonexistent(self):
-        motd = _load_motd('/tmp/this_file_does_not_exist')
+        motd = _load_motd('/this_file_does_not_exist')
         self.assertEquals(motd, None)
 
     def test_empty(self):
