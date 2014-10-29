@@ -17,15 +17,13 @@ def delete_and_confirm(browser, ancestor_xpath, delete_text='Delete'):
            .click()
     browser.find_element_by_xpath("//button[@type='button' and .//text()='Yes']").click()
 
-def logout(browser):
-    browser.get(get_server_base())
-    browser.find_element_by_link_text('Log out').click()
-
 def login(browser, user=None, password=None):
     if user is None and password is None:
         user = data_setup.ADMIN_USER
         password = data_setup.ADMIN_PASSWORD
-    browser.get(get_server_base())
+    # A lot of tests call login() before actually loading any page.
+    if browser.current_url == 'about:blank':
+        browser.get(get_server_base())
     browser.find_element_by_link_text('Log in').click()
     browser.find_element_by_name('user_name').click()
     browser.find_element_by_name('user_name').send_keys(user)
@@ -34,11 +32,12 @@ def login(browser, user=None, password=None):
     browser.find_element_by_name('login').click()
 
 def logout(browser):
-    browser.get(get_server_base())
     browser.find_element_by_xpath('//a[normalize-space(text())="Hello"]').click()
     browser.find_element_by_css_selector('.dropdown.open')\
            .find_element_by_link_text('Log out')\
            .click()
+    # check we have been logged out
+    browser.find_element_by_link_text('Log in')
 
 def is_text_present(browser, text):
     return bool(browser.find_elements_by_xpath(
