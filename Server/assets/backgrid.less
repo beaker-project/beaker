@@ -16,14 +16,17 @@
     th.sortable:after {
         margin-left: 0.3em;
         text-decoration: none;
+        .fa-icon();
         content: @fa-var-sort;
         color: @grayLighter;
     }
     th.sortable.ascending:after {
+        .fa-icon();
         content: @fa-var-sort-asc;
         color: @textColor;
     }
     th.sortable.descending:after {
+        .fa-icon();
         content: @fa-var-sort-desc;
         color: @textColor;
     }
@@ -70,7 +73,8 @@
     }
     &:before {
         content: @fa-var-search;
-        font-family: "FontAwesome";
+        .fa-icon();
+        line-height: inherit !important;
         opacity: 0.6;
         z-index: 200; // input-append uses z-index hackery
         position: absolute;
