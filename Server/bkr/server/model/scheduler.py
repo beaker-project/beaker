@@ -3487,7 +3487,7 @@ class VirtResource(RecipeResource):
         return span
 
     def install_options(self, distro_tree):
-        yield InstallOptions.from_strings('', u'console=tty0 console=ttyS0,115200n8', '')
+        yield InstallOptions.from_strings('no_clock_sync', u'console=tty0 console=ttyS0,115200n8', '')
 
     def release(self):
         try:
@@ -3523,7 +3523,7 @@ class GuestResource(RecipeResource):
         return self.fqdn # just text, not a link
 
     def install_options(self, distro_tree):
-        yield InstallOptions({}, {}, {})
+        yield InstallOptions.from_strings('no_clock_sync', '', '')
 
     def allocate(self):
         self.mac_address = self._lowest_free_mac()
