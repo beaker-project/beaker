@@ -167,6 +167,36 @@ class SystemProvisionWebUITest(WebDriverTestCase):
         self.assert_(u'key1=value1 key1=value2 key2=value key3' in \
                          system.command_queue[2].kernel_options)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1144195
+    def test_refreshing_commands_grid_is_triggered_by_provision(self):
+        with session.begin():
+            user = data_setup.create_user(password=u'testing')
+            system = data_setup.create_system(owner=user, shared=True,
+                                              lab_controller=self.lc)
+        b = self.browser
+        login(b, user=user.user_name, password='testing')
+        # load the commands grid first
+        b.get(get_server_base() + 'view/%s' % system.fqdn)
+        b.find_element_by_link_text('Power').click()
+        # provision system
+        b.find_element_by_link_text('Provision').click()
+        provision = b.find_element_by_id('provision')
+        self.select_distro_tree(self.distro_tree)
+        provision.find_element_by_xpath('.//button[text()="Provision"]').click()
+        b.find_element_by_xpath(
+                './/div[contains(@class, "modal")]//button[text()="OK"]').click()
+        b.find_element_by_xpath('//div[contains(@class, "alert-success")]'
+                '/h4[text()="Provisioning successful"]')
+        # check if the commands grid is refreshed
+        b.find_element_by_link_text('Power').click()
+        pane = b.find_element_by_id('power')
+        pane.find_element_by_xpath('.//span[contains(text(), "Items found: %s")]'
+                                   % len(system.command_queue))
+        command_row = pane.find_element_by_xpath('.//table/tbody/tr[1]')
+        command_row.find_element_by_xpath('./td[1]/a[text()="%s"]' % user.user_name)
+        command_row.find_element_by_xpath('./td[4][text()="%s"]' % system.command_queue[0].action)
+
+
 class SystemProvisionHTTPTest(unittest.TestCase):
 
     def setUp(self):

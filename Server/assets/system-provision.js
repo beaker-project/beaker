@@ -67,6 +67,8 @@ window.SystemProvisionView = Backbone.View.extend({
         $.bootstrapGrowl('<h4>Provisioning successful</h4> Provisioning commands ' +
                 'have been enqueued and will be executed by the lab controller shortly.',
                 {type: 'success'});
+        //refresh power commands grid
+        this.model.command_queue.fetch();
     },
     submit_error: function (model, xhr) {
         this.$('.submit-status').empty();
