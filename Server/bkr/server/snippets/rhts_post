@@ -16,6 +16,7 @@ fi
 # Enable post-install boot notification
 {% snippet 'post_anamon' %}
 if [ -f /etc/sysconfig/readahead ] ; then
+    :
 {% snippet 'readahead_sysconfig' %}
 fi
 {% snippet 'linkdelay' %}
@@ -120,6 +121,7 @@ useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82
 {% snippet 'ssh_keys' %}
 {% if recipe.systemtype == 'Virtual' %}
 if [ -d /etc/init ] ; then
+    :
 {% snippet 'virt_console_post' %}
 fi
 {% endif %}

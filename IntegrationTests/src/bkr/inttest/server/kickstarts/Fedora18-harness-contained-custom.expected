@@ -175,6 +175,7 @@ LOGFILES="/var/log/boot.log /var/log/messages /var/log/dmesg"
 __EOT__
 
 if [ -f /etc/sysconfig/readahead ] ; then
+    :
     cat >>/etc/sysconfig/readahead <<EOF
 
 # readahead conflicts with auditd, see bug 561486 for detailed explanation.
