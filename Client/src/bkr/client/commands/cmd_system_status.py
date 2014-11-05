@@ -6,6 +6,8 @@
 # (at your option) any later version.
 
 """
+.. _bkr-system-status:
+
 bkr system-status:  Return the current status of a system
 =========================================================
 

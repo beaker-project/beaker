@@ -5,6 +5,8 @@
 # (at your option) any later version.
 
 """
+.. _bkr-policy-revoke:
+
 bkr policy-revoke: Revoke permissions in an access policy
 =========================================================
 

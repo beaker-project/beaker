@@ -5,6 +5,8 @@
 # (at your option) any later version.
 
 """
+.. _bkr-loan-grant:
+
 bkr loan-grant: Grant a loan for a Beaker system
 ================================================
 

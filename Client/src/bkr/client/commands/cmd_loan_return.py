@@ -5,6 +5,8 @@
 # (at your option) any later version.
 
 """
+.. _bkr-loan-return:
+
 bkr loan-return: Return a current Beaker system loan
 ====================================================
 

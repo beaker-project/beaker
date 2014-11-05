@@ -5,6 +5,8 @@
 # (at your option) any later version.
 
 """
+.. _bkr-system-modify:
+
 bkr system-modify: Modify system attributes
 ===========================================
 
