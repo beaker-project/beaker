@@ -4,11 +4,26 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from bkr.server.model import session
+from bkr.server.model import session, SystemStatus
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError, ClientTestCase
 
 class ModifySystemTest(ClientTestCase):
+
+    def test_no_changes(self):
+        try:
+            run_client(['bkr', 'system-modify', 'fqdn.example'])
+            self.fail('Must raise')
+        except ClientError as e:
+            self.assertIn('At least one option is required', e.stderr_output)
+
+    def test_invalid_system(self):
+        try:
+            run_client(['bkr', 'system-modify', '--owner=somebody',
+                        'ireallydontexistblah.test.fqdn'])
+            self.fail('Must raise')
+        except ClientError as e:
+            self.assertIn('System not found', e.stderr_output)
 
     def test_change_owner(self):
         with session.begin():
@@ -26,14 +41,6 @@ class ModifySystemTest(ClientTestCase):
                 self.assertEquals(system.activity[-1].action, u'Changed')
                 self.assertEquals(system.activity[-1].new_value,
                                   new_owner.user_name)
-
-        # invalid system
-        try:
-            run_client(['bkr', 'system-modify', '--owner', new_owner.user_name,
-                        'ireallydontexistblah.test.fqdn'])
-            self.fail('Must raise')
-        except ClientError as e:
-            self.assertIn('System not found', e.stderr_output)
 
         # invalid user
         try:
@@ -56,5 +63,22 @@ class ModifySystemTest(ClientTestCase):
             self.assertIn('Insufficient permissions: Cannot edit system',
                           e.stderr_output)
 
+    def test_change_condition(self):
+        with session.begin():
+            system = data_setup.create_system(status=SystemStatus.automated)
+        run_client(['bkr', 'system-modify', '--condition=Manual', system.fqdn])
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(system.status, SystemStatus.manual)
+            self.assertEquals(system.activity[0].field_name, u'Status')
+            self.assertEquals(system.activity[0].new_value, u'Manual')
 
-
+    def test_invalid_condition(self):
+        with session.begin():
+            system = data_setup.create_system()
+        try:
+            run_client(['bkr', 'system-modify',
+                    '--condition=Unconditional', system.fqdn])
+            self.fail('Must raise')
+        except ClientError as e:
+            self.assertIn('option --condition: invalid choice', e.stderr_output)

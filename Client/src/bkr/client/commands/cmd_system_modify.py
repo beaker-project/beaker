@@ -18,7 +18,7 @@ Synopsis
 Description
 -----------
 
-Modify a Beaker system attribute.
+Modify attributes of Beaker systems.
 
 .. versionadded:: 0.19
 
@@ -29,6 +29,10 @@ Options
 
    Change the system owner to <username>.
 
+.. option:: --condition <condition>
+
+   Change the system condition to <condition>. Valid values are *Automated*, 
+   *Manual*, *Broken*, and *Removed*.
 
 Common :program:`bkr` options are described in the :ref:`Options
 <common-options>` section of :manpage:`bkr(1)`.
@@ -61,16 +65,25 @@ class System_Modify(BeakerCommand):
     def options(self):
         self.parser.usage = "%%prog %s [options] <fqdn> .." % self.normalized_name
 
-        self.parser.add_option(
-            "--owner",
-            help="Username of the new system owner",
-            )
+        self.parser.add_option('--owner', metavar='USERNAME',
+                help='Change owner to USERNAME')
+        self.parser.add_option('--condition', type='choice',
+                choices=['Automated', 'Manual', 'Broken', 'Removed'],
+                help='Change condition: Automated, Manual, Broken, Removed')
 
     def run(self, *args, **kwargs):
-
         owner = kwargs.pop('owner', None)
+        condition = kwargs.pop('condition', None)
+
         self.set_hub(**kwargs)
-        json_data = {'owner': {'user_name':owner}}
+
+        json_data = {}
+        if owner:
+            json_data['owner'] = {'user_name': owner}
+        if condition:
+            json_data['status'] = condition.title()
+        if not json_data:
+            self.parser.error('At least one option is required, specifying what to change')
 
         for fqdn in args:
             system_update_url = 'systems/%s/' % urllib.quote(fqdn, '')
