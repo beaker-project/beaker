@@ -320,6 +320,44 @@ window.System = Backbone.Model.extend({
             },
         });
     },
+    command: function (action, options) {
+        var model = this;
+        options = options || {};
+        if (action == 'reboot') {
+            // reboot is a special case, it is actually two commands: off then on
+            var off = new Command({action: 'off'}, {collection: this.command_queue});
+            var on = new Command({action: 'on'}, {collection: this.command_queue});
+            off.save()
+                .fail(function (jqxhr, status, error) {
+                    if (options.error)
+                        options.error(model, jqxhr, options);
+                    })
+                .done(function () {
+                    on.save()
+                        .always(function () { model.command_queue.fetch(); })
+                        .done(function (data, status, jqxhr) {
+                            if (options.success)
+                                options.success(model, data, options);
+                            })
+                        .fail(function (jqxhr, status, error) {
+                            if (options.error)
+                                options.error(model, jqxhr, options);
+                            });
+                });
+        } else {
+            var command = new Command({action: action}, {collection: this.command_queue});
+            command.save()
+                .done(function () { model.command_queue.fetch(); })
+                .done(function (data, status, jqxhr) {
+                    if (options.success)
+                        options.success(model, data, options);
+                    })
+                .fail(function (jqxhr, status, error) {
+                    if (options.error)
+                        options.error(model, jqxhr, options);
+                    });
+        }
+    },
     provision: function (options) {
         var model = this;
         options = options || {};
