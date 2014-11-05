@@ -1,19 +1,20 @@
 <% if (hardware_scan_date) { %>
-  <p>Hardware scan was last run
+  <div class="alert alert-info">Hardware scan was last run
   <time datetime="<%- moment.utc(hardware_scan_date).toISOString() %>"
         title="<%- hardware_scan_date %>">
     <%- moment.utc(hardware_scan_date).local().fromNow() %></time>.
-  </p>
+  </div>
 <% } else { %>
   <p>Hardware scan has never been run.</p>
 <% } %>
+<section>
 <h3>
   System
   <% if (can_change_hardware) { %>
     <button type="button" class="btn edit"><i class="fa fa-pencil-square-o"></i> Edit</button>
   <% } %>
 </h3>
-<table class="table table-bordered" style="max-width: 30em;">
+<table class="table table-vertical">
   <tbody>
     <tr>
       <th>Host Hypervisor</th>
@@ -45,3 +46,4 @@
     </tr>
   </tbody>
 </table>
+</section>

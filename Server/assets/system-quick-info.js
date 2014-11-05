@@ -11,13 +11,12 @@ window.SystemQuickInfo = Backbone.View.extend({
         this.render();
     },
     render: function () {
-        this.$el.addClass('row-fluid');
         new SystemQuickDescription({model: this.model}).$el
-            .addClass('span4').appendTo(this.$el);
-        new SystemQuickHealth({model: this.model}).$el
-            .addClass('span4').appendTo(this.$el);
+            .appendTo(this.$el);
         new SystemQuickUsage({model: this.model}).$el
-            .addClass('span4').appendTo(this.$el);
+            .appendTo(this.$el);
+        new SystemQuickHealth({model: this.model}).$el
+            .appendTo(this.$el);
     },
 });
 

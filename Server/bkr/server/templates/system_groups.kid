@@ -1,4 +1,4 @@
-<table id="systemgroups" class="table table-striped table-one-line-per-row" xmlns:py="http://purl.org/kid/ns#">
+<table id="systemgroups" class="table table-striped table-one-line-per-row table-hover" xmlns:py="http://purl.org/kid/ns#">
   <thead>
     <tr>
       <th>Name</th>

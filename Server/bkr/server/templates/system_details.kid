@@ -1,8 +1,8 @@
 <div xmlns:py="http://purl.org/kid/ns#">
 
-<span py:if="system.cpu">
+<section py:if="system.cpu">
 <h3>CPU</h3>
-<table class="table table-bordered">
+<table class="table table-vertical">
   <tbody>
     <tr>
       <th>Vendor</th>
@@ -82,9 +82,9 @@
     </tr>
   </tbody>
 </table>
-</span>
+</section>
 
-<span py:if="system.disks" py:strip="True">
+<section py:if="system.disks">
 <h3>Disks</h3>
 <table class="table table-striped">
   <thead>
@@ -113,8 +113,9 @@
     </tr>
   </tbody>
 </table>
-</span>
+</section>
 
+<section>
 <h3>Devices</h3>
 <table class="table table-striped">
   <thead>
@@ -158,4 +159,6 @@
     </tr>
   </tbody>
 </table>
+</section>
+
 </div>

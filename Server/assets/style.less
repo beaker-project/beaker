@@ -105,7 +105,7 @@ h3 small { font-size: @baseFontSize * 1.25; }
 
 // Friendly datetimes with the real timestamp in title.
 time[title] {
-    border-bottom: 1px dashed @gray;
+    border-bottom: 1px dashed currentColor;
 }
 
 // We have some forms in table cells, and the bottom margin (from Bootstrap) 
@@ -197,6 +197,32 @@ td form, td input, td select, td .input-append, td .input-prepend {
     & > td, & > th {
         background-color: @warningBackground;
         font-style: italic;
+    }
+}
+
+// Thicker bottom border for th (this is in Bootstrap 3)
+.table thead th {
+    border-bottom: 2px solid @tableBorder;
+}
+
+// "Vertical" tables have one <th/> at the start of each <tr/>, running 
+// vertically down the first column.
+.table-vertical {
+    width: auto;
+    border-collapse: separate;
+    border-spacing: 0 0.75em;
+    td, th {
+        padding: 0.25em 1em;
+        // override default row borders from .table
+        border-top: none;
+    }
+    th {
+        font-weight: normal;
+        color: @gray;
+        padding-left: 0;
+    }
+    td {
+        border-left: 1px solid @tableBorder;
     }
 }
 

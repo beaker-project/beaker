@@ -1,3 +1,4 @@
+<p>Owned by <a href="mailto:<%- owner.get('email_address') %>" title="<%- owner.get('display_name') %> &lt;<%- owner.get('email_address') %>&gt;"><%- owner.get('user_name') %></a>.</p>
 <% if (!_.isEmpty(current_loan)) { %>
   <p>
     <span class="label label-info">Loaned</span>
@@ -38,7 +39,7 @@
     they just got the loan), or return the loan (if they have already 
     taken+returned the system and are now done with it).
     */ %>
-    <div class="btn-group btn-group-justified">
+    <div class="btn-group btn-group-justified" style="display: block;">
       <a href="#" class="btn take" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Taking&hellip;">Take</a>
       <a href="#" class="btn return-loan" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Returning loan&hellip;">Return Loan</a>
     </div>

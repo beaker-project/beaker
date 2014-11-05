@@ -6,23 +6,81 @@
 
 // system page
 
-.system-tabs {
-    overflow: visible;
+.system-main-content {
+    display: flex;
+    flex-flow: row nowrap;
+    .system-nav {
+        flex-grow: 0.25;
+        flex-shrink: 0;
+        margin-right: 4em;
+    }
+    .system-tabs {
+        flex-grow: 1;
+        flex-shrink: 1;
+        flex-basis: 100%;
+        overflow: visible;
+    }
+}
+// disable flexbox stuff on narrow viewports
+@media (max-width: 767px) {
+    .system-main-content {
+        display: block !important;
+    }
+}
+
+// Nav list tweaks, suggested by HSS UX team based on user testing
+// https://bugzilla.redhat.com/show_bug.cgi?id=1144190
+.system-nav {
+    text-align: right;
+    li + .nav-header {
+        margin-top: 1em;
+    }
+    // CSS right triangle, using position and pseudo-element hacks
+    li {
+        position: relative;
+        a:after {
+            content: "";
+            position: absolute;
+            width: 0;
+            height: 0;
+            top: 0;
+            right: -15px; // matches .nav-list margin
+            // variable for nav list heights, used below
+            // (base line height + 3px top padding + 3px bottom padding)
+            @navListItemHeight: (@baseLineHeight + 2*3px);
+            border-top: white @navListItemHeight/2 solid;
+            border-bottom: white @navListItemHeight/2 solid;
+            border-left: transparent @navListItemHeight/2+1px solid;
+        }
+        &.nav-header, a {
+            padding-right: 30px; // extra padding to account for the triangle
+        }
+    }
 }
 
 .system-quick-info {
     // Matches the style of .page-header immediately above it.
-    padding-bottom: @baseLineHeight;
     border-bottom: 1px solid @grayLighter;
     margin-bottom: @baseLineHeight;
+    display: flex;
+    flex-flow: row nowrap;
     > div {
+        margin-bottom: @baseLineHeight;
         // vertical border between columns
-        border-left: 1px solid @grayLighter;
-        padding-left: @fluidGridGutterWidth;
-        &:first-child {
-            border-left: none;
-            padding-left: 0;
+        margin-right: 2em;
+        border-right: 1px solid @grayLighter;
+        padding-right: 2em;
+        &:last-child {
+            margin-right: 0;
+            border-right: none;
+            padding-right: 0;
         }
+    }
+    .system-quick-usage {
+        /* The quick usage box can be quite narrow in a lot of cases, so we 
+         * force a minimum width on it to prevent it from being too 
+         * disproportionate to the other quick info boxes. */
+        min-width: 12em;
     }
 }
 
@@ -31,6 +89,12 @@
     .well-small;
     // reset bottom margin to match p
     margin-bottom: @baseLineHeight / 2;
+}
+
+#details section {
+    padding-bottom: 1em;
+    border-bottom: 1px solid @grayLighter;
+    margin-bottom: 1.5em;
 }
 
 .system-provision {
@@ -54,4 +118,11 @@
 #access-policy .table .btn {
     // Reset to default button padding
     padding: 4px 12px;
+}
+
+/* The data in these tables is often quite brief and so stretching them out to 
+ * fill the entire width of the viewport hurts readability, since it causes the 
+ * columns to be spaced very far apart. */
+#groups .table, #keys .table {
+    width: auto;
 }

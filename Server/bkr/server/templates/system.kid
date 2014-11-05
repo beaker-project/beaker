@@ -47,8 +47,8 @@
 <body>
   <div class="page-header"><h1>${value.fqdn}</h1></div>
   <div class="system-quick-info"></div>
-  <div class="row-fluid">
-    <ul class="span3 nav nav-list system-nav">
+  <div class="system-main-content">
+    <ul class="nav nav-list system-nav">
       <li class="nav-header">Hardware</li>
       <li><a data-toggle="tab" href="#essentials">Essentials</a></li>
       <li><a data-toggle="tab" href="#details">Details</a></li>
@@ -76,7 +76,7 @@
       -->
       <li><a data-toggle="tab" href="#tasks">Executed Tasks</a></li>
     </ul>
-    <div class="span9 tab-content system-tabs">
+    <div class="tab-content system-tabs">
       <div class="tab-pane" id="essentials"/>
       <div class="tab-pane" id="details">
         <div class="system-hardware-details"></div>
