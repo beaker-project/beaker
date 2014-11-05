@@ -49,8 +49,7 @@ window.AccessPolicy = Backbone.Model.extend({
         return _.result(this.system, 'url') + 'access-policy';
     },
     parse: function (data) {
-        data['rules'] = (!_.isEmpty(data['rules']) ?
-                new AccessPolicyRules(data['rules'], {parse: true}) : null);
+        data['rules'] = new AccessPolicyRules(data['rules'], {parse: true});
         return data;
     },
 });

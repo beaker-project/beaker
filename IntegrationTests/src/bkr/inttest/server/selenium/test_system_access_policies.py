@@ -213,6 +213,19 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
         pane.find_element_by_xpath('.//span[@class="sync-status" and '
             'contains(string(.), "No such user")]')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1160513
+    def test_empty_policy(self):
+        with session.begin():
+            self.system.custom_access_policy.rules[:] = []
+        b = self.browser
+        login(b, user=self.system_owner.user_name, password='owner')
+        b.get(get_server_base() + 'view/%s/' % self.system.fqdn)
+        b.find_element_by_link_text('Access Policy').click()
+        pane = b.find_element_by_id('access-policy')
+        self.find_checkbox('Everybody', 'View')
+        for checkbox in pane.find_elements_by_xpath('.//input[@type="checkbox"]'):
+            self.assertFalse(checkbox.is_selected())
+
 class SystemAccessPolicyHTTPTest(DatabaseTestCase):
     """
     Directly tests the HTTP interface used by the access policy widget.
