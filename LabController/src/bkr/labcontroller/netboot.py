@@ -428,7 +428,7 @@ def clear_elilo(fqdn, basedir):
 
 ### Bootloader config: PowerPC Open Firmware bootloader (Yaboot)
 
-def configure_yaboot(fqdn, kernel_options, basedir):
+def configure_yaboot(fqdn, kernel_options, basedir, yaboot_symlink=True):
     """
     Creates bootloader files for Yaboot
 
@@ -437,8 +437,6 @@ def configure_yaboot(fqdn, kernel_options, basedir):
     """
     yaboot_conf_dir = os.path.join(basedir, 'etc')
     makedirs_ignore(yaboot_conf_dir, mode=0755)
-    ppc_dir = os.path.join(basedir, 'ppc')
-    makedirs_ignore(ppc_dir, mode=0755)
 
     basename = pxe_basename(fqdn).lower()
     # XXX I don't think multiple initrds are supported?
@@ -455,18 +453,22 @@ image=/images/%s/kernel
     logger.debug('Writing yaboot config for %s as %s', fqdn, basename)
     with atomically_replaced_file(os.path.join(yaboot_conf_dir, basename)) as f:
         f.write(config)
-    logger.debug('Creating yaboot symlink for %s as %s', fqdn, basename)
-    atomic_symlink('../yaboot', os.path.join(ppc_dir, basename))
+    if yaboot_symlink:
+        ppc_dir = os.path.join(basedir, 'ppc')
+        makedirs_ignore(ppc_dir, mode=0755)
+        logger.debug('Creating yaboot symlink for %s as %s', fqdn, basename)
+        atomic_symlink('../yaboot', os.path.join(ppc_dir, basename))
 
-def clear_yaboot(fqdn, basedir):
+def clear_yaboot(fqdn, basedir, yaboot_symlink=True):
     """
     Removes bootloader file created by configure_yaboot
     """
     basename = pxe_basename(fqdn).lower()
     logger.debug('Removing yaboot config for %s as %s', fqdn, basename)
     unlink_ignore(os.path.join(basedir, 'etc', basename))
-    logger.debug('Removing yaboot symlink for %s as %s', fqdn, basename)
-    unlink_ignore(os.path.join(basedir, 'ppc', basename))
+    if yaboot_symlink:
+        logger.debug('Removing yaboot symlink for %s as %s', fqdn, basename)
+        unlink_ignore(os.path.join(basedir, 'ppc', basename))
 
 ### Bootloader config for PPC64
 
@@ -605,6 +607,33 @@ add_bootloader("aarch64", configure_aarch64, clear_aarch64, set(["aarch64"]))
 add_bootloader("zpxe", configure_zpxe, clear_zpxe, set(["s390", "s390x"]))
 add_bootloader("petitboot", configure_petitboot, clear_petitboot)
 
+# Custom bootloader stuff
+def configure_netbootloader_directory(fqdn, kernel_options):
+    netbootloader, _ = extract_arg('netbootloader=', kernel_options)
+    tftp_root = get_tftp_root()
+    if netbootloader:
+        fqdn_dir = os.path.join(tftp_root, 'bootloader', fqdn)
+        logger.debug('Creating custom netbootloader tree for %s in %s', fqdn, fqdn_dir)
+        makedirs_ignore(fqdn_dir, mode=0755)
+        grub2_cfg_file = os.path.join(fqdn_dir, 'grub.cfg-%s'%pxe_basename(fqdn))
+        configure_grub2(fqdn, fqdn_dir, grub2_cfg_file, kernel_options)
+        configure_pxelinux(fqdn, kernel_options, fqdn_dir)
+        configure_yaboot(fqdn, kernel_options, fqdn_dir, yaboot_symlink=False)
+
+        # create the symlink to the specified bootloader w.r.t the tftp_root
+        if netbootloader.startswith('/'):
+            netbootloader = netbootloader.lstrip('/')
+        atomic_symlink(os.path.join('../../', netbootloader), os.path.join(fqdn_dir, 'image'))
+
+def clear_netbootloader_directory(fqdn):
+    fqdn_dir = os.path.join(get_tftp_root(), 'bootloader', fqdn)
+    logger.debug('Removing custom netbootloader config for %s from %s', fqdn, fqdn_dir)
+    unlink_ignore(os.path.join(fqdn_dir, 'image'))
+    grub2_cfg_file = os.path.join(fqdn_dir, 'grub.cfg-%s'%pxe_basename(fqdn))
+    clear_grub2(grub2_cfg_file)
+    clear_pxelinux(fqdn, fqdn_dir)
+    clear_yaboot(fqdn, fqdn_dir, yaboot_symlink=False)
+
 def configure_all(fqdn, arch, distro_tree_id,
                   kernel_url, initrd_url, kernel_options, basedir=None):
     """Configure images and all bootloader files for given fqdn"""
@@ -616,6 +645,7 @@ def configure_all(fqdn, arch, distro_tree_id,
             # Arch constrained bootloader and this system doesn't match
             continue
         bootloader.configure(fqdn, kernel_options, basedir)
+    configure_netbootloader_directory(fqdn, kernel_options)
 
 def clear_all(fqdn, basedir=None):
     """Clear images and all bootloader files for given fqdn"""
@@ -624,3 +654,4 @@ def clear_all(fqdn, basedir=None):
         basedir = get_tftp_root()
     for bootloader in BOOTLOADERS.values():
         bootloader.clear(fqdn, basedir)
+    clear_netbootloader_directory(fqdn)

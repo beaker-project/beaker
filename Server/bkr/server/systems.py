@@ -1011,6 +1011,12 @@ def ipxe_script(uuid):
     kernel_url = urlparse.urljoin(distro_tree_url, kernel.path)
     initrd_url = urlparse.urljoin(distro_tree_url, initrd.path)
     kernel_options = resource.kernel_options + ' netboot_method=ipxe'
+
+    # strip out netbootloader=.. string since it doesn't make sense for
+    # ipxe
+    kernel_options = ' '.join(arg for arg in kernel_options.split()
+                              if not arg.startswith('netbootloader='))
+
     return ('#!ipxe\nkernel %s %s\ninitrd %s\nboot\n'
             % (kernel_url, kernel_options, initrd_url),
             200, [('Content-Type', 'text/plain')])

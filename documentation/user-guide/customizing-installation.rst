@@ -66,6 +66,38 @@ The following kernel options are treated specially by Beaker:
     only GRUB for AArch64), Beaker extracts the ``devicetree=`` option from the 
     kernel command line and appends it to the boot loader configuration.
 
+``netbootloader=<tftp path to bootloader>``
+
+    Netboot loader image to use. Beaker creates a symlink so the TFTP
+    path :file:`bootloader/{fqdn}/image` serves the specified
+    image.
+
+    Set this option if you want to boot an alternative image. For example,
+    if the administrator has made an older version of PXELINUX available in
+    the TFTP root as :file:`pxelinux-311.0`, you can boot it using
+    ``netbootloader=pxelinux-311.0``.
+
+    By default Beaker uses the most suitable boot loader for the chosen
+    distro and architecture:
+
+    - i386/x86_64: :file:`pxelinux.0`
+    - ia64: :file:`elilo-ia64.efi`
+    - ppc: :file:`yaboot`
+    - aarch64: :file:`aarch64/bootaa64.efi`
+
+    For ppc64 and ppc64le, for Fedora, RHEL 7.1 and later:
+
+    - :file:`boot/grub2/powerpc-ieee1275/core.elf`
+
+    and for RHEL 7.0 and earlier:
+
+    - :file:`yaboot`
+
+    Note that this option will have no effect if the system has a
+    hard-coded boot loader filename in the DHCP configuration. For configurable
+    netboot loader support the DHCP configuration must specify the
+    filename as :file:`bootloader/{fqdn}/image`. See :ref:`system-dhcp`.
+
 .. _kickstart-metadata:
 
 Kickstart metadata

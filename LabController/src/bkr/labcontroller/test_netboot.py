@@ -484,3 +484,29 @@ append ks=http://lol/ ksdevice=bootif netboot_method=petitboot
 """)
         netboot.clear_petitboot(TEST_FQDN, self.tftp_root)
         self.assertFalse(os.path.exists(petitboot_config_path))
+
+class NetbootloaderTest(ImagesBaseTestCase):
+
+    def test_configure_then_clear(self):
+        netboot.configure_all(TEST_FQDN, 'ppc64', 1234,
+                              'file://%s' % self.kernel.name,
+                              'file://%s' % self.initrd.name,
+                              'netbootloader=myawesome/netbootloader'
+                              )
+        bootloader_config_symlink = os.path.join(self.tftp_root, 'bootloader', TEST_FQDN, 'image')
+        self.assertTrue(os.path.lexists(bootloader_config_symlink))
+        self.assertEquals(os.path.realpath(bootloader_config_symlink), 
+                          os.path.join(self.tftp_root, 'myawesome/netbootloader'))
+        # this tests ppc64 netboot creation
+        grub2_config_file = os.path.join(self.tftp_root, 'bootloader', TEST_FQDN, 'grub.cfg-7F0000FF')
+        self.assertTrue(os.path.exists(grub2_config_file))
+
+        # Clear
+        netboot.clear_netbootloader_directory(TEST_FQDN)
+
+        # the FQDN directory is not removed
+        self.assertTrue(os.path.exists(os.path.join(self.tftp_root, 'bootloader', TEST_FQDN)))
+        # the image symlink is removed
+        self.assertFalse(os.path.lexists(bootloader_config_symlink))
+        # The config files for grub2 should be removed (since this is for PPC64)
+        self.assertFalse(os.path.exists(grub2_config_file))

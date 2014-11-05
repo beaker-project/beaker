@@ -141,7 +141,7 @@ class TestSystem(DatabaseTestCase):
         # vnc should be removed
         self.assertEqual(opts.kernel_options,
                 dict(console='ttyS0', ksdevice='eth1', noverifyssl=None,
-                     serial=None))
+                     serial=None, netbootloader='pxelinux.0'))
 
     def test_mark_broken_updates_history(self):
         system = data_setup.create_system(status = SystemStatus.automated)
@@ -1069,6 +1069,89 @@ class DistroTreeTest(DatabaseTestCase):
                 scheme=['http', 'nfs']), None)
         self.assertRaises(ValueError, lambda: self.distro_tree.url_in_lab(
                 self.lc, scheme=['http', 'nfs'], required=True))
+
+    def test_custom_netbootloader(self):
+
+        # ppc64, RHEL 6
+        distro_rhel6 = data_setup.create_distro(osmajor='RedHatEnterpriseLinux6',
+                                                osminor=u'5')
+        rhel6_ppc64 = data_setup.create_distro_tree(distro=distro_rhel6,
+                                                    arch=u'ppc64')
+        system1 = data_setup.create_system(shared=True, lab_controller=self.lc)
+        r1 = data_setup.create_recipe(distro_tree=rhel6_ppc64)
+
+        # ppc64, RHEL 7.0
+        distro_rhel7 = data_setup.create_distro(osmajor='RedHatEnterpriseLinux7',
+                                                osminor=u'0')
+        rhel7_ppc64 = data_setup.create_distro_tree(distro=distro_rhel7,
+                                                    arch=u'ppc64')
+        system2 = data_setup.create_system(shared=True, arch=u'ppc64',
+                                           lab_controller=self.lc)
+        r2 = data_setup.create_recipe(distro_tree=rhel7_ppc64)
+
+        # ppc64, RHEL 7.1
+        distro_rhel71 = data_setup.create_distro(osmajor='RedHatEnterpriseLinux7',
+                                                 osminor=u'1')
+        rhel71_ppc64 = data_setup.create_distro_tree(distro=distro_rhel71,
+                                                     arch=u'ppc64')
+        system3 = data_setup.create_system(shared=True, arch=u'ppc64',
+                                           lab_controller=self.lc)
+        r3 = data_setup.create_recipe(distro_tree=rhel71_ppc64)
+
+        # admin set distro option to override the default netbootloader
+        distro_tree = data_setup.create_distro_tree(distro=data_setup.create_distro(),
+                                                    arch=u'x86_64',
+                                                    osmajor_installopts_arch= \
+                                                    {'kernel_options'
+                                                     :'netbootloader=something/weird'})
+        system4 = data_setup.create_system(shared=True, arch=u'ppc64',
+                                           lab_controller=self.lc)
+        r4 = data_setup.create_recipe(distro_tree=distro_tree)
+
+        # ppc64, Fedora 21
+        distro_f21 = data_setup.create_distro(osmajor='Fedora21',
+                                                osminor=u'0')
+        f21_ppc64 = data_setup.create_distro_tree(distro=distro_f21,
+                                                    arch=u'ppc64')
+        system5 = data_setup.create_system(shared=True, lab_controller=self.lc)
+        r5 = data_setup.create_recipe(distro_tree=f21_ppc64)
+
+        # ppc64, Fedora 21, custom bootloader specified as kernel option
+        system6 = data_setup.create_system(shared=True, lab_controller=self.lc)
+        r6 = data_setup.create_recipe(distro_tree=f21_ppc64)
+
+        job = data_setup.create_job_for_recipes([r1, r2, r3, r4, r5, r6])
+        job.recipesets[0].recipes[5].kernel_options = u'netbootloader=a/new/bootloader'
+        systems = [system1, system2, system3, system4, system5, system6]
+        for i, s in enumerate(systems):
+            data_setup.mark_recipe_waiting(job.recipesets[0].recipes[i], system=s)
+            job.recipesets[0].recipes[i].provision()
+
+        self.assertEqual(system1.command_queue[2].action, 'configure_netboot')
+        self.assertIn('netbootloader=yaboot',
+                      system1.command_queue[2].kernel_options)
+        self.assertEqual(system2.command_queue[2].action, 'configure_netboot')
+        self.assertIn('netbootloader=yaboot',
+                      system2.command_queue[2].kernel_options)
+        self.assertEqual(system3.command_queue[2].action, 'configure_netboot')
+        self.assertIn('netbootloader=boot/grub2/powerpc-ieee1275/core.elf',
+                      system3.command_queue[2].kernel_options)
+        self.assertEqual(system4.command_queue[2].action, 'configure_netboot')
+        self.assertIn('netbootloader=something/weird',
+                      system4.command_queue[2].kernel_options)
+        self.assertEqual(system5.command_queue[2].action, 'configure_netboot')
+        self.assertIn('netbootloader=boot/grub2/powerpc-ieee1275/core.elf',
+                      system5.command_queue[2].kernel_options)
+        self.assertEqual(system6.command_queue[2].action, 'configure_netboot')
+        self.assertIn('netbootloader=a/new/bootloader',
+                      system6.command_queue[2].kernel_options)
+
+        # Manual provision
+        system7 = data_setup.create_system(shared=True, lab_controller=self.lc)
+        system7.provisions[f21_ppc64.arch] = Provision(arch=f21_ppc64.arch,
+                                                      kernel_options='netbootloader=a/new/bootloader')
+        opts = system7.manual_provision_install_options(f21_ppc64)
+        self.assertEqual(opts.kernel_options['netbootloader'], 'a/new/bootloader')
 
 class OSMajorTest(DatabaseTestCase):
 

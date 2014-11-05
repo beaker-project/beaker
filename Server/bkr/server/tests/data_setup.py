@@ -25,7 +25,8 @@ from bkr.server.model import LabController, User, Group, UserGroup, Distro, Dist
         DeviceClass, DistroTreeRepo, TaskPackage, KernelType, \
         LogRecipeTaskResult, TaskType, SystemResource, GuestRecipe, \
         GuestResource, VirtResource, SystemStatusDuration, SystemAccessPolicy, \
-        SystemPermission, DistroTreeImage, ImageType, KernelType, RecipeReservationRequest
+        SystemPermission, DistroTreeImage, ImageType, KernelType, \
+        RecipeReservationRequest, OSMajorInstallOptions
 
 log = logging.getLogger(__name__)
 
@@ -170,7 +171,7 @@ def add_group_to_system(system, group):
     system.groups.append(group)
 
 def create_distro(name=None, osmajor=u'DansAwesomeLinux6', osminor=u'9',
-        arches=None, tags=None, harness_dir=True):
+                  arches=None, tags=None, harness_dir=True, osmajor_installopts=None):
     osmajor = OSMajor.lazy_create(osmajor=osmajor)
     osversion = OSVersion.lazy_create(osmajor=osmajor, osminor=osminor)
     if arches:
@@ -180,6 +181,15 @@ def create_distro(name=None, osmajor=u'DansAwesomeLinux6', osminor=u'9',
     distro = Distro.lazy_create(name=name, osversion=osversion)
     for tag in (tags or []):
         distro.add_tag(tag)
+    # add distro wide install options, if any
+    if osmajor_installopts:
+        for arch in arches:
+            io = OSMajorInstallOptions.lazy_create(osmajor_id=osmajor.id,
+                                                   arch_id=Arch.by_name(arch).id)
+            io.ks_meta = osmajor_installopts.get('ks_meta', '')
+            io.kernel_options = osmajor_installopts.get('kernel_options', '')
+            io.kernel_options_post = osmajor_installopts.get('kernel_options_post', '')
+
     log.debug('Created distro %r', distro)
     if harness_dir:
         harness_dir = os.path.join(turbogears.config.get('basepath.harness'), distro.osversion.osmajor.osmajor)
@@ -189,7 +199,7 @@ def create_distro(name=None, osmajor=u'DansAwesomeLinux6', osminor=u'9',
 
 def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux6',
         osminor=u'9', distro_tags=None, arch=u'i386', variant=u'Server',
-        lab_controllers=None, urls=None, harness_dir=True):
+        lab_controllers=None, urls=None,  harness_dir=True, osmajor_installopts_arch=None):
     if distro is None:
         distro = create_distro(name=distro_name, osmajor=osmajor, osminor=osminor,
                 tags=distro_tags, harness_dir=harness_dir)
@@ -222,6 +232,14 @@ def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux
             lab_controller_distro_tree = LabControllerDistroTree(
                 lab_controller=lc, url=url)
             distro_tree.lab_controller_assocs.append(lab_controller_distro_tree)
+
+    if osmajor_installopts_arch:
+        io = OSMajorInstallOptions.lazy_create(osmajor_id=distro_tree.distro.osversion.osmajor.id,
+                                               arch_id=distro_tree.arch.id)
+        io.ks_meta = osmajor_installopts_arch.get('ks_meta', '')
+        io.kernel_options = osmajor_installopts_arch.get('kernel_options', '')
+        io.kernel_options_post = osmajor_installopts_arch.get('kernel_options_post', '')
+
     log.debug('Created distro tree %r', distro_tree)
     return distro_tree
 

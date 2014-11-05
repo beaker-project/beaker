@@ -19,8 +19,13 @@ The Cobbler project provides `pre-compiled binaries of common boot loaders
 <https://github.com/cobbler/cobbler.github.com/tree/master/loaders>`__. Many 
 Linux distributions also package these boot loaders.
 
-Each test system should have a suitable DHCP option pointing at one of these 
-boot loader images (see :ref:`adding-systems`).
+When Beaker provisions a system it creates a symlink
+:file:`bootloader/{fqdn}/image` pointing to one of these images,
+depending on the value of the ``netbootloader=`` kernel option
+(see :ref:`kernel-options`). Alternatively, the DHCP boot filename
+option can be hard-coded to point at one of these images (see
+:ref:`adding-systems`).
+
 
 :file:`pxelinux.0`
     Recommended location of the PXELINUX image, used for x86-based systems with 
@@ -31,16 +36,9 @@ boot loader images (see :ref:`adding-systems`).
     Syslinux package to this location so that x86 BIOS systems can be 
     provisioned out of the box.
 
-    It is possible to use alternative names for this image (for example, to 
-    have multiple parallel versions of PXELINUX for compatibility reasons), 
-    assuming that the DHCP configuration is adjusted configured accordingly.
-
 :file:`grub/grub.efi`
     Recommended location of the EFI GRUB_ image, used for x86-based systems 
     with UEFI firmware.
-
-    It is possible to use alternative names for this image, but the image must 
-    be under the :file:`grub/` directory.
 
 :file:`yaboot`
     Location of the Yaboot_ image, used for PowerPC systems.
@@ -60,12 +58,47 @@ boot loader images (see :ref:`adding-systems`).
 .. _ELILO: http://elilo.sourceforge.net/
 .. _Yaboot: http://yaboot.ozlabs.org/
 
-Boot loader configuration files
--------------------------------
+.. _boot-loader-configs:
 
-Beaker creates these files when a test system is being provisioned, and then 
-removes them once the installation is complete.
+Boot loader configuration directory
+-----------------------------------
 
+.. versionadded:: 20
+
+When Beaker provisions a system, it creates a subdirectory
+:file:`bootloader/{fqdn}` under the TFTP root directory containing the
+following files.
+
+:file:`bootloader/{fqdn}/image`
+     Symlink to the desired netboot loader image, as specified in the
+     ``netbootloader=`` kernel option.
+
+:file:`bootloader/{fqdn}/etc/{0a010203}`
+     Configuration for Yaboot.
+
+:file:`bootloader/{fqdn}/grub.cfg-{0A010203}`
+     Configuration for GRUB2 (used by 64-bit ARM and PowerPC systems).
+
+:file:`bootloader/{fqdn}/grub.cfg`
+     Default configuration for GRUB2 (used by 64-bit ARM systems).
+
+:file:`bootloader/{fqdn}/petitboot.cfg`
+      Configuration for Petitboot.
+
+:file:`bootloader/{fqdn}/pxelinux.cfg/{0A010203}`
+      Configuration for PXELINUX.
+
+:file:`bootloader/{fqdn}/pxelinux.cfg/default`
+      Default configuration for PXELINUX.
+
+Legacy boot loader configuration files
+--------------------------------------
+
+Beaker also creates the following boot loader configuration files for
+compatibility reasons. These locations will be used when a system's
+DHCP configuration specifies a hard-coded boot filename instead of
+using Beaker's configurable netboot loader support.
+ 
 :file:`pxelinux.cfg/{0A010203}`
     Configuration for PXELINUX. The filename is the IPv4 address of the test 
     system, represented as 8 hexadecimal digits (using uppercase letters).
@@ -116,13 +149,13 @@ removes them once the installation is complete.
     Configuration files for System/390 virtual machines using "zPXE" (Cobbler's 
     ``zpxe.rexx`` script).
 
-:file:`images/{fqdn}/`
-    Kernel and initrd images for the distro being provisioned. All the 
-    generated boot loader configurations point at the images in this directory.
-
-
 Other files in the TFTP root directory
 --------------------------------------
+
+:file:`images/{fqdn}/`
+    Kernel and initrd images for the distro being provisioned. All the 
+    generated boot loader configurations point at the images in this
+    directory.
 
 :file:`pxelinux.cfg/default`
     Default configuration used by PXELINUX when no system-specific 

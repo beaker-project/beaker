@@ -334,6 +334,7 @@ class OSMajor(DeclarativeMappedObject):
         ks_meta['docker_package'] = 'docker'
         if (fedora and fedora != 'rawhide' and int(fedora) < 22)  or (rhel and int(rhel) <= 6):
             ks_meta['docker_package'] = 'docker-io'
+
         return InstallOptions(ks_meta, {}, {})
 
     def tasks(self):
@@ -691,6 +692,34 @@ class DistroTree(DeclarativeMappedObject, ActivityMixin):
         from the OS major level.
         """
         osmajor = self.distro.osversion.osmajor
+        osminor = self.distro.osversion.osminor
+
+        # set arch specific default netboot loader paths
+        # relative to the TFTP root directory
+        netbootloader = {'i386': 'pxelinux.0',
+                         # We can't distinguish between UEFI and BIOS systems at this level
+                         # so, we default to pxelinux.0
+                         'x86_64': 'pxelinux.0', 
+                         'ia64': 'elilo-ia64.efi',
+                         'ppc': 'yaboot',
+                         'ppc64': 'boot/grub2/powerpc-ieee1275/core.elf',
+                         'ppc64le': 'boot/grub2/powerpc-ieee1275/core.elf',
+                         'aarch64': 'aarch64/bootaa64.efi',
+                         }
+        name, version = osmajor.name, osmajor.number
+        rhel = False
+        if name in ('RedHatEnterpriseLinux', 'RedHatEnterpriseLinuxServer',
+                'RedHatEnterpriseLinuxClient', 'RedHatEnterpriseLinuxServerGrid',
+                'CentOS'):
+            rhel = version
+
+        if rhel and (int(rhel) <= 6 or (int(rhel) == 7 and osminor == '0')):
+            netbootloader['ppc64'] = 'yaboot'
+            netbootloader['ppc64le'] = 'yaboot'
+
+        # for s390, s390x and armhfp, we default to ''
+        kernel_options = {'netbootloader': netbootloader.get(self.arch.arch, '')}
+        yield InstallOptions({}, kernel_options, {})
         yield osmajor.default_install_options()
         # arch=None means apply to all arches
         if None in osmajor.install_options_by_arch:

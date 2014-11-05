@@ -10,6 +10,8 @@ button at the bottom of the page. Fill in the system's details and click the
 which architectures your system supports on the :guilabel:`Arches` tab. Then 
 fill in the other details as described below.
 
+.. _system-dhcp:
+
 DHCP and DNS
 ------------
 
@@ -28,10 +30,11 @@ synchronized at the start of each recipe. Use a public NTP server if none are
 available in your lab.
 
 The DHCP configuration must also include suitable netboot options for the 
-system. Typically DHCP option 66 ("TFTP server") is set to the address of the 
-lab controller and option 67 ("bootfile") is set to ``pxelinux.0`` or some 
-other boot loader image served by the lab controller (see 
-:ref:`boot-loader-images`).
+system. Typically DHCP option 66 ("TFTP Server Name") is set to the address of the 
+lab controller and option 67 ("Boot File Name") can either be set to
+:file:`bootloader/{fqdn}/image` to take advantage of Beaker's custom
+netboot loader support or a specific bootloader such as ``pxelinux.0``
+(see :ref:`boot-loader-images` and :ref:`boot-loader-configs`).
 
 Power control
 -------------
