@@ -133,6 +133,7 @@ fi
 
 # Enable post-install boot notification
 if [ -f /etc/sysconfig/readahead ] ; then
+    :
     cat >>/etc/sysconfig/readahead <<EOF
 
 # readahead conflicts with auditd, see bug 561486 for detailed explanation.

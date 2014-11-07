@@ -236,3 +236,10 @@ been released:
 * :issue:`1136963`: A more informative error is shown if the user runs
   ``make rpm`` on a task which is tracked in git but has never been tagged. 
   (Contributed by Dan Callaghan)
+
+Beaker 0.18.4
+~~~~~~~~~~~~~
+
+* :issue:`1155331`: Beaker no longer appends extra kernel options for serial
+  consoles in guest kickstarts. This change was released in 0.18.2 but reverted
+  accidentally in 0.18.3. (Contributed by Amit Saha)

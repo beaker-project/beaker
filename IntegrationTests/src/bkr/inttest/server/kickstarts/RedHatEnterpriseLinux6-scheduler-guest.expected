@@ -197,6 +197,7 @@ LOGFILES="/var/log/boot.log /var/log/messages /var/log/dmesg"
 __EOT__
 
 if [ -f /etc/sysconfig/readahead ] ; then
+    :
     cat >>/etc/sysconfig/readahead <<EOF
 
 # readahead conflicts with auditd, see bug 561486 for detailed explanation.
@@ -375,6 +376,7 @@ setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
 if [ -d /etc/init ] ; then
+    :
     cat << EOF >/etc/init/ttyS0.conf
 # start ttyS0
 start on runlevel [2345]
