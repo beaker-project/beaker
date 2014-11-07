@@ -203,6 +203,20 @@ class TestSystem(DatabaseTestCase):
         self.assertNotIn(tree_not_in_lab.distro, distros)
         self.assertIn(tree_in_lab.distro, distros)
 
+    def test_create_system_multi_arch(self):
+        excluded_osmajor = OSMajor.lazy_create(
+            osmajor=data_setup.unique_name(u'osmajor_test_distros%s'))
+        tree_excluded_1 = data_setup.create_distro_tree(arch=u'i386',
+                                                        osmajor=excluded_osmajor.osmajor)
+        tree_excluded_2 = data_setup.create_distro_tree(arch=u'x86_64',
+                                                        osmajor=excluded_osmajor.osmajor)
+        system = data_setup.create_system(arch=[u'i386', u'x86_64'],
+                                          exclude_osmajor=[excluded_osmajor])
+        session.flush()
+        distros = system.distros()
+        self.assertNotIn(tree_excluded_1.distro, distros)
+        self.assertNotIn(tree_excluded_2.distro, distros)
+
 class SystemFilterMethodsTest(DatabaseTestCase):
     """
     Test cases for the hybrid methods/properties used to build system queries.

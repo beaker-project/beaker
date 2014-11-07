@@ -250,13 +250,21 @@ def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.aut
     if shared:
         system.custom_access_policy.add_rule(
                 permission=SystemPermission.reserve, everybody=True)
-    system.arch.append(Arch.by_name(arch))
+    if isinstance(arch, list):
+        for a in arch:
+            system.arch.append(Arch.by_name(a))
+            system.excluded_osmajor.extend(ExcludeOSMajor(arch=Arch.by_name(a),
+                                                          osmajor=osmajor) for osmajor in exclude_osmajor)
+            system.excluded_osversion.extend(ExcludeOSVersion(arch=Arch.by_name(a),
+                                                              osversion=osversion) for osversion in exclude_osversion)
+    else:
+        system.arch.append(Arch.by_name(arch))
+        system.excluded_osmajor.extend(ExcludeOSMajor(arch=Arch.by_name(arch),
+                                                      osmajor=osmajor) for osmajor in exclude_osmajor)
+        system.excluded_osversion.extend(ExcludeOSVersion(arch=Arch.by_name(arch),
+                                                          osversion=osversion) for osversion in exclude_osversion)
     if with_power:
         configure_system_power(system)
-    system.excluded_osmajor.extend(ExcludeOSMajor(arch=Arch.by_name(arch),
-            osmajor=osmajor) for osmajor in exclude_osmajor)
-    system.excluded_osversion.extend(ExcludeOSVersion(arch=Arch.by_name(arch),
-            osversion=osversion) for osversion in exclude_osversion)
     if hypervisor:
         system.hypervisor = Hypervisor.by_name(hypervisor)
     if kernel_type:
