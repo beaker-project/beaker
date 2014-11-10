@@ -388,6 +388,9 @@ class TestGroupsWD(WebDriverTestCase):
         # remove self
         b.find_element_by_xpath('//td[preceding-sibling::td[2]/text()="%s"]' % user.user_name)\
                 .find_element_by_link_text('Remove').click()
+        self.assertEquals(
+                b.find_element_by_class_name('flash').text,
+                '%s Removed' % user.user_name)
 
         # admin should not be in groups/mine
         b.get(get_server_base() + 'groups/mine')
@@ -404,6 +407,9 @@ class TestGroupsWD(WebDriverTestCase):
             if usr.user_id != 1:
                 b.find_element_by_xpath('//td[preceding-sibling::td[2]/text()="%s"]' % usr.user_name)\
                         .find_element_by_link_text('Remove').click()
+                self.assertEquals(
+                        b.find_element_by_class_name('flash').text,
+                        '%s Removed' % usr.user_name)
 
         # attempt to remove admin user
         b.find_element_by_xpath('//a[@href="removeUser?group_id=1&id=1"]').click()
