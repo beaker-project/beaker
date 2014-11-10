@@ -246,7 +246,6 @@ class LabControllers(RPCRoot):
                 'id': cmd.id,
                 'action': cmd.action,
                 'fqdn': cmd.system.fqdn,
-                'arch': [arch.arch for arch in cmd.system.arch],
                 'delay': 0,
                 'quiescent_period': cmd.quiescent_period
             }
@@ -290,6 +289,7 @@ class LabControllers(RPCRoot):
                     cmd.abort(u'Initrd image not found for distro tree %s' % cmd.distro_tree.id)
                     continue
                 d['netboot'] = {
+                    'arch': cmd.distro_tree.arch.arch,
                     'distro_tree_id': cmd.distro_tree.id,
                     'kernel_url': urlparse.urljoin(distro_tree_url, kernel.path),
                     'initrd_url': urlparse.urljoin(distro_tree_url, initrd.path),

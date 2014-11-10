@@ -178,7 +178,8 @@ def handle_clear_logs(conf, command):
         f.truncate()
 
 def handle_configure_netboot(command):
-    netboot.configure_all(command['fqdn'], command['arch'],
+    netboot.configure_all(command['fqdn'],
+                          command['netboot']['arch'],
                           command['netboot']['distro_tree_id'],
                           command['netboot']['kernel_url'],
                           command['netboot']['initrd_url'],

@@ -654,3 +654,19 @@ class TestPowerFailures(XmlRpcTestCase):
             job.update_status()
             self.assertEqual(job.recipesets[0].recipes[0].status,
                              TaskStatus.aborted)
+
+    def test_netboot_config_arch(self):
+        with session.begin():
+            system = data_setup.create_system(arch=[u'i386', u'x86_64'],
+                                              lab_controller=self.lab_controller,
+                                              status=SystemStatus.automated, shared=True)
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20')
+            system.configure_netboot(distro_tree, '', service=u'testdata')
+        self.server.auth.login_password(self.lab_controller.user.user_name,
+                                        u'logmein')
+        queued_commands = self.server.labcontrollers.get_queued_command_details()
+        self.assertEquals(queued_commands[1]['action'], 'configure_netboot')
+        self.assertEquals(queued_commands[1]['fqdn'], system.fqdn)
+        self.assertEquals(queued_commands[1]['netboot']['arch'], 'i386')
+        self.assertEquals(queued_commands[1]['netboot']['distro_tree_id'],
+                          distro_tree.id)
