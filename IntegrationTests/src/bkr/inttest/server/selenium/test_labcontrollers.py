@@ -112,49 +112,43 @@ class LabControllerViewTest(WebDriverTestCase):
 
     def test_lab_controller_remove(self):
         b = self.browser
-        lc_name = data_setup.unique_name('lc%s.com')
-        lc_email = data_setup.unique_name('me@my%s.com')
-        self._add_lc(lc_name, lc_email)
         with session.begin():
-            sys = data_setup.create_system()
-            sys.lab_controller = LabController.by_name(lc_name)
+            lc = data_setup.create_labcontroller()
+            # When an LC is removed, we de-associate all systems, cancel all 
+            # running recipes, and remove all distro tree associations. So this 
+            # test creates a system, job, and distro tree in the lab to cover 
+            # all those cases.
+            sys = data_setup.create_system(lab_controller=lc)
+            job = data_setup.create_running_job(lab_controller=lc)
+            distro_tree = data_setup.create_distro_tree(lab_controllers=[lc])
         b.get(get_server_base() + 'labcontrollers')
         b.find_element_by_xpath("//table[@id='widget']/tbody/tr/"
             "td[preceding-sibling::td/a[normalize-space(text())='%s']]"
-            "/a[normalize-space(text())='Remove']" % lc_name).click()
-        self.assert_('%s removed' % lc_name in
+            "/a[normalize-space(text())='Remove']" % lc.fqdn).click()
+        # confirm deletion
+        b.find_element_by_xpath('//button[@type="button" and .//text()="Delete"]').click()
+        self.assert_('%s removed' % lc.fqdn in
             b.find_element_by_css_selector('.flash').text)
-
-        # Search in  LC activity
-        b.get(get_server_base() + 'activity/labcontroller')
-        b.find_element_by_link_text('Show Search Options').click()
-        b.find_element_by_xpath("//select[@id='activitysearch_0_table']/"
-            "option[@value='LabController/Name']").click()
-        b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/"
-            "option[@value='is']").click()
-        b.find_element_by_xpath("//input[@id='activitysearch_0_value']"). \
-            send_keys(lc_name)
-        b.find_element_by_id('searchform').submit()
-        self.assert_(is_activity_row_present(b,
-            object_='LabController: %s' % lc_name, via='WEBUI',
-            property_='Disabled', action='Changed', new_value='True'))
-        self.assert_(is_activity_row_present(b,
-            object_='LabController: %s' % lc_name, via='WEBUI',
-            property_='Removed', action='Changed', new_value='True'))
-
-        # Ensure System Actvity has been updated to note removal of LC
-        b.get(get_server_base() + 'activity/system')
-        b.find_element_by_link_text('Show Search Options').click()
-        b.find_element_by_xpath("//select[@id='activitysearch_0_table']/"
-            "option[@value='System/Name']").click()
-        b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/"
-            "option[@value='is']").click()
-        b.find_element_by_xpath("//input[@id='activitysearch_0_value']"). \
-            send_keys(sys.fqdn)
-        b.find_element_by_id('searchform').submit()
-        self.assert_(is_activity_row_present(b,
-            object_='System: %s' % sys.fqdn, via='WEBUI',
-            property_='lab_controller', action='Changed', new_value=''))
+        with session.begin():
+            session.expire_all()
+            # check lc activity
+            self.assertEquals(lc.activity[0].field_name, u'Removed')
+            self.assertEquals(lc.activity[0].action, u'Changed')
+            self.assertEquals(lc.activity[0].new_value, u'True')
+            self.assertEquals(lc.activity[1].field_name, u'Disabled')
+            self.assertEquals(lc.activity[1].action, u'Changed')
+            self.assertEquals(lc.activity[1].new_value, u'True')
+            # check system activity
+            self.assertEquals(sys.activity[0].field_name, u'lab_controller')
+            self.assertEquals(sys.activity[0].action, u'Changed')
+            self.assertEquals(sys.activity[0].new_value, None)
+            # check job status
+            job.update_status()
+            self.assertEquals(job.status, TaskStatus.cancelled)
+            # check distro tree activity
+            self.assertEquals(distro_tree.activity[0].field_name,
+                    u'lab_controller_assocs')
+            self.assertEquals(distro_tree.activity[0].action, u'Removed')
 
 
 class AddDistroTreeXmlRpcTest(XmlRpcTestCase):

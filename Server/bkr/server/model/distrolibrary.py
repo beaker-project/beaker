@@ -11,7 +11,7 @@ import xml.dom.minidom
 from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Integer,
         String, Unicode, DateTime, UnicodeText, Boolean)
 from sqlalchemy.sql import select, exists, and_, or_, not_
-from sqlalchemy.orm import relationship, backref, dynamic_loader
+from sqlalchemy.orm import relationship, backref, dynamic_loader, synonym
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -23,7 +23,7 @@ from bkr.server.installopts import InstallOptions
 from .sql import ConditionalInsert
 from .base import DeclarativeMappedObject
 from .types import ImageType, SystemStatus
-from .activity import Activity
+from .activity import Activity, ActivityMixin
 from .lab import LabController
 
 xmldoc = xml.dom.minidom.Document()
@@ -52,6 +52,7 @@ class DistroActivity(Activity):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
     distro_id = Column(Integer, ForeignKey('distro.id'))
+    object_id = synonym('distro_id')
     __mapper_args__ = {'polymorphic_identity': u'distro_activity'}
 
     def object_name(self):
@@ -63,6 +64,7 @@ class DistroTreeActivity(Activity):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
     distro_tree_id = Column(Integer, ForeignKey('distro_tree.id'))
+    object_id = synonym('distro_tree_id')
     __mapper_args__ = {'polymorphic_identity': u'distro_tree_activity'}
 
     def object_name(self):
@@ -443,7 +445,7 @@ class LabControllerDistroTree(DeclarativeMappedObject):
     url = Column(Unicode(255), nullable=False)
 
 
-class Distro(DeclarativeMappedObject):
+class Distro(DeclarativeMappedObject, ActivityMixin):
 
     __tablename__ = 'distro'
     __table_args__ = {'mysql_engine': 'InnoDB'}
@@ -456,6 +458,8 @@ class Distro(DeclarativeMappedObject):
     activity = relationship(DistroActivity, backref='object',
             order_by=[DistroActivity.created.desc(), DistroActivity.id.desc()])
     dyn_trees = dynamic_loader('DistroTree')
+
+    activity_type = DistroActivity
 
     @classmethod
     def lazy_create(cls, name, osversion):
@@ -517,7 +521,7 @@ class Distro(DeclarativeMappedObject):
         return Task.query.filter(not_(Task.excluded_osmajor.any(
                 TaskExcludeOSMajor.osmajor == self.osversion.osmajor)))
 
-class DistroTree(DeclarativeMappedObject):
+class DistroTree(DeclarativeMappedObject, ActivityMixin):
 
     __tablename__ = 'distro_tree'
     __table_args__ = (
@@ -538,6 +542,8 @@ class DistroTree(DeclarativeMappedObject):
             backref='distro_tree', cascade='all, delete-orphan')
     activity = relationship(DistroTreeActivity, backref='object',
             order_by=[DistroTreeActivity.created.desc(), DistroTreeActivity.id.desc()])
+
+    activity_type = DistroTreeActivity
 
     @classmethod
     def lazy_create(cls, distro, variant, arch):

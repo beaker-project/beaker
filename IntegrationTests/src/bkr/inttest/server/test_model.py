@@ -73,7 +73,7 @@ class ActivityMixinTest(DatabaseTestCase):
         # accepted by ActivityMixin._record_activity_inner
         argspec = inspect.getargspec(ActivityMixin._record_activity_inner)
         params = tuple(argspec[0][1:]) # skip 'self'
-        self.assertEqual(ActivityMixin._fields, params)
+        self.assertEqual(ActivityMixin._fields, ('object_id',) + params)
 
     def test_log_formatting(self):
         # Ensure ActivityMixin._log_fmt works as expected

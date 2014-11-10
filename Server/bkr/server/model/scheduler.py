@@ -25,7 +25,7 @@ from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
 from sqlalchemy.sql import select, union, and_, or_, not_, func, literal, exists
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import (mapper, relationship, backref, object_mapper,
-        dynamic_loader, validates)
+        dynamic_loader, validates, synonym)
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.associationproxy import association_proxy
 from turbogears import url
@@ -64,6 +64,7 @@ class RecipeSetActivity(Activity):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
     recipeset_id = Column(Integer, ForeignKey('recipe_set.id'))
+    object_id = synonym('recipeset_id')
     __mapper_args__ = {'polymorphic_identity': u'recipeset_activity'}
 
     def object_name(self):
@@ -114,6 +115,7 @@ class JobActivity(Activity):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
     job_id = Column(Integer, ForeignKey('job.id'), nullable=False)
+    object_id = synonym('job_id')
     __mapper_args__ = {'polymorphic_identity': u'job_activity'}
 
     def object_name(self):

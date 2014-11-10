@@ -6,7 +6,7 @@
 
 from sqlalchemy import (Column, ForeignKey, Integer, Unicode, Boolean,
         DateTime)
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship, backref, synonym
 from sqlalchemy.orm.exc import NoResultFound
 from turbogears.database import session
 from .base import DeclarativeMappedObject
@@ -19,6 +19,7 @@ class LabControllerActivity(Activity):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
     lab_controller_id = Column(Integer, ForeignKey('lab_controller.id'), nullable=False)
+    object_id = synonym('lab_controller_id')
     __mapper_args__ = {'polymorphic_identity': u'lab_controller_activity'}
 
     def object_name(self):

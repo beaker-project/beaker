@@ -21,7 +21,7 @@ from sqlalchemy.sql import select, and_, or_, not_, case, func
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import (mapper, relationship, backref,
         column_property, dynamic_loader, contains_eager, validates,
-        object_mapper)
+        object_mapper, synonym)
 from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.orm.attributes import NEVER_SET
 from sqlalchemy.orm.collections import attribute_mapped_collection
@@ -64,6 +64,7 @@ class SystemActivity(Activity):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
     system_id = Column(Integer, ForeignKey('system.id'), nullable=False)
+    object_id = synonym('system_id')
     __mapper_args__ = {'polymorphic_identity': u'system_activity'}
 
     def object_name(self):

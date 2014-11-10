@@ -86,7 +86,7 @@ class ActivityMixin(object):
     the type of object to create for individual activities.
     """
 
-    _fields = ('service', 'field', 'action', 'old', 'new', 'user')
+    _fields = ('object_id', 'service', 'field', 'action', 'old', 'new', 'user')
     _field_fmt = ', '.join('{0}=%({0})r'.format(name) for name in _fields)
     _log_fmt = 'Tentative %(kind)s: ' + _field_fmt
 
@@ -116,5 +116,25 @@ class ActivityMixin(object):
                                    old_value=old, new_value=new, object=self)
         log_details = dict(kind=self.activity_type.__name__, user=user,
                            service=service, action=action,
-                           field=field, old=old, new=new)
+                           field=field, old=old, new=new, object_id=self.id)
         log.debug(self._log_fmt, log_details)
+
+    @classmethod
+    def record_bulk_activity(cls, query, **kwds):
+        """
+        Like record_activity, but pass a query of this class. The activity 
+        record will be created against each row in the query.
+        """
+        cls._record_bulk_activity_inner(query, **kwds)
+
+    @classmethod
+    def _record_bulk_activity_inner(cls, query, service, field,
+            action=u'Changed', old=None, new=None, user=None):
+        for object_id, in query.values(cls.id):
+            entry = cls.activity_type(user, service, action=action,
+                    field_name=field, old_value=old, new_value=new,
+                    object_id=object_id)
+            log_details = dict(kind=cls.activity_type.__name__, user=user,
+                               service=service, action=action,
+                               field=field, old=old, new=new, object_id=object_id)
+            log.debug(cls._log_fmt, log_details)

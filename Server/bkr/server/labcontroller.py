@@ -519,25 +519,25 @@ class LabControllers(RPCRoot):
     def remove(self, id, *args, **kw):
         labcontroller = LabController.by_id(id)
         labcontroller.removed = datetime.utcnow()
-        systems = System.query.filter_by(lab_controller_id=id).values(System.id)
-        for system_id in systems:
-            sys_activity = SystemActivity(identity.current.user, 'WEBUI', \
-                'Changed', 'lab_controller', labcontroller.fqdn,
-                None, system_id=system_id[0])
-            session.add(sys_activity)
-        System.__table__.update().where(System.lab_controller_id == id).\
-            values(lab_controller_id=None).execute()
+        # de-associate systems
+        systems = System.query.filter(System.lab_controller == labcontroller)
+        System.record_bulk_activity(systems, user=identity.current.user,
+                service=u'WEBUI', action=u'Changed', field=u'lab_controller',
+                old=labcontroller.fqdn, new=None)
+        systems.update({'lab_controller_id': None}, synchronize_session=False)
+        # cancel running recipes
         watchdogs = Watchdog.by_status(labcontroller=labcontroller, 
             status='active')
         for w in watchdogs:
             w.recipe.recipeset.job.cancel(msg='LabController %s has been deleted' % labcontroller.fqdn)
-        for lca in labcontroller._distro_trees:
-            lca.distro_tree.activity.append(DistroTreeActivity(
-                    user=identity.current.user, service=u'WEBUI',
-                    action=u'Removed', field_name=u'lab_controller_assocs',
-                    old_value=u'%s %s' % (lca.lab_controller, lca.url),
-                    new_value=None))
-            session.delete(lca)
+        # remove distro trees
+        distro_tree_assocs = LabControllerDistroTree.query\
+            .filter(LabControllerDistroTree.lab_controller == labcontroller)\
+            .join(LabControllerDistroTree.distro_tree)
+        DistroTree.record_bulk_activity(distro_tree_assocs, user=identity.current.user,
+                service=u'WEBUI', action=u'Removed', field=u'lab_controller_assocs',
+                old=labcontroller.fqdn, new=None)
+        distro_tree_assocs.delete(synchronize_session=False)
         labcontroller.disabled = True
         labcontroller.record_activity(user=identity.current.user, service=u'WEBUI',
                 field=u'Disabled', action=u'Changed', old=unicode(False), new=unicode(True))

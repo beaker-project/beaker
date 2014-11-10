@@ -16,7 +16,7 @@ from kid import Element
 import passlib.context
 from sqlalchemy import (Table, Column, ForeignKey, Integer, Unicode,
         UnicodeText, String, DateTime, Boolean, UniqueConstraint)
-from sqlalchemy.orm import mapper, relationship, backref, validates
+from sqlalchemy.orm import mapper, relationship, backref, validates, synonym
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.associationproxy import association_proxy
 from turbogears.config import get
@@ -35,6 +35,7 @@ class GroupActivity(Activity):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
     group_id = Column(Integer, ForeignKey('tg_group.group_id'), nullable=False)
+    object_id = synonym('group_id')
     __mapper_args__ = {'polymorphic_identity': u'group_activity'}
 
     def object_name(self):
@@ -46,6 +47,7 @@ class UserActivity(Activity):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
     user_id = Column(Integer, ForeignKey('tg_user.user_id'), nullable=False)
+    object_id = synonym('user_id')
     __mapper_args__ = {'polymorphic_identity': u'user_activity'}
 
     def object_name(self):
@@ -76,6 +78,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
     __tablename__ = 'tg_user'
     __table_args__ = {'mysql_engine': 'InnoDB'}
     user_id = Column(Integer, primary_key=True)
+    id = synonym('user_id')
     user_name = Column(Unicode(255), unique=True)
     email_address = Column(Unicode(255), index=True)
     display_name = Column(Unicode(255))
@@ -380,6 +383,7 @@ class Group(DeclarativeMappedObject, ActivityMixin):
     __table_args__ = {'mysql_engine': 'InnoDB'}
 
     group_id = Column(Integer, primary_key=True)
+    id = synonym('group_id')
     group_name = Column(Unicode(255), unique=True, nullable=False)
     display_name = Column(Unicode(255))
     _root_password = Column('root_password', String(255), nullable=True,
