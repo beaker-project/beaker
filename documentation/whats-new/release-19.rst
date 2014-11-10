@@ -1,5 +1,15 @@
+What's New in Beaker 19?
+========================
+
+Beaker 19 brings many improvements to the system page. For Beaker 
+administrators, the upgrade process has been streamlined with automatic 
+database schema upgrades.
+
+Starting with this release, the leading zero has been dropped from Beaker's 
+version numbering scheme.
+
 Improved system page
-====================
+--------------------
 
 In this release the system page has been re-arranged and improved. The aim of 
 the improvements is to reduce wasted space, convey information more 
@@ -9,8 +19,14 @@ Important changes you need to be aware of are listed below. For a complete
 description of all the changes and their background and rationale, refer to the 
 :ref:`original design proposal <beakerdev:proposal-system-page-improvements>`.
 
+The new layout relies on browser support for the `CSS3 Flexible Box Layout 
+Module <http://www.w3.org/TR/css3-flexbox/>`_. Beaker is tested with Firefox 24 
+(which is the oldest supported ESR version of Firefox at the time of writing). 
+Older versions of Firefox are not supported and may be unable to render the 
+system page properly.
+
 Major page layout changes
--------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The system form — the set of fields arranged in two columns at the top of the 
 system page — has historically formed the focus of the system page. Over many 
@@ -31,7 +47,7 @@ a vertical list of tabs, to accommodate their increasing number. The tabs have
 also been re-ordered and grouped by theme.
 
 Relocated interface elements
-----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The various fields and interface elements which previously made up the system 
 form are now grouped into more appropriate tabs on the page:
@@ -62,7 +78,7 @@ system, has been replaced by the :guilabel:`Supported Architectures` field on
 the :guilabel:`Hardware Essentials` tab.
 
 :guilabel:`Provision` tab always provisions
--------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The :guilabel:`Provision` tab now always provisions the system immediately (if 
 you have permission to do so). In previous versions of Beaker, the tab would 
@@ -74,7 +90,7 @@ To provision a system through the scheduler, use the reserve workflow. The
 for the specific system.
 
 Screen scraping scripts will be impacted
-----------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The HTML structure of the system page has changed substantially in this 
 release. In addition, a number of widgets render their markup entirely in the 
@@ -102,11 +118,107 @@ subcommands, please `file an RFE against Beaker
 <https://bugzilla.redhat.com/enter_bug.cgi?product=Beaker&keywords=FutureFeature>`__ 
 requesting a new client command exposing the functionality you need.
 
-Bugs fixed
-----------
+
+Manual systems in the Reserve Workflow
+--------------------------------------
+
+When the user is browsing systems in the Reserve Workflow, Beaker now also 
+offers systems which are in Manual mode (in addition to Automated). If the user 
+picks a Manual system it will be reserved using the "forced system scheduling" 
+mechanism introduced in Beaker 0.17.
+
+System access policy restrictions will still apply as normal. Users will only 
+be offered systems for which they have ``reserve`` permission.
+
+If the user does not pick a specific system, the usual scheduler behaviour will 
+continue to apply: only Automated systems will be selected by the scheduler.
+
+(Contributed by Amit Saha in :issue:`1093226`.)
+
+
+Automatic database schema upgrades
+----------------------------------
+
+The :program:`beaker-init` command now supports fully automatic database schema 
+upgrades and downgrades using `Alembic <http://alembic.readthedocs.org/>`__. It 
+can upgrade Beaker databases from version 0.11 or higher.
+
+(Contributed by Matt Jia and Dan Callaghan in :issue:`682030`.)
+
+
+Notable changes
+---------------
+
+``systemd-readahead`` is disabled in Beaker recipes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Beaker now disables readahead collection on distros with systemd, in the same 
+way that the readahead service is disabled on RHEL6. Readahead is not generally 
+useful in Beaker recipes because they typically only boot once, and the harness 
+interferes with normal data collection.
+
+You can opt out of this behaviour by setting the ``no_disable_readahead`` 
+kickstart metadata variable. This will cause Beaker to omit the snippet which 
+disables readahead collection.
+
+Network time syncing is disabled for VMs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For guest recipes and recipes running on dynamic VMs, Beaker no longer includes 
+the kickstart snippet for ensuring a network time synchronization service (ntpd 
+or chrony) is installed and enabled. In these cases, the recipe is running on 
+a freshly created VM whose clock will be correctly synchronized from the host, 
+so network time synchronization is not necessary (and in some cases, may cause 
+extra delays).
+
+Workflow commands no longer use ``STABLE``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The :program:`bkr` workflow commands no longer filter for distros tagged 
+``STABLE`` by default. If your Beaker installation is using the ``STABLE`` tag, 
+you can apply the filter explicitly by adding ``--tag=STABLE`` when invoking 
+workflow commands.
+
+
+Other new features and enhancements
+-----------------------------------
+
+A new subcommand :program:`bkr system-modify` has been added to the Beaker 
+client to modify attributes of existing systems. In this initial release, the 
+subcommand can change the system owner and condition. (Contributed by Amit Saha 
+and Dan Callaghan in :issue:`1118884`, :issue:`804479`.)
+
+A new system permission ``view_power`` allows users to view and export the 
+power settings for a system. System owners can grant this permission to trusted 
+users/groups for debugging purposes. (Contributed by Dan Callaghan in 
+:issue:`1012174`.)
+
+
+
+Task and harness updates
+------------------------
+
+A new task ``/distribution/virt/image-install`` has been published, providing 
+experimental support for running guest recipes in VMs booted from disk images 
+with cloud-init. Refer to the :ref:`task documentation 
+<virt-image-install-task>` for more details. (Contributed by Matt Jia in 
+:issue:`1108455`.)
+
+Version 0.7.8 of the Beah test harness has been released, fixing an issue with 
+the harness service configurations for systemd which could cause systemd to 
+enter an inconsistent state. (Contributed by Dan Callaghan in 
+:issue:`1147807`.)
+
+Version 1.5 of the :program:`beaker-system-scan` utility has been released, 
+fixing a regression which affects systems whose :file:`/boot` volume is on 
+a mapped block device. (Contributed by Amit Saha in :issue:`1148174`.)
+
+
+Bug fixes
+---------
 
 The following user interface bugs/RFEs are solved by the system page 
-improvements:
+improvements in this release:
 
 * :issue:`619335`: The :guilabel:`Provision` tab should offer a way of
   filtering distros, to make it easier to find the desired distro.
@@ -152,3 +264,52 @@ improvements:
 * :issue:`1134689`: Under some circumstances when saving changes on the
   :guilabel:`Access Policy` tab, a rule is recorded as removed and added 
   multiple times for no reason.
+
+A number of other bug fixes are also included in this release:
+
+* :issue:`1160513`: Fixed a JavaScript ``TypeError`` which would occur when
+  viewing the system page for a system whose access policy does not contain any 
+  rules. (Contributed by Dan Callaghan)
+* :issue:`891827`: The :program:`bkr` workflow commands no longer use the
+  STABLE distro tag by default, since it does not exist in default Beaker 
+  installations. (Contributed by Dan Callaghan)
+* :issue:`1142714`: The :program:`bkr job-submit` command now reads job XML
+  from stdin when no positional arguments are given. (Contributed by Dan 
+  Callaghan)
+* :issue:`1032881`: The :program:`beaker-import` command now has a man page.
+  (Contributed by Amit Saha)
+* :issue:`1142532`: Server-side memory usage has been reduced in code paths
+  which create activity records. In particular, this fixes a MemoryError which 
+  can occur on large lab controllers when :program:`beaker-provision` is 
+  restarted after being killed uncleanly. (Contributed by Dan Callaghan)
+* :issue:`802641`: Deleting of lab controllers is now much faster and more
+  memory efficient. Previously, attempting to delete a lab controller would 
+  time out in very large labs. (Contributed by Dan Callaghan)
+* :issue:`1069438`, :issue:`1061955`: Fixed a number of minor database schema
+  inconsistencies between freshly created databases and existing upgraded 
+  databases, caused by mistakes in old release notes. (Contributed by Dan 
+  Callaghan)
+* :issue:`1160091`: Kickstart templates have been tweaked to avoid a bash
+  syntax error in case the administrator has defined a custom 
+  ``readahead_sysconfig`` or ``virt_console_post`` snippet with no content. 
+  (Contributed by Dan Callaghan)
+
+.. not reporting the following bugs in unreleased versions:
+   :issue:`1145867`
+   :issue:`1154887`
+   :issue:`1144196`
+   :issue:`1145864`
+   :issue:`1144203`
+   :issue:`1145479`
+   :issue:`1152887`
+   :issue:`1144190`
+   :issue:`1144193`
+   :issue:`1144205`
+   :issue:`1144195`
+
+.. these are dev details that are not worth reporting, listed here to keep the 
+   scripts happy:
+   :issue:`1138496`
+   :issue:`1124804`
+   :issue:`1072336`
+   :issue:`1014438`

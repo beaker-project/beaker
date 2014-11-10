@@ -103,6 +103,8 @@ Be aware that ``/distribution/virt/start`` and ``/distribution/virt/install``
 should never be defined in the guest recipe itself.
 
 
+.. _virt-image-install-task:
+
 /distribution/virt/image-install
 ================================
 

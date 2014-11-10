@@ -16,16 +16,31 @@ being upgraded to a new version.
    sensible order.
 
 
-Unreleased changes
-------------------
+.. commented out for release
+    Unreleased changes
+    ------------------
 
-The following changes will appear in the next Beaker release.
+    The following changes will appear in the next Beaker release.
+
+    .. toctree::
+       :maxdepth: 2
+       :glob:
+
+       next/*
+
+
+Beaker 19
+---------
+
+Beaker 19 brings many improvements to the system page. For Beaker 
+administrators, the upgrade process has been streamlined with automatic 
+database schema upgrades.
 
 .. toctree::
    :maxdepth: 2
-   :glob:
 
-   next/*
+   release-19
+   upgrade-19
 
 
 Beaker 0.18

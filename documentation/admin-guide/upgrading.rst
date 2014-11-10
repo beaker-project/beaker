@@ -32,7 +32,7 @@ Then, on the lab controllers::
 Feature releases
 ----------------
 
-When upgrading to a new *x.y* release of Beaker, some database changes may be 
+When upgrading to a new feature release of Beaker, some database changes may be 
 required. These will be detailed in the release notes.
 
 Database schema changes can interfere with Beaker's normal operation, so you 
