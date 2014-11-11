@@ -1613,6 +1613,33 @@ class TestBeakerd(DatabaseTestCase):
             job = Job.query.get(job2.id)
             self.assertEqual(job.status, TaskStatus.processed)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1162451
+    def test_recipes_with_force_are_queued(self):
+        with session.begin():
+            # Two recipes with force="" for the same system.
+            system = data_setup.create_system(status=u'Manual', shared=True,
+                    lab_controller=self.lab_controller)
+            job1 = data_setup.create_job()
+            job1.recipesets[0].recipes[0]._host_requires = (
+                '<hostRequires force="%s"/>' % system.fqdn)
+            job2 = data_setup.create_job()
+            job2.recipesets[0].recipes[0]._host_requires = (
+                '<hostRequires force="%s"/>' % system.fqdn)
+
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.abort_dead_recipes()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            job1 = Job.query.get(job1.id)
+            self.assertEqual(job1.status, TaskStatus.scheduled)
+            job2 = Job.query.get(job2.id)
+            self.assertEqual(job2.status, TaskStatus.queued)
+
     def test_recipe_state_reserved(self):
         with session.begin():
             recipe = data_setup.create_recipe(

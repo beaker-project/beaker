@@ -305,8 +305,7 @@ def abort_dead_recipes(*args):
         filters.append(and_(not_(Recipe.systems.any()),
                 Recipe.virt_status != RecipeVirtStatus.possible))
     else:
-        filters.append(not_(Recipe.systems. \
-            any(System.status==SystemStatus.automated)))
+        filters.append(not_(Recipe.systems.any()))
     recipes = MachineRecipe.query\
             .join(MachineRecipe.recipeset).join(RecipeSet.job)\
             .filter(Job.dirty_version == Job.clean_version)\
