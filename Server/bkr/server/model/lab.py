@@ -6,7 +6,7 @@
 
 from sqlalchemy import (Column, ForeignKey, Integer, Unicode, Boolean,
         DateTime)
-from sqlalchemy.orm import relationship, backref, synonym
+from sqlalchemy.orm import relationship, synonym
 from sqlalchemy.orm.exc import NoResultFound
 from turbogears.database import session
 from .base import DeclarativeMappedObject
@@ -20,6 +20,7 @@ class LabControllerActivity(Activity):
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
     lab_controller_id = Column(Integer, ForeignKey('lab_controller.id'), nullable=False)
     object_id = synonym('lab_controller_id')
+    object = relationship('LabController', back_populates='activity')
     __mapper_args__ = {'polymorphic_identity': u'lab_controller_activity'}
 
     def object_name(self):
@@ -35,11 +36,15 @@ class LabController(DeclarativeMappedObject, ActivityMixin):
     removed = Column(DateTime, nullable=True, default=None)
     user_id = Column(Integer, ForeignKey('tg_user.user_id'),
             nullable=False, unique=True)
-    user = relationship(User, backref=backref('lab_controller', uselist=False))
+    user = relationship(User, back_populates='lab_controller')
     write_activity = relationship(LabControllerActivity, lazy='noload')
-    activity = relationship(LabControllerActivity, backref='object',
+    activity = relationship(LabControllerActivity, back_populates='object',
             cascade='all, delete',
             order_by=[LabControllerActivity.created.desc(), LabControllerActivity.id.desc()])
+    _distro_trees = relationship('LabControllerDistroTree',
+            cascade='all, delete-orphan', back_populates='lab_controller')
+    systems = relationship('System', back_populates='lab_controller')
+    openstack_regions = relationship('OpenStackRegion', back_populates='lab_controller')
 
     activity_type = LabControllerActivity
 

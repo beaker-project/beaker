@@ -24,7 +24,7 @@ from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
         Integer, Unicode, DateTime, Boolean, UnicodeText, String, Numeric)
 from sqlalchemy.sql import select, union, and_, or_, not_, func, literal, exists
 from sqlalchemy.exc import InvalidRequestError
-from sqlalchemy.orm import (mapper, relationship, backref, object_mapper,
+from sqlalchemy.orm import (mapper, relationship, object_mapper,
         dynamic_loader, validates, synonym)
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -65,6 +65,7 @@ class RecipeSetActivity(Activity):
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
     recipeset_id = Column(Integer, ForeignKey('recipe_set.id'))
     object_id = synonym('recipeset_id')
+    object = relationship('RecipeSet', back_populates='activity')
     __mapper_args__ = {'polymorphic_identity': u'recipeset_activity'}
 
     def object_name(self):
@@ -116,6 +117,7 @@ class JobActivity(Activity):
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
     job_id = Column(Integer, ForeignKey('job.id'), nullable=False)
     object_id = synonym('job_id')
+    object = relationship('Job', back_populates='activity')
     __mapper_args__ = {'polymorphic_identity': u'job_activity'}
 
     def object_name(self):
@@ -319,6 +321,7 @@ class LogRecipe(Log, DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     # common column definitions are inherited from Log
     recipe_id = Column(Integer, ForeignKey('recipe.id'), nullable=False)
+    parent = relationship('Recipe', back_populates='logs')
 
 class LogRecipeTask(Log, DeclarativeMappedObject):
     type = 'T'
@@ -328,6 +331,7 @@ class LogRecipeTask(Log, DeclarativeMappedObject):
     # common column definitions are inherited from Log
     recipe_task_id = Column(Integer, ForeignKey('recipe_task.id'),
             nullable=False)
+    parent = relationship('RecipeTask', back_populates='logs')
 
 class LogRecipeTaskResult(Log, DeclarativeMappedObject):
     type = 'E'
@@ -337,6 +341,7 @@ class LogRecipeTaskResult(Log, DeclarativeMappedObject):
     # common column definitions are inherited from Log
     recipe_task_result_id = Column(Integer,
                 ForeignKey('recipe_task_result.id'), nullable=False)
+    parent = relationship('RecipeTaskResult', back_populates='logs')
 
 class TaskBase(object):
 
@@ -511,22 +516,20 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
     dirty_version = Column(UUID, nullable=False)
     clean_version = Column(UUID, nullable=False)
     owner_id = Column(Integer, ForeignKey('tg_user.user_id'), index=True)
-    owner = relationship(User, backref=backref('jobs', cascade_backrefs=False),
+    owner = relationship(User, back_populates='jobs',
             primaryjoin=owner_id == User.user_id)
     submitter_id = Column(Integer,
             ForeignKey('tg_user.user_id', name='job_submitter_id_fk'))
     submitter = relationship(User, primaryjoin=submitter_id == User.user_id)
     group_id = Column(Integer,
             ForeignKey('tg_group.group_id', name='job_group_id_fk'))
-    group = relationship(Group, backref=backref('jobs', cascade_backrefs=False))
+    group = relationship(Group, back_populates='jobs')
     whiteboard = Column(Unicode(2000))
     retention_tag_id = Column(Integer, ForeignKey('retention_tag.id'),
             nullable=False)
-    retention_tag = relationship('RetentionTag',
-            backref=backref('jobs', cascade_backrefs=False))
+    retention_tag = relationship('RetentionTag', back_populates='jobs')
     product_id = Column(Integer, ForeignKey('product.id'), nullable=True)
-    product = relationship('Product', backref=backref('jobs',
-            cascade_backrefs=False))
+    product = relationship('Product', back_populates='jobs')
     result = Column(TaskResult.db_type(), nullable=False,
             default=TaskResult.new, index=True)
     status = Column(TaskStatus.db_type(), nullable=False,
@@ -545,10 +548,10 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
     ftasks = Column(Integer, default=0)
     # Total Panic tasks
     ktasks = Column(Integer, default=0)
-    recipesets = relationship('RecipeSet', backref='job')
-    _job_ccs = relationship('JobCc', backref='job')
+    recipesets = relationship('RecipeSet', back_populates='job')
+    _job_ccs = relationship('JobCc', back_populates='job')
 
-    activity = relationship(JobActivity, backref='object',
+    activity = relationship(JobActivity, back_populates='object',
                             cascade='all, delete-orphan')
     activity_type = JobActivity
 
@@ -1231,6 +1234,7 @@ class JobCc(DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     job_id = Column(Integer, ForeignKey('job.id', ondelete='CASCADE',
             onupdate='CASCADE'), primary_key=True)
+    job = relationship(Job, back_populates='_job_ccs')
     email_address = Column(Unicode(255), primary_key=True, index=True)
 
     def __init__(self, email_address):
@@ -1245,6 +1249,7 @@ class Product(DeclarativeMappedObject):
     id = Column(Integer, autoincrement=True, primary_key=True)
     name = Column(Unicode(100), unique=True, index=True, nullable=False)
     created = Column(DateTime, nullable=False, default=datetime.utcnow)
+    jobs = relationship(Job, back_populates='product', cascade_backrefs=False)
 
     def __init__(self, name):
         super(Product, self).__init__()
@@ -1303,6 +1308,7 @@ class RetentionTag(BeakerTag):
     expire_in_days = Column(Integer, default=0, nullable=False)
     needs_product = Column(Boolean, nullable=False)
     __mapper_args__ = {'polymorphic_identity': u'retention_tag'}
+    jobs = relationship(Job, back_populates='retention_tag', cascade_backrefs=False)
 
     def __init__(self, tag, is_default=False, needs_product=False, expire_in_days=None, *args, **kw):
         self.needs_product = needs_product
@@ -1436,6 +1442,7 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, primary_key=True)
     job_id = Column(Integer, ForeignKey('job.id'), nullable=False)
+    job = relationship(Job, back_populates='recipesets')
     priority = Column(TaskPriority.db_type(), nullable=False,
             default=TaskPriority.default_priority(), index=True)
     queue_time = Column(DateTime, nullable=False, default=datetime.utcnow)
@@ -1457,8 +1464,8 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
     ftasks = Column(Integer, default=0)
     # Total Panic tasks
     ktasks = Column(Integer, default=0)
-    recipes = relationship('Recipe', backref='recipeset')
-    activity = relationship(RecipeSetActivity, backref='object',
+    recipes = relationship('Recipe', back_populates='recipeset')
+    activity = relationship(RecipeSetActivity, back_populates='object',
             order_by=[RecipeSetActivity.created.desc(), RecipeSetActivity.id.desc()])
     nacked = relationship(RecipeSetResponse, cascade='all, delete-orphan',
             uselist=False)
@@ -1721,9 +1728,9 @@ class Recipe(TaskBase, DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, primary_key=True)
     recipe_set_id = Column(Integer, ForeignKey('recipe_set.id'), nullable=False)
+    recipeset = relationship(RecipeSet, back_populates='recipes')
     distro_tree_id = Column(Integer, ForeignKey('distro_tree.id'))
-    distro_tree = relationship(DistroTree, backref=backref('recipes',
-            cascade_backrefs=False))
+    distro_tree = relationship(DistroTree, back_populates='recipes')
     rendered_kickstart_id = Column(Integer, ForeignKey('rendered_kickstart.id',
             name='recipe_rendered_kickstart_id_fk', ondelete='SET NULL'))
     rendered_kickstart = relationship('RenderedKickstart')
@@ -1765,18 +1772,19 @@ class Recipe(TaskBase, DeclarativeMappedObject):
     virt_status = Column(RecipeVirtStatus.db_type(), index=True,
             nullable=False, default=RecipeVirtStatus.possible)
     __mapper_args__ = {'polymorphic_on': type, 'polymorphic_identity': u'recipe'}
-    resource = relationship('RecipeResource', uselist=False, backref='recipe')
+    resource = relationship('RecipeResource', uselist=False, back_populates='recipe')
     watchdog = relationship(Watchdog, uselist=False,
             cascade='all, delete, delete-orphan')
     systems = relationship(System, secondary=system_recipe_map,
-            backref='queued_recipes')
+            back_populates='queued_recipes')
     dyn_systems = dynamic_loader(System, secondary=system_recipe_map)
-    tasks = relationship('RecipeTask', backref='recipe')
+    tasks = relationship('RecipeTask', back_populates='recipe')
     dyn_tasks = relationship('RecipeTask', lazy='dynamic')
-    tags = relationship('RecipeTag', secondary=recipe_tag_map, backref='recipes')
+    tags = relationship('RecipeTag', secondary=recipe_tag_map,
+            back_populates='recipes')
     repos = relationship('RecipeRepo')
-    rpms = relationship('RecipeRpm', backref='recipe')
-    logs = relationship(LogRecipe, backref='parent', cascade='all, delete-orphan')
+    rpms = relationship('RecipeRpm', back_populates='recipe')
+    logs = relationship(LogRecipe, back_populates='parent', cascade='all, delete-orphan')
     custom_packages = relationship(TaskPackage,
             secondary=task_packages_custom_map)
     ks_appends = relationship('RecipeKSAppend')
@@ -2506,6 +2514,8 @@ class GuestRecipe(Recipe):
     guestname = Column(UnicodeText)
     guestargs = Column(UnicodeText)
     __mapper_args__ = {'polymorphic_identity': u'guest_recipe'}
+    hostrecipe = relationship('MachineRecipe', secondary=machine_guest_map,
+            uselist=False, back_populates='guests')
 
     systemtype = 'Virtual'
 
@@ -2563,8 +2573,8 @@ class MachineRecipe(Recipe):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, ForeignKey('recipe.id'), primary_key=True)
     __mapper_args__ = {'polymorphic_identity': u'machine_recipe'}
-    guests = relationship(Recipe, secondary=machine_guest_map,
-            backref=backref('hostrecipe', uselist=False))
+    guests = relationship(GuestRecipe, secondary=machine_guest_map,
+            back_populates='hostrecipe')
 
     systemtype = 'Machine'
 
@@ -2704,6 +2714,7 @@ class RecipeTag(DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, primary_key=True)
     tag = Column(Unicode(255))
+    recipes = relationship(Recipe, secondary=recipe_tag_map, back_populates='tags')
 
 
 class RecipeTask(TaskBase, DeclarativeMappedObject):
@@ -2715,6 +2726,7 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, primary_key=True)
     recipe_id = Column(Integer, ForeignKey('recipe.id'), nullable=False)
+    recipe = relationship(Recipe, back_populates='tasks')
     name = Column(Unicode(255), nullable=False, index=True)
     version = Column(Unicode(255), index=True)
     # each RecipeTask must have either a fetch_url or a task reference
@@ -2727,12 +2739,12 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
     result = Column(TaskResult.db_type(), nullable=False, default=TaskResult.new)
     status = Column(TaskStatus.db_type(), nullable=False, default=TaskStatus.new)
     role = Column(Unicode(255))
-    results = relationship('RecipeTaskResult', backref='recipetask')
+    results = relationship('RecipeTaskResult', back_populates='recipetask')
     rpms = relationship('RecipeTaskRpm')
-    comments = relationship('RecipeTaskComment', backref='recipetask')
+    comments = relationship('RecipeTaskComment', back_populates='recipetask')
     params = relationship('RecipeTaskParam')
-    bugzillas = relationship('RecipeTaskBugzilla', backref='recipetask')
-    logs = relationship(LogRecipeTask, backref='parent',
+    bugzillas = relationship('RecipeTaskBugzilla', back_populates='recipetask')
+    logs = relationship(LogRecipeTask, back_populates='parent',
             cascade='all, delete-orphan')
     watchdog = relationship(Watchdog, uselist=False)
 
@@ -3176,10 +3188,11 @@ class RecipeTaskComment(DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, primary_key=True)
     recipe_task_id = Column(Integer, ForeignKey('recipe_task.id'))
+    recipetask = relationship(RecipeTask, back_populates='comments')
     comment = Column(UnicodeText)
     created = Column(DateTime)
     user_id = Column(Integer, ForeignKey('tg_user.user_id'), index=True)
-    user = relationship(User, backref='comments')
+    user = relationship(User)
 
 
 class RecipeTaskBugzilla(DeclarativeMappedObject):
@@ -3191,6 +3204,7 @@ class RecipeTaskBugzilla(DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, primary_key=True)
     recipe_task_id = Column(Integer, ForeignKey('recipe_task.id'))
+    recipetask = relationship(RecipeTask, back_populates='bugzillas')
     bugzilla_id = Column(Integer)
 
 
@@ -3203,6 +3217,7 @@ class RecipeRpm(DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, primary_key=True)
     recipe_id = Column(Integer, ForeignKey('recipe.id'), nullable=False)
+    recipe = relationship(Recipe, back_populates='rpms')
     package = Column(Unicode(255))
     version = Column(Unicode(255))
     release = Column(Unicode(255))
@@ -3237,12 +3252,13 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, primary_key=True)
     recipe_task_id = Column(Integer, ForeignKey('recipe_task.id'))
+    recipetask = relationship(RecipeTask, back_populates='results')
     path = Column(Unicode(2048))
     result = Column(TaskResult.db_type(), nullable=False, default=TaskResult.new)
     score = Column(Numeric(10))
     log = Column(UnicodeText)
     start_time = Column(DateTime, default=datetime.utcnow)
-    logs = relationship(LogRecipeTaskResult, backref='parent',
+    logs = relationship(LogRecipeTaskResult, back_populates='parent',
             cascade='all, delete-orphan')
 
     def __init__(self, recipetask=None, path=None, result=None,
@@ -3336,6 +3352,7 @@ class RecipeResource(DeclarativeMappedObject):
             name='recipe_resource_recipe_id_fk',
             onupdate='CASCADE', ondelete='CASCADE'),
             nullable=False, unique=True)
+    recipe = relationship(Recipe, back_populates='resource')
     type = Column(ResourceType.db_type(), nullable=False)
     fqdn = Column(Unicode(255), default=None)
     rebooted = Column(DateTime, nullable=True, default=None)

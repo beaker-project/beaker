@@ -21,6 +21,6 @@ class OpenStackRegion(DeclarativeMappedObject):
     id = Column(Integer, autoincrement=True, nullable=False, primary_key=True)
     lab_controller_id = Column(Integer, ForeignKey('lab_controller.id',
             name='openstack_region_lab_controller_id_fk'), nullable=False)
-    lab_controller = relationship(LabController, backref='openstack_regions')
+    lab_controller = relationship(LabController, back_populates='openstack_regions')
     # NULL ipxe_image_id means not uploaded yet
     ipxe_image_id = Column(Unicode(2048))

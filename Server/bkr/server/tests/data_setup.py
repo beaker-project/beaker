@@ -110,8 +110,10 @@ def create_user(user_name=None, password=None, display_name=None,
     log.debug('Created user %r', user)
     return user
 
-def create_admin(**kwargs):
-    user = create_user(**kwargs)
+def create_admin(user_name=None, **kwargs):
+    if user_name is None:
+        user_name = unique_name(u'admin%s')
+    user = create_user(user_name=user_name, **kwargs)
     user.groups.append(Group.by_name(u'admin'))
     return user
 

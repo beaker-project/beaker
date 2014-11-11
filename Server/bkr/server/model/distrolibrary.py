@@ -11,7 +11,7 @@ import xml.dom.minidom
 from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Integer,
         String, Unicode, DateTime, UnicodeText, Boolean)
 from sqlalchemy.sql import select, exists, and_, or_, not_
-from sqlalchemy.orm import relationship, backref, dynamic_loader, synonym
+from sqlalchemy.orm import relationship, dynamic_loader, synonym
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -53,6 +53,7 @@ class DistroActivity(Activity):
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
     distro_id = Column(Integer, ForeignKey('distro.id'))
     object_id = synonym('distro_id')
+    object = relationship('Distro', back_populates='activity')
     __mapper_args__ = {'polymorphic_identity': u'distro_activity'}
 
     def object_name(self):
@@ -65,6 +66,7 @@ class DistroTreeActivity(Activity):
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
     distro_tree_id = Column(Integer, ForeignKey('distro_tree.id'))
     object_id = synonym('distro_tree_id')
+    object = relationship('DistroTree', back_populates='activity')
     __mapper_args__ = {'polymorphic_identity': u'distro_tree_activity'}
 
     def object_name(self):
@@ -114,6 +116,8 @@ class Arch(DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, autoincrement=True, primary_key=True)
     arch = Column(String(20), unique=True)
+    distro_trees = relationship('DistroTree', back_populates='arch')
+    systems = relationship('System', secondary='system_arch_map', back_populates='arch')
 
     def __init__(self, arch=None):
         super(Arch, self).__init__()
@@ -163,7 +167,10 @@ class OSMajor(DeclarativeMappedObject):
     alias = Column(Unicode(25), unique=True)
     install_options_by_arch = relationship('OSMajorInstallOptions',
             collection_class=attribute_mapped_collection('arch'),
-            backref='osmajor', cascade='all, delete-orphan')
+            back_populates='osmajor', cascade='all, delete-orphan')
+    osversions = relationship('OSVersion', order_by='OSVersion.osminor',
+            back_populates='osmajor')
+    excluded_osmajors = relationship('ExcludeOSMajor', back_populates='osmajor')
 
     def __init__(self, osmajor):
         super(OSMajor, self).__init__()
@@ -360,6 +367,7 @@ class OSMajorInstallOptions(DeclarativeMappedObject):
     id = Column(Integer, autoincrement=True, primary_key=True)
     osmajor_id = Column(Integer, ForeignKey('osmajor.id',
             onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    osmajor = relationship(OSMajor, back_populates='install_options_by_arch')
     arch_id = Column(Integer, ForeignKey('arch.id'), nullable=True)
     arch = relationship(Arch)
     ks_meta = Column(String(1024))
@@ -377,8 +385,10 @@ class OSVersion(DeclarativeMappedObject):
     id = Column(Integer, autoincrement=True, primary_key=True)
     osmajor_id = Column(Integer, ForeignKey('osmajor.id'), index=True)
     osminor = Column(Unicode(255))
-    osmajor = relationship(OSMajor, backref=backref('osversions', order_by=[osminor]))
+    osmajor = relationship(OSMajor, back_populates='osversions')
     arches = relationship(Arch, secondary=osversion_arch_map)
+    distros = relationship('Distro', back_populates='osversion')
+    excluded_osversions = relationship('ExcludeOSVersion', back_populates='osversion')
 
     @classmethod
     def lazy_create(cls, osmajor, osminor):
@@ -438,9 +448,9 @@ class LabControllerDistroTree(DeclarativeMappedObject):
     )
     id = Column(Integer, autoincrement=True, primary_key=True)
     distro_tree_id = Column(Integer, ForeignKey('distro_tree.id'), nullable=False)
+    distro_tree = relationship('DistroTree', back_populates='lab_controller_assocs')
     lab_controller_id = Column(Integer, ForeignKey('lab_controller.id'), nullable=False)
-    lab_controller = relationship(LabController,
-            backref=backref('_distro_trees', cascade='all, delete-orphan'))
+    lab_controller = relationship(LabController, back_populates='_distro_trees')
     # 255 chars is probably not enough, but MySQL index limitations leave us no choice
     url = Column(Unicode(255), nullable=False)
 
@@ -452,11 +462,13 @@ class Distro(DeclarativeMappedObject, ActivityMixin):
     id = Column(Integer, autoincrement=True, primary_key=True)
     name = Column(Unicode(255), nullable=False, unique=True)
     osversion_id = Column(Integer, ForeignKey('osversion.id'), nullable=False)
-    osversion = relationship(OSVersion, backref='distros')
+    osversion = relationship(OSVersion, back_populates='distros')
     date_created = Column(DateTime, nullable=False, default=datetime.utcnow)
-    _tags = relationship('DistroTag', secondary=distro_tag_map, backref='distros')
-    activity = relationship(DistroActivity, backref='object',
+    _tags = relationship('DistroTag', secondary=distro_tag_map, back_populates='distros')
+    activity = relationship(DistroActivity, back_populates='object',
             order_by=[DistroActivity.created.desc(), DistroActivity.id.desc()])
+    trees = relationship('DistroTree', back_populates='distro',
+            order_by='[DistroTree.variant, DistroTree.arch_id]')
     dyn_trees = dynamic_loader('DistroTree')
 
     activity_type = DistroActivity
@@ -536,12 +548,18 @@ class DistroTree(DeclarativeMappedObject, ActivityMixin):
     kernel_options = Column('kernel_options', UnicodeText)
     kernel_options_post = Column('kernel_options_post', UnicodeText)
     date_created = Column('date_created', DateTime, nullable=False, default=datetime.utcnow)
-    distro = relationship(Distro, backref=backref('trees', order_by=[variant, arch_id]))
-    arch = relationship(Arch, backref='distro_trees')
+    distro = relationship(Distro, back_populates='trees')
+    arch = relationship(Arch, back_populates='distro_trees')
     lab_controller_assocs = relationship(LabControllerDistroTree,
-            backref='distro_tree', cascade='all, delete-orphan')
-    activity = relationship(DistroTreeActivity, backref='object',
+            back_populates='distro_tree', cascade='all, delete-orphan')
+    activity = relationship(DistroTreeActivity, back_populates='object',
             order_by=[DistroTreeActivity.created.desc(), DistroTreeActivity.id.desc()])
+    repos = relationship('DistroTreeRepo', back_populates='distro_tree',
+            cascade='all, delete-orphan',
+            order_by='[DistroTreeRepo.repo_type, DistroTreeRepo.repo_id]')
+    images = relationship('DistroTreeImage', back_populates='distro_tree',
+            cascade='all, delete-orphan')
+    recipes = relationship('Recipe', back_populates='distro_tree', cascade_backrefs=False)
 
     activity_type = DistroTreeActivity
 
@@ -694,8 +712,7 @@ class DistroTreeRepo(DeclarativeMappedObject):
     repo_id = Column(Unicode(255), nullable=False, primary_key=True)
     repo_type = Column(Unicode(255), index=True)
     path = Column(UnicodeText, nullable=False)
-    distro_tree = relationship(DistroTree, backref=backref('repos',
-            cascade='all, delete-orphan', order_by=[repo_type, repo_id]))
+    distro_tree = relationship(DistroTree, back_populates='repos')
 
     @classmethod
     def lazy_create(cls, distro_tree, repo_id, repo_type, path):
@@ -709,8 +726,7 @@ class DistroTreeImage(DeclarativeMappedObject):
     __tablename__ = 'distro_tree_image'
     __table_args__ = {'mysql_engine': 'InnoDB'}
     distro_tree_id = Column(Integer, ForeignKey('distro_tree.id'), primary_key=True)
-    distro_tree = relationship(DistroTree,
-            backref=backref('images', cascade='all, delete-orphan'))
+    distro_tree = relationship(DistroTree, back_populates='images')
     image_type = Column(ImageType.db_type(), nullable=False, primary_key=True)
     kernel_type_id = Column(Integer, ForeignKey('kernel_type.id'),
             default=select([KernelType.id], limit=1).where(KernelType.kernel_type == u'default').correlate(None),
@@ -731,6 +747,7 @@ class DistroTag(DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, autoincrement=True, primary_key=True)
     tag = Column(Unicode(255), unique=True)
+    distros = relationship(Distro, secondary=distro_tag_map, back_populates='_tags')
 
     def __init__(self, tag=None):
         super(DistroTag, self).__init__()

@@ -1129,6 +1129,22 @@ class UserTest(DatabaseTestCase):
         self.assertRaises(ValueError, lambda: User(user_name=u'extra  space'))
         self.assertRaises(ValueError, lambda: User(user_name=u'extra\t tab'))
 
+    def test_user_relationships(self):
+        # UserActivity is a tricky one because it has two foreign keys to 
+        # tg_user. This is just testing that the ORM relationships are defined 
+        # correctly.
+        user = data_setup.create_user()
+        admin = data_setup.create_admin()
+        user.record_activity(user=admin, service=u'testdata', field=u'Submission delegate',
+                action=u'Added', new=u'asdf')
+        session.flush()
+        session.expire_all()
+        activity = user.user_activity[0]
+        self.assertIs(admin.activity[0], activity)
+        self.assertEquals(activity.field_name, u'Submission delegate')
+        self.assertEquals(activity.object, user)
+        self.assertEquals(activity.user, admin)
+
 class GroupTest(DatabaseTestCase):
 
     def setUp(self):

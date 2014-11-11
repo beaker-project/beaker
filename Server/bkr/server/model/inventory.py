@@ -19,7 +19,7 @@ from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
         BigInteger, VARCHAR, TEXT)
 from sqlalchemy.sql import select, and_, or_, not_, case, func
 from sqlalchemy.exc import InvalidRequestError
-from sqlalchemy.orm import (mapper, relationship, backref,
+from sqlalchemy.orm import (mapper, relationship, synonym,
         column_property, dynamic_loader, contains_eager, validates,
         object_mapper, synonym)
 from sqlalchemy.orm.interfaces import AttributeExtension
@@ -65,6 +65,7 @@ class SystemActivity(Activity):
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
     system_id = Column(Integer, ForeignKey('system.id'), nullable=False)
     object_id = synonym('system_id')
+    object = relationship('System', back_populates='activity')
     __mapper_args__ = {'polymorphic_identity': u'system_activity'}
 
     def object_name(self):
@@ -90,7 +91,8 @@ class CommandActivity(Activity):
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
     system_id = Column(Integer, ForeignKey('system.id',
             onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
-    system = relationship('System')
+    object = relationship('System', back_populates='command_queue')
+    system = synonym('object')
     status = column_property(
             Column('status', CommandStatus.db_type(), nullable=False, index=True),
             extension=CallbackAttributeExtension())
@@ -153,6 +155,7 @@ class Reservation(DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, primary_key=True)
     system_id = Column(Integer, ForeignKey('system.id'), nullable=False)
+    system = relationship('System', back_populates='reservations')
     user_id = Column(Integer, ForeignKey('tg_user.user_id'), nullable=False)
     start_time = Column(DateTime, index=True, nullable=False,
             default=datetime.utcnow)
@@ -160,8 +163,7 @@ class Reservation(DeclarativeMappedObject):
     # type = 'manual' or 'recipe'
     # XXX Use Enum types
     type = Column(Unicode(30), index=True, nullable=False)
-    user = relationship(User, backref=backref('reservations',
-            order_by=[start_time.desc()]))
+    user = relationship(User, back_populates='reservations')
 
     def __json__(self):
         return {
@@ -179,6 +181,7 @@ class SystemStatusDuration(DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, primary_key=True)
     system_id = Column(Integer, ForeignKey('system.id'), nullable=False)
+    system = relationship('System', back_populates='status_durations')
     status = Column(SystemStatus.db_type(), nullable=False)
     start_time = Column(DateTime, index=True, nullable=False,
             default=datetime.utcnow)
@@ -268,7 +271,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
     memory = Column(Integer)
     checksum = Column(String(32))
     lab_controller_id = Column(Integer, ForeignKey('lab_controller.id'))
-    lab_controller = relationship(LabController, backref='systems')
+    lab_controller = relationship(LabController, back_populates='systems')
     mac_address = Column(String(18))
     loan_id = Column(Integer, ForeignKey('tg_user.user_id'))
     loaned = relationship(User, primaryjoin=loan_id == User.user_id)
@@ -283,52 +286,60 @@ class System(DeclarativeMappedObject, ActivityMixin):
            default=select([KernelType.id], limit=1).where(KernelType.kernel_type==u'default').correlate(None),
            nullable=False)
     kernel_type = relationship('KernelType')
-    devices = relationship('Device', secondary=system_device_map, backref='systems')
-    disks = relationship('Disk', backref='system', cascade='all, delete, delete-orphan')
+    devices = relationship('Device', secondary=system_device_map,
+            back_populates='systems')
+    disks = relationship('Disk', back_populates='system',
+            cascade='all, delete, delete-orphan')
     arch = relationship(Arch, order_by=[Arch.arch], secondary=system_arch_map,
-            backref='systems')
-    labinfo = relationship('LabInfo', uselist=False, backref='system',
+            back_populates='systems')
+    labinfo = relationship('LabInfo', uselist=False, back_populates='system',
             cascade='all, delete, delete-orphan')
-    cpu = relationship('Cpu', uselist=False, backref='system',
+    cpu = relationship('Cpu', uselist=False, back_populates='system',
             cascade='all, delete, delete-orphan')
-    numa = relationship('Numa', uselist=False, backref='system',
+    numa = relationship('Numa', uselist=False, back_populates='system',
             cascade='all, delete, delete-orphan')
-    power = relationship('Power', uselist=False, backref='system',
+    power = relationship('Power', uselist=False, back_populates='system',
             cascade='all, delete, delete-orphan')
-    excluded_osmajor = relationship('ExcludeOSMajor', backref='system',
+    excluded_osmajor = relationship('ExcludeOSMajor', back_populates='system',
             cascade='all, delete, delete-orphan')
-    excluded_osversion = relationship('ExcludeOSVersion', backref='system',
+    excluded_osversion = relationship('ExcludeOSVersion', back_populates='system',
             cascade='all, delete, delete-orphan')
-    provisions = relationship('Provision', backref='system',
+    provisions = relationship('Provision', back_populates='system',
             cascade='all, delete, delete-orphan',
             collection_class=attribute_mapped_collection('arch'))
-    group_assocs = relationship(SystemGroup, backref='system',
+    group_assocs = relationship(SystemGroup, back_populates='system',
             cascade='all, delete-orphan')
-    key_values_int = relationship('Key_Value_Int', backref='system',
+    key_values_int = relationship('Key_Value_Int', back_populates='system',
             cascade='all, delete, delete-orphan')
-    key_values_string = relationship('Key_Value_String', backref='system',
+    key_values_string = relationship('Key_Value_String', back_populates='system',
             cascade='all, delete, delete-orphan')
-    activity = relationship(SystemActivity, backref='object', cascade='all, delete',
+    activity = relationship(SystemActivity, back_populates='object', cascade='all, delete',
             order_by=[SystemActivity.__table__.c.id.desc()])
     dyn_activity = dynamic_loader(SystemActivity,
             order_by=[SystemActivity.__table__.c.id.desc()])
-    command_queue = relationship(CommandActivity, backref='object',
+    command_queue = relationship(CommandActivity, back_populates='object',
             cascade='all, delete, delete-orphan',
             order_by=[CommandActivity.created.desc(), CommandActivity.id.desc()])
     dyn_command_queue = dynamic_loader(CommandActivity,
             order_by=[CommandActivity.created.desc(), CommandActivity.id.desc()])
-    _system_ccs = relationship('SystemCc', backref='system',
+    _system_ccs = relationship('SystemCc', back_populates='system',
             cascade='all, delete, delete-orphan')
-    reservations = relationship(Reservation, backref='system',
+    reservations = relationship(Reservation, back_populates='system',
             order_by=[Reservation.start_time.desc()])
     dyn_reservations = dynamic_loader(Reservation)
     open_reservation = relationship(Reservation, uselist=False, viewonly=True,
             primaryjoin=and_(id == Reservation.system_id, Reservation.finish_time == None))
-    status_durations = relationship(SystemStatusDuration, backref='system',
+    status_durations = relationship(SystemStatusDuration, back_populates='system',
             cascade='all, delete, delete-orphan',
             order_by=[SystemStatusDuration.start_time.desc(),
                       SystemStatusDuration.id.desc()])
     dyn_status_durations = dynamic_loader(SystemStatusDuration)
+    custom_access_policy = relationship('SystemAccessPolicy', uselist=False,
+            back_populates='system')
+    notes = relationship('Note', back_populates='system',
+            cascade='all, delete, delete-orphan', order_by='Note.created.desc()')
+    queued_recipes = relationship('Recipe', back_populates='systems',
+            secondary='system_recipe_map')
 
     activity_type = SystemActivity
 
@@ -1533,6 +1544,7 @@ class SystemCc(DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     system_id = Column(Integer, ForeignKey('system.id', ondelete='CASCADE',
             onupdate='CASCADE'), primary_key=True)
+    system = relationship(System, back_populates='_system_ccs')
     email_address = Column(Unicode(255), primary_key=True, index=True)
 
     def __init__(self, email_address):
@@ -1588,8 +1600,9 @@ class SystemAccessPolicy(DeclarativeMappedObject):
     id = Column(Integer, nullable=False, primary_key=True)
     system_id = Column(Integer, ForeignKey('system.id',
             name='system_access_policy_system_id_fk'))
-    system = relationship(System,
-            backref=backref('custom_access_policy', uselist=False))
+    system = relationship(System, back_populates='custom_access_policy')
+    rules = relationship('SystemAccessPolicyRule', back_populates='policy',
+            cascade='all, delete, delete-orphan')
 
     def __json__(self):
         return {
@@ -1682,18 +1695,15 @@ class SystemAccessPolicyRule(DeclarativeMappedObject):
     id = Column(Integer, nullable=False, primary_key=True)
     policy_id = Column(Integer, ForeignKey('system_access_policy.id',
             name='system_access_policy_rule_policy_id_fk'), nullable=False)
-    policy = relationship(SystemAccessPolicy, backref=backref('rules',
-            cascade='all, delete, delete-orphan'))
+    policy = relationship(SystemAccessPolicy, back_populates='rules')
     # Either user or group is set, to indicate who the rule applies to.
     # If both are NULL, the rule applies to everyone.
     user_id = Column(Integer, ForeignKey('tg_user.user_id',
             name='system_access_policy_rule_user_id_fk'))
-    user = relationship(User, backref=backref('system_access_policy_rules',
-                                              cascade='all, delete, delete-orphan'))
+    user = relationship(User, back_populates='system_access_policy_rules')
     group_id = Column(Integer, ForeignKey('tg_group.group_id',
             name='system_access_policy_rule_group_id_fk'))
-    group = relationship(Group, backref=backref('system_access_policy_rules',
-                                                cascade='all, delete, delete-orphan'))
+    group = relationship(Group, back_populates='system_access_policy_rules')
     permission = Column(SystemPermission.db_type(), nullable=False)
 
     def __repr__(self):
@@ -1725,6 +1735,7 @@ class Provision(DeclarativeMappedObject):
     id = Column(Integer, autoincrement=True, primary_key=True)
     system_id = Column(Integer, ForeignKey('system.id',
            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    system = relationship(System, back_populates='provisions')
     ks_meta = Column(String(1024))
     kernel_options = Column(String(1024))
     kernel_options_post = Column(String(1024))
@@ -1773,10 +1784,11 @@ class ExcludeOSMajor(DeclarativeMappedObject):
     id = Column(Integer, autoincrement=True, primary_key=True)
     system_id = Column(Integer, ForeignKey('system.id',
            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    system = relationship(System, back_populates='excluded_osmajor')
     arch_id = Column(Integer, ForeignKey('arch.id'), nullable=False)
     arch = relationship(Arch)
     osmajor_id = Column(Integer, ForeignKey('osmajor.id'), nullable=False)
-    osmajor = relationship(OSMajor, backref='excluded_osmajors')
+    osmajor = relationship(OSMajor, back_populates='excluded_osmajors')
 
 
 class ExcludeOSVersion(DeclarativeMappedObject):
@@ -1786,10 +1798,11 @@ class ExcludeOSVersion(DeclarativeMappedObject):
     id = Column(Integer, autoincrement=True, primary_key=True)
     system_id = Column(Integer, ForeignKey('system.id',
            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    system = relationship(System, back_populates='excluded_osversion')
     arch_id = Column(Integer, ForeignKey('arch.id'), nullable=False)
     arch = relationship(Arch)
     osversion_id = Column(Integer, ForeignKey('osversion.id'), nullable=False)
-    osversion = relationship(OSVersion, backref='excluded_osversions')
+    osversion = relationship(OSVersion, back_populates='excluded_osversions')
 
 
 class LabInfo(DeclarativeMappedObject):
@@ -1799,6 +1812,7 @@ class LabInfo(DeclarativeMappedObject):
     id = Column(Integer, autoincrement=True, primary_key=True)
     system_id = Column(Integer, ForeignKey('system.id',
            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    system = relationship(System, back_populates='labinfo')
     orig_cost = Column(Numeric(precision=16, scale=2, asdecimal=True))
     curr_cost = Column(Numeric(precision=16, scale=2, asdecimal=True))
     dimensions = Column(String(255))
@@ -1816,6 +1830,7 @@ class Cpu(DeclarativeMappedObject):
     id = Column(Integer, autoincrement=True, primary_key=True)
     system_id = Column(Integer, ForeignKey('system.id',
            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    system = relationship(System, back_populates='cpu')
     vendor = Column(String(255))
     model = Column(Integer)
     model_name = Column(String(255))
@@ -1880,6 +1895,7 @@ class Numa(DeclarativeMappedObject):
     id = Column(Integer, autoincrement=True, primary_key=True)
     system_id = Column(Integer, ForeignKey('system.id',
            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    system = relationship(System, back_populates='numa')
     nodes = Column(Integer)
 
     def __init__(self, nodes=None):
@@ -1940,6 +1956,7 @@ class Device(DeclarativeMappedObject):
     device_class_id = Column(Integer, ForeignKey('device_class.id'), nullable=False)
     device_class = relationship(DeviceClass)
     date_added = Column(DateTime, default=datetime.utcnow, nullable=False)
+    systems = relationship(System, secondary=system_device_map, back_populates='devices')
 
 Index('ix_device_pciid', Device.vendor_id, Device.device_id)
 
@@ -1949,6 +1966,7 @@ class Disk(DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, autoincrement=True, primary_key=True)
     system_id = Column(Integer, ForeignKey('system.id'), nullable=False)
+    system = relationship(System, back_populates='disks')
     model = Column(String(255))
     # sizes are in bytes
     size = Column(BigInteger)
@@ -2005,9 +2023,10 @@ class Power(DeclarativeMappedObject):
     default_quiescent_period = 5
     id = Column(Integer, autoincrement=True, primary_key=True)
     power_type_id = Column(Integer, ForeignKey('power_type.id'), nullable=False)
-    power_type = relationship(PowerType, backref='power_control')
+    power_type = relationship(PowerType)
     system_id = Column(Integer, ForeignKey('system.id',
            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    system = relationship(System, back_populates='power')
     power_address = Column(String(255), nullable=False)
     power_user = Column(String(255))
     power_passwd = Column(String(255))
@@ -2053,12 +2072,11 @@ class Note(DeclarativeMappedObject):
     system_id = Column(Integer, ForeignKey('system.id', onupdate='CASCADE',
             ondelete='CASCADE'), nullable=False)
     user_id = Column(Integer, ForeignKey('tg_user.user_id'), index=True)
-    user = relationship(User, backref='notes')
+    user = relationship(User, back_populates='notes')
     created = Column(DateTime, nullable=False, default=datetime.utcnow)
     text = Column(TEXT, nullable=False)
     deleted = Column(DateTime, nullable=True, default=None)
-    system = relationship(System, backref=backref('notes',
-            cascade='all, delete, delete-orphan', order_by=[created.desc()]))
+    system = relationship(System, back_populates='notes')
 
     def __init__(self, user=None, text=None):
         super(Note, self).__init__()
@@ -2091,6 +2109,10 @@ class Key(DeclarativeMappedObject):
     id = Column(Integer, autoincrement=True, primary_key=True)
     key_name = Column(String(50), nullable=False, unique=True)
     numeric = Column(Boolean, default=False)
+    key_value_string = relationship('Key_Value_String',
+            back_populates='key', cascade='all, delete-orphan')
+    key_value_int = relationship('Key_Value_Int',
+            back_populates='key', cascade='all, delete-orphan')
 
     # Obsoleted keys are ones which have been replaced by real, structured 
     # columns on the system table (and its related tables). We disallow users 
@@ -2146,10 +2168,10 @@ class Key_Value_String(DeclarativeMappedObject):
     id = Column(Integer, autoincrement=True, primary_key=True)
     system_id = Column(Integer, ForeignKey('system.id', onupdate='CASCADE',
             ondelete='CASCADE'), nullable=False, index=True)
+    system = relationship(System, back_populates='key_values_string')
     key_id = Column(Integer, ForeignKey('key_.id', onupdate='CASCADE',
             ondelete='CASCADE'), nullable=False, index=True)
-    key = relationship(Key, backref=backref('key_value_string',
-            cascade='all, delete-orphan'))
+    key = relationship(Key, back_populates='key_value_string')
     key_value = Column(TEXT, nullable=False)
 
     key_type = 'string'
@@ -2177,10 +2199,10 @@ class Key_Value_Int(DeclarativeMappedObject):
     id = Column(Integer, autoincrement=True, primary_key=True)
     system_id = Column(Integer, ForeignKey('system.id', onupdate='CASCADE',
             ondelete='CASCADE'), nullable=False, index=True)
+    system = relationship(System, back_populates='key_values_int')
     key_id = Column(Integer, ForeignKey('key_.id', onupdate='CASCADE',
             ondelete='CASCADE'), nullable=False, index=True)
-    key = relationship(Key, backref=backref('key_value_int',
-            cascade='all, delete-orphan'))
+    key = relationship(Key, back_populates='key_value_int')
     key_value = Column(Integer, nullable=False)
 
     key_type = 'int'

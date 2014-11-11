@@ -85,6 +85,7 @@ class ConfigValueString(DeclarativeMappedObject):
     config_item = relationship(ConfigItem)
     modified = Column(DateTime, default=datetime.utcnow)
     user_id = Column(Integer, ForeignKey('tg_user.user_id'), nullable=False)
+    user = relationship('User', back_populates='config_values_string')
     valid_from = Column(DateTime, default=datetime.utcnow)
     value = Column(TEXT, nullable=True)
 
@@ -106,6 +107,7 @@ class ConfigValueInt(DeclarativeMappedObject):
     config_item = relationship(ConfigItem)
     modified = Column(DateTime, default=datetime.utcnow)
     user_id = Column(Integer, ForeignKey('tg_user.user_id'), nullable=False)
+    user = relationship('User', back_populates='config_values_int')
     valid_from = Column(DateTime, default=datetime.utcnow)
     value = Column(Integer, nullable=True)
 

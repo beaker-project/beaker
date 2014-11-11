@@ -7,7 +7,7 @@
 import logging
 from datetime import datetime
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, Unicode
-from sqlalchemy.orm import object_mapper
+from sqlalchemy.orm import object_mapper, relationship
 from turbogears.database import session
 from bkr.server import identity
 from bkr.server.util import unicode_truncate
@@ -21,6 +21,7 @@ class Activity(DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, autoincrement=True, primary_key=True)
     user_id = Column(Integer, ForeignKey('tg_user.user_id'), index=True)
+    user = relationship('User', back_populates='activity')
     created = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
     type = Column(Unicode(40), nullable=False)
     field_name = Column(Unicode(40), nullable=False)

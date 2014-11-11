@@ -40,6 +40,8 @@ class TaskPackage(DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB', 'mysql_collate': 'utf8_bin'}
     id = Column(Integer, primary_key=True)
     package = Column(Unicode(255), nullable=False, unique=True)
+    tasks = relationship('Task', secondary='task_packages_runfor_map',
+            back_populates='runfor')
 
     @classmethod
     def by_name(cls, package):
@@ -320,21 +322,21 @@ class Task(DeclarativeMappedObject):
     creation_date = Column(DateTime, default=datetime.utcnow)
     update_date = Column(DateTime, onupdate=datetime.utcnow)
     uploader_id = Column(Integer, ForeignKey('tg_user.user_id'))
-    uploader = relationship(User, backref='tasks')
+    uploader = relationship(User, back_populates='tasks')
     owner = Column(Unicode(255), index=True)
     version = Column(Unicode(256))
     license = Column(Unicode(256))
     priority = Column(Unicode(256))
     valid = Column(Boolean, default=True, nullable=False)
-    types = relationship('TaskType', secondary=task_type_map, backref='tasks')
-    excluded_osmajor = relationship('TaskExcludeOSMajor', backref='task')
-    excluded_arch = relationship('TaskExcludeArch', backref='task')
+    types = relationship('TaskType', secondary=task_type_map, back_populates='tasks')
+    excluded_osmajor = relationship('TaskExcludeOSMajor', back_populates='task')
+    excluded_arch = relationship('TaskExcludeArch', back_populates='task')
     runfor = relationship(TaskPackage, secondary=task_packages_runfor_map,
-            backref='tasks')
+            back_populates='tasks')
     required = relationship(TaskPackage, secondary=task_packages_required_map,
             order_by=[TaskPackage.package])
     needs = relationship('TaskPropertyNeeded')
-    bugzillas = relationship('TaskBugzilla', backref='task',
+    bugzillas = relationship('TaskBugzilla', back_populates='task',
             cascade='all, delete-orphan')
 
     library = TaskLibrary()
@@ -642,6 +644,7 @@ class TaskExcludeOSMajor(DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, autoincrement=True, primary_key=True)
     task_id = Column(Integer, ForeignKey('task.id'))
+    task = relationship(Task, back_populates='excluded_osmajor')
     osmajor_id = Column(Integer, ForeignKey('osmajor.id'))
     osmajor = relationship(OSMajor)
 
@@ -664,6 +667,7 @@ class TaskExcludeArch(DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, autoincrement=True, primary_key=True)
     task_id = Column(Integer, ForeignKey('task.id'))
+    task = relationship(Task, back_populates='excluded_arch')
     arch_id = Column(Integer, ForeignKey('arch.id'))
     arch = relationship(Arch)
 
@@ -685,6 +689,7 @@ class TaskType(DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, primary_key=True)
     type = Column(Unicode(255), nullable=False, unique=True)
+    tasks = relationship(Task, secondary=task_type_map, back_populates='types')
 
     @classmethod
     def by_name(cls, type):
@@ -714,3 +719,4 @@ class TaskBugzilla(DeclarativeMappedObject):
     id = Column(Integer, primary_key=True)
     bugzilla_id = Column(Integer)
     task_id = Column(Integer, ForeignKey('task.id'))
+    task = relationship(Task, back_populates='bugzillas')

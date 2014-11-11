@@ -2,7 +2,7 @@
  <table class="table recipe">
  <tbody>
   <tr>
-   <th><span py:strip="True" py:if="recipe.hostrecipe">Guest</span> Recipe ID</th>
+   <th><span py:strip="True" py:if="hasattr(recipe, 'hostrecipe')">Guest</span> Recipe ID</th>
    <td>${recipe.link}</td>
    <th>Progress</th>
    <td>${recipe.progress_bar}</td>

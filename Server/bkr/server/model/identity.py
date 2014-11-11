@@ -16,7 +16,7 @@ from kid import Element
 import passlib.context
 from sqlalchemy import (Table, Column, ForeignKey, Integer, Unicode,
         UnicodeText, String, DateTime, Boolean, UniqueConstraint)
-from sqlalchemy.orm import mapper, relationship, backref, validates, synonym
+from sqlalchemy.orm import mapper, relationship, validates, synonym
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.associationproxy import association_proxy
 from turbogears.config import get
@@ -29,6 +29,14 @@ from .config import ConfigItem, ConfigValueInt, ConfigValueString
 
 log = logging.getLogger(__name__)
 
+group_permission_table = Table('group_permission', DeclarativeMappedObject.metadata,
+    Column('group_id', Integer, ForeignKey('tg_group.group_id',
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True, index=True),
+    Column('permission_id', Integer, ForeignKey('permission.permission_id',
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True, index=True),
+    mysql_engine='InnoDB',
+)
+
 class GroupActivity(Activity):
 
     __tablename__ = 'group_activity'
@@ -36,6 +44,7 @@ class GroupActivity(Activity):
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
     group_id = Column(Integer, ForeignKey('tg_group.group_id'), nullable=False)
     object_id = synonym('group_id')
+    object = relationship('Group', back_populates='activity')
     __mapper_args__ = {'polymorphic_identity': u'group_activity'}
 
     def object_name(self):
@@ -46,8 +55,9 @@ class UserActivity(Activity):
     __tablename__ = 'user_activity'
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
-    user_id = Column(Integer, ForeignKey('tg_user.user_id'), nullable=False)
-    object_id = synonym('user_id')
+    object_id = Column('user_id', Integer, ForeignKey('tg_user.user_id'), nullable=False)
+    object = relationship('User', back_populates='user_activity',
+            primaryjoin='UserActivity.object_id == User.user_id')
     __mapper_args__ = {'polymorphic_identity': u'user_activity'}
 
     def object_name(self):
@@ -94,11 +104,24 @@ class User(DeclarativeMappedObject, ActivityMixin):
     submission_delegates = relationship('User', secondary=SubmissionDelegate.__table__,
             primaryjoin=user_id == SubmissionDelegate.user_id,
             secondaryjoin=user_id == SubmissionDelegate.delegate_id)
-    activity = relationship(Activity, backref='user')
-    config_values_int = relationship(ConfigValueInt, backref='user')
-    config_values_string = relationship(ConfigValueString, backref='user')
-    user_activity = relationship(UserActivity, backref='object',
-            primaryjoin=user_id == UserActivity.user_id)
+    activity = relationship(Activity, back_populates='user')
+    config_values_int = relationship(ConfigValueInt, back_populates='user')
+    config_values_string = relationship(ConfigValueString, back_populates='user')
+    user_activity = relationship(UserActivity, back_populates='object',
+            primaryjoin=user_id == UserActivity.object_id)
+    group_user_assocs = relationship('UserGroup', back_populates='user',
+            cascade='all, delete-orphan')
+    sshpubkeys = relationship('SSHPubKey', back_populates='user')
+    reservations = relationship('Reservation', back_populates='user',
+            order_by='Reservation.start_time.desc()')
+    system_access_policy_rules = relationship('SystemAccessPolicyRule',
+            back_populates='user', cascade='all, delete, delete-orphan')
+    notes = relationship('Note', back_populates='user')
+    lab_controller = relationship('LabController', uselist=False,
+            back_populates='user')
+    jobs = relationship('Job', back_populates='owner', cascade_backrefs=False,
+            primaryjoin='Job.owner_id == User.user_id')
+    tasks = relationship('Task', back_populates='uploader')
 
     activity_type = UserActivity
 
@@ -390,8 +413,17 @@ class Group(DeclarativeMappedObject, ActivityMixin):
         default=None)
     ldap = Column(Boolean, default=False, nullable=False, index=True)
     created = Column(DateTime, default=datetime.utcnow)
-    activity = relationship(GroupActivity, backref='object',
+    activity = relationship(GroupActivity, back_populates='object',
             cascade='all, delete-orphan')
+    permissions = relationship('Permission', back_populates='groups',
+            secondary=group_permission_table)
+    system_assocs = relationship('SystemGroup', back_populates='group',
+            cascade='all, delete-orphan')
+    user_group_assocs = relationship('UserGroup', back_populates='group',
+            cascade='all, delete-orphan')
+    system_access_policy_rules = relationship('SystemAccessPolicyRule',
+            back_populates='group', cascade='all, delete, delete-orphan')
+    jobs = relationship('Job', back_populates='group', cascade_backrefs=False)
 
     activity_type = GroupActivity
 
@@ -575,21 +607,12 @@ class UserGroup(DeclarativeMappedObject):
     user_id = Column(Integer, ForeignKey('tg_user.user_id',
             onupdate='CASCADE', ondelete='CASCADE'),
             primary_key=True, index=True)
-    user = relationship(User, backref=backref('group_user_assocs', cascade='all, delete-orphan'))
+    user = relationship(User, back_populates='group_user_assocs')
     group_id = Column(Integer, ForeignKey('tg_group.group_id',
             onupdate='CASCADE', ondelete='CASCADE'),
             primary_key=True, index=True)
-    group = relationship(Group, backref=backref('user_group_assocs', cascade='all, delete-orphan'))
+    group = relationship(Group, back_populates='user_group_assocs')
     is_owner = Column(Boolean, nullable=False, default=False)
-
-
-group_permission_table = Table('group_permission', DeclarativeMappedObject.metadata,
-    Column('group_id', Integer, ForeignKey('tg_group.group_id',
-        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True, index=True),
-    Column('permission_id', Integer, ForeignKey('permission.permission_id',
-        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True, index=True),
-    mysql_engine='InnoDB',
-)
 
 class Permission(DeclarativeMappedObject):
     """
@@ -601,7 +624,7 @@ class Permission(DeclarativeMappedObject):
     permission_id = Column(Integer, primary_key=True)
     permission_name = Column(Unicode(16), unique=True)
     description = Column(Unicode(255))
-    groups = relationship(Group, backref='permissions',
+    groups = relationship(Group, back_populates='permissions',
             secondary=group_permission_table)
 
     @classmethod
@@ -624,9 +647,10 @@ class SystemGroup(DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     system_id = Column(Integer, ForeignKey('system.id',
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True, index=True)
+    system = relationship('System', back_populates='group_assocs')
     group_id = Column(Integer, ForeignKey('tg_group.group_id',
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True, index=True)
-    group = relationship(Group, backref=backref('system_assocs', cascade='all, delete-orphan'))
+    group = relationship(Group, back_populates='system_assocs')
 
 class SSHPubKey(DeclarativeMappedObject):
 
@@ -635,7 +659,7 @@ class SSHPubKey(DeclarativeMappedObject):
     id = Column(Integer, autoincrement=True, primary_key=True)
     user_id = Column(Integer, ForeignKey('tg_user.user_id',
             onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
-    user = relationship(User, backref='sshpubkeys')
+    user = relationship(User, back_populates='sshpubkeys')
     keytype = Column(Unicode(16), nullable=False)
     pubkey = Column(UnicodeText, nullable=False)
     ident = Column(Unicode(63), nullable=False)
