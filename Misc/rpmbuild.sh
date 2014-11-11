@@ -15,7 +15,7 @@ if [ $# -eq 0 ] ; then
     exit 1
 fi
 
-tag="$(git describe --match=beaker-0\* --abbrev=0 HEAD)"
+tag="$(git describe --abbrev=0 HEAD)"
 version="${tag##beaker-}"
 commitcount=$(git rev-list "$tag..HEAD" | wc -l)
 commitsha=$(git rev-parse --short HEAD)
