@@ -371,7 +371,7 @@ def create_recipe(distro_tree=None, task_list=None,
     recipe = cls(ttasks=1)
     recipe.whiteboard = whiteboard
     recipe.distro_tree = distro_tree
-    recipe.role = role
+    recipe.role = role or u'STANDALONE'
     recipe.distro_requires = recipe.distro_tree.to_xml().toxml()
 
     if kwargs.get('reservesys', False):

@@ -3070,9 +3070,6 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
         result = {}
         i = self.recipe.tasks.index(self)
         for peer in self.recipe.recipeset.recipes:
-            # Roles are only shared amongst like recipe types
-            if type(self.recipe) != type(peer):
-                continue
             if i >= len(peer.tasks):
                 # We have uneven tasks
                 continue

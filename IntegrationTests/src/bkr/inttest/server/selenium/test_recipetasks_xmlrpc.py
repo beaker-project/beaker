@@ -104,5 +104,33 @@ class RecipeTasksXmlRpcTest(XmlRpcTestCase):
         self.assertEquals(self.server.recipes.tasks.peer_roles(
                 guestrecipe.tasks[0].id),
                 {'SERVERS': ['host.bz952948'],
-                 'STANDALONE': [],
+                 'STANDALONE': ['host.bz952948'],
                  'CLIENTS': []})
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=960434
+    def test_task_roles_visible_between_hosts_and_guests(self):
+        # Hosts and guests can all see each others' task roles now. Previously 
+        # they were not visible to each other.
+        with session.begin():
+            hostrecipe = data_setup.create_recipe()
+            guestrecipe_server = data_setup.create_guestrecipe(host=hostrecipe)
+            guestrecipe_client = data_setup.create_guestrecipe(host=hostrecipe)
+            job = data_setup.create_job_for_recipes([hostrecipe,
+                    guestrecipe_server, guestrecipe_client])
+            hostrecipe.tasks[0].role = u'SERVERS'
+            guestrecipe_server.tasks[0].role = u'SERVERS'
+            guestrecipe_client.tasks[0].role = u'CLIENTS'
+            system = data_setup.create_system(fqdn=u'host.bz960434')
+            data_setup.mark_recipe_running(hostrecipe, system=system)
+            data_setup.mark_recipe_running(guestrecipe_server, fqdn=u'guestserver.bz960434')
+            data_setup.mark_recipe_running(guestrecipe_client, fqdn=u'guestclient.bz960434')
+        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
+        expected_peer_roles = {
+            'SERVERS': ['host.bz960434', 'guestserver.bz960434'],
+            'CLIENTS': ['guestclient.bz960434'],
+            'STANDALONE': ['host.bz960434', 'guestserver.bz960434', 'guestclient.bz960434'],
+        }
+        for recipe in [hostrecipe, guestrecipe_server, guestrecipe_client]:
+            self.assertEquals(
+                    self.server.recipes.tasks.peer_roles(recipe.tasks[0].id),
+                    expected_peer_roles)
