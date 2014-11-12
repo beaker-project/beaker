@@ -523,7 +523,7 @@ class Groups(AdminPage):
 
         def get_remove_link(x):
             try:
-                if x.can_edit(identity.current.user):
+                if x.can_edit(identity.current.user) and not x.is_protected_group():
                     return self.delete_link.display(dict(group_id=x.group_id),
                                              action=url('remove'),
                                              action_text='Delete Group')
@@ -718,6 +718,10 @@ class Groups(AdminPage):
 
         if not group.can_edit(identity.current.user):
             flash(_(u'You are not an owner of group %s' % group))
+            redirect('../groups/mine')
+
+        if group.is_protected_group():
+            flash(_(u'This group %s is predefined and cannot be deleted' % group))
             redirect('../groups/mine')
 
         if group.jobs:

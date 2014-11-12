@@ -679,6 +679,20 @@ class TestGroupsWD(WebDriverTestCase):
         self.assertEquals(b.find_element_by_xpath('//input[@id="Group_group_name"]').get_attribute('value'),
                           group.group_name)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1102617
+    def test_cannot_delete_protected_group_by_admin(self):
+        with session.begin():
+            user = data_setup.create_admin(password='password')
+            admin_group = Group.by_name('admin')
+        b = self.browser
+        login(b, user=user.user_name, password='password')
+        b.get(get_server_base() + 'groups/')
+        self.assert_('Delete' not in b.find_element_by_xpath("//tr[(td[1]/a[text()='%s'])]"
+                                                    % admin_group.group_name).text)
+        b.get(get_server_base() + 'groups/mine')
+        self.assert_('Delete' not in b.find_element_by_xpath("//tr[(td[1]/a[text()='%s'])]"
+                                                    % admin_group.group_name).text)
+
 
 class GroupSystemTest(WebDriverTestCase):
 
