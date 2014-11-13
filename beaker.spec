@@ -251,9 +251,7 @@ Group:          Applications/Internet
 Requires:       python
 Requires:       crontabs
 Requires:       httpd
-%ifarch %{ix86} x86_64
 Requires:       syslinux
-%endif
 Requires:       yum-utils
 Requires:       fence-agents
 Requires:       ipmitool
