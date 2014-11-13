@@ -11,9 +11,18 @@ Utility functions for use in Alembic migration scripts.
 from alembic import op
 import sqlalchemy as sa
 
+def find_fk(table, columns):
+    """
+    Returns the string name of the foreign key constraint which applies to the 
+    given columns, or None if no matching constraint exists.
+    """
+    for info in sa.inspect(op.get_bind()).get_foreign_keys(table):
+        if info['constrained_columns'] == columns:
+            return info['name']
+    return None
+
 def create_fk_if_absent(source_table, dest_table, source_columns, dest_columns):
-    fks = sa.inspect(op.get_bind()).get_foreign_keys(source_table)
-    if not any(fk['constrained_columns'] == source_columns for fk in fks):
+    if find_fk(source_table, source_columns) is None:
         op.create_foreign_key(None, source_table, dest_table,
                 source_columns, dest_columns)
 

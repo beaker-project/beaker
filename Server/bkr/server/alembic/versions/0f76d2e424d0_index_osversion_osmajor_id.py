@@ -6,14 +6,14 @@
 """Index osversion.osmajor_id
 
 Revision ID: 0f76d2e424d0
-Revises: 1c10e575800c
+Revises: 2c0f1c0a668b
 Create Date: 2014-10-10 12:38:16.945789
 
 """
 
 # revision identifiers, used by Alembic.
 revision = '0f76d2e424d0'
-down_revision = '1c10e575800c'
+down_revision = '2c0f1c0a668b'
 
 from alembic import op
 import sqlalchemy as sa
