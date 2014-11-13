@@ -75,3 +75,17 @@ class PolicyGrantTest(ClientTestCase):
         # should silently have no effect
         run_client(['bkr', 'policy-grant', '--system', self.system.fqdn,
                 '--permission', 'edit_system', '--everybody'])
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1021924
+    def test_multiple_permissions_and_targets(self):
+        with session.begin():
+            user = data_setup.create_user()
+            group = data_setup.create_group()
+            # there is always the rule granting everybody view
+            self.assertEquals(len(self.system.custom_access_policy.rules), 1)
+        run_client(['bkr', 'policy-grant', '--system', self.system.fqdn,
+                '--permission=reserve', '--permission=view_power',
+                '--user', user.user_name, '--group', group.group_name])
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(len(self.system.custom_access_policy.rules), 5)
