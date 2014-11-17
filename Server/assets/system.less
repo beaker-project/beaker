@@ -12,7 +12,7 @@
     .system-nav {
         flex-grow: 0.25;
         flex-shrink: 0;
-        margin-right: 4em;
+        padding-right: 3em;
     }
     .system-tabs {
         flex-grow: 1;
@@ -38,22 +38,28 @@
     // CSS right triangle, using position and pseudo-element hacks
     li {
         position: relative;
+        // Bootstrap uses pixel line-height, but relative line-height lets us 
+        // avoid issues with font scaling:
+        // https://bugzilla.redhat.com/show_bug.cgi?id=1163721
+        @navListLineHeight: 1.5em;
+        @navListVerticalPadding: 0.25em;
+        @navListItemHeight: (@navListLineHeight + 2*@navListVerticalPadding);
+        line-height: @navListLineHeight;
         a:after {
             content: "";
             position: absolute;
             width: 0;
             height: 0;
             top: 0;
-            right: -15px; // matches .nav-list margin
-            // variable for nav list heights, used below
-            // (base line height + 3px top padding + 3px bottom padding)
-            @navListItemHeight: (@baseLineHeight + 2*3px);
+            right: 0;
             border-top: white @navListItemHeight/2 solid;
             border-bottom: white @navListItemHeight/2 solid;
-            border-left: transparent @navListItemHeight/2+1px solid;
+            border-left: transparent @navListItemHeight/2 solid;
         }
         &.nav-header, a {
-            padding-right: 30px; // extra padding to account for the triangle
+            margin-right: 0;
+            // extra right padding to account for the triangle
+            padding: @navListVerticalPadding 2em @navListVerticalPadding  1.5em;
         }
     }
 }
