@@ -9,6 +9,7 @@ import urlparse
 import re
 import jinja2
 import tempfile
+import difflib
 from bkr.inttest import data_setup, get_server_base
 from bkr.server.model import DistroTreeRepo
 
@@ -79,16 +80,9 @@ def compare_expected(name, recipe_id, actual):
     if expected != actual:
         expected_path = pkg_resources.resource_filename('bkr.inttest',
                 'server/kickstarts/%s.expected' % name)
-        # Undo the substitutions, so that we get a sensible diff
-        actual = re.sub(r'\b%s\b' % vars.pop('@RECIPEID@'), '@RECIPEID@', actual)
-        for var, value in vars.iteritems():
-            actual = actual.replace(value, var)
-        actual_temp = tempfile.NamedTemporaryFile(prefix='beaker-kickstart-test-',
-                suffix='-actual', delete=False)
-        actual_temp.write(actual)
-        raise AssertionError('actual kickstart does not match expected\n'
-                'diff -u %s %s\nmv %s %s' % (expected_path, actual_temp.name,
-                actual_temp.name, expected_path))
+        diff = ''.join(difflib.ndiff(expected.splitlines(True), actual.splitlines(True)))
+        raise AssertionError('Actual kickstart does not match expected %s\n%s'
+                % (expected_path, diff))
 
 def jinja_choice_loader(loader):
     return jinja2.ChoiceLoader([loader,
