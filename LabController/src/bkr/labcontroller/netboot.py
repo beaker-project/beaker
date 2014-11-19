@@ -577,9 +577,8 @@ def configure_all(fqdn, arch, distro_tree_id,
                   kernel_url, initrd_url, kernel_options):
     """Configure images and all bootloader files for given fqdn"""
     fetch_images(distro_tree_id, kernel_url, initrd_url, fqdn)
-    arches = set(arch)
     for bootloader in BOOTLOADERS.values():
-        if bootloader.arches and not (bootloader.arches & arches):
+        if bootloader.arches and arch not in bootloader.arches:
             # Arch constrained bootloader and this system doesn't match
             continue
         bootloader.configure(fqdn, kernel_options)
