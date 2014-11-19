@@ -108,5 +108,6 @@ xkeyboard-config
 {% snippet 'system_post' %}
 
 {{ ks_appends|join('\n') }}
+{% snippet 'postinstall_done' %}
 {% snippet 'post_s390_reboot' %}
 {% snippet 'postreboot' %}

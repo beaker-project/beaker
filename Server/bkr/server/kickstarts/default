@@ -104,5 +104,6 @@ ostreesetup --osname=atomic-host --remote=atomic-host --url={{ ostree_repo_url }
 %end
 
 {{ ks_appends|join('\n') }}
+{% snippet 'postinstall_done' %}
 {% snippet 'post_s390_reboot' %}
 {% snippet 'postreboot' %}

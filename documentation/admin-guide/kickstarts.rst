@@ -79,6 +79,11 @@ useful when implementing custom templates and snippets:
 ``password``
     Handles setting the root password for the system.
 
+``postinstall_done``
+    Checks in with the lab controller to indicate that post-installation 
+    scripts are complete. This snippet defines its own %post section and is 
+    placed after all other %post sections.
+
 ``pre_anamon``; ``post_anamon``
     Configures anamon, a small daemon which runs during the Anaconda
     install process and uploads log files to the Beaker scheduler.

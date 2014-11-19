@@ -352,8 +352,6 @@ setenv NFSSERVERS "RHEL3,rhel3-nfs.test-kickstart.invalid:/export/home RHEL4,rhe
 setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
-# Check in with Beaker Server, record our postinstall time.
-fetch - http://lab.test-kickstart.invalid:8000/postinstall_done/@RECIPEID@
 # Disable rhts-compat for Fedora15/RHEL7 and newer.
 cat >> /etc/profile.d/task-overrides-rhts.sh <<END
 export RHTS_OPTION_COMPATIBLE=
@@ -362,4 +360,44 @@ END
 # no snippet data for Fedora18_post
 # no snippet data for Fedora_post
 # no snippet data for system_post
+%end
+
+
+%post
+set -x
+# Some distros have curl in their minimal install set, others have wget.
+# We define a wrapper function around the best available implementation
+# so that the rest of the script can use that for making HTTP requests.
+if command -v curl >/dev/null ; then
+    # Older curl versions lack --retry
+    if curl --help 2>&1 | grep -q .*--retry ; then
+        function fetch() {
+            curl --retry 20 --remote-time -o "$1" "$2"
+        }
+    else
+        function fetch() {
+            curl --remote-time -o "$1" "$2"
+        }
+    fi
+elif command -v wget >/dev/null ; then
+    # In Anaconda images wget is actually busybox
+    if wget --help 2>&1 | grep -q BusyBox ; then
+        function fetch() {
+            wget -O "$1" "$2"
+        }
+    else
+        function fetch() {
+            wget --tries 20 -O "$1" "$2"
+        }
+    fi
+else
+    echo "No HTTP client command available!"
+    function fetch() {
+        false
+    }
+fi
+# Check in with Beaker Server, record our postinstall time.
+fetch - http://lab.test-kickstart.invalid:8000/postinstall_done/@RECIPEID@
+# Give anamon a chance to finish collecting logs.
+sleep 10
 %end

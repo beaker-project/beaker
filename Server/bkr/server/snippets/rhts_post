@@ -137,8 +137,4 @@ fi
 {% snippet 'mvebu' %}
 {% endif %}
 {% snippet 'remote_post' %}
-{% if recipe %}
-# Check in with Beaker Server, record our postinstall time.
-fetch - http://{{ lab_controller.fqdn }}:8000/postinstall_done/{{ recipe.id }}
-{% endif %}
 {% snippet 'disable_rhts_compat' %}

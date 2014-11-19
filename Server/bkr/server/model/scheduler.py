@@ -2344,6 +2344,7 @@ class Recipe(TaskBase, DeclarativeMappedObject):
 (
 {%% snippet 'rhts_post' %%}
 ) 2>&1 | /usr/bin/tee /dev/console
+{%% snippet 'postinstall_done' %%}
                 """
             else:
                 kicktemplate = """
@@ -2358,6 +2359,7 @@ class Recipe(TaskBase, DeclarativeMappedObject):
 %%post --log=/dev/console
 {%% snippet 'rhts_post' %%}
 {{ end }}
+{%% snippet 'postinstall_done' %%}
                 """
             kickstart = kicktemplate % dict(
                                         beforepackages = beforepackages,

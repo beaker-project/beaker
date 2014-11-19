@@ -1,0 +1,10 @@
+{% if recipe %}
+%post
+set -x
+{% snippet 'fetch_wrapper' %}
+# Check in with Beaker Server, record our postinstall time.
+fetch - http://{{ lab_controller.fqdn }}:8000/postinstall_done/{{ recipe.id }}
+# Give anamon a chance to finish collecting logs.
+sleep 10
+{{ end }}
+{% endif %}
