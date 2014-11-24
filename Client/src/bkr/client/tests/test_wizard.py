@@ -121,3 +121,15 @@ class DescTest(unittest.TestCase):
         self.assertEquals(
             """\n            \t@echo "Description:     Test for BZ#1234567 (I ran \`rm -rf ~\` and everything's gone suddenly)" >> $(METADATA)""",
             desc.formatMakefileLine())
+
+
+class ReleasesTest(unittest.TestCase):
+
+    def setUp(self):
+        self.options = options = wizard.Options([], load_user_prefs=False)
+        self.releases = wizard.Releases(options)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1131429
+    def test_default_excludes_rhel4_rhel5(self):
+        self.assertEqual(self.releases.data,
+                ['-RHEL4', '-RHELClient5', '-RHELServer5'])

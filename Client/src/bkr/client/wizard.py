@@ -1064,7 +1064,7 @@ class Options:
     def email(self):        return [ self.opt.email,        self.pref.getEmail() ]
     def skeleton(self):     return [ self.opt.skeleton,     self.pref.getSkeleton() ]
     def archs(self):        return [ self.opt.archs,        [] ]
-    def releases(self):     return [ self.opt.releases,     [] ]
+    def releases(self):     return [ self.opt.releases,     ['-RHEL4', '-RHELClient5', '-RHELServer5'] ]
     def runfor(self):       return [ self.opt.runfor,       [self.pref.getPackage()] ]
     def requires(self):     return [ self.opt.requires,     [self.pref.getPackage()] ]
     def time(self):         return [ self.opt.time,         self.pref.getTime() ]
