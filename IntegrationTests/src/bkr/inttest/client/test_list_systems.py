@@ -7,7 +7,7 @@
 from turbogears.database import session
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError, ClientTestCase
-from bkr.server.model import System, Key, Key_Value_String, SystemStatus
+from bkr.server.model import System, Key, Key_Value_String, SystemStatus, Cpu
 import datetime
 
 class ListSystemsTest(ClientTestCase):
@@ -88,6 +88,34 @@ class ListSystemsTest(ClientTestCase):
             sel.fail('should be an error')
         except ClientError, e:
             self.assertIn('Invalid XML syntax for host filter', e.stderr_output)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1118523
+    def test_predefined_host_filter(self):
+        with session.begin():
+            matching = data_setup.create_system()
+            matching.cpu = Cpu(family=6, model=47, model_name=u'Intel')
+            nonmatching = data_setup.create_system()
+        out = run_client(['bkr', 'list-systems',
+                '--host-filter', 'INTEL__WESTMERE'])
+        returned_systems = out.splitlines()
+        self.assertIn(matching.fqdn, returned_systems)
+        self.assertNotIn(nonmatching.fqdn, returned_systems)
+
+    def test_multiple_xml_filters(self):
+        with session.begin():
+            module_key = Key.by_name(u'MODULE')
+            matching = data_setup.create_system()
+            matching.cpu = Cpu(family=6, model=47, model_name=u'Intel')
+            matching.key_values_string.append(
+                    Key_Value_String(module_key, u'cciss'))
+            nonmatching = data_setup.create_system()
+        out = run_client(['bkr', 'list-systems',
+                '--xml-filter', '<not><lender value="shark"/></not>',
+                '--xml-filter', '<key_value key="MODULE" value="cciss"/>',
+                '--host-filter', 'INTEL__WESTMERE'])
+        returned_systems = out.splitlines()
+        self.assertIn(matching.fqdn, returned_systems)
+        self.assertNotIn(nonmatching.fqdn, returned_systems)
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=949777
     def test_inventory_date_search(self):
