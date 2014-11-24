@@ -88,9 +88,11 @@ class Policy_Grant(BeakerCommand):
         self.parser.usage = "%%prog %s <options>" % self.normalized_name
         self.parser.add_option('--system', metavar='FQDN',
                 help='Modify access policy for FQDN')
-        self.parser.add_option('--permission',
+        self.parser.add_option('--permission', metavar='PERMISSION',
                 dest='permissions', action='append', default=[],
-                help='Grant PERMISSION in policy')
+                help='Grant PERMISSION in policy: '
+                     'view, edit_policy, edit_system, loan_any, loan_self, '
+                     'control_system, reserve')
         self.parser.add_option('--user', metavar='USERNAME',
                 dest='users', action='append', default=[],
                 help='Grant permission to USERNAME')
