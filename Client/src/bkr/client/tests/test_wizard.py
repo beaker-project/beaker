@@ -15,6 +15,12 @@ EXPECTED_GPL_HEADER = ("Copyright (c) %s %s.\n" %
 EXPECTED_OTHER_HEADER = ("Copyright (c) %s %s. All rights reserved.\n" %
                            (date.today().year, wizard.LICENSE_ORGANISATION))
 
+class ShellEscapingTest(unittest.TestCase):
+
+    def test_it(self):
+        self.assertEquals(wizard.shellEscaped(r'a " ` $ ! \ z'),
+                r'a \" \` \$ \! \\ z')
+
 class LicenseTests(unittest.TestCase):
 
     def setUp(self):
@@ -103,3 +109,15 @@ class BugsTest(unittest.TestCase):
         self.assertEquals(
                 'abrt: Race condition in abrt-action-install-debuginfo',
                 bugs.getSummary())
+
+
+class DescTest(unittest.TestCase):
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1165754
+    def test_shell_metachars_escaped_in_makefile(self):
+        options = wizard.Options(['beaker-wizard', '--yes'], load_user_prefs=False)
+        desc = wizard.Desc(options, suggest="Test for BZ#1234567 "
+                "(I ran `rm -rf ~` and everything's gone suddenly)")
+        self.assertEquals(
+            """\n            \t@echo "Description:     Test for BZ#1234567 (I ran \`rm -rf ~\` and everything's gone suddenly)" >> $(METADATA)""",
+            desc.formatMakefileLine())

@@ -454,6 +454,16 @@ def shortenText(text, max = 50):
     text = re.sub(" [^ ]*$", "", text)
     return text
 
+def shellEscaped(text):
+    """
+    Returns the text escaped for inclusion inside a shell double-quoted string.
+    """
+    return text.replace('\\', '\\\\')\
+               .replace('"', r'\"')\
+               .replace('$', r'\$')\
+               .replace('`', r'\`')\
+               .replace('!', r'\!')
+
 def unique(seq):
     """ Remove duplicates from the supplied sequence """
     dictionary = {}
@@ -1195,7 +1205,7 @@ class Inquisitor:
         if not (self.value() or value): return ""
         return '\n            	@echo "%s%s" >> $(METADATA)' % (
                 ((name or self.name) + ":").ljust(MakefileLineWidth),
-                re.sub("\"", "\\\"", value or self.value()))
+                shellEscaped(value or self.value()))
 
     def valid(self):
         """ Return true when provided value is a valid answer """
