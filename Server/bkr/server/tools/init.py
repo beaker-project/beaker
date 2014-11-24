@@ -59,15 +59,14 @@ def init_db(metadata, user_name=None, password=None, user_display_name=None, use
 
     #Setup User account
     if user_name:
+        user = User.lazy_create(user_name=user_name.decode('utf8'))
         if password:
-            user = User(user_name=user_name.decode('utf8'), password=password.decode('utf8'))
-            if user_display_name:
-                user.display_name = user_display_name.decode('utf8')
-            if user_email_address:
-                user.email_address = user_email_address.decode('utf8')
-            admin.user_group_assocs.append(UserGroup(user=user, is_owner=True))
-        else:
-            print "Password must be provided with username"
+            user.password = password.decode('utf8')
+        if user_display_name:
+            user.display_name = user_display_name.decode('utf8')
+        if user_email_address:
+            user.email_address = user_email_address.decode('utf8')
+        admin.user_group_assocs.append(UserGroup(user=user, is_owner=True))
     elif len(admin.users) == 0:
         print "No admin account exists, please create one with --user"
         sys.exit(1)
