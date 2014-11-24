@@ -60,6 +60,24 @@ class WorkflowSimpleTest(ClientTestCase):
                 (user_not_in_group.user_name, group.group_name) in \
                 e.stderr_output, e)
 
+    def test_job_owner(self):
+        with session.begin():
+            bot = data_setup.create_user(password='bot')
+            user = data_setup.create_user()
+            user.add_submission_delegate(bot, service=u'testdata')
+        config = create_client_config(username=bot.user_name, password='bot')
+        out = run_client(['bkr', 'workflow-simple',
+                '--job-owner', user.user_name,
+                '--arch', self.distro_tree.arch.arch,
+                '--family', self.distro.osversion.osmajor.osmajor,
+                '--task', self.task.name], config=config)
+        self.assertTrue(out.startswith('Submitted:'), out)
+        m = re.search('J:(\d+)', out)
+        job_id = m.group(1)
+        with session.begin():
+            job = Job.by_id(job_id)
+            self.assertEquals(job.owner, user)
+
     def test_submit_job(self):
         out = run_client(['bkr', 'workflow-simple', '--random',
                 '--arch', self.distro_tree.arch.arch,

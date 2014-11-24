@@ -295,7 +295,12 @@ class BeakerWorkflow(BeakerCommand):
 
         job_options = OptionGroup(self.parser, 'Options for job configuration')
         job_options.add_option(
-             "--job-group",
+             '--job-owner', metavar='USERNAME',
+             help='Submit job on behalf of USERNAME '
+                  '(submitting user must be a submission delegate for job owner)',
+        )
+        job_options.add_option(
+             "--job-group", metavar='GROUPNAME',
              help="Associate a group to this job"
         )
         job_options.add_option(
@@ -578,6 +583,8 @@ class BeakerJob(BeakerBase):
             self.node.setAttribute('product', kwargs.get('product'))
         if kwargs.get('job_group'):
             self.node.setAttribute('group', kwargs.get('job_group'))
+        if kwargs.get('job_owner'):
+            self.node.setAttribute('user', kwargs.get('job_owner'))
 
     def addRecipeSet(self, recipeSet=None):
         """ properly add a recipeSet to this job """
