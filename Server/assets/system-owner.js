@@ -100,6 +100,7 @@ var SystemOwnerChangeModal = Backbone.View.extend({
         this.$el.html(this.template(this.model.attributes));
     },
     submit: function (evt) {
+        this.$('.sync-status').empty();
         this.$('button').button('loading');
         this.model.save(
             {owner: {user_name: this.$('input[name=user_name]').val()}},
@@ -112,9 +113,9 @@ var SystemOwnerChangeModal = Backbone.View.extend({
         this.$el.modal('hide');
     },
     save_error: function (model, xhr) {
-        this.$('.modal-footer').prepend(
-            $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText));
+        $('<div class="alert alert-error"/>')
+            .text(xhr.statusText + ': ' + xhr.responseText)
+            .appendTo(this.$('.sync-status'));
         this.$('button').button('reset');
     },
 });

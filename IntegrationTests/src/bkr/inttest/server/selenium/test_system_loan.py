@@ -235,6 +235,13 @@ class SystemLoanTest(WebDriverTestCase):
         self.change_loan(loanee_name)
         error = "user name %s is invalid" % loanee_name
         self.verify_loan_error(error)
+        # check errors don't stack up
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1161373
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_tag_name('form').submit()
+        modal.find_element_by_xpath('.//button[text()="Save changes"]')
+        errors = modal.find_elements_by_class_name('alert-error')
+        self.assertEquals(len(errors), 1, 'Multiple errors: %r' % errors)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1121748
     def test_cannot_lend_to_ldap_user_with_extra_whitespace(self):

@@ -25,6 +25,7 @@ var SystemRenameModal = Backbone.View.extend({
     },
     submit: function (evt) {
         evt.preventDefault();
+        this.$('.sync-status').empty();
         this.$('button').button('loading');
         this.model.save({fqdn: this.$('input[name=fqdn]').val()},
             {patch: true, wait: true})
@@ -38,9 +39,9 @@ var SystemRenameModal = Backbone.View.extend({
             this.$el.modal('hide');
     },
     save_error: function (xhr) {
-        this.$('.modal-footer').prepend(
-            $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText));
+        $('<div class="alert alert-error"/>')
+            .text(xhr.statusText + ': ' + xhr.responseText)
+            .appendTo(this.$('.sync-status'));
         this.$('button').button('reset');
     },
 });
