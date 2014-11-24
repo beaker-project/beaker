@@ -1133,7 +1133,10 @@ class XmlHost(XmlAnd):
 
     @classmethod
     def from_string(cls, xml_string):
-        return cls(etree.fromstring(xml_string))
+        try:
+            return cls(etree.fromstring(xml_string))
+        except etree.XMLSyntaxError as e:
+            raise ValueError('Invalid XML syntax for host filter: %s' % e)
 
     @property
     def force(self):

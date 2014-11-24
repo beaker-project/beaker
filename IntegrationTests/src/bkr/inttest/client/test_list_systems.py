@@ -81,6 +81,14 @@ class ListSystemsTest(ClientTestCase):
         self.assert_(without_module.fqdn not in returned_systems,
                 returned_systems)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1167164
+    def test_handles_xml_syntax_error(self):
+        try:
+            run_client(['bkr', 'list-systems', '--xml-filter', '<error'])
+            sel.fail('should be an error')
+        except ClientError, e:
+            self.assertIn('Invalid XML syntax for host filter', e.stderr_output)
+
     #https://bugzilla.redhat.com/show_bug.cgi?id=949777
     def test_inventory_date_search(self):
 

@@ -209,25 +209,19 @@ class List_Systems(BeakerCommand):
         if 'xml_filter' in kwargs:
             qs_args.append(('xmlsearch', kwargs['xml_filter']))
 
-        feed_url = '/%s?%s' % (kwargs['feed'], urllib.urlencode(qs_args))
+        feed_url = '%s?%s' % (kwargs['feed'], urllib.urlencode(qs_args))
 
         # This will log us in using XML-RPC
         self.set_hub(**kwargs)
 
-        # Now we can steal the cookie jar to make our own HTTP requests
-        urlopener = urllib2.build_opener(urllib2.HTTPCookieProcessor(
-                self.hub._transport.cookiejar))
-        try:
-            content = urlopener.open(self.hub._hub_url + feed_url)
-        except urllib2.HTTPError,e:
-            sys.stderr.write(e.read())
+        session = self.requests_session()
+        response = session.get(feed_url, stream=True)
+        response.raise_for_status()
+        atom = lxml.etree.parse(response.raw)
+        titles = atom.xpath('/atom:feed/atom:entry/atom:title',
+                            namespaces={'atom': 'http://www.w3.org/2005/Atom'})
+        if not titles:
+            sys.stderr.write('Nothing Matches\n')
             sys.exit(1)
-        else:
-            atom = lxml.etree.parse(content)
-            titles = atom.xpath('/atom:feed/atom:entry/atom:title',
-                                namespaces={'atom': 'http://www.w3.org/2005/Atom'})
-            if not titles:
-                sys.stderr.write('Nothing Matches\n')
-                sys.exit(1)
-            for title in titles:
-                print title.text.strip()
+        for title in titles:
+            print title.text.strip()
