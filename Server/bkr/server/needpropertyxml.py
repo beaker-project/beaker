@@ -964,7 +964,7 @@ class XmlDevice(ElementWrapper):
 
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        equal = op == '__ne__' and '__equal__' or op
+        equal = op == '__ne__' and '__eq__' or op
         query = None
         filter_clauses = []
         for attr in ['bus', 'driver', 'vendor_id', 'device_id',
