@@ -201,7 +201,7 @@ def main():
     try:
         proxy = Proxy(conf=conf)
     except Exception, ex:
-        sys.stderr.write("Error initializing Proxy: %s\n" % ex)
+        sys.stderr.write("Error starting beaker-proxy: %s\n" % ex)
         sys.exit(1)
 
     if opts.foreground:

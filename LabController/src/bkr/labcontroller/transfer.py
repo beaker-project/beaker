@@ -92,7 +92,7 @@ def main():
     try:
         transfer = Watchdog(conf=conf)
     except Exception, ex:
-        sys.stderr.write("Error initializing Watchdog: %s\n" % ex)
+        sys.stderr.write("Error starting beaker-transfer: %s\n" % ex)
         sys.exit(1)
 
     if opts.foreground:
