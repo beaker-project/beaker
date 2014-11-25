@@ -167,13 +167,13 @@ def clear_grub2(config):
 
 ### Bootloader config: PXE Linux for aarch64
 
-def configure_aarch64(fqdn, kernel_options):
+def configure_aarch64(fqdn, kernel_options, basedir):
     """
     Creates PXE bootloader files for aarch64 Linux
 
     <get_tftp_root()>/aarch64/grub.cfg-<pxe_basename(fqdn)>
     """
-    pxe_base = os.path.join(get_tftp_root(), 'aarch64')
+    pxe_base = os.path.join(basedir, 'aarch64')
     makedirs_ignore(pxe_base, mode=0755)
     devicetree, kernel_options = extract_arg('devicetree=', kernel_options)
     if devicetree:
@@ -185,11 +185,11 @@ def configure_aarch64(fqdn, kernel_options):
     grub_cfg_file = os.path.join(pxe_base, basename)
     configure_grub2(fqdn, pxe_base, grub_cfg_file, kernel_options, devicetree)
 
-def clear_aarch64(fqdn):
+def clear_aarch64(fqdn, basedir):
     """
     Removes PXE bootloader file created by configure_aarch64
     """
-    pxe_base = os.path.join(get_tftp_root(), 'aarch64')
+    pxe_base = os.path.join(basedir, 'aarch64')
     basename = "grub.cfg-%s" % pxe_basename(fqdn)
     logger.debug('Removing aarch64 config for %s as %s', fqdn, basename)
     clear_grub2(os.path.join(pxe_base, basename))
@@ -197,7 +197,7 @@ def clear_aarch64(fqdn):
 
 ### Bootloader config: PXE Linux for ARM
 
-def configure_armlinux(fqdn, kernel_options):
+def configure_armlinux(fqdn, kernel_options, basedir):
     """
     Creates PXE bootloader files for ARM Linux
 
@@ -211,7 +211,7 @@ def configure_armlinux(fqdn, kernel_options):
     This is needed to set a path prefix of arm so that we don't
     conflict with x86 pxelinux.cfg files.
     """
-    pxe_base = os.path.join(get_tftp_root(), 'arm')
+    pxe_base = os.path.join(basedir, 'arm')
     makedirs_ignore(pxe_base, mode=0755)
     write_ignore(os.path.join(pxe_base, 'empty'), '')
     pxe_dir = os.path.join(pxe_base, 'pxelinux.cfg')
@@ -230,11 +230,11 @@ label linux
     with atomically_replaced_file(os.path.join(pxe_dir, basename)) as f:
         f.write(config)
 
-def clear_armlinux(fqdn):
+def clear_armlinux(fqdn, basedir):
     """
     Removes PXE bootloader file created by configure_armlinux
     """
-    pxe_dir = os.path.join(get_tftp_root(), 'arm', 'pxelinux.cfg')
+    pxe_dir = os.path.join(basedir, 'arm', 'pxelinux.cfg')
     basename = pxe_basename(fqdn)
     logger.debug('Removing armlinux config for %s as %s', fqdn, basename)
     unlink_ignore(os.path.join(pxe_dir, basename))
@@ -243,7 +243,7 @@ def clear_armlinux(fqdn):
 
 ### Bootloader config: PXE Linux
 
-def configure_pxelinux(fqdn, kernel_options):
+def configure_pxelinux(fqdn, kernel_options, basedir):
     """
     Creates PXE bootloader files for PXE Linux
 
@@ -253,7 +253,7 @@ def configure_pxelinux(fqdn, kernel_options):
 
     <get_tftp_root()>/pxelinux.cfg/default
     """
-    pxe_dir = os.path.join(get_tftp_root(), 'pxelinux.cfg')
+    pxe_dir = os.path.join(basedir, 'pxelinux.cfg')
     makedirs_ignore(pxe_dir, mode=0755)
 
     basename = pxe_basename(fqdn)
@@ -284,11 +284,11 @@ label local
     localboot 0
 ''')
 
-def clear_pxelinux(fqdn):
+def clear_pxelinux(fqdn, basedir):
     """
     Removes PXE bootloader file created by configure_pxelinux
     """
-    pxe_dir = os.path.join(get_tftp_root(), 'pxelinux.cfg')
+    pxe_dir = os.path.join(basedir, 'pxelinux.cfg')
     basename = pxe_basename(fqdn)
     configname = os.path.join(pxe_dir, basename)
     logger.debug('Removing pxelinux config for %s as %s', fqdn, basename)
@@ -297,7 +297,7 @@ def clear_pxelinux(fqdn):
 
 ### Bootloader config: EFI GRUB
 
-def configure_efigrub(fqdn, kernel_options):
+def configure_efigrub(fqdn, kernel_options, basedir):
     """
     Creates bootloader file for EFI GRUB
 
@@ -307,7 +307,7 @@ def configure_efigrub(fqdn, kernel_options):
 
     <get_tftp_root()>/grub/images -> <get_tftp_root()>/images
     """
-    grub_dir = os.path.join(get_tftp_root(), 'grub')
+    grub_dir = os.path.join(basedir, 'grub')
     makedirs_ignore(grub_dir, mode=0755)
     atomic_symlink('../images', os.path.join(grub_dir, 'images'))
 
@@ -331,11 +331,11 @@ title Beaker scheduled job for %s
     with atomically_replaced_file(os.path.join(grub_dir, basename)) as f:
         f.write(config)
 
-def clear_efigrub(fqdn):
+def clear_efigrub(fqdn, basedir):
     """
     Removes bootloader file created by configure_efigrub
     """
-    grub_dir = os.path.join(get_tftp_root(), 'grub')
+    grub_dir = os.path.join(basedir, 'grub')
     basename = pxe_basename(fqdn)
     logger.debug('Removing grub config for %s as %s', fqdn, basename)
     unlink_ignore(os.path.join(grub_dir, basename))
@@ -343,7 +343,7 @@ def clear_efigrub(fqdn):
 
 ### Bootloader config: ZPXE (IBM zSeries)
 
-def configure_zpxe(fqdn, kernel_options):
+def configure_zpxe(fqdn, kernel_options, basedir):
     """
     Creates bootloader files for ZPXE
 
@@ -351,7 +351,7 @@ def configure_zpxe(fqdn, kernel_options):
     <get_tftp_root()>/s390x/s_<fqdn>_parm
     <get_tftp_root()>/s390x/s_<fqdn>_conf
     """
-    zpxe_dir = os.path.join(get_tftp_root(), 's390x')
+    zpxe_dir = os.path.join(basedir, 's390x')
     makedirs_ignore(zpxe_dir, mode=0755)
 
     kernel_options = "%s netboot_method=zpxe" % kernel_options
@@ -372,7 +372,7 @@ def configure_zpxe(fqdn, kernel_options):
     with atomically_replaced_file(os.path.join(zpxe_dir, 's_%s_conf' % fqdn)) as f:
         pass # unused, but zpxe.rexx fetches it anyway
 
-def clear_zpxe(fqdn):
+def clear_zpxe(fqdn, basedir):
     """
     If this system is configured for zpxe, reconfigures for local boot
 
@@ -380,7 +380,7 @@ def clear_zpxe(fqdn):
     Removed: <get_tftp_root()>/s390x/s_<fqdn>_parm
     Removed: <get_tftp_root()>/s390x/s_<fqdn>_conf
     """
-    zpxe_dir = os.path.join(get_tftp_root(), 's390x')
+    zpxe_dir = os.path.join(basedir, 's390x')
     configname = os.path.join(zpxe_dir, 's_%s' % fqdn)
     if not os.path.exists(configname):
         # Don't create a default zpxe config if we didn't create
@@ -397,7 +397,7 @@ def clear_zpxe(fqdn):
 
 ### Bootloader config: EFI Linux (ELILO)
 
-def configure_elilo(fqdn, kernel_options):
+def configure_elilo(fqdn, kernel_options, basedir):
     """
     Creates bootloader file for ELILO
 
@@ -415,29 +415,29 @@ image=/images/%s/kernel
     root=/dev/ram
 ''' % (fqdn, kernel_options, fqdn)
     logger.debug('Writing elilo config for %s as %s', fqdn, basename)
-    with atomically_replaced_file(os.path.join(get_tftp_root(), basename)) as f:
+    with atomically_replaced_file(os.path.join(basedir, basename)) as f:
         f.write(config)
 
-def clear_elilo(fqdn):
+def clear_elilo(fqdn, basedir):
     """
     Removes bootloader file created by configure_elilo
     """
     basename = '%s.conf' % pxe_basename(fqdn)
-    unlink_ignore(os.path.join(get_tftp_root(), basename))
+    unlink_ignore(os.path.join(basedir, basename))
 
 
 ### Bootloader config: PowerPC Open Firmware bootloader (Yaboot)
 
-def configure_yaboot(fqdn, kernel_options):
+def configure_yaboot(fqdn, kernel_options, basedir):
     """
     Creates bootloader files for Yaboot
 
     <get_tftp_root()>/etc/<pxe_basename(fqdn).lower()>
     <get_tftp_root()>/ppc/<pxe_basename(fqdn).lower()> -> ../yaboot
     """
-    yaboot_conf_dir = os.path.join(get_tftp_root(), 'etc')
+    yaboot_conf_dir = os.path.join(basedir, 'etc')
     makedirs_ignore(yaboot_conf_dir, mode=0755)
-    ppc_dir = os.path.join(get_tftp_root(), 'ppc')
+    ppc_dir = os.path.join(basedir, 'ppc')
     makedirs_ignore(ppc_dir, mode=0755)
 
     basename = pxe_basename(fqdn).lower()
@@ -458,19 +458,19 @@ image=/images/%s/kernel
     logger.debug('Creating yaboot symlink for %s as %s', fqdn, basename)
     atomic_symlink('../yaboot', os.path.join(ppc_dir, basename))
 
-def clear_yaboot(fqdn):
+def clear_yaboot(fqdn, basedir):
     """
     Removes bootloader file created by configure_yaboot
     """
     basename = pxe_basename(fqdn).lower()
     logger.debug('Removing yaboot config for %s as %s', fqdn, basename)
-    unlink_ignore(os.path.join(get_tftp_root(), 'etc', basename))
+    unlink_ignore(os.path.join(basedir, 'etc', basename))
     logger.debug('Removing yaboot symlink for %s as %s', fqdn, basename)
-    unlink_ignore(os.path.join(get_tftp_root(), 'ppc', basename))
+    unlink_ignore(os.path.join(basedir, 'ppc', basename))
 
 ### Bootloader config for PPC64
 
-def configure_ppc64(fqdn, kernel_options):
+def configure_ppc64(fqdn, kernel_options, basedir):
     """
     Calls configure_grub2() to create the machine config files and symlink
     to the grub2 boot loader:
@@ -485,7 +485,7 @@ def configure_ppc64(fqdn, kernel_options):
 
 
     """
-    ppc_dir = os.path.join(get_tftp_root(), 'ppc')
+    ppc_dir = os.path.join(basedir, 'ppc')
     makedirs_ignore(ppc_dir, mode=0755)
 
     grub_cfg_file = os.path.join(ppc_dir, "grub.cfg-%s" % pxe_basename(fqdn))
@@ -499,14 +499,14 @@ def configure_ppc64(fqdn, kernel_options):
     # Ref: https://bugzilla.redhat.com/show_bug.cgi?id=1144106
 
     # hack for older grub
-    grub2_conf_dir = os.path.join(get_tftp_root(), 'boot', 'grub2')
+    grub2_conf_dir = os.path.join(basedir, 'boot', 'grub2')
     makedirs_ignore(grub2_conf_dir, mode=0755)
     grub_cfg_file = os.path.join(grub2_conf_dir, "grub.cfg-%s" % pxe_basename(fqdn))
     logger.debug('Writing grub2/ppc64 config for %s as %s', fqdn, grub_cfg_file)
     configure_grub2(fqdn, grub2_conf_dir, grub_cfg_file, kernel_options)
 
     # hack for power VMs
-    grub_cfg_file = os.path.join(get_tftp_root(), "grub.cfg-%s" % pxe_basename(fqdn))
+    grub_cfg_file = os.path.join(basedir, "grub.cfg-%s" % pxe_basename(fqdn))
     logger.debug('Writing grub2/ppc64 config for %s as %s', fqdn, grub_cfg_file)
     configure_grub2(fqdn, ppc_dir, grub_cfg_file, kernel_options)
 
@@ -515,12 +515,12 @@ def configure_ppc64(fqdn, kernel_options):
     atomic_symlink('../boot/grub2/powerpc-ieee1275/core.elf',
                    os.path.join(ppc_dir, grub2_symlink))
 
-def clear_ppc64(fqdn):
+def clear_ppc64(fqdn, basedir):
     """
     Calls clear_grub2() to remove the machine config file and symlink to
     the grub2 boot loader
     """
-    ppc_dir = os.path.join(get_tftp_root(), 'ppc')
+    ppc_dir = os.path.join(basedir, 'ppc')
     grub2_config = "grub.cfg-%s" % pxe_basename(fqdn)
     logger.debug('Removing grub2/ppc64 config for %s as %s', fqdn, grub2_config)
     clear_grub2(os.path.join(ppc_dir, grub2_config))
@@ -530,13 +530,13 @@ def clear_ppc64(fqdn):
 
     # clear the files which were created as a result of the hacks
     # mentioned in configure_ppc64()
-    grub2_conf_dir = os.path.join(get_tftp_root(), 'boot', 'grub2')
+    grub2_conf_dir = os.path.join(basedir, 'boot', 'grub2')
     grub2_config = "grub.cfg-%s" % pxe_basename(fqdn)
     logger.debug('Removing grub2/ppc64 config for %s as %s', fqdn, grub2_config)
     clear_grub2(os.path.join(grub2_conf_dir, grub2_config))
     grub2_config = "grub.cfg-%s" % pxe_basename(fqdn)
     logger.debug('Removing grub2/ppc64 config for %s as %s', fqdn, grub2_config)
-    clear_grub2(os.path.join(get_tftp_root(), grub2_config))
+    clear_grub2(os.path.join(basedir, grub2_config))
 
 # Mass configuration
 
@@ -574,17 +574,21 @@ add_bootloader("aarch64", configure_aarch64, clear_aarch64, set(["aarch64"]))
 add_bootloader("zpxe", configure_zpxe, clear_zpxe, set(["s390", "s390x"]))
 
 def configure_all(fqdn, arch, distro_tree_id,
-                  kernel_url, initrd_url, kernel_options):
+                  kernel_url, initrd_url, kernel_options, basedir=None):
     """Configure images and all bootloader files for given fqdn"""
     fetch_images(distro_tree_id, kernel_url, initrd_url, fqdn)
+    if not basedir:
+        basedir = get_tftp_root()
     for bootloader in BOOTLOADERS.values():
         if bootloader.arches and arch not in bootloader.arches:
             # Arch constrained bootloader and this system doesn't match
             continue
-        bootloader.configure(fqdn, kernel_options)
+        bootloader.configure(fqdn, kernel_options, basedir)
 
-def clear_all(fqdn):
+def clear_all(fqdn, basedir=None):
     """Clear images and all bootloader files for given fqdn"""
     clear_images(fqdn)
+    if not basedir:
+        basedir = get_tftp_root()
     for bootloader in BOOTLOADERS.values():
-        bootloader.clear(fqdn)
+        bootloader.clear(fqdn, basedir)

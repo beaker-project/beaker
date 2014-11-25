@@ -176,7 +176,7 @@ class ArchBasedConfigTest(ImagesBaseTestCase):
     def configure(self, arch):
         netboot.configure_all(TEST_FQDN, arch, 1234,
             'file://%s' % self.kernel.name,
-            'file://%s' % self.initrd.name, "")
+            'file://%s' % self.initrd.name, "", self.tftp_root)
 
     def get_categories(self, arch):
         this = self.common_categories + self.extra_categories.get(arch, ())
@@ -191,7 +191,7 @@ class ArchBasedConfigTest(ImagesBaseTestCase):
             self.check_netboot_absent(category)
 
     def clear(self):
-        netboot.clear_all(TEST_FQDN)
+        netboot.clear_all(TEST_FQDN, self.tftp_root)
 
     def check_cleared(self, arch):
         categories, other = self.get_categories(arch)
@@ -219,7 +219,7 @@ class PxelinuxTest(NetBootTestCase):
 
     def test_configure_then_clear(self):
         netboot.configure_pxelinux(TEST_FQDN,
-                'console=ttyS0,115200 ks=http://lol/')
+                'console=ttyS0,115200 ks=http://lol/', self.tftp_root)
         pxelinux_config_path = os.path.join(self.tftp_root, 'pxelinux.cfg', '7F0000FF')
         pxelinux_default_path = os.path.join(self.tftp_root, 'pxelinux.cfg', 'default')
         self.assertEquals(open(pxelinux_config_path).read(),
@@ -238,12 +238,12 @@ timeout 0
 label local
     localboot 0
 ''')
-        netboot.clear_pxelinux(TEST_FQDN)
+        netboot.clear_pxelinux(TEST_FQDN, self.tftp_root)
         self.assert_(not os.path.exists(pxelinux_config_path))
 
     def test_multiple_initrds(self):
         netboot.configure_pxelinux(TEST_FQDN,
-                'initrd=/mydriverdisk.img ks=http://lol/')
+               'initrd=/mydriverdisk.img ks=http://lol/', self.tftp_root)
         pxelinux_config_path = os.path.join(self.tftp_root, 'pxelinux.cfg', '7F0000FF')
         self.assertEquals(open(pxelinux_config_path).read(),
                 '''default linux
@@ -258,7 +258,7 @@ label linux
     # https://bugzilla.redhat.com/show_bug.cgi?id=1067924
     def test_kernel_options_are_not_quoted(self):
         netboot.configure_pxelinux(TEST_FQDN,
-                'initrd=/mydriverdisk.img ks=http://example.com/~user/kickstart')
+                'initrd=/mydriverdisk.img ks=http://example.com/~user/kickstart', self.tftp_root)
         pxelinux_config_path = os.path.join(self.tftp_root, 'pxelinux.cfg', '7F0000FF')
         config = open(pxelinux_config_path).read()
         self.assertIn('    append '
@@ -281,14 +281,14 @@ label jabberwocky
     boot the thing'''
         open(pxelinux_default_path, 'wx').write(custom)
         netboot.configure_pxelinux(TEST_FQDN,
-                'console=ttyS0,115200 ks=http://lol/')
+               'console=ttyS0,115200 ks=http://lol/', self.tftp_root)
         self.assertEquals(open(pxelinux_default_path).read(), custom)
 
 class EfigrubTest(NetBootTestCase):
 
     def test_configure_then_clear(self):
         netboot.configure_efigrub(TEST_FQDN,
-                'console=ttyS0,115200 ks=http://lol/')
+                'console=ttyS0,115200 ks=http://lol/', self.tftp_root)
         grub_config_path = os.path.join(self.tftp_root, 'grub', '7F0000FF')
         self.assertEquals(open(grub_config_path).read(),
                 '''default 0
@@ -299,12 +299,12 @@ title Beaker scheduled job for fqdn.example.invalid
     initrd /images/fqdn.example.invalid/initrd
 ''')
 
-        netboot.clear_efigrub(TEST_FQDN)
+        netboot.clear_efigrub(TEST_FQDN, self.tftp_root)
         self.assert_(not os.path.exists(grub_config_path))
 
     def test_multiple_initrds(self):
         netboot.configure_efigrub(TEST_FQDN,
-                'initrd=/mydriverdisk.img ks=http://lol/')
+                'initrd=/mydriverdisk.img ks=http://lol/', self.tftp_root)
         grub_config_path = os.path.join(self.tftp_root, 'grub', '7F0000FF')
         self.assertEquals(open(grub_config_path).read(),
                 '''default 0
@@ -318,7 +318,7 @@ title Beaker scheduled job for fqdn.example.invalid
     # https://bugzilla.redhat.com/show_bug.cgi?id=1067924
     def test_kernel_options_are_not_quoted(self):
         netboot.configure_efigrub(TEST_FQDN,
-                'initrd=/mydriverdisk.img ks=http://example.com/~user/kickstart')
+                 'initrd=/mydriverdisk.img ks=http://example.com/~user/kickstart', self.tftp_root)
         grub_config_path = os.path.join(self.tftp_root, 'grub', '7F0000FF')
         config = open(grub_config_path).read()
         self.assertIn('    kernel /images/fqdn.example.invalid/kernel '
@@ -335,7 +335,7 @@ class ZpxeTest(NetBootTestCase):
                 'BROADCAST=10.16.71.255 SEARCHDNS= NETMASK=255.255.248.0 '
                 'DNS=10.16.255.2 PORTNAME=z10-01 DASD=208C,218C,228C,238C '
                 'GATEWAY=10.16.71.254 NETWORK=10.16.64.0 '
-                'MACADDR=02:DE:AD:BE:EF:01 ks=http://lol/')
+                'MACADDR=02:DE:AD:BE:EF:01 ks=http://lol/', self.tftp_root)
         self.assertEquals(open(os.path.join(self.tftp_root, 's390x',
                 's_fqdn.example.invalid')).read(),
                 '''/images/fqdn.example.invalid/kernel
@@ -353,7 +353,7 @@ class ZpxeTest(NetBootTestCase):
                 's_fqdn.example.invalid_conf')).read(),
                 '')
 
-        netboot.clear_zpxe(TEST_FQDN)
+        netboot.clear_zpxe(TEST_FQDN, self.tftp_root)
         self.assertEquals(open(os.path.join(self.tftp_root, 's390x',
                 's_fqdn.example.invalid')).read(),
                 'local\n')
@@ -366,7 +366,7 @@ class EliloTest(NetBootTestCase):
 
     def test_configure_then_clear(self):
         netboot.configure_elilo(TEST_FQDN,
-                'console=ttyS0,115200 ks=http://lol/')
+                'console=ttyS0,115200 ks=http://lol/', self.tftp_root)
         elilo_config_path = os.path.join(self.tftp_root, '7F0000FF.conf')
         self.assertEquals(open(elilo_config_path).read(),
                 '''relocatable
@@ -379,14 +379,14 @@ image=/images/fqdn.example.invalid/kernel
     root=/dev/ram
 ''')
 
-        netboot.clear_elilo(TEST_FQDN)
+        netboot.clear_elilo(TEST_FQDN, self.tftp_root)
         self.assert_(not os.path.exists(elilo_config_path))
 
 class YabootTest(NetBootTestCase):
 
     def test_configure_then_clear(self):
         netboot.configure_yaboot(TEST_FQDN,
-                'console=ttyS0,115200 ks=http://lol/')
+                'console=ttyS0,115200 ks=http://lol/', self.tftp_root)
         yaboot_config_path = os.path.join(self.tftp_root, 'etc', '7f0000ff')
         self.assertEquals(open(yaboot_config_path).read(),
                 '''init-message="Beaker scheduled job for fqdn.example.invalid"
@@ -402,16 +402,16 @@ image=/images/fqdn.example.invalid/kernel
         yaboot_symlink_path = os.path.join(self.tftp_root, 'ppc', '7f0000ff')
         self.assertEquals(os.readlink(yaboot_symlink_path), '../yaboot')
 
-        netboot.clear_yaboot(TEST_FQDN)
+        netboot.clear_yaboot(TEST_FQDN, self.tftp_root)
         self.assert_(not os.path.exists(yaboot_config_path))
         self.assert_(not os.path.exists(yaboot_symlink_path))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=829984
     def test_configure_twice(self):
         netboot.configure_yaboot(TEST_FQDN,
-                'console=ttyS0,115200 ks=http://lol/')
+                'console=ttyS0,115200 ks=http://lol/', self.tftp_root)
         netboot.configure_yaboot(TEST_FQDN,
-                'console=ttyS0,115200 ks=http://lol/')
+                'console=ttyS0,115200 ks=http://lol/', self.tftp_root)
         yaboot_symlink_path = os.path.join(self.tftp_root, 'ppc', '7f0000ff')
         self.assertEquals(os.readlink(yaboot_symlink_path), '../yaboot')
 
@@ -419,7 +419,7 @@ class Grub2PPC64Test(NetBootTestCase):
 
     def test_configure_then_clear(self):
         netboot.configure_ppc64(TEST_FQDN,
-                'console=ttyS0,115200 ks=http://lol/')
+                'console=ttyS0,115200 ks=http://lol/', self.tftp_root)
         grub2_configs_path = [os.path.join(self.tftp_root, 'ppc', 'grub.cfg-7F0000FF'),
                               os.path.join(self.tftp_root, 'boot', 'grub2', 'grub.cfg-7F0000FF'),
                               os.path.join(self.tftp_root, 'grub.cfg-7F0000FF')]
@@ -433,7 +433,7 @@ boot
         grub2_symlink_path = os.path.join(self.tftp_root, 'ppc', '7f0000ff-grub2')
         self.assertEquals(os.readlink(grub2_symlink_path), '../boot/grub2/powerpc-ieee1275/core.elf')
 
-        netboot.clear_ppc64(TEST_FQDN)
+        netboot.clear_ppc64(TEST_FQDN, self.tftp_root)
         for path in grub2_configs_path:
             self.assert_(not os.path.exists(path))
         self.assert_(not os.path.exists(grub2_symlink_path))
@@ -442,7 +442,7 @@ class Aarch64Test(NetBootTestCase):
 
     def test_configure_then_clear(self):
         netboot.configure_aarch64(TEST_FQDN,
-                'console=ttyS0,115200 ks=http://lol/')
+                'console=ttyS0,115200 ks=http://lol/', self.tftp_root)
         grub_config_path = os.path.join(self.tftp_root, 'aarch64', 'grub.cfg-7F0000FF')
         grub_default_path = os.path.join(self.tftp_root, 'aarch64', 'grub.cfg')
         self.assertEquals(open(grub_config_path).read(), """\
@@ -453,13 +453,13 @@ boot
 """)
         self.assertEquals(open(grub_default_path).read(), 'exit\n')
 
-        netboot.clear_aarch64(TEST_FQDN)
+        netboot.clear_aarch64(TEST_FQDN, self.tftp_root)
         self.assertFalse(os.path.exists(grub_config_path))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1100008
     def test_alternate_devicetree(self):
         netboot.configure_aarch64(TEST_FQDN,
-                'devicetree=custom.dtb ks=http://lol/')
+                'devicetree=custom.dtb ks=http://lol/', self.tftp_root)
         grub_config_path = os.path.join(self.tftp_root, 'aarch64', 'grub.cfg-7F0000FF')
         self.assertEquals(open(grub_config_path).read(), """\
 linux  /images/fqdn.example.invalid/kernel ks=http://lol/ netboot_method=grub2
