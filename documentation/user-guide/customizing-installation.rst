@@ -268,6 +268,9 @@ correspond to the similarly-named kickstart option.
     Note that the network device used for installation is always set to start 
     on boot with DHCP activation.
 
+``swapsize``
+    Size of the swap partition in MB.
+
 ``timezone=<tzname>``
     Time zone to use. Default is ``America/New_York`` unless overridden by the 
     administrator.
