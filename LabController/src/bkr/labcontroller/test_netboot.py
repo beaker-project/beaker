@@ -174,7 +174,7 @@ class ArchBasedConfigTest(ImagesBaseTestCase):
     }
 
     def configure(self, arch):
-        netboot.configure_all(TEST_FQDN, [arch], 1234,
+        netboot.configure_all(TEST_FQDN, arch, 1234,
             'file://%s' % self.kernel.name,
             'file://%s' % self.initrd.name, "")
 

@@ -278,7 +278,7 @@ def main():
     try:
         poller = CommandQueuePoller(conf=conf)
     except Exception, ex:
-        sys.stderr.write('Error initializing CommandQueuePoller: %s\n' % ex)
+        sys.stderr.write('Error starting beaker-provision: %s\n' % ex)
         sys.exit(1)
 
     if opts.foreground:

@@ -555,6 +555,9 @@ def addToGit(path):
                 % (" ".join(GitCommand), GitCommand[0]))
         sys.exit(1)
 
+def removeEmbargo(summary):
+    return summary.replace('EMBARGOED ', '')
+
 
 class Preferences:
     """ Test's author preferences """
@@ -1812,7 +1815,7 @@ class Bugs(MultipleChoice):
     def getSummary(self):
         """ Return short summary fetched from bugzilla """
         if self.bug:
-            return re.sub("CVE-\d{4}-\d{4}\s*", "", self.bug.summary)
+            return re.sub("CVE-\d{4}-\d{4}\s*", "", removeEmbargo(self.bug.summary))
 
     def getComponent(self):
         """ Return bug component fetched from bugzilla """

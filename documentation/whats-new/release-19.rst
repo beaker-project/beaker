@@ -198,6 +198,12 @@ users/groups for debugging purposes. (Contributed by Dan Callaghan in
 Task and harness updates
 ------------------------
 
+Version 4.0-86 of the ``/distribution/virt/install`` task for installing guest 
+recipes has been published. The task no longer disables NetworkManager in 
+favour of the network initscript on distros where NetworkManager is capable of 
+handling bridging (RHEL7 and Fedora). (Contributed by Matt Jia in 
+:issue:`1150132`.)
+
 A new task ``/distribution/virt/image-install`` has been published, providing 
 experimental support for running guest recipes in VMs booted from disk images 
 with cloud-init. Refer to the :ref:`task documentation 
@@ -293,6 +299,10 @@ A number of other bug fixes are also included in this release:
   syntax error in case the administrator has defined a custom 
   ``readahead_sysconfig`` or ``virt_console_post`` snippet with no content. 
   (Contributed by Dan Callaghan)
+* :issue:`1129059`: The notification e-mail sent when a system is reserved with
+  ``<reservesys/>`` now includes a link to the recipe, and includes more useful 
+  information when the recipe is running on OpenStack. (Contributed by Dan 
+  Callaghan)
 
 .. not reporting the following bugs in unreleased versions:
    :issue:`1145867`
@@ -306,6 +316,8 @@ A number of other bug fixes are also included in this release:
    :issue:`1144193`
    :issue:`1144205`
    :issue:`1144195`
+   :issue:`1165489`
+   :issue:`1163540`
 
 .. these are dev details that are not worth reporting, listed here to keep the 
    scripts happy:

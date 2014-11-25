@@ -6,6 +6,7 @@
 
 from datetime import date
 import unittest2 as unittest
+from mock import Mock
 from bkr.client import wizard
 
 EXPECTED_GPL_HEADER = ("Copyright (c) %s %s.\n" %
@@ -85,3 +86,20 @@ class ArchitecturesTest(unittest.TestCase):
     def test_contain_ppc64le(self):
         self.assertIn('ppc64le', self.archs.list)
 
+
+class BugsTest(unittest.TestCase):
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=902299
+    def test_security_info_removed_from_summary(self):
+        bzbug = Mock(
+            summary='CVE-2012-5660 EMBARGOED abrt: Race condition in '
+                    'abrt-action-install-debuginfo',
+            bug_id=887866,
+        )
+        options = wizard.Options(['beaker-wizard', 'CVE-2012-5660'],
+                load_user_prefs=False)
+        bugs = wizard.Bugs(options)
+        bugs.bug = bzbug
+        self.assertEquals(
+                'abrt: Race condition in abrt-action-install-debuginfo',
+                bugs.getSummary())

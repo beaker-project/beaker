@@ -234,6 +234,30 @@ class KickstartTest(unittest.TestCase):
             cls.frawhide_x86_64.repos[:] = [
                 DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
             ]
+            cls.frawhide_ppc = data_setup.create_distro_tree(
+                distro=cls.frawhide, variant=u'Fedora', arch=u'ppc',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/development/rawhide/ppc/os/',
+                      u'nfs://lab.test-kickstart.invalid/distros/development/rawhide/ppc/os/'])
+            cls.frawhide_ppc.repos[:] = [
+                DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
+            ]
+            cls.frawhide_ppc64 = data_setup.create_distro_tree(
+                distro=cls.frawhide, variant=u'Fedora', arch=u'ppc64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/development/rawhide/ppc64/os/',
+                      u'nfs://lab.test-kickstart.invalid/distros/development/rawhide/ppc64/os/'])
+            cls.frawhide_ppc64.repos[:] = [
+                DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
+            ]
+            cls.frawhide_ppc64le = data_setup.create_distro_tree(
+                distro=cls.frawhide, variant=u'Fedora', arch=u'ppc64le',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/development/rawhide/ppc64le/os/',
+                      u'nfs://lab.test-kickstart.invalid/distros/development/rawhide/ppc64le/os/'])
+            cls.frawhide_ppc64le.repos[:] = [
+                DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
+            ]
 
             cls.atomic = data_setup.create_distro(name=u'Atomic-Host',
                 osmajor=u'AtomicHost', osminor=u'0')
@@ -2406,6 +2430,58 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
         self.assertIn('\npart /boot/efi --fstype vfat --size 200 '
                 '--recommended --ondisk=vdb\n', ks)
         self.assertNotIn('\npart /boot ', ks)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1162513
+    def test_ppc_prep_boot_partition(self):
+        system = data_setup.create_system(arch=[u'ppc', u'ppc64', u'ppc64le'],
+                status=u'Automated', lab_controller=self.lab_controller)
+        for arch in [u'ppc', u'ppc64', u'ppc64le']:
+            recipe = self.provision_recipe('''
+                <job>
+                    <whiteboard/>
+                    <recipeSet>
+                        <recipe>
+                            <distroRequires>
+                                <distro_name op="=" value="Fedora-rawhide" />
+                                <distro_arch op="=" value="%s" />
+                            </distroRequires>
+                            <hostRequires/>
+                            <partitions>
+                                <partition fs="ext4" name="mnt" size="10" />
+                            </partitions>
+                            <task name="/distribution/install" />
+                        </recipe>
+                    </recipeSet>
+                </job>
+                ''' % arch, system)
+            ks = recipe.rendered_kickstart.kickstart
+            self.assertIn('''
+part None --fstype 'PPC PReP Boot' --size 8
+part /boot --size 200 --recommended --asprimary
+''', ks)
+            self.assertIn('\npart /mnt --size=10240 --fstype ext4\n', ks)
+            # also check when combined with ondisk and fstype
+            recipe = self.provision_recipe('''
+                <job>
+                    <whiteboard/>
+                    <recipeSet>
+                        <recipe ks_meta="ondisk=vdb fstype=ext4">
+                            <distroRequires>
+                                <distro_name op="=" value="Fedora-rawhide" />
+                                <distro_arch op="=" value="%s" />
+                            </distroRequires>
+                            <hostRequires/>
+                            <partitions/>
+                            <task name="/distribution/install" />
+                        </recipe>
+                    </recipeSet>
+                </job>
+                ''' % arch, system)
+            ks = recipe.rendered_kickstart.kickstart
+            self.assertIn('''
+part None --fstype 'PPC PReP Boot' --size 8 --ondisk=vdb
+part /boot --size 200 --recommended --asprimary --fstype ext4 --ondisk=vdb
+''', ks)
 
     def test_anamon(self):
         # Test that we can override the anamon URL

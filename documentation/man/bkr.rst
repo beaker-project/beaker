@@ -236,6 +236,15 @@ Options for selecting tasks:
 
 Options for job configuration:
 
+.. option:: --job-owner <username>
+
+   Submit the job on behalf of <username>. The job will be owned by <username> 
+   rather than the submitting user.
+
+   The submitting user must be a submission delegate of <username>. Users can 
+   add other users as submission delegates on their :guilabel:`Preferences` 
+   page in Beaker's web UI.
+
 .. option:: --job-group <group>
 
    Associate the job with <group>. This will allow other group members to 
