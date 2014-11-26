@@ -19,7 +19,7 @@ Resources
       architecture-guide/index
 
    * `Beaker Quick Start Guide: slides (PDF) <../psss-beaker-quick-start-guide-slides.pdf>`__
-   * `RELAX NG schema for Beaker jobs <../schema/beaker-job.rng>`__
+   * :download:`RELAX NG schema for Beaker jobs <../Common/bkr/common/schema/beaker-job.rng>`
 
 .. container:: resourcesbox
 
