@@ -101,6 +101,12 @@ mutually exclusive.
    Limit to systems which match the given XML filter criteria. Supports the 
    same criteria as inside the ``<hostRequires/>`` element in Beaker job XML.
 
+.. option:: --host-filter <name>
+
+   Limit to systems which match the given pre-defined host filter. Refer to the 
+   description of the :option:`--host-filter <bkr --host-filter>` workflow 
+   option in :manpage:`bkr(1)`.
+
 Common :program:`bkr` options are described in the :ref:`Options 
 <common-options>` section of :manpage:`bkr(1)`.
 
@@ -129,7 +135,7 @@ import sys
 import urllib
 import urllib2
 import lxml.etree
-from bkr.client import BeakerCommand
+from bkr.client import BeakerCommand, host_filter_presets
 
 class List_Systems(BeakerCommand):
     """List systems"""
@@ -187,8 +193,13 @@ class List_Systems(BeakerCommand):
                 table='Devices/Description',
                 help='only include systems with a device that has DESCRIPTION')
         self.parser.add_option('--xml-filter', metavar='XML',
+                action='append', default=[],
                 help='only include systems matching the given XML filter, '
                 'as in <hostRequires/>')
+        self.parser.add_option('--host-filter', metavar='NAME',
+                action='append', default=[],
+                help='Only include systems matching pre-defined host filter, '
+                'as in bkr workflow-* --host-filter')
         self.parser.set_defaults(feed='')
 
     def run(self, *args, **kwargs):
@@ -206,28 +217,29 @@ class List_Systems(BeakerCommand):
                     ('systemsearch-%d.operation' % i, 'is'),
                     ('systemsearch-%d.value' % i,     kwargs[x[0]])
                 ])
-        if 'xml_filter' in kwargs:
-            qs_args.append(('xmlsearch', kwargs['xml_filter']))
+        xmlsearch = ''.join(kwargs['xml_filter'])
+        for filter_name in kwargs['host_filter']:
+            try:
+                xmlsearch += host_filter_presets()[filter_name]
+            except KeyError:
+                sys.stderr.write('Pre-defined host-filter does not exist: %s\n' % filter_name)
+                sys.exit(1)
+        if xmlsearch:
+            qs_args.append(('xmlsearch', xmlsearch))
 
-        feed_url = '/%s?%s' % (kwargs['feed'], urllib.urlencode(qs_args))
+        feed_url = '%s?%s' % (kwargs['feed'], urllib.urlencode(qs_args))
 
         # This will log us in using XML-RPC
         self.set_hub(**kwargs)
 
-        # Now we can steal the cookie jar to make our own HTTP requests
-        urlopener = urllib2.build_opener(urllib2.HTTPCookieProcessor(
-                self.hub._transport.cookiejar))
-        try:
-            content = urlopener.open(self.hub._hub_url + feed_url)
-        except urllib2.HTTPError,e:
-            sys.stderr.write(e.read())
+        session = self.requests_session()
+        response = session.get(feed_url, stream=True)
+        response.raise_for_status()
+        atom = lxml.etree.parse(response.raw)
+        titles = atom.xpath('/atom:feed/atom:entry/atom:title',
+                            namespaces={'atom': 'http://www.w3.org/2005/Atom'})
+        if not titles:
+            sys.stderr.write('Nothing Matches\n')
             sys.exit(1)
-        else:
-            atom = lxml.etree.parse(content)
-            titles = atom.xpath('/atom:feed/atom:entry/atom:title',
-                                namespaces={'atom': 'http://www.w3.org/2005/Atom'})
-            if not titles:
-                sys.stderr.write('Nothing Matches\n')
-                sys.exit(1)
-            for title in titles:
-                print title.text.strip()
+        for title in titles:
+            print title.text.strip()

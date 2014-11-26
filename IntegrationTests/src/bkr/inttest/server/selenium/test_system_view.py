@@ -124,6 +124,12 @@ class SystemViewTestWD(WebDriverTestCase):
         self.assertIn('already exists',
                 modal.find_element_by_class_name('alert-error').text)
         modal.find_element_by_xpath('.//button[contains(text(), "Rename")]')
+        # check errors don't stack up
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1161373
+        modal.find_element_by_tag_name('form').submit()
+        modal.find_element_by_xpath('.//button[contains(text(), "Rename")]')
+        errors = modal.find_elements_by_class_name('alert-error')
+        self.assertEquals(len(errors), 1, 'Multiple errors: %r' % errors)
 
     def test_update_system(self):
         orig_date_modified = self.system.date_modified
@@ -651,21 +657,32 @@ class SystemViewTestWD(WebDriverTestCase):
         tab = b.find_element_by_id('owner')
         tab.find_element_by_xpath('.//button[contains(text(), "Change")]').click()
         modal = b.find_element_by_class_name('modal')
-        # Invalid user
-        modal.find_element_by_name('user_name').send_keys('$!7676')
-        modal.find_element_by_tag_name('form').submit()
-        self.assertIn(
-            'No such user', 
-            modal.find_element_by_class_name('alert-error').text)
-        modal.find_element_by_xpath('.//button[contains(text(), "Save changes")]')
-        # Valid user
-        modal.find_element_by_name('user_name').clear()
         modal.find_element_by_name('user_name').send_keys(new_owner.user_name)
         modal.find_element_by_tag_name('form').submit()
         tab.find_element_by_xpath('p[1]/a[text()="%s"]' % new_owner.user_name)
         with session.begin():
             session.refresh(self.system)
             self.assertEquals(self.system.owner, new_owner)
+
+    def test_cannot_set_owner_to_invalid_user(self):
+        b = self.browser
+        login(b)
+        self.go_to_system_view(tab='Owner')
+        tab = b.find_element_by_id('owner')
+        tab.find_element_by_xpath('.//button[contains(text(), "Change")]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('user_name').send_keys('$!7676')
+        modal.find_element_by_tag_name('form').submit()
+        self.assertIn(
+            'No such user', 
+            modal.find_element_by_class_name('alert-error').text)
+        modal.find_element_by_xpath('.//button[contains(text(), "Save changes")]')
+        # check errors don't stack up
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1161373
+        modal.find_element_by_tag_name('form').submit()
+        modal.find_element_by_xpath('.//button[contains(text(), "Save changes")]')
+        errors = modal.find_elements_by_class_name('alert-error')
+        self.assertEquals(len(errors), 1, 'Multiple errors: %r' % errors)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=691796
     def test_cannot_set_owner_to_none(self):

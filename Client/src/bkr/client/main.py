@@ -76,7 +76,7 @@ def main():
         sys.stderr.write('HTTP error: %s\n' % e)
         content_type, _ = cgi.parse_header(e.response.headers.get('Content-Type', ''))
         if content_type == 'text/plain':
-            sys.stderr.write(e.response.content)
+            sys.stderr.write(e.response.content.rstrip('\n') + '\n')
         return 1
 
 

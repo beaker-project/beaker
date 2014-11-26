@@ -56,6 +56,7 @@ from bkr.server.controller_utilities import Utility, \
 from bkr.server.bexceptions import BeakerException, BX
 from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
+from bkr.server.cherrypy_util import PlainTextHTTPException
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from bkr.server.helpers import make_link
 from bkr.server import metrics, identity
@@ -493,8 +494,7 @@ class Root(RPCRoot):
             try:
                 systems = XmlHost.from_string('<and>%s</and>' % kw['xmlsearch']).apply_filter(systems)
             except ValueError,e:
-                response.status = 400
-                return e.message
+                raise PlainTextHTTPException(status=400, message=str(e))
 
         if kw.get("systemsearch"):
             searchvalue = kw['systemsearch']

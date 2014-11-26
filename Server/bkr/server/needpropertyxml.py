@@ -964,7 +964,7 @@ class XmlDevice(ElementWrapper):
 
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        equal = op == '__ne__' and '__equal__' or op
+        equal = op == '__ne__' and '__eq__' or op
         query = None
         filter_clauses = []
         for attr in ['bus', 'driver', 'vendor_id', 'device_id',
@@ -1133,7 +1133,10 @@ class XmlHost(XmlAnd):
 
     @classmethod
     def from_string(cls, xml_string):
-        return cls(etree.fromstring(xml_string))
+        try:
+            return cls(etree.fromstring(xml_string))
+        except etree.XMLSyntaxError as e:
+            raise ValueError('Invalid XML syntax for host filter: %s' % e)
 
     @property
     def force(self):

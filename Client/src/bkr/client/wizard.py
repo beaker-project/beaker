@@ -454,6 +454,16 @@ def shortenText(text, max = 50):
     text = re.sub(" [^ ]*$", "", text)
     return text
 
+def shellEscaped(text):
+    """
+    Returns the text escaped for inclusion inside a shell double-quoted string.
+    """
+    return text.replace('\\', '\\\\')\
+               .replace('"', r'\"')\
+               .replace('$', r'\$')\
+               .replace('`', r'\`')\
+               .replace('!', r'\!')
+
 def unique(seq):
     """ Remove duplicates from the supplied sequence """
     dictionary = {}
@@ -1054,7 +1064,7 @@ class Options:
     def email(self):        return [ self.opt.email,        self.pref.getEmail() ]
     def skeleton(self):     return [ self.opt.skeleton,     self.pref.getSkeleton() ]
     def archs(self):        return [ self.opt.archs,        [] ]
-    def releases(self):     return [ self.opt.releases,     [] ]
+    def releases(self):     return [ self.opt.releases,     ['-RHEL4', '-RHELClient5', '-RHELServer5'] ]
     def runfor(self):       return [ self.opt.runfor,       [self.pref.getPackage()] ]
     def requires(self):     return [ self.opt.requires,     [self.pref.getPackage()] ]
     def time(self):         return [ self.opt.time,         self.pref.getTime() ]
@@ -1195,7 +1205,7 @@ class Inquisitor:
         if not (self.value() or value): return ""
         return '\n            	@echo "%s%s" >> $(METADATA)' % (
                 ((name or self.name) + ":").ljust(MakefileLineWidth),
-                re.sub("\"", "\\\"", value or self.value()))
+                shellEscaped(value or self.value()))
 
     def valid(self):
         """ Return true when provided value is a valid answer """

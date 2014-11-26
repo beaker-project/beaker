@@ -747,6 +747,14 @@ class SystemFilteringTest(DatabaseTestCase):
             </hostRequires>
             """,
             present=[with_e1000], absent=[with_tg3])
+        # preferred spelling of this is <not><... op="=" ..></not>
+        # but we support the counter-intuitive != as well
+        self.check_filter("""
+            <hostRequires>
+                <device op="!=" driver="e1000" />
+            </hostRequires>
+            """,
+            present=[with_tg3], absent=[with_e1000])
         self.check_filter("""
             <hostRequires>
                 <device op="like" description="82541PI%" />

@@ -24,6 +24,7 @@ window.SystemReportProblemModal = Backbone.View.extend({
     },
     submit: function (evt) {
         evt.preventDefault();
+        this.$('.sync-status').empty();
         this.$('button').button('loading');
         this.model.report_problem(
             this.$('[name=message]').val(),
@@ -37,9 +38,9 @@ window.SystemReportProblemModal = Backbone.View.extend({
                 {type: 'success'});
     },
     save_error: function (model, xhr) {
-        this.$('.modal-footer').prepend(
-            $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText));
+        $('<div class="alert alert-error"/>')
+            .text(xhr.statusText + ': ' + xhr.responseText)
+            .appendTo(this.$('.sync-status'));
         this.$('button').button('reset');
     },
 });

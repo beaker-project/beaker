@@ -60,6 +60,7 @@ var SystemLendModal = Backbone.View.extend({
         this.$el.html(this.template(this.model.attributes));
     },
     submit: function (evt) {
+        this.$('.sync-status').empty();
         this.$('button').button('loading');
         this.model.lend(
             this.$('input[name=recipient]').val(),
@@ -72,9 +73,9 @@ var SystemLendModal = Backbone.View.extend({
         this.$el.modal('hide');
     },
     save_error: function (model, xhr) {
-        this.$('.modal-footer').prepend(
-            $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText));
+        $('<div class="alert alert-error"/>')
+            .text(xhr.statusText + ': ' + xhr.responseText)
+            .appendTo(this.$('.sync-status'));
         this.$('button').button('reset');
     },
 });
@@ -97,6 +98,7 @@ window.SystemLoanRequestModal = Backbone.View.extend({
     },
     submit: function (evt) {
         evt.preventDefault();
+        this.$('.sync-status').empty();
         this.$('button').button('loading');
         this.model.request_loan(
             this.$('[name=message]').val(),
@@ -110,9 +112,9 @@ window.SystemLoanRequestModal = Backbone.View.extend({
                 {type: 'success'});
     },
     save_error: function (model, xhr) {
-        this.$('.modal-footer').prepend(
-            $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText));
+        $('<div class="alert alert-error"/>')
+            .text(xhr.statusText + ': ' + xhr.responseText)
+            .appendTo(this.$('.sync-status'));
         this.$('button').button('reset');
     },
 });

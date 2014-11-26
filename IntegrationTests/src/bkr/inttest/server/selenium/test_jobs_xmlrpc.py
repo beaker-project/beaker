@@ -184,3 +184,26 @@ class JobUploadTest(XmlRpcTestCase):
             self.assertEquals(recipe.tasks[4].fetch_url,
                     u'git://example.com/externaltasks#master')
             self.assertEquals(recipe.tasks[4].fetch_subdir, u'examples/4')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1140912
+    def test_invalid_user(self):
+        job_xml = '''
+            <job user="notexist">
+                <whiteboard>job submitted for invalid user</whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                            <distro_arch op="=" value="i386" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            '''
+        try:
+            self.server.jobs.upload(job_xml)
+            self.fail('should raise')
+        except xmlrpclib.Fault, e:
+            self.assertIn('notexist is not a valid user name', e.faultString)

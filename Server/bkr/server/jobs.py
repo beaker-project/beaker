@@ -482,9 +482,8 @@ class Jobs(RPCRoot):
             raise BX(_('Your root password has expired, please change or clear it in order to submit jobs.'))
         owner_name = xmljob.get_xml_attr('user', unicode, None)
         if owner_name:
-            try:
-                owner = User.by_user_name(owner_name)
-            except NoResultFound, e:
+            owner = User.by_user_name(owner_name)
+            if owner is None:
                 raise ValueError('%s is not a valid user name' % owner_name)
             if not submitter.is_delegate_for(owner):
                 raise ValueError('%s is not a valid submission delegate for %s' % (submitter, owner))
