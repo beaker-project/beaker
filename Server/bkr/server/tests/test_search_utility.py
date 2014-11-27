@@ -68,7 +68,7 @@ class LuceneQueryTest(unittest.TestCase):
         # searching invalid numbers against a numeric column is just False
         clause = lucene_to_sqlalchemy(u'memory:much',
                 {'memory': System.memory}, [System.memory])
-        self.assert_clause_equals(clause, false())
+        self.assert_clause_equals(clause, and_(false()))
 
     def test_numeric_column(self):
         clause = lucene_to_sqlalchemy(u'weight:1.2',
@@ -79,7 +79,7 @@ class LuceneQueryTest(unittest.TestCase):
         clause = lucene_to_sqlalchemy(u'weight:heavy',
                 {'weight': LabInfo.weight},
                 [LabInfo.weight])
-        self.assert_clause_equals(clause, false())
+        self.assert_clause_equals(clause, and_(false()))
 
     def test_datetime_column(self):
         clause = lucene_to_sqlalchemy(u'date_added:2014-09-08',
@@ -90,7 +90,7 @@ class LuceneQueryTest(unittest.TestCase):
         # searching invalid dates against a datetime column is just False
         clause = lucene_to_sqlalchemy(u'date_added:fnord',
                 {'date_added': System.date_added}, [System.date_added])
-        self.assert_clause_equals(clause, false())
+        self.assert_clause_equals(clause, and_(false()))
 
     def test_integer_range(self):
         clause = lucene_to_sqlalchemy(u'memory:[1024 TO 2048]',
@@ -186,7 +186,7 @@ class LuceneQueryTest(unittest.TestCase):
         clause = lucene_to_sqlalchemy(u'favourite_color:green',
                 {'user_name': User.user_name, 'email_address': User.email_address},
                 [User.user_name, User.email_address])
-        self.assert_clause_equals(clause, false())
+        self.assert_clause_equals(clause, and_(false()))
 
     def test_unterminated_range(self):
         clause = lucene_to_sqlalchemy(u'[what?',
@@ -206,7 +206,7 @@ class LuceneQueryTest(unittest.TestCase):
         clause = lucene_to_sqlalchemy(u'memory:[1024, 2048]',
                 {'fqdn': System.fqdn, 'memory': System.memory},
                 [System.fqdn, System.memory])
-        self.assert_clause_equals(clause, false())
+        self.assert_clause_equals(clause, and_(false()))
 
     def test_unterminated_quote(self):
         clause = lucene_to_sqlalchemy(u'"what?',
