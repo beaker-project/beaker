@@ -15,10 +15,6 @@ window.SystemPowerSettingsView = Backbone.View.extend({
     },
     initialize: function (options) {
         this.distro_picker_options = options.distro_picker_options;
-        this.request_in_progress = false;
-        this.listenTo(this.model, 'request', this.sync_started);
-        this.listenTo(this.model, 'sync', this.sync_complete);
-        this.listenTo(this.model, 'error', this.sync_error);
         this.listenTo(this.model, 'change:can_change_power change:lab_controller_id', this.render);
         this.render();
     },
@@ -65,31 +61,20 @@ window.SystemPowerSettingsView = Backbone.View.extend({
             view.$('#reprovision_distro_tree span').text(selection.get('distro_tree_label'));
         });
     },
-    update_button_state: function () {
-        this.$('.form-actions button').prop('disabled',
-                (this.request_in_progress));
+    sync_success: function (response, status, xhr) {
+        this.$('.form-actions button').button('reset');
     },
-    sync_started: function () {
-        this.request_in_progress = true;
-        this.update_button_state();
-    },
-    sync_complete: function () {
-        this.request_in_progress = false;
-        this.update_button_state();
-        this.$('.sync-status').empty();
-    },
-    sync_error: function (model, xhr) {
-        this.request_in_progress = false;
-        this.update_button_state();
-        this.$('.sync-status').empty();
-        this.$el.append(
-            $('<div class="alert alert-error"/>')
+    sync_error: function (xhr) {
+        this.$('.form-actions button').button('reset');
+        $('<div class="alert alert-error"/>')
             .text('Server request failed: ' + xhr.statusText + ': ' +
-                    xhr.responseText));
+                    xhr.responseText)
+            .appendTo(this.$('.sync-status'));
     },
     submit: function (evt) {
-        if (this.request_in_progress) return false;
-        this.$('.sync-status').html('<i class="fa fa-spinner fa-spin"></i> Saving&hellip;');
+        evt.preventDefault();
+        this.$('.sync-status').empty();
+        this.$('.form-actions button').button('loading');
         var form_values = this.$('form').serializeArray();
         var attributes = _.object(_.pluck(form_values, 'name'), _.pluck(form_values, 'value'));
         // reprovision_distro_tree needs special treatment
@@ -99,11 +84,13 @@ window.SystemPowerSettingsView = Backbone.View.extend({
             attributes['reprovision_distro_tree'] = {'id': rpdtid};
         else
             attributes['reprovision_distro_tree'] = null;
-        this.model.save(attributes, {patch: true, wait: true});
-        evt.preventDefault();
+        this.model.save(attributes, {patch: true, wait: true})
+            .done(_.bind(this.sync_success, this))
+            .fail(_.bind(this.sync_error, this));
     },
     reset: function (evt) {
-        if (this.request_in_progress) return false;
+        evt.preventDefault();
+        this.$('.sync-status').empty();
         var model = this.model;
         this.$('input, select').each(function (i, elem) {
             if (elem.name != 'reprovision_distro_tree_id')
@@ -117,7 +104,6 @@ window.SystemPowerSettingsView = Backbone.View.extend({
                     ' ' + dt.get('arch'));
         }
         this.$('select').selectpicker('refresh');
-        evt.preventDefault();
     },
 });
 
