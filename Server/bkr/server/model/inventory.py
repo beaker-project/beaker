@@ -16,13 +16,12 @@ from kid import XML
 from markdown import markdown
 from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
         Integer, Unicode, UnicodeText, DateTime, String, Boolean, Numeric, Float,
-        BigInteger, VARCHAR, TEXT)
+        BigInteger, VARCHAR, TEXT, event)
 from sqlalchemy.sql import select, and_, or_, not_, case, func
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import (mapper, relationship, synonym,
         column_property, dynamic_loader, contains_eager, validates,
         object_mapper, synonym)
-from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.orm.attributes import NEVER_SET
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.orm.exc import NoResultFound
@@ -71,18 +70,6 @@ class SystemActivity(Activity):
     def object_name(self):
         return "System: %s" % self.object.fqdn
 
-class CallbackAttributeExtension(AttributeExtension):
-    def set(self, state, value, oldvalue, initiator):
-        instance = state.obj()
-        if instance.callback:
-            try:
-                modname, _dot, funcname = instance.callback.rpartition(".")
-                module = import_module(modname)
-                cb = getattr(module, funcname)
-                cb(instance, value)
-            except Exception, e:
-                log.error("command callback failed: %s" % e)
-        return value
 
 class CommandActivity(Activity):
 
@@ -94,8 +81,7 @@ class CommandActivity(Activity):
     object = relationship('System', back_populates='command_queue')
     system = synonym('object')
     status = column_property(
-            Column('status', CommandStatus.db_type(), nullable=False, index=True),
-            extension=CallbackAttributeExtension())
+            Column('status', CommandStatus.db_type(), nullable=False, index=True))
     task_id = Column(String(255))
     delay_until = Column(DateTime, default=None)
     quiescent_period = Column(Integer, default=None)
@@ -148,6 +134,20 @@ class CommandActivity(Activity):
         self.status = CommandStatus.aborted
         self.new_value = msg
         self.log_to_system_history()
+
+# Switch to event listen since the AttributeExtension module is
+# deprecated in SQLAlchemy 0.9
+@event.listens_for(CommandActivity.status, 'set', retval=True)
+def handle_cmd_callback(instance, value, oldvalue, initiator):
+    if instance.callback:
+        try:
+            modname, _dot, funcname = instance.callback.rpartition(".")
+            module = import_module(modname)
+            cb = getattr(module, funcname)
+            cb(instance, value)
+        except Exception, e:
+            log.error("command callback failed: %s" % e)
+    return value
 
 class Reservation(DeclarativeMappedObject):
 
@@ -207,44 +207,6 @@ system_arch_map = Table('system_arch_map', DeclarativeMappedObject.metadata,
     mysql_engine='InnoDB',
 )
 
-
-class SystemStatusAttributeExtension(AttributeExtension):
-    def set(self, state, child, oldchild, initiator):
-        obj = state.obj()
-        log.debug('%r status changed from %r to %r', obj, oldchild, child)
-        if child == oldchild:
-            return child
-        if oldchild in (None, NEVER_SET):
-            # First time system.status has been set, there will be no duration 
-            # rows yet.
-            assert not obj.status_durations
-            obj.status_durations.insert(0, SystemStatusDuration(status=child))
-            return child
-        # Otherwise, there should be exactly one "open" duration row, 
-        # with NULL finish_time.
-        open_sd = obj.status_durations[0]
-        assert open_sd.finish_time is None
-        assert open_sd.status == oldchild
-        if open_sd in session.new:
-            # The current open row is not actually persisted yet. This 
-            # happens when system.status is set more than once in 
-            # a session. In this case we can just update the same row and 
-            # return, no reason to insert another.
-            open_sd.status = child
-            return child
-        # Need to close the open row using a conditional UPDATE to ensure 
-        # we don't race with another transaction
-        now = datetime.utcnow()
-        if session.query(SystemStatusDuration)\
-                .filter_by(finish_time=None, id=open_sd.id)\
-                .update({'finish_time': now}, synchronize_session=False) \
-                != 1:
-            raise RuntimeError('System status updated in another transaction')
-        # Make the ORM aware of it as well
-        open_sd.finish_time = now
-        obj.status_durations.insert(0, SystemStatusDuration(status=child))
-        return child
-
 class System(DeclarativeMappedObject, ActivityMixin):
 
     __tablename__ = 'system'
@@ -264,8 +226,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
     user_id = Column(Integer, ForeignKey('tg_user.user_id'))
     user = relationship(User, primaryjoin=user_id == User.user_id)
     type = Column(SystemType.db_type(), nullable=False)
-    status = column_property(Column(SystemStatus.db_type(), nullable=False),
-            extension=SystemStatusAttributeExtension())
+    status = column_property(Column(SystemStatus.db_type(), nullable=False))
     status_reason = Column(Unicode(4000))
     deleted = Column(Boolean, default=False)
     memory = Column(Integer)
@@ -1538,6 +1499,42 @@ class System(DeclarativeMappedObject, ActivityMixin):
     groups = association_proxy('group_assocs', 'group',
             creator=lambda group: SystemGroup(group=group))
 
+@event.listens_for(System.status, 'set', active_history=True, retval=True)
+def validate_status(system, child, oldchild, initiator):
+    log.debug('%r status changed from %r to %r', system, oldchild, child)
+    if child == oldchild:
+        return child
+    if oldchild in (None, NEVER_SET):
+        # First time system.status has been set, there will be no duration 
+        # rows yet.
+        assert not system.status_durations
+        system.status_durations.insert(0, SystemStatusDuration(status=child))
+        return child
+    # Otherwise, there should be exactly one "open" duration row, 
+    # with NULL finish_time.
+    open_sd = system.status_durations[0]
+    assert open_sd.finish_time is None
+    assert open_sd.status == oldchild
+    if open_sd in session.new:
+        # The current open row is not actually persisted yet. This 
+        # happens when system.status is set more than once in 
+        # a session. In this case we can just update the same row and 
+        # return, no reason to insert another.
+        open_sd.status = child
+        return child
+    # Need to close the open row using a conditional UPDATE to ensure 
+    # we don't race with another transaction
+    now = datetime.utcnow()
+    if session.query(SystemStatusDuration)\
+            .filter_by(finish_time=None, id=open_sd.id)\
+            .update({'finish_time': now}, synchronize_session=False) \
+            != 1:
+        raise RuntimeError('System status updated in another transaction')
+    # Make the ORM aware of it as well
+    open_sd.finish_time = now
+    system.status_durations.insert(0, SystemStatusDuration(status=child))
+    return child
+
 class SystemCc(DeclarativeMappedObject):
 
     __tablename__ = 'system_cc'
@@ -2226,3 +2223,4 @@ class Key_Value_Int(DeclarativeMappedObject):
 def import_module(modname):
     __import__(modname)
     return sys.modules[modname]
+
