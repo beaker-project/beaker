@@ -33,6 +33,10 @@ class ConditionalInsertTest(unittest.TestCase):
             Column('name', Unicode(16), nullable=False, unique=True),
         )
         clause = ConditionalInsert(table, {table.c.name: 'asdf'})
+        # there is a bug in upstream in pylint so we have to disable it for
+        # SQLAlchemy 0.9. 
+        # https://bitbucket.org/logilab/astroid/issue/39/support-for-sqlalchemy
+        #pylint: disable=E1120
         compiled = clause.compile()
         self.assertEquals(str(compiled),
                 'INSERT INTO "table" ("table".name)\n'
@@ -49,6 +53,7 @@ class ConditionalInsertTest(unittest.TestCase):
         )
         clause = ConditionalInsert(table, {table.c.name: 'asdf'},
                 {table.c.extra: 'something'})
+        #pylint: disable=E1120
         compiled = clause.compile()
         self.assertEquals(str(compiled),
                 'INSERT INTO "table" ("table".name, "table".extra)\n'
