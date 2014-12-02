@@ -15,7 +15,7 @@ core functions.
 
 from turbogears.database import session, metadata
 from bkr.server.model import User, Group
-from bkr.server.tools.init import init_db
+from bkr.server.tools.init import populate_db
 from bkr.inttest import data_setup, DatabaseTestCase
 
 class BeakerInitTest(DatabaseTestCase):
@@ -25,8 +25,10 @@ class BeakerInitTest(DatabaseTestCase):
         with session.begin():
             existing_user = data_setup.create_user()
             self.assertEquals(existing_user.groups, [])
-        init_db(metadata, user_name=existing_user.user_name)
+        populate_db(user_name=existing_user.user_name)
         with session.begin():
             existing_user = User.query.get(existing_user.user_id)
             admin_group = Group.by_name(u'admin')
             self.assertEquals(existing_user.groups, [admin_group])
+        # run the same thing again, should have no effect but should not break
+        populate_db(user_name=existing_user.user_name)
