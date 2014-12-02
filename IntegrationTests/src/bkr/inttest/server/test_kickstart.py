@@ -2483,6 +2483,27 @@ part None --fstype 'PPC PReP Boot' --size 8 --ondisk=vdb
 part /boot --size 200 --recommended --asprimary --fstype ext4 --ondisk=vdb
 ''', ks)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=854229
+    def test_swapsize(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="swapsize=2048">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        ks = recipe.rendered_kickstart.kickstart
+        self.assertIn('\npart swap --size 2048\n', ks)
+
     def test_anamon(self):
         # Test that we can override the anamon URL
         recipe_xml = '''

@@ -8,7 +8,7 @@ clearpart --drives {{ ondisk }} --all --initlabel
 clearpart --all --initlabel
 {% endif %}
 
-{% if partitions or ondisk or rootfstype or fstype %}
+{% if partitions or ondisk or rootfstype or fstype or swapsize %}
 
 {#
 ## Arch Specific Boot requirements
@@ -47,9 +47,9 @@ part / --size 1024 --grow
 {%- if rootfstype or fstype %} --fstype {{ rootfstype|default(fstype) }}{% endif %}
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 
-part swap --recommended
+part swap
+{%- if swapsize %} --size {{ swapsize }}{% else %} --recommended{% endif %}
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
-{%- if swapsize %} --size {{ swapsize }}{% endif %}
 
 {#
 ## Loop through partitions variable and create appropriate part commands

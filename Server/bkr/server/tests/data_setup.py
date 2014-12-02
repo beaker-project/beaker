@@ -34,7 +34,7 @@ ADMIN_PASSWORD = u'testing'
 ADMIN_EMAIL_ADDRESS = u'admin@example.com'
 
 def setup_model(override=True):
-    from bkr.server.tools.init import init_db
+    from bkr.server.tools.init import init_db, populate_db
     engine = turbogears.database.get_engine()
     db_name = engine.url.database
     connection = engine.connect()
@@ -46,7 +46,8 @@ def setup_model(override=True):
     connection.invalidate() # can't reuse this one
     del connection
     log.info('Initialising model')
-    init_db(metadata, user_name=ADMIN_USER, password=ADMIN_PASSWORD,
+    init_db(metadata)
+    populate_db(user_name=ADMIN_USER, password=ADMIN_PASSWORD,
             user_email_address=ADMIN_EMAIL_ADDRESS)
 
 _counter = itertools.count()

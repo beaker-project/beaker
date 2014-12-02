@@ -32,7 +32,7 @@ __description__ = 'Command line tool for initializing Beaker DB'
 
 logger = logging.getLogger(__name__)
 
-def init_db(metadata, user_name=None, password=None, user_display_name=None, user_email_address=None):
+def init_db(metadata):
     metadata.create_all()
 
     def stamp(rev, context):
@@ -42,6 +42,8 @@ def init_db(metadata, user_name=None, password=None, user_display_name=None, use
         return []
     run_alembic_operation(metadata, stamp)
 
+def populate_db(user_name=None, password=None, user_display_name=None,
+        user_email_address=None):
     session.begin()
 
     try:
@@ -66,10 +68,12 @@ def init_db(metadata, user_name=None, password=None, user_display_name=None, use
             user.display_name = user_display_name.decode('utf8')
         if user_email_address:
             user.email_address = user_email_address.decode('utf8')
-        admin.user_group_assocs.append(UserGroup(user=user, is_owner=True))
-    elif len(admin.users) == 0:
-        print "No admin account exists, please create one with --user"
-        sys.exit(1)
+        # Ensure the user is in the 'admin' group as an owner.
+        # Flush for lazy_create.
+        session.flush()
+        user_group_assoc = UserGroup.lazy_create(
+                user_id=user.user_id, group_id=admin.group_id)
+        user_group_assoc.is_owner = True
 
     # Create distro_expire perm if not present
     try:
@@ -286,11 +290,13 @@ def main():
     else:
         # if database is empty then initialize it
         if not metadata.bind.table_names():
-            init_db(metadata, user_name=opts.user_name, password=opts.password,
-                    user_display_name=opts.display_name, user_email_address=opts.email_address)
+            if not opts.user_name:
+                parser.error('Pass --user to create an admin user')
+            init_db(metadata)
         else:
             # upgrade to the latest DB version
             upgrade_db(metadata)
+    populate_db(opts.user_name, opts.password, opts.display_name, opts.email_address)
 
 if __name__ == "__main__":
     main()

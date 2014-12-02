@@ -486,7 +486,7 @@ class SystemViewTestWD(WebDriverTestCase):
         old_address = self.system.power.power_address
         old_quiescent = self.system.power.power_quiescent_period
         tab.find_element_by_tag_name('form').submit()
-        tab.find_element_by_xpath('.//span[@class="sync-status" and not(text())]')
+        tab.find_element_by_xpath('.//button[text()="Save Changes"]')
         with session.begin():
             session.refresh(self.system)
             self.assert_(self.system.date_modified > orig_date_modified)
@@ -540,18 +540,20 @@ class SystemViewTestWD(WebDriverTestCase):
         tab.find_element_by_name('power_user').send_keys('root')
         tab.find_element_by_name('power_id').send_keys(system.fqdn)
         tab.find_element_by_tag_name('form').submit()
+        tab.find_element_by_xpath('.//button[text()="Save Changes"]')
 
         # check activity records
         power_fields_changed = {'power_type': 'virsh',
-                                'power_address': 'qemu+ssh:10.10.10.1',
-                                'power_user': 'root',
+                                'power_address': 'qemu+ssh:10.10.10.10',
+                                'power_user': '********',
                                 'power_id': system.fqdn,
-                                'power_quiescent_period': 5}
+                                'power_quiescent_period': '5'}
         with session.begin():
             session.refresh(system)
+            self.assertEquals(len(system.activity), 5)
             for activity in system.activity:
                 self.assertEquals(activity.new_value,
-                                  power_fields_changed[activity])
+                                  power_fields_changed[activity.field_name])
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1059535
     def test_activity_is_not_logged_when_leaving_power_settings_empty(self):
@@ -572,7 +574,7 @@ class SystemViewTestWD(WebDriverTestCase):
         BootstrapSelect(tab.find_element_by_name('power_type'))\
             .select_by_visible_text('drac')
         tab.find_element_by_tag_name('form').submit()
-        tab.find_element_by_xpath('.//span[@class="sync-status" and not(text())]')
+        tab.find_element_by_xpath('.//button[text()="Save Changes"]')
         with session.begin():
             session.refresh(self.system)
             self.assertEquals(len(self.system.activity), 1,
