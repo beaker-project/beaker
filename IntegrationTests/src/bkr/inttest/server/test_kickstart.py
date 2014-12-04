@@ -1152,8 +1152,9 @@ class KickstartTest(unittest.TestCase):
                          recipe.rendered_kickstart.kickstart)
 
     def test_leavebootorder(self):
-        system = data_setup.create_system(arch=u'ppc64', status=u'Automated',
+        system = data_setup.create_system(arch=[u'ppc64', u'ppc64le'], status=u'Automated',
                 lab_controller=self.lab_controller)
+        # ppc64
         system.provisions[system.arch[0]] = Provision(arch=system.arch[0])
         recipe = self.provision_recipe('''
             <job>
@@ -1176,6 +1177,30 @@ class KickstartTest(unittest.TestCase):
                 r'''bootloader --location=mbr --leavebootorder'''
                 in recipe.rendered_kickstart.kickstart.splitlines(),
                 recipe.rendered_kickstart.kickstart)
+
+        # ppc64le
+        system.provisions[system.arch[1]] = Provision(arch=system.arch[1])
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-rawhide" />
+                            <distro_arch op="=" value="ppc64le" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        self.assert_(
+                r'''bootloader --location=mbr --leavebootorder'''
+                in recipe.rendered_kickstart.kickstart.splitlines(),
+                recipe.rendered_kickstart.kickstart)
+
         # --leavebootorder is only in RHEL7+ and F18+
         recipe = self.provision_recipe('''
             <job>

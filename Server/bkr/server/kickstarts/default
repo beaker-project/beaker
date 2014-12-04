@@ -14,7 +14,7 @@ ignoredisk --interactive
 auth {{ auth }}
 {% endif %}
 # System bootloader configuration
-bootloader --location={{ boot_loc|default("mbr") }}{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}{% if distro_tree is arch('ppc', 'ppc64') and has_leavebootorder is defined %} --leavebootorder{% endif %}{% if bootloader_type %} --{{ bootloader_type }}{% endif %}
+bootloader --location={{ boot_loc|default("mbr") }}{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}{% if distro_tree is arch('ppc', 'ppc64', 'ppc64le') and has_leavebootorder is defined %} --leavebootorder{% endif %}{% if bootloader_type %} --{{ bootloader_type }}{% endif %}
 
 {{ mode|default('text') }}
 {% snippet 'network' %}
