@@ -4,7 +4,7 @@
     addLoadEvent(${name}_0.initialize);
  </script>
  <p>All options are space separated</p>
- <p>Kickstart Metadata are variables passed to cobblers kickstart template engine.  You should check with cobbler for what variables are available</p>
+ <p>Kickstart Metadata are variables which allow customizing various aspects of the installation. You should check with Beaker's documentation for what variables are available.</p>
  <p>Kernel Options are passed at the command line for installations.  ksdevice=bootif is an example along with console=ttyS0.</p>
  <p>Kernel Options Post are also command line options but they are for after the installation has completed.</p>
  <p>Commands are inherited from least specific to most specific. ARCH->FAMILY->UPDATE</p>
