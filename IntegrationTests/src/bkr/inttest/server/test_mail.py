@@ -415,3 +415,4 @@ Hi %s,
                 email_content)
         actual_mail_body = msg.get_payload(decode=True)
         self.assertEqual(actual_mail_body, expected_mail_body)
+        self.assertEqual(msg['X-Beaker-Notification'], 'usage-report')

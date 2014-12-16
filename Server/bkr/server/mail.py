@@ -212,4 +212,5 @@ def send_usage_reminder(user, data={}, testing=False):
     if testing:
         print "From: %s\nTo: %s\nSubject: %s\nBody: %s\n\n" % (sender, recipient, subject, body)
     else:
-        send_mail(sender=sender, to=recipient, subject=subject, body=body)
+        send_mail(sender=sender, to=recipient, subject=subject, body=body,
+                  headers=[('X-Beaker-Notification', 'usage-report')])
