@@ -1,7 +1,7 @@
 {% if grubport %}
 # set --port for GRUB (0.9)
 for file in /boot/grub/grub.conf /boot/efi/EFI/redhat/grub.conf /boot/grub/menu.lst ; do
-    if [ -e "$file" ] ; then
+    if [ -f "$file" ] && [ ! -L "$file" ] ; then
         sed --in-place=.orig -e 's/^\(serial.*\)--unit=\S\+\(.*\)$/\1--port={{ grubport }}\2/' "$file"
     fi
 done
@@ -9,7 +9,7 @@ done
 if [ -e "/etc/default/grub" ] ; then
     sed --in-place=.orig -e '/^GRUB_SERIAL_COMMAND="serial/ {s/--unit=[0-9]\+//; s/"$/ --port={{ grubport }}"/}' /etc/default/grub
     for file in /boot/grub2/grub.cfg /boot/efi/EFI/redhat/grub.cfg ; do
-        if [ -e "$file" ] ; then
+        if [ -f "$file" ] && [ ! -L "$file" ] ; then
             grub2-mkconfig -o "$file"
         fi
     done
