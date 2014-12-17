@@ -12,7 +12,7 @@ from setuptools import setup, find_packages
 
 setup(
     name = "bkr",
-    version='19.0',
+    version='19.1',
     license = "GPLv2+",
 
     packages=find_packages('.'),

@@ -325,3 +325,77 @@ A number of other bug fixes are also included in this release:
    :issue:`1124804`
    :issue:`1072336`
    :issue:`1014438`
+
+
+Maintenance updates
+-------------------
+
+The following fixes have been included in Beaker 19 maintenance updates.
+
+Beaker 19.1
+~~~~~~~~~~~
+
+* :issue:`1162513`: Beaker now adds a PPC PReP Boot partition for recipes using
+  custom partitioning on ``ppc64le`` distros. Previously it was only defined 
+  for ``ppc`` and ``ppc64`` distros, leading to installation failures on 
+  ``ppc64le`` distros. (Contributed by Dan Callaghan)
+* :issue:`1172450`: Beaker now adds the ``--leavebootorder`` option to the
+  ``bootloader`` kickstart command on ``ppc64le`` distros. Previously it was 
+  only added for ``ppc`` and ``ppc64`` distros, which caused the boot order to 
+  left in an incorrect state after provisioning a ``ppc64le`` distro. 
+  (Contributed by Amit Saha)
+* :issue:`1014695`: The :program:`bkr` workflow commands now accept
+  :option:`--job-owner <bkr --job-owner>`. Submission delegates can use this 
+  option to submit jobs on behalf of other users. (Contributed by Dan 
+  Callaghan)
+* :issue:`1118523`: The :program:`bkr list-systems` command now accepts
+  :option:`--host-filter <bkr list-systems --host-filter>`. This option has the 
+  same functionality as the :option:`--host-filter <bkr --host-filter>` option 
+  for :program:`bkr` workflow commands. (Contributed by Dan Callaghan)
+* :issue:`1131429`: By default :program:`beaker-wizard` now suggests excluding
+  RHEL4 and RHEL5 on newly created tasks. (Contributed by Dan Callaghan)
+* :issue:`902299`: :program:`beaker-wizard` now strips the word "EMBARGOED"
+  from bug summaries when suggesting the task name. (Contributed by Dan 
+  Callaghan)
+* :issue:`1165754`: :program:`beaker-wizard` now correctly escapes backticks in
+  shell commands appearing in the generated Makefile, so that they are not 
+  evaluated by the shell when make is run. (Contributed by Dan Callaghan)
+* :issue:`854229`: The ``swapsize`` kickstart metadata variable now correctly
+  sets the size of the swap partition. Previously it was undocumented and did 
+  not work in all cases. (Contributed by Dan Callaghan)
+* :issue:`745560`: The :program:`beaker-init` utility is now capable of
+  converting an existing user account into an admin. (Contributed by Dan 
+  Callaghan)
+* :issue:`1102617`: The special ``admin`` group is no longer allowed to be
+  deleted. (Contributed by Matt Jia)
+* :issue:`949855`: Beaker now correctly handles XML host filters which use
+  requirements of the form :samp:`<device op="!=" driver="{drivername}"/>`. 
+  (Contributed by Dan Callaghan)
+* :issue:`1162451`: When a recipe is scheduled with ``<hostRequires
+  force=""/>`` on a Manual system, and the system is already reserved, the 
+  recipe will remain queued until the system becomes free. Previously Beaker 
+  would erroneously consider the queued recipe to be "dead" and abort it. 
+  (Contributed by Dan Callaghan)
+* :issue:`1163721`: Fixed a display issue with the system page when the
+  browser's minimum font size is larger than 14px. (Contributed by Dan 
+  Callaghan)
+* :issue:`1161373`: Fixed a number of issues which would cause excessive error
+  messages to appear on the system page under some circumstances. (Contributed 
+  by Dan Callaghan)
+* :issue:`1140912`: Beaker now returns a more descriptive error message when an
+  invalid username is given in the ``user=""`` attribute of the ``<job/>`` 
+  element when submitting a job. (Contributed by Dan Callaghan)
+* :issue:`1167164`: When syntactically invalid XML is passed to :option:`bkr
+  list-systems --xml-filter`, the command now prints a concise error message 
+  instead of an HTML error page. (Contributed by Dan Callaghan)
+* :issue:`1073266`: Improved the wording of error messages when the lab
+  controller daemons fail to start. (Contributed by Dan Callaghan)
+* :issue:`1009377`: The :option:`--help` output for :program:`bkr policy-grant`
+  and :program:`bkr policy-revoke` now lists all possible permission values.  
+  (Contributed by Dan Callaghan)
+* :issue:`1142591`: The ``beaker-lab-controller`` package now correctly
+  depends on ``syslinux``. This allows Beaker to automatically copy 
+  :file:`pxelinux.0` into the TFTP root directory for convenience in new Beaker 
+  installations. (Contributed by Dan Callaghan)
+
+.. dev implementation detail that is not worth reporting: :issue:`980340`
