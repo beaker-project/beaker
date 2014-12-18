@@ -164,6 +164,10 @@ correspond to the similarly-named kickstart option.
     public registry. Thus, if Fedora 20 is used on the host machine,
     the image used will be: "registry.hub.docker.com/fedora:20".
 
+``hwclock_is_utc``
+    If defined, the hardware clock is assumed to be set in UTC rather than
+    local time. It's defined by default for guest recipes and dynamic VMs.
+
 ``ignoredisk=<options``
     Passed directly to the ``ignoredisk`` kickstart command. Use this to select 
     or omit certain disks for the installation, for example 

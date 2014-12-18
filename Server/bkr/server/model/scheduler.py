@@ -3497,7 +3497,7 @@ class VirtResource(RecipeResource):
                 'project/instances/%s/' % self.instance_id)
 
     def install_options(self, distro_tree):
-        yield InstallOptions.from_strings('', u'console=tty0 console=ttyS0,115200n8', '')
+        yield InstallOptions.from_strings('hwclock_is_utc', u'console=tty0 console=ttyS0,115200n8', '')
 
     def release(self):
         try:
@@ -3533,7 +3533,10 @@ class GuestResource(RecipeResource):
         return self.fqdn # just text, not a link
 
     def install_options(self, distro_tree):
-        yield InstallOptions({}, {}, {})
+        ks_meta = {
+            'hwclock_is_utc': True,
+        }
+        yield InstallOptions(ks_meta, {}, {})
 
     def allocate(self):
         self.mac_address = self._lowest_free_mac()
