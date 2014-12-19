@@ -210,6 +210,29 @@ READAHEAD_COLLECT_ON_RPM="no"
 EOF
 fi
 
+if [ -e /etc/sysconfig/ntpdate ] ; then
+    chkconfig ntpdate on
+fi
+if [ -e "/etc/sysconfig/ntpd" ]; then
+    chkconfig ntpd on
+    GOT_G=$(/bin/cat /etc/sysconfig/ntpd | grep -E '^OPTIONS' | grep '\-g')
+
+    if [ -z "$GOT_G" ]; then
+        /bin/sed -i -r 's/(^OPTIONS\s*=\s*)(['\''|"])(.+)$/\1\2\-x \3 /' /etc/sysconfig/ntpd
+    fi
+fi
+if [ -e /etc/chrony.conf ] ; then
+    cp /etc/chrony.conf{,.orig}
+    # use only DHCP-provided time servers, no default pool servers
+    sed -i '/^server /d' /etc/chrony.conf
+    cp /etc/sysconfig/network{,.orig}
+    # setting iburst should speed up initial sync
+    # https://bugzilla.redhat.com/show_bug.cgi?id=787042#c12
+    echo NTPSERVERARGS=iburst >>/etc/sysconfig/network
+    chkconfig ntpd off
+    chkconfig ntpdate off
+    chkconfig chronyd on
+fi
 
 
 

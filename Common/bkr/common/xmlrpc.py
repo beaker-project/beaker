@@ -137,10 +137,10 @@ class TimeoutProxyHTTP(TimeoutHTTP):
 
 class TimeoutHTTPSConnection(httplib.HTTPSConnection):
     def connect(self):
-        httplib.HTTPSConnection.connect(self)
         timeout = getattr(self, "_timeout", 0)
         if timeout:
-            self.sock.settimeout(timeout)
+            self.timeout = timeout
+        httplib.HTTPSConnection.connect(self)
 
 
 class TimeoutHTTPS(httplib.HTTPS):
