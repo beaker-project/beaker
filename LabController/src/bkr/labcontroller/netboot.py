@@ -538,6 +538,32 @@ def clear_ppc64(fqdn):
     logger.debug('Removing grub2/ppc64 config for %s as %s', fqdn, grub2_config)
     clear_grub2(os.path.join(get_tftp_root(), grub2_config))
 
+def configure_petitboot(fqdn, ko):
+    """
+    Creates bootloader file for petitboot
+
+    <get_tftp_root()>/bootloader/<fqdn>petitboot.cfg
+    """
+    config = '''default Beaker scheduled job for %s
+label Beaker scheduled job for %s
+kernel ::/images/%s/kernel
+initrd ::/images/%s/initrd
+append %s netboot_method=petitboot
+''' % (fqdn, fqdn, fqdn, fqdn, ko)
+    petitboot_conf_dir = os.path.join(get_tftp_root(), 'bootloader', fqdn)
+    makedirs_ignore(petitboot_conf_dir, mode=0755)
+    logger.debug('Writing petitboot config for %s as %s', fqdn, 
+                 os.path.join(petitboot_conf_dir, 'petitboot.cfg'))
+    with atomically_replaced_file(os.path.join(petitboot_conf_dir, 'petitboot.cfg')) as f:
+        f.write(config)
+
+def clear_petitboot(fqdn):
+    """
+    Removes bootloader file created by configure_petitboot
+    """
+    petitboot_conf_dir = os.path.join(get_tftp_root(), 'bootloader', fqdn)
+    unlink_ignore(os.path.join(petitboot_conf_dir, 'petitboot.cfg'))
+
 # Mass configuration
 
 # We configure most known bootloaders for every system, in order
@@ -572,6 +598,7 @@ add_bootloader("elilo", configure_elilo, clear_elilo)
 add_bootloader("armlinux", configure_armlinux, clear_armlinux)
 add_bootloader("aarch64", configure_aarch64, clear_aarch64, set(["aarch64"]))
 add_bootloader("zpxe", configure_zpxe, clear_zpxe, set(["s390", "s390x"]))
+add_bootloader("petitboot", configure_petitboot, clear_petitboot)
 
 def configure_all(fqdn, arch, distro_tree_id,
                   kernel_url, initrd_url, kernel_options):

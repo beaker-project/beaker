@@ -85,6 +85,9 @@ removes them once the installation is complete.
     Configuration for Yaboot. The filename matches the boot loader symlink 
     filename.
 
+:file:`bootloader/{fqdn}/petitboot.cfg`
+    Configuration for petitboot.
+
 :file:`ppc/{0a010203}-grub2`
     Symbolic link to the GRUB2 boot loader. The filename is prefixed
     with the IPv4 address of the test system, represented as 8
