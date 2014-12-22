@@ -2298,9 +2298,10 @@ class Recipe(TaskBase, DeclarativeMappedObject):
                  InstallOptions.from_strings(self.ks_meta,
                     self.kernel_options, self.kernel_options_post)]))
 
-        if 'harness' not in install_options.ks_meta and not self.harness_repo():
-            raise ValueError('Failed to find repo for harness')
-
+        if 'contained_harness' not in install_options.ks_meta \
+           and 'ostree_repo_url' not in install_options.ks_meta:
+            if 'harness' not in install_options.ks_meta and not self.harness_repo():
+                raise ValueError('Failed to find repo for harness')
         if 'ks' in install_options.kernel_options:
             # Use it as is
             pass

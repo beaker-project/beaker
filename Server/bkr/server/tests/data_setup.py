@@ -168,7 +168,7 @@ def add_group_to_system(system, group):
     system.groups.append(group)
 
 def create_distro(name=None, osmajor=u'DansAwesomeLinux6', osminor=u'9',
-        arches=None, tags=None):
+        arches=None, tags=None, harness_dir=True):
     osmajor = OSMajor.lazy_create(osmajor=osmajor)
     osversion = OSVersion.lazy_create(osmajor=osmajor, osminor=osminor)
     if arches:
@@ -179,17 +179,18 @@ def create_distro(name=None, osmajor=u'DansAwesomeLinux6', osminor=u'9',
     for tag in (tags or []):
         distro.add_tag(tag)
     log.debug('Created distro %r', distro)
-    harness_dir = os.path.join(turbogears.config.get('basepath.harness'), distro.osversion.osmajor.osmajor)
-    if not os.path.exists(harness_dir):
-        os.makedirs(harness_dir)
+    if harness_dir:
+        harness_dir = os.path.join(turbogears.config.get('basepath.harness'), distro.osversion.osmajor.osmajor)
+        if not os.path.exists(harness_dir):
+            os.makedirs(harness_dir)
     return distro
 
 def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux6',
         osminor=u'9', distro_tags=None, arch=u'i386', variant=u'Server',
-        lab_controllers=None, urls=None):
+        lab_controllers=None, urls=None, harness_dir=True):
     if distro is None:
         distro = create_distro(name=distro_name, osmajor=osmajor, osminor=osminor,
-                tags=distro_tags)
+                tags=distro_tags, harness_dir=harness_dir)
     distro_tree = DistroTree.lazy_create(distro=distro,
             arch=Arch.lazy_create(arch=arch), variant=variant)
     if distro_tree.arch not in distro.osversion.arches:
