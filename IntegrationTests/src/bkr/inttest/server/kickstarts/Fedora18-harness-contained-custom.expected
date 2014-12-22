@@ -278,6 +278,7 @@ RUN yum -y update; yum clean all
 RUN yum -y install restraint restraint-rhts
 RUN yum -y install coreutils
 RUN yum -y install beakerlib || true
+RUN yum -y install beakerlib-redhat || true
 CMD /usr/bin/mybinary
 EOF
 

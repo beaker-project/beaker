@@ -13,7 +13,7 @@ with this feature is assumed for the rest of this guide.
 
 An example recipe which uses an atomic host OS is as follows:
 
-.. literalinclude:: contained-test-harness-atomic-beah.xml
+.. literalinclude:: contained-test-harness-atomic.xml
 
 The above recipe specifies that the test harness should be run in a CentOS 7 
 container. Two additional ksmeta variables have to be specified:
@@ -28,6 +28,3 @@ container. Two additional ksmeta variables have to be specified:
    at least 1500 MB memory. You may or may not need this to successfully execute a 
    recipe.
 
-The above recipe uses the "beah" test harness. To use the default test harness, 
-simply omit the ``harness`` ksmeta variable from the recipe and change the harness
-repository accordingly.

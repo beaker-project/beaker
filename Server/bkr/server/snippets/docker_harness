@@ -7,13 +7,6 @@ export BEAKER_RECIPE_ID={{ recipe.id }}
 export BEAKER_HUB_URL="{{ absolute_url('/', labdomain=True) }}"
 EOF
 
-{% if harness == 'beah' %}
-cat >> /root/task-overrides-rhts.sh <<END
-export RHTS_OPTION_COMPATIBLE=
-export RHTS_OPTION_COMPAT_SERVICE=
-END
-{% snippet 'docker_beah' %}
-{% endif %}
 # Add "traditional" Beaker task repo so that tasks from the
 # central task repository can be executed as well.
 {% if taskrepo %}
@@ -50,13 +43,6 @@ MAINTAINER Beaker Developers <beaker-devel@lists.fedoraproject.org>
 ADD beaker-tasks.repo /etc/yum.repos.d/
 ADD customrepos/ /etc/yum.repos.d/
 ADD beaker-harness-env.sh /etc/profile.d/beaker-harness-env.sh
-{% if harness == 'beah' %}
-ADD beah_beaker.conf /etc/beah_beaker.conf
-ADD beah.conf /etc/beah.conf
-# XXX: always disable rhts-compat assuming we will run systemd distros
-# in the container
-ADD task-overrides-rhts.sh /etc/profile.d/task-overrides-rhts.sh
-{% endif %}
 RUN yum -y update; yum clean all
 
 {% if contained_harness_entrypoint is not defined %}
@@ -80,14 +66,9 @@ VOLUME [ "/sys/fs/cgroup" ]
 
 # Install the harness
 RUN yum -y install {{ harness|default('restraint restraint-rhts') }}
-{% if harness == 'beah' %}
-RUN yum -y install rhts-test-env beakerlib
-# This may fail if you are outside of Red Hat.
-RUN yum -y install beakerlib-redhat || true
-RUN systemctl enable beah-srv beah-beaker-backend beah-fwd-backend
-{% endif %}
 RUN yum -y install coreutils
 RUN yum -y install beakerlib || true
+RUN yum -y install beakerlib-redhat || true
 CMD {{ contained_harness_entrypoint|default('["/usr/sbin/init"]') }}
 EOF
 

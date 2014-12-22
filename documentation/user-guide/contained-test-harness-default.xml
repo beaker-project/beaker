@@ -1,5 +1,5 @@
 <recipeSet priority="Normal">
-  <recipe kernel_options="" kernel_options_post="" ks_meta="contained_harness selinux=--disabled" role="None" whiteboard="">
+  <recipe kernel_options="" kernel_options_post="" ks_meta="contained_harness" role="None" whiteboard="">
     <autopick random="false"/>
     <watchdog panic="ignore"/>
     <packages/>
