@@ -86,6 +86,8 @@ RUN yum -y install rhts-test-env beakerlib
 RUN yum -y install beakerlib-redhat || true
 RUN systemctl enable beah-srv beah-beaker-backend beah-fwd-backend
 {% endif %}
+RUN yum -y install coreutils
+RUN yum -y install beakerlib || true
 CMD {{ contained_harness_entrypoint|default('["/usr/sbin/init"]') }}
 EOF
 
@@ -102,7 +104,7 @@ ExecStartPre=/usr/bin/docker build -t beaker-harness .
 # See: https://github.com/docker/docker/issues/3359
 # Mount the host /mnt at /mnt so that the test data is preserved
 # post container exit
-ExecStart=/usr/bin/docker run --privileged -d -v /etc/localtime:/etc/localtime:ro -v /etc/timezone:/etc/timezone:ro -v /mnt:/mnt -t beaker-harness
+ExecStart=/usr/bin/docker run --privileged -d {%- for path in contained_harness_ro_host_volumes|default('/etc/localtime,/etc/timezone,/var/log/messages')|split(',') %} -v {{ path }}:{{ path }}:ro{% endfor %}{%- for path in contained_harness_rw_host_volumes|default('/mnt,/root')|split(',') %} -v {{ path }}:{{ path }}:rw{% endfor %} -t beaker-harness
 User=root
 Group=root
 TimeoutStartSec=0
@@ -112,10 +114,6 @@ WantedBy=default.target
 EOF
 
 systemctl enable docker beaker-harness-docker
-{% if harness == 'beah' %}
-{# These directories are created by rhts-test-env in the harness image. However
-we volume mount the host's /mnt for a persistent /mnt. So we recreate these here
-on the host as well
-#}
+# Some tasks may be using these directories (legacy!), so we create these on the host
+# so that they are available when the host's /mnt is volume mounted
 mkdir -p /mnt/testarea /mnt/scratchspace
-{% endif %}
