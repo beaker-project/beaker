@@ -1041,6 +1041,20 @@ class TestBeakerd(DatabaseTestCase):
             if not os.path.exists(harness_dir):
                 os.mkdir(harness_dir)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1157348
+    def test_harness_repo_not_required_contained_harness(self):
+        with session.begin():
+            lc = data_setup.create_labcontroller()
+            distro_tree = data_setup.create_distro_tree(osmajor='MyAwesomeNewLinux', 
+                                                        harness_dir=False)
+            recipe = data_setup.create_recipe(distro_tree=distro_tree)
+            recipe.ks_meta = "contained_harness"
+            job = data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_waiting(recipe, 
+                                           system=data_setup.create_system\
+                                           (lab_controller=lc))
+            job.recipesets[0].recipes[0].provision()
+
     def test_single_processor_priority(self):
         with session.begin():
             user = data_setup.create_user()

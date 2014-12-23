@@ -355,8 +355,8 @@ Beaker 19.1
 * :issue:`1131429`: By default :program:`beaker-wizard` now suggests excluding
   RHEL4 and RHEL5 on newly created tasks. (Contributed by Dan Callaghan)
 * :issue:`902299`: :program:`beaker-wizard` now strips the word "EMBARGOED"
-  from bug summaries when suggesting the task name. (Contributed by Dan 
-  Callaghan)
+  from bug summaries when suggesting the task name. (Contributed by Martin 
+  Kyral)
 * :issue:`1165754`: :program:`beaker-wizard` now correctly escapes backticks in
   shell commands appearing in the generated Makefile, so that they are not 
   evaluated by the shell when make is run. (Contributed by Dan Callaghan)

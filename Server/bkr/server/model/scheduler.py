@@ -2306,9 +2306,10 @@ class Recipe(TaskBase, DeclarativeMappedObject):
                  InstallOptions.from_strings(self.ks_meta,
                     self.kernel_options, self.kernel_options_post)]))
 
-        if 'harness' not in install_options.ks_meta and not self.harness_repo():
-            raise ValueError('Failed to find repo for harness')
-
+        if 'contained_harness' not in install_options.ks_meta \
+           and 'ostree_repo_url' not in install_options.ks_meta:
+            if 'harness' not in install_options.ks_meta and not self.harness_repo():
+                raise ValueError('Failed to find repo for harness')
         if 'ks' in install_options.kernel_options:
             # Use it as is
             pass
@@ -3513,7 +3514,7 @@ class VirtResource(RecipeResource):
                 'project/instances/%s/' % self.instance_id)
 
     def install_options(self, distro_tree):
-        yield InstallOptions.from_strings('', u'console=tty0 console=ttyS0,115200n8', '')
+        yield InstallOptions.from_strings('hwclock_is_utc', u'console=tty0 console=ttyS0,115200n8', '')
 
     def release(self):
         try:
@@ -3549,7 +3550,10 @@ class GuestResource(RecipeResource):
         return self.fqdn # just text, not a link
 
     def install_options(self, distro_tree):
-        yield InstallOptions({}, {}, {})
+        ks_meta = {
+            'hwclock_is_utc': True,
+        }
+        yield InstallOptions(ks_meta, {}, {})
 
     def allocate(self):
         self.mac_address = self._lowest_free_mac()
