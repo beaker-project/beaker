@@ -467,3 +467,20 @@ initrd /images/fqdn.example.invalid/initrd
 devicetree custom.dtb
 boot
 """)
+
+class PetitbootTest(NetBootTestCase):
+
+    def test_configure_then_clear(self):
+        netboot.configure_petitboot(TEST_FQDN,
+                'ks=http://lol/ ksdevice=bootif')
+        petitboot_config_path = os.path.join(self.tftp_root, 'bootloader', 
+                                             TEST_FQDN, 'petitboot.cfg')
+        self.assertEquals(open(petitboot_config_path).read(), """\
+default Beaker scheduled job for fqdn.example.invalid
+label Beaker scheduled job for fqdn.example.invalid
+kernel ::/images/fqdn.example.invalid/kernel
+initrd ::/images/fqdn.example.invalid/initrd
+append ks=http://lol/ ksdevice=bootif netboot_method=petitboot
+""")
+        netboot.clear_petitboot(TEST_FQDN)
+        self.assertFalse(os.path.exists(petitboot_config_path))
