@@ -472,7 +472,7 @@ class PetitbootTest(NetBootTestCase):
 
     def test_configure_then_clear(self):
         netboot.configure_petitboot(TEST_FQDN,
-                'ks=http://lol/ ksdevice=bootif')
+                'ks=http://lol/ ksdevice=bootif', self.tftp_root)
         petitboot_config_path = os.path.join(self.tftp_root, 'bootloader', 
                                              TEST_FQDN, 'petitboot.cfg')
         self.assertEquals(open(petitboot_config_path).read(), """\
@@ -482,5 +482,5 @@ kernel ::/images/fqdn.example.invalid/kernel
 initrd ::/images/fqdn.example.invalid/initrd
 append ks=http://lol/ ksdevice=bootif netboot_method=petitboot
 """)
-        netboot.clear_petitboot(TEST_FQDN)
+        netboot.clear_petitboot(TEST_FQDN, self.tftp_root)
         self.assertFalse(os.path.exists(petitboot_config_path))

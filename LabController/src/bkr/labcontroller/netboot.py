@@ -538,11 +538,11 @@ def clear_ppc64(fqdn, basedir):
     logger.debug('Removing grub2/ppc64 config for %s as %s', fqdn, grub2_config)
     clear_grub2(os.path.join(basedir, grub2_config))
 
-def configure_petitboot(fqdn, ko):
+def configure_petitboot(fqdn, ko, basedir):
     """
     Creates bootloader file for petitboot
 
-    <get_tftp_root()>/bootloader/<fqdn>petitboot.cfg
+    basedir/bootloader/<fqdn>petitboot.cfg
     """
     config = '''default Beaker scheduled job for %s
 label Beaker scheduled job for %s
@@ -550,18 +550,23 @@ kernel ::/images/%s/kernel
 initrd ::/images/%s/initrd
 append %s netboot_method=petitboot
 ''' % (fqdn, fqdn, fqdn, fqdn, ko)
-    petitboot_conf_dir = os.path.join(get_tftp_root(), 'bootloader', fqdn)
+
+    if not basedir:
+        basedir = get_tftp_root()
+    petitboot_conf_dir = os.path.join(basedir, 'bootloader', fqdn)
     makedirs_ignore(petitboot_conf_dir, mode=0755)
     logger.debug('Writing petitboot config for %s as %s', fqdn, 
                  os.path.join(petitboot_conf_dir, 'petitboot.cfg'))
     with atomically_replaced_file(os.path.join(petitboot_conf_dir, 'petitboot.cfg')) as f:
         f.write(config)
 
-def clear_petitboot(fqdn):
+def clear_petitboot(fqdn, basedir):
     """
     Removes bootloader file created by configure_petitboot
     """
-    petitboot_conf_dir = os.path.join(get_tftp_root(), 'bootloader', fqdn)
+    if not basedir:
+        basedir = get_tftp_root()
+    petitboot_conf_dir = os.path.join(basedir, 'bootloader', fqdn)
     unlink_ignore(os.path.join(petitboot_conf_dir, 'petitboot.cfg'))
 
 # Mass configuration
