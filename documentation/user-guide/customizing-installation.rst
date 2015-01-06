@@ -128,6 +128,23 @@ correspond to the similarly-named kickstart option.
     This is only required if the test harness is run in a Docker
     container. See ``contained_harness`` above.
 
+``contained_harness_ro_host_volumes=</volume1>[,</volume2>..]``
+   Specify the host volumes to be mounted as read-only inside the container. The
+   default volumes mounted as read-only are
+   ``/var/log/messages``, ``/etc/localtime`` and
+   ``/etc/timezone``.
+
+   For example, ``contained_harness_ro_host_volumes='/var/run,/etc'`` will
+   then mount ``/var/run`` and ``/etc`` as read-only volumes.
+
+``contained_harness_rw_host_volumes=</volume1>[,</volume2>..]``
+   Specify the host volumes to be mounted with write permissions inside the container. The
+   default volumes with write permissions are ``/mnt`` and
+   ``/root``.
+
+   For example, ``harness_rw_host_volumes='/myvolume'`` will then only
+   mount the ``/myvolume`` with write permissions.
+
 ``ethdevices=<module>[,<module>...]``
     Comma-separated list of network modules to be loaded during installation.
 

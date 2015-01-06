@@ -8,7 +8,9 @@ Running tests in a Container
 
 Beaker supports running the tests in a Docker container instead of the host system.
 After the host system is provisioned, the test harness container is created which
-then executes the specified tasks in the recipe.
+then executes the specified tasks in the recipe. `Restraint
+<https://restraint.readthedocs.org>`__ is the default test harness
+used in the container.
 
 .. note::
 
@@ -44,25 +46,6 @@ The image specified by ``harness_docker_base_image`` is expected to be in a form
 usable in a Dockerfile's `FROM <http://docs.docker.com/reference/builder/#from>`__
 instruction. One thing to keep in mind is that the distro should use systemd as the 
 process manager.
-
-Using "beah" as the test harness
-================================
-
-By default, `restraint <https://restraint.readthedocs.org>`__ is used as the 
-test harness in the container. However, if you want to use the 
-`beah <https://beah.readthedocs.org>`__ test harness instead, specify it using 
-the ``harness`` ksmeta variable. Here is a recipe using "beah" as the test harness:
-
-.. literalinclude:: contained-test-harness-beah.xml
-
-As mentioned above, the yum repository for the test harness must be specified in
-the recipe using the ``<recipe/>`` elements even though it is not required for
-"traditional" beaker jobs. 
-
-It is worth noting here that Beah runs in an IPv4 only mode when used in the
-container and is thus not suitable for testing in an 
-`IPv6 only <http://beah.readthedocs.org/en/latest/admin.html#using-beah-for-ipv6-testing>`__ 
-environment.
 
 Test harness container entrypoint
 =================================

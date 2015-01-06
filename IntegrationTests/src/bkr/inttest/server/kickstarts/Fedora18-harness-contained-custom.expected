@@ -276,6 +276,9 @@ RUN yum -y update; yum clean all
 
 # Install the harness
 RUN yum -y install restraint restraint-rhts
+RUN yum -y install coreutils
+RUN yum -y install beakerlib || true
+RUN yum -y install beakerlib-redhat || true
 CMD /usr/bin/mybinary
 EOF
 
@@ -292,7 +295,7 @@ ExecStartPre=/usr/bin/docker build -t beaker-harness .
 # See: https://github.com/docker/docker/issues/3359
 # Mount the host /mnt at /mnt so that the test data is preserved
 # post container exit
-ExecStart=/usr/bin/docker run --privileged -d -v /etc/localtime:/etc/localtime:ro -v /etc/timezone:/etc/timezone:ro -v /mnt:/mnt -t beaker-harness
+ExecStart=/usr/bin/docker run --privileged -d -v /etc/localtime:/etc/localtime:ro -v /etc/timezone:/etc/timezone:ro -v /var/log/messages:/var/log/messages:ro -v /mnt:/mnt:rw -v /root:/root:rw -t beaker-harness
 User=root
 Group=root
 TimeoutStartSec=0
@@ -302,6 +305,9 @@ WantedBy=default.target
 EOF
 
 systemctl enable docker beaker-harness-docker
+# Some tasks may be using these directories (legacy!), so we create these on the host
+# so that they are available when the host's /mnt is volume mounted
+mkdir -p /mnt/testarea /mnt/scratchspace
 
 #Add test user account
 useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
@@ -379,3 +385,5 @@ fetch - http://lab.test-kickstart.invalid:8000/postinstall_done/@RECIPEID@
 # Give anamon a chance to finish collecting logs.
 sleep 10
 %end
+
+
