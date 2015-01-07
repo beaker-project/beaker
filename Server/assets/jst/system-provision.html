@@ -23,6 +23,11 @@
       <a href="<%- beaker_url_prefix %>reserveworkflow/?system=<%- fqdn %>">Reserve Workflow</a>
       instead.
     </div>
+  <% } else { %>
+    <div class="alert alert-info">
+      To reserve this system through the scheduler, use the
+      <a href="<%- beaker_url_prefix %>reserveworkflow/?system=<%- fqdn %>">Reserve Workflow</a>.
+    </div>
   <% } %>
   <form class="form-horizontal system-provision">
     <fieldset>
