@@ -355,6 +355,10 @@ overridden if necessary for custom distros.
 ``has_chrony``
     Indicates that chrony is available in the distro.
 
+``has_key``
+    Indicates that the distro requires the ``key`` command. This command
+    exists only on RHEL 5 and CentOS 5.
+
 ``has_leavebootorder``
     Indicates that the ``bootloader`` command accepts a ``--leavebootorder`` 
     option.

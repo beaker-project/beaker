@@ -308,6 +308,9 @@ class OSMajor(DeclarativeMappedObject):
         ks_meta['end'] = '%end'
         if rhel in ('3', '4', '5'):
             ks_meta['end'] = ''
+        # key option for RHEL 5
+        if rhel and int(rhel) == 5:
+            ks_meta['has_key'] = True
         # autopart --type
         ks_meta['has_autopart_type'] = True
         if rhel in ('3', '4', '5', '6') or \
