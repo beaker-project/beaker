@@ -8,6 +8,7 @@ from turbogears.database import session
 from turbogears import expose, flash, widgets, validate, \
     validators, redirect, paginate, url
 from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.orm.exc import NoResultFound
 from bkr.server import identity
 from bkr.server.helpers import make_link
 from bkr.server.widgets import myPaginateDataGrid, HorizontalForm, \
@@ -23,7 +24,8 @@ class OSVersions(AdminPage):
     exposed = False
 
     id      = widgets.HiddenField(name="id")
-    alias   = widgets.TextField(name="alias")
+    alias   = widgets.TextField(name="alias",
+                                validator=validators.UnicodeString(if_empty=None))
     arches  = CheckBoxList(name="arches", label="Arches",
                                       options=lambda: [(arch.id, arch.arch) for arch in Arch.query],
                                       validator=validators.Int())
@@ -80,7 +82,7 @@ class OSVersions(AdminPage):
 
     @identity.require(identity.in_group("admin"))
     @expose()
-    @validate(form=osversion_form)
+    @validate(form=osmajor_form)
     def save_osmajor(self, id=None, alias=None, *args, **kw):
         try:
             osmajor = OSMajor.by_id(id)
@@ -88,6 +90,15 @@ class OSVersions(AdminPage):
             flash(_(u"Invalid OSMajor ID %s" % id))
             redirect(".")
         if osmajor.alias != alias:
+            if alias:
+                try:
+                    existing = OSMajor.by_name_alias(alias)
+                except NoResultFound:
+                    pass
+                else:
+                    flash(_(u'Cannot save alias %s, it is already used by %s')
+                            % (alias, existing))
+                    redirect('.')
             osmajor.alias = alias
             flash(_(u"Changes saved for %s" % osmajor))
         else:

@@ -132,3 +132,41 @@ class OSVersionsTest(WebDriverTestCase):
         self.assertEquals(
             b.find_element_by_class_name('flash').text,
             'Changes saved for LinuxLinux2.1')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1173362
+    def test_cannot_save_duplicate_alias(self):
+        with session.begin():
+            existing = u'OrangeBucketLinux7'
+            existing_alias = u'OBL7'
+            OSMajor.lazy_create(osmajor=existing).alias = existing_alias
+            data_setup.create_distro_tree(osmajor=u'YellowSpaceshipLinux1')
+        b = self.browser
+        go_to_edit_osmajor(b, 'YellowSpaceshipLinux1')
+        b.find_element_by_xpath('//input[@id="form_alias"]')\
+                .send_keys(existing_alias)
+        b.find_element_by_xpath('//button[text()="Edit OSMajor"]').submit()
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                'Cannot save alias OBL7, it is already used by OrangeBucketLinux7')
+        go_to_edit_osmajor(b, 'YellowSpaceshipLinux1')
+        b.find_element_by_xpath('//input[@id="form_alias"]')\
+                .send_keys(existing)
+        b.find_element_by_xpath('//button[text()="Edit OSMajor"]').submit()
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                'Cannot save alias OrangeBucketLinux7, '
+                'it is already used by OrangeBucketLinux7')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1173362
+    def test_clearing_alias_stores_null(self):
+        with session.begin():
+            data_setup.create_distro_tree(osmajor=u'YellowSpaceshipLinux2')
+            osmajor = OSMajor.by_name(u'YellowSpaceshipLinux2')
+            osmajor.alias = u'YSL2'
+        b = self.browser
+        go_to_edit_osmajor(b, 'YellowSpaceshipLinux2')
+        b.find_element_by_xpath('//input[@id="form_alias"]').clear()
+        b.find_element_by_xpath('//button[text()="Edit OSMajor"]').submit()
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                'Changes saved for YellowSpaceshipLinux2')
+        with session.begin():
+            session.refresh(osmajor)
+            self.assertEquals(osmajor.alias, None) # not ''
