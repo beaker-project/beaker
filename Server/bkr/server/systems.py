@@ -8,7 +8,7 @@ import logging
 import xmlrpclib
 import datetime
 import urlparse
-from sqlalchemy import and_
+from sqlalchemy import and_, desc
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm.exc import NoResultFound
 from flask import request, jsonify, redirect as flask_redirect
@@ -19,7 +19,8 @@ from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree, \
         OSMajor, DistroTag, Arch, Distro, User, Group, SystemAccessPolicy, \
         SystemPermission, SystemAccessPolicyRule, ImageType, KernelType, \
         VirtResource, Hypervisor, Numa, LabController, SystemType, \
-        CommandActivity, Power, PowerType, ReleaseAction
+        CommandActivity, Power, PowerType, ReleaseAction, Task, \
+        Recipe, RecipeSet, RecipeTask, RecipeResource, Job
 from bkr.server.installopts import InstallOptions
 from bkr.server.kickstart import generate_kickstart
 from bkr.server.app import app
@@ -1229,6 +1230,61 @@ def get_system_activity(fqdn):
     # outerjoin user for sorting/filtering and also for eager loading
     query = query.outerjoin(SystemActivity.user)\
             .options(contains_eager(SystemActivity.user))
+    return query
+
+@app.route('/systems/<fqdn>/executed-tasks/', methods=['GET'])
+@json_collection(columns={
+    'id': RecipeTask.id,
+    'name': RecipeTask.name,
+    'distro_tree.distro': Distro.name,
+    'distro_tree.distro.name': Distro.name,
+    'distro_tree.variant': DistroTree.variant,
+    'distro_tree.arch': Arch.arch,
+    'start_time': RecipeTask.start_time,
+    'finish_time': RecipeTask.finish_time,
+    'status': RecipeTask.status,
+    'result': RecipeTask.result,
+}, extra_sort_columns={
+    't_id': RecipeTask.id,
+    'distro_tree': (Distro.name, DistroTree.variant, Arch.arch),
+})
+def get_system_executed_tasks(fqdn):
+    """
+    Returns a pageable JSON collection of the executed task records for
+    a system. Refer to :ref:`pageable-json-collections`.
+
+    The following fields are supported for filtering and sorting:
+
+    ``id``
+        ID of the task.
+    ``name``
+        Name of the task.
+    ``distro_tree.distro``
+        Name of the distro being used on the task.
+    ``distro_tree.distro.name``
+        Name of the distro being used on the task.
+    ``distro_tree.variant``
+        Variant of the distro tree being used on the task.
+    ``distro_tree.arch``
+        Arch of the distro tree being used on the task.
+    ``start_time``
+        Timestamp at which the task was started.
+    ``finish_time``
+        Timestamp at which the task was finished.
+    ``status``
+        Current status of the task. Must be Running, Completed, or Aborted.
+    ``result``
+        The result. Must be Pass, Warn, Fail, or None.
+    """
+    query = RecipeTask.query\
+        .filter(RecipeTask.recipe.has(Recipe.recipeset.has(RecipeSet.job.has(
+            and_(Job.to_delete == None, Job.deleted == None)))))\
+        .join(RecipeTask.recipe, Recipe.resource)\
+        .filter(RecipeResource.fqdn == fqdn)\
+        .outerjoin(RecipeTask.recipe, Recipe.distro_tree, DistroTree.distro, DistroTree.arch)\
+        .options(contains_eager(RecipeTask.recipe, Recipe.distro_tree, DistroTree.distro),
+                 contains_eager(RecipeTask.recipe, Recipe.distro_tree, DistroTree.arch))\
+        .order_by(desc(RecipeTask.id))
     return query
 
 # This is part of the iPXE-based installation support for OpenStack instances.

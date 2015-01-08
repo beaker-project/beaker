@@ -79,6 +79,13 @@ def wait_for_animation(browser, selector):
             'return jQuery(%s).is(":animated")' % json.dumps(selector))
             == False)
 
+def wait_for_ajax_loading(browser, class_name):
+    """
+    Waits until the ajax loading indicator disappears.
+    """
+    WebDriverWait(browser, 10).until(lambda browser: len(browser.find_elements_by_class_name(
+            class_name)) == 0)
+
 def check_system_search_results(browser, present=[], absent=[]):
     for system in absent:
         browser.find_element_by_xpath('//table[@id="widget" and '

@@ -168,7 +168,8 @@ Systems
 .. autoflask:: bkr.server.wsgi:app
    :endpoints: get_system, add_system, update_system, get_system_access_policy, 
      save_system_access_policy, add_system_access_policy_rule, 
-     delete_system_access_policy_rules, report_problem, get_system_activity
+     delete_system_access_policy_rules, report_problem, get_system_activity,
+     get_system_executed_tasks
 
 System reservations
 -------------------
@@ -187,7 +188,7 @@ System provisioning
 
 .. autoflask:: bkr.server.wsgi:app
    :endpoints: provision_system, get_system_command_queue, system_command
-    
+
 .. _Atom: http://tools.ietf.org/html/rfc4287
 .. _RDF: http://www.w3.org/RDF/
 .. _RDF/XML: http://www.w3.org/TR/REC-rdf-syntax/

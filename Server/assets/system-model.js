@@ -122,6 +122,43 @@ window.SystemActivity = Backbone.PageableCollection.extend({
     },
 });
 
+window.Task = Backbone.Model.extend({});
+
+window.RecipeTask = Backbone.Model.extend({
+    parse: function (data) {
+        data['task'] = !_.isEmpty(data['task']) ? new Task(data['task']) : null;
+        data['distro_tree'] = !_.isEmpty(data['distro_tree']) ? new DistroTree(data['distro_tree']) : null;
+        return data;
+    },
+});
+
+window.SystemExecutedTasks = Backbone.PageableCollection.extend({
+    model: RecipeTask,
+    state: {
+        pageSize: 20,
+    },
+    queryParams: {
+        currentPage: 'page',
+        pageSize: 'page_size',
+        totalPages: null,
+        totalRecords: null,
+        sortKey: 'sort_by',
+        order: 'order',
+    },
+    initialize: function (attributes, options) {
+        this.system = options.system;
+    },
+    url: function () {
+        return _.result(this.system, 'url') + 'executed-tasks/';
+    },
+    parseState: function (response) {
+        return {totalRecords: response.count};
+    },
+    parseRecords: function (response) {
+        return response.entries;
+    },
+});
+
 window.System = Backbone.Model.extend({
     initialize: function (attributes, options) {
         this.url = options.url;
@@ -130,6 +167,7 @@ window.System = Backbone.Model.extend({
         // if the system object changes, chances are there are new activity 
         // records describing the change so we refresh activity
         this.on('change', function () { this.activity.fetch(); });
+        this.executed_tasks = new SystemExecutedTasks([], {system: this});
     },
     parse: function (data) {
         data['owner'] = !_.isEmpty(data['owner']) ? new User(data['owner']) : null;

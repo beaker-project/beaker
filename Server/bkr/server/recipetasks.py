@@ -19,6 +19,7 @@ import cherrypy
 from bkr.server.model import (RecipeTask, LogRecipeTask,
                               RecipeTaskResult, LogRecipeTaskResult,
                               LabController, Watchdog, ResourceType)
+from flask import jsonify
 
 class RecipeTasks(RPCRoot):
     # For XMLRPC methods in this class.
@@ -163,7 +164,10 @@ class RecipeTasks(RPCRoot):
             task.name = data['name']
         if 'version' in data:
             task.version = data['version']
-        return task.__json__()
+        return {'id': task.id,
+                'name': task.name,
+                'version': task.version,
+                'status': unicode(task.status)}
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())

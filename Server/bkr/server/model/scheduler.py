@@ -2798,6 +2798,13 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
             'name': self.name,
             'version': self.version,
             'status': unicode(self.status),
+            'recipe_id': self.recipe_id,
+            't_id': self.t_id,
+            'task': self.task,
+            'distro_tree': self.recipe.distro_tree,
+            'start_time': self.start_time,
+            'finish_time': self.finish_time,
+            'result': self.result,
         }
 
     def delete(self):

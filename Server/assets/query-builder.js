@@ -109,6 +109,7 @@ window.QueryBuilder = Backbone.View.extend({
     initialize: function (options) {
         this.columns = options.columns;
         this.rows = [new QueryBuilderRow({columns: this.columns})];
+        this.grid_name = options.grid_name;
         this.render();
         this.build_query();
         // backdrop:'static' prevents the modal being closed when clicking 
@@ -118,7 +119,7 @@ window.QueryBuilder = Backbone.View.extend({
         this.rows[0].$('select').first().focus();
     },
     render: function () {
-        this.$el.html(this.template());
+        this.$el.html(this.template({grid_name: this.grid_name}));
         this.$('.query-builder-rows').append(_.pluck(this.rows, 'el'));
     },
     submit: function (evt) {

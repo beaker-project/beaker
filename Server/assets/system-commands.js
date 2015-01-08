@@ -64,6 +64,7 @@ var SystemCommandQueueView = BeakerGrid.extend({
             {name: 'status', label: 'Status', cell: 'string', editable: false},
             {name: 'message', label: 'Message', cell: 'string', editable: false},
         ];
+        options.name = 'command queue';
         BeakerGrid.prototype.initialize.apply(this, arguments);
     },
 });

@@ -1,0 +1,5 @@
+<% if (task) { %>
+    <a href="<%- window.beaker_url_prefix %>tasks/<%- task.id %>" title="<%- name %>"><%- name %></a>
+<% } else { %>
+    <%- name %>
+<% } %>

@@ -16,8 +16,8 @@ from bkr.server import identity
 from bkr.server.bexceptions import BX, InsufficientSystemPermissions
 from bkr.server.search_utility import lucene_to_sqlalchemy
 
-def json_collection(columns=None, min_page_size=20, max_page_size=500,
-        default_page_size=20, force_paging_for_count=500):
+def json_collection(columns=None, extra_sort_columns=None, min_page_size=20,
+                    max_page_size=500, default_page_size=20, force_paging_for_count=500):
     """
     Decorator factory for Flask request handlers which want to return 
     a collection of resources as JSON. The decorated function should return 
@@ -27,6 +27,8 @@ def json_collection(columns=None, min_page_size=20, max_page_size=500,
     """
     if columns is None:
         columns = {}
+    if extra_sort_columns is None:
+        extra_sort_columns = {}
     def decorator(func):
         @functools.wraps(func)
         def _json_collection_decorated(*args, **kwargs):
@@ -38,16 +40,24 @@ def json_collection(columns=None, min_page_size=20, max_page_size=500,
                         default_columns=set(columns.values())))
             total_count = query.order_by(None).count()
             result['count'] = total_count
-            if request.args.get('sort_by') in columns:
+            total_columns = columns.copy()
+            total_columns.update(extra_sort_columns)
+            if request.args.get('sort_by') in total_columns:
                 result['sort_by'] = request.args['sort_by']
-                sort_column = columns[request.args['sort_by']]
+                sort_columns = total_columns[request.args['sort_by']]
+                if not isinstance(sort_columns, tuple):
+                    sort_columns = (sort_columns,)
                 if request.args.get('order') == 'desc':
-                    result['order'] = 'desc'
-                    sort_criterion = sort_column.desc()
+                    sort_order = 'desc'
                 else:
-                    result['order'] = 'asc'
-                    sort_criterion = sort_column
-                query = query.order_by(None).order_by(sort_criterion)
+                    sort_order = 'asc'
+                result['order'] = sort_order
+                query = query.order_by(None)
+                for sort_column in sort_columns:
+                    if sort_order == 'desc':
+                       query = query.order_by(sort_column.desc())
+                    else:
+                       query = query.order_by(sort_column)
             with convert_internal_errors():
                 if 'page_size' in request.args:
                     page_size = int(request.args['page_size'])

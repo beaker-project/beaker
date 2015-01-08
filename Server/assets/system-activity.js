@@ -18,6 +18,7 @@ window.SystemActivityView = BeakerGrid.extend({
             {name: 'old_value', label: 'Old Value', cell: 'string', editable: false},
             {name: 'new_value', label: 'New Value', cell: 'string', editable: false},
         ];
+        options.name = 'system activity';
         BeakerGrid.prototype.initialize.apply(this, arguments);
     },
 });

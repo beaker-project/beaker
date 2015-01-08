@@ -37,6 +37,9 @@
         $('.system-nav a[href="#history"]').one('show', function () {
             new SystemActivityView({model: system, el: $('#history')});
         });
+        $('.system-nav a[href="#tasks"]').one('show', function () {
+            new SystemExecutedTasksView({model: system, el: $('#tasks')});
+        });
         $('.system-nav a[href="#power"]').one('show', function () {
             new SystemCommandsView({model: system, el: $('#power')});
         });
@@ -118,17 +121,7 @@
     ${widgets['labinfo'].display(method='get', action=widgets_action['labinfo'], value=value, options=widgets_options['labinfo'])}
    </div>
       <div class="tab-pane" id="history"></div>
-   <div class="tab-pane" id="tasks">
-    ${task_widget.display(
-    value=widgets_options['tasks'],
-    options=widgets_options['tasks'],
-    hidden=widgets_options['tasks']['hidden'],
-    action=widgets_action['tasks'],
-    target_dom='task_items',
-    update='task_items',
-    )}
-    <div id="task_items">&nbsp;</div>
-   </div>
+      <div class="tab-pane" id="tasks"></div>
     </div>
   </div>
   <script type="text/javascript">

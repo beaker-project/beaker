@@ -22,7 +22,7 @@ from bkr.server.model import Arch, Key, Key_Value_String, Key_Value_Int, System,
         SystemStatus, LabInfo, ReleaseAction, PowerType
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, check_system_search_results, \
-        delete_and_confirm, logout, click_menu_item, BootstrapSelect
+        delete_and_confirm, logout, click_menu_item, BootstrapSelect, wait_for_ajax_loading
 from bkr.inttest.server.requests_utils import login as requests_login, patch_json
 from selenium.webdriver.support.ui import Select
 from bkr.inttest.assertions import wait_for_condition, assert_sorted
@@ -817,8 +817,10 @@ class SystemViewTestWD(WebDriverTestCase):
         self.assertEquals(cell_values, ['ccc', 'bbb', 'aaa'])
         # sort by New Value column
         table.find_element_by_xpath('thead/tr/th[%d]/a[text()="New Value"]' % column).click()
-        # XXX need a loading indicator so we can wait for it
-        time.sleep(2)
+        # wait for the sort indicator in the column header to appear
+        table.find_element_by_xpath('thead/tr/th[%d][contains(@class, "ascending")]' % column)
+        # wait for the data loading indicator to disappear
+        wait_for_ajax_loading(b, 'loading-overlay')
         cell_values = [table.find_element_by_xpath('tbody/tr[%d]/td[%d]'
                 % (row, column)).text for row in [1, 2, 3]]
         self.assertEquals(cell_values, ['aaa', 'bbb', 'ccc'])
@@ -838,6 +840,55 @@ class SystemViewTestWD(WebDriverTestCase):
         tab.find_element_by_xpath('.//table[contains(@class, "table") and '
                 'not(.//td[7]/text()="Archer says") and '
                 './/td[7]/text()="Simon says"]')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1122464
+    def test_can_sort_executed_tasks_grid(self):
+        self.browser = self.get_browser()
+        with session.begin():
+            job1 = data_setup.create_completed_job(system=self.system)
+            job2 = data_setup.create_completed_job(system=self.system)
+            job3 = data_setup.create_running_job(system=self.system)
+        b = self.browser
+        login(b)
+        self.go_to_system_view(self.system, tab=u'Executed Tasks')
+        tab = b.find_element_by_id('tasks')
+        table = tab.find_element_by_tag_name('table')
+        column = 1 # Run ID
+        # by default the grid is sorted by id descending
+        cell_values = [table.find_element_by_xpath('tbody/tr[%d]/td[%d]/a' %
+                                                   (row, column)).text for row in [1, 2, 3]]
+        self.assertEquals(cell_values, [job3.recipesets[0].recipes[0].tasks[0].t_id,
+                                        job2.recipesets[0].recipes[0].tasks[0].t_id,
+                                        job1.recipesets[0].recipes[0].tasks[0].t_id])
+        # sort by Run ID column
+        table.find_element_by_xpath('thead/tr/th[%d]/a[text()="Run ID"]' % column).click()
+        # wait for the sort indicator in the column header to appear
+        table.find_element_by_xpath('thead/tr/th[%d][contains(@class, "ascending")]' % column)
+        # wait for the data loading indicator to disappear
+        wait_for_ajax_loading(b, 'loading-overlay')
+        cell_values = [table.find_element_by_xpath('tbody/tr[%d]/td[%d]/a' %
+                                                   (row, column)).text for row in [1, 2, 3]]
+        self.assertEquals(cell_values, [job1.recipesets[0].recipes[0].tasks[0].t_id,
+                                        job2.recipesets[0].recipes[0].tasks[0].t_id,
+                                        job3.recipesets[0].recipes[0].tasks[0].t_id])
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1122464
+    def test_can_filter_executed_tasks_grid(self):
+        with session.begin():
+            data_setup.create_completed_job(system=self.system,
+                                            distro_tree=self.distro_tree)
+            dt = data_setup.create_distro_tree()
+            data_setup.create_completed_job(system=self.system,
+                                            distro_tree=dt)
+        b = self.browser
+        login(b)
+        self.go_to_system_view(self.system, tab=u'Executed Tasks')
+        tab = b.find_element_by_id('tasks')
+        tab.find_element_by_xpath('.//input[@type="search"]')\
+            .send_keys('"%s"\n' % self.distro_tree.distro.name)
+        tab.find_element_by_xpath('.//table[contains(@class, "table") and '
+                'not(.//td[3]/a[contains(text(), "%s")]) and '
+                './/td[3]/a[contains(text(), "%s")]]' % (dt.distro.name, self.distro_tree.distro.name))
 
     def test_add_cc(self):
         with session.begin():

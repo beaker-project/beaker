@@ -49,6 +49,94 @@ window.BackgridDateTimeCell = Backgrid.Cell.extend({
     },
 });
 
+window.BackgridRecipeTaskIdCell = Backgrid.Cell.extend({
+    template: JST['backgrid-recipe-task-id-cell'],
+    render: function () {
+        this.$el.empty();
+        var t_id = this.model.get(this.column.get('name'));
+        var recipe_id = this.model.get('recipe_id');
+        var recipe_task_id = this.model.get('id');
+        this.$el.html(this.template({'t_id': t_id,
+                                     'recipe_id': recipe_id,
+                                     'recipe_task_id': recipe_task_id}));
+        return this;
+    },
+});
+
+window.BackgridTaskCell = Backgrid.Cell.extend({
+    template: JST['backgrid-task-cell'],
+    formatter: {
+        fromRaw: function (value) {
+            if (_.isEmpty(value))
+                return '';
+            return value.get('name');
+        },
+        toRaw: function (value) {
+            if (_.isEmpty(value))
+                return null;
+            return new Task({name: value});
+        },
+    },
+    render: function () {
+        this.$el.empty();
+        var name = this.model.get(this.column.get('name'));
+        var task = this.model.get('task');
+        if (!_.isEmpty(task)) {
+            this.$el.html(this.template({name: name,
+                                         task: task}));
+        }
+        return this;
+    },
+});
+
+window.BackgridDistroTreeCell = Backgrid.Cell.extend({
+    template: JST['backgrid-distro-tree-cell'],
+    formatter: {
+        fromRaw: function (value) {
+            if (_.isEmpty(value))
+                return '';
+            return value.get('id');
+        },
+        toRaw: function (value) {
+            if (_.isEmpty(value))
+                return null;
+            return new DistroTree({id: value});
+        },
+    },
+    render: function () {
+        this.$el.empty();
+        var distro_tree = this.model.get(this.column.get('name'));
+        if (!_.isEmpty(distro_tree)) {
+            this.$el.html(this.template(distro_tree.attributes));
+        }
+        return this;
+    },
+});
+
+window.BackgridStatusCell = Backgrid.Cell.extend({
+    template: JST['backgrid-status-cell'],
+    render: function () {
+        this.$el.empty();
+        var status = this.model.get(this.column.get('name'));
+        if (status) {
+            this.$el.html(this.template({'status': status}));
+        }
+        return this;
+    },
+});
+
+window.BackgridResultCell = Backgrid.EmailCell.extend({
+    template: JST['backgrid-result-cell'],
+    render: function () {
+        this.$el.empty();
+        var result = this.model.get(this.column.get('name'));
+        if (result) {
+            this.$el.html(this.template({'result': result}));
+        }
+        return this;
+    },
+});
+
 var BeakerBackgridFilter = Backbone.View.extend({
     tagName: 'form',
     className: 'grid-filter form-search',
@@ -62,6 +150,9 @@ var BeakerBackgridFilter = Backbone.View.extend({
     },
     initialize: function (options) {
         this.columns = options.columns;
+        this.grid_name = options.grid_name;
+        this.query_builder_columns = !_.isEmpty(options.query_builder_columns) ?
+            options.query_builder_columns : this.columns;
         this.collection.queryParams['q'] = _.bind(this.val, this);
     },
     render: function () {
@@ -72,9 +163,8 @@ var BeakerBackgridFilter = Backbone.View.extend({
         if (arguments.length) {
             this.$('input').val(arguments[0]);
             this.maybe_changed();
-        } else {
-            return this.$('input').val();
         }
+        return this.$('input').val();
     },
     submit: function (evt) {
         this.last_val = this.val();
@@ -86,7 +176,8 @@ var BeakerBackgridFilter = Backbone.View.extend({
             this.submit();
     }, 500 /* ms */),
     show_query_builder: function () {
-        var builder = new QueryBuilder({columns: this.columns});
+        var builder = new QueryBuilder({grid_name: this.grid_name,
+                                        columns: this.query_builder_columns});
         // receive built query back into this.val() when the modal is done
         this.listenTo(builder, 'done', this.val);
     },
@@ -126,6 +217,8 @@ window.BeakerGrid = Backbone.View.extend({
         this.filter_control = new BeakerBackgridFilter({
             collection: collection,
             columns: options.columns,
+            grid_name: options.name,
+            query_builder_columns: options.query_builder_columns,
         });
         this.top_paginator = new BeakerBackgridPaginator({
             collection: collection,

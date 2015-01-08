@@ -82,6 +82,7 @@ def _create_env(source_dir, output_dir, **kwargs):
             'system-activity.js',
             'system-add.js',
             'system-commands.js',
+            'system-executed-tasks.js',
             'system-hardware.js',
             'system-loan.js',
             'system-model.js',
