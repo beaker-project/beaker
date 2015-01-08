@@ -7,6 +7,7 @@
 import os
 import pkg_resources
 import re
+from tempfile import NamedTemporaryFile
 import textwrap
 from threading import Thread
 from turbogears.database import session
@@ -309,3 +310,40 @@ class WorkflowSimpleTest(ClientTestCase):
                     Arch.by_name(u'x86_64'))
             self.assertEquals(job.recipesets[1].recipes[0].distro_tree.arch,
                     Arch.by_name(u's390x'))
+
+    def test_kickstart_template(self):
+        template_contents = 'install\n%packages\n%end\n'
+        template_file = NamedTemporaryFile()
+        template_file.write(template_contents)
+        template_file.flush()
+        out = run_client(['bkr', 'workflow-simple', '--distro', self.distro.name,
+                '--task', self.task.name,
+                '--kickstart', template_file.name])
+        self.assertTrue(out.startswith('Submitted:'), out)
+        m = re.search('J:(\d+)', out)
+        job_id = m.group(1)
+        with session.begin():
+            job = Job.by_id(job_id)
+            self.assertEquals(job.recipesets[0].recipes[0].kickstart,
+                    template_contents)
+
+    def test_kickstart_template_with_kernel_options(self):
+        template_contents = """
+## kernel_options: sshd=1
+install
+%packages
+%end
+        """
+        template_file = NamedTemporaryFile()
+        template_file.write(template_contents)
+        template_file.flush()
+        out = run_client(['bkr', 'workflow-simple', '--distro', self.distro.name,
+                '--task', self.task.name,
+                '--kickstart', template_file.name])
+        self.assertTrue(out.startswith('Submitted:'), out)
+        m = re.search('J:(\d+)', out)
+        job_id = m.group(1)
+        with session.begin():
+            job = Job.by_id(job_id)
+            self.assertEquals(job.recipesets[0].recipes[0].kernel_options,
+                    "sshd=1")

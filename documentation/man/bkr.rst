@@ -321,6 +321,22 @@ Options for installation:
    applied on top of any post-install kernel options which are set by default 
    for the chosen system and distro.
 
+.. option:: --kickstart <filename>
+
+   Use this kickstart template for installation. Templates are rendered on the
+   server. Refer to the :ref:`custom-kickstarts` section in Beaker's 
+   documentation for details about the templating language and available 
+   variables. You can also pass raw kickstarts in - if you don't use any Jinja2 
+   variable substitution syntax, the rendering process will reproduce the 
+   template verbatim.
+
+   If the template provides the following line::
+
+       ## kernel_options: <options>
+
+   the specified kernel options will be appended to existing ones defined with 
+   :option:`--kernel-options`.
+
 Options for multi-host testing:
 
 .. option:: --clients <number>

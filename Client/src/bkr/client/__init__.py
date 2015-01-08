@@ -128,6 +128,26 @@ def prettyxml(option, opt_str, value, parser):
     parser.values.prettyxml = True
     parser.values.debug = True
 
+def generateKickstart(template_file):
+    abs_path  = os.path.abspath(template_file)
+
+    return open(abs_path, 'r').read()
+
+
+def generateKernelOptions(template_file):
+    abs_path  = os.path.abspath(template_file)
+
+    lines = []
+    # look for ## kernel_options: line
+    kernel_options_line_prefix = '## kernel_options:'
+    for line in open(abs_path, 'r').read().split("\n"):
+        if line.startswith(kernel_options_line_prefix):
+            line = line.split(kernel_options_line_prefix)[-1]
+            lines.append(line.strip())
+            break
+
+    return " ".join(lines)
+
 class BeakerWorkflow(BeakerCommand):
     doc = xml.dom.minidom.Document()
 
@@ -381,6 +401,11 @@ class BeakerWorkflow(BeakerCommand):
             default=None,
             help="Pass OPTIONS to kernel after installation",
         )
+        installation_options.add_option(
+            "--kickstart", metavar="FILENAME",
+            default=None,
+            help="Use this kickstart template for installation. Rendered on the server!",
+        )
         # for compat only
         installation_options.add_option("--kernel_options",
                 help=optparse.SUPPRESS_HELP)
@@ -543,6 +568,15 @@ class BeakerWorkflow(BeakerCommand):
                 recipe.addTask('/kernel/networking/kdump')
             for task in actualTasks:
                 recipe.addTask(task, role=role, taskParams=taskParams)
+            # process kickstart template if given
+            ksTemplate = kwargs.get("kickstart", None)
+            if ksTemplate:
+                kickstart = generateKickstart(ksTemplate)
+                # additional kernel options from template
+                kernel_options = recipe.kernel_options + " " + generateKernelOptions(ksTemplate)
+
+                recipe.kernel_options = kernel_options.strip()
+                recipe.addKickstart(kickstart)
         else:
             recipe = None
         return recipe
