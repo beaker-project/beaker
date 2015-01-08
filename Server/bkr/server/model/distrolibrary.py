@@ -11,7 +11,8 @@ import xml.dom.minidom
 from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Integer,
         String, Unicode, DateTime, UnicodeText, Boolean)
 from sqlalchemy.sql import select, exists, and_, or_, not_
-from sqlalchemy.orm import relationship, backref, dynamic_loader, synonym
+from sqlalchemy.orm import (relationship, backref, dynamic_loader, synonym,
+                            validates)
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -258,6 +259,24 @@ class OSMajor(DeclarativeMappedObject):
         name, version = self._split()
         return version
 
+    @staticmethod
+    def _validate_osmajor(osmajor):
+        if not osmajor:
+            raise ValueError('OSMajor cannot be empty')
+
+    @validates('osmajor')
+    def validate_osmajor(self, key, value):
+        self._validate_osmajor(value)
+        return value
+
+    @classmethod
+    def lazy_create(cls, osmajor, **kwargs):
+        """
+        Like the normal lazy_create, but with empty check for osmajor.
+        """
+        cls._validate_osmajor(osmajor)
+        return super(OSMajor, cls).lazy_create(osmajor=osmajor, **kwargs)
+
     def default_install_options(self):
         """
         Returns the default install options supplied by Beaker (rather than the 
@@ -461,8 +480,19 @@ class Distro(DeclarativeMappedObject, ActivityMixin):
 
     activity_type = DistroActivity
 
+    @staticmethod
+    def _validate_name(name):
+        if not name:
+            raise ValueError('Distro name cannot be empty')
+
+    @validates('name')
+    def validate_name(self, key, value):
+        self._validate_name(value)
+        return value
+
     @classmethod
     def lazy_create(cls, name, osversion):
+        cls._validate_name(name)
         return super(Distro, cls).lazy_create(name=name,
                 _extra_attrs=dict(osversion_id=osversion.id))
 
