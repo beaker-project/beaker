@@ -196,6 +196,18 @@ class SystemProvisionWebUITest(WebDriverTestCase):
         command_row.find_element_by_xpath('./td[1]/a[text()="%s"]' % user.user_name)
         command_row.find_element_by_xpath('./td[4][text()="%s"]' % system.command_queue[0].action)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1173446
+    def test_link_to_reserve_workflow_appears_for_privileged_user(self):
+        # Even if a user has permission to provision a system we want to offer 
+        # them a link to use the scheduler instead. Mainly this is because 
+        # a lot of people were caught out by the change in Beaker 19 to make 
+        # the provision tab always provision.
+        with session.begin():
+            owner = data_setup.create_user(password=u'owner')
+            system = data_setup.create_system(owner=owner, lab_controller=self.lc)
+        login(self.browser, user=owner.user_name, password=u'owner')
+        provision = self.go_to_provision_tab(system)
+        provision.find_element_by_xpath('.//a[text()="Reserve Workflow"]')
 
 class SystemProvisionHTTPTest(unittest.TestCase):
 
