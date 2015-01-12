@@ -1830,7 +1830,7 @@ def Build(url, options=None):
             logging.debug("\tImporter %s does not match", cls.__name__)
     raise BX('No valid importer found for %s' % url)
 
-_primary_methods = ['http', 'ftp',]
+_primary_methods = ['http', 'https', 'ftp',]
 
 def _get_primary_url(urls):
     """Return primary method used to import distro
