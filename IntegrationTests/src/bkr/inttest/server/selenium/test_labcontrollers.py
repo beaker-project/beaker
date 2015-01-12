@@ -6,6 +6,7 @@
 
 import time
 import datetime
+import xmlrpclib
 from threading import Thread, Event
 from turbogears.database import session
 from bkr.inttest.server.selenium import XmlRpcTestCase, \
@@ -390,6 +391,31 @@ class AddDistroTreeXmlRpcTest(XmlRpcTestCase):
         # ensure osmajor is new
         distro_data['osmajor'] = 'ConcurrentEnterpriseLinux6'
         self.add_distro_trees_concurrently(distro_data, distro_data)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1173368
+    def test_empty_osmajor_is_invalid(self):
+        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
+        distro_data = dict(self.distro_data)
+        # set osmajor empty
+        distro_data['osmajor'] = ''
+        try:
+            self.server.labcontrollers.add_distro_tree(distro_data)
+            self.fail('should raise')
+        except xmlrpclib.Fault, e:
+             self.assertIn('OSMajor cannot be empty', e.faultString)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1173368
+    def test_empty_name_is_invalid(self):
+        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
+        distro_data = dict(self.distro_data)
+        # set distro name empty
+        distro_data['name'] = ''
+        try:
+            self.server.labcontrollers.add_distro_tree(distro_data)
+            self.fail('should raise')
+        except xmlrpclib.Fault, e:
+             self.assertIn('Distro name cannot be empty', e.faultString)
+
 
 class GetDistroTreesXmlRpcTest(XmlRpcTestCase):
 

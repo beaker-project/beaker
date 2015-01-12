@@ -128,6 +128,24 @@ class DistroExpireXmlRpcTest(XmlRpcTestCase):
             self.assertEquals(activity.service, u'CUSTOMSERVICE')
 
 
+class DistroEditVersionXmlRpcTest(XmlRpcTestCase):
+
+    @with_transaction
+    def setUp(self):
+        self.distro = data_setup.create_distro()
+        self.server = self.get_server()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1173368
+    def test_empty_version(self):
+        self.server.auth.login_password(data_setup.ADMIN_USER,
+                                        data_setup.ADMIN_PASSWORD)
+        try:
+            self.server.distros.edit_version(self.distro.name, '')
+            self.fail('should raise')
+        except xmlrpclib.Fault, e:
+             self.assertIn('OSMajor cannot be empty', e.faultString)
+
+
 class DistroTaggingXmlRpcTest(XmlRpcTestCase):
 
     @with_transaction

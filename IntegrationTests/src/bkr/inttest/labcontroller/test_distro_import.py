@@ -917,6 +917,100 @@ class DistroImportTest(LabControllerTestCase):
             u'ks_meta': None,
         }
 
+        self.x86_64_f21 = {u'osmajor': u'Fedora-Server21',
+                           u'name': u'Fedora-Server-21',
+                           u'tree_build_time': u'1417653911.68',
+                           u'osminor': u'0',
+                           u'tags': [],
+                           u'kernel_options_post': None,
+                           u'repos': [
+                               {u'path': u'.',
+                                u'type': u'variant',
+                                u'repoid': u'Fedora'},
+                               {u'path': u'../../../Everything/x86_64/os',
+                                u'repoid': u'Fedora-Everything',
+                                u'type': u'fedora'},
+                               {u'path': u'../../x86_64/debug', u'type': u'debug',
+                                u'repoid': u'Server-debuginfo'}],
+                           u'variant': u'Server',
+                           u'kernel_options': None,
+                           u'images': [{u'path': u'images/pxeboot/vmlinuz',
+                                        u'type': u'kernel'},
+                                       {u'path': u'images/pxeboot/initrd.img',
+                                        u'type': u'initrd'}],
+                           u'arches': [],
+                           u'urls': [u'http://localhost:19998/F-21/Server/x86_64/os/'],
+                           u'arch': u'x86_64',
+                           u'ks_meta': None}
+
+        self.i386_f21 = {u'osmajor': u'Fedora-Server21',
+                         u'name': u'Fedora-Server-21',
+                         u'tree_build_time': u'1417650931.44',
+                         u'osminor': u'0',
+                         u'tags': [],
+                         u'kernel_options_post': None,
+                         u'repos': [
+                             {u'path': u'.',
+                              u'type': u'variant',
+                              u'repoid': u'Fedora'},
+                             {u'path': u'../../../Everything/i386/os',
+                              u'repoid': u'Fedora-Everything',
+                              u'type': u'fedora'},
+                             {u'path': u'../../i386/debug', u'type': u'debug',
+                              u'repoid': u'Server-debuginfo'}],
+                         u'variant': u'Server',
+                         u'kernel_options': None,
+                         u'images': [{u'path': u'images/pxeboot/vmlinuz',
+                                      u'type': u'kernel'},
+                                     {u'path': u'images/pxeboot/initrd.img',
+                                      u'type': u'initrd'}],
+                         u'arches': [],
+                         u'urls': [u'http://localhost:19998/F-21/Server/i386/os/'],
+                         u'arch': u'i386',
+                         u'ks_meta': None}
+
+        self.armhfp_f21 = {u'osmajor': u'Fedora-Server21',
+                           u'name': u'Fedora-Server-21',
+                           u'tree_build_time': u'1417645512.96',
+                           u'osminor': u'0',
+                           u'tags': [],
+                           u'kernel_options_post': None,
+                           u'repos': [
+                               {u'path': u'.',
+                                u'type': u'variant',
+                                u'repoid': u'Fedora'},
+                               {u'path': u'../../../Everything/armhfp/os',
+                                u'repoid': u'Fedora-Everything',
+                                u'type': u'fedora'},
+                               {u'path': u'../../armhfp/debug',
+                                u'type': u'debug',
+                                u'repoid': u'Server-debuginfo'}],
+                           u'variant': u'Server',
+                           u'kernel_options': None,
+                           u'images': [{u'path': u'images/pxeboot/vmlinuz',
+                                        u'type': u'kernel'},
+                                       {u'path': u'images/pxeboot/initrd.img',
+                                        u'type': u'initrd'},
+                                       {u'path': u'images/pxeboot/uImage',
+                                        u'type': u'uimage'},
+                                       {u'path': u'images/pxeboot/uInitrd',
+                                        u'type': u'uinitrd'},
+                                       {u'path': u'images/pxeboot/vmlinuz-lpae',
+                                        u'type': u'kernel',
+                                        u'kernel_type': u'lpae'},
+                                       {u'path': u'images/pxeboot/uImage-lpae',
+                                        u'type': u'uimage',
+                                        u'kernel_type': u'lpae'},
+                                       {u'path': u'images/pxeboot/initrd-lpae.img',
+                                        u'type': u'initrd',
+                                        u'kernel_type': u'lpae'},
+                                       {u'path': u'images/pxeboot/uInitrd-lpae',
+                                        u'type': u'uinitrd',
+                                        u'kernel_type': u'lpae'}],
+                           u'arches': [],
+                           u'urls': [u'http://localhost:19998/F-21/Server/armhfp/os/'],
+                           u'arch': u'armhfp',
+                           u'ks_meta': None}
 
     def _run_import(self, import_args):
         p = subprocess.Popen(import_args,
@@ -1104,6 +1198,11 @@ class DistroImportTest(LabControllerTestCase):
 
         trees = self.dry_run_import_trees(['%sF-18/GOLD/Fedora/' % self.distro_url])
         self.assertItemsEqual(trees, [self.i386_f18_compose, self.x86_64_f18_compose])
+
+    def test_f21_server_tree_import_compose(self):
+
+        trees = self.dry_run_import_trees(['%sF-21/Server/' % self.distro_url])
+        self.assertItemsEqual(trees, [self.i386_f21, self.x86_64_f21, self.armhfp_f21])
 
     def _rawhide_treeinfo(self, compose_tree):
         # "derive" the expected treeinfo data from the

@@ -1081,7 +1081,7 @@ mainimage = images/stage2.img
                 parser.has_section_startswith('addon-'):
             return False
         # Fedora has a special case below, see TreeInfoFedora
-        if parser.get('general', 'family') == 'Fedora':
+        if 'Fedora' in parser.get('general', 'family'):
             return False
         return parser
 

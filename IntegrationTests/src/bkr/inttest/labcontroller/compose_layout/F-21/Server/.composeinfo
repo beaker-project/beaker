@@ -1,0 +1,28 @@
+[variant-Server.armhfp]
+arch = armhfp
+os_dir = armhfp/os
+debuginfo = armhfp/debug
+
+[variant-Server.i386]
+arch = i386
+os_dir = i386/os
+debuginfo = i386/debug
+
+[variant-Server.x86_64]
+arch = x86_64
+os_dir = x86_64/os
+debuginfo = x86_64/debug
+
+[product]
+family = Fedora-Server
+name = Fedora-Server-21
+version = 21
+variants = Server
+
+[variant-Server]
+arches = armhfp,i386,x86_64
+id = Server
+name = Server
+type = variant
+variants = 
+
