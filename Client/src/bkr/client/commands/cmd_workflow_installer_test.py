@@ -3,8 +3,8 @@
 """
 .. _bkr-workflow-installer-test:
 
-bkr workflow-installer-test: Workflow to generate a kickstart for testing Anaconda
-==================================================================================
+bkr workflow-installer-test: DEPRECATED workflow to generate a kickstart for testing Anaconda
+=============================================================================================
 
 .. program:: bkr workflow-installer-test
 
@@ -19,6 +19,8 @@ Description
 
 Generates an Anaconda kickstart for the purpose of testing. Uses
 `Jinja2 <http://jinja.pocoo.org/docs/>`_ to render the templates.
+This workflow is deprecated, use :option:`--kickstart` with
+:program:`bkr workflow-simple` or any other workflow command.
 
 
 Options
@@ -194,6 +196,8 @@ class Workflow_Installer_Test(BeakerWorkflow):
         return os_major
 
     def run(self, *args, **kwargs):
+        sys.stderr.write('workflow-installer-test is deprecated, use --kickstart with workflow-simple or any other workflow command')
+
         debug  = kwargs.get("debug", False)
         dryrun = kwargs.get("dryrun", False)
         family = kwargs.get("family", None)

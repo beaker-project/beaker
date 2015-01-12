@@ -1,7 +1,7 @@
 import pkg_resources
 from turbogears.database import session
 from bkr.inttest import data_setup
-from bkr.inttest.client import run_client, ClientTestCase
+from bkr.inttest.client import start_client, ClientTestCase
 
 
 class WorkflowInstallerTest(ClientTestCase):
@@ -15,12 +15,14 @@ class WorkflowInstallerTest(ClientTestCase):
         with session.begin():
             distro = data_setup.create_distro(tags=[u'STABLE'])
             distro_tree = data_setup.create_distro_tree(distro=distro)
-        out = run_client(['bkr', 'workflow-installer-test',
+        p = start_client(['bkr', 'workflow-installer-test',
             '--family', distro.osversion.osmajor.osmajor,
             '--arch', distro_tree.arch.arch,
             '--template', self.template_file_name,
             '--debug',
             '--task', self.task.name])
+        out, err = p.communicate()
+        self.assertEquals(p.returncode, 0)
         self.assertIn('key --skip', out)
         self.assertIn('Submitted:', out)
 
@@ -29,11 +31,13 @@ class WorkflowInstallerTest(ClientTestCase):
         with session.begin():
             distro = data_setup.create_distro(tags=[u'STABLE'])
             distro_tree = data_setup.create_distro_tree(distro=distro)
-        out = run_client(['bkr', 'workflow-installer-test',
+        p = start_client(['bkr', 'workflow-installer-test',
                           '--family', distro.osversion.osmajor.osmajor,
                           '--arch', distro_tree.arch.arch,
                           '--template', self.template_file_name,
                           '--task',
                           self.task.name,
                           '--dryrun'])
+        out, err = p.communicate()
+        self.assertEquals(p.returncode, 0)
         self.assertEquals('', out)
