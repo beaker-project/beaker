@@ -9,6 +9,7 @@ import os
 import threading
 import shutil
 import pkg_resources
+from mock import patch
 import bkr
 
 from bkr.server.model import TaskStatus, Job, System, User, \
@@ -1766,17 +1767,10 @@ class TestBeakerd(DatabaseTestCase):
             self.assertEqual(job.status, TaskStatus.processed)
             self.assertEqual(job.recipesets[0].priority, TaskPriority.medium)
 
-class FakeMetrics():
-    def __init__(self):
-        self.calls = []
-    def measure(self, *args):
-        self.calls.append(args)
-
+@patch('bkr.server.tools.beakerd.metrics')
 class TestBeakerdMetrics(DatabaseTestCase):
 
     def setUp(self):
-        self.original_metrics = beakerd.metrics
-        beakerd.metrics = FakeMetrics()
         self.mail_capture = MailCaptureThread()
         self.mail_capture.start()
         self.addCleanup(self.mail_capture.stop)
@@ -1801,9 +1795,8 @@ class TestBeakerdMetrics(DatabaseTestCase):
 
     def tearDown(self):
         session.rollback()
-        beakerd.metrics = self.original_metrics
 
-    def test_system_count_metrics(self):
+    def test_system_count_metrics(self, mock_metrics):
         gauges = [
             'gauges.systems_recipe',
             'gauges.systems_manual',
@@ -1839,24 +1832,10 @@ class TestBeakerdMetrics(DatabaseTestCase):
                                   status=SystemStatus.removed)
         session.flush()
         beakerd.system_count_metrics()
-        # We need to split out unknown lab metrics, which we may inherit
-        # from other tests which left systems in the database
-        all_labs = {}
-        known_metrics = {}
-        other_labs = {}
-        for k, v in beakerd.metrics.calls:
-            all_labs[k] = v
-            if k in expected:
-                known_metrics[k] = v
-            else:
-                other_labs[k] = v
-        self.assertEqual(set(known_metrics), set(expected))
-        for k, v in known_metrics.iteritems():
-            self.assertEqual((k, v), (k, expected[k]))
-        for k, v in other_labs.iteritems():
-            self.assertEqual((k, v), (k, 0))
+        for name, value in expected.iteritems():
+            mock_metrics.measure.assert_any_call(name, value)
 
-    def test_system_count_metrics_uses_active_access_policy(self):
+    def test_system_count_metrics_uses_active_access_policy(self, mock_metrics):
         lc = data_setup.create_labcontroller()
         # not shared
         data_setup.create_system(lab_controller=lc, shared=False)
@@ -1873,11 +1852,10 @@ class TestBeakerdMetrics(DatabaseTestCase):
         restricted_via_pool.active_access_policy = restrictive_pool.access_policy
         session.flush()
         beakerd.system_count_metrics()
-        shared_count, = [value for name, value in beakerd.metrics.calls
-                if name == 'gauges.systems_idle_automated.shared']
-        self.assertEquals(shared_count, 2)
+        mock_metrics.measure.assert_any_call(
+                'gauges.systems_idle_automated.shared', 2)
 
-    def test_recipe_count_metrics(self):
+    def test_recipe_count_metrics(self, mock_metrics):
         gauges = [
             'gauges.recipes_scheduled',
             'gauges.recipes_running',
@@ -1897,24 +1875,23 @@ class TestBeakerdMetrics(DatabaseTestCase):
         ]
         expected = dict(("%s.%s" % (g, c), 0)
                             for g in gauges for c in categories)
+        lc = data_setup.create_labcontroller()
         recipes = []
         for arch in u"i386 x86_64 ppc ppc64".split():
+            data_setup.create_system(arch=arch, lab_controller=lc, shared=True)
             dt = data_setup.create_distro_tree(arch=arch)
-            job = data_setup.create_job(num_guestrecipes=1, distro_tree=dt)
-            recipe = job.recipesets[0].recipes[0]
+            recipe = data_setup.create_recipe(distro_tree=dt)
+            data_setup.create_job_for_recipes([recipe])
             recipes.append(recipe)
-            categories = ['all', 'dynamic_virt_possible',
-                          'by_arch.%s' % arch]
-            for category in categories:
-                key = 'gauges.recipes_new.%s' % category
-                expected[key] += 1
+            expected['gauges.recipes_new.all'] += 1
+            expected['gauges.recipes_new.dynamic_virt_possible'] += 1
+            expected['gauges.recipes_new.by_arch.%s' % arch] += 1
         session.flush()
         beakerd.recipe_count_metrics()
-        actual = dict(beakerd.metrics.calls)
-        self.assertEqual(set(actual), set(expected))
-        for k, v in actual.iteritems():
-            self.assertEqual((k, v), (k, expected[k]))
+        for name, value in expected.iteritems():
+            mock_metrics.measure.assert_any_call(name, value)
         # Processing the recipes should set their virt status correctly
+        mock_metrics.reset_mock()
         for category in categories:
             new = 'gauges.recipes_new.%s' % category
             processed = 'gauges.recipes_processed.%s' % category
@@ -1925,6 +1902,8 @@ class TestBeakerdMetrics(DatabaseTestCase):
                 expected[new], expected[processed] = 0, 2
         for recipe in recipes:
             beakerd.process_new_recipe(recipe.id)
-        beakerd.metrics.calls[:] = []
+            recipe.recipeset.job.update_status()
+        session.flush()
         beakerd.recipe_count_metrics()
-        actual = dict(beakerd.metrics.calls)
+        for name, value in expected.iteritems():
+            mock_metrics.measure.assert_any_call(name, value)
