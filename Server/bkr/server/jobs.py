@@ -19,6 +19,7 @@ from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
 from bkr.server import search_utility, identity, metrics
 from bkr.server.needpropertyxml import XmlHost
+from bkr.server.installopts import InstallOptions
 from bkr.server.controller_utilities import _custom_status, _custom_result, \
     restrict_http_method
 import pkg_resources
@@ -593,6 +594,12 @@ class Jobs(RPCRoot):
         recipe.ks_meta = xmlrecipe.ks_meta
         recipe.kernel_options = xmlrecipe.kernel_options
         recipe.kernel_options_post = xmlrecipe.kernel_options_post
+        # try parsing install options to make sure there is no syntax error
+        try:
+            InstallOptions.from_strings(recipe.ks_meta,
+                    recipe.kernel_options, recipe.kernel_options_post)
+        except Exception as e:
+            raise BX(_('Error parsing ks_meta: %s' % e))
         recipe.role = xmlrecipe.role
         if xmlrecipe.reservesys:
             recipe.reservation_request = RecipeReservationRequest(xmlrecipe.reservesys.duration)
