@@ -1132,7 +1132,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
     def _mark_clean(self):
         self.clean_version = self.dirty_version
 
-    @property
+    @hybrid_property
     def is_dirty(self):
         return (self.dirty_version != self.clean_version)
 

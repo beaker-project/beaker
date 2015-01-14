@@ -746,6 +746,10 @@ def system_count_metrics():
     _system_count_metrics_for_query_grouped('by_lab', LabController.fqdn,
             System.query.join(System.lab_controller))
 
+# Dirty jobs
+def dirty_job_metrics():
+    metrics.measure('gauges.dirty_jobs', Job.query.filter(Job.is_dirty).count())
+
 # These functions are run in separate threads, so we want to log any uncaught 
 # exceptions instead of letting them be written to stderr and lost to the ether
 
@@ -756,6 +760,7 @@ def metrics_loop(*args, **kwargs):
         try:
             recipe_count_metrics()
             system_count_metrics()
+            dirty_job_metrics()
         except Exception:
             log.exception('Exception in metrics loop')
         end = time.time()

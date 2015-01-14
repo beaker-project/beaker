@@ -155,6 +155,21 @@ x86_64 machines can be accessed as::
     beaker.gauges.recipes_queued.by_arch.x86_64
 
 
+Dirty job count
+---------------
+
+Beaker populates this gauge with the number of jobs currently marked "dirty" in 
+the database::
+
+    beaker.gauges.dirty_jobs
+
+Jobs become "dirty" when their scheduling state has been changed (for example, 
+the user cancels the job, or the harness completes a task) but the scheduler 
+has not yet handled the status update.
+
+A large value for this gauge indicates that there may be a problem with the 
+scheduler causing a backlog of unhandled status updates.
+
 
 Useful graphs
 -------------

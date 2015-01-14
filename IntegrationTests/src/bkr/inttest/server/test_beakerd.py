@@ -1907,3 +1907,24 @@ class TestBeakerdMetrics(DatabaseTestCase):
         beakerd.recipe_count_metrics()
         for name, value in expected.iteritems():
             mock_metrics.measure.assert_any_call(name, value)
+
+    def test_dirty_job_metrics(self, mock_metrics):
+        job = data_setup.create_running_job()
+        self.assertFalse(job.is_dirty)
+        session.flush()
+        beakerd.dirty_job_metrics()
+        mock_metrics.measure.assert_called_with('gauges.dirty_jobs', 0)
+
+        mock_metrics.reset_mock()
+        job.cancel()
+        self.assertTrue(job.is_dirty)
+        session.flush()
+        beakerd.dirty_job_metrics()
+        mock_metrics.measure.assert_called_with('gauges.dirty_jobs', 1)
+
+        mock_metrics.reset_mock()
+        job.update_status()
+        self.assertFalse(job.is_dirty)
+        session.flush()
+        beakerd.dirty_job_metrics()
+        mock_metrics.measure.assert_called_with('gauges.dirty_jobs', 0)
