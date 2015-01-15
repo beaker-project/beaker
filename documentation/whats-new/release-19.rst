@@ -161,16 +161,6 @@ You can opt out of this behaviour by setting the ``no_disable_readahead``
 kickstart metadata variable. This will cause Beaker to omit the snippet which 
 disables readahead collection.
 
-Network time syncing is disabled for VMs
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-For guest recipes and recipes running on dynamic VMs, Beaker no longer includes 
-the kickstart snippet for ensuring a network time synchronization service (ntpd 
-or chrony) is installed and enabled. In these cases, the recipe is running on 
-a freshly created VM whose clock will be correctly synchronized from the host, 
-so network time synchronization is not necessary (and in some cases, may cause 
-extra delays).
-
 Workflow commands no longer use ``STABLE``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -399,3 +389,43 @@ Beaker 19.1
   installations. (Contributed by Dan Callaghan)
 
 .. dev implementation detail that is not worth reporting: :issue:`980340`
+
+Beaker 19.2
+~~~~~~~~~~~
+
+* :issue:`1163466`: The :program:`beaker-provision` daemon now generates
+  netboot configuration files for Petitboot, the boot loader used in some 
+  recent IBM Power systems. (Contributed by Amit Saha)
+* :issue:`1169293`: Usage reminder e-mails now include a header
+  ``X-Beaker-Notification: usage-report`` to aid in mail filtering. 
+  (Contributed by Matt Jia)
+* :issue:`1175118`: The :program:`beaker-import` command now correctly imports
+  the "Everything" repo for Fedora 21. This fixes an issue which would cause 
+  Fedora 21 jobs to fail with unsatisfied dependencies. The distro must be 
+  re-imported for the fix to take effect. (Contributed by Amit Saha)
+* :issue:`1174279`: Reverted a change in Beaker 19.0 which caused NTP services
+  not to be enabled for guest recipes. Clock syncing is now enabled in all 
+  recipes by default. Additionally, guest recipes are now configured so that 
+  their hardware clock is assumed to be in UTC, as provided by the host. 
+  (Contributed by Matt Jia)
+* :issue:`1157348`: Beaker no longer requires that a cached harness repo exists
+  for the recipe when using the experimental "contained harness" feature. In 
+  that case the job submitter is responsible for ensuring suitable harness 
+  packages are available. (Contributed by Amit Saha)
+* :issue:`1173402`: Removed references to running Beah inside a container, as
+  part of the experimental "contained harness" feature. This never worked 
+  properly due to limitations of Beah. Restraint is the recommended harness 
+  inside containers. (Contributed by Amit Saha)
+* :issue:`1174786`: Fixed an issue with the kickstart snippet for handling
+  ``grubport=`` which would cause the GRUB ``menu.lst`` symlink to be 
+  overwritten. (Contributed by Dan Callaghan)
+* :issue:`1173362`: Beaker now prevents the admin from setting an OS major's
+  alias to the same name or alias as another OS major. (Contributed by Dan 
+  Callaghan)
+* :issue:`1173368`: Beaker no longer accepts the empty string as an OS major
+  name or distro name. (Contributed by Matt Jia)
+* :issue:`963042`: The lab controller daemons now properly enforce a 120-second
+  timeout for connections to the Beaker server. Previously the connect timeout 
+  did not take effect for ``https://`` connections. (Contributed by Matt Jia)
+* :issue:`1173446`: The :guilabel:`Provision` tab on the system page now always
+  shows a link to the Reserve Workflow. (Contributed by Dan Callaghan)
