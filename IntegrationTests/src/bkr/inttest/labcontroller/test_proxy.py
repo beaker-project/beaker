@@ -1014,8 +1014,14 @@ class LogUploadTest(LabControllerTestCase):
     def test_large_PUT_request_is_rejected(self):
         upload_url = '%srecipes/%s/logs/asdf' % (self.get_proxy_url(),
                 self.recipe.id)
+        # No specified data content-type
         response = requests.put(upload_url, data='a' * (1024 * 1024 * 10 + 1))
         self.assertEquals(response.status_code, 413)
+        # specify data content-type
+        response = requests.put(upload_url, data='a' * (1024 * 1024 * 10 + 1),
+                                headers={'content-type': 'application/x-url-encoded'})
+        self.assertEquals(response.status_code, 413)
+
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1293007
     def test_max_logs_per_recipe_limit_is_enforced(self):

@@ -16,7 +16,8 @@ from SimpleXMLRPCServer import SimpleXMLRPCDispatcher
 from DocXMLRPCServer import XMLRPCDocGenerator
 from flask.wrappers import Request, Response
 from werkzeug.routing import Map as RoutingMap, Rule
-from werkzeug.exceptions import HTTPException, NotFound, MethodNotAllowed, BadRequest
+from werkzeug.exceptions import HTTPException, NotFound, MethodNotAllowed, \
+BadRequest, RequestEntityTooLarge
 import gevent, gevent.pool, gevent.wsgi, gevent.event, gevent.monkey
 from bkr.common.helpers import RepeatTimer
 from bkr.labcontroller.proxy import Proxy, ProxyHTTP
@@ -101,6 +102,10 @@ class WSGIApplication(object):
     @LimitedRequest.application
     def __call__(self, req):
         try:
+            # Limit request data in all cases.
+            if req.max_content_length is not None and \
+                req.content_length > req.max_content_length:
+                    raise RequestEntityTooLarge()
             if req.path in ('/', '/RPC2', '/server'):
                 if req.method == 'POST':
                     # XML-RPC
