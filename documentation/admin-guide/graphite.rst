@@ -171,6 +171,34 @@ A large value for this gauge indicates that there may be a problem with the
 scheduler causing a backlog of unhandled status updates.
 
 
+System command metrics
+----------------------
+
+Similar to the recipe queue metrics described above, Beaker provides 
+a real-time view of the system command queue with the following gauges::
+
+    beaker.gauges.system_commands_queued.all
+    beaker.gauges.system_commands_running.all
+
+The ``queued`` state represents commands which are in the queue but the 
+:program:`beaker-provision` daemon has not started running them yet. The 
+``running`` state represents commands which have started but not finished yet.
+
+A large value for the ``queued`` gauge indicates that there may be a problem 
+with the :program:`beaker-provision` daemon on a lab controller causing 
+a backlog of queued commands.
+
+In addition, Beaker updates the following counters when a system command has 
+finished (whether successfully or not)::
+
+    beaker.counters.system_commands_completed.all
+    beaker.counters.system_commands_aborted.all
+    beaker.counters.system_commands_failed.all
+
+Each of the command queue gauges and counters is also available broken down by 
+the lab controller responsible for running the command.
+
+
 Useful graphs
 -------------
 

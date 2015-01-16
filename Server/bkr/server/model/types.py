@@ -39,11 +39,11 @@ class TaskStatus(DeclEnum):
 class CommandStatus(DeclEnum):
 
     symbols = [
-        ('queued',    u'Queued',    dict()),
-        ('running',   u'Running',   dict()),
-        ('completed', u'Completed', dict()),
-        ('failed',    u'Failed',    dict()),
-        ('aborted',   u'Aborted',   dict()),
+        ('queued',    u'Queued',    dict(finished=False)),
+        ('running',   u'Running',   dict(finished=False)),
+        ('completed', u'Completed', dict(finished=True)),
+        ('failed',    u'Failed',    dict(finished=True)),
+        ('aborted',   u'Aborted',   dict(finished=True)),
     ]
 
 class TaskResult(DeclEnum):

@@ -24,7 +24,7 @@ from bkr.server.model import (Job, RecipeSet, Recipe, MachineRecipe,
         GuestRecipe, RecipeVirtStatus, TaskStatus, TaskPriority, LabController,
         Watchdog, System, DistroTree, LabControllerDistroTree, SystemStatus,
         VirtResource, SystemResource, GuestResource, Arch,
-        SystemAccessPolicy, SystemPermission, ConfigItem)
+        SystemAccessPolicy, SystemPermission, ConfigItem, CommandActivity)
 from bkr.server.model.scheduler import machine_guest_map
 from bkr.server.needpropertyxml import XmlHost
 from bkr.server.util import load_config_or_exit, log_traceback
@@ -746,6 +746,23 @@ def system_count_metrics():
     _system_count_metrics_for_query_grouped('by_lab', LabController.fqdn,
             System.query.join(System.lab_controller))
 
+# System power commands
+def _system_command_metrics_for_query(name, query):
+    for status, count in CommandActivity.get_queue_stats(query).items():
+        metrics.measure('gauges.system_commands_%s.%s' % (status, name), count)
+
+def _system_command_metrics_for_query_grouped(name, grouping, query):
+    group_counts = CommandActivity.get_queue_stats_by_group(grouping, query)
+    for group, counts in group_counts.iteritems():
+        for status, count in counts.iteritems():
+            metrics.measure('gauges.system_commands_%s.%s.%s'
+                    % (status, name, group.replace('.', '_')), count)
+
+def system_command_metrics():
+    _system_command_metrics_for_query('all', CommandActivity.query)
+    _system_command_metrics_for_query_grouped('by_lab', LabController.fqdn,
+            CommandActivity.query.join(CommandActivity.system).join(System.lab_controller))
+
 # Dirty jobs
 def dirty_job_metrics():
     metrics.measure('gauges.dirty_jobs', Job.query.filter(Job.is_dirty).count())
@@ -761,6 +778,7 @@ def metrics_loop(*args, **kwargs):
             recipe_count_metrics()
             system_count_metrics()
             dirty_job_metrics()
+            system_command_metrics()
         except Exception:
             log.exception('Exception in metrics loop')
         end = time.time()

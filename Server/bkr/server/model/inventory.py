@@ -9,6 +9,7 @@ import logging
 from datetime import datetime, timedelta
 from hashlib import md5
 from itertools import chain
+from collections import defaultdict
 import urllib
 import xml.dom.minidom
 import lxml.etree
@@ -104,6 +105,37 @@ class CommandActivity(Activity):
         self.callback = callback
         self.quiescent_period = quiescent_period
 
+    @classmethod
+    def get_queue_stats(cls, query):
+        """
+        Returns a dict of (status -> count) for all unfinished commands 
+        in the given query.
+        """
+        active_statuses = [s for s in CommandStatus if not s.finished]
+        query = query.filter(cls.status.in_(active_statuses))\
+                .group_by(cls.status)\
+                .values(cls.status, func.count(cls.id))
+        result = dict((status.name, 0) for status in active_statuses)
+        result.update((status.name, count) for status, count in query)
+        return result
+
+    @classmethod
+    def get_queue_stats_by_group(cls, grouping, query):
+        """
+        Returns a nested dict of (group value -> (status -> count)) for all 
+        unfinished commands in the given query, grouped by the given column.
+        """
+        active_statuses = [s for s in CommandStatus if not s.finished]
+        query = query.filter(cls.status.in_(active_statuses))\
+                .group_by(grouping, cls.status)\
+                .with_entities(grouping, cls.status, func.count(cls.id))
+        def init_group_stats():
+            return dict((status.name, 0) for status in active_statuses)
+        result = defaultdict(init_group_stats)
+        for group, status, count in query:
+            result[group][status.name] = count
+        return result
+
     def __json__(self):
         return {
             'id': self.id,
@@ -118,6 +150,14 @@ class CommandActivity(Activity):
     def object_name(self):
         return "Command: %s %s" % (self.object.fqdn, self.action)
 
+    @hybrid_property
+    def finished(self):
+        return self.status.finished
+
+    @finished.expression
+    def finished(cls): #pylint: disable=E0213
+        return cls.status.in_([s for s in CommandStatus if s.finished])
+
     def change_status(self, new_status):
         current_status = self.status
         if session.connection(CommandActivity).execute(CommandActivity.__table__.update(
@@ -128,6 +168,8 @@ class CommandActivity(Activity):
                     'Status for command %s updated in another transaction'
                     % self.id)
         self.status = new_status
+        if self.status.finished:
+            metrics.increment('counters.system_commands_%s' % self.status.name)
 
     def log_to_system_history(self):
         self.system.record_activity(user=self.user, service=self.service,

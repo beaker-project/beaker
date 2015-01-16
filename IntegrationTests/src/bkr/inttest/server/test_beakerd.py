@@ -8,6 +8,7 @@ import datetime
 import os
 import threading
 import shutil
+import logging
 import pkg_resources
 from mock import patch
 import bkr
@@ -16,7 +17,7 @@ from bkr.server.model import TaskStatus, Job, System, User, \
         Group, SystemStatus, SystemActivity, Recipe, Cpu, LabController, \
         Provision, TaskPriority, RecipeSet, RecipeTaskResult, Task, SystemPermission,\
         MachineRecipe, GuestRecipe, LabControllerDistroTree, DistroTree, \
-        TaskResult
+        TaskResult, CommandActivity, CommandStatus
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import not_
 from turbogears.database import session, get_engine
@@ -32,6 +33,8 @@ from bkr.inttest.assertions import assert_datetime_within
 # We capture the sent mail to avoid error spam in the logs rather than to
 # check anything in particular
 from bkr.inttest.mail_capture import MailCaptureThread
+
+log = logging.getLogger(__name__)
 
 class TestBeakerd(DatabaseTestCase):
 
@@ -222,7 +225,6 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.update_dirty_jobs()
         beakerd.schedule_queued_recipes()
 
-        import logging
         # Check only the first recipe is scheduled at this point
         job_id = job.id
         r1_id = r1.id
@@ -1776,14 +1778,18 @@ class TestBeakerdMetrics(DatabaseTestCase):
         self.addCleanup(self.mail_capture.stop)
         session.begin()
         try:
-            # Other tests might have left behind systems and running recipes,
-            # so we remove or cancel them all so they don't pollute our metrics
+            # Other tests might have left behind systems and system commands 
+            # and running recipes, so we remove or cancel them all so they 
+            # don't pollute our metrics
             manually_reserved = System.query.filter(System.open_reservation != None)
             for system in manually_reserved:
                 data_setup.unreserve_manual(system)
             systems = System.query.filter(System.status != SystemStatus.removed)
             for system in systems:
                 system.status = SystemStatus.removed
+            commands = CommandActivity.query.filter(not_(CommandActivity.finished))
+            for command in commands:
+                command.change_status(CommandStatus.aborted)
             running = Recipe.query.filter(not_(Recipe.status.in_(
                 [s for s in TaskStatus if s.finished])))
             for recipe in running:
@@ -1928,3 +1934,38 @@ class TestBeakerdMetrics(DatabaseTestCase):
         session.flush()
         beakerd.dirty_job_metrics()
         mock_metrics.measure.assert_called_with('gauges.dirty_jobs', 0)
+
+    def test_system_command_metrics(self, mock_metrics):
+        lc = data_setup.create_labcontroller(fqdn=u'testcommandmetrics.invalid')
+        system = data_setup.create_system(lab_controller=lc)
+        command = system.enqueue_command(u'on', service=u'testdata')
+        session.flush()
+        beakerd.system_command_metrics()
+        log.debug('Metrics calls were: %s', mock_metrics.measure.call_args_list)
+        for category in ['all', 'by_lab.testcommandmetrics_invalid']:
+            mock_metrics.measure.assert_any_call(
+                    'gauges.system_commands_queued.%s' % category, 1)
+            mock_metrics.measure.assert_any_call(
+                    'gauges.system_commands_running.%s' % category, 0)
+
+        mock_metrics.reset_mock()
+        command.change_status(CommandStatus.running)
+        session.flush()
+        beakerd.system_command_metrics()
+        log.debug('Metrics calls were: %s', mock_metrics.measure.call_args_list)
+        for category in ['all', 'by_lab.testcommandmetrics_invalid']:
+            mock_metrics.measure.assert_any_call(
+                    'gauges.system_commands_queued.%s' % category, 0)
+            mock_metrics.measure.assert_any_call(
+                    'gauges.system_commands_running.%s' % category, 1)
+
+        mock_metrics.reset_mock()
+        command.change_status(CommandStatus.completed)
+        session.flush()
+        beakerd.system_command_metrics()
+        log.debug('Metrics calls were: %s', mock_metrics.measure.call_args_list)
+        for category in ['all']:
+            mock_metrics.measure.assert_any_call(
+                    'gauges.system_commands_queued.%s' % category, 0)
+            mock_metrics.measure.assert_any_call(
+                    'gauges.system_commands_running.%s' % category, 0)
