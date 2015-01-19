@@ -21,20 +21,9 @@ def json_collection(columns=None, min_page_size=20, max_page_size=500,
     """
     Decorator factory for Flask request handlers which want to return 
     a collection of resources as JSON. The decorated function should return 
-    a SQLAlchemy Query object. Adds support for the following query parameters:
+    a SQLAlchemy Query object.
 
-        page_size
-            Return at most this many entities in the response.
-        page
-            Return this page number within the collection. Pages are numbered 
-            starting from 1.
-        q
-            Apply this filter to the collection, prior to pagination. Uses 
-            Lucene-compatible query syntax.
-        sort_by
-            Sort entities by this key, prior to pagination.
-        order
-            'asc' or 'desc' for ascending or descending sort respectively.
+    There are API docs for this in documentation/server-api/http.rst.
     """
     if columns is None:
         columns = {}

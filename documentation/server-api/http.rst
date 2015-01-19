@@ -6,8 +6,71 @@ programmatic access to Beaker's data.
 
 All URLs are given relative to the base URL of the Beaker server.
 
-System inventory information
-----------------------------
+.. _pageable-json-collections:
+
+Pageable JSON collections
+-------------------------
+
+.. Note for Beaker devs: this describes the functionality provided by the 
+   @json_collection decorator in bkr.server.flask_util.
+
+A number of Beaker server APIs return "pageable JSON collections", which share 
+some common characteristics described here.
+
+The following query parameters are supported by pageable JSON collections:
+
+``page_size=<int>``
+    Return this many elements per page in the response.
+
+``page=<int>``
+    Return this page number within the collection. Pages are numbered from 1.
+
+``q=<query>``
+    Apply this filter to the collection, prior to pagination. The query uses 
+    `Lucene query parser syntax`_:
+    
+    * ``field:value`` finds rows where ``field`` is equal to ``value``
+    * ``value`` finds rows where any field is equal to ``value``
+    * ``"`` quotes phrases, as in ``field:"value with space"``
+    * ``-field:value`` finds rows where ``field`` is not equal to ``value``
+    * ``field:[1 TO 10]`` finds rows where ``field`` is between 1 and 10
+      inclusive
+
+    Each API endpoint lists the supported query fields, but in general the 
+    field names correspond to the keys in the JSON objects for each element.
+
+``sort_by=<field>``
+    Sort elements by this field, prior to pagination. Each API endpoint lists 
+    the supported sort fields.
+
+``order=asc|desc``
+    Must be ``asc`` or ``desc``. Sorts in ascending or descending order, 
+    respectively.
+
+The response is a JSON object with the following keys:
+
+``count``
+    Total number of elements in the (possibly filtered) collection.
+
+``page_size``
+    Number of elements in each page. This is the same as the ``page_size`` 
+    query parameter if given, unless the requested page size was larger than 
+    allowed.
+
+``page``
+    Index of this page within the entire collection. The index of the first 
+    page is 1.
+
+``sort_by``, ``order``
+    If a custom sort order was requested with the ``sort_by`` and ``order`` 
+    query parameters, their values are included in the response.
+
+``entries``
+    A JSON array containing all the elements of the collection making up this 
+    page in sorted order.
+
+Systems
+-------
 
 .. http:get::
    /
@@ -82,8 +145,6 @@ System inventory information
       filter criteria in this parameter. It supports the same criteria as in 
       the ``<hostRequires/>`` element in Beaker job XML.
 
-   .. versionadded:: 0.6
-
 .. http:get:: /view/(fqdn)
 
    Provides detailed information about a system.
@@ -99,9 +160,31 @@ System inventory information
    For a detailed description of the RDF schema used, refer to 
    :file:`Common/bkr/common/schema/beaker-inventory.ttl`.
 
-   .. versionadded:: 0.6
+.. autoflask:: bkr.server.wsgi:app
+   :endpoints: get_system, add_system, update_system, get_system_access_policy, 
+     save_system_access_policy, add_system_access_policy_rule, 
+     delete_system_access_policy_rules, report_problem, get_system_activity
+
+System reservations
+-------------------
+
+.. autoflask:: bkr.server.wsgi:app
+   :endpoints: reserve, update_reservation
+
+System loans
+------------
+
+.. autoflask:: bkr.server.wsgi:app
+   :endpoints: request_loan, grant_loan, update_loan
+
+System provisioning
+-------------------
+
+.. autoflask:: bkr.server.wsgi:app
+   :endpoints: provision_system, get_system_command_queue, system_command
     
 .. _Atom: http://tools.ietf.org/html/rfc4287
 .. _RDF: http://www.w3.org/RDF/
 .. _RDF/XML: http://www.w3.org/TR/REC-rdf-syntax/
 .. _Turtle: http://www.w3.org/TeamSubmission/turtle/
+.. _Lucene query parser syntax: http://lucene.apache.org/core/2_9_4/queryparsersyntax.html

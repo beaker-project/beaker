@@ -313,6 +313,16 @@ def _get_system_by_FQDN(fqdn):
 @app.route('/systems/', methods=['POST'])
 @auth_required
 def add_system():
+    """
+    Adds a new system to Beaker. The request must be 
+    :mimetype:`application/x-www-form-urlencoded` or 
+    :mimetype:`application/json`.
+
+    :jsonparam string fqdn: Fully-qualified domain name for the new system.
+
+    :status 302: The system was successfully created and can be found at the
+      redirected location.
+    """
     # We accept JSON or form-encoded for convenience
     if request.json:
         if 'fqdn' not in request.json:
@@ -342,12 +352,75 @@ def add_system():
 # XXX need to move /view/FQDN to /systems/FQDN/
 @app.route('/systems/<fqdn>/', methods=['GET'])
 def get_system(fqdn):
+    """
+    Provides detailed information about a system in JSON format. In a future 
+    release this will be consolidated with the :http:get:`/view/(fqdn)` 
+    resource.
+
+    :param fqdn: The system's fully-qualified domain name.
+    """
     system = _get_system_by_FQDN(fqdn)
     return jsonify(system.__json__())
 
-@app.route('/systems/<fqdn>/', methods=['PATCH', 'POST'])
+@app.route('/systems/<fqdn>/', methods=['PATCH'])
 @auth_required
 def update_system(fqdn):
+    """
+    Updates attributes of an existing system. The request body must be a JSON 
+    object containing one or more of the following keys.
+
+    :param fqdn: The system's fully-qualified domain name.
+    :jsonparam string fqdn: New FQDN for the system (it will be renamed).
+    :jsonparam object owner: JSON object containing a ``user_name`` key 
+      identifying the new owner for the system.
+    :jsonparam string status: System status: ``Automated``, ``Manual``, 
+      ``Broken``, or ``Removed``.
+    :jsonparam string status_reason: Description of why the status has been 
+      changed. Only valid when the status is ``Broken`` or ``Removed``.
+    :jsonparam string type: System type: ``Machine``, ``Prototype``, 
+      ``Resource``.
+    :jsonparam array arches: Array of architecture names (strings) supported by 
+      the system, for example ``['i386', 'x86_64']``.
+    :jsonparam int lab_controller_id: Lab controller which the system is 
+      attached to.
+    :jsonparam string power_type: Remote power control type. This value must be 
+      a valid power type configured by the Beaker administrator (or one of the 
+      Beaker defaults).
+    :jsonparam string power_address: Address passed to the power control script.
+    :jsonparam string power_user: Username passed to the power control script.
+    :jsonparam string power_password: Password passed to the power control script.
+    :jsonparam string power_id: Unique identifier passed to the power control 
+      script. The meaning of the power ID depends on which power type is 
+      selected. Typically this field identifies a particular plug, socket, 
+      port, or virtual guest name.
+    :jsonparam int power_quiescent_period: Quiescent period for power control. 
+      Beaker will delay at least this long between consecutive power commands. 
+    :jsonparam string release_action: Action to take whenever a reservation for 
+      this system is returned: ``PowerOff``, ``LeaveOn``, ``ReProvision``.
+    :jsonparam object reprovision_distro_tree: JSON object containing an ``id`` 
+      key identifying the distro tree to be installed when the release action 
+      is ``ReProvision``.
+    :jsonparam string location: Physical location of the system.
+    :jsonparam string lender: Organization who lent this system to Beaker's 
+      inventory.
+    :jsonparam string kernel_type: Kernel types are only relevant for the ARM 
+      architecture.
+    :jsonparam string hypervisor: Type of hypervisor which this system is 
+      hosted on, or ``null`` if it is not virtualized. Valid values are 
+      configurable by the Beaker administrator, but by default include: 
+      ``KVM``, ``Xen``, ``HyperV``, ``VMWare``.
+    :jsonparam string vendor: Vendor who produced the system.
+    :jsonparam string model: Model name or number.
+    :jsonparam string serial_number: Serial number.
+    :jsonparam string mac_address: MAC address of the default network interface.
+    :jsonparam int memory: Amount of memory (MB) installed in the system.
+    :jsonparam int numa_nodes: Number of nodes in the system's NUMA topology.
+    :status 200: System was updated.
+    :status 400: Invalid data was given.
+    :status 409: Attempted to change the lab controller while the system is 
+      reserved. Return the system (cancel the running recipe) before changing 
+      which lab controller it is attached to.
+    """
     system = _get_system_by_FQDN(fqdn)
     if not system.can_edit(identity.current.user):
         raise Forbidden403('Cannot edit system')
@@ -569,6 +642,11 @@ def update_system(fqdn):
         response.headers.add('Location', url('/view/%s' % system.fqdn))
     return response
 
+# For compat only. Separate function so that it doesn't appear in the docs.
+@app.route('/systems/<fqdn>/', methods=['POST'])
+def update_system_post(fqdn):
+    return update_system(fqdn)
+
 # Not sure if this is a sane API...
 @app.route('/systems/<fqdn>/cc/<email>', methods=['PUT'])
 @auth_required
@@ -599,6 +677,14 @@ def remove_cc(fqdn, email):
 @app.route('/systems/<fqdn>/problem-reports/', methods=['POST'])
 @auth_required
 def report_problem(fqdn):
+    """
+    Submits a problem report about a system. The report is forwarded to the 
+    system owner and any other addresses on the system's notification cc list.
+
+    :param fqdn: The system's fully-qualified domain name.
+    :jsonparam string message: Description of the problem being reported.
+    :status 201: Problem report was created.
+    """
     system = _get_system_by_FQDN(fqdn)
     data = read_json_request(request)
     message = (data.get('message') or u'').strip()
@@ -613,7 +699,9 @@ def report_problem(fqdn):
 @auth_required
 def reserve(fqdn):
     """
-    Reserves the system "manually".
+    Reserves the system "manually" (that is, bypassing the scheduler).
+
+    :param fqdn: The system's fully-qualified domain name.
     """
     system = _get_system_by_FQDN(fqdn)
     with convert_internal_errors():
@@ -621,13 +709,17 @@ def reserve(fqdn):
                 user=identity.current.user)
     return jsonify(reservation.__json__())
 
-@app.route('/systems/<fqdn>/reservations/+current', methods=['PATCH', 'PUT'])
+@app.route('/systems/<fqdn>/reservations/+current', methods=['PATCH'])
 @auth_required
 def update_reservation(fqdn):
     """
     Updates the system's current reservation. The only permitted update is to 
     end the reservation (returning the system), and this is only permitted when 
     the reservation was "manual" (not made by the scheduler).
+
+    :param fqdn: The system's fully-qualified domain name.
+    :jsonparam string finish_time: Must be the string ``now``, indicating that 
+      the reservation should end now. The system will be returned.
     """
     system = _get_system_by_FQDN(fqdn)
     data = read_json_request(request)
@@ -641,9 +733,23 @@ def update_reservation(fqdn):
             raise ValueError('Reservation durations are not configurable')
     return jsonify(reservation.__json__())
 
+# For compat only. Separate function so that it doesn't appear in the docs.
+@app.route('/systems/<fqdn>/reservations/+current', methods=['PUT'])
+def update_reservation_put(fqdn):
+    return update_reservation(fqdn)
+
 @app.route('/systems/<fqdn>/loan-requests/', methods=['POST'])
 @auth_required
 def request_loan(fqdn):
+    """
+    Submits a loan request for a system. The loan request is forwarded to the 
+    system owner and any other addresses on the system's notification cc list 
+    for their action.
+
+    :param fqdn: The system's fully-qualified domain name.
+    :jsonparam string message: Reason for the loan request.
+    :status 201: The loan request was created.
+    """
     system = _get_system_by_FQDN(fqdn)
     data = read_json_request(request)
     message = (data.get('message') or u'').strip()
@@ -657,9 +763,16 @@ def request_loan(fqdn):
 @auth_required
 def grant_loan(fqdn):
     """
-    Lends the system to the specified user (or borrows the system for
-    the current user if no other user is specified)
+    Lends the system to the specified user, or borrows the system for
+    the current user if no other user is specified.
 
+    :param fqdn: The system's fully-qualified domain name.
+    :jsonparam object recipient: JSON object containing a ``user_name`` key 
+      identifying the user to whom the loan will be granted. If this parameter 
+      is ``null`` or absent, the loan is granted to the user submitting this 
+      request.
+    :jsonparam string comment: Comment recorded with the loan. Used to record 
+      the purpose or conditions of the loan.
     """
     system = _get_system_by_FQDN(fqdn)
     data = read_json_request(request)
@@ -675,14 +788,16 @@ def grant_loan(fqdn):
         system.grant_loan(user_name, comment, service=u'HTTP')
     return jsonify(system.get_loan_details())
 
-@app.route('/systems/<fqdn>/loans/+current', methods=['PATCH', 'PUT'])
+@app.route('/systems/<fqdn>/loans/+current', methods=['PATCH'])
 @auth_required
 def update_loan(fqdn):
     """
-    Updates a loan on the system with the given fully-qualified
-    domain name.
+    Updates the current loan for a system. Currently, the only permitted update 
+    is to end the loan.
 
-    Currently, the only permitted update is to return it.
+    :param fqdn: The system's fully-qualified domain name.
+    :jsonparam string finish: Must be the string ``now``, indicating that the 
+      reservation should end now. The system will be returned.
     """
     system = _get_system_by_FQDN(fqdn)
     data = read_json_request(request)
@@ -695,8 +810,19 @@ def update_loan(fqdn):
             raise ValueError("Loan durations are not yet configurable")
     return jsonify(system.get_loan_details())
 
+# For compat only. Separate function so that it doesn't appear in the docs.
+@app.route('/systems/<fqdn>/loans/+current', methods=['PUT'])
+def update_loan_put(fqdn):
+    return update_loan(fqdn)
+
 @app.route('/systems/<fqdn>/access-policy', methods=['GET'])
 def get_system_access_policy(fqdn):
+    """
+    Returns the access policy for a system, including all the rules making up 
+    the policy.
+
+    :param fqdn: The system's fully-qualified domain name.
+    """
     # XXX need to consolidate this with SystemAccessPolicy.__json__
     # (maybe get rid of filtering here and implement it client side instead)
     system = _get_system_by_FQDN(fqdn)
@@ -743,6 +869,14 @@ def get_system_access_policy(fqdn):
 @app.route('/systems/<fqdn>/access-policy', methods=['POST', 'PUT'])
 @auth_required
 def save_system_access_policy(fqdn):
+    """
+    Updates the access policy for a system.
+
+    :param fqdn: The system's fully-qualified domain name.
+    :jsonparam array rules: List of rules to include in the new policy. This 
+      replaces all existing rules in the policy. Each rule is a JSON object 
+      with ``user``, ``group``, and ``everybody`` keys.
+    """
     system = _get_system_by_FQDN(fqdn)
     if not system.can_edit_policy(identity.current.user):
         raise Forbidden403('Cannot edit system policy')
@@ -787,6 +921,23 @@ def save_system_access_policy(fqdn):
 @app.route('/systems/<fqdn>/access-policy/rules/', methods=['POST'])
 @auth_required
 def add_system_access_policy_rule(fqdn):
+    """
+    Adds a new rule to the access policy for a system. Each rule in the policy 
+    grants a permission to a single user, a group of users, or to everybody.
+
+    :param fqdn: The system's fully-qualified domain name.
+    :jsonparam string permission: Name of the permission to grant. See 
+      :ref:`system-access-policies`.
+    :jsonparam string user: User name of the user to whom the permission is 
+      granted.
+    :jsonparam string group: Name of the group to which the permission is 
+      granted.
+    :jsonparam bool everybody: If true, the permission is granted to everybody.
+
+    A rule can only apply to a user, or a group, or everybody, therefore the 
+    ``user``, ``group``, and ``everybody`` keys are mutually exclusive. It is 
+    invalid for more than one of them to be non-``null``.
+    """
     system = _get_system_by_FQDN(fqdn)
     if not system.can_edit_policy(identity.current.user):
         raise Forbidden403('Cannot edit system policy')
@@ -846,6 +997,20 @@ def get_system_status(fqdn):
 @app.route('/systems/<fqdn>/access-policy/rules/', methods=['DELETE'])
 @auth_required
 def delete_system_access_policy_rules(fqdn):
+    """
+    Deletes one or more matching rules from a system's access policy.
+
+    :param fqdn: The system's fully-qualified domain name.
+    :queryparam permission: Delete rules which grant the named permission. See 
+      :ref:`system-access-policies`.
+    :queryparam user: Delete rules which apply to the user with this username.
+    :queryparam group: Delete rules which apply to this group.
+    :queryparam everybody: Delete rules which apply to everybody. The value of 
+      this parameter is ignored.
+    :status 204: Matching rules have been deleted.
+    :status 405: The DELETE method is not allowed with no query string 
+      arguments.
+    """
     system = _get_system_by_FQDN(fqdn)
     if not system.can_edit_policy(identity.current.user):
         raise Forbidden403('Cannot edit system policy')
@@ -878,6 +1043,23 @@ def delete_system_access_policy_rules(fqdn):
 
 @app.route('/systems/<fqdn>/installations/', methods=['POST'])
 def provision_system(fqdn):
+    """
+    Instructs Beaker to begin provisioning a system (installing an operating 
+    system).
+
+    :param fqdn: The system's fully-qualified domain name.
+    :jsonparam object distro_tree: JSON object containing an ``id`` key 
+      identifying the distro tree to be provisionied.
+    :jsonparam string ks_meta: Kickstart metadata variables. See 
+      :ref:`kickstart-metadata`.
+    :jsonparam string koptions: Kernel options to be passed to the installer. 
+      See :ref:`kernel-options`.
+    :jsonparam string koptions_post: Kernel options to be configured after 
+      installation.
+    :jsonparam boolean reboot: If true, the system will be rebooted immediately 
+      after the installer netboot configuration has been set up.
+    :status 201: The installation has been successfully enqueued.
+    """
     system = _get_system_by_FQDN(fqdn)
     if not system.can_configure_netboot(identity.current.user):
         raise Forbidden403('Cannot provision system')
@@ -922,6 +1104,36 @@ def provision_system(fqdn):
     'status': CommandActivity.status,
 })
 def get_system_command_queue(fqdn):
+    """
+    Returns a pageable JSON collection of the power commands for a system. 
+    Refer to :ref:`pageable-json-collections`.
+
+    The following fields are supported for filtering and sorting:
+
+    ``user``
+        Username of the user who performed the action.
+    ``user.user_name``
+        Username of the user who performed the action.
+    ``user.email_address``
+        Email address of the user who performed the action.
+    ``user.display_name``
+        Full display name of the user who performed the action.
+    ``service``
+        Service through which the power command was submitted. Usually this is 
+        ``XMLRPC``, ``HTTP``, or ``Scheduler``.
+    ``submitted``
+        Timestamp at which the command was submitted.
+    ``action``
+        Power action to be performed: ``on``, ``off``, ``interrupt``, 
+        ``clear_netboot``, ``configure_netboot``, ``truncate_logs``.
+    ``status``
+        Status of this command: ``Queued``, ``Running``, ``Completed``, 
+        ``Failed``, ``Aborted``.
+    ``message``
+        If the command is failed or aborted, the message gives further 
+        information. For queued, running, and completed commands the message is 
+        empty.
+    """
     system = _get_system_by_FQDN(fqdn)
     query = system.dyn_command_queue
     # outerjoin user for sorting/filtering and also for eager loading
@@ -932,6 +1144,14 @@ def get_system_command_queue(fqdn):
 @app.route('/systems/<fqdn>/commands/', methods=['POST'])
 @auth_required
 def system_command(fqdn):
+    """
+    Queues a power command for a system. After a command is queued the lab 
+    controller will pick it up and execute it.
+
+    :param fqdn: The system's fully-qualified domain name.
+    :jsonparam string action: Action to be queued: ``on``, ``off``, 
+      ``interrupt``, ``clear_netboot``.
+    """
     system = _get_system_by_FQDN(fqdn)
     if not system.lab_controller:
         raise BadRequest400('System is not attached to a lab controller')
@@ -976,6 +1196,34 @@ def system_command(fqdn):
     'new_value': SystemActivity.new_value,
 })
 def get_system_activity(fqdn):
+    """
+    Returns a pageable JSON collection of the historical activity records for 
+    a system. Refer to :ref:`pageable-json-collections`.
+
+    The following fields are supported for filtering and sorting:
+
+    ``user``
+        Username of the user who performed the action.
+    ``user.user_name``
+        Username of the user who performed the action.
+    ``user.email_address``
+        Email address of the user who performed the action.
+    ``user.display_name``
+        Full display name of the user who performed the action.
+    ``service``
+        Service through which the action was performed. Usually this is 
+        ``XMLRPC``, ``WEBUI``, ``HTTP``, or ``Scheduler``.
+    ``created``
+        Timestamp at which the activity was recorded.
+    ``action``
+        Action which was recorded.
+    ``field_name``
+        Field in the system data which was affected by the action.
+    ``old_value``
+        Previous value of the field before the action was performed (if applicable).
+    ``new_value``
+        New value of the field after the action was performed (if applicable).
+    """
     system = _get_system_by_FQDN(fqdn)
     query = system.dyn_activity
     # outerjoin user for sorting/filtering and also for eager loading
