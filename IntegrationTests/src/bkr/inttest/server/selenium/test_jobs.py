@@ -716,6 +716,35 @@ class NewJobTest(WebDriverTestCase):
         flash_message = b.find_element_by_class_name('flash').text
         self.assert_(flash_message.startswith('Success!'), flash_message)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1171936
+    def test_useful_error_message_on_ksmeta_syntax_error(self):
+        b = self.browser
+        login(b)
+        b.get(get_server_base())
+        click_menu_item(b, 'Scheduler', 'New Job')
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write('''
+            <job>
+                <whiteboard>job with ksmeta syntax error</whiteboard>
+                <recipeSet>
+                    <recipe ks_meta="'">
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        xml_file.flush()
+        b.find_element_by_id('jobs_filexml').send_keys(xml_file.name)
+        b.find_element_by_xpath('//button[text()="Submit Data"]').click()
+        b.find_element_by_xpath('//button[text()="Queue"]').click()
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                'Failed to import job because of: '
+                'Error parsing ks_meta: No closing quotation')
+
 
 class JobAttributeChangeTest(WebDriverTestCase):
 
