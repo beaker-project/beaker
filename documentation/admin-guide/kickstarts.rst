@@ -108,9 +108,9 @@ override these if necessary.
     added by Anaconda rather than booting from the network. See
     :ref:`boot-order-details` for more information.
 
-   .. versionadded:: 0.14.4
-      The boot order adjustment was moved to its own snippet, allowing it
-      to be overridden without replacing the entirety of rhts_post.
+    .. versionadded:: 0.14.4
+       The boot order adjustment was moved to its own snippet, allowing it
+       to be overridden without replacing the entirety of rhts_post.
 
 ``install_method``
     Provides the ``url`` or ``nfs`` kickstart command which tells
@@ -176,31 +176,31 @@ unless customized by the administrator:
 
 .. _override-kickstarts:
 
-Overridding kickstart snippets
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Overriding kickstart snippets
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 When a snippet is included in a kickstart template, Beaker tries to load
 the snippet from the following locations on the server’s filesystem, in
 order:
 
--  ``/etc/beaker/snippets/per_system/<snippet_name>/<system_fqdn>``
+- :file:`/etc/beaker/snippets/per_system/{snippet_name}/{system_fqdn}`
 
--  ``/etc/beaker/snippets/per_lab/<snippet_name>/<labcontroller_fqdn>``
+- :file:`/etc/beaker/snippets/per_lab/{snippet_name}/{labcontroller_fqdn}`
 
--  ``/etc/beaker/snippets/per_osversion/<snippet_name>/<distro_version>``
+- :file:`/etc/beaker/snippets/per_osversion/{snippet_name}/{distro_version}`
 
--  ``/etc/beaker/snippets/per_osmajor/<snippet_name>/<distro_major_version>``
+- :file:`/etc/beaker/snippets/per_osmajor/{snippet_name}/{distro_major_version}`
 
--  ``/etc/beaker/snippets/<snippet_name>``
+- :file:`/etc/beaker/snippets/{snippet_name}`
 
--  ``/usr/lib/python2.6/site-packages/bkr/server/snippets/<snippet_name>``
+- :file:`/usr/lib/python2.6/site-packages/bkr/server/snippets/{snippet_name}`
 
 This allows administrators to customize Beaker kickstarts at whatever
 level is necessary.
 
 For example, if the system host01.example.com needs to use a network
 interface other than the default, the following snippet could be placed
-in ``/etc/beaker/snippets/per_system/network/host01.example.com``:
+in :file:`/etc/beaker/snippets/per_system/network/host01.example.com`:
 
 ::
 
