@@ -919,9 +919,9 @@ class XmlArch(ElementWrapper):
             except ValueError:
                 return (joins, None)
             if op == '__eq__':
-                query = System.arch.contains(arch)
+                query = System.arch.any(Arch.id == arch.id)
             else:
-                query = not_(System.arch.contains(arch))
+                query = not_(System.arch.any(Arch.id == arch.id))
         return (joins, query)
 
     def filter_openstack_flavors(self, flavors, lab_controllers):
