@@ -209,69 +209,110 @@ in :file:`/etc/beaker/snippets/per_system/network/host01.example.com`:
 Writing kickstart templates
 ---------------------------
 
-All kickstart metadata variables are exposed as template variables. The
-``system``, ``distro``, ``distro_tree``, ``user``, and ``recipe``
-variables are the corresponding Beaker model objects loaded from the
-database. (User templates do not have access to these model objects.)
+Kickstart templates and snippets are rendered using the same mechanism as 
+custom kickstart templates from a recipe. Refer to :ref:`custom-kickstarts`.
 
-In addition to the built-in template constructs provided by Jinja, the
-following utilities are available in templates:
+Some extra variables are also available to system templates (that is, templates 
+loaded from disk rather than submitted by users):
 
-``end``
-    A variable which contains the string ``%end`` if the version of
-    Anaconda requires it, otherwise undefined. For compatibility across
-    all Anaconda versions, templates should always terminate sections
-    with this variable. For example:
+.. py:data:: config
 
-    ::
+   The Beaker configuration. Call ``config.get(name, default=None)`` to look up 
+   values in Beaker's application-wide configuration.
 
-        %post
-        echo "All done."
-        {{ end }}
+.. py:data:: distro
 
-``parsed_url``
-    A Jinja filter which parses a URL using :py:func:`urlparse.urlparse`.
+   The distro which is being provisioned. This object has the following 
+   attributes:
 
-``re``
-    The Python :py:mod:`re` module, for evaluating regular expressions.
+   ``name``
+        Name of the distro, for example "Fedora-Server-21_Alpha".
 
-``snippet``
-    A function which evaluates the named snippet and returns the result.
-    If no template is found for the snippet, returns a comment to that
-    effect.
+   ``osversion``
+        Object representing the distro's version.
 
-``split``
-    A Jinja filter which splits on whitespace, or any other delimiter.
-    See :py:func:`string.split`.
+   ``osversion.osminor``
+        OS minor version (the portion after the first period).
 
-``arch``; ``osmajor``; ``osversion``
-    These are Jinja tests which can be applied to ``distro_tree``. Each
-    takes multiple arguments, and evaluates to true if the distro tree
-    matches one of the arguments. For example:
+   ``osversion.osmajor``
+        Object representing the OS major version.
 
-    ::
+   ``osversion.osmajor.name``
+        Name portion of the OS major version, for example "Fedora".
+    
+   ``osversion.osmajor.number``
+        Numerical portion of the OS major version, for example "21". Note that 
+        this is a string, not an integer, because it might be "rawhide".
 
-        {% if distro_tree is arch('s390', 's390x') %}
-        <...>
+   ``osversion.osmajor.osmajor``
+        Complete OS major version string, for example "Fedora21".
 
-        {% if distro is osversion('RedHatEnterpriseLinux6.0') %}
-        <...>
+.. py:data:: distro_tree
 
-        {% if distro is osmajor('RedHatEnterpriseLinux3', 'RedHatEnterpriseLinux4') %}
-        <...>
+   The distro tree which is being provisioned. This object has the following 
+   attributes:
 
-``urljoin``
-    A Jinja filter which resolves a relative URL against a base URL. For
-    example:
+   ``arch``
+        Object representing the CPU architecture which this tree was built for.
 
-    ::
+   ``arch.arch``
+        Name of the CPU architecture which this tree was built for, for example 
+        "x86_64".
 
-        {{ 'http://example.com/distros/'|urljoin('RHEL-6.2/') }}
+   ``url_in_lab(lab_controller)``
+        A method which returns a URL for this distro tree in the given lab.
 
-    will evaluate to ``http://example.com/distros/RHEL-6.2/`` in the
-    kickstart.
+   ``variant``
+        Name of the distro variant, for example "Server". This may also be 
+        empty.
 
-``var``
-    A function which looks up a variable by name.
+.. py:data:: ks_appends
 
+   List of string containing extra kickstart content supplied by the job 
+   submitter in the ``<ks_appends/>`` element.
 
+.. py:data:: lab_controller
+
+   The lab controller where the system is being provisioned.
+
+   ``fqdn``
+        The fully-qualified domain name of the lab controller.
+
+.. py:data:: recipe
+
+   The recipe which is being provisioned. If the kickstart is for a system 
+   which is being manually provisioned (using the :guilabel:`Provision` tab on 
+   the system page) then this variable will be None.
+
+   This object has the following attributes:
+
+   ``id``
+        Database identifier of the recipe.
+
+.. py:data:: system
+
+   The system which is being provisioned. This object has the following 
+   attributes:
+
+   ``fqdn``
+        The fully-qualified domain name of the system.
+
+   ``has_efi``
+        True if the system has EFI firmware. Only valid for x86.
+
+   ``owner``
+        A user object representing the system owner.
+
+.. py:data:: user
+
+   A user object representing the job owner. This object has the following 
+   attributes:
+
+   ``display_name``
+        Full display name of the job owner.
+
+   ``email_address``
+        Email address of the job owner.
+
+   ``user_name``
+        Username of the job owner.

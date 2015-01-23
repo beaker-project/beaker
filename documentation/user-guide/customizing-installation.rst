@@ -4,11 +4,6 @@ Customizing the installation
 Beaker provides a number of ways to customize the distro installation which 
 happens at the start of each recipe.
 
-.. todo::
-
-   Describe other ways of customizing the installation, including custom 
-   kickstart templates, ks= arg, admin snippets,...
-
 .. _install-options:
 
 Install options
@@ -48,6 +43,15 @@ Refer to the distro documentation for details about kernel options supported by
 the installer.
 
 The following kernel options are treated specially by Beaker:
+
+``ks=<url>``
+    This option is passed as-is on the kernel command line. It specifies the 
+    kickstart file for Anaconda.
+
+    Beaker performs no extra processing on this kernel option, however if it is 
+    present Beaker skips all of the normal mechanisms for kickstart generation 
+    using templates and variables (described below). The kickstart used for 
+    provisioning will be the one given in this option.
 
 ``initrd=<tftp path>``
     Extra initrd/initramfs image to load, in addition to the initrd image for 
@@ -387,3 +391,156 @@ overridden if necessary for custom distros.
 ``yum``
     Unset, except on older distros which require the yum package to be fetched 
     and installed.
+
+Appended kickstart content
+--------------------------
+
+In your job XML you can specify extra content to be appended to the generated 
+kickstart, using the ``<ks_appends/>`` element. For example::
+
+    <recipe>
+        ...
+        <ks_appends>
+            <ks_append><![CDATA[
+    %post
+    echo "This is my extra %post script"
+    %end
+            ]]></ks_append>
+        </ks_appends>
+    </recipe>
+
+.. _custom-kickstarts:
+
+Custom kickstart templates
+--------------------------
+
+You can also specify a complete kickstart template in your job XML, using the 
+``<kickstart/>`` element. Note that if a custom template is supplied, the other 
+customization mechanisms described above (``ksmeta=`` and ``<ks_appends/>``) 
+will have no effect, unless the custom template also obeys those 
+customizations.
+
+Beaker’s kickstart templates are written in the Jinja2 templating language. 
+Refer to the `Jinja2 documentation <http://jinja.pocoo.org/docs/>`_ for details 
+of the template syntax and built-in constructs which are available to all 
+templates.
+
+All kickstart metadata variables are available to the kickstart template. That 
+includes variables set on the recipe, the system, the distro, the OS major, and 
+system-wide in the Beaker configuration. It also includes distro feature 
+variables (see :ref:`kickstart-metadata-distro-features` above) which are 
+particularly useful in kickstart templates for handling differences between 
+distros and versions.
+
+A number of additional Beaker-specific Jinja filters, tests, and variables are 
+defined in the template environment. They are described below.
+
+Jinja filters
+~~~~~~~~~~~~~
+
+.. py:function:: dictsplit(delim=',', pairsep=':')
+
+   Returns a dict based on a sequence of key-value pairs encoded in a string,
+   like this::
+
+        type:mdraid,part:swap,size:256
+
+.. py:function:: parsed_url
+
+   Parses a URL using :py:func:`urlparse.urlparse`.
+
+.. py:function:: shell_quoted
+
+   Quotes a string using :py:func:`pipes.quote`, suitable for interpolation as 
+   an argument into a shell command.
+
+.. py:function:: split(delim=None)
+
+   Splits on whitespace, or the given delimiter. See :py:func:`string.split`.
+
+.. py:function:: urljoin(relativeurl)
+
+   Resolves a relative URL against a base URL. For example::
+
+        {{ 'http://example.com/distros/'|urljoin('RHEL-6.2/') }}
+
+   will evaluate to ``http://example.com/distros/RHEL-6.2/`` in the kickstart.
+
+Jinja tests
+~~~~~~~~~~~
+
+.. py:function:: arch(arch, ...)
+
+   Tests whether a distro tree's arch matches any of the given arches. For 
+   example::
+
+        {% if distro_tree is arch('i386', 'x86_64') %}
+
+.. py:function:: osmajor(osmajor, ...)
+
+   Tests whether a distro matches any of the given OS major names. For 
+   example::
+
+        {% if distro is osmajor('CentOS6', 'RedHatEnterpriseLinux6') %}
+
+   In most cases it is preferable to use a distro feature variable rather than 
+   hard-coding all possible OS major names.
+
+.. py:function:: osversion(osversion, ...)
+
+   Tests whether a distro matches any of the given OS versions. For example::
+
+        {% if distro is osversion('CentOS6.0', 'RedHatEnterpriseLinux6.0') %}
+
+Template variables
+~~~~~~~~~~~~~~~~~~
+
+.. py:function:: absolute_url(path, **kwargs)
+
+   A function which returns the absolute URL to the given path within the 
+   Beaker application. *kwargs* are converted to query parameters.
+
+.. py:function:: chr(i)
+
+   The built-in :py:mod:`chr` function, which returns a byte with the given 
+   integer value.
+
+.. py:data:: job_whiteboard
+
+   The value of the job whiteboard.
+
+.. py:data:: kernel_options_post
+
+   Post-install kernel options from the install options.
+
+.. py:data:: netaddr
+
+   The Python `netaddr <https://pythonhosted.org/netaddr/>`_ module for 
+   manipulating network addresses.
+
+.. py:function:: ord(c)
+
+   The built-in :py:mod:`ord` function, which returns the integer ordinal of 
+   the given character.
+
+.. py:data:: re
+
+   The Python :py:mod:`re` module, for evaluating regular expressions.
+
+.. py:data:: recipe_whiteboard
+
+   The value of the recipe whiteboard.
+
+.. py:function:: snippet(name)
+
+   A function which evaluates the named snippet and returns the result. If no 
+   template is found for the snippet, returns a comment to that effect.
+
+   This is also available as a Jinja statement, for example::
+
+        {% snippet 'network' %}
+
+.. py:function:: var(name)
+
+   A function which returns the value of the template variable with the given 
+   name.
