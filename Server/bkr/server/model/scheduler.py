@@ -3357,7 +3357,7 @@ class RecipeResource(DeclarativeMappedObject):
             nullable=False, unique=True)
     recipe = relationship(Recipe, back_populates='resource')
     type = Column(ResourceType.db_type(), nullable=False)
-    fqdn = Column(Unicode(255), default=None)
+    fqdn = Column(Unicode(255), default=None, index=True)
     rebooted = Column(DateTime, nullable=True, default=None)
     install_started = Column(DateTime, nullable=True, default=None)
     install_finished = Column(DateTime, nullable=True, default=None)
