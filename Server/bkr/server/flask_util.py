@@ -36,7 +36,7 @@ def json_collection(columns=None, min_page_size=20, max_page_size=500,
                 query = query.filter(lucene_to_sqlalchemy(request.args['q'],
                         search_columns=columns,
                         default_columns=set(columns.values())))
-            total_count = query.count()
+            total_count = query.order_by(None).count()
             result['count'] = total_count
             if request.args.get('sort_by') in columns:
                 result['sort_by'] = request.args['sort_by']
