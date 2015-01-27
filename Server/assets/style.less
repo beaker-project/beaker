@@ -265,6 +265,21 @@ input.tt-hint {
     box-shadow: 0px 2px 14px rgba(50, 50, 50, 0.5);
 }
 
+// simulate Bootstrap 3 list group
+.list-group {
+    margin-left: 0px;
+    margin-bottom: 20px;
+    li {
+        position: relative;
+        display: block;
+        padding: 10px 15px;
+        // Place the border on the list items and negative margin up for better styling
+        margin-bottom: -1px;
+        background-color: @white;
+        border: 1px solid #ddd;
+    }
+}
+
 @import "master.less";
 @import "system.less";
 @import "job.less";

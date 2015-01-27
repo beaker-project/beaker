@@ -19,7 +19,7 @@ window.SystemOwnerView = Backbone.View.extend({
     render: function () {
         this.$el.html(this.template(this.model.attributes));
         if (this.model.get('can_change_notify_cc')) {
-            this.$('.system-notify-cc').append(
+            this.$('.system-notify-cc').after(
                 new SystemAddCcForm({model: this.model}).el);
         }
     },
@@ -27,13 +27,13 @@ window.SystemOwnerView = Backbone.View.extend({
         new SystemOwnerChangeModal({model: this.model});
     },
     remove_cc: function (evt) {
-        $(evt.currentTarget).after(
-                ' <i class="fa fa-spinner fa-spin"></i> Removing&hellip;');
+        $(evt.currentTarget).button('loading');
         this.model.remove_cc($(evt.currentTarget).data('cc'),
             {error: _.bind(this.remove_cc_error, this)});
         evt.preventDefault();
     },
     remove_cc_error: function (model, xhr) {
+        $(evt.currentTarget).button('reset');
         this.$el.append(
             $('<div class="alert alert-error"/>')
             .text(xhr.statusText + ': ' + xhr.responseText));
@@ -41,7 +41,6 @@ window.SystemOwnerView = Backbone.View.extend({
 });
 
 var SystemAddCcForm = Backbone.View.extend({
-    tagName: 'li',
     template: JST['system-add-cc'],
     events: {
         'change input[name=cc]': 'update_button_state',

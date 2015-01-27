@@ -7,18 +7,19 @@
 </p>
 <p>
   Notifications sent to the owner will be copied to these addresses:
-  <% /* Bootstrap 3 list group would be handy here */ %>
-  <ul class="system-notify-cc">
+</p>
+<div>
+  <% if (_.isEmpty(notify_cc)) { %>
+    (none)
+  <% } %>
+  <ul class="list-group system-notify-cc">
     <% _.each(notify_cc, function (cc_email) { %>
       <li>
         <%- cc_email %>
         <% if (can_change_notify_cc) { %>
-          <a href="#" class="cc-remove" data-cc="<%- cc_email %>" title="Remove"><i class="fa fa-times-circle-o"></i></a>
+          <button type="button" class="btn cc-remove" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Removing&hellip;" data-cc="<%- cc_email %>"><i class="fa fa-times"></i> Remove</button>
         <% } %>
       </li>
     <% }) %>
-    <% if (_.isEmpty(notify_cc)) { %>
-      <li>(none)</li>
-    <% } %>
   </ul>
-</p>
+</div>

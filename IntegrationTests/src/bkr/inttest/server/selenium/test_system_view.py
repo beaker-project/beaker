@@ -925,10 +925,10 @@ class SystemViewTestWD(WebDriverTestCase):
         self.go_to_system_view(tab='Owner')
         tab = b.find_element_by_id('owner')
         tab.find_element_by_xpath('.//li[contains(text(), "roy.baty@pkd.com")]'
-                '/a[@title="Remove"]').click()
+                '/button[contains(text(), "Remove")]').click()
         tab.find_element_by_xpath('.//ul[not(./li[contains(text(), "roy.baty@pkd.com")])]')
         tab.find_element_by_xpath('.//li[contains(text(), "deckard@police.gov")]'
-                '/a[@title="Remove"]').click()
+                '/button[contains(text(), "Remove")]').click()
         tab.find_element_by_xpath('.//ul[not(./li[contains(text(), "deckard@police.gov")])]')
         with session.begin():
             session.refresh(self.system)
