@@ -11,6 +11,10 @@
 
 ;(function () {
 
+// use no confict mode
+var datepicker = $.fn.datepicker.noConflict();
+$.fn.bootstrapDP = datepicker;
+
 var QueryBuilderRow = Backbone.View.extend({
     tagName: 'div',
     className: 'query-builder-row',
@@ -41,9 +45,9 @@ var QueryBuilderRow = Backbone.View.extend({
                 function () { return _.contains(disabled_operators, this.value); });
         // Use datepicker if it's a date field.
         if (column.cell == BackgridDateTimeCell)
-            this.$('[name=value]').datepicker({autoclose: true, format: 'yyyy-mm-dd'});
+            this.$('[name=value]').bootstrapDP({autoclose: true, format: 'yyyy-mm-dd'});
         else
-            this.$('[name=value]').datepicker('remove');
+            this.$('[name=value]').bootstrapDP('remove');
     },
     operator_changed: function (evt) {
         var selected_operator = this.$('[name=operator]').val();
