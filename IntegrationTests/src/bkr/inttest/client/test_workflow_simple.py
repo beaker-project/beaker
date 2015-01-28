@@ -184,6 +184,15 @@ class WorkflowSimpleTest(ClientTestCase):
                 '--task', self.task.name])
         self.assertIn('<device vendor_id="8086"/>', out)
 
+    def test_reserve(self):
+        out = run_client(['bkr', 'workflow-simple',
+                '--dry-run', '--pretty-xml',
+                '--arch', self.distro_tree.arch.arch,
+                '--family', self.distro.osversion.osmajor.osmajor,
+                '--task', self.task.name,
+                '--reserve', '--reserve-duration', '3600'])
+        self.assertIn('<reservesys duration="3600"/>', out)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1095026
     def test_machine_ignore_other_options(self):
         p = start_client(['bkr', 'workflow-simple',

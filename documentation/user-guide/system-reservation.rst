@@ -116,6 +116,8 @@ the two scripts accessible from your shell. These changes
 are in addition to the RPM packages installed to meet the
 dependencies for the task.
 
+.. _reservesys:
+
 Using the ``<reservesys/>`` element
 -----------------------------------
 

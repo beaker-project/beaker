@@ -356,6 +356,14 @@ class BeakerWorkflow(BeakerCommand):
             help="Do not abort job if panic message appears on serial console",
         )
         job_options.add_option(
+            "--reserve", action="store_true",
+            help="Reserve system at the end of the recipe",
+        )
+        job_options.add_option(
+            "--reserve-duration", metavar="SECONDS",
+            help="Release system automatically SECONDS after being reserved [default: 24 hours]",
+        )
+        job_options.add_option(
             "--cc",
             default=[],
             action="append",
@@ -536,6 +544,8 @@ class BeakerWorkflow(BeakerCommand):
                          arch=None,
                          whiteboard=None,
                          install=None,
+                         reserve=None,
+                         reserve_duration=None,
                          **kwargs):
         """ add tasks and additional requires to our template """
         actualTasks = []
@@ -543,7 +553,7 @@ class BeakerWorkflow(BeakerCommand):
             if arch not in task['arches']:
                 actualTasks.append(task['name'])
         # Don't create empty recipes
-        if actualTasks:
+        if actualTasks or reserve:
             # Copy basic requirements
             recipe = recipeTemplate.clone()
             if whiteboard:
@@ -568,6 +578,8 @@ class BeakerWorkflow(BeakerCommand):
                 recipe.addTask('/kernel/networking/kdump')
             for task in actualTasks:
                 recipe.addTask(task, role=role, taskParams=taskParams)
+            if reserve:
+                recipe.addReservesys(duration=reserve_duration)
             # process kickstart template if given
             ksTemplate = kwargs.get("kickstart", None)
             if ksTemplate:
@@ -867,6 +879,12 @@ EOF
             params.appendChild(param)
         recipeTask.appendChild(params)
         self.node.appendChild(recipeTask)
+
+    def addReservesys(self, duration=None):
+        reservesys = self.doc.createElement('reservesys')
+        if duration:
+            reservesys.setAttribute('duration', duration)
+        self.node.appendChild(reservesys)
 
     def addPartition(self,name=None, type=None, fs=None, size=None):
         """ add a partition node

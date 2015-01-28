@@ -281,6 +281,17 @@ Options for job configuration:
    this option is given, the messages are ignored and the recipe is not 
    aborted.
 
+.. option:: --reserve
+
+   Reserve the system at the end of the recipe, for further testing or 
+   examination. The system will be reserved when all tasks have completed 
+   executing, or if the recipe ends abnormally. Refer to :ref:`reservesys`.
+
+.. option:: --reserve-duration <seconds>
+
+   When :option:`--reserve` is used, this option controls the duration for the 
+   reservation. The default duration is 86400 seconds (24 hours).
+
 .. option:: --cc <email>
 
    Add <email> to the cc list for the job(s). The cc list will receive the job 
