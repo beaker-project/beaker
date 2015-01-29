@@ -145,6 +145,13 @@ correspond to the similarly-named kickstart option.
     Note that the network device used for installation is always set to start 
     on boot with DHCP activation.
 
+``conflicts_groups``
+    This is a list of comps.xml group ids (without the @ symbol) which contain 
+    packages conflicting with the rest of the package set, e.g. Samba 3 vs. 
+    Samba 4. Empty list is a valid value as well so templates can iterate over 
+    the list without testing if the variable has been defined. Usually 
+    applicable for RHEL and CentOS.
+
 ``contained_harness``
     If specified, runs the test harness and hence the tasks in a Docker
     container. The test harness to be run defaults to "restraint". A

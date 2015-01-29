@@ -750,6 +750,23 @@ class DistroTree(DeclarativeMappedObject, ActivityMixin):
             netbootloader['ppc64'] = 'yaboot'
             netbootloader['ppc64le'] = 'yaboot'
 
+        conflicts = {'conflicts_groups' : []}
+        if name in ('RedHatEnterpriseLinux', 'RedHatEnterpriseLinuxServer',
+            'RedHatEnterpriseLinuxClient'):
+            if int(rhel) >= 5:
+                conflicts['conflicts_groups'] = ["conflicts"]
+
+            if (int(rhel) >= 6) and self.variant:
+                conflicts['conflicts_groups'] = ["conflicts-%s" % self.variant.lower()]
+
+        if (name == 'CentOS') and (int(rhel) >= 6):
+            conflicts['conflicts_groups'] = [
+                                                "conflicts-client",
+                                                "conflicts-server",
+                                                "conflicts-workstation",
+                                            ]
+        yield InstallOptions(conflicts, {}, {})
+
         # for s390, s390x and armhfp, we default to ''
         kernel_options = {'netbootloader': netbootloader.get(self.arch.arch, '')}
         yield InstallOptions({}, kernel_options, {})

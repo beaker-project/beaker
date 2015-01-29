@@ -194,6 +194,16 @@ class KickstartTest(unittest.TestCase):
                 DistroTreeRepo(repo_id=u'repos_Server', repo_type=u'os', path=u'.'),
             ]
 
+            cls.centos7 = data_setup.create_distro(name=u'CentOS-7',
+                osmajor=u'CentOS7', osminor=u'0')
+            cls.centos7_x86_64 = data_setup.create_distro_tree(
+                distro=cls.centos7, variant=u'', arch=u'x86_64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/CentOS-7/os/x86_64/'])
+            cls.centos7_x86_64.repos[:] = [
+                DistroTreeRepo(repo_id=u'distro', repo_type=u'distro', path=u'.'),
+            ]
+
             cls.f17 = data_setup.create_distro(name=u'Fedora-17',
                 osmajor=u'Fedora17', osminor=u'0')
             cls.f17_armhfp = data_setup.create_distro_tree(
@@ -1801,6 +1811,144 @@ install
 # conditional using osmajor name and number is true
 # variant test is true
 # tree url is http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/
+''', ks)
+
+    def test_custom_kickstart_rhel5_with_conflicts_groups(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL5-Server-U8" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <kickstart><![CDATA[
+install
+%packages
+*
+{% for group in conflicts_groups %}
+-@{{ group }}
+{% endfor %}
+%end
+                        ]]></kickstart>
+                        <task name="/distribution/utils/dummy" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        ks = recipe.rendered_kickstart.kickstart
+        self.assertIn('''\
+install
+%packages
+*
+-@conflicts
+%end
+''', ks)
+
+    def test_custom_kickstart_rhel7_with_conflicts_groups(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <kickstart><![CDATA[
+install
+%packages
+*
+{% for group in conflicts_groups %}
+-@{{ group }}
+{% endfor %}
+%end
+                        ]]></kickstart>
+                        <task name="/distribution/utils/dummy" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        ks = recipe.rendered_kickstart.kickstart
+        self.assertIn('''\
+install
+%packages
+*
+-@conflicts-workstation
+%end
+''', ks)
+
+    def test_custom_kickstart_centos7_with_conflicts_groups(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="CentOS-7" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <kickstart><![CDATA[
+install
+%packages
+*
+{% for group in conflicts_groups %}
+-@{{ group }}
+{% endfor %}
+%end
+                        ]]></kickstart>
+                        <task name="/distribution/utils/dummy" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        ks = recipe.rendered_kickstart.kickstart
+        self.assertIn('''\
+install
+%packages
+*
+-@conflicts-client
+-@conflicts-server
+-@conflicts-workstation
+%end
+''', ks)
+
+    def test_custom_kickstart_fedora_without_conflicts_groups(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-18" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <kickstart><![CDATA[
+install
+%packages
+*
+{% for group in conflicts_groups %}
+-{{ group }}
+{% endfor %}
+%end
+                        ]]></kickstart>
+                        <task name="/distribution/utils/dummy" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        ks = recipe.rendered_kickstart.kickstart
+        self.assertIn('''\
+install
+%packages
+*
+%end
 ''', ks)
 
     def test_no_debug_repos(self):
