@@ -666,6 +666,30 @@ class SystemFilteringTest(DatabaseTestCase):
         # but when it's 926127 instead of 278, that's bad
         self.assertEquals(query.count(), 1)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1183239
+    def test_arch_inside_or(self):
+        # The bug was that <arch/> inside <or/> with other conditions would 
+        # produce a cartesian product where the join condition was on one side 
+        # of the OR, leading to a row explosion (similar to the case above).
+        lc = data_setup.create_labcontroller(fqdn=u'bz1183239.lab')
+        data_setup.create_system(lab_controller=lc, arch=[u'i386', u'x86_64'])
+        session.flush()
+        filter = """
+            <hostRequires>
+                <labcontroller value="bz1183239.lab" />
+                <or>
+                    <system><arch value="i386" /></system>
+                    <hostname op="!=" value="blerch" />
+                </or>
+            </hostRequires>
+            """
+        query = XmlHost.from_string(filter).apply_filter(System.query)
+        self.assertEquals(len(query.all()), 1)
+        # with the bug this count comes out as 2 instead of 1,
+        # which doesn't sound so bad...
+        # but when it's 30575826 instead of 4131, that's bad
+        self.assertEquals(query.count(), 1)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=824050
     def test_multiple_nonexistent_keys(self):
         filter = """

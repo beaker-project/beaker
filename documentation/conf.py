@@ -1,6 +1,6 @@
 
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinx.ext.todo',
-    'sphinxcontrib.httpdomain']
+    'sphinxcontrib.httpdomain', 'sphinxcontrib.autohttp.flask']
 master_doc = 'index'
 project = u'Beaker'
 copyright = u'2013, Red Hat, Inc'
