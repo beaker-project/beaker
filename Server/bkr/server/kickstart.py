@@ -93,6 +93,43 @@ class TemplateRenderingEnvironment(object):
         session.rollback()
         #identity.set_current_identity(self.saved_identity)
 
+# For user-supplied templates we only expose these "fake" objects which wrap 
+# real model objects, providing only safe documented attributes. Otherwise 
+# users could invoke arbitrary methods on the model objects which we don't 
+# want. Server templates (controlled by the admin) on the other hand have 
+# access to the real model objects because it is more powerful.
+class RestrictedOSMajor(object):
+    def __init__(self, osmajor):
+        self.osmajor = unicode(osmajor.osmajor)
+        self.name = unicode(osmajor.name)
+        self.number = unicode(osmajor.number)
+class RestrictedOSVersion(object):
+    def __init__(self, osversion):
+        self.osmajor = RestrictedOSMajor(osversion.osmajor)
+        if osversion.osminor is None:
+            self.osminor = None
+        else:
+            self.osminor = unicode(osversion.osminor)
+class RestrictedDistro(object):
+    def __init__(self, distro):
+        self.osversion = RestrictedOSVersion(distro.osversion)
+        self.name = unicode(distro.name)
+class RestrictedArch(object):
+    def __init__(self, arch):
+        self.arch = unicode(arch.arch)
+class RestrictedDistroTree(object):
+    def __init__(self, distro_tree):
+        self.distro = RestrictedDistro(distro_tree.distro)
+        if distro_tree.variant is None:
+            self.variant = None
+        else:
+            self.variant = unicode(distro_tree.variant)
+        self.arch = RestrictedArch(distro_tree.arch)
+        self.url_in_lab = distro_tree.url_in_lab
+class RestrictedLabController(object):
+    def __init__(self, lab_controller):
+        self.fqdn = unicode(lab_controller.fqdn)
+
 # Some custom Jinja template filters and tests,
 # for added convenience when writing kickstart/snippet templates
 # http://jinja.pocoo.org/docs/api/#custom-filters
@@ -174,6 +211,10 @@ def generate_kickstart(install_options, distro_tree, system, user,
         'kernel_options_post': install_options.kernel_options_post_str,
         'recipe_whiteboard': recipe_whiteboard,
         'job_whiteboard': job_whiteboard,
+        'distro_tree': RestrictedDistroTree(distro_tree),
+        'distro': RestrictedDistro(distro_tree.distro),
+        'lab_controller': RestrictedLabController(lab_controller),
+        'ks_appends': ks_appends or [],
     }
 
     restricted_context.update(install_options.ks_meta)
@@ -188,7 +229,6 @@ def generate_kickstart(install_options, distro_tree, system, user,
         'user': user,
         'recipe': recipe,
         'config': config,
-        'ks_appends': ks_appends or [],
     })
 
     snippet_locations = []

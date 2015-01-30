@@ -505,6 +505,52 @@ Template variables
    The built-in :py:mod:`chr` function, which returns a byte with the given 
    integer value.
 
+.. py:data:: distro
+
+   The distro which is being provisioned. This object has the following 
+   attributes:
+
+   ``name``
+        Name of the distro, for example "Fedora-Server-21_Alpha".
+
+   ``osversion``
+        Object representing the distro's version.
+
+   ``osversion.osminor``
+        OS minor version (the portion after the first period).
+
+   ``osversion.osmajor``
+        Object representing the OS major version.
+
+   ``osversion.osmajor.name``
+        Name portion of the OS major version, for example "Fedora".
+    
+   ``osversion.osmajor.number``
+        Numerical portion of the OS major version, for example "21". Note that 
+        this is a string, not an integer, because it might be "rawhide".
+
+   ``osversion.osmajor.osmajor``
+        Complete OS major version string, for example "Fedora21".
+
+.. py:data:: distro_tree
+
+   The distro tree which is being provisioned. This object has the following 
+   attributes:
+
+   ``arch``
+        Object representing the CPU architecture which this tree was built for.
+
+   ``arch.arch``
+        Name of the CPU architecture which this tree was built for, for example 
+        "x86_64".
+
+   ``url_in_lab(lab_controller)``
+        A method which returns a URL for this distro tree in the given lab.
+
+   ``variant``
+        Name of the distro variant, for example "Server". This may also be 
+        empty.
+
 .. py:data:: job_whiteboard
 
    The value of the job whiteboard.
@@ -512,6 +558,18 @@ Template variables
 .. py:data:: kernel_options_post
 
    Post-install kernel options from the install options.
+
+.. py:data:: ks_appends
+
+   List of string containing extra kickstart content supplied by the job 
+   submitter in the ``<ks_appends/>`` element.
+
+.. py:data:: lab_controller
+
+   The lab controller where the system is being provisioned.
+
+   ``fqdn``
+        The fully-qualified domain name of the lab controller.
 
 .. py:data:: netaddr
 

@@ -690,7 +690,7 @@ class DistroTree(DeclarativeMappedObject, ActivityMixin):
             scheme = [scheme]
         urls = dict((urlparse.urlparse(lca.url).scheme, lca.url)
                 for lca in self.lab_controller_assocs
-                if lca.lab_controller == lab_controller)
+                if lca.lab_controller.fqdn == lab_controller.fqdn)
         if scheme is not None:
             for s in scheme:
                 if s in urls:

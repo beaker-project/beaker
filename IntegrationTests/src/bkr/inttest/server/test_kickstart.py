@@ -1755,6 +1755,54 @@ mysillypackage
         k = recipe.rendered_kickstart.kickstart
         self.assert_('ssh-rsa lolthisismykey description' in k.splitlines(), k)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1077251
+    def test_custom_kickstart_can_access_model_objects(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <kickstart><![CDATA[
+install
+{% if distro_tree is arch('i386', 'x86_64') %}
+# arch test is true
+{% endif %}
+{% if distro is osversion('RedHatEnterpriseLinux7.0', 'CentOS7.0') %}
+# osversion test is true
+{% endif %}
+{% if distro is osmajor('RedHatEnterpriseLinux7', 'CentOS7') %}
+# osmajor test is true
+{% endif %}
+{% if distro.osversion.osmajor.name == 'RedHatEnterpriseLinux' and distro.osversion.osmajor.number|int >= 6 %}
+# conditional using osmajor name and number is true
+{% endif %}
+{% if distro_tree.variant == 'Workstation' %}
+# variant test is true
+{% endif %}
+# tree url is {{ distro_tree.url_in_lab(lab_controller, required=True) }}
+                        ]]></kickstart>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        ks = recipe.rendered_kickstart.kickstart
+        self.assertIn('''\
+install
+# arch test is true
+# osversion test is true
+# osmajor test is true
+# conditional using osmajor name and number is true
+# variant test is true
+# tree url is http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/
+''', ks)
+
     def test_no_debug_repos(self):
         recipe = self.provision_recipe('''
             <job>
