@@ -58,6 +58,27 @@ good idea to run this task on every system to ensure that the hardware
 details are correctly updated in Beaker's database.
 
 
+/distribution/command
+=====================
+
+The ``/distribution/command`` task runs an arbitrary shell command, given in 
+the ``CMDS_TO_RUN`` parameter.
+
+This task is useful for inserting ad hoc tests or behaviour into a recipe for 
+experimentation purposes, without needing to modify an existing task or write 
+a new one.
+
+For example, to test the effect of rebooting in between two other tasks::
+
+    ...
+    <task name="/distribution/command">
+        <params>
+            <param name="CMDS_TO_RUN" value="rhts-reboot" />
+        </params>
+    </task>
+    ...
+
+
 /distribution/beaker/dogfood
 ============================
 

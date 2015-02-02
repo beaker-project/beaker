@@ -6,6 +6,11 @@ programmatic access to Beaker's data.
 
 All URLs are given relative to the base URL of the Beaker server.
 
+Note that all HTTP resources listed here support content negotiation (or will 
+in future). Your API client must send a suitable :mailheader:`Accept` header in 
+all requests. For example, clients expecting to receive JSON formatted 
+responses should include ``Accept: application/json`` in all requests.
+
 .. _pageable-json-collections:
 
 Pageable JSON collections
