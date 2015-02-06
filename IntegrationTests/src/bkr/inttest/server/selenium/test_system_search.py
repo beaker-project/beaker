@@ -502,6 +502,29 @@ class Search(WebDriverTestCase):
                 .find_elements_by_tag_name('option')
         assert_sorted([option.text for option in keyvalue_options])
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1182545
+    def test_date_picker(self):
+        with session.begin():
+            today = datetime.date.today()
+            new_system = data_setup.create_system()
+            new_system.date_added = today
+            old_system = data_setup.create_system()
+            old_system.date_added = today - datetime.timedelta(days=10)
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Show Search Options').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('System/Added')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('is')
+        b.find_element_by_name('systemsearch-0.value').click()
+        b.find_element_by_xpath('//a[contains(@class, "ui-state-default")'
+                                'and contains(@class, "ui-state-highlight")]').click()
+        b.find_element_by_id('searchform').submit()
+        check_system_search_results(b, present=[new_system], absent=[old_system])
+
+
 class SystemVisibilityTest(WebDriverTestCase):
 
     def setUp(self):
