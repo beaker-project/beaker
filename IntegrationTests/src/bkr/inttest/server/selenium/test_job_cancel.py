@@ -139,3 +139,21 @@ class Cancel(WebDriverTestCase):
             self.assertEquals(self.job.recipesets[0].activity[0].object_name(), 'RecipeSet: %s'
                               % self.job.recipesets[0].id)
             self.assertEquals(self.job.recipesets[0].activity[0].action, u'Cancelled')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1173376
+    def test_clear_rows_in_system_recipe_map(self):
+        with session.begin():
+            system = data_setup.create_system(owner=self.user)
+            self.job.recipesets[0].recipes[0].systems[:] = [system]
+        # check if rows in system_recipe_map
+        self.assertNotEqual(len(self.job.recipesets[0].recipes[0].systems), 0)
+        b = self.browser
+        login(b, self.user.user_name, self.password)
+        b.get(get_server_base() + 'jobs/%s' % self.job.id)
+        b.find_element_by_xpath('//div[@class="recipeset"]//a[text()="Cancel"]').click()
+        b.find_element_by_xpath("//input[@value='Yes']").click()
+        self.assertTrue(is_text_present(b, "Successfully cancelled recipeset %s"
+            % self.job.recipesets[0].id))
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(len(self.job.recipesets[0].recipes[0].systems), 0)

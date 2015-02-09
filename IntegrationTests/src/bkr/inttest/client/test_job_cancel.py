@@ -76,3 +76,19 @@ class JobCancelTest(ClientTestCase):
         t_id = self.job.recipesets[0].recipes[0].tasks[0].t_id
         out = run_client(['bkr', 'job-cancel', t_id])
         self.assertEquals('Cancelled %s\n' % t_id, out)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1173376
+    def test_clear_rows_in_system_recipe_map(self):
+        with session.begin():
+            system = data_setup.create_system()
+            job_owner = data_setup.create_user(password=u'owner')
+            job = data_setup.create_job(owner=job_owner)
+            job.recipesets[0].recipes[0].systems[:] = [system]
+        # check if rows in system_recipe_map
+        self.assertNotEquals(len(job.recipesets[0].recipes[0].systems), 0)
+        out = run_client(['bkr', 'job-cancel', '--username', job_owner.user_name, '--password', 'owner', job.t_id])
+        self.assertEquals('Cancelled %s\n' % job.t_id, out)
+        with session.begin():
+            session.expire_all()
+            # check if no rows in system_recipe_map
+            self.assertEqual(len(job.recipesets[0].recipes[0].systems), 0)

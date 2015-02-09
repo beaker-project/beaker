@@ -1078,9 +1078,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         """
         for recipeset in self.recipesets:
             for recipe in recipeset.recipes:
-                for task in recipe.tasks:
-                    if not task.is_finished():
-                        task._abort_cancel(TaskStatus.aborted, msg)
+                recipe._abort_cancel(TaskStatus.aborted, msg)
         self._mark_dirty()
 
     def task_info(self):
@@ -2200,6 +2198,8 @@ class Recipe(TaskBase, DeclarativeMappedObject):
         for task in self.tasks:
             if not task.is_finished():
                 task._abort_cancel(status, msg)
+        # clear rows in system_recipe_map
+        self.systems = []
 
     def abort(self, msg=None):
         """
