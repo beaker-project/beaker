@@ -18,7 +18,6 @@ Resources
       glossary
       architecture-guide/index
 
-   * `Beaker Quick Start Guide: slides (PDF) <../psss-beaker-quick-start-guide-slides.pdf>`__
    * :download:`RELAX NG schema for Beaker jobs <../Common/bkr/common/schema/beaker-job.rng>`
 
 .. container:: resourcesbox
@@ -64,3 +63,22 @@ mailing list.
 If you've found a bug in Beaker, please report it in `Red Hat Bugzilla 
 <https://bugzilla.redhat.com/enter_bug.cgi?product=Beaker>`__ against the 
 Beaker product.
+
+Presentations about Beaker
+==========================
+
+* *Beaker's hardware inventory system*
+  (`video <https://www.youtube.com/watch?v=keNCbdYaIxg>`__,
+  `slides <https://amitksaha.fedorapeople.org/lca2015/slides.html>`__).
+  Nick Coghlan, Amit Saha, 2015
+* *Full stack integration testing with Beaker*
+  (`video <https://www.youtube.com/watch?v=tjUjdBm-Mqw>`__,
+  `slides <https://bitbucket.org/ncoghlan/misc/src/default/talks/2014-01-linux.conf.au/beaker/>`__).
+  Nick Coghlan, 2014
+* *Scaling integration testing with Beaker*
+  (`video <https://www.youtube.com/watch?v=UHIll_TmjDk>`__,
+  `slides <http://www.curiousefficiency.org/uploads/flock-2013/beaker-ncoghlan.html>`__).
+  Nick Coghlan, 2013
+* *Beaker quick start guide*
+  (`slides <../psss-beaker-quick-start-guide-slides.pdf>`__).
+  Petr Šplíchal, 2011
