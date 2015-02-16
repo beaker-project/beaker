@@ -19,6 +19,3 @@ clean:
 .PHONY: check
 check:
 	./run-tests.sh
-	env PYTHONPATH=../Common:.$${PYTHONPATH:+:$$PYTHONPATH} \
-	    pylint --disable=W --report=no --rcfile=../Misc/pylint-errors.cfg \
-	    bkr.server
