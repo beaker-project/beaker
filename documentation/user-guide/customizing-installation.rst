@@ -515,7 +515,7 @@ Template variables
 
 .. py:data:: netaddr
 
-   The Python `netaddr <https://pythonhosted.org/netaddr/>`_ module for 
+   The Python `netaddr <https://pythonhosted.org/netaddr/>`__ module for 
    manipulating network addresses.
 
 .. py:function:: ord(c)
