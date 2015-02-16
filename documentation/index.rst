@@ -54,8 +54,12 @@ Getting further help
 The best way to interact with Beaker developers and users is in the `#beaker 
 <irc://chat.freenode.net/beaker>`_ IRC channel on irc.freenode.net. The Beaker 
 developers monitor this channel, and development discussions often happen 
-there. Alternatively, you can post your question to the `beaker-devel 
-<https://fedorahosted.org/mailman/listinfo/beaker-devel>`_ mailing list.
+there.
+
+You can also ask your question in the `"beaker-testing" tag on Stack Overflow 
+<http://stackoverflow.com/questions/ask?tags=beaker-testing>`__, or post it to 
+the `beaker-devel <https://fedorahosted.org/mailman/listinfo/beaker-devel>`_ 
+mailing list.
 
 If you've found a bug in Beaker, please report it in `Red Hat Bugzilla 
 <https://bugzilla.redhat.com/enter_bug.cgi?product=Beaker>`__ against the 
