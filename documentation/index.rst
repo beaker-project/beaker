@@ -48,28 +48,6 @@ Resources
       alternative-harnesses/index
       architecture-guide/index
 
-Search this site
-================
-
-.. raw:: html
-
-   <div id="cse-search-form" style="width: 100%;">Loading…</div>
-   <script src="//www.google.com/jsapi" type="text/javascript"></script>
-   <script type="text/javascript"> 
-     google.load('search', '1', {language : 'en', style : google.loader.themes.MINIMALIST});
-     google.setOnLoadCallback(function() {
-       var customSearchOptions = {};
-       customSearchOptions['adoptions'] = {'layout': 'noTop'};
-       var customSearchControl = new google.search.CustomSearchControl(
-         '000379057217241479047:jjwkmhjefoc', customSearchOptions);
-       customSearchControl.setResultSetSize(google.search.Search.FILTERED_CSE_RESULTSET);
-       var options = new google.search.DrawOptions();
-       options.setAutoComplete(true);
-       options.enableSearchboxOnly("http://beaker-project.org/search.html");
-       customSearchControl.draw('cse-search-form', options);
-     }, true);
-   </script>
-
 Getting further help
 ====================
 
