@@ -564,7 +564,7 @@ class Watchdog(ProxyHelper):
                 recipe = recipeset.recipe
             except AttributeError:
                 recipe = recipeset.guestrecipe
-            for task in recipe['task':]:
+            for task in recipe['task':]: #pylint: disable=invalid-slice-index
                 if task()['status'] == 'Running':
                     break
             task_id = task()['id']
@@ -628,7 +628,7 @@ class Monitor(ProxyHelper):
         else:
             # Report the panic
             # Look for active task, worst case it records it on the last task
-            for task in recipe['task':]:
+            for task in recipe['task':]: #pylint: disable=invalid-slice-index
                 if task()['status'] == 'Running':
                     break
             self.task_result(task()['id'], 'panic', '/', 0, panic_message)

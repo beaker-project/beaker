@@ -287,7 +287,7 @@ class TaskLibrary(object):
                         )
         taskinfo['hdr'] = self.get_rpm_info(fd)
         taskinfo_file = None
-        for file in taskinfo['hdr']['files']:
+        for file in taskinfo['hdr']['files']: #pylint: disable=invalid-sequence-index
             if file.endswith('testinfo.desc'):
                 taskinfo_file = file
         if taskinfo_file:

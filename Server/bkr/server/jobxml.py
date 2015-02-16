@@ -4,6 +4,8 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+#pylint: disable=invalid-slice-index
+
 import xmltramp
 import sys
 

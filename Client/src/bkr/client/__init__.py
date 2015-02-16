@@ -87,7 +87,7 @@ class BeakerCommand(Command):
             Custom requests.Session class with a few conveniences for bkr client code.
             """
             def __init__(self):
-                super(BeakerClientRequestsSession, self).__init__()
+                super(BeakerClientRequestsSession, self).__init__() #pylint: disable=bad-super-call
                 self.cookies = cookies
                 if ca_cert:
                     self.verify = ca_cert
@@ -98,7 +98,7 @@ class BeakerCommand(Command):
                 if 'json' in kwargs:
                     kwargs['data'] = json.dumps(kwargs.pop('json'))
                     kwargs.setdefault('headers', {}).update({'Content-Type': 'application/json'})
-                return super(BeakerClientRequestsSession, self).request(method, url, **kwargs)
+                return super(BeakerClientRequestsSession, self).request(method, url, **kwargs) #pylint: disable=bad-super-call
         return BeakerClientRequestsSession()
 
     t_id_types = dict(T = 'RecipeTask',
