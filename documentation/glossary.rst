@@ -69,7 +69,6 @@ Glossary
        reporting of recipe task results, and importing distros.
 
    loan recipient
-   loanee
        The Beaker user to whom a system has been loaned. A loan grants 
        exclusive use of a system. Refer to :ref:`loaning-systems`.
 
