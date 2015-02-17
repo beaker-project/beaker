@@ -517,12 +517,12 @@ class Search(WebDriverTestCase):
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('System/Added')
         Select(b.find_element_by_name('systemsearch-0.operation'))\
-            .select_by_visible_text('is')
+            .select_by_visible_text('before')
         b.find_element_by_name('systemsearch-0.value').click()
-        b.find_element_by_xpath('//a[contains(@class, "ui-state-default")'
-                                'and contains(@class, "ui-state-highlight")]').click()
+        date_picker = b.find_element_by_id('ui-datepicker-div')
+        date_picker.find_element_by_class_name('ui-state-highlight').click()
         b.find_element_by_id('searchform').submit()
-        check_system_search_results(b, present=[new_system], absent=[old_system])
+        check_system_search_results(b, present=[old_system], absent=[new_system])
 
 
 class SystemVisibilityTest(WebDriverTestCase):
