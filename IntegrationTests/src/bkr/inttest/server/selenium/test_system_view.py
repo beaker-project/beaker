@@ -938,3 +938,32 @@ class SystemStatusHTTPTest(DatabaseTestCase):
         self.assertEquals(loan_info['recipient'], u'wolfman') # Beaker 0.15.3
         self.assertEquals(loan_info['recipient_user']['user_name'], 'wolfman') # Beaker 19
         self.assertEquals(loan_info['comment'], u'For evil purposes')
+
+class SystemActivityHTTPTest(DatabaseTestCase):
+    """
+    Directly tests the HTTP interface for system activity.
+    """
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1193746
+    def test_enforced_pagination_redirect(self):
+        with session.begin():
+            system = data_setup.create_system()
+            # need >500 activity rows to trigger forced pagination
+            for _ in xrange(501):
+                system.record_activity(service=u'testdata',
+                        field=u'nonsense', action=u'poke')
+        original_url = (get_server_base() +
+                'systems/%s/activity/?q=action:poke' % system.fqdn)
+        expected_redirect = (get_server_base() +
+                'systems/%s/activity/?q=action:poke&page_size=20' % system.fqdn)
+        response = requests.get(original_url, allow_redirects=False)
+        self.assertEquals(response.status_code, 302)
+        self.assertEquals(response.headers['Location'], expected_redirect)
+        # For completeness, the same thing with no query params.
+        original_url = (get_server_base() +
+                'systems/%s/activity/' % system.fqdn)
+        expected_redirect = (get_server_base() +
+                'systems/%s/activity/?page_size=20' % system.fqdn)
+        response = requests.get(original_url, allow_redirects=False)
+        self.assertEquals(response.status_code, 302)
+        self.assertEquals(response.headers['Location'], expected_redirect)

@@ -27,6 +27,12 @@ The following query parameters are supported by pageable JSON collections:
 ``page_size=<int>``
     Return this many elements per page in the response.
 
+    If this query parameter is not present, the response includes all elements 
+    in the collection. However, in cases where this would produce a very large 
+    response body, Beaker enforces pagination by redirecting the request to 
+    include a suitable page size. Therefore it is recommended that clients 
+    always include this parameter.
+
 ``page=<int>``
     Return this page number within the collection. Pages are numbered from 1.
 
