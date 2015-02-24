@@ -239,7 +239,12 @@ window.BeakerGrid = Backbone.View.extend({
             .append(this.grid.render().el)
             .append(this.bottom_paginator.render().el);
     },
-    fetch_started: function () {
+    fetch_started: function (collection, xhr) {
+        // abort the last pending request to handle the case 2 in
+        // https://github.com/jashkenas/backbone/pull/1325#issuecomment-11146707
+        if (!_.isUndefined(this.previous_request) && this.previous_request.readyState != 4)
+            this.previous_request.abort();
+        this.previous_request = xhr;
         this.$('.alert').remove();
         if (this.grid.body.$el.width()) {
             // Show semi-transparent overlay over the existing data while the 
@@ -258,12 +263,14 @@ window.BeakerGrid = Backbone.View.extend({
         }
     },
     fetch_error: function (collection, xhr) {
-        this.grid.body.$el.empty();
-        // can't put a <div/> inside a <tbody/> so it goes at the bottom instead
-        this.$el.append(
-            $('<div class="alert alert-error"/>')
-            .text('Failed to fetch data while populating grid: ' +
-                xhr.statusText + ': ' + xhr.responseText));
+        if ( xhr.statusText != 'abort' ) {
+            this.grid.body.$el.empty();
+            // can't put a <div/> inside a <tbody/> so it goes at the bottom instead
+            this.$el.append(
+                $('<div class="alert alert-error"/>')
+                .text('Failed to fetch data while populating grid: ' +
+                    xhr.statusText + ': ' + xhr.responseText)); 
+        }
     },
     fetch_success: function () {
         this.$('.alert').remove();

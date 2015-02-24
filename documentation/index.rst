@@ -18,7 +18,6 @@ Resources
       glossary
       architecture-guide/index
 
-   * `Beaker Quick Start Guide: slides (PDF) <../psss-beaker-quick-start-guide-slides.pdf>`__
    * :download:`RELAX NG schema for Beaker jobs <../Common/bkr/common/schema/beaker-job.rng>`
 
 .. container:: resourcesbox
@@ -48,37 +47,38 @@ Resources
       alternative-harnesses/index
       architecture-guide/index
 
-Search this site
-================
-
-.. raw:: html
-
-   <div id="cse-search-form" style="width: 100%;">Loading…</div>
-   <script src="//www.google.com/jsapi" type="text/javascript"></script>
-   <script type="text/javascript"> 
-     google.load('search', '1', {language : 'en', style : google.loader.themes.MINIMALIST});
-     google.setOnLoadCallback(function() {
-       var customSearchOptions = {};
-       customSearchOptions['adoptions'] = {'layout': 'noTop'};
-       var customSearchControl = new google.search.CustomSearchControl(
-         '000379057217241479047:jjwkmhjefoc', customSearchOptions);
-       customSearchControl.setResultSetSize(google.search.Search.FILTERED_CSE_RESULTSET);
-       var options = new google.search.DrawOptions();
-       options.setAutoComplete(true);
-       options.enableSearchboxOnly("http://beaker-project.org/search.html");
-       customSearchControl.draw('cse-search-form', options);
-     }, true);
-   </script>
-
 Getting further help
 ====================
 
 The best way to interact with Beaker developers and users is in the `#beaker 
 <irc://chat.freenode.net/beaker>`_ IRC channel on irc.freenode.net. The Beaker 
 developers monitor this channel, and development discussions often happen 
-there. Alternatively, you can post your question to the `beaker-devel 
-<https://fedorahosted.org/mailman/listinfo/beaker-devel>`_ mailing list.
+there.
+
+You can also ask your question in the `"beaker-testing" tag on Stack Overflow 
+<http://stackoverflow.com/questions/ask?tags=beaker-testing>`__, or post it to 
+the `beaker-devel <https://fedorahosted.org/mailman/listinfo/beaker-devel>`_ 
+mailing list.
 
 If you've found a bug in Beaker, please report it in `Red Hat Bugzilla 
 <https://bugzilla.redhat.com/enter_bug.cgi?product=Beaker>`__ against the 
 Beaker product.
+
+Presentations about Beaker
+==========================
+
+* *Beaker's hardware inventory system*
+  (`video <https://www.youtube.com/watch?v=keNCbdYaIxg>`__,
+  `slides <https://amitksaha.fedorapeople.org/lca2015/slides.html>`__).
+  Nick Coghlan, Amit Saha, 2015
+* *Full stack integration testing with Beaker*
+  (`video <https://www.youtube.com/watch?v=tjUjdBm-Mqw>`__,
+  `slides <https://bitbucket.org/ncoghlan/misc/src/default/talks/2014-01-linux.conf.au/beaker/>`__).
+  Nick Coghlan, 2014
+* *Scaling integration testing with Beaker*
+  (`video <https://www.youtube.com/watch?v=UHIll_TmjDk>`__,
+  `slides <http://www.curiousefficiency.org/uploads/flock-2013/beaker-ncoghlan.html>`__).
+  Nick Coghlan, 2013
+* *Beaker quick start guide*
+  (`slides <../psss-beaker-quick-start-guide-slides.pdf>`__).
+  Petr Šplíchal, 2011

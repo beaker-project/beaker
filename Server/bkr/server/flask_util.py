@@ -69,11 +69,10 @@ def json_collection(columns=None, extra_sort_columns=None, min_page_size=20,
                     result['page'] = page
                     result['page_size'] = page_size
                 elif total_count > force_paging_for_count:
-                    url = request.base_url
-                    if '?' not in url:
-                        url += '?page_size=%d' % default_page_size
+                    if request.query_string:
+                        url = request.url + ('&page_size=%s' % default_page_size)
                     else:
-                        url += '&page_size=%s' % default_page_size
+                        url = request.base_url + ('?page_size=%s' % default_page_size)
                     return redirect(url)
                 result['entries'] = query.all()
             return jsonify(result)
