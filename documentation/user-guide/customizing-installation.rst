@@ -366,6 +366,13 @@ overridden if necessary for custom distros.
 ``has_chrony``
     Indicates that chrony is available in the distro.
 
+``has_gpt_bios_support``
+    Indicates that the installer is capable of formatting disks using GPT on 
+    x86 systems with BIOS firmware.
+
+    This support is needed for disks larger than 2TB and it requires an extra 
+    "BIOS boot" partition to be defined.
+
 ``has_key``
     Indicates that the distro requires the ``key`` command. This command
     exists only on RHEL 5 and CentOS 5.

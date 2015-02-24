@@ -30,6 +30,12 @@ part /boot/efi --fstype vfat --size 200 --recommended
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 {% else %}
 {# x86 BIOS #}
+{% if has_gpt_bios_support is defined %}
+{# biosboot partition is needed in case Anaconda uses GPT (when the disk is >2TB) #}
+part biosboot --size 1 --fstype biosboot
+{%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
+
+{% endif %}
 part /boot --size 200 --recommended --asprimary
 {%- if fstype %} --fstype {{ fstype }}{% endif %}
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}

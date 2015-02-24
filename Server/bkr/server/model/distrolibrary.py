@@ -322,6 +322,11 @@ class OSMajor(DeclarativeMappedObject):
         if rhel in ('3', '4', '5', '6') or \
                 self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3'):
             del ks_meta['has_chrony']
+        # GPT on BIOS
+        ks_meta['has_gpt_bios_support'] = True
+        if rhel in ('3', '4', '5', '6') or \
+                self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3'):
+            del ks_meta['has_gpt_bios_support']
         # bootloader --leavebootorder
         ks_meta['has_leavebootorder'] = True
         if rhel in ('3', '4', '5', '6') or \

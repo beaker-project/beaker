@@ -2652,6 +2652,52 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
                 '--recommended --ondisk=vdb\n', ks)
         self.assertNotIn('\npart /boot ', ks)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1108393
+    def test_x86_biosboot(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <partitions>
+                            <partition fs="ext4" name="mnt" size="10" />
+                        </partitions>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        ks = recipe.rendered_kickstart.kickstart
+        self.assertIn('\npart biosboot --size 1 --fstype biosboot\n', ks)
+        # also check when combined with ondisk
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="ondisk=vdb">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <partitions>
+                            <partition fs="ext4" name="mnt" size="10" />
+                        </partitions>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        ks = recipe.rendered_kickstart.kickstart
+        self.assertIn('\npart biosboot --size 1 --fstype biosboot --ondisk=vdb\n', ks)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1162513
     def test_ppc_prep_boot_partition(self):
         system = data_setup.create_system(arch=[u'ppc', u'ppc64', u'ppc64le'],
