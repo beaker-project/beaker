@@ -651,7 +651,7 @@ class SearchBar(RepeatingFormField):
     """Search Bar""" 
     css = [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     javascript = [LocalJSLink('bkr', '/static/javascript/search_object.js'),
-                  LocalJSLink('bkr', '/static/javascript/searchbar_v9.js'),
+                  LocalJSLink('bkr', '/static/javascript/searchbar_v10.js'),
                   LocalJSLink('bkr','/static/javascript/jquery-ui-1.9.2.min.js', order=3),]
     template = "bkr.server.templates.search_bar"
 

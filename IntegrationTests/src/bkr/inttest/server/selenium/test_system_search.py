@@ -5,6 +5,7 @@
 # (at your option) any later version.
 
 from selenium.webdriver.support.ui import Select
+from selenium.webdriver.common.keys import Keys
 from bkr.server.model import Numa, User, Key, Key_Value_String, Key_Value_Int, \
     Device, DeviceClass, Disk, Cpu, SystemPermission
 from bkr.inttest.server.selenium import WebDriverTestCase
@@ -514,11 +515,26 @@ class Search(WebDriverTestCase):
         b.get(get_server_base())
         b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
+        # test for using invalid date
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('System/Added')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('after')
+        search_field = b.find_element_by_name('systemsearch-0.value')
+        search_field.click()
+        # close the date picker
+        search_field.clear()
+        search_field.send_keys(Keys.ESCAPE)
+        search_field.clear()
+        search_field.send_keys('02-02-2002')
+        # we can't actually check the HTML5 validation error
+        b.find_element_by_css_selector('input[name="systemsearch-0.value"]:invalid')
+
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('System/Added')
         Select(b.find_element_by_name('systemsearch-0.operation'))\
             .select_by_visible_text('before')
-        b.find_element_by_name('systemsearch-0.value').click()
+        search_field.click()
         date_picker = b.find_element_by_id('ui-datepicker-div')
         date_picker.find_element_by_class_name('ui-state-highlight').click()
         b.find_element_by_id('searchform').submit()
