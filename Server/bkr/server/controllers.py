@@ -10,14 +10,14 @@ from turbogears import redirect, config
 import bkr
 import bkr.server.stdvars
 import bkr.server.search_utility as su
-from bkr.server.model import (TaskBase, Device, System, SystemGroup,
+from bkr.server.model import (TaskBase, Device, System,
         SystemActivity, Key, OSMajor, DistroTree, Arch, TaskPriority,
         Group, GroupActivity, RecipeSet, RecipeSetActivity, User, LabInfo,
         ReleaseAction, LabController, Hypervisor, KernelType,
         SystemType, Distro, Note, Job, InstallOptions, ExcludeOSMajor,
         ExcludeOSVersion, OSVersion, Provision, ProvisionFamily,
         ProvisionFamilyUpdate, SystemStatus, Key_Value_Int, Key_Value_String,
-        SystemAccessPolicy, SystemPermission, MachineRecipe, DistroTag)
+                              SystemAccessPolicy, SystemPermission, MachineRecipe, DistroTag, SystemPool)
 from bkr.server.power import PowerTypes
 from bkr.server.keytypes import KeyTypes
 from bkr.server.CSV_import_export import CSV
@@ -39,7 +39,7 @@ from bkr.server.watchdog import Watchdogs
 from bkr.server.systems import SystemsController
 from bkr.server.system_action import SystemAction as SystemActionController
 from bkr.server.widgets import TaskSearchForm, SearchBar, \
-    SystemInstallOptions, SystemGroups, \
+    SystemInstallOptions, \
     SystemNotes, SystemKeys, SystemExclude, SystemDetails, \
     LabInfoForm, myPaginateDataGrid
 from bkr.server.preferences import Preferences
@@ -175,7 +175,6 @@ class Root(RPCRoot):
     system_exclude = SystemExclude(name='excluded_families')
     system_keys = SystemKeys(name='keys')
     system_notes = SystemNotes(name='notes')
-    system_groups = SystemGroups(name='groups')
     system_installoptions = SystemInstallOptions(name='installoptions')
     task_form = TaskSearchForm(name='tasks')
 
@@ -697,14 +696,12 @@ class Root(RPCRoot):
             value           = system,
             options         = options,
             task_widget     = self.task_form,
-            groups_widget   = self.system_groups,
             install_widget  = self.system_installoptions,
             widgets         = widgets,
             widgets_action  = dict( labinfo   = url('/save_labinfo'),
                                     exclude   = url('/save_exclude'),
                                     keys      = url('/save_keys'),
                                     notes     = url('/save_note'),
-                                    groups    = url('/save_group'),
                                     install   = url('/save_install'),
                                     tasks     = '/tasks/do_search',
                                   ),
@@ -715,9 +712,6 @@ class Root(RPCRoot):
                                                 key_values_string = system.key_values_string),
                                    notes     = dict(readonly = readonly,
                                                 notes = system.notes),
-                                   groups    = dict(readonly = readonly,
-                                                group_assocs = system.group_assocs,
-                                                system_id = system.id),
                                    install   = dict(readonly = readonly,
                                                 provisions = system.provisions,
                                                 prov_arch = [(arch.id, arch.arch) for arch in system.arch]),
@@ -1186,6 +1180,13 @@ class Root(RPCRoot):
         static_dir = config.get('static_filter.dir', path="/static")
         filename = join(os.path.normpath(static_dir), 'images', 'favicon.ico')
         return serve_file(filename)
+
+
+    #@expose(template='bkr.server.templates.system_pool')
+    @expose
+    def pools(self):
+        return ""
+
 
 #    @expose(template='bkr.server.templates.activity')
 #    def activity(self, *args, **kw):

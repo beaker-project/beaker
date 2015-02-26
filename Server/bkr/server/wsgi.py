@@ -51,6 +51,7 @@ import bkr.server.user
 import bkr.server.group
 import bkr.server.systems
 import bkr.server.reserve_workflow
+import bkr.server.pools
 
 @app.before_first_request
 def init():

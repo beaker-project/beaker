@@ -620,6 +620,18 @@ the Free Software Foundation; either version 2 of the License, or
         <oneOrMore><ref name="diskreq" /></oneOrMore>
       </element>
       <element name="group">
+        <a:documentation xml:lang="en">
+          Deprecated.  Use &lt;pool&gt; instead.
+        </a:documentation>
+        <ref name="equality_op" />
+        <attribute name="value" />
+      </element>
+      <element name="pool">
+        <a:documentation xml:lang="en">
+          Select system from a specific pool. If operator is = or ==, select a system which
+          belongs to the specified pool. If the operator is, !=, select a system which does
+          not belong to the pool, != "" will select a system which belongs to any pool.
+        </a:documentation>
         <ref name="equality_op" />
         <attribute name="value" />
       </element>

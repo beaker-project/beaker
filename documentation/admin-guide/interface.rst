@@ -152,9 +152,9 @@ System Install Options
 System Key/Values
     For every system, its key value pairs are exported.
 
-System Groups
-    Systems which belong to a group are exported along with the
-    corresponding group names.
+System Pools
+    Systems which belong to a system pool are exported along with the
+    corresponding pool names.
 
 User Groups
     The users and the groups which they are a member of are exported.

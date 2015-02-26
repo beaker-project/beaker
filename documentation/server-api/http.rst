@@ -200,3 +200,9 @@ System provisioning
 .. _RDF/XML: http://www.w3.org/TR/REC-rdf-syntax/
 .. _Turtle: http://www.w3.org/TeamSubmission/turtle/
 .. _Lucene query parser syntax: http://lucene.apache.org/core/2_9_4/queryparsersyntax.html
+
+System pools
+------------
+
+.. autoflask:: bkr.server.wsgi:app
+   :endpoints: get_pool, add_system_to_pool, remove_system_from_pool

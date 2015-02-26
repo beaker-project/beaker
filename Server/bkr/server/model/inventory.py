@@ -21,7 +21,7 @@ from sqlalchemy.sql import select, and_, or_, not_, case, func
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import (mapper, relationship, synonym,
         column_property, dynamic_loader, contains_eager, validates,
-        object_mapper, synonym)
+        object_mapper)
 from sqlalchemy.orm.attributes import NEVER_SET
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.orm.exc import NoResultFound
@@ -40,7 +40,7 @@ from .base import DeclarativeMappedObject
 from .types import (SystemType, SystemStatus, ReleaseAction, CommandStatus,
         SystemPermission, TaskStatus)
 from .activity import Activity, ActivityMixin
-from .identity import User, Group, SystemGroup
+from .identity import User, Group
 from .lab import LabController
 from .distrolibrary import (Arch, KernelType, OSMajor, OSVersion, Distro, DistroTree,
         LabControllerDistroTree)
@@ -268,8 +268,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
     provisions = relationship('Provision', back_populates='system',
             cascade='all, delete, delete-orphan',
             collection_class=attribute_mapped_collection('arch'))
-    group_assocs = relationship(SystemGroup, back_populates='system',
-            cascade='all, delete-orphan')
+    pools = relationship('SystemPool', secondary='system_pool_map',
+                         back_populates='systems')
     key_values_int = relationship('Key_Value_Int', back_populates='system',
             cascade='all, delete, delete-orphan')
     key_values_string = relationship('Key_Value_String', back_populates='system',
@@ -296,7 +296,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
                       SystemStatusDuration.id.desc()])
     dyn_status_durations = dynamic_loader(SystemStatusDuration)
     custom_access_policy = relationship('SystemAccessPolicy', uselist=False,
-            back_populates='system')
+                                        back_populates='system')
     notes = relationship('Note', back_populates='system',
             cascade='all, delete, delete-orphan', order_by='Note.created.desc()')
     queued_recipes = relationship('Recipe', back_populates='systems',
@@ -409,6 +409,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             'cpu_model_name': None,
             'disk_space': None,
             'queue_size': None,
+            'pools': [pool.name for pool in self.pools],
         }
         if self.lab_controller:
             data['lab_controller_id'] = self.lab_controller.id
@@ -456,9 +457,13 @@ class System(DeclarativeMappedObject, ActivityMixin):
         else:
             data['access_policy'] = SystemAccessPolicy.empty_json()
         # XXX replace with actual access policy data?
+        data['can_remove_from_pool'] = {}
         if identity.current.user:
             u = identity.current.user
             data['can_change_fqdn'] = self.can_edit(u)
+            data['can_add_to_pool'] = self.can_edit(u)
+            for pool in self.pools:
+                data['can_remove_from_pool'][pool.name] = pool.can_edit(u) or self.can_edit(u)
             data['can_change_owner'] = self.can_change_owner(u)
             data['can_edit_policy'] = self.can_edit_policy(u)
             data['can_change_notify_cc'] = self.can_edit(u)
@@ -480,6 +485,9 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['can_reserve'] = self.can_reserve(u)
         else:
             data['can_change_fqdn'] = False
+            data['can_add_to_pool'] = False
+            for pool in self.pools:
+                data['can_remove_from_pool'][pool.name]  = False
             data['can_change_owner'] = False
             data['can_edit_policy'] = False
             data['can_change_notify_cc'] = False
@@ -496,6 +504,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['can_lend'] = False
             data['can_return_loan'] = False
             data['can_reserve'] = False
+        data['all_pools'] = [pool.name for pool in SystemPool.query.all()]
         return data
 
     @classmethod
@@ -583,11 +592,11 @@ class System(DeclarativeMappedObject, ActivityMixin):
     def scheduler_ordering(cls, user, query):
         # Order by:
         #   System Owner
-        #   System group
+        #   System pools
         #   Single procesor bare metal system
         return query.outerjoin(System.cpu).order_by(
             case([(System.owner==user, 1),
-                (and_(System.owner!=user, System.group_assocs != None), 2)],
+                (and_(System.owner!=user, System.pools != None), 2)],
                 else_=3),
                 and_(System.hypervisor == None, Cpu.processors == 1))
 
@@ -1496,9 +1505,6 @@ class System(DeclarativeMappedObject, ActivityMixin):
 
     cc = association_proxy('_system_ccs', 'email_address')
 
-    groups = association_proxy('group_assocs', 'group',
-            creator=lambda group: SystemGroup(group=group))
-
 @event.listens_for(System.status, 'set', active_history=True, retval=True)
 def validate_status(system, child, oldchild, initiator):
     log.debug('%r status changed from %r to %r', system, oldchild, child)
@@ -1534,6 +1540,97 @@ def validate_status(system, child, oldchild, initiator):
     open_sd.finish_time = now
     system.status_durations.insert(0, SystemStatusDuration(status=child))
     return child
+
+system_pool_map = Table('system_pool_map', DeclarativeMappedObject.metadata,
+        Column('system_id', Integer,
+                ForeignKey('system.id', onupdate='CASCADE', ondelete='CASCADE'),
+                primary_key=True),
+        Column('pool_id', Integer,
+                ForeignKey('system_pool.id', onupdate='CASCADE', ondelete='CASCADE'),
+                primary_key=True),
+        mysql_engine='InnoDB',
+)
+
+class SystemPoolActivity(Activity):
+
+    __tablename__ = 'system_pool_activity'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
+    pool_id = Column(Integer, ForeignKey('system_pool.id'), nullable=False)
+    object_id = synonym('pool_id')
+    object = relationship('SystemPool', back_populates='activity')
+    __mapper_args__ = {'polymorphic_identity': u'system_pool_activity'}
+
+    def object_name(self):
+        return "System Pool: %s" % self.object.name
+
+class SystemPool(DeclarativeMappedObject, ActivityMixin):
+
+    __tablename__ = 'system_pool'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    name = Column(Unicode(255), unique=True, nullable=False)
+    description = Column(Unicode(4000))
+    owning_group_id = Column(Integer, ForeignKey('tg_group.group_id'))
+    owning_group = relationship('Group', uselist=False, back_populates='system_pools')
+    owning_user_id = Column(Integer, ForeignKey('tg_user.user_id'))
+    owning_user = relationship(User, uselist=False, back_populates='system_pools')
+    systems = relationship('System', secondary='system_pool_map',
+                           back_populates='pools')
+    activity = relationship(SystemPoolActivity, back_populates='object', cascade='all, delete',
+                            order_by=[SystemPoolActivity.__table__.c.id.desc()])
+    activity_type = SystemPoolActivity
+
+    def __unicode__(self):
+        return self.name
+
+    def __str__(self):
+        return unicode(self).encode('utf8')
+
+    def __repr__(self):
+        return 'SystemPool(name=%r, owning_user=%r, owning_group=%r)' % \
+            (self.name, self.owning_user, self.owning_group)
+
+    def __json__(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description':self.description,
+            }
+
+    @validates('owning_group', 'owning_user')
+    def validate_owner(self, key, owner):
+        # System pool cannot have both an owning group and an owning user
+        if (key == 'owning_group' and owner and self.owning_user) or \
+           (key == 'owning_user' and owner and self.owning_group):
+            raise ValueError('System pool can have either an user or a group as owner')
+        return owner
+
+    @validates('name')
+    def validate_name(self, key, name):
+        if '/' in name:
+            raise ValueError('Pool name cannot contain "/"')
+        if name != name.strip():
+            raise ValueError('Pool name must not cannot contain leading '
+                             'or trailing whitespace')
+        return name
+
+    @classmethod
+    def by_name(cls, pool_name, lockmode=False):
+        if lockmode:
+            return cls.query.with_lockmode(lockmode).filter(cls.name == pool_name).one()
+        else:
+            return cls.query.filter(cls.name == pool_name).one()
+
+    def has_owner(self, user):
+        if (self.owning_group and self.owning_group in user.groups) or \
+           (self.owning_user and self.owning_user.user_id == user.user_id):
+            return True
+        else:
+            return False
+
+    def can_edit(self, user):
+        return self.has_owner(user=user) or user.is_admin()
 
 class SystemCc(DeclarativeMappedObject):
 

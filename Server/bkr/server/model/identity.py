@@ -124,7 +124,8 @@ class User(DeclarativeMappedObject, ActivityMixin):
     tasks = relationship('Task', back_populates='uploader')
 
     activity_type = UserActivity
-
+    system_pools = relationship('SystemPool', back_populates='owning_user',
+                                cascade='all, delete, delete-orphan')
     _unnormalized_username_pattern = re.compile(r'^\s|\s\s|\s$')
     @validates('user_name')
     def validate_user_name(self, key, value):
@@ -417,13 +418,13 @@ class Group(DeclarativeMappedObject, ActivityMixin):
             cascade='all, delete-orphan')
     permissions = relationship('Permission', back_populates='groups',
             secondary=group_permission_table)
-    system_assocs = relationship('SystemGroup', back_populates='group',
-            cascade='all, delete-orphan')
     user_group_assocs = relationship('UserGroup', back_populates='group',
             cascade='all, delete-orphan')
     system_access_policy_rules = relationship('SystemAccessPolicyRule',
             back_populates='group', cascade='all, delete, delete-orphan')
     jobs = relationship('Job', back_populates='group', cascade_backrefs=False)
+    system_pools = relationship('SystemPool', back_populates='owning_group',
+                                cascade='all, delete, delete-orphan')
 
     activity_type = GroupActivity
 
@@ -594,9 +595,6 @@ class Group(DeclarativeMappedObject, ActivityMixin):
                 users.append(user)
         return users
 
-    systems = association_proxy('system_assocs', 'system',
-            creator=lambda system: SystemGroup(system=system))
-
     users = association_proxy('user_group_assocs','user',
             creator=lambda user: UserGroup(user=user))
 
@@ -640,17 +638,6 @@ class Permission(DeclarativeMappedObject):
     def __init__(self, permission_name):
         super(Permission, self).__init__()
         self.permission_name = permission_name
-
-class SystemGroup(DeclarativeMappedObject):
-
-    __tablename__ = 'system_group'
-    __table_args__ = {'mysql_engine': 'InnoDB'}
-    system_id = Column(Integer, ForeignKey('system.id',
-        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True, index=True)
-    system = relationship('System', back_populates='group_assocs')
-    group_id = Column(Integer, ForeignKey('tg_group.group_id',
-        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True, index=True)
-    group = relationship(Group, back_populates='system_assocs')
 
 class SSHPubKey(DeclarativeMappedObject):
 

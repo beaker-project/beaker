@@ -222,6 +222,54 @@ window.System = Backbone.Model.extend({
             },
         });
     },
+
+    add_to_pool: function (pool, options) {
+        var model = this;
+        options = options || {};
+        $.ajax({
+            url: beaker_url_prefix + 'pools/' + encodeURIComponent(pool) + '/systems/',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({'fqdn': model.get('fqdn')}),
+            dataType: 'json',
+            success: function (data, status, jqxhr) {
+                var can_remove_from_pool = model.get('can_remove_from_pool');
+                can_remove_from_pool[pool] = true;
+                model.set({'pools': model.get('pools').concat([pool]), 'can_remove_from_pool': can_remove_from_pool});
+                if (!(_.contains(model.get('all_pools'), pool))) {
+                    model.set('all_pools', model.get('all_pools').concat([pool]));
+                }
+            },
+            error: function (jqxhr, status, error) {
+                if (options.error)
+                    options.error(model, jqxhr, options);
+            },
+        });
+    },
+
+    remove_from_pool: function (pool, options) {
+        var model = this
+        options = options || {};
+        $.ajax({
+            url: beaker_url_prefix + 'pools/' + encodeURIComponent(pool) +
+                '/systems/' + '?fqdn=' + encodeURIComponent(model.get('fqdn')),
+            type: 'DELETE',
+            contentType: 'application/json',
+            success: function (data, status, jqxhr) {
+                var pools = model.get('pools');
+                var pool_index = _.indexOf(pools, pool);
+                pools.splice(pool_index, 1);
+                model.set('pools', pools);
+                // XXX: better way?
+                model.trigger('change');
+            },
+            error: function (jqxhr, status, error) {
+                if (options.error)
+                    options.error(model, jqxhr, options);
+            },
+        });
+    },
+
     take: function (options) {
         var model = this;
         options = options || {};

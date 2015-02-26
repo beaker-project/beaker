@@ -16,6 +16,7 @@
         }
         new SystemQuickInfo({model: system, el: $('.system-quick-info')});
         new SystemOwnerView({model: system, el: $('#owner')});
+        new SystemPoolView({model: system, el: $('#pools')});
         new SystemHardwareDetailsView({model: system, el: $('.system-hardware-details')});
         new SystemHardwareEssentialsView({model: system, el: $('#essentials')});
         new SystemProvisionView({
@@ -62,7 +63,7 @@
       <li><a data-toggle="tab" href="#provision">Provision</a></li>
       <li class="nav-header">Access</li>
       <li><a data-toggle="tab" href="#owner">Owner</a></li>
-      <li><a data-toggle="tab" href="#groups">Groups</a></li>
+      <li><a data-toggle="tab" href="#pools">Pools</a></li>
       <li><a data-toggle="tab" href="#loan">Loan</a></li>
       <li><a data-toggle="tab" href="#access-policy">Access Policy</a></li>
       <li class="nav-header">Configuration</li>
@@ -89,9 +90,7 @@
     ${widgets['keys'].display(method='get', action=widgets_action['keys'], value=value, options=widgets_options['keys'])} 
    </div>
       <div class="tab-pane" id="owner"></div>
-   <div class="tab-pane" id="groups">
-    ${groups_widget.display(method='get', action=widgets_action['groups'], value=value, options=widgets_options['groups'])}
-   </div>
+   <div class="tab-pane" id="pools"> </div>
       <div class="tab-pane" id="loan"></div>
       <div class="tab-pane" id="access-policy"></div>
    <div class="tab-pane" id="exclude">

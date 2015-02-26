@@ -21,7 +21,7 @@ from .types import (TaskStatus, CommandStatus, TaskResult, TaskPriority,
         RecipeVirtStatus, SystemPermission, UUID, MACAddress)
 from .activity import Activity, ActivityMixin
 from .config import ConfigItem
-from .identity import (User, Group, Permission, SSHPubKey, SystemGroup,
+from .identity import (User, Group, Permission, SSHPubKey,
         UserGroup, UserActivity, GroupActivity)
 from .lab import LabController, LabControllerActivity
 from .distrolibrary import (Arch, KernelType, OSMajor, OSVersion,
@@ -35,7 +35,7 @@ from .inventory import (System, SystemStatusDuration, SystemCc, Hypervisor,
         Key, Key_Value_String, Key_Value_Int, Provision, ProvisionFamily,
         ProvisionFamilyUpdate, ExcludeOSMajor, ExcludeOSVersion, LabInfo,
         SystemAccessPolicy, SystemAccessPolicyRule, Reservation,
-        SystemActivity, CommandActivity)
+        SystemActivity, CommandActivity, SystemPool)
 from .scheduler import (Watchdog, TaskBase, Job, RecipeSet, Recipe,
         RecipeTaskResult, MachineRecipe, GuestRecipe, RecipeTask, Log,
         LogRecipe, LogRecipeTask, LogRecipeTaskResult, JobCc, RecipeResource,

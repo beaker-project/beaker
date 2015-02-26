@@ -992,30 +992,6 @@ class DistroTags(Form):
             d['tags'] = d['options']['tags']
 
 
-class SystemGroups(Form):
-    template = "bkr.server.templates.system_groups"
-    member_widgets = ["id", "group", "delete_link"]
-    params = ['options', 'readonly', 'group_assocs']
-    delete_link = DeleteLinkWidgetForm()
-
-    def __init__(self, *args, **kw):
-        super(SystemGroups, self).__init__(*args, **kw)
-        self.id    = HiddenField(name="id")
-        self.group = AutoCompleteField(name='group',
-                                      search_controller=url("/groups/by_name"),
-                                      search_param="input",
-                                      result_name="matches")
-
-    def update_params(self, d):
-        super(SystemGroups, self).update_params(d)
-        if 'readonly' in d['options']:
-            d['readonly'] = d['options']['readonly']
-        if 'group_assocs' in d['options']:
-            d['group_assocs'] = d['options']['group_assocs']
-        if 'system_id' in d['options']:
-            d['system_id'] = d['options']['system_id']
-
-
 class SystemInstallOptions(Form):
     javascript = [LocalJSLink('bkr', '/static/javascript/install_options.js')]
     template = "bkr.server.templates.system_installoptions"

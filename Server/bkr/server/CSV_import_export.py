@@ -19,7 +19,7 @@ from bkr.server.model import (System, SystemType, Activity, SystemActivity,
                               Provision, ProvisionFamily,
                               ProvisionFamilyUpdate,
                               Key, Key_Value_Int, Key_Value_String,
-                              SystemAccessPolicy, SystemPermission)
+                              SystemAccessPolicy, SystemPermission, SystemPool)
 from bkr.server.widgets import HorizontalForm, RadioButtonList
 from kid import XML
 
@@ -91,7 +91,7 @@ class CSV(RPCRoot):
                                         ('exclude', 'System Excluded Families'), 
                                         ('install', 'System Install Options'),
                                         ('keyvalue', 'System Key/Values'),
-                                        ('system_group', 'System Groups'),
+                                        ('system_pool', 'System Pools'),
                                         ('user_group', 'User Groups')], 
                                  default='system',
                                  help_text = export_help_text)
@@ -920,54 +920,53 @@ class CSV_GroupUser(CSV):
         self.user = user.user_name
         self.deleted = False
 
-class CSV_GroupSystem(CSV):
-    csv_type = 'system_group'
-    csv_keys = ['fqdn', 'group', 'deleted']
+class CSV_SystemPool(CSV):
+    csv_type = 'system_pool'
+    csv_keys = ['fqdn', 'pool', 'deleted']
 
     @classmethod
     def query(cls):
         for system in System.all(identity.current.user):
-            for group in system.groups:
-                yield CSV_GroupSystem(system, group)
+            for pool in system.pools:
+                yield CSV_SystemPool(system, pool)
 
     @classmethod
     def _from_csv(cls,system,data,csv_type,log):
         """
-        Import data from CSV file into system.groups
+        Import data from CSV file into system.pool
         """
-        if 'group' in data and data['group']:
+        if 'pool' in data and data['pool']:
             try:
-                group = Group.by_name(data['group'])
+                pool = SystemPool.by_name(data['pool'])
             except InvalidRequestError:
-                group = Group(group_name=data['group'],
-                              display_name=data['group'])
-                session.add(group)
+                log.append('%s: pool does not exist' % data['pool'])
+                return False
             deleted = False
             if 'deleted' in data:
                 deleted = smart_bool(data['deleted'])
             if deleted:
-                if group in system.groups:
+                if pool in system.pools:
                     system.record_activity(user=identity.current.user, service=u'CSV',
-                            action=u'Removed', field=u'group',
-                            old=u'%s' % group, new=u'')
-                    system.groups.remove(group)
+                            action=u'Removed', field=u'pool',
+                            old=u'%s' % pool, new=u'')
+                    system.pools.remove(pool)
             else:
-                if group not in system.groups:
-                    system.groups.append(group)
+                if pool not in system.pools:
+                    system.pools.append(pool)
                     system.record_activity(user=identity.current.user, service=u'CSV',
-                            action=u'Added', field=u'group', old=u'', new=u'%s' % group)
+                                           action=u'Added', field=u'pool', old=u'', new=u'%s' % pool)
         else:
-            log.append("%s: group can't be empty!" % system.fqdn)
+            log.append("%s: pool can't be empty!" % system.fqdn)
             return False
         return True
 
-    def __init__(self, system, group):
-        self.group = group.group_name
+    def __init__(self, system, pool):
+        self.pool = pool.name
         self.fqdn = system.fqdn
         self.deleted = False
 
 system_types = ['system', 'labinfo', 'exclude','install','keyvalue',
-                'system_group', 'power']
+                'system_pool', 'power']
 user_types   = ['user_group']
 csv_types = dict( system = CSV_System,
                   system_id = CSV_System_id,
@@ -975,6 +974,6 @@ csv_types = dict( system = CSV_System,
                   exclude = CSV_Exclude,
                   install = CSV_Install,
                   keyvalue = CSV_KeyValue,
-                  system_group = CSV_GroupSystem,
+                  system_pool = CSV_SystemPool,
                   user_group = CSV_GroupUser,
                   power      = CSV_Power)

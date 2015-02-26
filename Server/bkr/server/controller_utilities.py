@@ -154,8 +154,8 @@ class Utility:
         return lambda x:getattr(x,c.lower())
 
     @classmethod
-    def system_group_getter(cls):
-        return lambda x: ' '.join([group.group_name for group in x.groups])
+    def system_pools_getter(cls):
+        return lambda x: ' '.join([pool.name for pool in x.pools])
 
     @classmethod
     def system_numanodes_getter(cls):

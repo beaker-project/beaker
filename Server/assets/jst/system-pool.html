@@ -1,0 +1,19 @@
+<p>
+The system is in the following pools:
+</p>
+<div id="list-system-pools">
+ <% if (_.isEmpty(pools)) { %>
+(none)
+<% } %>
+<ul class="list-group system-pools-list">
+    <% _.each(pools, function (pool) { %>
+    <li><a href="/pools/<%- encodeURIComponent(pool) %>"><%- pool %></a>
+      <% if (can_remove_from_pool[pool]) { %>
+      <button type="button" class="btn pool-remove" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Removing&hellip;" data-pool-remove="<%- pool %>"><i class="fa fa-times"></i> Remove</button>
+      <% }%>
+    </li>
+    <% }) %>
+</ul>
+</div>
+<div id="system-pool-add">
+</div>

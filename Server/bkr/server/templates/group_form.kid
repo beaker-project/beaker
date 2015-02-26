@@ -30,13 +30,6 @@
       <i>Members populated from LDAP</i>
     </div>
     <div>
-        <h2>Systems</h2>
-        <div py:if="value.systems"
-             py:content="systemgrid.display(value.systems)" />
-       <div py:if="tg.identity.user and tg.identity.user.is_admin()"
-            py:content="system_form(method='POST', action=system_action, value=value)" />
-    </div>
-    <div>
         <h2>Permissions</h2>
        ${group_permissions.display(value, form=group_form, grid=group_permissions_grid)}
     </div>

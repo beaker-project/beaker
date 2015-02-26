@@ -26,7 +26,7 @@ from bkr.server.model import LabController, User, Group, UserGroup, Distro, Dist
         LogRecipeTaskResult, TaskType, SystemResource, GuestRecipe, \
         GuestResource, VirtResource, SystemStatusDuration, SystemAccessPolicy, \
         SystemPermission, DistroTreeImage, ImageType, KernelType, \
-        RecipeReservationRequest, OSMajorInstallOptions
+        RecipeReservationRequest, OSMajorInstallOptions, SystemPool
 
 log = logging.getLogger(__name__)
 
@@ -167,8 +167,8 @@ def add_owner_to_group(user, group):
             if assoc.user == user:
                 assoc.is_owner = True
 
-def add_group_to_system(system, group):
-    system.groups.append(group)
+def add_pool_to_system(system, pool):
+    system.pools.append(pool)
 
 def create_distro(name=None, osmajor=u'DansAwesomeLinux6', osminor=u'9',
                   arches=None, tags=None, harness_dir=True, osmajor_installopts=None):
@@ -294,6 +294,22 @@ def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.aut
     system.date_modified = datetime.datetime.utcnow()
     log.debug('Created system %r', system)
     return system
+
+def create_system_pool(name=None, description='A system Pool',
+                       owning_group=None, owning_user=None, systems=[]):
+    if owning_group and owning_user:
+        raise ValueError('Must supply either an owning user or an owning group')
+    if not owning_group and not owning_user:
+        owning_group = create_group()
+    if name is None:
+        name = unique_name(u'test-system-pool-%s')
+    pool = SystemPool(name=name, description=description,
+                      owning_group=owning_group,
+                      owning_user=owning_user,
+                      systems=systems)
+    session.add(pool)
+    log.debug('Created System Pool %s', pool.name)
+    return pool
 
 def configure_system_power(system, power_type=u'ilo', address=None,
         user=None, password=None, power_id=None):

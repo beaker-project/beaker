@@ -59,14 +59,6 @@ class SystemViewTestWD(WebDriverTestCase):
             b.find_element_by_xpath('//ul[contains(@class, "system-nav")]'
                     '//a[text()="%s"]' % tab).click()
 
-    # https://bugzilla.redhat.com/show_bug.cgi?id=647854
-    def test_manual_system_with_group_when_not_logged_in(self):
-        with session.begin():
-            system = data_setup.create_system(status=u'Manual')
-            group = data_setup.create_group()
-            data_setup.add_group_to_system(system, group)
-        self.go_to_system_view(system=system)
-
     def test_system_view_condition_report(self):
         b = self.browser
         login(b)
@@ -353,55 +345,88 @@ class SystemViewTestWD(WebDriverTestCase):
             session.refresh(self.system)
             self.assert_(self.system.date_modified > orig_date_modified)
 
-    def test_add_group(self):
+    def test_add_pool(self):
         with session.begin():
-            group = data_setup.create_group()
-            user_password = 'password'
-            user = data_setup.create_user(password=user_password)
-            data_setup.add_user_to_group(user, group)
-            orig_date_modified = self.system.date_modified
-
-        # as admin, assign the system to our test group
+            system = data_setup.create_system()
+            pool = data_setup.create_system_pool(name='Beaker developers')
+            orig_date_modified = system.date_modified
+        # as admin, assign the system to our test pool
         b = self.browser
         login(b)
-        self.go_to_system_view(tab='Groups')
-        b.find_element_by_name('group.text').send_keys(group.group_name)
-        b.find_element_by_name('groups').submit()
-        b.find_element_by_xpath(
-                '//div[@id="groups"]'
-                '//td[normalize-space(text())="%s"]' % group.group_name)
+        self.go_to_system_view(system=system, tab='Pools')
+        b.find_element_by_name('pool').send_keys(pool.name)
+        b.find_element_by_class_name('system-pool-add').submit()
+        self.assertEquals(b.find_element_by_xpath('//div[@id="list-system-pools"]'
+                                                  '/ul[@class="list-group system-pools-list"]'
+                                                  '/li/a').text, pool.name)
         with session.begin():
-            session.refresh(self.system)
-            self.assert_(self.system.date_modified > orig_date_modified)
+            session.refresh(system)
+            self.assert_(system.date_modified > orig_date_modified)
 
-        # as a user in the group, can we see it?
+    def test_remove_pool(self):
+        with session.begin():
+            system = data_setup.create_system()
+            pool = data_setup.create_system_pool()
+            system.pools.append(pool)
+            orig_date_modified = system.date_modified
+        b = self.browser
+        login(b)
+        self.go_to_system_view(system=system, tab='Pools')
+        b.find_element_by_link_text(pool.name)
+        # remove
+        b.find_element_by_xpath('//li[contains(a/text(), "%s")]/button' % pool.name).click()
+        b.find_element_by_xpath('//div[@id="list-system-pools" and '
+                                'not(./ul/li)]')
+        with session.begin():
+            session.refresh(system)
+            self.assert_(system.date_modified > orig_date_modified)
+
+        # A pool owner or an user with edit permissions on a system can remove a system from a pool
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            system = data_setup.create_system(owner=user)
+            system.pools.append(pool)
         logout(b)
-        login(b, user.user_name, user_password)
-        click_menu_item(b, 'Systems', 'Available')
-        b.find_element_by_name('simplesearch').send_keys(self.system.fqdn)
-        b.find_element_by_name('systemsearch_simple').submit()
-        check_system_search_results(b, present=[self.system])
-
-    def test_remove_group(self):
+        login(b, user=user.user_name, password='password')
+        self.go_to_system_view(system=system, tab='Pools')
+        b.find_element_by_link_text(pool.name)
+        # remove
+        b.find_element_by_xpath('//li[contains(a/text(), "%s")]/button' % pool.name).click()
+        b.find_element_by_xpath('//div[@id="list-system-pools" and '
+                                'not(./ul/li)]')
         with session.begin():
-            group = data_setup.create_group()
-            self.system.groups.append(group)
-        orig_date_modified = self.system.date_modified
+            session.refresh(system)
+            self.assertNotIn(pool, system.pools)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=917745
+    def test_add_pool_to_system_twice(self):
+        with session.begin():
+            system = data_setup.create_system()
+            pool = data_setup.create_system_pool()
+            orig_date_modified = self.system.date_modified
+        # as admin, assign the system to our test pool
         b = self.browser
         login(b)
-        self.go_to_system_view(tab='Groups')
-        b.find_element_by_xpath(
-                '//td[normalize-space(text())="%s"]' % group.group_name)
-        delete_and_confirm(b, '//tr[normalize-space(td[1]/text())="%s"]'
-                % group.group_name)
-        self.assertEquals(b.find_element_by_class_name('flash').text,
-                '%s Removed' % group.display_name)
-        b.find_element_by_xpath(
-                '//div[@id="groups" and not(.//td[normalize-space(text())="%s"])]'
-                % group.group_name)
+        self.go_to_system_view(system=system, tab='Pools')
+        b.find_element_by_name('pool').send_keys(pool.name)
+        b.find_element_by_class_name('system-pool-add').submit()
+        self.assertEquals(b.find_element_by_xpath('//div[@id="list-system-pools"]'
+                                                  '/ul[@class="list-group system-pools-list"]'
+                                                  '/li/a').text, pool.name)
         with session.begin():
-            session.refresh(self.system)
-            self.assert_(self.system.date_modified > orig_date_modified)
+            session.refresh(system)
+            self.assert_(system.date_modified > orig_date_modified)
+
+        orig_date_modified = system.date_modified
+        # add again
+        self.go_to_system_view(system=system, tab='Pools')
+        b.find_element_by_name('pool').send_keys(pool.name)
+        b.find_element_by_class_name('system-pool-add').submit()
+        # this is a no-op, will just clear the input field
+        self.assertFalse(b.find_element_by_name('pool').text)
+        with session.begin():
+            session.refresh(system)
+            self.assert_(system.date_modified == orig_date_modified)
 
     def test_unprivileged_user_cannot_see_power_settings(self):
         with session.begin():

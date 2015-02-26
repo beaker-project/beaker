@@ -219,3 +219,17 @@ class CSVExportTest(WebDriverTestCase):
         csv_rows = [row for row in csv.DictReader(csv_request)
                     if row['fqdn'] == system.fqdn]
         self.assertNotIn('secret', csv_rows[0].keys())
+
+    def test_export_system_pool(self):
+        with session.begin():
+            system = data_setup.create_system()
+            pool = data_setup.create_system_pool(systems=[system])
+            system1 = data_setup.create_system()
+            pool.systems.append(system1)
+
+        login(self.browser)
+        csv_request = self.get_csv('system_pool')
+        csv_rows = [row for row in csv.DictReader(csv_request)
+                    if row['pool'] == pool.name]
+        self.assertEquals([csv_row['fqdn'] for csv_row in csv_rows],
+                          [s.fqdn for s in pool.systems])

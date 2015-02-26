@@ -238,19 +238,19 @@ class TestSystemsAtomFeed(DatabaseTestCase):
         self.assertEqual(href,
                 '%sview/%s?tg_format=turtle' % (get_server_base(), system.fqdn))
 
-    def test_filter_by_group(self):
+    def test_filter_by_pool(self):
         with session.begin():
-            data_setup.create_system(fqdn=u'nogroup.system')
-            self.group = data_setup.create_group()
-            data_setup.create_system(fqdn=u'grouped.system').groups.append(self.group)
+            data_setup.create_system(fqdn=u'nopool.system')
+            pool = data_setup.create_system_pool()
+            data_setup.create_system(fqdn=u'inpool.system').pools.append(pool)
         feed_url = urljoin(get_server_base(), '?' + urlencode({
                 'tg_format': 'atom', 'list_tgp_order': '-date_modified',
-                'systemsearch-0.table': 'System/Group',
+                'systemsearch-0.table': 'System/Pools',
                 'systemsearch-0.operation': 'is',
-                'systemsearch-0.value': self.group.group_name}))
+                'systemsearch-0.value': pool.name}))
         feed = lxml.etree.parse(urlopen(feed_url)).getroot()
-        self.assert_(not self.feed_contains_system(feed, 'nogroup.system'))
-        self.assert_(self.feed_contains_system(feed, 'grouped.system'))
+        self.assertFalse(self.feed_contains_system(feed, 'nopool.system'))
+        self.assertTrue(self.feed_contains_system(feed, 'inpool.system'))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=690063
     def test_xml_filter(self):
@@ -272,23 +272,6 @@ class SystemsBrowseTest(WebDriverTestCase):
 
     def setUp(self):
         self.browser = self.get_browser()
-
-    def test_group_systems(self):
-
-        b = self.browser
-        with session.begin():
-            group = data_setup.create_group()
-            system1 = data_setup.create_system()
-            system1.groups.append(group)
-            system2 = data_setup.create_system(status=SystemStatus.removed)
-            system2.groups.append(group)
-
-        b.get(urljoin(get_server_base(),
-                      'groups/systems?group_id={0}'.format(group.group_id)))
-        b.find_element_by_xpath('//h1[text()="Systems in Group {0}"]'.format(group.group_name))
-        check_system_search_results(b, present=[system1], absent=[system2])
-        self.assertEqual(
-            b.find_element_by_class_name('item-count').text, 'Items found: 1')
 
     def test_mine_systems(self):
 

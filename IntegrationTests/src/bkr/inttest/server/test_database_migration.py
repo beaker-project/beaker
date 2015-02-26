@@ -5,12 +5,13 @@
 # (at your option) any later version.
 
 import unittest2 as unittest
-import contextlib
 import pkg_resources
 import sqlalchemy
 from turbogears import config
 from turbogears.database import metadata
 from bkr.server.tools.init import upgrade_db, downgrade_db
+from sqlalchemy.orm import create_session
+from bkr.server.model import SystemPool, System, Group, User
 
 def has_initial_sublist(larger, prefix):
     """ Return true iff list *prefix* is an initial sublist of list 
@@ -36,6 +37,7 @@ class MigrationTest(unittest.TestCase):
         migration_engine = sqlalchemy.create_engine(
                 config.get('beaker.migration_test_dburi'))
         self.migration_metadata = sqlalchemy.MetaData(bind=migration_engine)
+        self.migration_session = create_session(bind=migration_engine)
         connection = migration_engine.connect()
         db_name = migration_engine.url.database
         connection.execute('DROP DATABASE IF EXISTS %s' % db_name)
@@ -159,6 +161,11 @@ class MigrationTest(unittest.TestCase):
         if 'lab_controller_data_center' in actual_tables:
             # may be left over from 0.16
             actual_tables.remove('lab_controller_data_center')
+        # As part of the migration to system pools, we do not delete
+        # the system_group table, but simply stop using it. But, if
+        # we are upgrading from a version which has it, just remove it
+        if 'system_group' in actual_tables:
+            actual_tables.remove('system_group')
         self.assertItemsEqual(expected_tables, actual_tables)
         for table_name in metadata.tables:
             expected_columns = metadata.tables[table_name].columns.keys()
@@ -317,3 +324,60 @@ class MigrationTest(unittest.TestCase):
         self.assertEquals([col.name for col in expected.columns],
                 [col.name for col in actual.columns])
         self.assertEquals(expected.unique, actual.unique)
+
+    def test_migrate_system_groups_to_pools(self):
+        connection = self.migration_metadata.bind.connect()
+
+        # create the DB schema for beaker 19
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                                                         'database-dumps/19.sql'))
+        # populate synthetic data into relevant tables
+        connection.execute('INSERT INTO tg_user(user_id, user_name, email_address) VALUES (1, "user1", "user1@user.com")')
+        connection.execute('INSERT INTO kernel_type (id) VALUES (1)')
+        connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (1, "test.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
+        connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (2, "test1.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
+        connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (3, "test2.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
+        connection.execute('INSERT INTO tg_group(group_id, group_name) VALUES (1, "group1")')
+        connection.execute('INSERT INTO tg_group(group_id, group_name) VALUES (2, "group2")')
+        connection.execute('INSERT INTO system_group(system_id, group_id) VALUES (1, 1)')
+        connection.execute('INSERT INTO system_group(system_id, group_id) VALUES (2, 1)')
+        connection.execute('INSERT INTO system_group(system_id, group_id) VALUES (1, 2)')
+        connection.execute('INSERT INTO system_group(system_id, group_id) VALUES (3, 2)')
+
+        # Migrate to system pools
+        upgrade_db(self.migration_metadata)
+        self.check_migrated_schema()
+
+        # check data for system_pool
+        created_pools = self.migration_session.query(SystemPool).all()
+        self.assertItemsEqual(['group1', 'group2'],
+                          [pool.name for pool in created_pools])
+        self.assertItemsEqual(['Pool migrated from group group1',
+                               'Pool migrated from group group2'],
+                              [pool.description for pool in created_pools])
+        expected_system_pool_owners = {
+            'group1': 'group1',
+            'group2': 'group2',
+        }
+        for pool in expected_system_pool_owners.keys():
+            p = self.migration_session.query(SystemPool).filter(SystemPool.name == pool).one()
+            self.assertEquals(p.owning_group,
+                              self.migration_session.query(Group).filter(Group.group_name == pool).one())
+
+        expected_system_pools_map = {
+            'test.fqdn.name': ['group1', 'group2'],
+            'test1.fqdn.name': ['group1'],
+            'test2.fqdn.name': ['group2'],
+        }
+        for system in expected_system_pools_map.keys():
+            s = self.migration_session.query(System).filter(System.fqdn == system).one()
+            self.assertItemsEqual([p.name for p in s.pools],
+                                  expected_system_pools_map[system])
+
+        min_user_id = min([user.id for user in self.migration_session.query(User).all()])
+        for pool in created_pools:
+            self.assertEquals(pool.activity[-1].action, u'Created')
+            self.assertEquals(pool.activity[-1].field_name, u'Pool')
+            self.assertEquals(pool.activity[-1].user.user_id, min_user_id)
+            self.assertEquals(pool.activity[-1].new_value, pool.name)
+            self.assertEquals(pool.activity[-1].service, u'Migration')

@@ -24,9 +24,8 @@ from bkr.server.controller_utilities import restrict_http_method
 from bkr.server.app import app
 from bkr.server import mail, identity
 
-from bkr.server.model import (Group, Permission, System, User, UserGroup,
-                              Activity, GroupActivity, SystemActivity, 
-                              SystemStatus)
+from bkr.server.model import (Group, Permission, User, UserGroup,
+                              Activity, GroupActivity)
 from bkr.server.util import convert_db_lookup_error
 from bkr.server.bexceptions import DatabaseLookupError
 
@@ -84,10 +83,6 @@ class Groups(AdminPage):
                                      search_controller = url("/users/by_name"),
                                      search_param = "input",
                                      result_name = "matches")
-    auto_systems  = AutoCompleteField(name='system',
-                                     search_controller = url("/by_fqdn"),
-                                     search_param = "input",
-                                     result_name = "matches")
 
     search_groups = AutoCompleteField(name='group',
                                      search_controller = url("/groups/by_name?anywhere=1"),
@@ -114,13 +109,6 @@ class Groups(AdminPage):
     group_user_form = InlineForm(
         'GroupUser',
         fields = [group_id, auto_users],
-        action = 'save_data',
-        submit_text = _(u'Add'),
-    )
-
-    group_system_form = InlineForm(
-        'GroupSystem',
-        fields = [group_id, auto_systems],
         action = 'save_data',
         submit_text = _(u'Add'),
     )
@@ -223,22 +211,7 @@ class Groups(AdminPage):
 
         return BeakerDataGrid(name='group_members_grid', fields=user_fields)
 
-    @expose(template='bkr.server.templates.grid')
-    @paginate('list', default_order='fqdn', limit=20, max_limit=None)
-    def systems(self,group_id=None,*args,**kw):
-        try:
-            group = Group.by_id(group_id)
-        except DatabaseLookupError:
-            log.exception('Group id %s is not a valid group id' % group_id)
-            flash(_(u'Need a valid group to search on'))
-            redirect('../groups/mine')
 
-        systems = System.all(identity.current.user). \
-                  filter(System.groups.contains(group)). \
-                  filter(System.status != SystemStatus.removed)
-        title = 'Systems in Group %s' % group.group_name
-        from bkr.server.controllers import Root
-        return Root()._systems(systems, title, group_id = group_id,**kw)
 
     @expose(template='bkr.server.templates.group_form')
     def edit(self, group_id=None, group_name=None, **kw):
@@ -266,16 +239,6 @@ class Groups(AdminPage):
         if identity.current.user:
             can_edit = group.can_edit(identity.current.user)
 
-        systems_fields = [('System', lambda x: x.link)]
-        if can_edit:
-            system_remove_widget = DeleteLinkWidgetForm(action='removeSystem',
-                    hidden_fields=[widgets.HiddenField(name='group_id'),
-                        widgets.HiddenField(name='id')],
-                    action_text=u'Remove')
-            systems_fields.append((' ', lambda x: system_remove_widget.display(
-                dict(group_id=group_id, id=x.id))))
-        systemgrid = BeakerDataGrid(fields=systems_fields)
-
         permissions_fields = [('Permission', lambda x: x.permission_name)]
         if can_edit:
             permissions_fields.append((' ', lambda x: XML(
@@ -287,17 +250,14 @@ class Groups(AdminPage):
 
         return dict(
             form = self.group_form,
-            system_form = self.group_system_form,
             user_form = self.group_user_form,
             group_edit_js = LocalJSLink('bkr', '/static/javascript/group_users_v2.js'),
             action = './save',
-            system_action = './save_system',
             user_action = './save_user',
             options = {},
             value = group,
             group_pw = group.root_password,
             usergrid = usergrid,
-            systemgrid = systemgrid,
             disabled_fields=[],
             group_permissions = group_permissions,
             group_form = self.permissions_form,
@@ -398,34 +358,6 @@ class Groups(AdminPage):
         flash( _(u"OK") )
         redirect("mine")
 
-    @expose()
-    @error_handler(edit)
-    @identity.require(identity.not_anonymous())
-    def save_system(self, **kw):
-        try:
-            with convert_db_lookup_error('No such system: %s' % kw['system']['text']):
-                system = System.by_fqdn(kw['system']['text'],identity.current.user)
-        except DatabaseLookupError, e:
-            flash(unicode(e))
-            redirect("./edit?group_id=%s" % kw['group_id'])
-        # A system owner can add their system to a group, but a group owner 
-        # *cannot* add an arbitrary system to their group because that would 
-        # grant them extra privileges over it.
-        if not system.can_edit(identity.current.user):
-            flash(_(u'You do not have permission to edit system %s' % system))
-            redirect('edit?group_id=%s' % kw['group_id'])
-        group = Group.by_id(kw['group_id'])
-        if group in system.groups:
-            flash( _(u"System '%s' is already in group '%s'" % (system.fqdn, group.group_name)))
-            redirect("./edit?group_id=%s" % kw['group_id'])
-        group.systems.append(system)
-        activity = GroupActivity(identity.current.user, u'WEBUI', u'Added', u'System', u"", system.fqdn)
-        group.activity.append(activity)
-        system.record_activity(user=identity.current.user, service=u'WEBUI',
-                action=u'Added', field=u'Group', old=u"", new=group.display_name)
-        flash( _(u"OK") )
-        redirect("./edit?group_id=%s" % kw.get('group_id'))
-
     @identity.require(identity.in_group("admin"))
     @expose(format='json')
     def save_group_permissions(self, **kw):
@@ -512,15 +444,6 @@ class Groups(AdminPage):
         if groups is None:
             groups = session.query(Group)
 
-        def get_sys(x):
-            systems = System.all(identity.current.user). \
-                      filter(System.groups.contains(x)). \
-                      filter(System.status != SystemStatus.removed).all()
-            if len(systems):
-                return make_link('systems?group_id=%s' % x.group_id, u'System count: %s' % len(systems))
-            else:
-                return 'System count: 0'
-
         def get_remove_link(x):
             try:
                 if x.can_edit(identity.current.user) and not x.is_protected_group():
@@ -534,11 +457,10 @@ class Groups(AdminPage):
 
         group_name = ('Group Name', lambda group: make_link(
                 'edit?group_id=%s' % group.group_id, group.group_name))
-        systems = ('Systems', get_sys)
         display_name = ('Display Name', lambda x: x.display_name)
         remove_link = ('', get_remove_link)
 
-        grid_fields =  [group_name, display_name, systems, remove_link]
+        grid_fields =  [group_name, display_name, remove_link]
         grid = myPaginateDataGrid(fields=grid_fields,
                 add_action='./new' if not identity.current.anonymous else None)
         return_dict = dict(title=u"Groups",
@@ -686,29 +608,6 @@ class Groups(AdminPage):
     @identity.require(identity.not_anonymous())
     @expose()
     @restrict_http_method('post')
-    def removeSystem(self, group_id=None, id=None, **kw):
-        group = Group.by_id(group_id)
-        system = System.by_id(id, identity.current.user)
-
-        # A group owner can remove a system from their group.
-        # A system owner can remove their system from a group.
-        # But note this is not symmetrical with adding systems.
-        if not (group.can_edit(identity.current.user) or
-                system.can_edit(identity.current.user)):
-            flash(_(u'Not permitted to remove %s from %s') % (system, group))
-            redirect('../groups/mine')
-
-        group.systems.remove(system)
-        activity = GroupActivity(identity.current.user, u'WEBUI', u'Removed', u'System', system.fqdn, u"")
-        group.activity.append(activity)
-        system.record_activity(user=identity.current.user, service=u'WEBUI',
-                action=u'Removed', field=u'Group', old=group.display_name, new=u"")
-        flash( _(u"%s Removed" % system.fqdn))
-        raise redirect("./edit?group_id=%s" % group_id)
-
-    @identity.require(identity.not_anonymous())
-    @expose()
-    @restrict_http_method('post')
     def remove(self, **kw):
         try:
             group = Group.by_id(kw['group_id'])
@@ -732,12 +631,9 @@ class Groups(AdminPage):
         # before deleting the group
         for rule in group.system_access_policy_rules:
             rule.record_deletion()
-
         session.delete(group)
         activity = Activity(identity.current.user, u'WEBUI', u'Removed', u'Group', group.display_name, u"")
         session.add(activity)
-        for system in group.systems:
-            session.add(SystemActivity(identity.current.user, u'WEBUI', u'Removed', u'Group', group.display_name, u"", object=system))
         flash( _(u"%s deleted") % group.display_name )
         raise redirect(".")
 
@@ -752,20 +648,6 @@ class Groups(AdminPage):
 
         users = group.users
         return [(user.user_id, user.display_name) for user in users]
-
-    @expose(format='json')
-    def get_group_systems(self, group_id=None, *args, **kw):
-        try:
-            group = Group.by_id(group_id)
-        except DatabaseLookupError:
-            log.exception('Group id %s is not a valid group id' % group_id)
-            response.status = 403
-            return ['Invalid Group Id']
-
-        systems = System.all(identity.current.user).filter(System.groups.contains(group)). \
-                  filter(System.status != SystemStatus.removed)
-
-        return [(system.id, system.fqdn) for system in systems]
 
     # XML-RPC method for creating a group
     @identity.require(identity.not_anonymous())

@@ -848,24 +848,25 @@ class SystemFilteringTest(DatabaseTestCase):
             """,
             present=[small_disk], absent=[big_disk, two_disks])
 
+    # <group> is deprecated, but we keep the tests to prevent regressive behaviour
     def test_group(self):
-        group_a = data_setup.create_group()
-        group_b = data_setup.create_group()
+        pool_a = data_setup.create_system_pool()
+        pool_b = data_setup.create_system_pool()
         system_0 = data_setup.create_system()
         system_a = data_setup.create_system()
-        system_a.groups.append(group_a)
+        system_a.pools.append(pool_a)
         system_ab = data_setup.create_system()
-        system_ab.groups.append(group_a)
-        system_ab.groups.append(group_b)
+        system_ab.pools.append(pool_a)
+        system_ab.pools.append(pool_b)
         system_b = data_setup.create_system()
-        system_b.groups.append(group_b)
+        system_b.pools.append(pool_b)
         self.check_filter("""
             <hostRequires>
                 <and>
                     <group op="=" value="%s" />
                 </and>
             </hostRequires>
-            """ % group_a.group_name,
+            """ % pool_a.name,
             present=[system_a, system_ab],
             absent=[system_b, system_0])
         self.check_filter("""
@@ -874,7 +875,7 @@ class SystemFilteringTest(DatabaseTestCase):
                     <group op="!=" value="%s" />
                 </and>
             </hostRequires>
-            """ % group_a.group_name,
+            """ % pool_a.name,
             present=[system_b, system_0],
             absent=[system_a, system_ab])
         # https://bugzilla.redhat.com/show_bug.cgi?id=601952
@@ -891,6 +892,55 @@ class SystemFilteringTest(DatabaseTestCase):
             <hostRequires>
                 <and>
                     <group op="!=" value="" />
+                </and>
+            </hostRequires>
+            """,
+            present=[system_a, system_ab, system_b],
+            absent=[system_0])
+
+    def test_system_pool(self):
+        pool_a = data_setup.create_system_pool()
+        pool_b = data_setup.create_system_pool()
+        system_0 = data_setup.create_system()
+        system_a = data_setup.create_system()
+        system_a.pools.append(pool_a)
+        system_ab = data_setup.create_system()
+        system_ab.pools.append(pool_a)
+        system_ab.pools.append(pool_b)
+        system_b = data_setup.create_system()
+        system_b.pools.append(pool_b)
+        self.check_filter("""
+            <hostRequires>
+                <and>
+                    <pool op="=" value="%s" />
+                </and>
+            </hostRequires>
+            """ % pool_a.name,
+            present=[system_a, system_ab],
+            absent=[system_b, system_0])
+        self.check_filter("""
+            <hostRequires>
+                <and>
+                    <pool op="!=" value="%s" />
+                </and>
+            </hostRequires>
+            """ % pool_a.name,
+            present=[system_b, system_0],
+            absent=[system_a, system_ab])
+        # https://bugzilla.redhat.com/show_bug.cgi?id=601952
+        self.check_filter("""
+            <hostRequires>
+                <and>
+                    <pool op="==" value="" />
+                </and>
+            </hostRequires>
+            """,
+            present=[system_0],
+            absent=[system_a, system_ab, system_b])
+        self.check_filter("""
+            <hostRequires>
+                <and>
+                    <pool op="!=" value="" />
                 </and>
             </hostRequires>
             """,

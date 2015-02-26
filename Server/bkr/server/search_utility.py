@@ -6,7 +6,7 @@
 
 import datetime
 import decimal
-import model
+import bkr.server.model as model
 import re
 import sqlalchemy
 from copy import copy
@@ -1067,11 +1067,12 @@ class System(SystemObject):
                           'LoanComment': MyColumn(
                                             column=model.System.loan_comment,
                                             col_type='string'),
-                          'Group'     : AliasedColumn(col_type='string',
-                                            target_table=[model.Group],
-                                            relations = lambda: [model.System.group_assocs, model.Group],
-                                            column_name='group_name',
-                                            eagerload=False,)
+                          'Pools'       : AliasedColumn(col_type='string',
+                                                        column_name='name',
+                                                        eagerload=False,
+                                                        onclause=model.System.pools,
+                                                        relations=[model.SystemPool]),
+
                          }
     search_values_dict = {'Status'    : lambda: [status for status in 
                                                  model.SystemStatus.values() if status != 'Removed'],

@@ -87,6 +87,7 @@ def _create_env(source_dir, output_dir, **kwargs):
             'system-loan.js',
             'system-model.js',
             'system-owner.js',
+            'system-pool.js',
             'system-power-settings.js',
             'system-provision.js',
             'system-quick-info.js',

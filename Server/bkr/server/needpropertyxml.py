@@ -1,4 +1,5 @@
 
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -12,7 +13,7 @@ import datetime
 from lxml import etree
 
 from bkr.server.model import (Arch, Distro, DistroTree, DistroTag,
-                              OSMajor, OSVersion, Group, System, User,
+                              OSMajor, OSVersion, SystemPool, System, User,
                               Key, Key_Value_Int, Key_Value_String,
                               LabController, LabControllerDistroTree,
                               Hypervisor, Cpu, CpuFlag, Numa, Device,
@@ -301,9 +302,9 @@ class XmlDistroVirt(ElementWrapper):
     pass
 
 
-class XmlGroup(ElementWrapper):
+class XmlPool(ElementWrapper):
     """
-    Filter based on group
+    Filter based on pool
     """
 
     op_table = { '=' : '__eq__',
@@ -314,23 +315,23 @@ class XmlGroup(ElementWrapper):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
         if value:
-            # - '==' - search for system which is member of given group
-            # - '!=' - search for system which is not member of given group
+            # - '==' - search for system which is member of given pool
+            # - '!=' - search for system which is not member of given pool
             try:
-                group = Group.by_name(value)
+                pool = SystemPool.by_name(value)
             except NoResultFound:
                 return (joins, None)
             if op == '__eq__':
-                query = System.groups.contains(group)
+                query = System.pools.contains(pool)
             else:
-                query = not_(System.groups.contains(group))
+                query = not_(System.pools.contains(pool))
         else:
-            # - '!=' - search for system which is member of any group
-            # - '==' - search for system which is not member of any group
+            # - '!=' - search for system which is member of any pool
+            # - '==' - search for system which is not member of any pool
             if op == '__eq__':
-                query = System.group_assocs == None
+                query = System.pools == None
             else:
-                query = System.group_assocs != None
+                query = System.pools != None
         return (joins, query)
 
 
@@ -911,7 +912,7 @@ class XmlArch(ElementWrapper):
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if value:
-            # As per XmlGroup above,
+            # As per XmlPool above,
             # - '==' - search for system which has given arch
             # - '!=' - search for system which does not have given arch
             try:
@@ -1118,7 +1119,9 @@ class XmlHost(XmlAnd):
                     'cpu': XmlCpu,
                     'device': XmlDevice,
                     'disk': XmlDisk,
-                    'group': XmlGroup,
+                    'pool': XmlPool,
+                    # for backward compatibility
+                    'group': XmlPool,
                     'key_value': XmlKeyValue,
                     'auto_prov': XmlAutoProv,
                     'hostlabcontroller': XmlHostLabController, #deprecated

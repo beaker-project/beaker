@@ -20,7 +20,6 @@ class TestGroups(WebDriverTestCase):
             self.system = data_setup.create_system()
             self.group = data_setup.create_group()
             self.user.groups.append(self.group)
-            self.system.groups.append(self.group)
             self.rand_group = data_setup.create_group \
                 (group_name=data_setup.unique_name(u'aardvark%s'))
 
@@ -89,9 +88,6 @@ class TestGroups(WebDriverTestCase):
         b.get(get_server_base() + 'groups/mine')
         b.find_element_by_xpath('//h1[text()="My Groups"]')
         self.assert_(not is_text_present(b, self.rand_group.group_name))
-        b.find_element_by_link_text('System count: 1').click()
-        self.assert_(is_text_present(b, 'Systems in Group %s' % self.group.group_name))
-        self.assert_(is_text_present(b, self.system.fqdn))
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=968865
     def test_group_remove_link_visibility(self):

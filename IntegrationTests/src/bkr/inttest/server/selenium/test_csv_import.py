@@ -254,22 +254,6 @@ class CSVImportTest(WebDriverTestCase):
             self.assertEquals(p.ks_meta, u'mode=cmdline')
             self.assertEquals(p.kernel_options_post, u'console=ttyS0')
 
-    #https://bugzilla.redhat.com/show_bug.cgi?id=1058549
-    def test_groups_non_existent_system(self):
-        login(self.browser)
-        fqdn = data_setup.unique_name('system%s.idonot.exist')
-        with session.begin():
-            group = data_setup.create_group()
-        self.import_csv((u'csv_type,fqdn,group,deleted\n'
-                         u'system_group,%s,%s,False' % 
-                         (fqdn, group.group_name))
-                        .encode('utf8'))
-
-        with session.begin():
-            system = System.query.filter(System.fqdn == fqdn).one()
-            self.assertIn(group.group_name, 
-                          [g.group_name for g in system.groups])
-
     # https://bugzilla.redhat.com/show_bug.cgi?id=787519
     def test_no_quotes(self):
         with session.begin():
@@ -370,3 +354,36 @@ class CSVImportTest(WebDriverTestCase):
         with session.begin():
             session.refresh(self.system)
             self.assertEquals(self.system.location, u'在我的办公桌')
+
+
+    def test_system_pools_import(self):
+        with session.begin():
+            system = data_setup.create_system()
+            pool1 = data_setup.create_system_pool()
+            pool2 = data_setup.create_system_pool()
+
+        login(self.browser)
+        self.import_csv((u'csv_type,fqdn,pool,deleted\n'
+                         u'system_pool,%s,%s,False\n'
+                         u'system_pool,%s,%s,False'%(system.fqdn, pool1.name,
+                                                     system.fqdn, pool2.name)) \
+                        .encode('utf8'))
+        self.failUnless(is_text_present(self.browser, 'No Errors'))
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals([pool1.name, pool2.name],
+                              [pool.name for pool in system.pools])
+        # test deletion
+        self.import_csv((u'csv_type,fqdn,pool,deleted\n'
+                         u'system_pool,%s,%s,True' % (system.fqdn, pool2.name)) \
+                         .encode('utf8'))
+        self.failUnless(is_text_present(self.browser, 'No Errors'))
+        with session.begin():
+            session.refresh(system)
+            self.assertNotIn(pool2.name, [pool.name for pool in system.pools])
+
+        # Attempting to add a system to a Non existent pool should throw an error
+        self.import_csv((u'csv_type,fqdn,pool,deleted\n'
+                         u'system_pool,%s,poolpool,True' % system.fqdn) \
+                         .encode('utf8'))
+        self.assertTrue(is_text_present(self.browser, 'poolpool: pool does not exist'))

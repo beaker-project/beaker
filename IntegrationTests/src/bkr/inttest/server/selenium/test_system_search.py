@@ -21,31 +21,31 @@ class SearchColumns(WebDriverTestCase):
     def setUp(self):
         self.browser = self.get_browser()
 
-    def test_group_column(self):
+    def test_pool_column(self):
         with session.begin():
-            group = data_setup.create_group()
-            system_with_group = data_setup.create_system()
-            system_with_group.groups.append(group)
-            system_without_group = data_setup.create_system()
+            pool = data_setup.create_system_pool()
+            system_in_pool = data_setup.create_system()
+            system_in_pool.pools.append(pool)
+            system_outside_pool = data_setup.create_system()
         b = self.browser
         b.get(get_server_base())
         b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_name('systemsearch-0.table'))\
-            .select_by_visible_text('System/Group')
+            .select_by_visible_text('System/Pools')
         Select(b.find_element_by_name('systemsearch-0.operation'))\
             .select_by_visible_text('is')
-        b.find_element_by_name('systemsearch-0.value').send_keys(group.group_name)
+        b.find_element_by_name('systemsearch-0.value').send_keys(pool.name)
         b.find_element_by_link_text('Toggle Result Columns').click()
         wait_for_animation(b, '#selectablecolumns')
         b.find_element_by_link_text('Select None').click()
         b.find_element_by_name('systemsearch_column_System/Name').click()
-        b.find_element_by_name('systemsearch_column_System/Group').click()
+        b.find_element_by_name('systemsearch_column_System/Pools').click()
         b.find_element_by_id('searchform').submit()
-        check_system_search_results(b, present=[system_with_group],
-                absent=[system_without_group])
+        check_system_search_results(b, present=[system_in_pool],
+                                    absent=[system_outside_pool])
         b.find_element_by_xpath('//table[@id="widget"]'
-                '//td[2][normalize-space(text())="%s"]' % group.group_name)
+                                '//td[2][normalize-space(text())="%s"]' % pool.name)
 
     def test_numa_column(self):
         with session.begin():

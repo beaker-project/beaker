@@ -28,7 +28,8 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task, TaskResult, \
         Group, User, ActivityMixin, SystemAccessPolicy, SystemPermission, \
         RecipeTask, RecipeTaskResult, DeclarativeMappedObject, OSVersion, \
-        RecipeReservationRequest, ReleaseAction
+        RecipeReservationRequest, ReleaseAction, SystemPool
+
 from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
 from sqlalchemy.exc import OperationalError
@@ -216,6 +217,46 @@ class TestSystem(DatabaseTestCase):
         distros = system.distros()
         self.assertNotIn(tree_excluded_1.distro, distros)
         self.assertNotIn(tree_excluded_2.distro, distros)
+
+class TestSystemPool(DatabaseTestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.rollback()
+
+    def test_create_system_pool(self):
+        system1 = data_setup.create_system()
+        system2 = data_setup.create_system()
+        data_setup.create_system_pool(name='pool-1',
+                                      systems=[system1, system2])
+        session.flush()
+        pool = SystemPool.by_name('pool-1')
+        self.assertEquals(pool.name, 'pool-1')
+        self.assertIn(system1, pool.systems)
+        self.assertIn(system2, pool.systems)
+
+        # invalid pool name should raise ValueError
+        self.assertRaises(ValueError, lambda: data_setup.create_system_pool(name='pool-1/'))
+
+    def test_system_pool_owner(self):
+        group = data_setup.create_group()
+        user1 = data_setup.create_user()
+        user1.groups.append(group)
+        data_setup.create_system_pool(name='pool-1', owning_group=group)
+        session.flush()
+
+        pool = SystemPool.by_name('pool-1')
+        self.assertTrue(pool.has_owner(user1))
+
+        user2 = data_setup.create_user()
+        pool.owning_group = None
+        pool.owning_user = user2
+        session.flush()
+
+        self.assertFalse(pool.has_owner(user=user1))
+        self.assertTrue(pool.has_owner(user=user2))
 
 class SystemFilterMethodsTest(DatabaseTestCase):
     """

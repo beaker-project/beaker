@@ -132,7 +132,6 @@ class ActivityTestWD(WebDriverTestCase):
                 object_='Group: %s' % self.group.display_name))
 
     def test_group_removal_is_noticed(self):
-        self.group.systems.append(self.system)
         session.flush()
         b = self.browser
         login(b)
@@ -145,8 +144,8 @@ class ActivityTestWD(WebDriverTestCase):
         should_have_deleted_msg = b.find_element_by_xpath('//body').text
         self.assert_('%s deleted' % self.group.display_name in should_have_deleted_msg)
 
-        # Check it's recorded in System Activity
-        b.get(get_server_base() + 'activity/system')
+        # Check it's recorded in Group Activity
+        b.get(get_server_base() + 'activity/')
         b.find_element_by_link_text('Show Search Options').click()
         b.find_element_by_xpath("//select[@id='activitysearch_0_table']/option[@value='Action']").click()
         b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/option[@value='is']").click()
@@ -159,4 +158,4 @@ class ActivityTestWD(WebDriverTestCase):
         b.find_element_by_id('searchform').submit()
         self.assert_(is_activity_row_present(b,via='WEBUI', action='Removed',
              old_value=self.group.display_name, new_value='',
-             object_='System: %s' % self.system.fqdn))
+             property_='Group'))

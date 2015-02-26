@@ -1187,14 +1187,14 @@ class TestBeakerd(DatabaseTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=880852
     def test_recipe_no_longer_has_access(self):
         with session.begin():
-            group = data_setup.create_group()
             job_owner = data_setup.create_user()
-            job_owner.groups.append(group)
-            system1 = data_setup.create_system(fqdn='no-longer-has-access1.invalid',
-                    lab_controller=self.lab_controller)
-            system1.custom_access_policy.add_rule(
-                    permission=SystemPermission.reserve, group=group)
-            system1.groups.append(group)
+            # system1 is added to a pool to make sure system1 is picked first
+            # before system2
+            # See: bkr.server.model.inventory:scheduler_ordering
+            system1 = data_setup.create_system(shared=True,
+                                               fqdn='no-longer-has-access1.invalid',
+                                               lab_controller=self.lab_controller)
+            system1.pools.append(data_setup.create_system_pool())
             system2 = data_setup.create_system(shared=True,
                     fqdn='no-longer-has-access2.invalid',
                     lab_controller=self.lab_controller)
@@ -1219,7 +1219,9 @@ class TestBeakerd(DatabaseTestCase):
             self.assertEqual(job.status, TaskStatus.queued)
             candidate_systems = job.recipesets[0].recipes[0].systems
             self.assertEqual(candidate_systems, [system1, system2])
-            # now remove access to system1
+            # now change acess policy of system1 so that none has any permission
+            # and system1 is not picked up as one of the systems in
+            # candidate_systems in schedule_queued_recipes()
             system1.custom_access_policy.rules[:] = []
         # first iteration: "recipe no longer has access"
         beakerd.schedule_queued_recipes()
