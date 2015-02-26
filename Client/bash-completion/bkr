@@ -7,9 +7,10 @@
 # Function expands options from main option (like workflow-tcms)
 _bkr_complete()
 {
+    local GREP=`which grep --skip-alias`
     local component=$( echo $COMP_LINE | cut -d' ' -f2 )
     if [ $component != "" ] ; then
-        local opts=$(echo $( bkr $component --help 2>/dev/null | grep -o -- '--[^ =]*' | sort | uniq ) --help )
+        local opts=$(echo $( bkr $component --help 2>/dev/null | $GREP -o -- '--[^ =]*' | sort | uniq ) --help )
 
         [[ $COMP_LINE == bkr\ $component* ]] && \
             printf %s "$opts"
@@ -20,6 +21,7 @@ _bkr_complete()
 _bkr()
 {
     COMPREPLY=()
+    local GREP=`which grep --skip-alias`
     local bkr=$1
     local cur prev
     local -a words
@@ -30,7 +32,7 @@ _bkr()
     fi
 
     # Commands offered as completions for bkr
-    local cmds=( $( bkr --help 2>/dev/null | grep "  " | cut -d' ' -f3 | sed '1d' | cut -d'=' -f1 ) -h --help )
+    local cmds=( $( bkr --help 2>/dev/null | $GREP "  " | cut -d' ' -f3 | sed '1d' | cut -d'=' -f1 ) -h --help )
 
     local i c cmd
     for (( i=1; i < ${#words[@]}-1; i++ )) ; do
