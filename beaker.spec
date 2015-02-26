@@ -4,17 +4,10 @@
 %endif
 
 # The server, lab controller, and integration test subpackages can be conditionally built.
-# Enabled on RHEL 6 and F18+
-# Use rpmbuild --with/--without to override.
-%if 0%{?rhel} == 6 || 0%{?fedora} >= 18
+# Use rpmbuild --without to override.
 %bcond_without server
 %bcond_without labcontroller
 %bcond_without inttests
-%else
-%bcond_with server
-%bcond_with labcontroller
-%bcond_with inttests
-%endif
 %global _lc_services beaker-proxy beaker-provision beaker-watchdog beaker-transfer
 # systemd?
 %if 0%{?fedora} >= 18 || 0%{?rhel} >= 7
