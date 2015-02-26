@@ -10,7 +10,7 @@ _bkr_complete()
     local GREP=`which grep --skip-alias`
     local component=$( echo $COMP_LINE | cut -d' ' -f2 )
     if [ $component != "" ] ; then
-        local opts=$(echo $( bkr $component --help 2>/dev/null | $GREP -o -- '--[^ =]*' | sort | uniq ) --help )
+        local opts=$(echo $( bkr $component --help 2>/dev/null | $GREP -v "Usage:" | $GREP -o -- '--[^ =,]*' | sort | uniq ) --help )
 
         [[ $COMP_LINE == bkr\ $component* ]] && \
             printf %s "$opts"
