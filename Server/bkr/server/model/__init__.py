@@ -81,13 +81,8 @@ class_mapper(Reservation).add_properties({
 })
 
 ## Static list of device_classes -- used by master.kid
-_device_classes = None
-def device_classes():
-    global _device_classes
-    if not _device_classes:
-        _device_classes = DeviceClass.query.all()
-    for device_class in _device_classes:
-        yield device_class
+# (This is populated by bkr.server.wsgi:init before the first request.)
+device_classes = []
 
 def auto_cmd_handler(command, new_status):
     if not command.system.open_reservation:

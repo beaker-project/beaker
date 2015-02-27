@@ -94,6 +94,11 @@ def init():
     from turbogears.widgets.base import register_static_directory
     tgmochikit.init(register_static_directory, config)
 
+    # Global device class list... a terrible hack, desperately needs deleting
+    from bkr.server import model
+    with session.begin():
+        model.device_classes = [c.device_class for c in model.DeviceClass.query]
+
     log.debug('Application initialised')
 
 # NOTE: order of before_request/after_request functions is important!

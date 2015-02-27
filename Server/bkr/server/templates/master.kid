@@ -46,7 +46,7 @@ from bkr.server.reports import Reports
                 </a>
                 <ul class="dropdown-menu">
                     <li><a href="${tg.url('/devices')}">All</a></li>
-                    <li py:for="device_class in device_classes()">
+                    <li py:for="device_class in device_classes">
                         <a href="${tg.url('/devices/%s' % device_class)}">${device_class}</a>
                     </li>
                 </ul>
