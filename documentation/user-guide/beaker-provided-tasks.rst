@@ -162,6 +162,77 @@ The ``/distribution/virt/start`` task is used for starting a virtual machine,
 via ``virsh start``. Please see :ref:`virt-install-task` for examples on how to
 use it with ``/distribution/virt/install``.
 
+/distribution/rebuild
+=====================
+
+This task is for experimental mass rebuilds of an entire distribution from 
+source, for example using a newer or modified build toolchain. It fetches 
+source RPMs from a given yum repo and rebuilds them all in mock.
+
+Packages are rebuilt in alphabetical order. This task does not attempt to build 
+packages in dependency order, nor does it inject the build results back into 
+the build root.
+
+The following task parameters are accepted:
+
+``SOURCE_REPO``
+    URL of the yum repo to fetch source RPMs from.
+``MOCK_REPOS``
+    Space-separated list of URLs of the yum repos to include in the build root. 
+    Typically this should include the entire distribution or the build tag for 
+    it. You can also add extra repos containing patched packages.
+``MOCK_CHROOT_SETUP_CMD``
+    Command to be run when mock sets up the chroot. The default value is 
+    suitable for Fedora: ``install @buildsys-build``. The group name may need 
+    adjusting for other distros.
+``MOCK_TARGET_ARCH``
+    Target architecture for builds. By default this will match the arch of the 
+    recipe where this task is running.
+``MOCK_CONFIG_NAME``
+    Name of the mock configuration to use or generate (excluding ``.cfg`` file 
+    extension).
+    If this parameter is set and the configuration exists, it will be used as 
+    is. Otherwise the configuration will be generated based on the parameters 
+    above.
+``SKIP_NOARCH``
+    If set to a non-empty value, skip building any SRPMs which produce only 
+    noarch packages.
+``KEEP_RESULTS``
+    If set to a non-empty value, keep the results (RPMs and log files) produced 
+    by each build in 
+    :file:`/mnt/tests/distribution/rebuild/results/{packagename}/`.
+    You can use a subsequent task in the recipe to examine the results or copy 
+    the RPMs elsewhere.
+``SRPM_BLACKLIST``
+    SRPMs to skip.
+    This parameter must be a whitespace-separated list of `bash glob patterns 
+    <http://www.gnu.org/software/bash/manual/bashref.html#Pattern-Matching>`_. 
+    Each pattern is matched against the SRPM filename (including .src.rpm 
+    extension). If any pattern matches, the SRPM is skipped. For example 
+    ``kernel*`` will skip any SRPMs beginning with kernel.
+``SRPM_WHITELIST``
+    SRPMs to build. If this parameter is set, any SRPM which does not match 
+    a pattern in the whitelist is skipped.
+    Similar to ``SRPM_BLACKLIST``, this must be a whitespace-separated list of 
+    bash glob patterns.
+
+As an example, imagine you have built the latest GCC version 99.0, and you want 
+to try rebuilding all architecture-specific packages in Fedora 21 using the new 
+compiler to see if it introduces any build failures:
+
+.. code-block:: xml
+
+    <task name="/distribution/rebuild" role="STANDALONE">
+        <params>
+            <param name="SOURCE_REPO"
+                   value="http://dl.fedoraproject.org/pub/fedora/linux/releases/21/Everything/source/SRPMS/" />
+            <param name="MOCK_REPOS"
+                   value="http://dl.fedoraproject.org/pub/fedora/linux/releases/21/Everything/x86_64/os/
+                          http://example.com/my-gcc99-test-repo/" />
+            <param name="SKIP_NOARCH" value="1" />
+        </params>
+    </task>
+
 Other tasks
 ===========
 
