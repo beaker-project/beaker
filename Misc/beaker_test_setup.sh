@@ -1,17 +1,13 @@
 #!/bin/bash
 
-# On Fedora, this script installs the necessary packages, sets up the database
-# and copies selenium JAR to the appropriate location. All of these
-# are needed to run Beaker's test suite.
+# On Fedora, this script installs the necessary packages and sets up the database
+# to run Beaker's test suite.
 
 # You should run this as root from the Misc/ directory of a git clone
 # of the source repository
 
 # Abort if any of these fails
 set -e
-
-# install wget
-yum -y install wget python-sphinx-1.1.3-8.fc20.beaker.1
 
 # add the beaker-server-testing repo
 pushd /etc/yum.repos.d/
@@ -72,15 +68,6 @@ echo "CREATE DATABASE beaker_test;" | mysql
 echo "GRANT ALL ON beaker_test.* TO 'beaker'@'localhost' IDENTIFIED BY
 'beaker';" | mysql
 
-# Download selenium JAR
-mkdir -p /usr/local/share/selenium
-pushd /usr/local/share/selenium
-wget http://selenium.googlecode.com/files/selenium-server-standalone-2.35.0.jar
-popd
-
-
-# make build
-pushd ../
-make build
-popd
-
+echo "CREATE DATABASE beaker_migration_test;" | mysql
+echo "GRANT ALL ON beaker_migration_test.* TO 'beaker'@'localhost' IDENTIFIED BY
+'beaker';" | mysql
