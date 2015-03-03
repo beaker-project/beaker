@@ -61,30 +61,13 @@ window.Command = Backbone.Model.extend({
     },
 });
 
-window.CommandQueue = Backbone.PageableCollection.extend({
+window.CommandQueue = BeakerPageableCollection.extend({
     model: Command,
-    state: {
-        pageSize: 20,
-    },
-    queryParams: {
-        currentPage: 'page',
-        pageSize: 'page_size',
-        totalPages: null,
-        totalRecords: null,
-        sortKey: 'sort_by',
-        order: 'order',
-    },
     initialize: function (attributes, options) {
         this.system = options.system;
     },
     url: function () {
         return _.result(this.system, 'url') + 'commands/';
-    },
-    parseState: function (response) {
-        return {totalRecords: response.count};
-    },
-    parseRecords: function (response) {
-        return response.entries;
     },
 });
 
@@ -95,30 +78,13 @@ window.SystemActivityEntry = Backbone.Model.extend({
     },
 });
 
-window.SystemActivity = Backbone.PageableCollection.extend({
+window.SystemActivity = BeakerPageableCollection.extend({
     model: SystemActivityEntry,
-    state: {
-        pageSize: 20,
-    },
-    queryParams: {
-        currentPage: 'page',
-        pageSize: 'page_size',
-        totalPages: null,
-        totalRecords: null,
-        sortKey: 'sort_by',
-        order: 'order',
-    },
     initialize: function (attributes, options) {
         this.system = options.system;
     },
     url: function () {
         return _.result(this.system, 'url') + 'activity/';
-    },
-    parseState: function (response) {
-        return {totalRecords: response.count};
-    },
-    parseRecords: function (response) {
-        return response.entries;
     },
 });
 
@@ -132,30 +98,13 @@ window.RecipeTask = Backbone.Model.extend({
     },
 });
 
-window.SystemExecutedTasks = Backbone.PageableCollection.extend({
+window.SystemExecutedTasks = BeakerPageableCollection.extend({
     model: RecipeTask,
-    state: {
-        pageSize: 20,
-    },
-    queryParams: {
-        currentPage: 'page',
-        pageSize: 'page_size',
-        totalPages: null,
-        totalRecords: null,
-        sortKey: 'sort_by',
-        order: 'order',
-    },
     initialize: function (attributes, options) {
         this.system = options.system;
     },
     url: function () {
         return _.result(this.system, 'url') + 'executed-tasks/';
-    },
-    parseState: function (response) {
-        return {totalRecords: response.count};
-    },
-    parseRecords: function (response) {
-        return response.entries;
     },
 });
 

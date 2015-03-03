@@ -153,10 +153,9 @@ var BeakerBackgridFilter = Backbone.View.extend({
         this.grid_name = options.grid_name;
         this.query_builder_columns = !_.isEmpty(options.query_builder_columns) ?
             options.query_builder_columns : this.columns;
-        this.collection.queryParams['q'] = _.bind(this.val, this);
     },
     render: function () {
-        this.$el.html(this.template());
+        this.$el.html(this.template(this.collection.state));
         return this;
     },
     val: function () {
@@ -167,7 +166,7 @@ var BeakerBackgridFilter = Backbone.View.extend({
         return this.$('input').val();
     },
     submit: function (evt) {
-        this.last_val = this.val();
+        this.collection.state['q'] = this.last_val = this.val();
         this.collection.getFirstPage();
         if (evt) evt.preventDefault();
     },
@@ -279,5 +278,35 @@ window.BeakerGrid = Backbone.View.extend({
     },
 });
 
+/* Backgrid PageableCollection adapted to match Beaker's API conventions for 
+ * "pageable JSON collections". */
+window.BeakerPageableCollection = Backbone.PageableCollection.extend({
+    state: {
+        pageSize: 20,
+        q: '',
+    },
+    queryParams: {
+        currentPage: 'page',
+        pageSize: 'page_size',
+        totalPages: null,
+        totalRecords: null,
+        sortKey: 'sort_by',
+        order: 'order',
+        q: function () { return this.state.q; },
+    },
+    parseState: function (response) {
+        return {
+            currentPage: response.page,
+            pageSize: response.page_size,
+            totalRecords: response.count,
+            sortKey: response.sort_by,
+            order: response.order,
+            q: response.q,
+        };
+    },
+    parseRecords: function (response) {
+        return response.entries;
+    },
+});
 
 })();
