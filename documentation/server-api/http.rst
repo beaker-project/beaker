@@ -60,6 +60,9 @@ The following query parameters are supported by pageable JSON collections:
 
 The response is a JSON object with the following keys:
 
+``q``
+    Filter which was applied to the collection.
+
 ``count``
     Total number of elements in the (possibly filtered) collection.
 

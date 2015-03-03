@@ -38,6 +38,7 @@ def json_collection(columns=None, extra_sort_columns=None, min_page_size=20,
                 query = query.filter(lucene_to_sqlalchemy(request.args['q'],
                         search_columns=columns,
                         default_columns=set(columns.values())))
+                result['q'] = request.args['q']
             total_count = query.order_by(None).count()
             result['count'] = total_count
             total_columns = columns.copy()
