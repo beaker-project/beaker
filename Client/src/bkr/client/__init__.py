@@ -315,21 +315,6 @@ class BeakerWorkflow(BeakerCommand):
             help="Set parameter NAME=VALUE for every task in job",
         )
         job_options.add_option(
-            "--repo", metavar="URL",
-            action="append",
-            default=[],
-            help=("Configure repo at <URL> in the kickstart. The repo "
-                  "will be available during initial package installation "
-                  "and subsequent recipe execution."),
-        )
-        job_options.add_option(
-            "--repo-post", metavar="URL",
-            default=[], action="append",
-            help=("Configure repo at <URL> as part of kickstart %post "
-                  "execution. The repo will NOT be available during "
-                  "initial package installation."),
-        )
-        job_options.add_option(
             "--ignore-panic",
             default=False,
             action="store_true",
@@ -367,11 +352,6 @@ class BeakerWorkflow(BeakerCommand):
             help="Installation source method (nfs, http, ftp) [default: %default]",
         )
         installation_options.add_option(
-            "--ks-meta", metavar="OPTIONS",
-            default=None,
-            help="Pass kickstart metadata OPTIONS when generating kickstart",
-        )
-        installation_options.add_option(
             "--kernel-options", metavar="OPTIONS",
             default=None,
             help="Pass OPTIONS to kernel during installation",
@@ -380,6 +360,31 @@ class BeakerWorkflow(BeakerCommand):
             "--kernel-options-post", metavar="OPTIONS",
             default=None,
             help="Pass OPTIONS to kernel after installation",
+        )
+        installation_options.add_option(
+            "--ks-append", metavar="COMMANDS",
+            default=[], action="append",
+            help="Specify additional kickstart commands to add to the base kickstart file",
+        )
+        installation_options.add_option(
+            "--ks-meta", metavar="OPTIONS",
+            default=None,
+            help="Pass kickstart metadata OPTIONS when generating kickstart",
+        )
+        installation_options.add_option(
+            "--repo", metavar="URL",
+            action="append",
+            default=[],
+            help=("Configure repo at <URL> in the kickstart. The repo "
+                  "will be available during initial package installation "
+                  "and subsequent recipe execution."),
+        )
+        installation_options.add_option(
+            "--repo-post", metavar="URL",
+            default=[], action="append",
+            help=("Configure repo at <URL> as part of kickstart %post "
+                  "execution. The repo will NOT be available during "
+                  "initial package installation."),
         )
         # for compat only
         installation_options.add_option("--kernel_options",
@@ -717,6 +722,7 @@ class BeakerRecipeBase(BeakerBase):
         ks_meta = kwargs.get("ks_meta", "")
         kernel_options = kwargs.get("kernel_options", '')
         kernel_options_post = kwargs.get("kernel_options_post", '')
+        ks_appends = kwargs.get("ks_append", [])
         tags = kwargs.get("tag", [])
         repos = kwargs.get("repo", [])
         postrepos = kwargs.get("repo_post", [])
@@ -751,6 +757,10 @@ class BeakerRecipeBase(BeakerBase):
             self.kernel_options = kernel_options
         if kernel_options_post:
             self.kernel_options_post = kernel_options_post
+        for ks_command in ks_appends:
+            ks_append = self.doc.createElement('ks_append')
+            ks_append.appendChild(self.doc.createCDATASection(ks_command))
+            self.ks_appends.appendChild(ks_append.cloneNode(True))
         for i, repo in enumerate(repos):
             myrepo = self.doc.createElement('repo')
             myrepo.setAttribute('name', 'myrepo_%s' % i)
