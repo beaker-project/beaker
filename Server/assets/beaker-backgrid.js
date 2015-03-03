@@ -229,7 +229,6 @@ window.BeakerGrid = Backbone.View.extend({
         this.listenTo(collection, 'request', this.fetch_started);
         this.listenTo(collection, 'error', this.fetch_error);
         this.listenTo(collection, 'sync', this.fetch_success);
-        collection.fetch({reset: true});
     },
     render: function () {
         this.$el.empty()

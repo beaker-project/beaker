@@ -32,17 +32,20 @@
         });
         new SystemSchedulerSettingsView({model: system, el: $('#scheduler-settings')});
         new SystemAccessPolicyView({model: system, el: $('#access-policy')});
-        // Widgets which trigger additional HTTP requests are deferred until 
-        // their tab is shown. This way we avoid the extra requests if the user 
-        // doesn't care about them.
+        new SystemActivityView({model: system, el: $('#history')});
+        new SystemExecutedTasksView({model: system, el: $('#tasks')});
+        new SystemCommandsView({model: system, el: $('#power')});
+        // We defer the HTTP requests to populate these grids until the
+        // relevant tab is shown. This way we avoid the extra requests if the 
+        // user doesn't care about them.
         $('.system-nav a[href="#history"]').one('show', function () {
-            new SystemActivityView({model: system, el: $('#history')});
+            system.activity.fetch({reset: true});
         });
         $('.system-nav a[href="#tasks"]').one('show', function () {
-            new SystemExecutedTasksView({model: system, el: $('#tasks')});
+            system.executed_tasks.fetch({reset: true});
         });
         $('.system-nav a[href="#power"]').one('show', function () {
-            new SystemCommandsView({model: system, el: $('#power')});
+            system.command_queue.fetch({reset: true});
         });
     });
   </script>
