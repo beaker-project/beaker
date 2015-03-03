@@ -10,75 +10,80 @@ Utilities to help with Flask based web interfaces
 import contextlib
 import functools
 from werkzeug.exceptions import HTTPException
-from flask import request, jsonify, redirect
+from flask import request, redirect
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server import identity
 from bkr.server.bexceptions import BX, InsufficientSystemPermissions
 from bkr.server.search_utility import lucene_to_sqlalchemy
 
-def json_collection(columns=None, extra_sort_columns=None, min_page_size=20,
+class PaginationRequiredException(HTTPException):
+    code = 302
+    # delete the following when we have Werkzeug 0.9:
+    def __init__(self, response):
+        self.response = response
+    def get_response(self, environ):
+        return self.response
+
+def json_collection(query, columns=None, extra_sort_columns=None, min_page_size=20,
                     max_page_size=500, default_page_size=20, force_paging_for_count=500):
     """
-    Decorator factory for Flask request handlers which want to return 
-    a collection of resources as JSON. The decorated function should return 
-    a SQLAlchemy Query object.
+    Helper function for Flask request handlers which want to return 
+    a collection of resources as JSON.
 
-    There are API docs for this in documentation/server-api/http.rst.
+    The return value is a Python dict suitable for serialization into JSON, in 
+    a format corresponding to Beaker's API for "pageable JSON collections" 
+    (defined in documentation/server-api/http.rst). The caller can either 
+    return a JSON response directly by passing the return value to 
+    flask.jsonify(), or serialize it and embed it in an HTML response.
     """
     if columns is None:
         columns = {}
     if extra_sort_columns is None:
         extra_sort_columns = {}
-    def decorator(func):
-        @functools.wraps(func)
-        def _json_collection_decorated(*args, **kwargs):
-            result = {}
-            query = func(*args, **kwargs)
-            if request.args.get('q') and columns:
-                query = query.filter(lucene_to_sqlalchemy(request.args['q'],
-                        search_columns=columns,
-                        default_columns=set(columns.values())))
-                result['q'] = request.args['q']
-            total_count = query.order_by(None).count()
-            result['count'] = total_count
-            total_columns = columns.copy()
-            total_columns.update(extra_sort_columns)
-            if request.args.get('sort_by') in total_columns:
-                result['sort_by'] = request.args['sort_by']
-                sort_columns = total_columns[request.args['sort_by']]
-                if not isinstance(sort_columns, tuple):
-                    sort_columns = (sort_columns,)
-                if request.args.get('order') == 'desc':
-                    sort_order = 'desc'
-                else:
-                    sort_order = 'asc'
-                result['order'] = sort_order
-                query = query.order_by(None)
-                for sort_column in sort_columns:
-                    if sort_order == 'desc':
-                       query = query.order_by(sort_column.desc())
-                    else:
-                       query = query.order_by(sort_column)
-            with convert_internal_errors():
-                if 'page_size' in request.args:
-                    page_size = int(request.args['page_size'])
-                    page_size = min(max(page_size, min_page_size), max_page_size)
-                    query = query.limit(page_size)
-                    page = int(request.args.get('page', 1))
-                    if page > 1:
-                        query = query.offset((page - 1) * page_size)
-                    result['page'] = page
-                    result['page_size'] = page_size
-                elif total_count > force_paging_for_count:
-                    if request.query_string:
-                        url = request.url + ('&page_size=%s' % default_page_size)
-                    else:
-                        url = request.base_url + ('?page_size=%s' % default_page_size)
-                    return redirect(url)
-                result['entries'] = query.all()
-            return jsonify(result)
-        return _json_collection_decorated
-    return decorator
+    result = {}
+    if request.args.get('q') and columns:
+        query = query.filter(lucene_to_sqlalchemy(request.args['q'],
+                search_columns=columns,
+                default_columns=set(columns.values())))
+        result['q'] = request.args['q']
+    total_count = query.order_by(None).count()
+    result['count'] = total_count
+    total_columns = columns.copy()
+    total_columns.update(extra_sort_columns)
+    if request.args.get('sort_by') in total_columns:
+        result['sort_by'] = request.args['sort_by']
+        sort_columns = total_columns[request.args['sort_by']]
+        if not isinstance(sort_columns, tuple):
+            sort_columns = (sort_columns,)
+        if request.args.get('order') == 'desc':
+            sort_order = 'desc'
+        else:
+            sort_order = 'asc'
+        result['order'] = sort_order
+        query = query.order_by(None)
+        for sort_column in sort_columns:
+            if sort_order == 'desc':
+               query = query.order_by(sort_column.desc())
+            else:
+               query = query.order_by(sort_column)
+    with convert_internal_errors():
+        if 'page_size' in request.args:
+            page_size = int(request.args['page_size'])
+            page_size = min(max(page_size, min_page_size), max_page_size)
+            query = query.limit(page_size)
+            page = int(request.args.get('page', 1))
+            if page > 1:
+                query = query.offset((page - 1) * page_size)
+            result['page'] = page
+            result['page_size'] = page_size
+        elif total_count > force_paging_for_count:
+            if request.query_string:
+                url = request.url + ('&page_size=%s' % default_page_size)
+            else:
+                url = request.base_url + ('?page_size=%s' % default_page_size)
+            raise PaginationRequiredException(response=redirect(url))
+        result['entries'] = query.all()
+    return result
 
 # Error handling helpers that play nice with the Beaker CLI.
 # These report HTTP errors as plain text responses containing just the

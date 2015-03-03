@@ -1160,17 +1160,6 @@ def provision_system(fqdn):
     return 'Provisioned', 201
 
 @app.route('/systems/<fqdn>/commands/', methods=['GET'])
-@json_collection(columns={
-    'user': User.user_name,
-    'user.user_name': User.user_name,
-    'user.email_address': User.email_address,
-    'user.display_name': User.display_name,
-    'service': CommandActivity.service,
-    'submitted': CommandActivity.created,
-    'action': CommandActivity.action,
-    'message': CommandActivity.new_value,
-    'status': CommandActivity.status,
-})
 def get_system_command_queue(fqdn):
     """
     Returns a pageable JSON collection of the power commands for a system. 
@@ -1207,7 +1196,18 @@ def get_system_command_queue(fqdn):
     # outerjoin user for sorting/filtering and also for eager loading
     query = query.outerjoin(CommandActivity.user)\
             .options(contains_eager(CommandActivity.user))
-    return query
+    json_result = json_collection(query, columns={
+        'user': User.user_name,
+        'user.user_name': User.user_name,
+        'user.email_address': User.email_address,
+        'user.display_name': User.display_name,
+        'service': CommandActivity.service,
+        'submitted': CommandActivity.created,
+        'action': CommandActivity.action,
+        'message': CommandActivity.new_value,
+        'status': CommandActivity.status,
+    })
+    return jsonify(json_result)
 
 @app.route('/systems/<fqdn>/commands/', methods=['POST'])
 @auth_required
@@ -1251,18 +1251,6 @@ def system_command(fqdn):
     return jsonify(command.__json__())
 
 @app.route('/systems/<fqdn>/activity/', methods=['GET'])
-@json_collection(columns={
-    'user': User.user_name,
-    'user.user_name': User.user_name,
-    'user.email_address': User.email_address,
-    'user.display_name': User.display_name,
-    'service': SystemActivity.service,
-    'created': SystemActivity.created,
-    'field_name': SystemActivity.field_name,
-    'action': SystemActivity.action,
-    'old_value': SystemActivity.old_value,
-    'new_value': SystemActivity.new_value,
-})
 def get_system_activity(fqdn):
     """
     Returns a pageable JSON collection of the historical activity records for 
@@ -1297,24 +1285,21 @@ def get_system_activity(fqdn):
     # outerjoin user for sorting/filtering and also for eager loading
     query = query.outerjoin(SystemActivity.user)\
             .options(contains_eager(SystemActivity.user))
-    return query
+    json_result = json_collection(query, columns={
+        'user': User.user_name,
+        'user.user_name': User.user_name,
+        'user.email_address': User.email_address,
+        'user.display_name': User.display_name,
+        'service': SystemActivity.service,
+        'created': SystemActivity.created,
+        'field_name': SystemActivity.field_name,
+        'action': SystemActivity.action,
+        'old_value': SystemActivity.old_value,
+        'new_value': SystemActivity.new_value,
+    })
+    return jsonify(json_result)
 
 @app.route('/systems/<fqdn>/executed-tasks/', methods=['GET'])
-@json_collection(columns={
-    'id': RecipeTask.id,
-    'name': RecipeTask.name,
-    'distro_tree.distro': Distro.name,
-    'distro_tree.distro.name': Distro.name,
-    'distro_tree.variant': DistroTree.variant,
-    'distro_tree.arch': Arch.arch,
-    'start_time': RecipeTask.start_time,
-    'finish_time': RecipeTask.finish_time,
-    'status': RecipeTask.status,
-    'result': RecipeTask.result,
-}, extra_sort_columns={
-    't_id': RecipeTask.id,
-    'distro_tree': (Distro.name, DistroTree.variant, Arch.arch),
-})
 def get_system_executed_tasks(fqdn):
     """
     Returns a pageable JSON collection of the executed task records for
@@ -1352,7 +1337,22 @@ def get_system_executed_tasks(fqdn):
         .options(contains_eager(RecipeTask.recipe, Recipe.distro_tree, DistroTree.distro),
                  contains_eager(RecipeTask.recipe, Recipe.distro_tree, DistroTree.arch))\
         .order_by(desc(RecipeTask.id))
-    return query
+    json_result = json_collection(query, columns={
+        'id': RecipeTask.id,
+        'name': RecipeTask.name,
+        'distro_tree.distro': Distro.name,
+        'distro_tree.distro.name': Distro.name,
+        'distro_tree.variant': DistroTree.variant,
+        'distro_tree.arch': Arch.arch,
+        'start_time': RecipeTask.start_time,
+        'finish_time': RecipeTask.finish_time,
+        'status': RecipeTask.status,
+        'result': RecipeTask.result,
+    }, extra_sort_columns={
+        't_id': RecipeTask.id,
+        'distro_tree': (Distro.name, DistroTree.variant, Arch.arch),
+    })
+    return jsonify(json_result)
 
 # This is part of the iPXE-based installation support for OpenStack instances.
 @app.route('/systems/by-uuid/<uuid>/ipxe-script')
