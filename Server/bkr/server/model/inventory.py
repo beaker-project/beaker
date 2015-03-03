@@ -295,13 +295,24 @@ class System(DeclarativeMappedObject, ActivityMixin):
             order_by=[SystemStatusDuration.start_time.desc(),
                       SystemStatusDuration.id.desc()])
     dyn_status_durations = dynamic_loader(SystemStatusDuration)
-    custom_access_policy = relationship('SystemAccessPolicy', uselist=False,
-                                        back_populates='system')
     notes = relationship('Note', back_populates='system',
             cascade='all, delete, delete-orphan', order_by='Note.created.desc()')
     queued_recipes = relationship('Recipe', back_populates='systems',
             secondary='system_recipe_map')
 
+    custom_access_policy_id = Column(Integer,
+                                     ForeignKey('system_access_policy.id',
+                                                name='custom_access_policy_id_fk'))
+    custom_access_policy = relationship('SystemAccessPolicy',
+                                        uselist=False,
+                                        back_populates='system',
+                                        cascade='all, delete',
+                                        foreign_keys=[custom_access_policy_id])
+    active_access_policy_id = Column(Integer,
+                                     ForeignKey('system_access_policy.id',
+                                                name='active_access_policy_id_fk'))
+    active_access_policy = relationship('SystemAccessPolicy', uselist=False,
+                                        foreign_keys=[active_access_policy_id])
     activity_type = SystemActivity
 
     def __init__(self, fqdn=None, status=SystemStatus.broken, contact=None, location=None,
@@ -1541,6 +1552,10 @@ def validate_status(system, child, oldchild, initiator):
     system.status_durations.insert(0, SystemStatusDuration(status=child))
     return child
 
+@event.listens_for(System.custom_access_policy, 'set')
+def update_active_access_policy(system, policy, old_policy, initiator):
+    system.active_access_policy = policy
+
 system_pool_map = Table('system_pool_map', DeclarativeMappedObject.metadata,
         Column('system_id', Integer,
                 ForeignKey('system.id', onupdate='CASCADE', ondelete='CASCADE'),
@@ -1580,7 +1595,14 @@ class SystemPool(DeclarativeMappedObject, ActivityMixin):
     activity = relationship(SystemPoolActivity, back_populates='object', cascade='all, delete',
                             order_by=[SystemPoolActivity.__table__.c.id.desc()])
     activity_type = SystemPoolActivity
-
+    access_policy_id = Column(Integer,
+                              ForeignKey('system_access_policy.id',
+                                         name='system_pool_access_policy_id_fk'),
+                              nullable=False)
+    access_policy = relationship('SystemAccessPolicy',
+                                 cascade='all, delete',
+                                 back_populates='system_pool',
+                                 uselist=False)
     def __unicode__(self):
         return self.name
 
@@ -1632,8 +1654,12 @@ class SystemPool(DeclarativeMappedObject, ActivityMixin):
     def can_edit(self, user):
         return self.has_owner(user=user) or user.is_admin()
 
-class SystemCc(DeclarativeMappedObject):
+    def can_edit_policy(self, user):
+        return (self.can_edit(user) or \
+            self.access_policy.grants(SystemPermission.edit_policy, user))
 
+
+class SystemCc(DeclarativeMappedObject):
     __tablename__ = 'system_cc'
     __table_args__ = {'mysql_engine': 'InnoDB'}
     system_id = Column(Integer, ForeignKey('system.id', ondelete='CASCADE',
@@ -1692,11 +1718,18 @@ class SystemAccessPolicy(DeclarativeMappedObject):
     __tablename__ = 'system_access_policy'
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, nullable=False, primary_key=True)
-    system_id = Column(Integer, ForeignKey('system.id',
-            name='system_access_policy_system_id_fk'))
-    system = relationship(System, back_populates='custom_access_policy')
+    # Depending on whether a policy belongs to a System or a SystemPool,
+    # system or system_pool will be either set or None. They are mutually
+    # exclusive.
+    system = relationship(System,
+                          back_populates='custom_access_policy',
+                          uselist=False,
+                          foreign_keys='System.custom_access_policy_id',)
+    system_pool = relationship('SystemPool',
+                               uselist=False,
+                               back_populates='access_policy',)
     rules = relationship('SystemAccessPolicyRule', back_populates='policy',
-            cascade='all, delete, delete-orphan')
+                         cascade='all, delete, delete-orphan')
 
     def __json__(self):
         return {
@@ -1818,9 +1851,13 @@ class SystemAccessPolicyRule(DeclarativeMappedObject):
         return (self.user == None) & (self.group == None)
 
     def record_deletion(self, service=u'WEBUI'):
-        self.policy.system.record_activity(user=identity.current.user, service=service,
-                                           action=u'Removed',
-                                           field=u'Access Policy Rule', old=repr(self))
+        if self.policy.system_pool:
+            object = self.policy.system_pool
+        else:
+            object = self.policy.system
+        object.record_activity(user=identity.current.user, service=service,
+                               action=u'Removed',
+                               field=u'Access Policy Rule', old=repr(self))
 
 class Provision(DeclarativeMappedObject):
 

@@ -15,8 +15,8 @@ from flask import request, jsonify, redirect as flask_redirect
 from turbogears import expose, controllers, flash, redirect, url
 from bkr.server import identity, mail
 from bkr.server.bexceptions import BX, InsufficientSystemPermissions
-from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree, \
-        OSMajor, DistroTag, Arch, Distro, User, Group, SystemAccessPolicy, \
+from bkr.server.model import System, SystemActivity, SystemStatus, SystemPool, \
+        DistroTree, OSMajor, DistroTag, Arch, Distro, User, Group, SystemAccessPolicy, \
         SystemPermission, SystemAccessPolicyRule, ImageType, KernelType, \
         VirtResource, Hypervisor, Numa, LabController, SystemType, \
         CommandActivity, Power, PowerType, ReleaseAction, Task, \
@@ -816,27 +816,7 @@ def update_loan(fqdn):
 def update_loan_put(fqdn):
     return update_loan(fqdn)
 
-@app.route('/systems/<fqdn>/access-policy', methods=['GET'])
-def get_system_access_policy(fqdn):
-    """
-    Returns the access policy for a system, including all the rules making up 
-    the policy.
-
-    :param fqdn: The system's fully-qualified domain name.
-    """
-    # XXX need to consolidate this with SystemAccessPolicy.__json__
-    # (maybe get rid of filtering here and implement it client side instead)
-    system = _get_system_by_FQDN(fqdn)
-
-    policy = system.custom_access_policy
-    # For now, we don't distinguish between an empty policy and an absent one.
-    if not policy:
-        return jsonify(SystemAccessPolicy.empty_json())
-
-    # filtering, if any
-    if len(request.args.keys()) > 1:
-        raise BadRequest400('Only one filtering criteria allowd')
-
+def filtered_policy(policy):
     query = SystemAccessPolicyRule.query.\
         filter(SystemAccessPolicyRule.policy == policy)
 
@@ -867,11 +847,34 @@ def get_system_access_policy(fqdn):
             for permission in SystemPermission],
     })
 
+@app.route('/systems/<fqdn>/access-policy', methods=['GET'])
+def get_system_access_policy(fqdn):
+    """
+    Returns the custom access policy for a system, including all the rules making up 
+    the policy.
+
+    :param fqdn: The system's fully-qualified domain name.
+    """
+    # XXX need to consolidate this with SystemAccessPolicy.__json__
+    # (maybe get rid of filtering here and implement it client side instead)
+    system = _get_system_by_FQDN(fqdn)
+
+    policy = system.custom_access_policy
+    # For now, we don't distinguish between an empty policy and an absent one.
+    if not policy:
+        return jsonify(SystemAccessPolicy.empty_json())
+
+    # filtering, if any
+    if len(request.args.keys()) > 1:
+        raise BadRequest400('Only one filtering criteria allowd')
+
+    return filtered_policy(policy)
+
 @app.route('/systems/<fqdn>/access-policy', methods=['POST', 'PUT'])
 @auth_required
 def save_system_access_policy(fqdn):
     """
-    Updates the access policy for a system.
+    Updates the custom access policy for a system.
 
     :param fqdn: The system's fully-qualified domain name.
     :jsonparam array rules: List of rules to include in the new policy. This 
@@ -923,7 +926,7 @@ def save_system_access_policy(fqdn):
 @auth_required
 def add_system_access_policy_rule(fqdn):
     """
-    Adds a new rule to the access policy for a system. Each rule in the policy 
+    Adds a new rule to the custom access policy for a system. Each rule in the policy 
     grants a permission to a single user, a group of users, or to everybody.
 
     :param fqdn: The system's fully-qualified domain name.
@@ -999,7 +1002,7 @@ def get_system_status(fqdn):
 @auth_required
 def delete_system_access_policy_rules(fqdn):
     """
-    Deletes one or more matching rules from a system's access policy.
+    Deletes one or more matching rules from a system's custom access policy.
 
     :param fqdn: The system's fully-qualified domain name.
     :queryparam permission: Delete rules which grant the named permission. See 
@@ -1040,6 +1043,70 @@ def delete_system_access_policy_rules(fqdn):
     for rule in query:
         rule.record_deletion(service=u'HTTP')
         session.delete(rule)
+    return '', 204
+
+@app.route('/systems/<fqdn>/active-access-policy/rules/', methods=['GET'])
+def get_active_access_policy(fqdn):
+    """
+    Returns the active access policy rules for a system
+    """
+
+    system = _get_system_by_FQDN(fqdn)
+    policy = system.active_access_policy
+    # filtering, if any
+    if len(request.args.keys()) > 1:
+        raise BadRequest400('Only one filtering criteria allowd')
+
+    return filtered_policy(policy)
+
+@app.route('/systems/<fqdn>/active-access-policy/', methods=['PUT'])
+@auth_required
+def change_active_access_policy(fqdn):
+    """
+    Set the currently active access policy for a system. A system can be configured
+    to use a shared access policy from a pool, or to use the custom access policy
+    defined on the system itself.
+
+    :param fqdn: The system's FQDN
+
+    The request body must be a JSON object in one of the following forms:
+
+    ``{"pool_name": <name>}``: Use a shared access policy from the named pool.
+
+    ``{"custom": True}``: Use the custom access policy defined on this system.
+
+    """
+    data = read_json_request(request)
+    if ('custom' not in data and 'pool_name' not in data) or \
+       'custom' in data and 'pool_name' in data:
+        raise BadRequest400('Must specify either custom or pool parameter')
+    system = _get_system_by_FQDN(fqdn)
+    if not system.can_edit_policy(identity.current.user):
+        raise Forbidden403('Cannot edit system policy')
+    if system.active_access_policy.system_pool:
+        old_policy = 'Pool policy: %s' % system.active_access_policy.system_pool.name
+    else:
+        old_policy = 'Custom Access Policy'
+    if 'pool_name' in data:
+        pool_name = data['pool_name']
+        with convert_internal_errors():
+            pool = SystemPool.by_name(pool_name)
+        if pool not in system.pools:
+            raise BadRequest400('To use a pool policy, the system must be in the pool first')
+        pool_policy = pool.access_policy
+        system.active_access_policy = pool_policy
+        system.record_activity(user=identity.current.user, service=u'HTTP',
+                               field=u'Active Access Policy', action=u'Changed',
+                               old = old_policy,
+                               new = 'Pool policy: %s' % pool_name,)
+    if 'custom' in data:
+        if data.get('custom'):
+            system.active_access_policy = system.custom_access_policy
+            system.record_activity(user=identity.current.user, service=u'HTTP',
+                                   field=u'Access Policy Changed', action=u'Changed',
+                                   old = old_policy,
+                                   new = 'Custom access policy')
+
     return '', 204
 
 @app.route('/systems/<fqdn>/installations/', methods=['POST'])

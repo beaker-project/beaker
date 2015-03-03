@@ -39,7 +39,7 @@ INNER JOIN
     GROUP BY system.id) system_arch
     ON system_arch.id = system.id
 INNER JOIN tg_user ON reservation.user_id = tg_user.user_id
-LEFT OUTER JOIN system_access_policy ON system.id = system_access_policy.system_id
+LEFT OUTER JOIN system_access_policy ON system.active_access_policy_id = system_access_policy.id
 WHERE reservation.start_time < '2012-11-01 00:00:00'
     AND (reservation.finish_time >= '2012-10-01 00:00:00'
          OR reservation.finish_time IS NULL)

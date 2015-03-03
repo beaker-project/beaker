@@ -172,10 +172,17 @@ Systems
    :file:`Common/bkr/common/schema/beaker-inventory.ttl`.
 
 .. autoflask:: bkr.server.wsgi:app
-   :endpoints: get_system, add_system, update_system, get_system_access_policy, 
-     save_system_access_policy, add_system_access_policy_rule, 
-     delete_system_access_policy_rules, report_problem, get_system_activity,
+   :endpoints: get_system, add_system, update_system, report_problem, get_system_activity,
      get_system_executed_tasks
+
+.. _system-access-policies-api:
+
+System access policy
+--------------------
+
+.. autoflask:: bkr.server.wsgi:app
+   :endpoints: get_system_access_policy, save_system_access_policy, add_system_access_policy_rule,
+     delete_system_access_policy_rules, change_active_access_policy
 
 System reservations
 -------------------
@@ -205,4 +212,5 @@ System pools
 ------------
 
 .. autoflask:: bkr.server.wsgi:app
-   :endpoints: get_pool, add_system_to_pool, remove_system_from_pool
+   :endpoints: get_pool, add_system_to_pool, remove_system_from_pool, get_access_policy,
+     add_access_policy_rule, delete_access_policy_rules

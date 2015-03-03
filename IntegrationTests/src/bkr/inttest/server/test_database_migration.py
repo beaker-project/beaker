@@ -34,12 +34,12 @@ class MigrationTest(unittest.TestCase):
         # that is already created and populated at the start of the test run.
         if not config.get('beaker.migration_test_dburi'):
             raise unittest.SkipTest('beaker.migration_test_dburi is not set')
-        migration_engine = sqlalchemy.create_engine(
+        self.migration_engine = sqlalchemy.create_engine(
                 config.get('beaker.migration_test_dburi'))
-        self.migration_metadata = sqlalchemy.MetaData(bind=migration_engine)
-        self.migration_session = create_session(bind=migration_engine)
-        connection = migration_engine.connect()
-        db_name = migration_engine.url.database
+        self.migration_metadata = sqlalchemy.MetaData(bind=self.migration_engine)
+        self.migration_session = create_session(bind=self.migration_engine)
+        connection = self.migration_engine.connect()
+        db_name = self.migration_engine.url.database
         connection.execute('DROP DATABASE IF EXISTS %s' % db_name)
         connection.execute('CREATE DATABASE %s' % db_name)
         connection.invalidate() # can't reuse this one
@@ -381,3 +381,47 @@ class MigrationTest(unittest.TestCase):
             self.assertEquals(pool.activity[-1].user.user_id, min_user_id)
             self.assertEquals(pool.activity[-1].new_value, pool.name)
             self.assertEquals(pool.activity[-1].service, u'Migration')
+
+    def test_migrate_system_access_policies_to_custom_access_policies(self):
+        connection = self.migration_metadata.bind.connect()
+
+        # create the DB schema for beaker 19
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                                                         'database-dumps/19.sql'))
+        # populate synthetic data into relevant tables
+        connection.execute('INSERT INTO tg_user(user_id, user_name, email_address) VALUES (1, "user1", "user1@user.com")')
+        connection.execute('INSERT INTO kernel_type (id) VALUES (1)')
+        connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (1, "test.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
+        connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (2, "test1.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
+        connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (3, "test2.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
+        connection.execute('INSERT INTO system_access_policy(id, system_id) VALUES (1, 2)')
+        connection.execute('INSERT INTO system_access_policy(id, system_id) VALUES (2, 1)')
+        connection.execute('INSERT INTO system_access_policy(id, system_id) VALUES (3, 3)')
+
+        # Migrate
+        upgrade_db(self.migration_metadata)
+        self.check_migrated_schema()
+
+        # check the data has been migrated successfully
+        systems = self.migration_session.query(System).all()
+        expected_system_policy_map = {
+            'test.fqdn.name':2,
+            'test1.fqdn.name':1,
+            'test2.fqdn.name':3
+        }
+        for s in systems:
+            self.assertEquals(s.custom_access_policy_id,
+                              expected_system_policy_map[s.fqdn])
+            self.assertEquals(s.active_access_policy_id,
+                              expected_system_policy_map[s.fqdn])
+
+        # downgrade test
+        downgrade_db(self.migration_metadata, '1c444555ea3d')
+        # XXX self.metadata.reflect() isn't for some reason detecting
+        # the schema changes
+        migration_metadata = sqlalchemy.MetaData(bind=self.migration_engine)
+        migration_metadata.reflect()
+        self.assertIn('system_id',
+                      migration_metadata.tables['system_access_policy'].columns.keys())
+        self.assertNotIn('system_access_policy_id',
+                      migration_metadata.tables['system_pool'].columns.keys())

@@ -307,6 +307,8 @@ def create_system_pool(name=None, description='A system Pool',
                       owning_group=owning_group,
                       owning_user=owning_user,
                       systems=systems)
+    pool.access_policy = SystemAccessPolicy()
+    pool.access_policy.add_rule(SystemPermission.view, everybody=True)
     session.add(pool)
     log.debug('Created System Pool %s', pool.name)
     return pool

@@ -258,6 +258,56 @@ class TestSystemPool(DatabaseTestCase):
         self.assertFalse(pool.has_owner(user=user1))
         self.assertTrue(pool.has_owner(user=user2))
 
+    def test_system_pool_access_policy(self):
+        system1 = data_setup.create_system()
+        system2 = data_setup.create_system()
+        pool = data_setup.create_system_pool(name='pool-1',
+                                             systems=[system1, system2])
+        policy = pool.access_policy
+        perm = SystemPermission.reserve
+        user = data_setup.create_user()
+        policy.add_rule(perm, user=user)
+
+        session.flush()
+
+        self.assertEquals(len(policy.rules), 2)
+        self.assertEquals(policy.rules[1].permission, perm)
+        self.assertEquals(policy.rules[1].user, user)
+        self.assertTrue(policy.grants(user, perm))
+        self.assert_(SystemAccessPolicy.query
+                     .filter(SystemAccessPolicy.id == policy.id)
+                     .filter(SystemAccessPolicy.grants(user, perm)).count())
+
+        other_user = data_setup.create_user()
+        self.assertFalse(policy.grants(other_user, perm))
+
+        # assign the pool policy to the system
+        system1.active_access_policy = policy
+        self.assertTrue(system1.active_access_policy.grants(user, perm))
+
+    def test_system_pool_access_policy_deletion(self):
+        system1 = data_setup.create_system()
+        pool = data_setup.create_system_pool(name='pool-1')
+        policy = pool.access_policy
+        perm = SystemPermission.reserve
+        user = data_setup.create_user()
+        policy.add_rule(perm, user=user)
+
+        session.flush()
+        self.assertEquals(len(policy.rules), 2)
+        self.assertTrue(policy.grants(user, perm))
+        # assign the pool policy to the system
+        system1.active_access_policy = policy
+        self.assertTrue(system1.active_access_policy.grants(user, perm))
+
+        # deleting the system should not delete the pool policy
+        session.flush()
+        session.delete(system1)
+        session.flush()
+        session.refresh(pool)
+        self.assertTrue(pool.access_policy.grants(user, perm))
+
+
 class SystemFilterMethodsTest(DatabaseTestCase):
     """
     Test cases for the hybrid methods/properties used to build system queries.

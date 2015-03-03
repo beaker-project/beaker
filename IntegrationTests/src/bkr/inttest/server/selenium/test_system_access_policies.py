@@ -241,7 +241,7 @@ class SystemAccessPolicyHTTPTest(DatabaseTestCase):
             self.policy.add_rule(group=self.privileged_group,
                     permission=SystemPermission.edit_system)
 
-    def test_get_access_policy(self):
+    def test_get_custom_access_policy(self):
         response = requests.get(get_server_base() +
                 'systems/%s/access-policy' % self.system.fqdn)
         response.raise_for_status()
@@ -315,3 +315,89 @@ class SystemAccessPolicyHTTPTest(DatabaseTestCase):
             self.assertEquals(self.policy.rules[2].permission,
                     SystemPermission.control_system)
             self.assertEquals(self.policy.rules[2].everybody, True)
+
+    def test_get_active_access_policy_rules(self):
+        response = requests.get(get_server_base() +
+                'systems/%s/active-access-policy/rules/' % self.system.fqdn)
+        response.raise_for_status()
+        json = response.json()
+        self.assertEquals(json['id'], self.policy.id)
+        self.assertEquals([p['value'] for p in json['possible_permissions']],
+                ['view', 'view_power', 'edit_policy', 'edit_system',
+                 'loan_any', 'loan_self', 'control_system', 'reserve'])
+        self.assertItemsEqual(json['rules'], [
+            {'id': self.policy.rules[0].id, 'permission': 'view',
+             'everybody': True, 'user': None, 'group': None},
+            {'id': self.policy.rules[1].id, 'permission': 'reserve',
+             'everybody': True, 'user': None, 'group': None},
+            {'id': self.policy.rules[2].id, 'permission': 'edit_system',
+             'everybody': False, 'user': None,
+             'group': self.privileged_group.group_name},
+        ])
+
+    def test_set_active_policy_from_pool(self):
+        with session.begin():
+            user = data_setup.create_user()
+            pool = data_setup.create_system_pool()
+            pool.systems.append(self.system)
+            pool.access_policy.add_rule(
+                permission=SystemPermission.edit_system, user=user)
+
+        with session.begin():
+            self.assertFalse(self.system.active_access_policy.grants
+                             (user, SystemPermission.edit_system))
+
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': self.owner.user_name,
+                'password': 'theowner'}).raise_for_status()
+        response = put_json(get_server_base() +
+                            'systems/%s/active-access-policy/' % self.system.fqdn, session=s,
+                            data={'pool_name': pool.name},
+                         )
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertTrue(self.system.active_access_policy.grants
+                            (user, SystemPermission.edit_system))
+
+        # attempt to set active policy to a pool policy when the system
+        # is not in the pool
+        with session.begin():
+            pool = data_setup.create_system_pool()
+        response = put_json(get_server_base() +
+                            'systems/%s/active-access-policy/' % self.system.fqdn, session=s,
+                            data={'pool_name': pool.name},
+                        )
+        self.assertEquals(response.status_code, 400)
+        self.assertEquals(response.text,
+                          'To use a pool policy, the system must be in the pool first')
+
+    def test_set_active_policy_to_custom_policy(self):
+        with session.begin():
+            user1 = data_setup.create_user()
+            user2 = data_setup.create_user()
+            self.system.access_policy = SystemAccessPolicy()
+            self.system.active_access_policy.add_rule(
+                permission=SystemPermission.edit_system, user=user1)
+            pool = data_setup.create_system_pool()
+            pool.access_policy.add_rule(
+                permission=SystemPermission.edit_system, user=user2)
+            self.system.active_access_policy = pool.access_policy
+
+        self.assertFalse(self.system.active_access_policy.grants 
+                        (user1, SystemPermission.edit_system))
+        self.assertTrue(self.system.active_access_policy.grants
+                         (user2, SystemPermission.edit_system))
+
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': self.owner.user_name,
+                'password': 'theowner'}).raise_for_status()
+        response = put_json(get_server_base() +
+                            'systems/%s/active-access-policy/' % self.system.fqdn, session=s,
+                            data={'custom': True},
+                         )
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertTrue(self.system.active_access_policy.grants \
+                            (user1, SystemPermission.edit_system))

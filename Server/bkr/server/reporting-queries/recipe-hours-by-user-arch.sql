@@ -34,7 +34,7 @@ INNER JOIN arch distro_tree_arch ON distro_tree.arch_id = distro_tree_arch.id
 INNER JOIN recipe_resource ON recipe_resource.recipe_id = recipe.id
 LEFT OUTER JOIN system_resource ON system_resource.id = recipe_resource.id
 LEFT OUTER JOIN system ON system_resource.system_id = system.id
-LEFT OUTER JOIN system_access_policy ON system.id = system_access_policy.system_id
+LEFT OUTER JOIN system_access_policy ON system.active_access_policy_id = system_access_policy.id
 WHERE recipe.start_time < '2012-11-01 00:00:00'
     AND (recipe.finish_time >= '2012-10-01 00:00:00'
          OR recipe.finish_time IS NULL)
