@@ -26,6 +26,11 @@ class LabControllerActivity(Activity):
     def object_name(self):
         return 'LabController: %s' % self.object.fqdn
 
+    def __json__(self):
+        result = super(LabControllerActivity, self).__json__()
+        result['lab_controller'] = {'fqdn': self.object.fqdn}
+        return result
+
 class LabController(DeclarativeMappedObject, ActivityMixin):
 
     __tablename__ = 'lab_controller'

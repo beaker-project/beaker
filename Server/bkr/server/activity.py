@@ -4,139 +4,238 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from turbogears import expose, widgets, paginate
-from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.widgets import SearchBar, myPaginateDataGrid
-from bkr.server import search_utility
+from sqlalchemy.orm import contains_eager
+from flask import request, jsonify
+from bkr.server.app import app
+from bkr.server.flask_util import json_collection, request_wants_json, \
+        render_tg_template
+from bkr.server.model import (Activity, User, Distro, DistroTree,
+        LabController, System, Group, Arch,
+        CommandActivity, DistroActivity, DistroTreeActivity,
+        LabControllerActivity, SystemActivity, GroupActivity)
 
-from bkr.server.model import (Activity,
-                              DistroActivity, DistroTreeActivity,
-                              LabControllerActivity, SystemActivity,
-                              GroupActivity)
+# Search field mapping which applies to all activity types.
+common_activity_search_columns = {
+    'type': Activity.type,
+    'service': Activity.service,
+    'created': Activity.created,
+    'field_name': Activity.field_name,
+    'action': Activity.action,
+    'old_value': Activity.old_value,
+    'new_value': Activity.new_value,
+}
 
+@app.route('/activity/', methods=['GET'])
+def get_activity():
+    """
+    Returns a pageable JSON collection of all activity records in Beaker.
+    Refer to :ref:`pageable-json-collections`.
 
-class Activities(RPCRoot):
-    # For XMLRPC methods in this class.
-    exposed = False
+    The following fields are supported for filtering and sorting:
 
-    def activities(self, activity_search, **kw):
-        return_dict = {}
-        if 'simplesearch' in kw:
-            simplesearch = kw['simplesearch']
-            kw['activitysearch'] = [{'table' : 'Property',
-                                     'operation' : 'contains',
-                                     'value' : kw['simplesearch']}]
-        else:
-            simplesearch = None
+    ``type``
+        Type of the activity record. Possible values are: ``system_activity``, 
+        ``lab_controller_activity``, ``distro_activity``, 
+        ``distro_tree_activity``, ``job_activity``, ``recipeset_activity``, 
+        ``user_activity``, ``group_activity``.
+    ``service``
+        Service through which the action was performed. Usually this is 
+        ``XMLRPC``, ``WEBUI``, ``HTTP``, or ``Scheduler``.
+    ``created``
+        Timestamp at which the activity was recorded.
+    ``action``
+        Action which was recorded.
+    ``field_name``
+        Field in the system data which was affected by the action.
+    ``old_value``
+        Previous value of the field before the action was performed (if applicable).
+    ``new_value``
+        New value of the field after the action was performed (if applicable).
+    """
+    query = Activity.query.order_by(Activity.id.desc())
+    # Command queue inherits from activity but really it's a separate thing, so 
+    # we filter it out. The obvious way would be:
+    #   query = query.filter(Activity.type != 'command_activity')
+    # but that destroys all performance, because MySQL.
+    # Hence this outer join business.
+    query = query.outerjoin(CommandActivity.__table__)\
+            .filter(CommandActivity.id == None)
+    json_result = json_collection(query, columns=common_activity_search_columns)
+    if request_wants_json():
+        return jsonify(json_result)
+    return render_tg_template('bkr.server.templates.backgrid', {
+        'title': u'Activity',
+        'grid_collection_type': 'Activity',
+        'grid_collection_data': json_result,
+        'grid_collection_url': request.base_url,
+        'grid_view_type': 'ActivityView',
+    })
 
-        return_dict.update({'simplesearch':simplesearch})
+@app.route('/activity/distro', methods=['GET'])
+def get_distro_activity():
+    """
+    Returns a pageable JSON collection of all distro activity records.
 
-        if kw.get("activitysearch"):
-            searchvalue = kw['activitysearch']
-            activities_found = self._activity_search(activity_search, **kw)
-            return_dict.update({'activities_found':activities_found})
-            return_dict.update({'searchvalue':searchvalue})
-        return return_dict
+    Supports the same fields for filtering and sorting as 
+    :http:get:`/activity/`, with the following additions:
 
-    def _activity_search(self, activity_search, **kw):
-        for search in kw['activitysearch']:
-            col = search['table']
-            activity_search.append_results(search['value'], col, search['operation'], **kw)
-        return activity_search.return_results()
+    ``distro``
+        Name of the distro affected.
+    ``distro.name``
+        Name of the distro affected.
+    """
+    query = DistroActivity.query.order_by(DistroActivity.id.desc())
+    # join Distro for sorting/filtering and also for eager loading
+    query = query.join(DistroActivity.object)\
+            .options(contains_eager(DistroActivity.object))
+    json_result = json_collection(query, columns=dict(
+        common_activity_search_columns.items() + {
+        'distro': Distro.name,
+        'distro.name': Distro.name,
+        }.items()))
+    if request_wants_json():
+        return jsonify(json_result)
+    return render_tg_template('bkr.server.templates.backgrid', {
+        'title': u'Distro Activity',
+        'grid_collection_type': 'Activity',
+        'grid_collection_data': json_result,
+        'grid_collection_url': request.base_url,
+        'grid_view_type': 'DistroActivityView',
+    })
 
-    @expose(template='bkr.server.templates.grid')
-    @paginate('list', default_order='-created', limit=50)
-    def distrotree(self, **kw):
-        activities = DistroTreeActivity.all()
-        activity_search = search_utility.DistroTreeActivity.search
-        search_bar = SearchBar(activity_search.create_complete_search_table(),
-                               name='activitysearch',)
-        return self._activities_grid(activities, search_bar, 'distrotree',
-            search_utility.DistroTreeActivity, title='Distro Tree Activity', **kw)
+@app.route('/activity/distrotree', methods=['GET'])
+def get_distro_tree_activity():
+    """
+    Returns a pageable JSON collection of all distro tree activity records.
 
-    @expose(template='bkr.server.templates.grid')
-    @paginate('list', default_order='-created', limit=50)
-    def labcontroller(self, **kw):
-        activities = LabControllerActivity.all()
-        activity_search = search_utility.LabControllerActivity.search
-        search_bar = SearchBar(activity_search.create_complete_search_table(),
-                               name='activitysearch',)
-        return self._activities_grid(activities, search_bar, 'labcontroller',
-            search_utility.LabControllerActivity,
-            title='Lab Controller Activity', **kw)
+    Supports the same fields for filtering and sorting as 
+    :http:get:`/activity/`, with the following additions:
 
-    @expose(template='bkr.server.templates.grid')
-    @paginate('list', default_order='-created', limit=50)
-    def group(self, **kw):
-        activities = GroupActivity.all()
-        activity_search = search_utility.GroupActivity.search
-        search_bar = SearchBar(activity_search.create_complete_search_table(),
-                               name='activitysearch',)
-        return self._activities_grid(activities, search_bar, 'group',
-            search_utility.GroupActivity, title='Group Activity', **kw)
+    ``distro_tree.distro``
+        Distro name of the tree affected.
+    ``distro_tree.distro.name``
+        Distro name of the tree affected.
+    ``distro_tree.variant``
+        Variant of the tree affected.
+    ``distro_tree.arch``
+        Arch of the tree affected.
+    """
+    query = DistroTreeActivity.query.order_by(DistroTreeActivity.id.desc())
+    # join DistroTree, Distro, and Arch for sorting/filtering and also for eager loading
+    query = query.join(DistroTreeActivity.object)\
+            .join(DistroTree.distro)\
+            .join(DistroTree.arch)\
+            .options(contains_eager(DistroTreeActivity.object, DistroTree.distro))\
+            .options(contains_eager(DistroTreeActivity.object, DistroTree.arch))
+    json_result = json_collection(query, columns=dict(
+        common_activity_search_columns.items() + {
+        'distro_tree.distro': Distro.name,
+        'distro_tree.distro.name': Distro.name,
+        'distro_tree.variant': DistroTree.variant,
+        'distro_tree.arch': Arch.arch,
+        }.items()))
+    if request_wants_json():
+        return jsonify(json_result)
+    return render_tg_template('bkr.server.templates.backgrid', {
+        'title': u'Distro Tree Activity',
+        'grid_collection_type': 'Activity',
+        'grid_collection_data': json_result,
+        'grid_collection_url': request.base_url,
+        'grid_view_type': 'DistroTreeActivityView',
+    })
 
-    @expose(template='bkr.server.templates.grid')
-    @paginate('list', default_order='-created', limit=50)
-    def system(self, **kw):
-        activities = SystemActivity.all()
-        activity_search = search_utility.SystemActivity.search
-        search_bar = SearchBar(activity_search.create_complete_search_table(),
-                               name='activitysearch',)
-        return self._activities_grid(activities, search_bar, 'system',
-            search_utility.SystemActivity, title='System Activity', **kw)
+@app.route('/activity/group', methods=['GET'])
+def get_group_activity():
+    """
+    Returns a pageable JSON collection of all group activity records.
 
-    @expose(template='bkr.server.templates.grid')
-    @paginate('list', default_order='-created', limit=50)
-    def distro(self, **kw):
-        activities = DistroActivity.all()
-        activity_search = search_utility.DistroActivity.search
-        search_bar = SearchBar(activity_search.create_complete_search_table(),
-                               name='activitysearch',)
-        return self._activities_grid(activities, search_bar, 'distro',
-            search_utility.DistroActivity, title='Distro Activity', **kw)
+    Supports the same fields for filtering and sorting as 
+    :http:get:`/activity/`, with the following additions:
 
-    @expose(template='bkr.server.templates.grid')
-    @paginate('list', default_order='-created', limit=50)
-    def index(self, **kw):
-        activities = Activity.all()
-        activity_search = search_utility.Activity.search
-        search_bar = SearchBar(activity_search.create_complete_search_table(),
-                               name='activitysearch',)
-        return self._activities_grid(activities, search_bar, '.',
-            search_utility.Activity, **kw)
+    ``group``
+        Name of the group affected.
+    ``group.group_name``
+        Name of the group affected.
+    """
+    query = GroupActivity.query.order_by(GroupActivity.id.desc())
+    # join Group for sorting/filtering and also for eager loading
+    query = query.join(GroupActivity.object)\
+            .options(contains_eager(DistroTreeActivity.object))
+    json_result = json_collection(query, columns=dict(
+        common_activity_search_columns.items() + {
+        'group': Group.group_name,
+        'group.group_name': Group.group_name,
+        }.items()))
+    if request_wants_json():
+        return jsonify(json_result)
+    return render_tg_template('bkr.server.templates.backgrid', {
+        'title': u'Group Activity',
+        'grid_collection_type': 'Activity',
+        'grid_collection_data': json_result,
+        'grid_collection_url': request.base_url,
+        'grid_view_type': 'GroupActivityView',
+    })
 
-    def _activities_grid(self, activities, search_bar, action, searcher, \
-        title='Activity', **kw):
-        activity_search = searcher.search(activities)
-        activities_return = self.activities(activity_search, **kw)
-        searchvalue = None
-        search_options = {}
-        if activities_return:
-            if 'activities_found' in activities_return:
-                activities = activities_return['activities_found']
-            if 'searchvalue' in activities_return:
-                searchvalue = activities_return['searchvalue']
-            if 'simplesearch' in activities_return:
-                search_options['simplesearch'] = activities_return['simplesearch']
+@app.route('/activity/labcontroller', methods=['GET'])
+def get_lab_controller_activity():
+    """
+    Returns a pageable JSON collection of all lab controller activity records.
 
-        activity_grid = myPaginateDataGrid(fields=[
-                                  widgets.PaginateDataGrid.Column(name='user.user_name', getter=lambda x: x.user, title='User', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='service', getter=lambda x: x.service, title='Via', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='created',
-                                    getter=lambda x: x.created, title='Date',
-                                    options=dict(sortable=True, datetime=True)),
-                                  widgets.PaginateDataGrid.Column(name='object_name', getter=lambda x: x.object_name(), title='Object', options=dict(sortable=False)),
-                                  widgets.PaginateDataGrid.Column(name='field_name', getter=lambda x: x.field_name, title='Property', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='action', getter=lambda x: x.action, title='Action', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='old_value', getter=lambda x: x.old_value, title='Old Value', options=dict(sortable=True)),
-                                  widgets.PaginateDataGrid.Column(name='new_value', getter=lambda x: x.new_value, title='New Value', options=dict(sortable=True)),
-                              ])
+    Supports the same fields for filtering and sorting as 
+    :http:get:`/activity/`, with the following additions:
 
-        return dict(title=title,
-                    grid = activity_grid,
-                    search_bar = search_bar,
-                    searchvalue = searchvalue,
-                    action = action,
-                    options = search_options,
-                    list = activities)
-    default = index
+    ``lab_controller``
+        FQDN of the lab controller affected.
+    ``lab_controller.fqdn``
+        FQDN of the lab controller affected.
+    """
+    query = LabControllerActivity.query.order_by(LabControllerActivity.id.desc())
+    # join LabController for sorting/filtering and also for eager loading
+    query = query.join(LabControllerActivity.object)\
+            .options(contains_eager(LabControllerActivity.object))
+    json_result = json_collection(query, columns=dict(
+        common_activity_search_columns.items() + {
+        'lab_controller': LabController.fqdn,
+        'lab_controller.fqdn': LabController.fqdn,
+        }.items()))
+    if request_wants_json():
+        return jsonify(json_result)
+    return render_tg_template('bkr.server.templates.backgrid', {
+        'title': u'Lab Controller Activity',
+        'grid_collection_type': 'Activity',
+        'grid_collection_data': json_result,
+        'grid_collection_url': request.base_url,
+        'grid_view_type': 'LabControllerActivityView',
+    })
+
+@app.route('/activity/system', methods=['GET'])
+def get_systems_activity(): # distinct from get_system_activity
+    """
+    Returns a pageable JSON collection of all system activity records.
+
+    Supports the same fields for filtering and sorting as 
+    :http:get:`/activity/`, with the following additions:
+
+    ``system``
+        FQDN of the system affected.
+    ``system.fqdn``
+        FQDN of the system affected.
+    """
+    query = SystemActivity.query.order_by(SystemActivity.id.desc())
+    # join System for sorting/filtering and also for eager loading
+    query = query.join(SystemActivity.object)\
+            .options(contains_eager(SystemActivity.object))
+    json_result = json_collection(query, columns=dict(
+        common_activity_search_columns.items() + {
+        'system': System.fqdn,
+        'system.fqdn': System.fqdn,
+        }.items()))
+    if request_wants_json():
+        return jsonify(json_result)
+    return render_tg_template('bkr.server.templates.backgrid', {
+        'title': u'System Activity',
+        'grid_collection_type': 'Activity',
+        'grid_collection_data': json_result,
+        'grid_collection_url': request.base_url,
+        'grid_view_type': 'SystemsActivityView',
+    })

@@ -71,6 +71,18 @@ class RecipeSetActivity(Activity):
     def object_name(self):
         return "RecipeSet: %s" % self.object.id
 
+    def __json__(self):
+        result = super(RecipeSetActivity, self).__json__()
+        result['recipeset'] = {
+            'id': self.object.id,
+            't_id': self.object.t_id,
+            'job': {
+                'id': self.object.job.id,
+                't_id': self.object.job.t_id,
+            },
+        }
+        return result
+
 machine_guest_map =Table('machine_guest_map', DeclarativeMappedObject.metadata,
         Column('machine_recipe_id', Integer,
                 ForeignKey('machine_recipe.id', onupdate='CASCADE', ondelete='CASCADE'),
@@ -122,6 +134,11 @@ class JobActivity(Activity):
 
     def object_name(self):
         return "Job: %s" % self.object.id
+
+    def __json__(self):
+        result = super(JobActivity, self).__json__()
+        result['job'] = {'id': self.object.id, 't_id': self.object.t_id}
+        return result
 
 
 class Watchdog(DeclarativeMappedObject):

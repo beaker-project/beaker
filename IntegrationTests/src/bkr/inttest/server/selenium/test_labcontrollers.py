@@ -11,7 +11,7 @@ from threading import Thread, Event
 from turbogears.database import session
 from bkr.inttest.server.selenium import XmlRpcTestCase, \
     WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login, is_activity_row_present
+from bkr.inttest.server.webdriver_utils import login
 from bkr.inttest import data_setup, get_server_base, fix_beakerd_repodata_perms
 from bkr.server.model import Distro, DistroTree, Arch, ImageType, Job, \
         System, SystemStatus, TaskStatus, CommandActivity, CommandStatus, \
@@ -19,7 +19,6 @@ from bkr.server.model import Distro, DistroTree, Arch, ImageType, Job, \
 from bkr.server.tools import beakerd
 from bkr.server.wsgi import app
 from bkr.server import identity
-from bkr.inttest.server.selenium.test_activity import is_activity_row_present
 
 class LabControllerViewTest(WebDriverTestCase):
 
@@ -44,27 +43,18 @@ class LabControllerViewTest(WebDriverTestCase):
         self.assert_('%s saved' % lc_name in
             b.find_element_by_css_selector('.flash').text)
 
-        # Search in activity
-        b.get(get_server_base() + 'activity/labcontroller')
-        b.find_element_by_link_text('Show Search Options').click()
-        b.find_element_by_xpath("//select[@id='activitysearch_0_table']/"
-            "option[@value='LabController/Name']").click()
-        b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/"
-            "option[@value='is']").click()
-        b.find_element_by_xpath("//input[@id='activitysearch_0_value']"). \
-            send_keys(lc_name)
-        b.find_element_by_id('searchform').submit()
-
-        self.assert_(is_activity_row_present(b,
-            object_='LabController: %s' % lc_name, via='WEBUI',
-            property_='FQDN', action='Changed', new_value=lc_name))
-        self.assert_(is_activity_row_present(b,
-            object_='LabController: %s' % lc_name, via='WEBUI',
-            property_='User', action='Changed',
-            new_value='host/' + lc_name))
-        self.assert_(is_activity_row_present(b,
-            object_='LabController: %s' % lc_name, via='WEBUI',
-            property_='Disabled', action='Changed', new_value='False'))
+        # check activity
+        with session.begin():
+            lc = LabController.by_name(lc_name)
+            self.assertEquals(lc.activity[0].field_name, u'Disabled')
+            self.assertEquals(lc.activity[0].action, u'Changed')
+            self.assertEquals(lc.activity[0].new_value, u'False')
+            self.assertEquals(lc.activity[1].field_name, u'User')
+            self.assertEquals(lc.activity[1].action, u'Changed')
+            self.assertEquals(lc.activity[1].new_value, u'host/' + lc_name)
+            self.assertEquals(lc.activity[2].field_name, u'FQDN')
+            self.assertEquals(lc.activity[2].action, u'Changed')
+            self.assertEquals(lc.activity[2].new_value, lc_name)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=998374
     # https://bugzilla.redhat.com/show_bug.cgi?id=1064710

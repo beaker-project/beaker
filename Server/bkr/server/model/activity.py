@@ -70,6 +70,7 @@ class Activity(DeclarativeMappedObject):
             'field_name': self.field_name,
             'old_value': self.old_value,
             'new_value': self.new_value,
+            'type': self.type,
         }
 
     @classmethod
@@ -108,7 +109,7 @@ class ActivityMixin(object):
         """
         # This trick of using an inner functions lets us force the use of
         # keyword arguments without needing to do our own argument parsing
-        self._record_activity_inner(**kwds)
+        return self._record_activity_inner(**kwds)
 
     def _record_activity_inner(self, service, field, action=u'Changed',
                                old=None, new=None, user=None):
@@ -119,6 +120,7 @@ class ActivityMixin(object):
                            service=service, action=action,
                            field=field, old=old, new=new, object_id=self.id)
         log.debug(self._log_fmt, log_details)
+        return entry
 
     @classmethod
     def record_bulk_activity(cls, query, **kwds):

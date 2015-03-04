@@ -16,6 +16,12 @@ from bkr.server import identity
 from bkr.server.bexceptions import BX, InsufficientSystemPermissions
 from bkr.server.search_utility import lucene_to_sqlalchemy
 
+# http://flask.pocoo.org/snippets/45/
+def request_wants_json():
+    best = request.accept_mimetypes.best_match(['application/json', 'text/html'])
+    return (best == 'application/json' and
+            request.accept_mimetypes[best] > request.accept_mimetypes['text/html'])
+
 class PaginationRequiredException(HTTPException):
     code = 302
     # delete the following when we have Werkzeug 0.9:
@@ -48,6 +54,7 @@ def json_collection(query, columns=None, extra_sort_columns=None, min_page_size=
         result['q'] = request.args['q']
     total_count = query.order_by(None).count()
     result['count'] = total_count
+    force_paging = (total_count > force_paging_for_count)
     total_columns = columns.copy()
     total_columns.update(extra_sort_columns)
     if request.args.get('sort_by') in total_columns:
@@ -70,20 +77,63 @@ def json_collection(query, columns=None, extra_sort_columns=None, min_page_size=
         if 'page_size' in request.args:
             page_size = int(request.args['page_size'])
             page_size = min(max(page_size, min_page_size), max_page_size)
+        elif not request_wants_json():
+            # For the web UI, we always do paging even if the query params 
+            # didn't request it.
+            page_size = default_page_size
+        elif force_paging and request_wants_json():
+            # If an API user didn't request paging but we are forcing it 
+            # because of the result size, then we redirect them to the URL with 
+            # a page_size= param added, as a way of indicating that they should 
+            # be using paging. There's no point doing this for the web UI though.
+            if request.query_string:
+                url = request.url + ('&page_size=%s' % default_page_size)
+            else:
+                url = request.base_url + ('?page_size=%s' % default_page_size)
+            raise PaginationRequiredException(response=redirect(url))
+        elif force_paging:
+            page_size = default_page_size
+        else:
+            page_size = None
+        if page_size:
             query = query.limit(page_size)
             page = int(request.args.get('page', 1))
             if page > 1:
                 query = query.offset((page - 1) * page_size)
             result['page'] = page
             result['page_size'] = page_size
-        elif total_count > force_paging_for_count:
-            if request.query_string:
-                url = request.url + ('&page_size=%s' % default_page_size)
-            else:
-                url = request.base_url + ('?page_size=%s' % default_page_size)
-            raise PaginationRequiredException(response=redirect(url))
         result['entries'] = query.all()
     return result
+
+def render_tg_template(template_name, data):
+    """
+    Helper for Flask handlers to render a Kid template in 
+    a TurboGears-compatible way. This reimplements the bare minimum TG magic 
+    bits needed to successfully render a template inheriting from master.kid.
+    """
+    from turbogears.view import render
+    # These are the widgets which are always included on every page (as defined 
+    # in tg.include_widgets) minus Mochikit because we are not using that in any 
+    # new code.
+    from bkr.server.widgets import jquery, beaker_js, beaker_css
+    data['tg_css'] = beaker_css.retrieve_css()
+    data['tg_js_head'] = jquery.retrieve_javascript() + beaker_js.retrieve_javascript()
+    data['tg_js_bodytop'] = []
+    data['tg_js_bodybottom'] = []
+    # If the worker has previously handled a CherryPy request then 
+    # cherrypy.request will be left behind from that, and 
+    # turbogears.util.request_available will be fooled into thinking we are 
+    # actually inside CherryPy. The base implementation of 
+    # turbogears.widgets.Widget#display tries to check tg_template_enginename if 
+    # it thinks a CherryPy request is available, so we just set it here to 
+    # avoid AttributeErrors in that code (since we really aren't inside 
+    # a CherryPy request at this point).
+    import cherrypy
+    try:
+        cherrypy.request.tg_template_enginename = 'kid'
+    except AttributeError:
+        pass
+    return render(data, template_name)
 
 # Error handling helpers that play nice with the Beaker CLI.
 # These report HTTP errors as plain text responses containing just the

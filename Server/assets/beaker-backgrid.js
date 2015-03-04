@@ -191,7 +191,7 @@ var BeakerBackgridPaginator = Backbone.View.extend({
     },
     initialize: function () {
         var collection = this.collection;
-        this.listenTo(collection, 'add remove reset', this.render);
+        this.listenTo(collection, 'sync', this.render);
     },
     render: function () {
         this.$el.html(this.template(this.collection.state));

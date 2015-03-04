@@ -47,6 +47,7 @@ log_to_stream(sys.stderr, level=logging.DEBUG)
 application = app
 
 # Register all routes.
+import bkr.server.activity
 import bkr.server.user
 import bkr.server.group
 import bkr.server.systems

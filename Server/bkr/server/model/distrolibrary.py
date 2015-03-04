@@ -60,6 +60,14 @@ class DistroActivity(Activity):
     def object_name(self):
         return "Distro: %s" % self.object.name
 
+    def __json__(self):
+        result = super(DistroActivity, self).__json__()
+        result['distro'] = {
+            'id': self.object.id,
+            'name': self.object.name,
+        }
+        return result
+
 class DistroTreeActivity(Activity):
 
     __tablename__ = 'distro_tree_activity'
@@ -72,6 +80,19 @@ class DistroTreeActivity(Activity):
 
     def object_name(self):
         return u'DistroTree: %s' % self.object
+
+    def __json__(self):
+        result = super(DistroTreeActivity, self).__json__()
+        result['distro_tree'] = {
+            'id': self.object.id,
+            'distro': {
+                'id': self.object.distro.id,
+                'name': self.object.distro.name,
+            },
+            'variant': self.object.variant,
+            'arch': self.object.arch,
+        }
+        return result
 
 class KernelType(DeclarativeMappedObject):
 

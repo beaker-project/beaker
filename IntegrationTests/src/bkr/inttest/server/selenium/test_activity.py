@@ -6,156 +6,128 @@
 
 from turbogears.database import session
 from bkr.inttest.server.selenium import WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login, is_activity_row_present, \
-    delete_and_confirm
+from bkr.inttest.server.webdriver_utils import login, \
+    check_activity_search_results, delete_and_confirm
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.server.model import User, DistroActivity, SystemActivity, \
     GroupActivity, DistroTreeActivity
 
 class ActivityTestWD(WebDriverTestCase):
 
-    @with_transaction
     def setUp(self):
-        self.distro = data_setup.create_distro()
-        self.distro_tree1 = data_setup.create_distro_tree(distro=self.distro,
-            arch='x86_64')
-        self.distro_tree2 = data_setup.create_distro_tree(distro=self.distro,
-            arch='i386')
-
-        self.distro_tree1.activity.append(DistroTreeActivity(
-            user=User.by_user_name(data_setup.ADMIN_USER),
-            service=u'testdata', field_name=u'Nonesente',
-            old_value=u'sdfas', new_value=u'sdfa', action='Added'))
-        self.distro_tree2.activity.append(DistroTreeActivity(
-            user=User.by_user_name(data_setup.ADMIN_USER), 
-            service=u'testdata', field_name=u'Noneseonce',
-            old_value=u'bsdf', new_value=u'sdfas', action='Added'))
-
-        self.distro.activity.append(DistroActivity(
-                user=User.by_user_name(data_setup.ADMIN_USER), service=u'testdata',
-                action=u'Nothing', field_name=u'Nonsense',
-                old_value=u'asdf', new_value=u'omgwtfbbq'))
-        self.system = data_setup.create_system()
-        self.system.activity.append(SystemActivity(
-                user=User.by_user_name(data_setup.ADMIN_USER), service=u'testdata',
-                action=u'Nothing', field_name=u'Nonsense',
-                old_value=u'asdf', new_value=u'omgwtfbbq'))
-        self.group2 = data_setup.create_group()
-        self.group = data_setup.create_group()
-        self.group.activity.append(GroupActivity(
-                user=User.by_user_name(data_setup.ADMIN_USER), service=u'testdata',
-                action=u'Nothing', field_name=u'Nonsense',
-                old_value=u'asdf', new_value=u'omgwtfbbq'))
         self.browser = self.get_browser()
 
     def test_can_search_custom_service(self):
         with session.begin():
-            self.distro_tree1.activity.append(DistroTreeActivity(
+            distro_tree = data_setup.create_distro_tree()
+            act1 = distro_tree.record_activity(
                 user=User.by_user_name(data_setup.ADMIN_USER),
-                service=u'TESTSERVICE', field_name=u'Nonesente',
-                old_value=u'sdfas', new_value=u'sdfa', action='Removed'))
-            self.distro_tree2.activity.append(DistroTreeActivity(
+                service=u'TESTSERVICE', field=u'Nonesente',
+                old=u'sdfas', new=u'sdfa', action=u'Removed')
+            act2 = distro_tree.record_activity(
                 user=User.by_user_name(data_setup.ADMIN_USER),
-                service=u'TESTSERVICE2', field_name=u'Noneseonce',
-                old_value=u'bsdf', new_value=u'sdfas', action='Removed'))
+                service=u'TESTSERVICE2', field=u'Noneseonce',
+                old=u'bsdf', new=u'sdfas', action=u'Removed')
         b = self.browser
         b.get(get_server_base() + 'activity/distrotree')
-        b.find_element_by_link_text('Show Search Options').click()
-        # Make sure only distrotree1 is returned
-        b.find_element_by_xpath("//select[@id='activitysearch_0_table']/option[@value='Via']").click()
-        b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/option[@value='is']").click()
-        b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys('TESTSERVICE')
-        b.find_element_by_id('searchform').submit()
-        self.assertTrue(is_activity_row_present(b, via='TESTSERVICE', action='Removed',
-            object_='DistroTree: %s' % self.distro_tree1))
-        self.assertFalse(is_activity_row_present(b, via='TESTSERVICE2', action='Removed',
-            object_='DistroTree: %s' % self.distro_tree2))
+        b.find_element_by_class_name('search-query').send_keys('service:TESTSERVICE')
+        b.find_element_by_class_name('grid-filter').submit()
+        check_activity_search_results(b, present=[act1], absent=[act2])
 
     def test_can_search_by_distro_tree_specifics(self):
+        with session.begin():
+            tree1 = data_setup.create_distro_tree(arch=u'i386')
+            act1 = tree1.record_activity(
+                user=User.by_user_name(data_setup.ADMIN_USER),
+                service=u'TESTSERVICE', field=u'Nonesente',
+                old=u'sdfas', new=u'sdfa', action=u'Added')
+            tree2 = data_setup.create_distro_tree(arch=u'x86_64')
+            act2 = tree2.record_activity(
+                user=User.by_user_name(data_setup.ADMIN_USER),
+                service=u'TESTSERVICE2', field=u'Noneseonce',
+                old=u'bsdf', new=u'sdfas', action=u'Added')
         b = self.browser
         b.get(get_server_base() + 'activity/distrotree')
-        b.find_element_by_link_text('Show Search Options').click()
-        # Make sure only distrotree1 is returned
-        b.find_element_by_xpath("//select[@id='activitysearch_0_table']/option[@value='DistroTree/Arch']").click()
-        b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/option[@value='is']").click()
-        b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys(self.distro_tree1.arch.arch)
-
-        b.find_element_by_link_text('Add').click()
-        b.find_element_by_xpath("//select[@id='activitysearch_1_table']/option[@value='DistroTree/Variant']").click()
-        b.find_element_by_xpath("//select[@id='activitysearch_1_operation']/option[@value='is']").click()
-        b.find_element_by_xpath("//input[@id='activitysearch_1_value']").send_keys(self.distro_tree1.variant)
-
-        b.find_element_by_link_text('Add').click()
-        b.find_element_by_xpath("//select[@id='activitysearch_2_table']/option[@value='DistroTree/Distro Name']").click()
-        b.find_element_by_xpath("//select[@id='activitysearch_2_operation']/option[@value='is']").click()
-        b.find_element_by_xpath("//input[@id='activitysearch_2_value']").send_keys(self.distro_tree1.distro.name)
-
-        b.find_element_by_id('searchform').submit()
-
-        self.assert_(is_activity_row_present(b,
-                object_='DistroTree: %s' % self.distro_tree1))
-
-        self.assert_(not is_activity_row_present(b,
-                object_='DistroTree: %s' % self.distro_tree2))
+        b.find_element_by_class_name('search-query').send_keys('distro_tree.arch:i386')
+        b.find_element_by_class_name('grid-filter').submit()
+        check_activity_search_results(b, present=[act1], absent=[act2])
 
     def test_can_search_by_system_name(self):
+        with session.begin():
+            sys1 = data_setup.create_system()
+            act1 = sys1.record_activity(service=u'testdata',
+                    user=User.by_user_name(data_setup.ADMIN_USER),
+                    action=u'Nothing', field=u'Nonsense',
+                    old=u'asdf', new=u'omgwtfbbq')
+            sys2 = data_setup.create_system()
+            act2 = sys2.record_activity(service=u'testdata',
+                    user=User.by_user_name(data_setup.ADMIN_USER),
+                    action=u'Nothing', field=u'Nonsense',
+                    old=u'asdf', new=u'lollercopter')
         b = self.browser
         b.get(get_server_base() + 'activity/system')
-        b.find_element_by_link_text('Show Search Options').click()
-        b.find_element_by_xpath("//select[@id='activitysearch_0_table']/option[@value='System/Name']").click()
-        b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/option[@value='is']").click()
-        b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys(self.system.fqdn)
-        b.find_element_by_id('searchform').submit()
-        self.assert_(is_activity_row_present(b,
-                object_='System: %s' % self.system.fqdn))
+        b.find_element_by_class_name('search-query').send_keys(
+                'system.fqdn:%s' % sys1.fqdn)
+        b.find_element_by_class_name('grid-filter').submit()
+        check_activity_search_results(b, present=[act1], absent=[act2])
 
     def test_can_search_by_distro_name(self):
+        with session.begin():
+            distro1 = data_setup.create_distro()
+            act1 = distro1.record_activity(service=u'testdata',
+                    user=User.by_user_name(data_setup.ADMIN_USER),
+                    action=u'Nothing', field=u'Nonsense',
+                    old=u'asdf', new=u'omgwtfbbq')
+            distro2 = data_setup.create_distro()
+            act2 = distro2.record_activity(service=u'testdata',
+                    user=User.by_user_name(data_setup.ADMIN_USER),
+                    action=u'Nothing', field=u'Nonsense',
+                    old=u'asdf', new=u'lollercopter')
         b = self.browser
         b.get(get_server_base() + 'activity/distro')
-        b.find_element_by_link_text('Show Search Options').click()
-        b.find_element_by_xpath('//select[@id="activitysearch_0_table"]/option[@value="Distro/Name"]').click()
-        b.find_element_by_xpath('//select[@id="activitysearch_0_operation"]/option[@value="is"]').click()
-        b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys(self.distro.name)
-        b.find_element_by_id('searchform').submit()
-        self.assert_(is_activity_row_present(b,
-                object_='Distro: %s' % self.distro.name))
+        b.find_element_by_class_name('search-query').send_keys(
+                'distro.name:%s' % distro1.name)
+        b.find_element_by_class_name('grid-filter').submit()
+        check_activity_search_results(b, present=[act1], absent=[act2])
 
     def test_can_search_by_group_name(self):
+        with session.begin():
+            group1 = data_setup.create_group()
+            act1 = group1.record_activity(service=u'testdata',
+                    user=User.by_user_name(data_setup.ADMIN_USER),
+                    action=u'Nothing', field=u'Nonsense',
+                    old=u'asdf', new=u'omgwtfbbq')
+            group2 = data_setup.create_group()
+            act2 = group2.record_activity(service=u'testdata',
+                    user=User.by_user_name(data_setup.ADMIN_USER),
+                    action=u'Nothing', field=u'Nonsense',
+                    old=u'asdf', new=u'lollercopter')
         b = self.browser
         b.get(get_server_base() + 'activity/group')
-        b.find_element_by_link_text('Show Search Options').click()
-        b.find_element_by_xpath("//select[@id='activitysearch_0_table']/option[@value='Group/Name']").click()
-        b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/option[@value='is']").click()
-        b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys(self.group.display_name)
-        b.find_element_by_id('searchform').submit()
-        self.assert_(is_activity_row_present(b,
-                object_='Group: %s' % self.group.display_name))
+        b.find_element_by_class_name('search-query').send_keys(
+                'group.group_name:%s' % group1.group_name)
+        b.find_element_by_class_name('grid-filter').submit()
+        check_activity_search_results(b, present=[act1], absent=[act2])
 
     def test_group_removal_is_noticed(self):
-        session.flush()
+        with session.begin():
+            group = data_setup.create_group()
         b = self.browser
         login(b)
         b.get(get_server_base() + 'groups/')
         b.find_element_by_xpath("//input[@name='group.text']").clear()
-        b.find_element_by_xpath("//input[@name='group.text']").send_keys(self.group.group_name)
+        b.find_element_by_xpath("//input[@name='group.text']").send_keys(group.group_name)
         b.find_element_by_id('Search').submit()
-        delete_and_confirm(b, "//tr[td/a[normalize-space(text())='%s']]" % self.group.group_name,
+        delete_and_confirm(b, "//tr[td/a[normalize-space(text())='%s']]" % group.group_name,
             'Delete Group')
         should_have_deleted_msg = b.find_element_by_xpath('//body').text
-        self.assert_('%s deleted' % self.group.display_name in should_have_deleted_msg)
+        self.assertIn('%s deleted' % group.display_name, should_have_deleted_msg)
 
         # Check it's recorded in Group Activity
         b.get(get_server_base() + 'activity/')
-        b.find_element_by_link_text('Show Search Options').click()
-        b.find_element_by_xpath("//select[@id='activitysearch_0_table']/option[@value='Action']").click()
-        b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/option[@value='is']").click()
-        b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys('Removed')
-        b.find_element_by_link_text('Add').click()
-
-        b.find_element_by_xpath("//select[@id='activitysearch_1_table']/option[@value='Old Value']").click()
-        b.find_element_by_xpath("//select[@id='activitysearch_1_operation']/option[@value='is']").click()
-        b.find_element_by_xpath("//input[@id='activitysearch_1_value']").send_keys(self.group.display_name)
-        b.find_element_by_id('searchform').submit()
-        self.assert_(is_activity_row_present(b,via='WEBUI', action='Removed',
-             old_value=self.group.display_name, new_value='',
-             property_='Group'))
+        first_row = b.find_element_by_xpath('//div[@id="grid"]/table/tbody/tr[1]')
+        self.assertEquals(first_row.find_element_by_xpath('td[2]').text, 'WEBUI')
+        self.assertEquals(first_row.find_element_by_xpath('td[5]').text, 'Group')
+        self.assertEquals(first_row.find_element_by_xpath('td[6]').text, 'Removed')
+        self.assertEquals(first_row.find_element_by_xpath('td[7]').text,
+                group.display_name)

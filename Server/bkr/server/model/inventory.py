@@ -70,6 +70,11 @@ class SystemActivity(Activity):
     def object_name(self):
         return "System: %s" % self.object.fqdn
 
+    def __json__(self):
+        result = super(SystemActivity, self).__json__()
+        result['system'] = {'fqdn': self.object.fqdn}
+        return result
+
 
 class CommandActivity(Activity):
 
@@ -1578,6 +1583,11 @@ class SystemPoolActivity(Activity):
 
     def object_name(self):
         return "System Pool: %s" % self.object.name
+
+    def __json__(self):
+        result = super(SystemPoolActivity, self).__json__()
+        result['pool'] = self.object
+        return result
 
 class SystemPool(DeclarativeMappedObject, ActivityMixin):
 

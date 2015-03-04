@@ -1032,7 +1032,8 @@ class SystemActivityHTTPTest(DatabaseTestCase):
                 'systems/%s/activity/?q=action:poke' % system.fqdn)
         expected_redirect = (get_server_base() +
                 'systems/%s/activity/?q=action:poke&page_size=20' % system.fqdn)
-        response = requests.get(original_url, allow_redirects=False)
+        response = requests.get(original_url, allow_redirects=False,
+                headers={'Accept': 'application/json'})
         self.assertEquals(response.status_code, 302)
         self.assertEquals(response.headers['Location'], expected_redirect)
         # For completeness, the same thing with no query params.
@@ -1040,6 +1041,7 @@ class SystemActivityHTTPTest(DatabaseTestCase):
                 'systems/%s/activity/' % system.fqdn)
         expected_redirect = (get_server_base() +
                 'systems/%s/activity/?page_size=20' % system.fqdn)
-        response = requests.get(original_url, allow_redirects=False)
+        response = requests.get(original_url, allow_redirects=False,
+                headers={'Accept': 'application/json'})
         self.assertEquals(response.status_code, 302)
         self.assertEquals(response.headers['Location'], expected_redirect)

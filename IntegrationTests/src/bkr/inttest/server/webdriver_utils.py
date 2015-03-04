@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 import json
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium import webdriver
 from bkr.inttest import data_setup, get_server_base
@@ -43,25 +44,6 @@ def is_text_present(browser, text):
     return bool(browser.find_elements_by_xpath(
             '//*[contains(text(), "%s")]' % text.replace('"', r'\"')))
 
-def is_activity_row_present(b, via=u'testdata', object_=None, property_=None,
-        action=None, old_value=None, new_value=None):
-    row_count = len(b.find_elements_by_xpath('//table[@id="widget"]/tbody/tr'))
-    for row in range(1, row_count + 1):
-        if via and via != b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[2]' % row).text:
-            continue
-        if object_ and object_ != b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[4]' % row).text:
-            continue
-        if property_ and property_ != b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[5]' % row).text:
-            continue
-        if action and action != b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[6]' % row).text:
-            continue
-        if old_value and old_value != b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[7]' % row).text:
-            continue
-        if new_value and new_value != b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[8]' % row).text:
-            continue
-        return True
-    return False
-
 def search_for_system(browser, system):
     browser.find_element_by_link_text('Show Search Options').click()
     Select(browser.find_element_by_name('systemsearch-0.table'))\
@@ -85,6 +67,32 @@ def wait_for_ajax_loading(browser, class_name):
     """
     WebDriverWait(browser, 10).until(lambda browser: len(browser.find_elements_by_class_name(
             class_name)) == 0)
+
+def _activity_row_xpath(activity):
+    return ('string(tr/td[1])="%s" and string(tr/td[2])="%s" and '
+            'string(tr/td[5])="%s" and string(tr/td[6])="%s" and '
+            'string(tr/td[7])="%s" and string(tr/td[8])="%s"'
+            % (activity.user.user_name, activity.service,
+               activity.field_name, activity.action,
+               activity.old_value, activity.new_value))
+def check_activity_search_results(browser, present=[], absent=[]):
+    for activity in absent:
+        try:
+            browser.find_element_by_xpath(
+                    '//div[@id="grid"]/table/tbody[not(%s)]'
+                    % _activity_row_xpath(activity))
+        except NoSuchElementException:
+            raise AssertionError('Grid was missing or contained '
+                    'activity entry which was expected to be absent: %r'
+                    % activity)
+    for activity in present:
+        try:
+            browser.find_element_by_xpath(
+                    '//div[@id="grid"]/table/tbody[%s]'
+                    % _activity_row_xpath(activity))
+        except NoSuchElementException:
+            raise AssertionError('Grid was missing or did not contain '
+                    'activity entry: %r' % activity)
 
 def check_system_search_results(browser, present=[], absent=[]):
     for system in absent:

@@ -30,7 +30,6 @@ from bkr.server.labcontroller import LabControllers
 from bkr.server.user import Users
 from bkr.server.distro import Distros
 from bkr.server.distrotrees import DistroTrees
-from bkr.server.activity import Activities
 from bkr.server.reports import Reports
 from bkr.server.job_matrix import JobMatrix
 from bkr.server.reserve_workflow import ReserveWorkflow
@@ -144,7 +143,6 @@ class Root(RPCRoot):
     labcontrollers = LabControllers()
     distros = Distros()
     distrotrees = DistroTrees()
-    activity = Activities()
     users = Users()
     arches = Arches()
     auth = Auth()

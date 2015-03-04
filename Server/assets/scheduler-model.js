@@ -6,18 +6,23 @@
 
 ;(function () {
 
-window.User = Backbone.Model.extend({
-    _toHTML_template: _.template('<a href="mailto:<%- email_address %>" title="<%- display_name %> &lt;<%- email_address %>&gt;"><%- user_name %></a>'),
+window.Job = Backbone.Model.extend({
+    _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>jobs/<%- id %>"><%- t_id %></a>'),
     toHTML: function () {
         return this._toHTML_template(this.attributes);
     },
 });
 
-window.Group = Backbone.Model.extend({
-    _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>groups/edit?group_id=<%- id %>" title="<%- display_name %>"><%- group_name %></a>'),
+window.RecipeSet = Backbone.Model.extend({
+    parse: function (data) {
+        data['job'] = !_.isEmpty(data['job']) ? new Job(data['job']) : null;
+        return data;
+    },
+    _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>jobs/<%- job.get("id") %>"><%- t_id %></a>'),
     toHTML: function () {
         return this._toHTML_template(this.attributes);
     },
 });
+
 
 })();

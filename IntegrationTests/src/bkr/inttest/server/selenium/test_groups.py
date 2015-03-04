@@ -8,7 +8,7 @@ from bkr.server.model import session
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_text_present, \
-    delete_and_confirm, logout, is_activity_row_present
+    delete_and_confirm, logout
 from bkr.server.model import session, SystemPermission, SystemAccessPolicy
 
 
@@ -159,31 +159,19 @@ class TestGroups(WebDriverTestCase):
             b.find_element_by_class_name('flash').text,
             '%s deleted' % group.display_name)
 
-        # check if the access policy rule has been removed
-        session.refresh(p)
-        self.assertEquals(len(p.rules), 0)
+        with session.begin():
+            session.expire_all()
+            # check if the access policy rule has been removed
+            self.assertEquals(len(p.rules), 0)
 
-        # Check whether the rules deleted have been recorded in the
-        # Activity table
-        b.get(get_server_base() + 'activity/')
-        b.find_element_by_link_text('Show Search Options').click()
-        b.find_element_by_xpath("//select[@id='activitysearch_0_table']/option[@value='Action']").click()
-        b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/option[@value='is']").click()
-        b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys('Removed')
-        b.find_element_by_link_text('Add').click()
-
-        b.find_element_by_xpath("//select[@id='activitysearch_1_table']/option[@value='Property']").click()
-        b.find_element_by_xpath("//select[@id='activitysearch_1_operation']/option[@value='is']").click()
-        b.find_element_by_xpath("//input[@id='activitysearch_1_value']").send_keys('Access Policy Rule')
-        b.find_element_by_id('searchform').submit()
-        self.assert_(is_activity_row_present(b,via='WEBUI', action='Removed',
-                                             object_ = 'System: %s' % system.fqdn,
-                                             property_='Access Policy Rule',
-                                             old_value=access_policy_rule_1, new_value=''))
-        self.assert_(is_activity_row_present(b,via='WEBUI', action='Removed',
-                                             object_ = 'System: %s' % system.fqdn,
-                                             property_='Access Policy Rule',
-                                             old_value=access_policy_rule_2, new_value=''))
+            # Check whether the rules deleted have been recorded in the
+            # Activity table
+            self.assertEquals(system.activity[0].field_name, u'Access Policy Rule')
+            self.assertEquals(system.activity[0].action, u'Removed')
+            self.assertEquals(system.activity[0].old_value, access_policy_rule_2)
+            self.assertEquals(system.activity[1].field_name, u'Access Policy Rule')
+            self.assertEquals(system.activity[1].action, u'Removed')
+            self.assertEquals(system.activity[1].old_value, access_policy_rule_1)
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=1199368
     def test_group_remove_should_not_remove_system_pool(self):

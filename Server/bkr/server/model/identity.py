@@ -50,6 +50,11 @@ class GroupActivity(Activity):
     def object_name(self):
         return "Group: %s" % self.object.display_name
 
+    def __json__(self):
+        result = super(GroupActivity, self).__json__()
+        result['group'] = self.object
+        return result
+
 class UserActivity(Activity):
 
     __tablename__ = 'user_activity'
@@ -62,6 +67,11 @@ class UserActivity(Activity):
 
     def object_name(self):
         return "User: %s" % self.object.display_name
+
+    def __json__(self):
+        result = super(UserActivity, self).__json__()
+        result['object'] = self.object
+        return result
 
 class SubmissionDelegate(DeclarativeMappedObject):
 
@@ -444,6 +454,13 @@ class Group(DeclarativeMappedObject, ActivityMixin):
 
     def __repr__(self):
         return 'Group(group_name=%r, display_name=%r)' % (self.group_name, self.display_name)
+
+    def __json__(self):
+        return {
+            'id': self.id,
+            'group_name': self.group_name,
+            'display_name': self.display_name,
+        }
 
     @classmethod
     def list_by_name(cls, name, find_anywhere=False):

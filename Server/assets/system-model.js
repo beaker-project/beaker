@@ -68,15 +68,8 @@ window.CommandQueue = BeakerPageableCollection.extend({
     },
 });
 
-window.SystemActivityEntry = Backbone.Model.extend({
-    parse: function (data) {
-        data['user'] = !_.isEmpty(data['user']) ? new User(data['user']) : null;
-        return data;
-    },
-});
-
 window.SystemActivity = BeakerPageableCollection.extend({
-    model: SystemActivityEntry,
+    model: ActivityEntry,
     initialize: function (attributes, options) {
         this.system = options.system;
     },
@@ -105,8 +98,16 @@ window.SystemExecutedTasks = BeakerPageableCollection.extend({
     },
 });
 
+window.SystemPool = Backbone.Model.extend({
+    _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>pools/<%- encodeURIComponent(name) %>/"><%- name %></a>'),
+    toHTML: function () {
+        return this._toHTML_template(this.attributes);
+    },
+});
+
 window.System = Backbone.Model.extend({
     initialize: function (attributes, options) {
+        options = options || {};
         this.url = options.url;
         this.command_queue = new CommandQueue([], {system: this});
         this.activity = new SystemActivity([], {system: this});

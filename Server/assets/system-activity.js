@@ -6,6 +6,8 @@
 
 ;(function () {
 
+// Note that we also have SystemsActivityView (plural) which shows all system 
+// activity records.
 window.SystemActivityView = BeakerGrid.extend({
     initialize: function (options) {
         options.collection = this.model.activity;
