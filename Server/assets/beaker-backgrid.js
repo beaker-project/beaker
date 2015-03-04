@@ -9,7 +9,6 @@
 ;(function () {
 
 window.BackgridUserCell = Backgrid.Cell.extend({
-    template: JST['backgrid-user-cell'],
     className: 'user-cell',
     formatter: {
         fromRaw: function (value) {
@@ -27,7 +26,7 @@ window.BackgridUserCell = Backgrid.Cell.extend({
         this.$el.empty();
         var user = this.model.get(this.column.get('name'));
         if (!_.isEmpty(user)) {
-            this.$el.html(this.template(user.attributes));
+            this.$el.html(user.toHTML());
         }
         return this;
     },
@@ -90,7 +89,6 @@ window.BackgridTaskCell = Backgrid.Cell.extend({
 });
 
 window.BackgridDistroTreeCell = Backgrid.Cell.extend({
-    template: JST['backgrid-distro-tree-cell'],
     formatter: {
         fromRaw: function (value) {
             if (_.isEmpty(value))
@@ -107,7 +105,7 @@ window.BackgridDistroTreeCell = Backgrid.Cell.extend({
         this.$el.empty();
         var distro_tree = this.model.get(this.column.get('name'));
         if (!_.isEmpty(distro_tree)) {
-            this.$el.html(this.template(distro_tree.attributes));
+            this.$el.html(distro_tree.toHTML());
         }
         return this;
     },

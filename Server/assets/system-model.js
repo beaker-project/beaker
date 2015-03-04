@@ -10,9 +10,6 @@
  * System-related models for client-side Backbone widgets.
  */
 
-// XXX this needs to be moved somewhere better
-window.User = Backbone.Model.extend({});
-
 window.Loan = Backbone.Model.extend({
     parse: function (data) {
         data['recipient_user'] = !_.isEmpty(data['recipient_user']) ? new User(data['recipient_user']) : null;
@@ -93,7 +90,7 @@ window.Task = Backbone.Model.extend({});
 window.RecipeTask = Backbone.Model.extend({
     parse: function (data) {
         data['task'] = !_.isEmpty(data['task']) ? new Task(data['task']) : null;
-        data['distro_tree'] = !_.isEmpty(data['distro_tree']) ? new DistroTree(data['distro_tree']) : null;
+        data['distro_tree'] = !_.isEmpty(data['distro_tree']) ? new DistroTree(data['distro_tree'], {parse: true}) : null;
         return data;
     },
 });
@@ -132,6 +129,10 @@ window.System = Backbone.Model.extend({
         data['reprovision_distro_tree'] = (!_.isEmpty(data['reprovision_distro_tree']) ?
                 new DistroTree(data['reprovision_distro_tree'], {parse: true}) : null);
         return data;
+    },
+    _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>view/<%- encodeURIComponent(fqdn) %>"><%- fqdn %></a>'),
+    toHTML: function () {
+        return this._toHTML_template(this.attributes);
     },
     add_cc: function (cc, options) {
         var model = this;

@@ -1,15 +1,15 @@
-<p>Owned by <a href="mailto:<%- owner.get('email_address') %>" title="<%- owner.get('display_name') %> &lt;<%- owner.get('email_address') %>&gt;"><%- owner.get('user_name') %></a>.</p>
+<p>Owned by <%= owner.toHTML() %>.</p>
 <% if (!_.isEmpty(current_loan)) { %>
   <p>
     <span class="label label-info">Loaned</span>
-    to <a href="mailto:<%- current_loan.get('recipient_user').get('email_address') %>" title="<%- current_loan.get('recipient_user').get('display_name') %> &lt;<%- current_loan.get('recipient_user').get('email_address') %>&gt;"><%- current_loan.get('recipient_user').get('user_name') %></a>.
+    to <%= current_loan.get('recipient_user').toHTML() %>.
     <% /* IMPLEMENTME add "since", needs proper loan records */ %>
   </p>
 <% } %>
 <p>
   <% if (current_reservation) { %>
     <span class="label">Reserved</span>
-    by <a href="mailto:<%- current_reservation.get('user').get('email_address') %>" title="<%- current_reservation.get('user').get('display_name') %> &lt;<%- current_reservation.get('user').get('email_address') %>&gt;"><%- current_reservation.get('user').get('user_name') %></a>
+    by <%= current_reservation.get('user').toHTML() %>
     <% if (current_reservation.get('type') == 'recipe') { %>
       for <a href="<%- window.beaker_url_prefix %>recipes/<%- current_reservation.get('recipe_id') %>">R:<%- current_reservation.get('recipe_id') %></a>
     <% } %>

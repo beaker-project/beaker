@@ -1,6 +1,5 @@
 <p>
-  The system is owned by
-  <a href="mailto:<%- owner.get('email_address') %>" title="<%- owner.get('display_name') %> &lt;<%- owner.get('email_address') %>&gt;"><%- owner.get('user_name') %></a>.
+  The system is owned by <%= owner.toHTML() %>.
   <% if (can_change_owner) { %>
     <button type="button" class="btn change"><i class="fa fa-pencil-square-o"></i> Change</button>
   <% } %>
