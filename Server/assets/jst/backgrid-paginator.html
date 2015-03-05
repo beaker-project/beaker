@@ -1,10 +1,20 @@
-<div class="pagination-beside">
-  <span class="item-count">Items found: <%- totalRecords %></span>
-</div>
+<% if (_.isNumber(totalRecords)) { %>
+  <div class="pagination-beside">
+    <span class="item-count">Items found: <%- totalRecords %></span>
+  </div>
+<% } %>
 <ul>
   <%
-    var start = Math.max(Math.min(currentPage - 2, totalPages - 4), 1);
-    var end = Math.min(Math.max(currentPage, 3) + 2, totalPages);
+    if (_.isNumber(totalPages)) {
+      var start = Math.max(Math.min(currentPage - 2, totalPages - 4), 1);
+      var end = Math.min(Math.max(currentPage, 3) + 2, totalPages);
+    } else {
+      var start = Math.max(currentPage - 2, 1);
+      // If we don't have a count, they are only allowed to go forward one page 
+      // at a time, to avoid going "off the end".
+      // The link for the next page is below.
+      var end = currentPage;
+    }
   %>
   <% if (start > 2) { %>
     <li><a href="#" data-page="1">1&hellip;</a></li>
@@ -18,9 +28,13 @@
       <li><a href="#" data-page="<%= i %>"><%= i %></a></li>
     <% } %>
   <% } %>
-  <% if (end < totalPages - 1) { %>
-    <li><a href="#" data-page="<%= totalPages %>">&hellip;<%= totalPages %></a></li>
-  <% } else if (end == totalPages - 1) { %>
-    <li><a href="#" data-page="<%= totalPages %>"><%= totalPages %></a></li>
+  <% if (_.isNumber(totalPages)) { %>
+    <% if (end < totalPages - 1) { %>
+      <li><a href="#" data-page="<%= totalPages %>">&hellip;<%= totalPages %></a></li>
+    <% } else if (end == totalPages - 1) { %>
+      <li><a href="#" data-page="<%= totalPages %>"><%= totalPages %></a></li>
+    <% } %>
+  <% } else { %>
+    <li><a href="#" data-page="<%= i %>"><%= i %>&hellip;</a></li>
   <% } %>
 </ul>

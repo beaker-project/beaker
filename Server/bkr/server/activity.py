@@ -60,7 +60,9 @@ def get_activity():
     # Hence this outer join business.
     query = query.outerjoin(CommandActivity.__table__)\
             .filter(CommandActivity.id == None)
-    json_result = json_collection(query, columns=common_activity_search_columns)
+    json_result = json_collection(query,
+            columns=common_activity_search_columns,
+            skip_count=True)
     if request_wants_json():
         return jsonify(json_result)
     return render_tg_template('bkr.server.templates.backgrid', {
@@ -88,11 +90,12 @@ def get_distro_activity():
     # join Distro for sorting/filtering and also for eager loading
     query = query.join(DistroActivity.object)\
             .options(contains_eager(DistroActivity.object))
-    json_result = json_collection(query, columns=dict(
-        common_activity_search_columns.items() + {
-        'distro': Distro.name,
-        'distro.name': Distro.name,
-        }.items()))
+    json_result = json_collection(query,
+            columns=dict(common_activity_search_columns.items() + {
+                'distro': Distro.name,
+                'distro.name': Distro.name,
+                }.items()),
+            skip_count=True)
     if request_wants_json():
         return jsonify(json_result)
     return render_tg_template('bkr.server.templates.backgrid', {
@@ -127,13 +130,14 @@ def get_distro_tree_activity():
             .join(DistroTree.arch)\
             .options(contains_eager(DistroTreeActivity.object, DistroTree.distro))\
             .options(contains_eager(DistroTreeActivity.object, DistroTree.arch))
-    json_result = json_collection(query, columns=dict(
-        common_activity_search_columns.items() + {
-        'distro_tree.distro': Distro.name,
-        'distro_tree.distro.name': Distro.name,
-        'distro_tree.variant': DistroTree.variant,
-        'distro_tree.arch': Arch.arch,
-        }.items()))
+    json_result = json_collection(query,
+            columns=dict(common_activity_search_columns.items() + {
+                'distro_tree.distro': Distro.name,
+                'distro_tree.distro.name': Distro.name,
+                'distro_tree.variant': DistroTree.variant,
+                'distro_tree.arch': Arch.arch,
+                }.items()),
+            skip_count=True)
     if request_wants_json():
         return jsonify(json_result)
     return render_tg_template('bkr.server.templates.backgrid', {
@@ -161,11 +165,11 @@ def get_group_activity():
     # join Group for sorting/filtering and also for eager loading
     query = query.join(GroupActivity.object)\
             .options(contains_eager(DistroTreeActivity.object))
-    json_result = json_collection(query, columns=dict(
-        common_activity_search_columns.items() + {
-        'group': Group.group_name,
-        'group.group_name': Group.group_name,
-        }.items()))
+    json_result = json_collection(query,
+            columns=dict(common_activity_search_columns.items() + {
+                'group': Group.group_name,
+                'group.group_name': Group.group_name,
+                }.items()))
     if request_wants_json():
         return jsonify(json_result)
     return render_tg_template('bkr.server.templates.backgrid', {
@@ -193,11 +197,11 @@ def get_lab_controller_activity():
     # join LabController for sorting/filtering and also for eager loading
     query = query.join(LabControllerActivity.object)\
             .options(contains_eager(LabControllerActivity.object))
-    json_result = json_collection(query, columns=dict(
-        common_activity_search_columns.items() + {
-        'lab_controller': LabController.fqdn,
-        'lab_controller.fqdn': LabController.fqdn,
-        }.items()))
+    json_result = json_collection(query,
+            columns=dict(common_activity_search_columns.items() + {
+                'lab_controller': LabController.fqdn,
+                'lab_controller.fqdn': LabController.fqdn,
+                }.items()))
     if request_wants_json():
         return jsonify(json_result)
     return render_tg_template('bkr.server.templates.backgrid', {
@@ -225,11 +229,12 @@ def get_systems_activity(): # distinct from get_system_activity
     # join System for sorting/filtering and also for eager loading
     query = query.join(SystemActivity.object)\
             .options(contains_eager(SystemActivity.object))
-    json_result = json_collection(query, columns=dict(
-        common_activity_search_columns.items() + {
-        'system': System.fqdn,
-        'system.fqdn': System.fqdn,
-        }.items()))
+    json_result = json_collection(query,
+            columns=dict(common_activity_search_columns.items() + {
+                'system': System.fqdn,
+                'system.fqdn': System.fqdn,
+                }.items()),
+            skip_count=True)
     if request_wants_json():
         return jsonify(json_result)
     return render_tg_template('bkr.server.templates.backgrid', {

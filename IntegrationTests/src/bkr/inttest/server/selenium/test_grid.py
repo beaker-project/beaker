@@ -8,7 +8,7 @@
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support.ui import Select
 from turbogears.database import session
-from bkr.server.model import CommandActivity, CommandStatus
+from bkr.server.model import User, CommandActivity, CommandStatus
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base
 
@@ -18,15 +18,11 @@ class GridTest(WebDriverTestCase):
     def setUp(self):
         self.page_size = 20
         with session.begin():
-            self.system = data_setup.create_system()
-            user = data_setup.create_user()
-            self.activity = CommandActivity(user, 'Just', 'testing',
-                status=CommandStatus.queued)
-            self.system.command_queue.append(self.activity)
-            other_system = data_setup.create_system()
+            self.lc = data_setup.create_labcontroller()
+            other_lc = data_setup.create_labcontroller()
             for _ in range(self.page_size + 5):
-                other_system.record_activity(service=u'testdata',
-                        user=user, field=u'nothing', action=u'nothing')
+                other_lc.record_activity(service=u'testdata',
+                        field=u'nothing', action=u'nothing')
         self.browser = self.get_browser()
 
     def _get_paginators(self):
@@ -38,8 +34,10 @@ class GridTest(WebDriverTestCase):
 
     def create_activity_pages(self, number_of_pages):
         with session.begin():
+            user = User.query.first()
             for i in range(self.page_size * number_of_pages):
-                self.activity.log_to_system_history()
+                self.lc.record_activity(user=user, service=u'testdata',
+                        field=u'nonsense', action=u'poke')
 
     def check_page_text_is_shown(self, page_text, current=False):
         b = self.browser
@@ -63,11 +61,11 @@ class GridTest(WebDriverTestCase):
         b.find_element_by_xpath('//table[contains(@class, "backgrid")]'
                 '/tbody[not(.//div[@class="loading-overlay"])]')
 
-    def go_to_system_activity(self):
+    def go_to_activity_grid(self):
         b = self.browser
-        b.get(get_server_base() + 'activity/system?page_size=%d' % self.page_size)
+        b.get(get_server_base() + 'activity/labcontroller?page_size=%d' % self.page_size)
         b.find_element_by_class_name('search-query').send_keys(
-                'system.fqdn:%s' % self.system.fqdn)
+                'lab_controller.fqdn:%s' % self.lc.fqdn)
         b.find_element_by_class_name('grid-filter').submit()
         # let the grid finish loading
         b.find_element_by_xpath('//table[contains(@class, "backgrid")]'
@@ -75,12 +73,12 @@ class GridTest(WebDriverTestCase):
 
     def test_single_page(self):
         self.create_activity_pages(1)
-        self.go_to_system_activity()
+        self.go_to_activity_grid()
         self.check_page_text_is_shown('1', current=True)
 
     def test_pagination_links_exist_with_five_pages(self):
         self.create_activity_pages(5)
-        self.go_to_system_activity()
+        self.go_to_activity_grid()
         for number in range(1,6):
             self.check_page_text_is_shown(number, True if number is 1 else False)
 
@@ -88,7 +86,7 @@ class GridTest(WebDriverTestCase):
         # We're expecting 1 2 3 4 5 6 and no ellipsis.
         b = self.browser
         self.create_activity_pages(6)
-        self.go_to_system_activity()
+        self.go_to_activity_grid()
         # Start clicking from page #2
         for number in range(2,7):
             self.click_page_number(number)
@@ -107,7 +105,7 @@ class GridTest(WebDriverTestCase):
         # 1 2 3 _4 5...8
         # 1...3 4 _5 6 7 8
         self.create_activity_pages(8)
-        self.go_to_system_activity()
+        self.go_to_activity_grid()
         # We will be on page 1...
         self.check_page_text_is_shown(u'…8')
 

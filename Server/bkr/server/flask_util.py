@@ -31,7 +31,8 @@ class PaginationRequiredException(HTTPException):
         return self.response
 
 def json_collection(query, columns=None, extra_sort_columns=None, min_page_size=20,
-                    max_page_size=500, default_page_size=20, force_paging_for_count=500):
+                    max_page_size=500, default_page_size=20, force_paging_for_count=500,
+                    skip_count=False):
     """
     Helper function for Flask request handlers which want to return 
     a collection of resources as JSON.
@@ -52,9 +53,12 @@ def json_collection(query, columns=None, extra_sort_columns=None, min_page_size=
                 search_columns=columns,
                 default_columns=set(columns.values())))
         result['q'] = request.args['q']
-    total_count = query.order_by(None).count()
-    result['count'] = total_count
-    force_paging = (total_count > force_paging_for_count)
+    if not skip_count:
+        total_count = query.order_by(None).count()
+        result['count'] = total_count
+        force_paging = (total_count > force_paging_for_count)
+    else:
+        force_paging = True
     total_columns = columns.copy()
     total_columns.update(extra_sort_columns)
     if request.args.get('sort_by') in total_columns:
@@ -103,6 +107,12 @@ def json_collection(query, columns=None, extra_sort_columns=None, min_page_size=
             result['page'] = page
             result['page_size'] = page_size
         result['entries'] = query.all()
+        if len(result['entries']) < page_size and 'count' not in result:
+            # Even if we're not counting rows for performance reason, we know 
+            # we have reached the end of the rows if we returned fewer than the 
+            # page size. In this case we can infer the total count and return 
+            # it to the client, so that they know they are at the last page.
+            result['count'] = (page - 1) * page_size + len(result['entries'])
     return result
 
 def render_tg_template(template_name, data):
