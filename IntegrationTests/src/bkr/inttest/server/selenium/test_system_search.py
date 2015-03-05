@@ -504,6 +504,24 @@ class Search(WebDriverTestCase):
         assert_sorted([option.text for option in keyvalue_options])
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1182545
+    def test_invalid_date(self):
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Show Search Options').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('System/Added')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('after')
+        search_field = b.find_element_by_name('systemsearch-0.value')
+        search_field.click()
+        # close the date picker
+        search_field.send_keys(Keys.ESCAPE)
+        search_field.send_keys('02-02-2002')
+        # we can't actually check the HTML5 validation error
+        b.find_element_by_css_selector('input[name="systemsearch-0.value"]:invalid')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1182545
     def test_date_picker(self):
         with session.begin():
             today = datetime.date.today()
@@ -515,28 +533,13 @@ class Search(WebDriverTestCase):
         b.get(get_server_base())
         b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
-        # test for using invalid date
-        Select(b.find_element_by_name('systemsearch-0.table'))\
-            .select_by_visible_text('System/Added')
-        Select(b.find_element_by_name('systemsearch-0.operation'))\
-            .select_by_visible_text('after')
-        search_field = b.find_element_by_name('systemsearch-0.value')
-        search_field.click()
-        # close the date picker
-        search_field.clear()
-        search_field.send_keys(Keys.ESCAPE)
-        search_field.clear()
-        search_field.send_keys('02-02-2002')
-        # we can't actually check the HTML5 validation error
-        b.find_element_by_css_selector('input[name="systemsearch-0.value"]:invalid')
-
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('System/Added')
         Select(b.find_element_by_name('systemsearch-0.operation'))\
             .select_by_visible_text('before')
+        search_field = b.find_element_by_name('systemsearch-0.value')
         search_field.click()
-        date_picker = b.find_element_by_id('ui-datepicker-div')
-        date_picker.find_element_by_class_name('ui-state-highlight').click()
+        b.find_element_by_css_selector('.datepicker td.active').click()
         b.find_element_by_id('searchform').submit()
         check_system_search_results(b, present=[old_system], absent=[new_system])
 

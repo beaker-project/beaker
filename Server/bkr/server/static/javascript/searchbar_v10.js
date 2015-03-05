@@ -197,11 +197,9 @@ SearchBar.prototype.createValueField = function(current, vals) {
     var table_value_lower = this.tableField.value.toLowerCase()
     for (i in SearchBarForm.datepicker) {
         if (table_value_lower == SearchBarForm.datepicker[i]) {
-            if(!clone_attrs['class']) {
-                clone_attrs['class'] = ['datepicker']
-            } else {
-                clone_attrs['class'].push('datepicker')
-            }
+            clone_attrs['data-provide'] = 'datepicker';
+            clone_attrs['data-date-format'] = 'yyyy-mm-dd';
+            clone_attrs['data-autoclose'] = 'true';
             clone_attrs['pattern'] = '\\d\\d\\d\\d-\\d\\d-\\d\\d';
             clone_attrs['title'] = 'date in YYYY-MM-DD format';
         }

@@ -103,18 +103,6 @@
 </form>
 <script type="text/javascript">
 $(document).ready(function() {
-
-    $(document).on('mouseover', '.datepicker', function(event) {
-        $(this).datepicker({ dateFormat: 'yy-mm-dd', 
-                             changeMonth: true,
-                             changeYear: true,
-                             yearRange: '-5:+0',
-                             onClose: function(dateText, inst) {
-                                var validDate = $.datepicker.formatDate( "yy-mm-dd", $(this).datepicker('getDate'));
-                                $(this).datepicker('setDate', validDate);
-                             }
-                            }); 
-    });
     $('#showadvancedsearch').click(function () {
         $('#searchform').show('slow');
         $('#simpleform').hide('slow');
