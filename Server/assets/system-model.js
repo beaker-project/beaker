@@ -99,9 +99,25 @@ window.SystemExecutedTasks = BeakerPageableCollection.extend({
 });
 
 window.SystemPool = Backbone.Model.extend({
+    parse: function (data) {
+        data['owner'] = !_.isEmpty(data['owner'])
+                ? (!_.isEmpty(data['owner']['group_name'])
+                    ? new Group(data['owner'], {parse: true})
+                    : new User(data['owner'], {parse: true}))
+                : null;
+        return data;
+    },
     _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>pools/<%- encodeURIComponent(name) %>/"><%- name %></a>'),
     toHTML: function () {
         return this._toHTML_template(this.attributes);
+    },
+});
+
+/* The collection of *all* system pools in Beaker. */
+window.SystemPools = BeakerPageableCollection.extend({
+    model: SystemPool,
+    initialize: function (attributes, options) {
+        this.url = options.url;
     },
 });
 

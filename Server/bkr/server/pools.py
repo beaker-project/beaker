@@ -12,12 +12,53 @@ from bkr.server.model import System, SystemPool, SystemAccessPolicy, \
 from bkr.server.flask_util import auth_required, \
     convert_internal_errors, read_json_request, BadRequest400, \
     Forbidden403, MethodNotAllowed405, NotFound404, Conflict409, \
-    UnsupportedMediaType415, request_wants_json, render_tg_template
+    UnsupportedMediaType415, request_wants_json, render_tg_template, \
+    json_collection
+from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm.exc import NoResultFound
 from turbogears.database import session
 from turbogears import  url
 from bkr.server.systems import _get_system_by_FQDN, _edit_access_policy_rules
 import datetime
+
+@app.route('/pools/', methods=['GET'])
+def get_pools():
+    """
+    Returns a pageable JSON collection of system pools in Beaker.
+    Refer to :ref:`pageable-json-collections`.
+
+    The following fields are supported for filtering and sorting:
+
+    ``name``
+        Name of the pool.
+    ``owner.user_name``
+        Username of the pool owner (if the pool is owned by a user rather than 
+        by a group).
+    ``owner.group_name``
+        Name of the pool's owning group (if the pool is owned by a group rather 
+        than by a user).
+    """
+    query = SystemPool.query.order_by(SystemPool.name)
+    # join User and Group for sorting/filtering and also for eager loading
+    query = query\
+            .outerjoin(SystemPool.owning_user)\
+            .options(contains_eager(SystemPool.owning_user))\
+            .outerjoin(SystemPool.owning_group)\
+            .options(contains_eager(SystemPool.owning_group))
+    json_result = json_collection(query, columns={
+        'name': SystemPool.name,
+        'owner.user_name': User.user_name,
+        'owner.group_name': Group.group_name,
+    })
+    if request_wants_json():
+        return jsonify(json_result)
+    return render_tg_template('bkr.server.templates.backgrid', {
+        'title': u'Pools',
+        'grid_collection_type': 'SystemPools',
+        'grid_collection_data': json_result,
+        'grid_collection_url': request.base_url,
+        'grid_view_type': 'PoolsView',
+    })
 
 def _get_pool_by_name(pool_name, lockmode=False):
     """Get system pool by name, reporting HTTP 404 if the system pool is not found"""

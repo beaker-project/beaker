@@ -2,8 +2,25 @@ import requests
 from bkr.server.model import session, SystemAccessPolicy, SystemPermission, \
         Group, SystemPool
 from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
-from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest.server.selenium import WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import login, check_pool_search_results
 from bkr.inttest.server.requests_utils import put_json, post_json, patch_json
+
+class SystemPoolsGridTest(WebDriverTestCase):
+
+    def setUp(self):
+        self.browser = self.get_browser()
+
+    def test_searching_by_name(self):
+        with session.begin():
+            pool = data_setup.create_system_pool()
+            other_pool = data_setup.create_system_pool()
+        b = self.browser
+        b.get(get_server_base() + 'pools/')
+        b.find_element_by_class_name('search-query').send_keys(
+                'name:"%s"' % pool.name)
+        b.find_element_by_class_name('grid-filter').submit()
+        check_pool_search_results(b, present=[pool], absent=[other_pool])
 
 class SystemPoolHTTPTest(DatabaseTestCase):
     """

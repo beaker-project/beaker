@@ -79,6 +79,7 @@ def _create_env(source_dir, output_dir, **kwargs):
             'distro-picker.js',
             'identity-model.js',
             'lab-model.js',
+            'pools.js',
             'query-builder.js',
             'recipe-tasks.js',
             'reserve-workflow.js',

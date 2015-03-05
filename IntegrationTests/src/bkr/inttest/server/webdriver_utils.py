@@ -94,6 +94,23 @@ def check_activity_search_results(browser, present=[], absent=[]):
             raise AssertionError('Grid was missing or did not contain '
                     'activity entry: %r' % activity)
 
+def check_pool_search_results(browser, present=[], absent=[]):
+    for pool in absent:
+        try:
+            browser.find_element_by_xpath('//div[@id="grid"]/table'
+                    '/tbody[not(string(tr/td[1])="%s")]' % pool.name)
+        except NoSuchElementException:
+            raise AssertionError('Grid was missing or contained '
+                    'pool which was expected to be absent: %r'
+                    % pool)
+    for pool in present:
+        try:
+            browser.find_element_by_xpath('//div[@id="grid"]/table'
+                    '/tbody[string(tr/td[1])="%s"]' % pool.name)
+        except NoSuchElementException:
+            raise AssertionError('Grid was missing or did not contain '
+                    'pool: %r' % pool)
+
 def check_system_search_results(browser, present=[], absent=[]):
     for system in absent:
         browser.find_element_by_xpath('//table[@id="widget" and '
