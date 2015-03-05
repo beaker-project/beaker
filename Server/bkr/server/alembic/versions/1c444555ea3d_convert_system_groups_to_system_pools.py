@@ -81,5 +81,9 @@ def upgrade():
 
 def downgrade():
     op.drop_table('system_pool_map')
+    op.execute("""
+    DELETE FROM system_pool_activity;
+    DELETE FROM activity WHERE type='system_pool_activity';
+    """)
     op.drop_table('system_pool_activity')
     op.drop_table('system_pool')
