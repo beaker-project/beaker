@@ -202,9 +202,9 @@ SearchBar.prototype.createValueField = function(current, vals) {
             } else {
                 clone_attrs['class'].push('datepicker')
             }
+            clone_attrs['pattern'] = '\\d\\d\\d\\d-\\d\\d-\\d\\d';
+            clone_attrs['title'] = 'date in YYYY-MM-DD format';
         }
-	clone_attrs['pattern'] = '\\d\\d\\d\\d-\\d\\d-\\d\\d';
-        clone_attrs['title'] = 'date in YYYY-MM-DD format';
     }
 
     if(vals) {//set up drop down menu
