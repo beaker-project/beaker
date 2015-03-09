@@ -29,6 +29,10 @@ class PolicyListTest(ClientTestCase):
                 permission=SystemPermission.control_system, group=self.group)
             self.system_public.custom_access_policy.add_rule(
                 permission=SystemPermission.control_system, everybody=True)
+            self.pool = data_setup.create_system_pool(systems=[self.system])
+            self.user3 = data_setup.create_user()
+            self.pool.access_policy.add_rule(
+                permission=SystemPermission.edit_system, user=self.user3)
 
     def gen_expected_pretty_table(self, rows):
         table = PrettyTable(['Permission', 'User', 'Group', 'Everybody'])
@@ -61,6 +65,23 @@ class PolicyListTest(ClientTestCase):
                           '--format','json'])
         out = json.loads(out)
         self.assertEquals(len(out['rules']), 4)
+
+        # change active policy
+        with session.begin():
+            self.system.active_access_policy = self.pool.access_policy
+        out = run_client(['bkr', 'policy-list', self.system.fqdn,
+                          '--format','json'])
+        out = json.loads(out)
+        self.assertEquals(len(out['rules']), 2)
+
+        # --custom should return the custom access policy rules
+        out = run_client(['bkr', 'policy-list', self.system.fqdn, '--custom'])
+        expected_output = self.gen_expected_pretty_table(
+            (['control_system', 'X', self.group.group_name, 'No'],
+             ['control_system', self.user2.user_name, 'X', 'No'],
+             ['edit_system', self.user1.user_name, 'X', 'No'],
+             ['view', 'X', 'X', 'Yes'])) + '\n'
+        self.assertEquals(out, expected_output)
 
     def test_list_policy_non_existent_system(self):
 
@@ -113,6 +134,16 @@ class PolicyListTest(ClientTestCase):
         expected_output = self.gen_expected_pretty_table(
             (['control_system', self.user2.user_name, 'X', 'No'],
              ['edit_system', self.user1.user_name, 'X', 'No'])) + '\n'
+        self.assertEquals(out, expected_output)
+
+        # change active policy
+        with session.begin():
+            self.system.active_access_policy = self.pool.access_policy
+        out = run_client(['bkr', 'policy-list',
+                          '--user', self.user3.user_name,
+                          self.system.fqdn])
+        expected_output = self.gen_expected_pretty_table(
+            (['edit_system', self.user3.user_name, 'X', 'No'],)) + '\n'
         self.assertEquals(out, expected_output)
 
     def test_list_policy_filter_group(self):

@@ -20,12 +20,21 @@ Synopsis
 Description
 -----------
 
-Retrieves and prints the access policy rules for a system whose FQDN is <fqdn>.
+Retrieves and prints the access policy rules for a system whose FQDN is <fqdn>. 
+
+By default, the currently *active* access policy rules are retrieved,
+which could be a a pool access policy. To retrieve the custom access
+policy rules, specify ``--custom``.
 
 (Note: this command requires Python 2.6 or later)
 
 Options
 -------
+
+.. option:: --custom
+
+   Retrieve the custom access policy rules for the system instead of
+   the currently active access policy rules.
 
 .. option:: --mine
 
@@ -73,7 +82,6 @@ See also
 """
 
 import urllib
-import pprint
 from bkr.client import BeakerCommand
 import bkr.client.json_compat as json
 from prettytable import PrettyTable
@@ -85,6 +93,9 @@ class Policy_List(BeakerCommand):
 
     def options(self):
         self.parser.usage = "%%prog %s <options> <fqdn>" % self.normalized_name
+        self.parser.add_option('--custom', action="store_true", default=False,
+                               help='List the custom access policy rules '
+                               'for the system')
         self.parser.add_option('--mine', action="store_true", default=False,
                                help='List your access policy rules'
                                'for a system')
@@ -125,7 +136,11 @@ class Policy_List(BeakerCommand):
 
         self.set_hub(**kwargs)
         requests_session = self.requests_session()
-        rules_url = 'systems/%s/access-policy' % urllib.quote(fqdn, '')
+
+        if kwargs.get('custom', False):
+            rules_url = 'systems/%s/access-policy' % urllib.quote(fqdn, '')
+        else:
+            rules_url = 'systems/%s/active-access-policy/' % urllib.quote(fqdn, '')
         res = requests_session.get(rules_url, params=query_string)
         res.raise_for_status()
 
