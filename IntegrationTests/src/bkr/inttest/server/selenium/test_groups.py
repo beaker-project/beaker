@@ -184,3 +184,30 @@ class TestGroups(WebDriverTestCase):
                                              object_ = 'System: %s' % system.fqdn,
                                              property_='Access Policy Rule',
                                              old_value=access_policy_rule_2, new_value=''))
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1199368
+    def test_group_remove_should_not_remove_system_pool(self):
+        with session.begin():
+            user = data_setup.create_user(password='testing')
+            group = data_setup.create_group(owner=user)
+            pool = data_setup.create_system_pool(owning_group=group)
+        b = self.browser
+        login(b, user=user.user_name, password='testing')
+        b.get(get_server_base() + 'groups/')
+        b.find_element_by_xpath("//input[@name='group.text']").clear()
+        b.find_element_by_xpath("//input[@name='group.text']").send_keys(group.group_name)
+        b.find_element_by_id('Search').submit()
+        delete_and_confirm(b, "//tr[td/a[normalize-space(text())='%s']]" %
+                           group.group_name, delete_text='Delete Group')
+        self.assertEqual(
+            b.find_element_by_class_name('flash').text,
+            '%s deleted' % group.display_name)
+        with session.begin():
+            session.refresh(pool)
+            self.assertFalse(pool.owning_group)
+            self.assertEquals(pool.owning_user, user)
+            self.assertEquals(pool.activity[-1].action, u'Changed')
+            self.assertEquals(pool.activity[-1].field_name, u'Owner')
+            self.assertEquals(pool.activity[-1].old_value, 'Group %s' % group.group_name)
+            self.assertEquals(pool.activity[-1].new_value, user.user_name)
+            self.assertEquals(pool.activity[-1].service, u'WEBUI')

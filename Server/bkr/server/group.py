@@ -25,7 +25,7 @@ from bkr.server.app import app
 from bkr.server import mail, identity
 
 from bkr.server.model import (Group, Permission, User, UserGroup,
-                              Activity, GroupActivity)
+                              Activity, GroupActivity, SystemPool)
 from bkr.server.util import convert_db_lookup_error
 from bkr.server.bexceptions import DatabaseLookupError
 
@@ -609,13 +609,14 @@ class Groups(AdminPage):
     @expose()
     @restrict_http_method('post')
     def remove(self, **kw):
+        u = identity.current.user
         try:
             group = Group.by_id(kw['group_id'])
         except DatabaseLookupError:
             flash(unicode('Invalid group or already removed'))
             redirect('../groups/mine')
 
-        if not group.can_edit(identity.current.user):
+        if not group.can_edit(u):
             flash(_(u'You are not an owner of group %s' % group))
             redirect('../groups/mine')
 
@@ -631,8 +632,19 @@ class Groups(AdminPage):
         # before deleting the group
         for rule in group.system_access_policy_rules:
             rule.record_deletion()
+
+        # For any system pool owned by this group, unset owning_group
+        # and set owning_user to the user deleting this group
+        pools = SystemPool.query.filter_by(owning_group_id=group.group_id)
+        for pool in pools:
+            pool.owning_group = None
+            pool.owning_user = u
+            pool.record_activity(user=u, service=u'WEBUI',
+                                 action=u'Changed', field=u'Owner',
+                                 old=unicode(group),
+                                 new=unicode(identity.current.user))
         session.delete(group)
-        activity = Activity(identity.current.user, u'WEBUI', u'Removed', u'Group', group.display_name, u"")
+        activity = Activity(u, u'WEBUI', u'Removed', u'Group', group.display_name, u"")
         session.add(activity)
         flash( _(u"%s deleted") % group.display_name )
         raise redirect(".")

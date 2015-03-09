@@ -423,8 +423,7 @@ class Group(DeclarativeMappedObject, ActivityMixin):
     system_access_policy_rules = relationship('SystemAccessPolicyRule',
             back_populates='group', cascade='all, delete, delete-orphan')
     jobs = relationship('Job', back_populates='group', cascade_backrefs=False)
-    system_pools = relationship('SystemPool', back_populates='owning_group',
-                                cascade='all, delete, delete-orphan')
+    system_pools = relationship('SystemPool', back_populates='owning_group')
 
     activity_type = GroupActivity
 
