@@ -117,9 +117,10 @@ class HubProxy(object):
         """Login using username and password."""
         username = self._conf.get("USERNAME")
         password = self._conf.get("PASSWORD")
+        proxyuser = self._conf.get("PROXY_USER")
         if not username:
             raise AuthenticationError("USERNAME is not set")
-        self._hub.auth.login_password(username, password)
+        self._hub.auth.login_password(username, password, proxyuser)
 
     def _login_worker_key(self):
         """Login using worker key."""
@@ -151,7 +152,7 @@ class HubProxy(object):
         service = self._conf.get("KRB_SERVICE")
         realm = self._conf.get("KRB_REALM")
         ccache = self._conf.get("KRB_CCACHE")
-        proxyuser = self._conf.get("KRB_PROXYUSER")
+        proxyuser = self._conf.get("PROXY_USER")
 
         import krbV
         ctx = krbV.default_context()
@@ -189,4 +190,4 @@ class HubProxy(object):
             raise ex
         req_enc = base64.encodestring(req)
 
-        self._hub.auth.login_krbv(req_enc)
+        self._hub.auth.login_krbv(req_enc, proxyuser)

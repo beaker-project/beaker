@@ -8,7 +8,7 @@
 
 import os
 import sys
-from optparse import Option, IndentedHelpFormatter
+from optparse import Option, IndentedHelpFormatter, SUPPRESS_HELP
 import xmlrpclib
 import cgi
 import krbV
@@ -32,6 +32,8 @@ class BeakerOptionParser(CommandOptionParser):
             help='Use USERNAME for password authentication (overrides config file)'),
         Option('--password',
             help='Use PASSWORD for password authentication (overrides config file)'),
+        Option('--proxy-user',
+            help=SUPPRESS_HELP),
     ]
 
 # register default command plugins

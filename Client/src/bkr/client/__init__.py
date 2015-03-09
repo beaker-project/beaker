@@ -66,7 +66,9 @@ class BeakerCommand(Command):
     def set_hub(self, username=None, password=None, **kwargs):
         if kwargs.get('hub'):
             self.conf['HUB_URL'] = kwargs['hub']
-        self.container.set_hub(username, password, auto_login=self.requires_login)
+        proxy_user = kwargs.get('proxy_user')
+        self.container.set_hub(username, password, auto_login=self.requires_login,
+            proxy_user=proxy_user)
 
     def requests_session(self):
         import bkr.client.json_compat as json
