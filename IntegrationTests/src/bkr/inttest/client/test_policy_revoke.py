@@ -6,10 +6,10 @@
 
 import unittest
 from bkr.server.model import session, SystemPermission
-from bkr.inttest import data_setup, DatabaseTestCase
-from bkr.inttest.client import run_client
+from bkr.inttest import data_setup
+from bkr.inttest.client import run_client, ClientError, ClientTestCase
 
-class PolicyGrantTest(DatabaseTestCase):
+class PolicyRevokeTest(ClientTestCase):
 
     def setUp(self):
         with session.begin():
@@ -84,3 +84,54 @@ class PolicyGrantTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             self.assertEquals(len(self.system.custom_access_policy.rules), 1)
+
+    def test_revoke_policy_pool(self):
+        with session.begin():
+            pool = data_setup.create_system_pool()
+            user = data_setup.create_user()
+            user1 = data_setup.create_user()
+            group = data_setup.create_group()
+            group.users.append(user1)
+
+            pol = pool.access_policy
+            pol.add_rule(SystemPermission.reserve, user=user)
+            pol.add_rule(SystemPermission.view_power, user=user)
+            pol.add_rule(SystemPermission.reserve, group=group)
+            pol.add_rule(SystemPermission.view_power, group=group)
+
+        # revoke edit_system from group
+        run_client(['bkr', 'policy-revoke', '--pool', pool.name,
+                    '--permission', 'view_power', '--group', group.group_name])
+        with session.begin():
+            session.refresh(pool)
+            self.assertFalse(pool.access_policy.grants(
+                user1, SystemPermission.edit_system))
+
+        # test_multiple_permissions_and_targets
+        run_client(['bkr', 'policy-revoke', '--pool', pool.name,
+                    '--permission=reserve', '--permission=view_power', \
+                    '--user', user.user_name, '--group', group.group_name])
+        with session.begin():
+            session.refresh(pool)
+            self.assertFalse(pool.access_policy.grants(
+                    user, SystemPermission.view_power))
+            self.assertFalse(pool.access_policy.grants(
+                    user, SystemPermission.reserve))
+            self.assertFalse(pool.access_policy.grants(
+                user1, SystemPermission.view_power))
+            self.assertFalse(pool.access_policy.grants(
+                    user1, SystemPermission.reserve))
+
+        # this should still exist
+        with session.begin():
+            session.refresh(pool)
+            self.assertTrue(pool.access_policy.grants(
+                user, SystemPermission.view))
+
+        # non-existent pool
+        try:
+            run_client(['bkr', 'policy-revoke', '--pool', 'idontexist',
+                        '--permission=reserve', '--permission=view_power', \
+                        '--user', user.user_name, '--group', group.group_name])
+        except ClientError as e:
+            self.assertIn("System pool idontexist does not exist", e.stderr_output)

@@ -15,15 +15,15 @@ bkr policy-revoke: Revoke permissions in an access policy
 Synopsis
 --------
 
-| :program:`bkr policy-revoke` [*options*] :option:`--system` <fqdn>
+| :program:`bkr policy-revoke` [*options*]
+|       [:option:`--system` <fqdn> | :option:`--pool` <name>]
 |       :option:`--permission` <permission> [:option:`--permission` <permission> ...]
 |       [:option:`--user` <username> | :option:`--group` <groupname> | :option:`--everybody`]
 
 Description
 -----------
 
-Modifies the system's access policy to revoke permissions for the given users 
-or groups.
+Modifies the access policy to revoke permissions for the given users or groups.
 
 (Note: this command requires Python 2.6 or later)
 
@@ -32,7 +32,13 @@ Options
 
 .. option:: --system <fqdn>
 
-   Modify the access policy for <fqdn>. This option must be specified exactly once.
+   Modify the custom access policy for <fqdn>. This option is mutuallly
+   exclusive with :option:`--pool`.
+
+.. option:: --pool <name>
+
+   Modify the access policy for the named system pool. This option
+   is mutually exclusive with :option:`--system`.
 
 .. option:: --permission <permission>
 
@@ -92,7 +98,9 @@ class Policy_Revoke(BeakerCommand):
     def options(self):
         self.parser.usage = "%%prog %s <options>" % self.normalized_name
         self.parser.add_option('--system', metavar='FQDN',
-                help='Modify access policy for FQDN')
+                help='Modify custom access policy for FQDN')
+        self.parser.add_option('--pool', metavar='NAME',
+                help='Modify access policy for system pool NAME')
         self.parser.add_option('--permission', metavar='PERMISSION',
                 dest='permissions', action='append', default=[],
                 help='Revoke PERMISSION in policy: '
@@ -107,12 +115,12 @@ class Policy_Revoke(BeakerCommand):
         self.parser.add_option('--everybody', action='store_true', default=False,
                 help='Revoke permission granted to all Beaker users')
 
-    def run(self, system=None, permissions=None, users=None,
+    def run(self, system=None, pool=None, permissions=None, users=None,
             groups=None, everybody=None, *args, **kwargs):
         if args:
             self.parser.error('This command does not accept any arguments')
-        if not system:
-            self.parser.error('Specify system using --system')
+        if (not system and not pool) or (system and pool):
+            self.parser.error('Specify system using --system or system pool using --pool')
         if not permissions:
             self.parser.error('Specify at least one permission to revoke using --permission')
         if not (users or groups or everybody):
@@ -121,7 +129,11 @@ class Policy_Revoke(BeakerCommand):
 
         self.set_hub(**kwargs)
         requests_session = self.requests_session()
-        rules_url = 'systems/%s/access-policy/rules/' % urllib.quote(system, '')
+        if system:
+            rules_url = 'systems/%s/access-policy/rules/' % urllib.quote(system, '')
+        if pool:
+            rules_url = 'pools/%s/access-policy/rules/' % urllib.quote(pool, '')
+
         if users:
             res = requests_session.delete(rules_url,
                     params=[('permission', p) for p in permissions]
