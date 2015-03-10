@@ -1085,7 +1085,7 @@ def change_active_access_policy(fqdn):
         raise BadRequest400('Must specify either custom or pool parameter')
     system = _get_system_by_FQDN(fqdn)
     if not system.can_edit_policy(identity.current.user):
-        raise Forbidden403('Cannot edit system policy')
+        raise Forbidden403('Cannot edit system access policy')
     if system.active_access_policy.system_pool:
         old_policy = 'Pool policy: %s' % system.active_access_policy.system_pool.name
     else:
@@ -1106,7 +1106,7 @@ def change_active_access_policy(fqdn):
         if data.get('custom'):
             system.active_access_policy = system.custom_access_policy
             system.record_activity(user=identity.current.user, service=u'HTTP',
-                                   field=u'Access Policy Changed', action=u'Changed',
+                                   field=u'Active Access Policy', action=u'Changed',
                                    old = old_policy,
                                    new = 'Custom access policy')
 

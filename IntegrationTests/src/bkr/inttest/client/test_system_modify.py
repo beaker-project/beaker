@@ -4,7 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from bkr.server.model import session, SystemStatus
+from bkr.server.model import session, SystemStatus, SystemPermission
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError, ClientTestCase
 
@@ -82,3 +82,90 @@ class ModifySystemTest(ClientTestCase):
             self.fail('Must raise')
         except ClientError as e:
             self.assertIn('option --condition: invalid choice', e.stderr_output)
+
+    def test_modify_active_access_policy(self):
+        with session.begin():
+            user1 = data_setup.create_user()
+            perm = SystemPermission.reserve
+            system1 = data_setup.create_system(shared=False)
+            system2 = data_setup.create_system(shared=False)
+            system1.custom_access_policy.add_rule(perm, user=user1)
+            system2.custom_access_policy.add_rule(perm, user=user1)
+
+            pool = data_setup.create_system_pool(systems=[system1, system2])
+            user2 = data_setup.create_user()
+            pool.access_policy.add_rule(perm, user=user2)
+
+        # use pool policy
+        run_client(['bkr', 'system-modify',
+                    '--pool-policy', pool.name,
+                    system1.fqdn, system2.fqdn])
+        with session.begin():
+            session.expire_all()
+            for s in [system1, system2]:
+                self.assertFalse(s.active_access_policy.grants(user1, perm))
+                self.assertTrue(s.active_access_policy.grants(user2, perm))
+                self.assertEquals(s.activity[-1].field_name, u'Active Access Policy')
+                self.assertEquals(s.activity[-1].action, u'Changed')
+                self.assertEquals(s.activity[-1].old_value, 'Custom Access Policy')
+                self.assertEquals(s.activity[-1].new_value,'Pool policy: %s' % pool.name)
+
+        # system not in a pool
+        try:
+            run_client(['bkr', 'system-modify',
+                        '--pool-policy', data_setup.create_system_pool().name,
+                        system1.fqdn])
+        except ClientError as e:
+            self.assertIn('To use a pool policy, the system must be in the pool first',
+                          e.stderr_output)
+
+        # Revert to custom policy
+        run_client(['bkr', 'system-modify',
+                    '--use-custom-policy',
+                    system1.fqdn, system2.fqdn])
+
+        with session.begin():
+            session.expire_all()
+            for s in [system1, system2]:
+                self.assertTrue(s.active_access_policy.grants(user1, perm))
+                self.assertFalse(s.active_access_policy.grants(user2, perm))
+
+        # insufficient permission to change active policy
+        with session.begin():
+            user1 = data_setup.create_user(password='abc')
+        try:
+            run_client(['bkr', 'system-modify',
+                        '--use-custom-policy',
+                        '--user', user1.user_name,
+                        '--password', 'abc',
+                        system1.fqdn])
+            self.fail('Must raise')
+        except ClientError as e:
+            self.assertIn('Cannot edit system access policy',
+                          e.stderr_output)
+
+    def test_modify_attributes_policy(self):
+        with session.begin():
+            system1 = data_setup.create_system(shared=False)
+            system2 = data_setup.create_system(shared=False)
+            new_owner = data_setup.create_user()
+            perm = SystemPermission.reserve
+            user1 = data_setup.create_user()
+            system1.custom_access_policy.add_rule(perm, user=user1)
+            system2.custom_access_policy.add_rule(perm, user=user1)
+            pool = data_setup.create_system_pool(systems=[system1, system2])
+            user2 = data_setup.create_user()
+            pool.access_policy.add_rule(perm, user=user2)
+
+        run_client(['bkr', 'system-modify',
+                    '--owner', new_owner.user_name,
+                    '--condition', 'Manual',
+                    '--pool-policy', pool.name,
+                    system1.fqdn, system2.fqdn])
+        with session.begin():
+            session.expire_all()
+            for s in [system1, system2]:
+                self.assertEquals(s.owner.user_name, new_owner.user_name)
+                self.assertEquals(s.status, SystemStatus.manual)
+                self.assertFalse(s.active_access_policy.grants(user1, perm))
+                self.assertTrue(s.active_access_policy.grants(user2, perm))
