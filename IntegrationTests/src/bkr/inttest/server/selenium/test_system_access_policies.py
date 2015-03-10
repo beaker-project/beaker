@@ -376,8 +376,7 @@ class SystemAccessPolicyHTTPTest(DatabaseTestCase):
         with session.begin():
             user1 = data_setup.create_user()
             user2 = data_setup.create_user()
-            self.system.access_policy = SystemAccessPolicy()
-            self.system.active_access_policy.add_rule(
+            self.system.custom_access_policy.add_rule(
                 permission=SystemPermission.edit_system, user=user1)
             pool = data_setup.create_system_pool()
             pool.access_policy.add_rule(
