@@ -132,7 +132,9 @@ Options for selecting distro tree(s):
 
 .. option:: --distro <name>
 
-   Run the job with distro named <name>.
+   Run the job with distro named <name>. If the given name includes 
+   a % character, it is interpreted as a SQL LIKE pattern (the % character 
+   matches any substring).
 
 .. option:: --variant <variant>
 

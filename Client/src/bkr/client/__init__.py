@@ -777,7 +777,10 @@ class BeakerRecipeBase(BeakerBase):
         ignore_panic = kwargs.get("ignore_panic", False)
         if distro:
             distroName = self.doc.createElement('distro_name')
-            distroName.setAttribute('op', '=')
+            if '%' not in distro:
+                distroName.setAttribute('op', '=')
+            else:
+                distroName.setAttribute('op', 'like')
             distroName.setAttribute('value', '%s' % distro)
             self.addDistroRequires(distroName)
         else:

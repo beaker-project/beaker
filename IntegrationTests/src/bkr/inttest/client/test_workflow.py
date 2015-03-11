@@ -4,7 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
+import unittest2 as unittest
 import re
 from bkr.client import BeakerWorkflow, BeakerRecipe
 
@@ -73,3 +73,12 @@ class WorkflowTest(unittest.TestCase):
         xml = recipe.toxml(prettyxml=True)
         self.assertEquals(len(re.findall('<distro_name', xml)), 1, xml)
         self.assertEquals(len(re.findall('<hostname', xml)), 1, xml)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1200427
+    def test_distro_wildcard(self):
+        recipeTemplate = BeakerRecipe()
+        recipeTemplate.addBaseRequires(distro='RHEL-7.1%')
+        recipe = self.command.processTemplate(recipeTemplate,
+                requestedTasks=[{'name': '/example', 'arches': []}])
+        xml = recipe.toxml(prettyxml=True)
+        self.assertIn('<distro_name op="like" value="RHEL-7.1%"/>', xml)
