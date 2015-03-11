@@ -104,6 +104,13 @@ class MigrationTest(unittest.TestCase):
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
+    def test_from_19(self):
+        connection = self.migration_metadata.bind.connect()
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/19.sql'))
+        upgrade_db(self.migration_metadata)
+        self.check_migrated_schema()
+
     def test_already_upgraded(self):
         connection = self.migration_metadata.bind.connect()
         connection.execute(pkg_resources.resource_string('bkr.inttest.server',
@@ -332,21 +339,18 @@ class MigrationTest(unittest.TestCase):
         connection.execute(pkg_resources.resource_string('bkr.inttest.server',
                                                          'database-dumps/19.sql'))
         # populate synthetic data into relevant tables
-        connection.execute('INSERT INTO tg_user(user_id, user_name, email_address) VALUES (1, "user1", "user1@user.com")')
-        connection.execute('INSERT INTO kernel_type (id) VALUES (1)')
         connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (1, "test.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
         connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (2, "test1.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
         connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (3, "test2.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
-        connection.execute('INSERT INTO tg_group(group_id, group_name) VALUES (1, "group1")')
-        connection.execute('INSERT INTO tg_group(group_id, group_name) VALUES (2, "group2")')
-        connection.execute('INSERT INTO system_group(system_id, group_id) VALUES (1, 1)')
-        connection.execute('INSERT INTO system_group(system_id, group_id) VALUES (2, 1)')
-        connection.execute('INSERT INTO system_group(system_id, group_id) VALUES (1, 2)')
-        connection.execute('INSERT INTO system_group(system_id, group_id) VALUES (3, 2)')
+        connection.execute('INSERT INTO tg_group(group_id, group_name) VALUES (3, "group1")')
+        connection.execute('INSERT INTO tg_group(group_id, group_name) VALUES (4, "group2")')
+        connection.execute('INSERT INTO system_group(system_id, group_id) VALUES (1, 3)')
+        connection.execute('INSERT INTO system_group(system_id, group_id) VALUES (2, 3)')
+        connection.execute('INSERT INTO system_group(system_id, group_id) VALUES (1, 4)')
+        connection.execute('INSERT INTO system_group(system_id, group_id) VALUES (3, 4)')
 
         # Migrate to system pools
         upgrade_db(self.migration_metadata)
-        self.check_migrated_schema()
 
         # check data for system_pool
         created_pools = self.migration_session.query(SystemPool).all()
@@ -389,8 +393,6 @@ class MigrationTest(unittest.TestCase):
         connection.execute(pkg_resources.resource_string('bkr.inttest.server',
                                                          'database-dumps/19.sql'))
         # populate synthetic data into relevant tables
-        connection.execute('INSERT INTO tg_user(user_id, user_name, email_address) VALUES (1, "user1", "user1@user.com")')
-        connection.execute('INSERT INTO kernel_type (id) VALUES (1)')
         connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (1, "test.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
         connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (2, "test1.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
         connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (3, "test2.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
@@ -400,7 +402,6 @@ class MigrationTest(unittest.TestCase):
 
         # Migrate
         upgrade_db(self.migration_metadata)
-        self.check_migrated_schema()
 
         # check the data has been migrated successfully
         systems = self.migration_session.query(System).all()

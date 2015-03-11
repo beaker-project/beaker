@@ -1,8 +1,5 @@
--- MySQL dump 10.15  Distrib 10.0.15-MariaDB, for Linux (x86_64)
---
--- Host: localhost    Database: beaker_test
--- ------------------------------------------------------
--- Server version	10.0.15-MariaDB
+-- Database dump for testing migration from Beaker 19.
+-- Produced by running beaker-init from 19.0 and then dumping the result.
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -36,8 +33,17 @@ CREATE TABLE `activity` (
   KEY `ix_activity_user_id` (`user_id`),
   KEY `ix_activity_created` (`created`),
   CONSTRAINT `activity_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `tg_user` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=117 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `activity`
+--
+
+LOCK TABLES `activity` WRITE;
+/*!40000 ALTER TABLE `activity` DISABLE KEYS */;
+/*!40000 ALTER TABLE `activity` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `alembic_version`
@@ -50,6 +56,16 @@ CREATE TABLE `alembic_version` (
   `version_num` varchar(32) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `alembic_version`
+--
+
+LOCK TABLES `alembic_version` WRITE;
+/*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
+INSERT INTO `alembic_version` VALUES ('53942581687f');
+/*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `arch`
@@ -67,6 +83,16 @@ CREATE TABLE `arch` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `arch`
+--
+
+LOCK TABLES `arch` WRITE;
+/*!40000 ALTER TABLE `arch` DISABLE KEYS */;
+INSERT INTO `arch` VALUES (10,'aarch64'),(11,'arm'),(9,'armhfp'),(1,'i386'),(3,'ia64'),(4,'ppc'),(5,'ppc64'),(6,'ppc64le'),(7,'s390'),(8,'s390x'),(2,'x86_64');
+/*!40000 ALTER TABLE `arch` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `beaker_tag`
 --
 
@@ -81,6 +107,16 @@ CREATE TABLE `beaker_tag` (
   UNIQUE KEY `tag` (`tag`,`type`)
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `beaker_tag`
+--
+
+LOCK TABLES `beaker_tag` WRITE;
+/*!40000 ALTER TABLE `beaker_tag` DISABLE KEYS */;
+INSERT INTO `beaker_tag` VALUES (3,'120days','retention_tag'),(2,'60days','retention_tag'),(4,'active','retention_tag'),(5,'audit','retention_tag'),(1,'scratch','retention_tag');
+/*!40000 ALTER TABLE `beaker_tag` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `command_queue`
@@ -111,6 +147,15 @@ CREATE TABLE `command_queue` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `command_queue`
+--
+
+LOCK TABLES `command_queue` WRITE;
+/*!40000 ALTER TABLE `command_queue` DISABLE KEYS */;
+/*!40000 ALTER TABLE `command_queue` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `config_item`
 --
 
@@ -127,6 +172,16 @@ CREATE TABLE `config_item` (
   UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `config_item`
+--
+
+LOCK TABLES `config_item` WRITE;
+/*!40000 ALTER TABLE `config_item` DISABLE KEYS */;
+INSERT INTO `config_item` VALUES (1,'root_password','Plaintext root password for provisioned systems',0,0),(2,'root_password_validity','Maximum number of days a user\'s root password is valid for',1,0),(3,'guest_name_prefix','Prefix for names of dynamic guests in OpenStack',0,0);
+/*!40000 ALTER TABLE `config_item` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `config_value_int`
@@ -151,6 +206,15 @@ CREATE TABLE `config_value_int` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `config_value_int`
+--
+
+LOCK TABLES `config_value_int` WRITE;
+/*!40000 ALTER TABLE `config_value_int` DISABLE KEYS */;
+/*!40000 ALTER TABLE `config_value_int` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `config_value_string`
 --
 
@@ -171,6 +235,16 @@ CREATE TABLE `config_value_string` (
   CONSTRAINT `config_value_string_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `tg_user` (`user_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `config_value_string`
+--
+
+LOCK TABLES `config_value_string` WRITE;
+/*!40000 ALTER TABLE `config_value_string` DISABLE KEYS */;
+INSERT INTO `config_value_string` VALUES (1,1,'2015-03-11 05:17:30',1,'2015-03-11 05:17:30','beaker');
+/*!40000 ALTER TABLE `config_value_string` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `cpu`
@@ -199,6 +273,15 @@ CREATE TABLE `cpu` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `cpu`
+--
+
+LOCK TABLES `cpu` WRITE;
+/*!40000 ALTER TABLE `cpu` DISABLE KEYS */;
+/*!40000 ALTER TABLE `cpu` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `cpu_flag`
 --
 
@@ -214,6 +297,15 @@ CREATE TABLE `cpu_flag` (
   CONSTRAINT `cpu_flag_ibfk_1` FOREIGN KEY (`cpu_id`) REFERENCES `cpu` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `cpu_flag`
+--
+
+LOCK TABLES `cpu_flag` WRITE;
+/*!40000 ALTER TABLE `cpu_flag` DISABLE KEYS */;
+/*!40000 ALTER TABLE `cpu_flag` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `device`
@@ -239,8 +331,17 @@ CREATE TABLE `device` (
   KEY `ix_device_driver` (`driver`),
   KEY `ix_device_pciid` (`vendor_id`,`device_id`),
   CONSTRAINT `device_ibfk_1` FOREIGN KEY (`device_class_id`) REFERENCES `device_class` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `device`
+--
+
+LOCK TABLES `device` WRITE;
+/*!40000 ALTER TABLE `device` DISABLE KEYS */;
+/*!40000 ALTER TABLE `device` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `device_class`
@@ -255,8 +356,17 @@ CREATE TABLE `device_class` (
   `description` text,
   PRIMARY KEY (`id`),
   UNIQUE KEY `device_class` (`device_class`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `device_class`
+--
+
+LOCK TABLES `device_class` WRITE;
+/*!40000 ALTER TABLE `device_class` DISABLE KEYS */;
+/*!40000 ALTER TABLE `device_class` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `disk`
@@ -279,6 +389,15 @@ CREATE TABLE `disk` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `disk`
+--
+
+LOCK TABLES `disk` WRITE;
+/*!40000 ALTER TABLE `disk` DISABLE KEYS */;
+/*!40000 ALTER TABLE `disk` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `distro`
 --
 
@@ -294,8 +413,17 @@ CREATE TABLE `distro` (
   UNIQUE KEY `name` (`name`),
   KEY `osversion_id` (`osversion_id`),
   CONSTRAINT `distro_ibfk_1` FOREIGN KEY (`osversion_id`) REFERENCES `osversion` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=94 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `distro`
+--
+
+LOCK TABLES `distro` WRITE;
+/*!40000 ALTER TABLE `distro` DISABLE KEYS */;
+/*!40000 ALTER TABLE `distro` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `distro_activity`
@@ -315,6 +443,15 @@ CREATE TABLE `distro_activity` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `distro_activity`
+--
+
+LOCK TABLES `distro_activity` WRITE;
+/*!40000 ALTER TABLE `distro_activity` DISABLE KEYS */;
+/*!40000 ALTER TABLE `distro_activity` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `distro_tag`
 --
 
@@ -326,8 +463,17 @@ CREATE TABLE `distro_tag` (
   `tag` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `tag` (`tag`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `distro_tag`
+--
+
+LOCK TABLES `distro_tag` WRITE;
+/*!40000 ALTER TABLE `distro_tag` DISABLE KEYS */;
+/*!40000 ALTER TABLE `distro_tag` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `distro_tag_map`
@@ -345,6 +491,15 @@ CREATE TABLE `distro_tag_map` (
   CONSTRAINT `distro_tag_map_ibfk_2` FOREIGN KEY (`distro_tag_id`) REFERENCES `distro_tag` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `distro_tag_map`
+--
+
+LOCK TABLES `distro_tag_map` WRITE;
+/*!40000 ALTER TABLE `distro_tag_map` DISABLE KEYS */;
+/*!40000 ALTER TABLE `distro_tag_map` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `distro_tree`
@@ -367,8 +522,17 @@ CREATE TABLE `distro_tree` (
   KEY `arch_id` (`arch_id`),
   CONSTRAINT `distro_tree_ibfk_1` FOREIGN KEY (`distro_id`) REFERENCES `distro` (`id`),
   CONSTRAINT `distro_tree_ibfk_2` FOREIGN KEY (`arch_id`) REFERENCES `arch` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=93 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `distro_tree`
+--
+
+LOCK TABLES `distro_tree` WRITE;
+/*!40000 ALTER TABLE `distro_tree` DISABLE KEYS */;
+/*!40000 ALTER TABLE `distro_tree` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `distro_tree_activity`
@@ -386,6 +550,15 @@ CREATE TABLE `distro_tree_activity` (
   CONSTRAINT `distro_tree_activity_ibfk_2` FOREIGN KEY (`distro_tree_id`) REFERENCES `distro_tree` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `distro_tree_activity`
+--
+
+LOCK TABLES `distro_tree_activity` WRITE;
+/*!40000 ALTER TABLE `distro_tree_activity` DISABLE KEYS */;
+/*!40000 ALTER TABLE `distro_tree_activity` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `distro_tree_image`
@@ -407,6 +580,15 @@ CREATE TABLE `distro_tree_image` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `distro_tree_image`
+--
+
+LOCK TABLES `distro_tree_image` WRITE;
+/*!40000 ALTER TABLE `distro_tree_image` DISABLE KEYS */;
+/*!40000 ALTER TABLE `distro_tree_image` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `distro_tree_lab_controller_map`
 --
 
@@ -423,8 +605,17 @@ CREATE TABLE `distro_tree_lab_controller_map` (
   KEY `lab_controller_id` (`lab_controller_id`),
   CONSTRAINT `distro_tree_lab_controller_map_ibfk_1` FOREIGN KEY (`distro_tree_id`) REFERENCES `distro_tree` (`id`),
   CONSTRAINT `distro_tree_lab_controller_map_ibfk_2` FOREIGN KEY (`lab_controller_id`) REFERENCES `lab_controller` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1465 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `distro_tree_lab_controller_map`
+--
+
+LOCK TABLES `distro_tree_lab_controller_map` WRITE;
+/*!40000 ALTER TABLE `distro_tree_lab_controller_map` DISABLE KEYS */;
+/*!40000 ALTER TABLE `distro_tree_lab_controller_map` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `distro_tree_repo`
@@ -445,6 +636,15 @@ CREATE TABLE `distro_tree_repo` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `distro_tree_repo`
+--
+
+LOCK TABLES `distro_tree_repo` WRITE;
+/*!40000 ALTER TABLE `distro_tree_repo` DISABLE KEYS */;
+/*!40000 ALTER TABLE `distro_tree_repo` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `exclude_osmajor`
 --
 
@@ -463,8 +663,17 @@ CREATE TABLE `exclude_osmajor` (
   CONSTRAINT `exclude_osmajor_ibfk_1` FOREIGN KEY (`system_id`) REFERENCES `system` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `exclude_osmajor_ibfk_2` FOREIGN KEY (`arch_id`) REFERENCES `arch` (`id`),
   CONSTRAINT `exclude_osmajor_ibfk_3` FOREIGN KEY (`osmajor_id`) REFERENCES `osmajor` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `exclude_osmajor`
+--
+
+LOCK TABLES `exclude_osmajor` WRITE;
+/*!40000 ALTER TABLE `exclude_osmajor` DISABLE KEYS */;
+/*!40000 ALTER TABLE `exclude_osmajor` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `exclude_osversion`
@@ -485,8 +694,17 @@ CREATE TABLE `exclude_osversion` (
   CONSTRAINT `exclude_osversion_ibfk_1` FOREIGN KEY (`system_id`) REFERENCES `system` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `exclude_osversion_ibfk_2` FOREIGN KEY (`arch_id`) REFERENCES `arch` (`id`),
   CONSTRAINT `exclude_osversion_ibfk_3` FOREIGN KEY (`osversion_id`) REFERENCES `osversion` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `exclude_osversion`
+--
+
+LOCK TABLES `exclude_osversion` WRITE;
+/*!40000 ALTER TABLE `exclude_osversion` DISABLE KEYS */;
+/*!40000 ALTER TABLE `exclude_osversion` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `external_reports`
@@ -506,6 +724,15 @@ CREATE TABLE `external_reports` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `external_reports`
+--
+
+LOCK TABLES `external_reports` WRITE;
+/*!40000 ALTER TABLE `external_reports` DISABLE KEYS */;
+/*!40000 ALTER TABLE `external_reports` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `group_activity`
 --
 
@@ -523,6 +750,15 @@ CREATE TABLE `group_activity` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `group_activity`
+--
+
+LOCK TABLES `group_activity` WRITE;
+/*!40000 ALTER TABLE `group_activity` DISABLE KEYS */;
+/*!40000 ALTER TABLE `group_activity` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `group_permission`
 --
 
@@ -533,12 +769,22 @@ CREATE TABLE `group_permission` (
   `group_id` int(11) NOT NULL,
   `permission_id` int(11) NOT NULL,
   PRIMARY KEY (`group_id`,`permission_id`),
-  KEY `ix_group_permission_permission_id` (`permission_id`),
   KEY `ix_group_permission_group_id` (`group_id`),
+  KEY `ix_group_permission_permission_id` (`permission_id`),
   CONSTRAINT `group_permission_ibfk_1` FOREIGN KEY (`group_id`) REFERENCES `tg_group` (`group_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `group_permission_ibfk_2` FOREIGN KEY (`permission_id`) REFERENCES `permission` (`permission_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `group_permission`
+--
+
+LOCK TABLES `group_permission` WRITE;
+/*!40000 ALTER TABLE `group_permission` DISABLE KEYS */;
+INSERT INTO `group_permission` VALUES (1,3),(1,4),(1,5),(2,4),(2,5);
+/*!40000 ALTER TABLE `group_permission` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `guest_recipe`
@@ -557,6 +803,15 @@ CREATE TABLE `guest_recipe` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `guest_recipe`
+--
+
+LOCK TABLES `guest_recipe` WRITE;
+/*!40000 ALTER TABLE `guest_recipe` DISABLE KEYS */;
+/*!40000 ALTER TABLE `guest_recipe` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `guest_resource`
 --
 
@@ -573,6 +828,15 @@ CREATE TABLE `guest_resource` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `guest_resource`
+--
+
+LOCK TABLES `guest_resource` WRITE;
+/*!40000 ALTER TABLE `guest_resource` DISABLE KEYS */;
+/*!40000 ALTER TABLE `guest_resource` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `hypervisor`
 --
 
@@ -585,6 +849,16 @@ CREATE TABLE `hypervisor` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `hypervisor`
+--
+
+LOCK TABLES `hypervisor` WRITE;
+/*!40000 ALTER TABLE `hypervisor` DISABLE KEYS */;
+INSERT INTO `hypervisor` VALUES (1,'KVM'),(2,'Xen'),(3,'HyperV'),(4,'VMWare');
+/*!40000 ALTER TABLE `hypervisor` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `job`
@@ -618,19 +892,28 @@ CREATE TABLE `job` (
   KEY `job_group_id_fk` (`group_id`),
   KEY `retention_tag_id` (`retention_tag_id`),
   KEY `product_id` (`product_id`),
-  KEY `ix_job_to_delete` (`to_delete`),
   KEY `ix_job_result` (`result`),
+  KEY `ix_job_deleted` (`deleted`),
   KEY `ix_job_owner_id` (`owner_id`),
   KEY `ix_job_status` (`status`),
-  KEY `ix_job_deleted` (`deleted`),
+  KEY `ix_job_to_delete` (`to_delete`),
   KEY `ix_job_dirty_clean_version` (`dirty_version`,`clean_version`),
   CONSTRAINT `job_group_id_fk` FOREIGN KEY (`group_id`) REFERENCES `tg_group` (`group_id`),
   CONSTRAINT `job_ibfk_1` FOREIGN KEY (`owner_id`) REFERENCES `tg_user` (`user_id`),
   CONSTRAINT `job_ibfk_2` FOREIGN KEY (`retention_tag_id`) REFERENCES `retention_tag` (`id`),
   CONSTRAINT `job_ibfk_3` FOREIGN KEY (`product_id`) REFERENCES `product` (`id`),
   CONSTRAINT `job_submitter_id_fk` FOREIGN KEY (`submitter_id`) REFERENCES `tg_user` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=62 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `job`
+--
+
+LOCK TABLES `job` WRITE;
+/*!40000 ALTER TABLE `job` DISABLE KEYS */;
+/*!40000 ALTER TABLE `job` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `job_activity`
@@ -650,6 +933,15 @@ CREATE TABLE `job_activity` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `job_activity`
+--
+
+LOCK TABLES `job_activity` WRITE;
+/*!40000 ALTER TABLE `job_activity` DISABLE KEYS */;
+/*!40000 ALTER TABLE `job_activity` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `job_cc`
 --
 
@@ -664,6 +956,15 @@ CREATE TABLE `job_cc` (
   CONSTRAINT `job_cc_ibfk_1` FOREIGN KEY (`job_id`) REFERENCES `job` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `job_cc`
+--
+
+LOCK TABLES `job_cc` WRITE;
+/*!40000 ALTER TABLE `job_cc` DISABLE KEYS */;
+/*!40000 ALTER TABLE `job_cc` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `kernel_type`
@@ -681,6 +982,16 @@ CREATE TABLE `kernel_type` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `kernel_type`
+--
+
+LOCK TABLES `kernel_type` WRITE;
+/*!40000 ALTER TABLE `kernel_type` DISABLE KEYS */;
+INSERT INTO `kernel_type` VALUES (1,'default',0),(2,'highbank',0),(3,'imx',0),(4,'omap',0),(5,'tegra',0),(6,'mvebu',1);
+/*!40000 ALTER TABLE `kernel_type` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `key_`
 --
 
@@ -693,8 +1004,18 @@ CREATE TABLE `key_` (
   `numeric` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `key_name` (`key_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=30 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `key_`
+--
+
+LOCK TABLES `key_` WRITE;
+/*!40000 ALTER TABLE `key_` DISABLE KEYS */;
+INSERT INTO `key_` VALUES (1,'DISKSPACE',1),(2,'COMMENT',0),(3,'CPUFAMILY',1),(4,'CPUFLAGS',0),(5,'CPUMODEL',0),(6,'CPUMODELNUMBER',1),(7,'CPUSPEED',1),(8,'CPUVENDOR',0),(9,'DISK',1),(10,'FORMFACTOR',0),(11,'HVM',0),(12,'MEMORY',1),(13,'MODEL',0),(14,'MODULE',0),(15,'NETWORK',0),(16,'NR_DISKS',1),(17,'NR_ETH',1),(18,'NR_IB',1),(19,'PCIID',0),(20,'PROCESSORS',1),(21,'RTCERT',0),(22,'SCRATCH',0),(23,'STORAGE',0),(24,'USBID',0),(25,'VENDOR',0),(26,'XENCERT',0),(27,'NETBOOT_METHOD',0);
+/*!40000 ALTER TABLE `key_` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `key_value_int`
@@ -713,8 +1034,17 @@ CREATE TABLE `key_value_int` (
   KEY `ix_key_value_int_key_id` (`key_id`),
   CONSTRAINT `key_value_int_ibfk_1` FOREIGN KEY (`system_id`) REFERENCES `system` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `key_value_int_ibfk_2` FOREIGN KEY (`key_id`) REFERENCES `key_` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `key_value_int`
+--
+
+LOCK TABLES `key_value_int` WRITE;
+/*!40000 ALTER TABLE `key_value_int` DISABLE KEYS */;
+/*!40000 ALTER TABLE `key_value_int` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `key_value_string`
@@ -733,8 +1063,17 @@ CREATE TABLE `key_value_string` (
   KEY `ix_key_value_string_key_id` (`key_id`),
   CONSTRAINT `key_value_string_ibfk_1` FOREIGN KEY (`system_id`) REFERENCES `system` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `key_value_string_ibfk_2` FOREIGN KEY (`key_id`) REFERENCES `key_` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `key_value_string`
+--
+
+LOCK TABLES `key_value_string` WRITE;
+/*!40000 ALTER TABLE `key_value_string` DISABLE KEYS */;
+/*!40000 ALTER TABLE `key_value_string` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `lab_controller`
@@ -753,8 +1092,17 @@ CREATE TABLE `lab_controller` (
   UNIQUE KEY `user_id` (`user_id`),
   UNIQUE KEY `fqdn` (`fqdn`),
   CONSTRAINT `lab_controller_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `tg_user` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `lab_controller`
+--
+
+LOCK TABLES `lab_controller` WRITE;
+/*!40000 ALTER TABLE `lab_controller` DISABLE KEYS */;
+/*!40000 ALTER TABLE `lab_controller` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `lab_controller_activity`
@@ -772,6 +1120,15 @@ CREATE TABLE `lab_controller_activity` (
   CONSTRAINT `lab_controller_activity_ibfk_2` FOREIGN KEY (`lab_controller_id`) REFERENCES `lab_controller` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `lab_controller_activity`
+--
+
+LOCK TABLES `lab_controller_activity` WRITE;
+/*!40000 ALTER TABLE `lab_controller_activity` DISABLE KEYS */;
+/*!40000 ALTER TABLE `lab_controller_activity` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `labinfo`
@@ -796,6 +1153,15 @@ CREATE TABLE `labinfo` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `labinfo`
+--
+
+LOCK TABLES `labinfo` WRITE;
+/*!40000 ALTER TABLE `labinfo` DISABLE KEYS */;
+/*!40000 ALTER TABLE `labinfo` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `log_recipe`
 --
 
@@ -813,8 +1179,17 @@ CREATE TABLE `log_recipe` (
   PRIMARY KEY (`id`),
   KEY `recipe_id` (`recipe_id`),
   CONSTRAINT `log_recipe_ibfk_1` FOREIGN KEY (`recipe_id`) REFERENCES `recipe` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `log_recipe`
+--
+
+LOCK TABLES `log_recipe` WRITE;
+/*!40000 ALTER TABLE `log_recipe` DISABLE KEYS */;
+/*!40000 ALTER TABLE `log_recipe` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `log_recipe_task`
@@ -834,8 +1209,17 @@ CREATE TABLE `log_recipe_task` (
   PRIMARY KEY (`id`),
   KEY `recipe_task_id` (`recipe_task_id`),
   CONSTRAINT `log_recipe_task_ibfk_1` FOREIGN KEY (`recipe_task_id`) REFERENCES `recipe_task` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `log_recipe_task`
+--
+
+LOCK TABLES `log_recipe_task` WRITE;
+/*!40000 ALTER TABLE `log_recipe_task` DISABLE KEYS */;
+/*!40000 ALTER TABLE `log_recipe_task` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `log_recipe_task_result`
@@ -855,8 +1239,17 @@ CREATE TABLE `log_recipe_task_result` (
   PRIMARY KEY (`id`),
   KEY `recipe_task_result_id` (`recipe_task_result_id`),
   CONSTRAINT `log_recipe_task_result_ibfk_1` FOREIGN KEY (`recipe_task_result_id`) REFERENCES `recipe_task_result` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `log_recipe_task_result`
+--
+
+LOCK TABLES `log_recipe_task_result` WRITE;
+/*!40000 ALTER TABLE `log_recipe_task_result` DISABLE KEYS */;
+/*!40000 ALTER TABLE `log_recipe_task_result` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `machine_guest_map`
@@ -876,6 +1269,15 @@ CREATE TABLE `machine_guest_map` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `machine_guest_map`
+--
+
+LOCK TABLES `machine_guest_map` WRITE;
+/*!40000 ALTER TABLE `machine_guest_map` DISABLE KEYS */;
+/*!40000 ALTER TABLE `machine_guest_map` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `machine_recipe`
 --
 
@@ -888,6 +1290,15 @@ CREATE TABLE `machine_recipe` (
   CONSTRAINT `machine_recipe_ibfk_1` FOREIGN KEY (`id`) REFERENCES `recipe` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `machine_recipe`
+--
+
+LOCK TABLES `machine_recipe` WRITE;
+/*!40000 ALTER TABLE `machine_recipe` DISABLE KEYS */;
+/*!40000 ALTER TABLE `machine_recipe` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `note`
@@ -912,6 +1323,15 @@ CREATE TABLE `note` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `note`
+--
+
+LOCK TABLES `note` WRITE;
+/*!40000 ALTER TABLE `note` DISABLE KEYS */;
+/*!40000 ALTER TABLE `note` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `numa`
 --
 
@@ -927,6 +1347,15 @@ CREATE TABLE `numa` (
   CONSTRAINT `numa_ibfk_1` FOREIGN KEY (`system_id`) REFERENCES `system` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `numa`
+--
+
+LOCK TABLES `numa` WRITE;
+/*!40000 ALTER TABLE `numa` DISABLE KEYS */;
+/*!40000 ALTER TABLE `numa` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `openstack_region`
@@ -946,6 +1375,15 @@ CREATE TABLE `openstack_region` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `openstack_region`
+--
+
+LOCK TABLES `openstack_region` WRITE;
+/*!40000 ALTER TABLE `openstack_region` DISABLE KEYS */;
+/*!40000 ALTER TABLE `openstack_region` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `osmajor`
 --
 
@@ -959,8 +1397,17 @@ CREATE TABLE `osmajor` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `osmajor` (`osmajor`),
   UNIQUE KEY `alias` (`alias`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `osmajor`
+--
+
+LOCK TABLES `osmajor` WRITE;
+/*!40000 ALTER TABLE `osmajor` DISABLE KEYS */;
+/*!40000 ALTER TABLE `osmajor` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `osmajor_install_options`
@@ -981,8 +1428,17 @@ CREATE TABLE `osmajor_install_options` (
   KEY `arch_id` (`arch_id`),
   CONSTRAINT `osmajor_install_options_ibfk_1` FOREIGN KEY (`osmajor_id`) REFERENCES `osmajor` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `osmajor_install_options_ibfk_2` FOREIGN KEY (`arch_id`) REFERENCES `arch` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `osmajor_install_options`
+--
+
+LOCK TABLES `osmajor_install_options` WRITE;
+/*!40000 ALTER TABLE `osmajor_install_options` DISABLE KEYS */;
+/*!40000 ALTER TABLE `osmajor_install_options` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `osversion`
@@ -999,8 +1455,17 @@ CREATE TABLE `osversion` (
   UNIQUE KEY `osversion_uix_1` (`osmajor_id`,`osminor`),
   KEY `ix_osversion_osmajor_id` (`osmajor_id`),
   CONSTRAINT `osversion_ibfk_1` FOREIGN KEY (`osmajor_id`) REFERENCES `osmajor` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `osversion`
+--
+
+LOCK TABLES `osversion` WRITE;
+/*!40000 ALTER TABLE `osversion` DISABLE KEYS */;
+/*!40000 ALTER TABLE `osversion` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `osversion_arch_map`
@@ -1013,12 +1478,21 @@ CREATE TABLE `osversion_arch_map` (
   `osversion_id` int(11) NOT NULL,
   `arch_id` int(11) NOT NULL,
   PRIMARY KEY (`osversion_id`,`arch_id`),
-  KEY `ix_osversion_arch_map_arch_id` (`arch_id`),
   KEY `ix_osversion_arch_map_osversion_id` (`osversion_id`),
+  KEY `ix_osversion_arch_map_arch_id` (`arch_id`),
   CONSTRAINT `osversion_arch_map_ibfk_1` FOREIGN KEY (`osversion_id`) REFERENCES `osversion` (`id`),
   CONSTRAINT `osversion_arch_map_ibfk_2` FOREIGN KEY (`arch_id`) REFERENCES `arch` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `osversion_arch_map`
+--
+
+LOCK TABLES `osversion_arch_map` WRITE;
+/*!40000 ALTER TABLE `osversion_arch_map` DISABLE KEYS */;
+/*!40000 ALTER TABLE `osversion_arch_map` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `permission`
@@ -1035,6 +1509,16 @@ CREATE TABLE `permission` (
   UNIQUE KEY `permission_name` (`permission_name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `permission`
+--
+
+LOCK TABLES `permission` WRITE;
+/*!40000 ALTER TABLE `permission` DISABLE KEYS */;
+INSERT INTO `permission` VALUES (1,'distro_expire',NULL),(2,'proxy_auth',NULL),(3,'tag_distro',NULL),(4,'stop_task',NULL),(5,'secret_visible',NULL);
+/*!40000 ALTER TABLE `permission` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `power`
@@ -1057,8 +1541,17 @@ CREATE TABLE `power` (
   KEY `system_id` (`system_id`),
   CONSTRAINT `power_ibfk_1` FOREIGN KEY (`power_type_id`) REFERENCES `power_type` (`id`),
   CONSTRAINT `power_ibfk_2` FOREIGN KEY (`system_id`) REFERENCES `system` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=68 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `power`
+--
+
+LOCK TABLES `power` WRITE;
+/*!40000 ALTER TABLE `power` DISABLE KEYS */;
+/*!40000 ALTER TABLE `power` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `power_type`
@@ -1075,6 +1568,16 @@ CREATE TABLE `power_type` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `power_type`
+--
+
+LOCK TABLES `power_type` WRITE;
+/*!40000 ALTER TABLE `power_type` DISABLE KEYS */;
+INSERT INTO `power_type` VALUES (1,'apc_snmp'),(2,'apc_snmp_then_etherwake'),(3,'bladecenter'),(4,'bladepap'),(5,'drac'),(6,'ether_wake'),(7,'hyper-v'),(8,'ilo'),(9,'integrity'),(10,'ipmilan'),(11,'ipmitool'),(12,'lpar'),(13,'rsa'),(14,'virsh'),(15,'wti');
+/*!40000 ALTER TABLE `power_type` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `product`
 --
 
@@ -1089,6 +1592,15 @@ CREATE TABLE `product` (
   UNIQUE KEY `ix_product_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `product`
+--
+
+LOCK TABLES `product` WRITE;
+/*!40000 ALTER TABLE `product` DISABLE KEYS */;
+/*!40000 ALTER TABLE `product` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `provision`
@@ -1113,6 +1625,15 @@ CREATE TABLE `provision` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `provision`
+--
+
+LOCK TABLES `provision` WRITE;
+/*!40000 ALTER TABLE `provision` DISABLE KEYS */;
+/*!40000 ALTER TABLE `provision` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `provision_family`
 --
 
@@ -1135,6 +1656,15 @@ CREATE TABLE `provision_family` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `provision_family`
+--
+
+LOCK TABLES `provision_family` WRITE;
+/*!40000 ALTER TABLE `provision_family` DISABLE KEYS */;
+/*!40000 ALTER TABLE `provision_family` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `provision_update_family`
 --
 
@@ -1155,6 +1685,15 @@ CREATE TABLE `provision_update_family` (
   CONSTRAINT `provision_update_family_ibfk_2` FOREIGN KEY (`osversion_id`) REFERENCES `osversion` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `provision_update_family`
+--
+
+LOCK TABLES `provision_update_family` WRITE;
+/*!40000 ALTER TABLE `provision_update_family` DISABLE KEYS */;
+/*!40000 ALTER TABLE `provision_update_family` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `recipe`
@@ -1196,16 +1735,25 @@ CREATE TABLE `recipe` (
   KEY `recipe_set_id` (`recipe_set_id`),
   KEY `distro_tree_id` (`distro_tree_id`),
   KEY `recipe_rendered_kickstart_id_fk` (`rendered_kickstart_id`),
-  KEY `ix_recipe_start_time` (`start_time`),
-  KEY `ix_recipe_log_server` (`log_server`),
   KEY `ix_recipe_result` (`result`),
-  KEY `ix_recipe_virt_status` (`virt_status`),
   KEY `ix_recipe_status` (`status`),
+  KEY `ix_recipe_start_time` (`start_time`),
+  KEY `ix_recipe_virt_status` (`virt_status`),
+  KEY `ix_recipe_log_server` (`log_server`),
   CONSTRAINT `recipe_ibfk_1` FOREIGN KEY (`recipe_set_id`) REFERENCES `recipe_set` (`id`),
   CONSTRAINT `recipe_ibfk_2` FOREIGN KEY (`distro_tree_id`) REFERENCES `distro_tree` (`id`),
   CONSTRAINT `recipe_rendered_kickstart_id_fk` FOREIGN KEY (`rendered_kickstart_id`) REFERENCES `rendered_kickstart` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=90 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `recipe`
+--
+
+LOCK TABLES `recipe` WRITE;
+/*!40000 ALTER TABLE `recipe` DISABLE KEYS */;
+/*!40000 ALTER TABLE `recipe` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `recipe_ksappend`
@@ -1223,6 +1771,15 @@ CREATE TABLE `recipe_ksappend` (
   CONSTRAINT `recipe_ksappend_ibfk_1` FOREIGN KEY (`recipe_id`) REFERENCES `recipe` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `recipe_ksappend`
+--
+
+LOCK TABLES `recipe_ksappend` WRITE;
+/*!40000 ALTER TABLE `recipe_ksappend` DISABLE KEYS */;
+/*!40000 ALTER TABLE `recipe_ksappend` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `recipe_repo`
@@ -1243,6 +1800,15 @@ CREATE TABLE `recipe_repo` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `recipe_repo`
+--
+
+LOCK TABLES `recipe_repo` WRITE;
+/*!40000 ALTER TABLE `recipe_repo` DISABLE KEYS */;
+/*!40000 ALTER TABLE `recipe_repo` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `recipe_reservation`
 --
 
@@ -1256,8 +1822,17 @@ CREATE TABLE `recipe_reservation` (
   PRIMARY KEY (`id`),
   KEY `recipe_id` (`recipe_id`),
   CONSTRAINT `recipe_reservation_ibfk_1` FOREIGN KEY (`recipe_id`) REFERENCES `recipe` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `recipe_reservation`
+--
+
+LOCK TABLES `recipe_reservation` WRITE;
+/*!40000 ALTER TABLE `recipe_reservation` DISABLE KEYS */;
+/*!40000 ALTER TABLE `recipe_reservation` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `recipe_resource`
@@ -1278,8 +1853,17 @@ CREATE TABLE `recipe_resource` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `recipe_id` (`recipe_id`),
   CONSTRAINT `recipe_resource_recipe_id_fk` FOREIGN KEY (`recipe_id`) REFERENCES `recipe` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=45 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `recipe_resource`
+--
+
+LOCK TABLES `recipe_resource` WRITE;
+/*!40000 ALTER TABLE `recipe_resource` DISABLE KEYS */;
+/*!40000 ALTER TABLE `recipe_resource` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `recipe_rpm`
@@ -1302,6 +1886,15 @@ CREATE TABLE `recipe_rpm` (
   CONSTRAINT `recipe_rpm_ibfk_1` FOREIGN KEY (`recipe_id`) REFERENCES `recipe` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `recipe_rpm`
+--
+
+LOCK TABLES `recipe_rpm` WRITE;
+/*!40000 ALTER TABLE `recipe_rpm` DISABLE KEYS */;
+/*!40000 ALTER TABLE `recipe_rpm` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `recipe_set`
@@ -1328,12 +1921,21 @@ CREATE TABLE `recipe_set` (
   KEY `job_id` (`job_id`),
   KEY `lab_controller_id` (`lab_controller_id`),
   KEY `ix_recipe_set_priority` (`priority`),
-  KEY `ix_recipe_set_status` (`status`),
   KEY `ix_recipe_set_result` (`result`),
+  KEY `ix_recipe_set_status` (`status`),
   CONSTRAINT `recipe_set_ibfk_1` FOREIGN KEY (`job_id`) REFERENCES `job` (`id`),
   CONSTRAINT `recipe_set_ibfk_2` FOREIGN KEY (`lab_controller_id`) REFERENCES `lab_controller` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=62 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `recipe_set`
+--
+
+LOCK TABLES `recipe_set` WRITE;
+/*!40000 ALTER TABLE `recipe_set` DISABLE KEYS */;
+/*!40000 ALTER TABLE `recipe_set` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `recipe_set_nacked`
@@ -1355,6 +1957,15 @@ CREATE TABLE `recipe_set_nacked` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `recipe_set_nacked`
+--
+
+LOCK TABLES `recipe_set_nacked` WRITE;
+/*!40000 ALTER TABLE `recipe_set_nacked` DISABLE KEYS */;
+/*!40000 ALTER TABLE `recipe_set_nacked` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `recipe_tag`
 --
 
@@ -1367,6 +1978,15 @@ CREATE TABLE `recipe_tag` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `recipe_tag`
+--
+
+LOCK TABLES `recipe_tag` WRITE;
+/*!40000 ALTER TABLE `recipe_tag` DISABLE KEYS */;
+/*!40000 ALTER TABLE `recipe_tag` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `recipe_tag_map`
@@ -1384,6 +2004,15 @@ CREATE TABLE `recipe_tag_map` (
   CONSTRAINT `recipe_tag_map_ibfk_2` FOREIGN KEY (`recipe_id`) REFERENCES `recipe` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `recipe_tag_map`
+--
+
+LOCK TABLES `recipe_tag_map` WRITE;
+/*!40000 ALTER TABLE `recipe_tag_map` DISABLE KEYS */;
+/*!40000 ALTER TABLE `recipe_tag_map` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `recipe_task`
@@ -1409,12 +2038,21 @@ CREATE TABLE `recipe_task` (
   KEY `recipe_id` (`recipe_id`),
   KEY `task_id` (`task_id`),
   KEY `ix_recipe_task_name` (`name`),
-  KEY `ix_recipe_task_name_version` (`name`,`version`),
   KEY `ix_recipe_task_version` (`version`),
+  KEY `ix_recipe_task_name_version` (`name`,`version`),
   CONSTRAINT `recipe_task_ibfk_1` FOREIGN KEY (`recipe_id`) REFERENCES `recipe` (`id`),
   CONSTRAINT `recipe_task_ibfk_2` FOREIGN KEY (`task_id`) REFERENCES `task` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `recipe_task`
+--
+
+LOCK TABLES `recipe_task` WRITE;
+/*!40000 ALTER TABLE `recipe_task` DISABLE KEYS */;
+/*!40000 ALTER TABLE `recipe_task` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `recipe_task_bugzilla`
@@ -1432,6 +2070,15 @@ CREATE TABLE `recipe_task_bugzilla` (
   CONSTRAINT `recipe_task_bugzilla_ibfk_1` FOREIGN KEY (`recipe_task_id`) REFERENCES `recipe_task` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `recipe_task_bugzilla`
+--
+
+LOCK TABLES `recipe_task_bugzilla` WRITE;
+/*!40000 ALTER TABLE `recipe_task_bugzilla` DISABLE KEYS */;
+/*!40000 ALTER TABLE `recipe_task_bugzilla` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `recipe_task_comment`
@@ -1455,6 +2102,15 @@ CREATE TABLE `recipe_task_comment` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `recipe_task_comment`
+--
+
+LOCK TABLES `recipe_task_comment` WRITE;
+/*!40000 ALTER TABLE `recipe_task_comment` DISABLE KEYS */;
+/*!40000 ALTER TABLE `recipe_task_comment` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `recipe_task_param`
 --
 
@@ -1471,6 +2127,15 @@ CREATE TABLE `recipe_task_param` (
   CONSTRAINT `recipe_task_param_ibfk_1` FOREIGN KEY (`recipe_task_id`) REFERENCES `recipe_task` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `recipe_task_param`
+--
+
+LOCK TABLES `recipe_task_param` WRITE;
+/*!40000 ALTER TABLE `recipe_task_param` DISABLE KEYS */;
+/*!40000 ALTER TABLE `recipe_task_param` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `recipe_task_result`
@@ -1490,8 +2155,17 @@ CREATE TABLE `recipe_task_result` (
   PRIMARY KEY (`id`),
   KEY `recipe_task_id` (`recipe_task_id`),
   CONSTRAINT `recipe_task_result_ibfk_1` FOREIGN KEY (`recipe_task_id`) REFERENCES `recipe_task` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=160 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `recipe_task_result`
+--
+
+LOCK TABLES `recipe_task_result` WRITE;
+/*!40000 ALTER TABLE `recipe_task_result` DISABLE KEYS */;
+/*!40000 ALTER TABLE `recipe_task_result` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `recipe_task_rpm`
@@ -1514,6 +2188,15 @@ CREATE TABLE `recipe_task_rpm` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `recipe_task_rpm`
+--
+
+LOCK TABLES `recipe_task_rpm` WRITE;
+/*!40000 ALTER TABLE `recipe_task_rpm` DISABLE KEYS */;
+/*!40000 ALTER TABLE `recipe_task_rpm` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `recipeset_activity`
 --
 
@@ -1531,6 +2214,15 @@ CREATE TABLE `recipeset_activity` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `recipeset_activity`
+--
+
+LOCK TABLES `recipeset_activity` WRITE;
+/*!40000 ALTER TABLE `recipeset_activity` DISABLE KEYS */;
+/*!40000 ALTER TABLE `recipeset_activity` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `rendered_kickstart`
 --
 
@@ -1544,6 +2236,15 @@ CREATE TABLE `rendered_kickstart` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `rendered_kickstart`
+--
+
+LOCK TABLES `rendered_kickstart` WRITE;
+/*!40000 ALTER TABLE `rendered_kickstart` DISABLE KEYS */;
+/*!40000 ALTER TABLE `rendered_kickstart` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `reservation`
@@ -1562,13 +2263,22 @@ CREATE TABLE `reservation` (
   PRIMARY KEY (`id`),
   KEY `system_id` (`system_id`),
   KEY `user_id` (`user_id`),
-  KEY `ix_reservation_finish_time` (`finish_time`),
   KEY `ix_reservation_start_time` (`start_time`),
+  KEY `ix_reservation_finish_time` (`finish_time`),
   KEY `ix_reservation_type` (`type`),
   CONSTRAINT `reservation_ibfk_1` FOREIGN KEY (`system_id`) REFERENCES `system` (`id`),
   CONSTRAINT `reservation_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `tg_user` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=35 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `reservation`
+--
+
+LOCK TABLES `reservation` WRITE;
+/*!40000 ALTER TABLE `reservation` DISABLE KEYS */;
+/*!40000 ALTER TABLE `reservation` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `response`
@@ -1583,6 +2293,16 @@ CREATE TABLE `response` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `response`
+--
+
+LOCK TABLES `response` WRITE;
+/*!40000 ALTER TABLE `response` DISABLE KEYS */;
+INSERT INTO `response` VALUES (1,'ack'),(2,'nak');
+/*!40000 ALTER TABLE `response` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `retention_tag`
@@ -1600,6 +2320,16 @@ CREATE TABLE `retention_tag` (
   CONSTRAINT `retention_tag_ibfk_1` FOREIGN KEY (`id`) REFERENCES `beaker_tag` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `retention_tag`
+--
+
+LOCK TABLES `retention_tag` WRITE;
+/*!40000 ALTER TABLE `retention_tag` DISABLE KEYS */;
+INSERT INTO `retention_tag` VALUES (1,1,30,0),(2,0,60,0),(3,0,120,0),(4,0,0,1),(5,0,0,1);
+/*!40000 ALTER TABLE `retention_tag` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `sshpubkey`
@@ -1621,6 +2351,15 @@ CREATE TABLE `sshpubkey` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `sshpubkey`
+--
+
+LOCK TABLES `sshpubkey` WRITE;
+/*!40000 ALTER TABLE `sshpubkey` DISABLE KEYS */;
+/*!40000 ALTER TABLE `sshpubkey` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `submission_delegate`
 --
 
@@ -1638,6 +2377,15 @@ CREATE TABLE `submission_delegate` (
   CONSTRAINT `tg_user_id_fk2` FOREIGN KEY (`delegate_id`) REFERENCES `tg_user` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `submission_delegate`
+--
+
+LOCK TABLES `submission_delegate` WRITE;
+/*!40000 ALTER TABLE `submission_delegate` DISABLE KEYS */;
+/*!40000 ALTER TABLE `submission_delegate` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `system`
@@ -1689,8 +2437,17 @@ CREATE TABLE `system` (
   CONSTRAINT `system_ibfk_5` FOREIGN KEY (`reprovision_distro_tree_id`) REFERENCES `distro_tree` (`id`),
   CONSTRAINT `system_ibfk_6` FOREIGN KEY (`hypervisor_id`) REFERENCES `hypervisor` (`id`),
   CONSTRAINT `system_ibfk_7` FOREIGN KEY (`kernel_type_id`) REFERENCES `kernel_type` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=72 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `system`
+--
+
+LOCK TABLES `system` WRITE;
+/*!40000 ALTER TABLE `system` DISABLE KEYS */;
+/*!40000 ALTER TABLE `system` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `system_access_policy`
@@ -1705,8 +2462,17 @@ CREATE TABLE `system_access_policy` (
   PRIMARY KEY (`id`),
   KEY `system_access_policy_system_id_fk` (`system_id`),
   CONSTRAINT `system_access_policy_system_id_fk` FOREIGN KEY (`system_id`) REFERENCES `system` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=75 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `system_access_policy`
+--
+
+LOCK TABLES `system_access_policy` WRITE;
+/*!40000 ALTER TABLE `system_access_policy` DISABLE KEYS */;
+/*!40000 ALTER TABLE `system_access_policy` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `system_access_policy_rule`
@@ -1725,11 +2491,20 @@ CREATE TABLE `system_access_policy_rule` (
   KEY `system_access_policy_rule_policy_id_fk` (`policy_id`),
   KEY `system_access_policy_rule_user_id_fk` (`user_id`),
   KEY `system_access_policy_rule_group_id_fk` (`group_id`),
-  CONSTRAINT `system_access_policy_rule_group_id_fk` FOREIGN KEY (`group_id`) REFERENCES `tg_group` (`group_id`),
   CONSTRAINT `system_access_policy_rule_policy_id_fk` FOREIGN KEY (`policy_id`) REFERENCES `system_access_policy` (`id`),
-  CONSTRAINT `system_access_policy_rule_user_id_fk` FOREIGN KEY (`user_id`) REFERENCES `tg_user` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=148 DEFAULT CHARSET=utf8;
+  CONSTRAINT `system_access_policy_rule_user_id_fk` FOREIGN KEY (`user_id`) REFERENCES `tg_user` (`user_id`),
+  CONSTRAINT `system_access_policy_rule_group_id_fk` FOREIGN KEY (`group_id`) REFERENCES `tg_group` (`group_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `system_access_policy_rule`
+--
+
+LOCK TABLES `system_access_policy_rule` WRITE;
+/*!40000 ALTER TABLE `system_access_policy_rule` DISABLE KEYS */;
+/*!40000 ALTER TABLE `system_access_policy_rule` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `system_activity`
@@ -1747,6 +2522,15 @@ CREATE TABLE `system_activity` (
   CONSTRAINT `system_activity_ibfk_2` FOREIGN KEY (`system_id`) REFERENCES `system` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `system_activity`
+--
+
+LOCK TABLES `system_activity` WRITE;
+/*!40000 ALTER TABLE `system_activity` DISABLE KEYS */;
+/*!40000 ALTER TABLE `system_activity` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `system_arch_map`
@@ -1767,6 +2551,15 @@ CREATE TABLE `system_arch_map` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `system_arch_map`
+--
+
+LOCK TABLES `system_arch_map` WRITE;
+/*!40000 ALTER TABLE `system_arch_map` DISABLE KEYS */;
+/*!40000 ALTER TABLE `system_arch_map` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `system_cc`
 --
 
@@ -1783,6 +2576,15 @@ CREATE TABLE `system_cc` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `system_cc`
+--
+
+LOCK TABLES `system_cc` WRITE;
+/*!40000 ALTER TABLE `system_cc` DISABLE KEYS */;
+/*!40000 ALTER TABLE `system_cc` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `system_device_map`
 --
 
@@ -1793,12 +2595,21 @@ CREATE TABLE `system_device_map` (
   `system_id` int(11) NOT NULL,
   `device_id` int(11) NOT NULL,
   PRIMARY KEY (`system_id`,`device_id`),
-  KEY `ix_system_device_map_device_id` (`device_id`),
   KEY `ix_system_device_map_system_id` (`system_id`),
+  KEY `ix_system_device_map_device_id` (`device_id`),
   CONSTRAINT `system_device_map_ibfk_1` FOREIGN KEY (`system_id`) REFERENCES `system` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `system_device_map_ibfk_2` FOREIGN KEY (`device_id`) REFERENCES `device` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `system_device_map`
+--
+
+LOCK TABLES `system_device_map` WRITE;
+/*!40000 ALTER TABLE `system_device_map` DISABLE KEYS */;
+/*!40000 ALTER TABLE `system_device_map` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `system_group`
@@ -1819,6 +2630,15 @@ CREATE TABLE `system_group` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `system_group`
+--
+
+LOCK TABLES `system_group` WRITE;
+/*!40000 ALTER TABLE `system_group` DISABLE KEYS */;
+/*!40000 ALTER TABLE `system_group` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `system_recipe_map`
 --
 
@@ -1836,6 +2656,15 @@ CREATE TABLE `system_recipe_map` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `system_recipe_map`
+--
+
+LOCK TABLES `system_recipe_map` WRITE;
+/*!40000 ALTER TABLE `system_recipe_map` DISABLE KEYS */;
+/*!40000 ALTER TABLE `system_recipe_map` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `system_resource`
 --
 
@@ -1850,10 +2679,19 @@ CREATE TABLE `system_resource` (
   KEY `system_resource_system_id_fk` (`system_id`),
   KEY `system_resource_reservation_id_fk` (`reservation_id`),
   CONSTRAINT `system_resource_id_fk` FOREIGN KEY (`id`) REFERENCES `recipe_resource` (`id`),
-  CONSTRAINT `system_resource_reservation_id_fk` FOREIGN KEY (`reservation_id`) REFERENCES `reservation` (`id`),
-  CONSTRAINT `system_resource_system_id_fk` FOREIGN KEY (`system_id`) REFERENCES `system` (`id`)
+  CONSTRAINT `system_resource_system_id_fk` FOREIGN KEY (`system_id`) REFERENCES `system` (`id`),
+  CONSTRAINT `system_resource_reservation_id_fk` FOREIGN KEY (`reservation_id`) REFERENCES `reservation` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `system_resource`
+--
+
+LOCK TABLES `system_resource` WRITE;
+/*!40000 ALTER TABLE `system_resource` DISABLE KEYS */;
+/*!40000 ALTER TABLE `system_resource` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `system_status_duration`
@@ -1873,8 +2711,17 @@ CREATE TABLE `system_status_duration` (
   KEY `ix_system_status_duration_start_time` (`start_time`),
   KEY `ix_system_status_duration_finish_time` (`finish_time`),
   CONSTRAINT `system_status_duration_ibfk_1` FOREIGN KEY (`system_id`) REFERENCES `system` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=81 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `system_status_duration`
+--
+
+LOCK TABLES `system_status_duration` WRITE;
+/*!40000 ALTER TABLE `system_status_duration` DISABLE KEYS */;
+/*!40000 ALTER TABLE `system_status_duration` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `task`
@@ -1907,8 +2754,17 @@ CREATE TABLE `task` (
   KEY `uploader_id` (`uploader_id`),
   KEY `ix_task_owner` (`owner`),
   CONSTRAINT `task_ibfk_1` FOREIGN KEY (`uploader_id`) REFERENCES `tg_user` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `task`
+--
+
+LOCK TABLES `task` WRITE;
+/*!40000 ALTER TABLE `task` DISABLE KEYS */;
+/*!40000 ALTER TABLE `task` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `task_bugzilla`
@@ -1926,6 +2782,15 @@ CREATE TABLE `task_bugzilla` (
   CONSTRAINT `task_bugzilla_ibfk_1` FOREIGN KEY (`task_id`) REFERENCES `task` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `task_bugzilla`
+--
+
+LOCK TABLES `task_bugzilla` WRITE;
+/*!40000 ALTER TABLE `task_bugzilla` DISABLE KEYS */;
+/*!40000 ALTER TABLE `task_bugzilla` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `task_exclude_arch`
@@ -1947,6 +2812,15 @@ CREATE TABLE `task_exclude_arch` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `task_exclude_arch`
+--
+
+LOCK TABLES `task_exclude_arch` WRITE;
+/*!40000 ALTER TABLE `task_exclude_arch` DISABLE KEYS */;
+/*!40000 ALTER TABLE `task_exclude_arch` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `task_exclude_osmajor`
 --
 
@@ -1966,6 +2840,15 @@ CREATE TABLE `task_exclude_osmajor` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `task_exclude_osmajor`
+--
+
+LOCK TABLES `task_exclude_osmajor` WRITE;
+/*!40000 ALTER TABLE `task_exclude_osmajor` DISABLE KEYS */;
+/*!40000 ALTER TABLE `task_exclude_osmajor` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `task_package`
 --
 
@@ -1977,8 +2860,17 @@ CREATE TABLE `task_package` (
   `package` varchar(255) COLLATE utf8_bin NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `package` (`package`)
-) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `task_package`
+--
+
+LOCK TABLES `task_package` WRITE;
+/*!40000 ALTER TABLE `task_package` DISABLE KEYS */;
+/*!40000 ALTER TABLE `task_package` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `task_packages_custom_map`
@@ -1998,6 +2890,15 @@ CREATE TABLE `task_packages_custom_map` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `task_packages_custom_map`
+--
+
+LOCK TABLES `task_packages_custom_map` WRITE;
+/*!40000 ALTER TABLE `task_packages_custom_map` DISABLE KEYS */;
+/*!40000 ALTER TABLE `task_packages_custom_map` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `task_packages_required_map`
 --
 
@@ -2013,6 +2914,15 @@ CREATE TABLE `task_packages_required_map` (
   CONSTRAINT `task_packages_required_map_ibfk_2` FOREIGN KEY (`package_id`) REFERENCES `task_package` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `task_packages_required_map`
+--
+
+LOCK TABLES `task_packages_required_map` WRITE;
+/*!40000 ALTER TABLE `task_packages_required_map` DISABLE KEYS */;
+/*!40000 ALTER TABLE `task_packages_required_map` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `task_packages_runfor_map`
@@ -2032,6 +2942,15 @@ CREATE TABLE `task_packages_runfor_map` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `task_packages_runfor_map`
+--
+
+LOCK TABLES `task_packages_runfor_map` WRITE;
+/*!40000 ALTER TABLE `task_packages_runfor_map` DISABLE KEYS */;
+/*!40000 ALTER TABLE `task_packages_runfor_map` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `task_property_needed`
 --
 
@@ -2049,6 +2968,15 @@ CREATE TABLE `task_property_needed` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `task_property_needed`
+--
+
+LOCK TABLES `task_property_needed` WRITE;
+/*!40000 ALTER TABLE `task_property_needed` DISABLE KEYS */;
+/*!40000 ALTER TABLE `task_property_needed` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `task_type`
 --
 
@@ -2060,8 +2988,17 @@ CREATE TABLE `task_type` (
   `type` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `type` (`type`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `task_type`
+--
+
+LOCK TABLES `task_type` WRITE;
+/*!40000 ALTER TABLE `task_type` DISABLE KEYS */;
+/*!40000 ALTER TABLE `task_type` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `task_type_map`
@@ -2081,6 +3018,15 @@ CREATE TABLE `task_type_map` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `task_type_map`
+--
+
+LOCK TABLES `task_type_map` WRITE;
+/*!40000 ALTER TABLE `task_type_map` DISABLE KEYS */;
+/*!40000 ALTER TABLE `task_type_map` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `tg_group`
 --
 
@@ -2097,8 +3043,18 @@ CREATE TABLE `tg_group` (
   PRIMARY KEY (`group_id`),
   UNIQUE KEY `group_name` (`group_name`),
   KEY `ix_tg_group_ldap` (`ldap`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tg_group`
+--
+
+LOCK TABLES `tg_group` WRITE;
+/*!40000 ALTER TABLE `tg_group` DISABLE KEYS */;
+INSERT INTO `tg_group` VALUES (1,'admin','Admin',NULL,0,'2015-03-11 05:17:30'),(2,'lab_controller','Lab Controller',NULL,0,'2015-03-11 05:17:30');
+/*!40000 ALTER TABLE `tg_group` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `tg_user`
@@ -2124,8 +3080,18 @@ CREATE TABLE `tg_user` (
   PRIMARY KEY (`user_id`),
   UNIQUE KEY `user_name` (`user_name`),
   KEY `ix_tg_user_email_address` (`email_address`)
-) ENGINE=InnoDB AUTO_INCREMENT=233 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tg_user`
+--
+
+LOCK TABLES `tg_user` WRITE;
+/*!40000 ALTER TABLE `tg_user` DISABLE KEYS */;
+INSERT INTO `tg_user` VALUES (1,'admin','dcallagh@redhat.com','Dan Callaghan','$pbkdf2-sha512$12000$A2AsZSyltBYCgLAWwjiH0A$TcoNiiT72XwR6ZJQ8OrizeBrGSErdktwA0aFc1PjtRFfWwAxLWY2LfgrcKB1j5zGqWGfSK4/Jde7tI1HFLnQlA',NULL,NULL,NULL,NULL,NULL,'2015-03-11 05:17:30',0,NULL);
+/*!40000 ALTER TABLE `tg_user` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `user_activity`
@@ -2145,6 +3111,15 @@ CREATE TABLE `user_activity` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `user_activity`
+--
+
+LOCK TABLES `user_activity` WRITE;
+/*!40000 ALTER TABLE `user_activity` DISABLE KEYS */;
+/*!40000 ALTER TABLE `user_activity` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `user_group`
 --
 
@@ -2156,12 +3131,22 @@ CREATE TABLE `user_group` (
   `group_id` int(11) NOT NULL,
   `is_owner` tinyint(1) NOT NULL,
   PRIMARY KEY (`user_id`,`group_id`),
-  KEY `ix_user_group_group_id` (`group_id`),
   KEY `ix_user_group_user_id` (`user_id`),
+  KEY `ix_user_group_group_id` (`group_id`),
   CONSTRAINT `user_group_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `tg_user` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `user_group_ibfk_2` FOREIGN KEY (`group_id`) REFERENCES `tg_group` (`group_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_group`
+--
+
+LOCK TABLES `user_group` WRITE;
+/*!40000 ALTER TABLE `user_group` DISABLE KEYS */;
+INSERT INTO `user_group` VALUES (1,1,1);
+/*!40000 ALTER TABLE `user_group` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `virt_resource`
@@ -2183,6 +3168,15 @@ CREATE TABLE `virt_resource` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `virt_resource`
+--
+
+LOCK TABLES `virt_resource` WRITE;
+/*!40000 ALTER TABLE `virt_resource` DISABLE KEYS */;
+/*!40000 ALTER TABLE `virt_resource` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `watchdog`
 --
 
@@ -2200,8 +3194,17 @@ CREATE TABLE `watchdog` (
   KEY `recipetask_id` (`recipetask_id`),
   CONSTRAINT `watchdog_ibfk_1` FOREIGN KEY (`recipe_id`) REFERENCES `recipe` (`id`),
   CONSTRAINT `watchdog_ibfk_2` FOREIGN KEY (`recipetask_id`) REFERENCES `recipe_task` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=43 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `watchdog`
+--
+
+LOCK TABLES `watchdog` WRITE;
+/*!40000 ALTER TABLE `watchdog` DISABLE KEYS */;
+/*!40000 ALTER TABLE `watchdog` ENABLE KEYS */;
+UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -2212,10 +3215,4 @@ CREATE TABLE `watchdog` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-02-25 14:54:57
-
-/*
-When we start with this dump, we want the migration to start from
-first revision after 19 (53942581687f -> 10436ef002a7)
-*/
-INSERT INTO alembic_version values("53942581687f");
+-- Dump completed on 2015-03-11 15:17:39
