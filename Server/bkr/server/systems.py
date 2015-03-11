@@ -870,6 +870,41 @@ def get_system_access_policy(fqdn):
 
     return filtered_policy(policy)
 
+def _edit_access_policy_rules(object, policy, rules=None):
+    if rules is None:
+        rules = []
+    # Figure out what is added, what is removed.
+    # Rules are immutable, so if it has an id it is unchanged, 
+    # if it has no id it is new.
+    kept_rule_ids = frozenset(r['id'] for r in rules if 'id' in r)
+    removed = []
+    for old_rule in policy.rules:
+        if old_rule.id not in kept_rule_ids:
+            removed.append(old_rule)
+    for old_rule in removed:
+        object.record_activity(user=identity.current.user, service=u'HTTP',
+                field=u'Access Policy Rule', action=u'Removed',
+                old=repr(old_rule))
+        policy.rules.remove(old_rule)
+    for rule in rules:
+        if 'id' not in rule:
+            if rule['user']:
+                user = User.by_user_name(rule['user'])
+                if user is None:
+                    raise BadRequest400('No such user %r' % rule['user'])
+            else:
+                user = None
+            try:
+                group = Group.by_name(rule['group']) if rule['group'] else None
+            except NoResultFound:
+                raise BadRequest400('No such group %r' % rule['group'])
+            permission = SystemPermission.from_string(rule['permission'])
+            new_rule = policy.add_rule(user=user, group=group,
+                    everybody=rule['everybody'], permission=permission)
+            object.record_activity(user=identity.current.user, service=u'HTTP',
+                    field=u'Access Policy Rule', action=u'Added',
+                    new=repr(new_rule))
+
 @app.route('/systems/<fqdn>/access-policy', methods=['POST', 'PUT'])
 @auth_required
 def save_system_access_policy(fqdn):
@@ -889,37 +924,8 @@ def save_system_access_policy(fqdn):
     else:
         policy = system.custom_access_policy = SystemAccessPolicy()
     data = read_json_request(request)
-    # Figure out what is added, what is removed.
-    # Rules are immutable, so if it has an id it is unchanged, 
-    # if it has no id it is new.
-    kept_rule_ids = frozenset(r['id'] for r in data['rules'] if 'id' in r)
-    removed = []
-    for old_rule in policy.rules:
-        if old_rule.id not in kept_rule_ids:
-            removed.append(old_rule)
-    for old_rule in removed:
-        system.record_activity(user=identity.current.user, service=u'HTTP',
-                field=u'Access Policy Rule', action=u'Removed',
-                old=repr(old_rule))
-        policy.rules.remove(old_rule)
-    for rule in data['rules']:
-        if 'id' not in rule:
-            if rule['user']:
-                user = User.by_user_name(rule['user'])
-                if user is None:
-                    raise BadRequest400('No such user %r' % rule['user'])
-            else:
-                user = None
-            try:
-                group = Group.by_name(rule['group']) if rule['group'] else None
-            except NoResultFound:
-                raise BadRequest400('No such group %r' % rule['group'])
-            permission = SystemPermission.from_string(rule['permission'])
-            new_rule = policy.add_rule(user=user, group=group,
-                    everybody=rule['everybody'], permission=permission)
-            system.record_activity(user=identity.current.user, service=u'HTTP',
-                    field=u'Access Policy Rule', action=u'Added',
-                    new=repr(new_rule))
+    _edit_access_policy_rules(system, policy, data['rules'])
+
     return jsonify(policy.__json__())
 
 @app.route('/systems/<fqdn>/access-policy/rules/', methods=['POST'])

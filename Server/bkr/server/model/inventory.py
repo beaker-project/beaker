@@ -1629,7 +1629,8 @@ class SystemPool(DeclarativeMappedObject, ActivityMixin):
             'id': self.id,
             'name': self.name,
             'description':self.description,
-            }
+            'owner': self.owner
+        }
 
     @validates('owning_group', 'owning_user')
     def validate_owner(self, key, owner):
@@ -1668,6 +1669,33 @@ class SystemPool(DeclarativeMappedObject, ActivityMixin):
     def can_edit_policy(self, user):
         return (self.can_edit(user) or \
             self.access_policy.grants(SystemPermission.edit_policy, user))
+
+    @property
+    def href(self):
+        """Returns a relative URL for this system pool's page."""
+        return urllib.quote((u'/pools/%s/' % self.name).encode('utf8'))
+
+    @property
+    def owner(self):
+        return self.owning_user or self.owning_group
+
+    def change_owner(self, user=None, group=None, service='HTTP'):
+        old_owner = self.owner
+        if user is not None:
+            if user != self.owner:
+                if self.owning_group:
+                    self.owning_group = None
+                self.owning_user = user
+        if group is not None:
+            if group != self.owner:
+                if self.owning_user:
+                    self.owning_user = None
+                self.owning_group = group
+        if old_owner != self.owner:
+            self.record_activity(user=identity.current.user, service=service,
+                                 action=u'Changed', field=u'Owner',
+                                 old=u'%s' % old_owner,
+                                 new=u'%s' % self.owner)
 
 
 class SystemCc(DeclarativeMappedObject):

@@ -637,12 +637,7 @@ class Groups(AdminPage):
         # and set owning_user to the user deleting this group
         pools = SystemPool.query.filter_by(owning_group_id=group.group_id)
         for pool in pools:
-            pool.owning_group = None
-            pool.owning_user = u
-            pool.record_activity(user=u, service=u'WEBUI',
-                                 action=u'Changed', field=u'Owner',
-                                 old=unicode(group),
-                                 new=unicode(identity.current.user))
+            pool.change_owner(user=u, service='WEBUI')
         session.delete(group)
         activity = Activity(u, u'WEBUI', u'Removed', u'Group', group.display_name, u"")
         session.add(activity)
