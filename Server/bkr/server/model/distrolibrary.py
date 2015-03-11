@@ -52,7 +52,7 @@ class DistroActivity(Activity):
     __tablename__ = 'distro_activity'
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
-    distro_id = Column(Integer, ForeignKey('distro.id'))
+    distro_id = Column(Integer, ForeignKey('distro.id'), index=True)
     object_id = synonym('distro_id')
     object = relationship('Distro', back_populates='activity')
     __mapper_args__ = {'polymorphic_identity': u'distro_activity'}
@@ -73,7 +73,7 @@ class DistroTreeActivity(Activity):
     __tablename__ = 'distro_tree_activity'
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
-    distro_tree_id = Column(Integer, ForeignKey('distro_tree.id'))
+    distro_tree_id = Column(Integer, ForeignKey('distro_tree.id'), index=True)
     object_id = synonym('distro_tree_id')
     object = relationship('DistroTree', back_populates='activity')
     __mapper_args__ = {'polymorphic_identity': u'distro_tree_activity'}

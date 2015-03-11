@@ -90,6 +90,10 @@ def get_distro_activity():
     # join Distro for sorting/filtering and also for eager loading
     query = query.join(DistroActivity.object)\
             .options(contains_eager(DistroActivity.object))
+    if not request.args.get('q'):
+        # need to avoid a filesort due to MySQL picking distro as first table
+        query = query.with_hint(DistroActivity.__table__,
+                'IGNORE INDEX (ix_distro_activity_distro_id)', 'mysql')
     json_result = json_collection(query,
             columns=dict(common_activity_search_columns.items() + {
                 'distro': Distro.name,
@@ -130,6 +134,10 @@ def get_distro_tree_activity():
             .join(DistroTree.arch)\
             .options(contains_eager(DistroTreeActivity.object, DistroTree.distro))\
             .options(contains_eager(DistroTreeActivity.object, DistroTree.arch))
+    if not request.args.get('q'):
+        # need to avoid a filesort due to MySQL picking distro_tree as first table
+        query = query.with_hint(DistroTreeActivity.__table__,
+                'IGNORE INDEX (ix_distro_tree_activity_distro_tree_id)', 'mysql')
     json_result = json_collection(query,
             columns=dict(common_activity_search_columns.items() + {
                 'distro_tree.distro': Distro.name,
@@ -165,6 +173,10 @@ def get_group_activity():
     # join Group for sorting/filtering and also for eager loading
     query = query.join(GroupActivity.object)\
             .options(contains_eager(DistroTreeActivity.object))
+    if not request.args.get('q'):
+        # need to avoid a filesort due to MySQL picking group as first table
+        query = query.with_hint(GroupActivity.__table__,
+                'IGNORE INDEX (ix_group_activity_group_id)', 'mysql')
     json_result = json_collection(query,
             columns=dict(common_activity_search_columns.items() + {
                 'group': Group.group_name,
@@ -197,6 +209,10 @@ def get_lab_controller_activity():
     # join LabController for sorting/filtering and also for eager loading
     query = query.join(LabControllerActivity.object)\
             .options(contains_eager(LabControllerActivity.object))
+    if not request.args.get('q'):
+        # need to avoid a filesort due to MySQL picking lab_controller as first table
+        query = query.with_hint(LabControllerActivity.__table__,
+                'IGNORE INDEX (ix_lab_controller_activity_lab_controller_id)', 'mysql')
     json_result = json_collection(query,
             columns=dict(common_activity_search_columns.items() + {
                 'lab_controller': LabController.fqdn,
@@ -229,6 +245,10 @@ def get_systems_activity(): # distinct from get_system_activity
     # join System for sorting/filtering and also for eager loading
     query = query.join(SystemActivity.object)\
             .options(contains_eager(SystemActivity.object))
+    if not request.args.get('q'):
+        # need to avoid a filesort due to MySQL picking system as first table
+        query = query.with_hint(SystemActivity.__table__,
+                'IGNORE INDEX (ix_system_activity_system_id)', 'mysql')
     json_result = json_collection(query,
             columns=dict(common_activity_search_columns.items() + {
                 'system': System.fqdn,

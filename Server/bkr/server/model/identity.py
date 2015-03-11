@@ -42,7 +42,8 @@ class GroupActivity(Activity):
     __tablename__ = 'group_activity'
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
-    group_id = Column(Integer, ForeignKey('tg_group.group_id'), nullable=False)
+    group_id = Column(Integer, ForeignKey('tg_group.group_id'),
+            nullable=False, index=True)
     object_id = synonym('group_id')
     object = relationship('Group', back_populates='activity')
     __mapper_args__ = {'polymorphic_identity': u'group_activity'}

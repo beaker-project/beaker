@@ -45,6 +45,15 @@ def create_unique_if_absent(name, table, columns):
     if find_unique(table, columns) is None:
         op.create_unique_constraint(name, table, columns)
 
+def find_index(table, columns):
+    """
+    Returns the string name of the index which applies to the given columns, or 
+    None if no matching index exists.
+    """
+    for info in sa.inspect(op.get_bind()).get_indexes(table):
+        if info['column_names'] == columns:
+            return info['name']
+
 # When altering a MySQL ENUM column to add a new value, we can only add it at 
 # the end. Similarly values can only be removed from the end. The enum values 
 # must not be re-ordered, otherwise it will change the data stored in the 

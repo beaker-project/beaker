@@ -62,7 +62,8 @@ class SystemActivity(Activity):
     __tablename__ = 'system_activity'
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
-    system_id = Column(Integer, ForeignKey('system.id'), nullable=False)
+    system_id = Column(Integer, ForeignKey('system.id'),
+            nullable=False, index=True)
     object_id = synonym('system_id')
     object = relationship('System', back_populates='activity')
     __mapper_args__ = {'polymorphic_identity': u'system_activity'}
