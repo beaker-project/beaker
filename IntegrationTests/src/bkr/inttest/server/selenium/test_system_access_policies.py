@@ -316,9 +316,9 @@ class SystemAccessPolicyHTTPTest(DatabaseTestCase):
                     SystemPermission.control_system)
             self.assertEquals(self.policy.rules[2].everybody, True)
 
-    def test_get_active_access_policy_rules(self):
+    def test_get_active_access_policy(self):
         response = requests.get(get_server_base() +
-                'systems/%s/active-access-policy/rules/' % self.system.fqdn)
+                'systems/%s/active-access-policy/' % self.system.fqdn)
         response.raise_for_status()
         json = response.json()
         self.assertEquals(json['id'], self.policy.id)

@@ -184,7 +184,7 @@ System access policy
 --------------------
 
 .. autoflask:: bkr.server.wsgi:app
-   :endpoints: get_system_access_policy, save_system_access_policy, add_system_access_policy_rule,
+   :endpoints: get_system_access_policy, get_active_access_policy, save_system_access_policy, add_system_access_policy_rule,
      delete_system_access_policy_rules, change_active_access_policy
 
 System reservations

@@ -1045,12 +1045,15 @@ def delete_system_access_policy_rules(fqdn):
         session.delete(rule)
     return '', 204
 
-@app.route('/systems/<fqdn>/active-access-policy/rules/', methods=['GET'])
+@app.route('/systems/<fqdn>/active-access-policy/', methods=['GET'])
 def get_active_access_policy(fqdn):
     """
-    Returns the active access policy rules for a system
-    """
+    Returns the active access policy for a system, including all the rules making up
+    the policy.
 
+    :param fqdn: The system's fully-qualified domain name.
+
+    """
     system = _get_system_by_FQDN(fqdn)
     policy = system.active_access_policy
     # filtering, if any
