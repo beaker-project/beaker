@@ -474,3 +474,43 @@ install
                           '--ignore-system-status',
                           '--task', self.task.name, '--dry-run', '--pretty-xml'])
         self.assertIn('<hostRequires force="%s"/>' % system.fqdn, out)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1197608
+    def test_filters_task_by_arch_with_given_taskfile(self):
+        with session.begin():
+            ignored_task = data_setup.create_task(exclude_arch=[self.distro_tree.arch.arch])
+            included_task = data_setup.create_task()
+
+        taskfile = NamedTemporaryFile()
+        taskfile.write('\n'.join([ignored_task.name, included_task.name]))
+        taskfile.flush()
+
+        out = run_client(['bkr', 'workflow-simple',
+                          '--dryrun', '--prettyxml',
+                          '--family', self.distro.osversion.osmajor.osmajor,
+                          '--arch', self.distro_tree.arch.arch,
+                          '--taskfile', taskfile.name])
+
+        self.assertNotIn(ignored_task.name, out)
+        self.assertIn(included_task.name, out)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1197608
+    def test_filters_task_by_osmajor_with_given_taskfile(self):
+        with session.begin():
+            ignored_task = data_setup.create_task(exclude_osmajor=[self.distro.osversion.osmajor.osmajor])
+            included_task = data_setup.create_task()
+
+        taskfile = NamedTemporaryFile()
+        taskfile.write('\n'.join([ignored_task.name, included_task.name]))
+        taskfile.flush()
+
+        p = start_client(['bkr', 'workflow-simple',
+                          '--dryrun', '--prettyxml',
+                          '--family', self.distro.osversion.osmajor.osmajor,
+                          '--arch', self.distro_tree.arch.arch,
+                          '--taskfile', taskfile.name])
+        out, err = p.communicate()
+        self.assertEqual(p.returncode, 0)
+        self.assertEqual('WARNING: task %s not applicable for distro, ignoring\n' % ignored_task.name, err)
+        self.assertNotIn(ignored_task.name, out)
+        self.assertIn(included_task.name, out)

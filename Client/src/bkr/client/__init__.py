@@ -285,6 +285,11 @@ class BeakerWorkflow(BeakerCommand):
             help="Include named task in job",
         )
         task_options.add_option(
+            "--taskfile", metavar="FILENAME",
+            default=None,
+            help="Include all tasks from this file in job"
+        )
+        task_options.add_option(
             "--package",
             action="append",
             default=[],
@@ -499,6 +504,22 @@ class BeakerWorkflow(BeakerCommand):
             self.set_hub(**kwargs)
         return self.hub.distros.get_osmajor(distro)
     
+    def getTaskNamesFromFile(self, kwargs):
+        """ get list of task(s) from a file """
+
+        task_names = []
+        tasklist = kwargs.get('taskfile')
+        if tasklist:
+            if not os.path.exists(tasklist):
+                self.parser.error("Task file not found: %s\n" % tasklist)
+            with open(tasklist) as fobj:
+                for line in fobj:
+                    # If the line does not start with /, assume it is not a
+                    # valid test and don't submit it to the scheduler.
+                    if line.startswith('/'):
+                        task_names.append(line.rstrip())
+        return task_names
+
     def getTasks(self, *args, **kwargs):
         """ get all requested tasks """
 
@@ -519,11 +540,13 @@ class BeakerWorkflow(BeakerCommand):
 
         tasks = []
         valid_tasks = dict()
-        if kwargs.get("task", None):
-            for task in self.hub.tasks.filter(dict(names=kwargs.get('task'),
-                                               osmajor=filter['osmajor'])):
+        task_names = list(kwargs['task'])
+        task_names.extend(self.getTaskNamesFromFile(kwargs))
+        if task_names:
+            for task in self.hub.tasks.filter(dict(names=task_names,
+                                                   osmajor=filter['osmajor'])):
                 valid_tasks[task['name']] = task
-            for name in kwargs['task']:
+            for name in task_names:
                 task = valid_tasks.get(name, None)
                 if task:
                     tasks.append(task)
