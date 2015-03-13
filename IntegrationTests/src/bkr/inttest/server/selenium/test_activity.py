@@ -108,26 +108,3 @@ class ActivityTestWD(WebDriverTestCase):
                 'group.group_name:%s' % group1.group_name)
         b.find_element_by_class_name('grid-filter').submit()
         check_activity_search_results(b, present=[act1], absent=[act2])
-
-    def test_group_removal_is_noticed(self):
-        with session.begin():
-            group = data_setup.create_group()
-        b = self.browser
-        login(b)
-        b.get(get_server_base() + 'groups/')
-        b.find_element_by_xpath("//input[@name='group.text']").clear()
-        b.find_element_by_xpath("//input[@name='group.text']").send_keys(group.group_name)
-        b.find_element_by_id('Search').submit()
-        delete_and_confirm(b, "//tr[td/a[normalize-space(text())='%s']]" % group.group_name,
-            'Delete Group')
-        should_have_deleted_msg = b.find_element_by_xpath('//body').text
-        self.assertIn('%s deleted' % group.display_name, should_have_deleted_msg)
-
-        # Check it's recorded in Group Activity
-        b.get(get_server_base() + 'activity/')
-        first_row = b.find_element_by_xpath('//div[@id="grid"]/table/tbody/tr[1]')
-        self.assertEquals(first_row.find_element_by_xpath('td[2]').text, 'WEBUI')
-        self.assertEquals(first_row.find_element_by_xpath('td[5]').text, 'Group')
-        self.assertEquals(first_row.find_element_by_xpath('td[6]').text, 'Removed')
-        self.assertEquals(first_row.find_element_by_xpath('td[7]').text,
-                group.display_name)

@@ -9,7 +9,8 @@ from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_text_present, \
     delete_and_confirm, logout
-from bkr.server.model import session, SystemPermission, SystemAccessPolicy
+from bkr.server.model import session, SystemPermission, SystemAccessPolicy, \
+    Activity
 
 
 class TestGroups(WebDriverTestCase):
@@ -38,6 +39,13 @@ class TestGroups(WebDriverTestCase):
         self.assertEqual(
             b.find_element_by_class_name('flash').text,
             '%s deleted' % self.group.display_name)
+
+        with session.begin():
+            self.assertEquals(1, Activity.query
+                .filter(Activity.field_name == u'Group')
+                .filter(Activity.action == u'Removed')
+                .filter(Activity.old_value == self.group.display_name).count(),
+                'Expected to find activity record for group removal')
 
     def test_group_remove_on_different_pages(self):
         b1 = self.browser
