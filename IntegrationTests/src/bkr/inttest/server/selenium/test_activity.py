@@ -108,3 +108,40 @@ class ActivityTestWD(WebDriverTestCase):
                 'group.group_name:%s' % group1.group_name)
         b.find_element_by_class_name('grid-filter').submit()
         check_activity_search_results(b, present=[act1], absent=[act2])
+
+    def test_system_pool_activity(self):
+        with session.begin():
+            pool1 = data_setup.create_system_pool()
+            act1 = pool1.record_activity(service=u'testdata',
+                    user=User.by_user_name(data_setup.ADMIN_USER),
+                    action=u'Nothing', field=u'Nonsense',
+                    old=u'asdf', new=u'omgwtfbbq')
+            pool2 = data_setup.create_system_pool()
+            act2 = pool2.record_activity(service=u'testdata',
+                    user=User.by_user_name(data_setup.ADMIN_USER),
+                    action=u'Nothing', field=u'Nonsense',
+                    old=u'asdf', new=u'lollercopter')
+        b = self.browser
+        b.get(get_server_base() + 'activity/pool')
+        b.find_element_by_class_name('search-query').send_keys(
+            'pool.name:%s' % pool1.name)
+        b.find_element_by_class_name('grid-filter').submit()
+        check_activity_search_results(b, present=[act1], absent=[act2])
+
+        # search by pool owner
+        b.get(get_server_base() + 'activity/pool')
+        b.find_element_by_class_name('search-query').send_keys(
+            'pool.owner.user_name:%s' % pool2.owner.user_name)
+        b.find_element_by_class_name('grid-filter').submit()
+        check_activity_search_results(b, present=[act2], absent=[act1])
+
+        with session.begin():
+            pool1.owning_user = None
+            pool1.owning_group = data_setup.create_group()
+
+        b.get(get_server_base() + 'activity/pool')
+        b.find_element_by_class_name('search-query').send_keys(
+            'pool.owner.group_name:%s' % pool1.owner.group_name)
+        b.find_element_by_class_name('grid-filter').submit()
+        check_activity_search_results(b, present=[act1], absent=[act2])
+

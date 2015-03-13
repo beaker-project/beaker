@@ -35,7 +35,8 @@ from .inventory import (System, SystemStatusDuration, SystemCc, Hypervisor,
         Key, Key_Value_String, Key_Value_Int, Provision, ProvisionFamily,
         ProvisionFamilyUpdate, ExcludeOSMajor, ExcludeOSVersion, LabInfo,
         SystemAccessPolicy, SystemAccessPolicyRule, Reservation,
-        SystemActivity, CommandActivity, SystemPool)
+                        SystemActivity, CommandActivity, SystemPool,
+                        SystemPoolActivity)
 from .scheduler import (Watchdog, TaskBase, Job, RecipeSet, Recipe,
         RecipeTaskResult, MachineRecipe, GuestRecipe, RecipeTask, Log,
         LogRecipe, LogRecipeTask, LogRecipeTaskResult, JobCc, RecipeResource,

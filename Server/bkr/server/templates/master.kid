@@ -100,6 +100,7 @@ from bkr.server.reports import Reports
                 <ul class="dropdown-menu">
                     <li><a href="${tg.url('/activity/')}">All</a></li>
                     <li><a href="${tg.url('/activity/system')}">Systems</a></li>
+                    <li><a href="${tg.url('/activity/pool')}">System Pools</a></li>
                     <li><a href="${tg.url('/activity/labcontroller')}">Lab Controllers</a></li>
                     <li><a href="${tg.url('/activity/group')}">Groups</a></li>
                     <li><a href="${tg.url('/activity/distro')}">Distros</a></li>

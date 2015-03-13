@@ -104,4 +104,16 @@ window.SystemsActivityView = ActivityView.extend({
     },
 });
 
+window.SystemPoolActivityView = ActivityView.extend({
+    initialize: function (options) {
+        options.object_column_label = 'System Pool';
+        options.object_query_builder_columns = [
+                {name: 'pool.name', label: 'System Pool/Name'},
+                {name:'pool.owner.user_name', label: 'Owner/Username'},
+                {name:'pool.owner.group_name', label: 'Owner/Group Name'},
+                ];
+        ActivityView.prototype.initialize.apply(this, arguments);
+    },
+});
+
 })();

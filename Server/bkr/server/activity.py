@@ -12,7 +12,8 @@ from bkr.server.flask_util import json_collection, request_wants_json, \
 from bkr.server.model import (Activity, User, Distro, DistroTree,
         LabController, System, Group, Arch,
         CommandActivity, DistroActivity, DistroTreeActivity,
-        LabControllerActivity, SystemActivity, GroupActivity)
+                              LabControllerActivity, SystemActivity, GroupActivity,
+                              SystemPool, SystemPoolActivity)
 
 # Search field mapping which applies to all activity types.
 common_activity_search_columns = {
@@ -263,4 +264,48 @@ def get_systems_activity(): # distinct from get_system_activity
         'grid_collection_data': json_result,
         'grid_collection_url': request.base_url,
         'grid_view_type': 'SystemsActivityView',
+    })
+
+
+@app.route('/activity/pool', methods=['GET'])
+def get_system_pools_activity():
+    """
+    Returns a pageable JSON collection of all system pool activity records.
+
+    Supports the same fields for filtering and sorting as 
+    :http:get:`/activity/`, with the following additions:
+
+    ``pool``
+        Name of the system pool
+    ``pool.name``
+        Name of the system pool
+    ``pool.owner.user_name``
+        Username of the pool owner (if the pool is owned by a user rather than 
+        by a group).
+    ``pool.owner.group_name``
+        Name of the pool's owning group (if the pool is owned by a group rather 
+        than by a user).
+
+    """
+    query = SystemPoolActivity.query.order_by(SystemPoolActivity.id.desc())
+    query = query.join(SystemPoolActivity.object)\
+            .options(contains_eager(SystemPoolActivity.object)) \
+            .outerjoin(SystemPool.owning_user) \
+            .outerjoin(SystemPool.owning_group)
+    json_result = json_collection(query,
+            columns=dict(common_activity_search_columns.items() + {
+                'pool': SystemPool.name,
+                'pool.name': SystemPool.name,
+                'pool.owner.user_name': User.user_name,
+                'pool.owner.group_name': Group.group_name,
+                }.items()),
+            skip_count=True)
+    if request_wants_json():
+        return jsonify(json_result)
+    return render_tg_template('bkr.server.templates.backgrid', {
+        'title': u'System Pool Activity',
+        'grid_collection_type': 'Activity',
+        'grid_collection_data': json_result,
+        'grid_collection_url': request.base_url,
+        'grid_view_type': 'SystemPoolActivityView',
     })
