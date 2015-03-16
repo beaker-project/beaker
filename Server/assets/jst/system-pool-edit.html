@@ -1,0 +1,30 @@
+<form>
+<div class="modal-header">
+  <a href="#" class="close" data-dismiss="modal" aria-hidden="true">&times;</a>
+  <h3>Edit system pool</h3>
+</div>
+<div class="modal-body">
+  <label for="name">Name</label>
+  <input type="text" id="name" name="name" placeholder="Name" />
+  <label for="description">Description</label>
+  <textarea id="description" name="description" class="input-block-level" />
+  <label for="description">Owner</label>
+  <div class="form-inline">
+    <div class="input-prepend">
+      <select name="owner_type" data-width="auto">
+          <option value="user">User</option>
+          <option value="group">Group</option>
+      </select>
+      <% /* The view will show one or the other of these depending on selected type. */ %>
+      <input type="text" name="user_name" placeholder="Username" required/>
+      <input type="text" name="group_name" placeholder="Group name" required/>
+    </div>
+  </div>
+</div>
+<div class="modal-footer">
+  <div class="sync-status"/>
+  <button type="button" class="btn" data-dismiss="modal" data-loading-text="Cancel">Cancel</button>
+  <button type="submit" class="btn btn-primary" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Saving&hellip;">Save changes</button>
+</div>
+</form>
+

@@ -639,7 +639,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
         A class method that can be used to search systems
         based on the fqdn since it is unique.
         """
-        return System.all(user).filter(System.fqdn.like('%s%%' % fqdn))
+        return System.all(user).filter(System.fqdn.like('%%%s%%' % fqdn))
 
     @classmethod
     def by_id(cls, id, user):
@@ -1624,12 +1624,22 @@ class SystemPool(DeclarativeMappedObject, ActivityMixin):
             (self.name, self.owning_user, self.owning_group)
 
     def __json__(self):
-        return {
+        data = {
             'id': self.id,
             'name': self.name,
             'description':self.description,
-            'owner': self.owner
+            'owner': self.owner,
+            'systems': [system.fqdn for system in self.systems],
+            'access_policy': self.access_policy,
         }
+        if identity.current.user:
+            user = identity.current.user
+            data['can_edit'] = self.can_edit(user)
+            data['can_edit_policy'] = self.can_edit_policy(user)
+        else:
+            data['can_edit'] = False
+            data['can_edit_policy'] = False
+        return data
 
     @validates('owning_group', 'owning_user')
     def validate_owner(self, key, owner):

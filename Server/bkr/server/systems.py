@@ -1401,5 +1401,15 @@ def ipxe_script(uuid):
             % (kernel_url, kernel_options, initrd_url),
             200, [('Content-Type', 'text/plain')])
 
+@app.route('/systems/+typeahead')
+def systems_typeahead():
+    if 'q' in request.args:
+        systems = System.list_by_fqdn(request.args['q'], identity.current.user)
+    else:
+        systems = System.all(identity.current.user)
+    data = [{'fqdn': system.fqdn, 'tokens': [system.fqdn]}
+                    for system in systems.values(System.fqdn)]
+    return jsonify(data=data)
+
 # for sphinx
 systems = SystemsController

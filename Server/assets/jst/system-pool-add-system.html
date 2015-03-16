@@ -1,0 +1,9 @@
+<form class="pool-add-system-form">
+  <div class="input-append">
+    <input name="system" placeholder="FQDN" required maxlength="255"
+           type="text" placeholder="System fqdn"
+           pattern="[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?)*\.?"
+           title="Fully-qualified domain name of up to 255 characters"/>
+    <button class="btn" type="submit" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Adding&hellip;"><i class="fa fa-plus"></i> Add</button>
+  </div>
+</form>

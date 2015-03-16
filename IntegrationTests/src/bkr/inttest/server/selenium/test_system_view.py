@@ -348,7 +348,7 @@ class SystemViewTestWD(WebDriverTestCase):
     def test_add_pool(self):
         with session.begin():
             system = data_setup.create_system()
-            pool = data_setup.create_system_pool(name='Beaker developers')
+            pool = data_setup.create_system_pool()
             orig_date_modified = system.date_modified
         # as admin, assign the system to our test pool
         b = self.browser

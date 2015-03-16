@@ -9,7 +9,9 @@ from bkr.server.model import session, SystemAccessPolicy, SystemPermission, \
         Group
 from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
 from bkr.inttest.server.selenium import WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest.server.webdriver_utils import login, logout, \
+find_policy_checkbox, check_policy_row_is_dirty, \
+check_policy_row_is_not_dirty, check_policy_row_is_absent
 from bkr.inttest.server.requests_utils import put_json
 
 class SystemAccessPolicyWebUITest(WebDriverTestCase):
@@ -28,56 +30,24 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
             p.add_rule(permission=SystemPermission.loan_self,
                     group=data_setup.create_group(group_name=u'test?123#123'))
             p.add_rule(permission=SystemPermission.control_system,
-                    user=data_setup.create_user(user_name=u'poirot'))
+                    user=data_setup.create_user(user_name=u'poirot', password=u'testing'))
             p.add_rule(permission=SystemPermission.loan_any,
                     user=data_setup.create_user(user_name=u'hastings'))
             p.add_rule(permission=SystemPermission.reserve, everybody=True)
         self.browser = self.get_browser()
 
-    def check_row_is_dirty(self, row):
-        pane = self.browser.find_element_by_id('access-policy')
-        # Is it better to check for a class or a specific appearance?
-        # Not sure, so let's do both for now.
-        cell = pane.find_element_by_xpath('.//table/tbody'
-                '/tr[contains(@class, "dirty")]'
-                '/td[1][normalize-space(string(.))="%s"]' % row)
-        self.assertNotEquals(cell.value_of_css_property('background-color'),
-                'transparent')
-
-    def check_row_is_not_dirty(self, row):
-        pane = self.browser.find_element_by_id('access-policy')
-        cell = pane.find_element_by_xpath('.//table/tbody'
-                '/tr[not(contains(@class, "dirty"))]'
-                '/td[1][normalize-space(string(.))="%s"]' % row)
-        self.assertEquals(cell.value_of_css_property('background-color'),
-                'transparent')
-
-    def check_row_is_absent(self, row):
-        pane = self.browser.find_element_by_id('access-policy')
-        pane.find_element_by_xpath(
-                './/table[not(tbody/tr/td[1][normalize-space(string(.))="%s"])]' % row)
-
-    def find_checkbox(self, row, column):
-        """
-        Returns the <input type="checkbox"/> for the given row and column labels.
-        """
-        pane = self.browser.find_element_by_id('access-policy')
-        cols = pane.find_elements_by_xpath('.//table/thead/tr[1]/th')
-        col_num = [col.text for col in cols].index(column) + 1
-        # using * in the xpaths below since it could be td or th
-        row_elem = pane.find_element_by_xpath('.//table/tbody/tr[normalize-space(string(.))="%s"]' % row)
-        return row_elem.find_element_by_xpath('./*[%d]/input[@type="checkbox"]' % col_num)
-
     def check_checkboxes(self):
+        b = self.browser
         pane = self.browser.find_element_by_id('access-policy')
         # corresponds to the rules added in setUp
         pane.find_element_by_xpath('.//table/tbody[1]/tr[1]/th[text()="Group"]')
-        self.assertTrue(self.find_checkbox('detectives', 'Edit system details').is_selected())
-        self.assertTrue(self.find_checkbox('sidekicks', 'Loan to self').is_selected())
+        self.assertTrue(find_policy_checkbox(b, 'detectives', 'Edit system details') \
+                        .is_selected())
+        self.assertTrue(find_policy_checkbox(b, 'sidekicks', 'Loan to self').is_selected())
         pane.find_element_by_xpath('.//table/tbody[2]/tr[1]/th[text()="User"]')
-        self.assertTrue(self.find_checkbox('poirot', 'Control power').is_selected())
-        self.assertTrue(self.find_checkbox('hastings', 'Loan to anyone').is_selected())
-        self.assertTrue(self.find_checkbox('Everybody', 'Reserve').is_selected())
+        self.assertTrue(find_policy_checkbox(b, 'poirot', 'Control power').is_selected())
+        self.assertTrue(find_policy_checkbox(b, 'hastings', 'Loan to anyone').is_selected())
+        self.assertTrue(find_policy_checkbox(b, 'Everybody', 'Reserve').is_selected())
 
     def test_read_only_view(self):
         b = self.browser
@@ -107,33 +77,32 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
 
         # grant loan_any permission to poirot user
         pane = b.find_element_by_id('access-policy')
-        checkbox = self.find_checkbox('poirot', 'Loan to anyone')
+        checkbox = find_policy_checkbox(b, 'poirot', 'Loan to anyone')
         self.assertFalse(checkbox.is_selected())
         checkbox.click()
-        self.check_row_is_dirty('poirot')
+        check_policy_row_is_dirty(b, 'poirot')
         pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
-        self.check_row_is_not_dirty('poirot')
+        check_policy_row_is_not_dirty(b, 'poirot')
 
         # refresh to check it is persisted
         b.get(get_server_base() + 'view/%s/' % self.system.fqdn)
         b.find_element_by_link_text('Access Policy').click()
-        self.assertTrue(self.find_checkbox('poirot', 'Loan to anyone').is_selected())
+        self.assertTrue(find_policy_checkbox(b, 'poirot', 'Loan to anyone').is_selected())
 
     def test_remove_rule(self):
         b = self.browser
         login(b, user=self.system_owner.user_name, password='owner')
         b.get(get_server_base() + 'view/%s/' % self.system.fqdn)
         b.find_element_by_link_text('Access Policy').click()
-
         # revoke loan_self permission from sidekicks group
         pane = b.find_element_by_id('access-policy')
-        checkbox = self.find_checkbox('sidekicks', 'Loan to self')
+        checkbox = find_policy_checkbox(b, 'sidekicks', 'Loan to self')
         self.assertTrue(checkbox.is_selected())
         checkbox.click()
-        self.check_row_is_dirty('sidekicks')
+        check_policy_row_is_dirty(b, 'sidekicks')
         pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
         # "sidekicks" row is completely absent now due to having no permissions
-        self.check_row_is_absent('sidekicks')
+        check_policy_row_is_absent(b, 'sidekicks')
 
         # refresh to check it is persisted
         b.get(get_server_base() + 'view/%s/' % self.system.fqdn)
@@ -153,15 +122,15 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
         pane = b.find_element_by_id('access-policy')
         pane.find_element_by_xpath('.//input[@placeholder="Username"]')\
             .send_keys('marple\n')
-        self.find_checkbox('marple', 'Edit this policy').click()
-        self.check_row_is_dirty('marple')
+        find_policy_checkbox(b, 'marple', 'Edit this policy').click()
+        check_policy_row_is_dirty(b, 'marple')
         pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
-        self.check_row_is_not_dirty('marple')
+        check_policy_row_is_not_dirty(b, 'marple')
 
         # refresh to check it has been persisted
         b.get(get_server_base() + 'view/%s/' % self.system.fqdn)
         b.find_element_by_link_text('Access Policy').click()
-        self.assertTrue(self.find_checkbox('marple', 'Edit this policy').is_selected())
+        self.assertTrue(find_policy_checkbox(b, 'marple', 'Edit this policy').is_selected())
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1076322
     def test_group_not_in_cache(self):
@@ -185,7 +154,7 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
         pane.find_element_by_xpath('.//div[@class="tt-suggestion" and '
                 'contains(string(.), "beatles")]')
         group_input.send_keys('\n')
-        self.find_checkbox('beatles', 'Edit this policy')
+        find_policy_checkbox(b, 'beatles', 'Edit this policy')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1073767
     # https://bugzilla.redhat.com/show_bug.cgi?id=1085028
@@ -208,7 +177,7 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
         pane = b.find_element_by_id('access-policy')
         pane.find_element_by_xpath('.//input[@placeholder="Username"]')\
             .send_keys('this_user_does_not_exist\n')
-        self.find_checkbox('this_user_does_not_exist', 'Edit this policy').click()
+        find_policy_checkbox(b, 'this_user_does_not_exist', 'Edit this policy').click()
         pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
         pane.find_element_by_xpath('.//span[@class="sync-status" and '
             'contains(string(.), "No such user")]')
@@ -222,9 +191,31 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
         b.get(get_server_base() + 'view/%s/' % self.system.fqdn)
         b.find_element_by_link_text('Access Policy').click()
         pane = b.find_element_by_id('access-policy')
-        self.find_checkbox('Everybody', 'View')
+        find_policy_checkbox(b, 'Everybody', 'View')
         for checkbox in pane.find_elements_by_xpath('.//input[@type="checkbox"]'):
             self.assertFalse(checkbox.is_selected())
+
+    def test_remove_self_edit_policy_permission(self):
+        b = self.browser
+        login(b, user=self.system_owner.user_name, password='owner')
+        b.get(get_server_base() + 'view/%s/' % self.system.fqdn)
+        b.find_element_by_link_text('Access Policy').click()
+        pane = b.find_element_by_id('access-policy')
+        # grant poirot edit_policy permission
+        find_policy_checkbox(b, 'poirot', 'Edit this policy').click()
+        pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        logout(b)
+        login(b, user='poirot', password='testing')
+        b.get(get_server_base() + 'view/%s/' % self.system.fqdn)
+        b.find_element_by_link_text('Access Policy').click()
+        pane = b.find_element_by_id('access-policy')
+        # remove self edit_policy permission
+        find_policy_checkbox(b, 'poirot', 'Edit this policy').click()
+        pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        # the widget should be readonly
+        pane.find_element_by_xpath('.//table[not(.//input[@type="checkbox" and not(@disabled)])]')
+        pane.find_element_by_xpath('.//table[not(.//input[@type="text"])]')
+
 
 class SystemAccessPolicyHTTPTest(DatabaseTestCase):
     """

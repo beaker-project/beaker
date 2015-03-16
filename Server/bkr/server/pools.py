@@ -309,7 +309,6 @@ def get_access_policy(pool_name):
     Get access policy for pool
 
     :param pool_name: System pool's name.
-
     """
     pool = _get_pool_by_name(pool_name)
     rules = pool.access_policy.rules

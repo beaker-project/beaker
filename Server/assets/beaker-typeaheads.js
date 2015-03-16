@@ -59,6 +59,20 @@ $.fn.beaker_typeahead = function (type) {
             limit: 10,
             template: JST['beaker-typeaheads/pool-name'],
         },
+        'system-fqdn': {
+            name: 'beaker-system-fqdn',
+            prefetch: {
+                url: beaker_url_prefix + 'systems/+typeahead',
+                filter: results_filter,
+            },
+            remote: {
+                url: beaker_url_prefix + 'systems/+typeahead?q=%QUERY',
+                filter: results_filter,
+            },
+            valueKey: 'fqdn',
+            limit: 10,
+            template: JST['beaker-typeaheads/system-fqdn'],
+        },
     })[type];
     this.typeahead(options);
 

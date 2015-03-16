@@ -85,9 +85,11 @@ def _create_env(source_dir, output_dir, **kwargs):
             'recipe-tasks.js',
             'reserve-workflow.js',
             'scheduler-model.js',
-            'system-access-policy.js',
+            'access-policy.js',
+            'access-policy-model.js',
             'system-activity.js',
             'system-add.js',
+            'system-access-policy.js',
             'system-commands.js',
             'system-executed-tasks.js',
             'system-hardware.js',
@@ -101,6 +103,9 @@ def _create_env(source_dir, output_dir, **kwargs):
             'system-rename.js',
             'system-report-problem.js',
             'system-scheduler-settings.js',
+            'system-pool-access-policy.js',
+            'system-pool-info.js',
+            'system-pool-systems.js',
             filters=['uglifyjs'],
             output='beaker-%(version)s.js')
     return env

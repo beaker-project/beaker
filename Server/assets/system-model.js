@@ -24,21 +24,7 @@ window.Reservation = Backbone.Model.extend({
     },
 });
 
-var AccessPolicyRule = Backbone.Model.extend({
-    // ensure the 'everybody' attribute is filled in
-    initialize: function (attributes, options) {
-        if (!_.has(attributes, 'everybody')) {
-            this.set('everybody', (attributes['user'] == null && 
-                    attributes['group'] == null));
-        }
-    },
-});
-
-var AccessPolicyRules = Backbone.Collection.extend({
-    model: AccessPolicyRule,
-});
-
-window.AccessPolicy = Backbone.Model.extend({
+window.SystemAccessPolicy = Backbone.Model.extend({
     initialize: function (attributes, options) {
         this.system = options.system;
     },
@@ -48,6 +34,19 @@ window.AccessPolicy = Backbone.Model.extend({
     parse: function (data) {
         data['rules'] = new AccessPolicyRules(data['rules'], {parse: true});
         return data;
+    },
+    save_access_policy: function (options) {
+        var model = this;
+        options = options || {};
+        this.save({}, {
+            success: function (data, status, jqxhr) {
+                // We refresh the entire system since permissions are likely to 
+                // have changed. Don't invoke the success/error callbacks until 
+                // the refresh is complete.
+                this.system.fetch({success: options.success, error: options.error});
+            },
+            error: options.error,
+        });
     },
 });
 
@@ -98,18 +97,83 @@ window.SystemExecutedTasks = BeakerPageableCollection.extend({
     },
 });
 
+window.SystemPoolAccessPolicy = Backbone.Model.extend({
+    initialize: function (attributes, options) {
+        this.system_pool = options.system_pool;
+    },
+    url: function () {
+        return _.result(this.system_pool, 'url') + 'access-policy/';
+    },
+    parse: function (data) {
+        data['rules'] = new AccessPolicyRules(data['rules'], {parse: true});
+        return data;
+    },
+    save_access_policy: function (options) {
+        this.save({}, {
+            success: function (data, status, jqxhr) {
+                // to refresh the can_edit_policy attribute
+                this.system_pool.fetch({success: options.success, error: options.error});
+            },
+            error: options.error,
+        });
+    },
+});
+
 window.SystemPool = Backbone.Model.extend({
+    _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>pools/<%- encodeURIComponent(name) %>/"><%- name %></a>'),
+    toHTML: function () {
+        return this._toHTML_template(this.attributes);
+    },
+    initialize: function (attributes, options) {
+        if(options.url)
+            this.url = options.url;
+    },
     parse: function (data) {
         data['owner'] = !_.isEmpty(data['owner'])
                 ? (!_.isEmpty(data['owner']['group_name'])
                     ? new Group(data['owner'], {parse: true})
                     : new User(data['owner'], {parse: true}))
                 : null;
+        data['access_policy'] = new SystemPoolAccessPolicy(data['access_policy'],
+                {parse: true, system_pool: this});
         return data;
     },
-    _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>pools/<%- encodeURIComponent(name) %>/"><%- name %></a>'),
-    toHTML: function () {
-        return this._toHTML_template(this.attributes);
+    add_system: function (system, options) {
+        var model = this;
+        options = options || {};
+        $.ajax({
+            url: this.url + 'systems/',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({'fqdn': system}),
+            success: function (data, status, jqxhr) {
+                model.set({'systems': model.get('systems').concat([system])});
+                if (options.success)
+                    options.success(model, data, options);
+            },
+            error: function (jqxhr, status, error) {
+                if (options.error)
+                    options.error(model, jqxhr, options);
+            },
+        });
+    },
+    remove_system: function (system, options) {
+        var model = this;
+        options = options || {};
+        $.ajax({
+            url: this.url + 'systems/' + '?fqdn=' + encodeURIComponent(system),
+            type: 'DELETE',
+            contentType: 'application/json',
+            success: function (data, status, jqxhr) {
+                if (options.success)
+                    options.success(model, data, options);
+                model.set({'systems': _.without(model.get('systems'), system)});
+            },
+            error: function (jqxhr, status, error) {
+                if (options.error)
+                    options.error(model, jqxhr, options);
+            },
+        });
     },
 });
 
@@ -141,7 +205,7 @@ window.System = Backbone.Model.extend({
                 new Reservation(data['current_reservation'], {parse: true}) : null);
         data['previous_reservation'] = (!_.isEmpty(data['previous_reservation']) ?
                 new Reservation(data['previous_reservation'], {parse: true}) : null);
-        data['access_policy'] = new AccessPolicy(data['access_policy'],
+        data['access_policy'] = new SystemAccessPolicy(data['access_policy'],
                 {parse: true, system: this});
         data['reprovision_distro_tree'] = (!_.isEmpty(data['reprovision_distro_tree']) ?
                 new DistroTree(data['reprovision_distro_tree'], {parse: true}) : null);
@@ -436,21 +500,6 @@ window.System = Backbone.Model.extend({
                 if (options.error)
                     options.error(model, jqxhr, options);
             },
-        });
-    },
-    // call this instead of calling .get('access_policy').save() directly, so 
-    // that the system attributes can be refreshed
-    save_access_policy: function (options) {
-        var model = this;
-        options = options || {};
-        this.get('access_policy').save({}, {
-            success: function (data, status, jqxhr) {
-                // We refresh the entire system since permissions are likely to 
-                // have changed. Don't invoke the success/error callbacks until 
-                // the refresh is complete.
-                model.fetch({success: options.success, error: options.error});
-            },
-            error: options.error,
         });
     },
 });

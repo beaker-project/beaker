@@ -165,6 +165,39 @@ def click_menu_item(browser, menu_item, submenu_item):
            .find_element_by_link_text(submenu_item)\
            .click()
 
+def check_policy_row_is_dirty(browser, row):
+    pane = browser.find_element_by_id('access-policy')
+    # Is it better to check for a class or a specific appearance?
+    # Not sure, so let's do both for now.
+    cell = pane.find_element_by_xpath('.//table/tbody'
+            '/tr[contains(@class, "dirty")]'
+            '/td[1][normalize-space(string(.))="%s"]' % row)
+    assert cell.value_of_css_property('background-color') != 'transparent'
+
+def check_policy_row_is_not_dirty(browser, row):
+    pane = browser.find_element_by_id('access-policy')
+    cell = pane.find_element_by_xpath('.//table/tbody'
+            '/tr[not(contains(@class, "dirty"))]'
+            '/td[1][normalize-space(string(.))="%s"]' % row)
+    assert cell.value_of_css_property('background-color') == 'transparent'
+
+def check_policy_row_is_absent(browser, row):
+    pane = browser.find_element_by_id('access-policy')
+    pane.find_element_by_xpath(
+            './/table[not(tbody/tr/td[1][normalize-space(string(.))="%s"])]' % row)
+
+def find_policy_checkbox(browser, row, column):
+    """
+    Returns the <input type="checkbox"/> for the given row and column labels.
+    """
+    pane = browser.find_element_by_id('access-policy')
+    cols = pane.find_elements_by_xpath('.//table/thead/tr[1]/th')
+    col_num = [col.text for col in cols].index(column) + 1
+    # using * in the xpaths below since it could be td or th
+    row_elem = pane.find_element_by_xpath('.//table/tbody/tr[normalize-space(string(.))="%s"]' % row)
+    return row_elem.find_element_by_xpath('./*[%d]/input[@type="checkbox"]' % col_num)
+
+
 class BootstrapSelect(object):
     """
     Like selenium.webdriver.ui.support.Select but for bootstrap-select, 

@@ -1,9 +1,18 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import requests
 from bkr.server.model import session, SystemAccessPolicy, SystemPermission, \
         Group, SystemPool, User, Activity
 from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
 from bkr.inttest.server.selenium import WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login, check_pool_search_results
+from bkr.inttest.server.webdriver_utils import login, logout, \
+check_pool_search_results, BootstrapSelect, find_policy_checkbox,\
+check_policy_row_is_dirty, check_policy_row_is_not_dirty, \
+check_policy_row_is_absent
 from bkr.inttest.server.requests_utils import put_json, post_json, patch_json
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -38,10 +47,316 @@ class SystemPoolsGridTest(WebDriverTestCase):
         modal = b.find_element_by_class_name('modal')
         modal.find_element_by_name('name').send_keys('inflatable')
         modal.find_element_by_tag_name('form').submit()
-        import time; time.sleep(5) # XXX replace when pool page is implemented
+        b.find_element_by_xpath('//title[text()="inflatable"]')
         with session.begin():
             pool = SystemPool.by_name(u'inflatable')
             self.assertEquals(pool.owner, User.by_user_name(data_setup.ADMIN_USER))
+
+
+class SystemPoolEditTest(WebDriverTestCase):
+
+    def setUp(self):
+        with session.begin():
+            self.user = data_setup.create_user()
+            self.pool = data_setup.create_system_pool(owning_user=self.user)
+        self.browser = self.get_browser()
+
+    def go_to_pool_edit(self, system_pool=None, tab=None):
+        if system_pool is None:
+            system_pool = self.pool
+        b = self.browser
+        b.get(get_server_base() + 'pools/%s/' % system_pool.name)
+        b.find_element_by_xpath('//title[normalize-space(text())="%s"]' % \
+            system_pool.name)
+        if tab:
+            b.find_element_by_xpath('//ul[contains(@class, "system-pool-nav")]'
+                    '//a[text()="%s"]' % tab).click()
+
+    def test_edit_button_is_absent_when_not_logged_in(self):
+        b = self.browser
+        self.go_to_pool_edit()
+        b.find_element_by_xpath('//div[@id="system-pool-info" and '
+                'not(.//button[normalize-space(string(.))="Edit"])]')
+
+    def test_page_info_display(self):
+        self.go_to_pool_edit()
+        b = self.browser
+        pool_info = b.find_element_by_id('system-pool-info')
+        # name
+        pool_info.find_element_by_xpath('.//h1[normalize-space(text())="%s"]' % \
+                                           self.pool.name)
+        # owner
+        pool_info.find_element_by_xpath('.//h1/small[contains(text(), %s)]' % \
+                                   self.pool.owner.display_name)
+        # description
+        pool_info.find_element_by_xpath('.//p[text()="%s"]' % \
+                           self.pool.description)
+
+    def test_update_pool(self):
+        with session.begin():
+            pool = data_setup.create_system_pool()
+            group = data_setup.create_group()
+        b = self.browser
+        login(b)
+        self.go_to_pool_edit(system_pool=pool)
+        b.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('description').clear()
+        modal.find_element_by_name('description').send_keys('newdescription')
+        BootstrapSelect(modal.find_element_by_name('owner_type'))\
+            .select_by_visible_text('Group')
+        modal.find_element_by_name('group_name').clear()
+        modal.find_element_by_name('group_name').send_keys(group.group_name)
+        modal.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        b.find_element_by_xpath('//body[not(.//div[@id="modal"])]')
+        with session.begin():
+            session.refresh(pool)
+            self.assertEqual(pool.description, 'newdescription')
+            self.assertEqual(pool.owner, group)
+
+    def test_add_system(self):
+        with session.begin():
+            system = data_setup.create_system()
+            pool = data_setup.create_system_pool()
+        b = self.browser
+        login(b)
+        self.go_to_pool_edit(system_pool=pool, tab='Systems')
+        b.find_element_by_name('system').send_keys(system.fqdn)
+        b.find_element_by_class_name('pool-add-system-form').submit()
+        self.assertEquals(b.find_element_by_xpath('//div[@id="systems"]'
+                                                  '/div/ul[@class="list-group pool-systems-list"]'
+                                                  '/li/a').text, system.fqdn)
+        with session.begin():
+            session.refresh(pool)
+            self.assertIn(system, pool.systems)
+
+    def test_remove_system(self):
+        with session.begin():
+            system = data_setup.create_system()
+            pool = data_setup.create_system_pool()
+            pool.systems.append(system)
+        b = self.browser
+        login(b)
+        self.go_to_pool_edit(system_pool=pool, tab='Systems')
+        b.find_element_by_link_text(system.fqdn)
+        # remove
+        b.find_element_by_xpath('//li[contains(a/text(), "%s")]/button' % system.fqdn).click()
+        b.find_element_by_xpath('//div[@id="systems" and '
+                                'not(./div/ul/li)]')
+        with session.begin():
+            session.refresh(pool)
+            self.assertNotIn(system, pool.systems)
+
+
+class SystemPoolAccessPolicyWebUITest(WebDriverTestCase):
+
+    def setUp(self):
+        with session.begin():
+            self.pool_owner = data_setup.create_user(password='owner')
+            self.pool = data_setup.create_system_pool(owning_user=self.pool_owner)
+            # create an assortment of different rules
+            p = self.pool.access_policy
+            p.add_rule(permission=SystemPermission.edit_system,
+                    group=data_setup.create_group(group_name=u'pdetectives'))
+            p.add_rule(permission=SystemPermission.loan_self,
+                    group=data_setup.create_group(group_name=u'psidekicks'))
+            p.add_rule(permission=SystemPermission.loan_self,
+                    group=data_setup.create_group(group_name=u'test?123#1234'))
+            p.add_rule(permission=SystemPermission.control_system,
+                    user=data_setup.create_user(user_name=u'anotherpoirot',
+                                                password='testing'))
+            p.add_rule(permission=SystemPermission.loan_any,
+                    user=data_setup.create_user(user_name=u'anotherhastings'))
+            p.add_rule(permission=SystemPermission.reserve, everybody=True)
+        self.browser = self.get_browser()
+
+    def check_checkboxes(self):
+        b = self.browser
+        pane = self.browser.find_element_by_id('access-policy')
+        # corresponds to the rules added in setUp
+        pane.find_element_by_xpath('.//table/tbody[1]/tr[1]/th[text()="Group"]')
+        self.assertTrue(find_policy_checkbox(b, 'pdetectives', 'Edit system details') \
+                    .is_selected())
+        self.assertTrue(find_policy_checkbox(b, 'psidekicks', 'Loan to self').is_selected())
+        pane.find_element_by_xpath('.//table/tbody[2]/tr[1]/th[text()="User"]')
+        self.assertTrue(find_policy_checkbox(b, 'anotherpoirot', 'Control power').is_selected())
+        self.assertTrue(find_policy_checkbox(b, 'anotherhastings', 'Loan to anyone').is_selected())
+        self.assertTrue(find_policy_checkbox(b, 'Everybody', 'Reserve').is_selected())
+
+    def go_to_pool_edit(self, pool=None):
+        if pool is None:
+            pool = self.pool
+        b = self.browser
+        b.get(get_server_base() + 'pools/%s/' % pool.name)
+
+    def test_read_only_view(self):
+        b = self.browser
+        self.go_to_pool_edit()
+        b.find_element_by_link_text('Access Policy').click()
+        self.check_checkboxes()
+        # in read-only view, all checkboxes should be disabled
+        # and user/group inputs should be absent
+        pane = b.find_element_by_id('access-policy')
+        for checkbox in pane.find_elements_by_xpath('.//input[@type="checkbox"]'):
+            self.assertFalse(checkbox.is_enabled(),
+                    '%s should be disabled' % checkbox.get_attribute('id'))
+        pane.find_element_by_xpath('.//table[not(.//input[@type="text"])]')
+
+    def test_owner_view(self):
+        b = self.browser
+        login(b, user=self.pool_owner.user_name, password='owner')
+        self.go_to_pool_edit()
+        b.find_element_by_link_text('Access Policy').click()
+        self.check_checkboxes()
+
+    def test_add_rule(self):
+        b = self.browser
+        login(b, user=self.pool_owner.user_name, password='owner')
+        self.go_to_pool_edit()
+        b.find_element_by_link_text('Access Policy').click()
+
+        # grant loan_any permission to anotherpoirot user
+        pane = b.find_element_by_id('access-policy')
+        checkbox = find_policy_checkbox(b, 'anotherpoirot', 'Loan to anyone')
+        self.assertFalse(checkbox.is_selected())
+        checkbox.click()
+        check_policy_row_is_dirty(b, 'anotherpoirot')
+        pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        check_policy_row_is_not_dirty(b, 'anotherpoirot')
+
+        # refresh to check it is persisted
+        self.go_to_pool_edit()
+        b.find_element_by_link_text('Access Policy').click()
+        self.assertTrue(find_policy_checkbox(b, 'anotherpoirot', 'Loan to anyone').is_selected())
+
+    def test_remove_rule(self):
+        b = self.browser
+        login(b, user=self.pool_owner.user_name, password='owner')
+        self.go_to_pool_edit()
+        b.find_element_by_link_text('Access Policy').click()
+
+        # revoke loan_self permission from psidekicks group
+        pane = b.find_element_by_id('access-policy')
+        checkbox = find_policy_checkbox(b, 'psidekicks', 'Loan to self')
+        self.assertTrue(checkbox.is_selected())
+        checkbox.click()
+        check_policy_row_is_dirty(b, 'psidekicks')
+        pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        # "psidekicks" row is completely absent now due to having no permissions
+        check_policy_row_is_absent(b, 'psidekicks')
+
+        # refresh to check it is persisted
+        self.go_to_pool_edit()
+        b.find_element_by_link_text('Access Policy').click()
+        pane = b.find_element_by_id('access-policy')
+        self.assertNotIn('psidekicks', pane.text)
+
+    def test_add_rule_for_new_user(self):
+        with session.begin():
+            data_setup.create_user(user_name=u'marple')
+        b = self.browser
+        login(b, user=self.pool_owner.user_name, password='owner')
+        self.go_to_pool_edit()
+        b.find_element_by_link_text('Access Policy').click()
+
+        # grant edit_policy permission to marple user
+        pane = b.find_element_by_id('access-policy')
+        pane.find_element_by_xpath('.//input[@placeholder="Username"]')\
+            .send_keys('marple\n')
+        find_policy_checkbox(b, 'marple', 'Edit this policy').click()
+        check_policy_row_is_dirty(b, 'marple')
+        pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        check_policy_row_is_not_dirty(b, 'marple')
+
+        # refresh to check it has been persisted
+        self.go_to_pool_edit()
+        b.find_element_by_link_text('Access Policy').click()
+        self.assertTrue(find_policy_checkbox(b, 'marple', 'Edit this policy').is_selected())
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1076322
+    def test_group_not_in_cache(self):
+        b = self.browser
+        login(b, user=self.pool_owner.user_name, password='owner')
+        self.go_to_pool_edit()
+        b.find_element_by_link_text('Access Policy').click()
+        pane = b.find_element_by_id('access-policy')
+        # type the group name before it exists
+        with session.begin():
+            self.assertEquals(Group.query.filter_by(group_name=u'anotherbeatles').first(), None)
+        group_input = pane.find_element_by_xpath('.//input[@placeholder="Group name"]')
+        group_input.send_keys('anotherbeatles')
+        # group is created
+        with session.begin():
+            data_setup.create_group(group_name=u'anotherbeatles')
+        # type it again
+        group_input.clear()
+        group_input.send_keys('anotherbeatles')
+        # suggestion should appear
+        pane.find_element_by_xpath('.//div[@class="tt-suggestion" and '
+                'contains(string(.), "anotherbeatles")]')
+        group_input.send_keys('\n')
+        find_policy_checkbox(b, 'anotherbeatles', 'Edit this policy')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1073767
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1085028
+    def test_click_group_name(self):
+        b = self.browser
+        login(b, user=self.pool_owner.user_name, password='owner')
+        self.go_to_pool_edit()
+        b.find_element_by_link_text('Access Policy').click()
+        pane = b.find_element_by_id('access-policy')
+        pane.find_element_by_link_text('test?123#1234').click()
+        b.find_element_by_xpath('//h1[text()="Group test?123#1234"]')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1086506
+    def test_add_rule_for_nonexistent_user(self):
+        b = self.browser
+        login(b, user=self.pool_owner.user_name, password='owner')
+        self.go_to_pool_edit()
+        b.find_element_by_link_text('Access Policy').click()
+
+        pane = b.find_element_by_id('access-policy')
+        pane.find_element_by_xpath('.//input[@placeholder="Username"]')\
+            .send_keys('this_user_does_not_exist\n')
+        find_policy_checkbox(b, 'this_user_does_not_exist', 'Edit this policy').click()
+        pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        pane.find_element_by_xpath('.//span[@class="sync-status" and '
+            'contains(string(.), "No such user")]')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1160513
+    def test_empty_policy(self):
+        with session.begin():
+            self.pool.access_policy.rules[:] = []
+        b = self.browser
+        login(b, user=self.pool_owner.user_name, password='owner')
+        self.go_to_pool_edit()
+        b.find_element_by_link_text('Access Policy').click()
+        pane = b.find_element_by_id('access-policy')
+        find_policy_checkbox(b, 'Everybody', 'View')
+        for checkbox in pane.find_elements_by_xpath('.//input[@type="checkbox"]'):
+            self.assertFalse(checkbox.is_selected())
+
+    def test_remove_self_edit_policy_permission(self):
+        b = self.browser
+        login(b, user=self.pool_owner.user_name, password='owner')
+        self.go_to_pool_edit()
+        b.find_element_by_link_text('Access Policy').click()
+        pane = b.find_element_by_id('access-policy')
+        # grant anotherpoirot edit_policy permission
+        find_policy_checkbox(b, 'anotherpoirot', 'Edit this policy').click()
+        pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        logout(b)
+        login(b, user='anotherpoirot', password='testing')
+        self.go_to_pool_edit()
+        b.find_element_by_link_text('Access Policy').click()
+        pane = b.find_element_by_id('access-policy')
+        # remove self edit_policy permission
+        find_policy_checkbox(b, 'anotherpoirot', 'Edit this policy').click()
+        pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        # the widget should be readonly
+        pane.find_element_by_xpath('.//table[not(.//input[@type="checkbox" and not(@disabled)])]')
+        pane.find_element_by_xpath('.//table[not(.//input[@type="text"])]')
+
 
 class SystemPoolHTTPTest(DatabaseTestCase):
     """
@@ -224,6 +539,7 @@ class SystemPoolHTTPTest(DatabaseTestCase):
                               .filter(Activity.action == u'Deleted')
                               .filter(Activity.old_value == pool_name).count(),
                               'Expected to find activity record for pool deletion')
+
 
 class SystemPoolAccessPolicyHTTPTest(DatabaseTestCase):
     """
