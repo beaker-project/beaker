@@ -300,7 +300,7 @@ def create_system_pool(name=None, description='A system Pool',
     if owning_group and owning_user:
         raise ValueError('Must supply either an owning user or an owning group')
     if not owning_group and not owning_user:
-        owning_group = create_group()
+        owning_user = create_user()
     if name is None:
         name = unique_name(u'test-system-pool-%s')
     pool = SystemPool(name=name, description=description,
