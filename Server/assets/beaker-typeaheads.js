@@ -45,6 +45,20 @@ $.fn.beaker_typeahead = function (type) {
             limit: 10,
             template: JST['beaker-typeaheads/user-name'],
         },
+        'pool-name': {
+            name: 'beaker-pool-name',
+            prefetch: {
+                url: beaker_url_prefix + 'pools/+typeahead',
+                filter: results_filter,
+            },
+            remote: {
+                url: beaker_url_prefix + 'pools/+typeahead?q=%QUERY',
+                filter: results_filter,
+            },
+            valueKey: 'name',
+            limit: 10,
+            template: JST['beaker-typeaheads/pool-name'],
+        },
     })[type];
     this.typeahead(options);
 

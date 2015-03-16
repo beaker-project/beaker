@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import re
 from flask import jsonify, request
 from bkr.server import identity
 from bkr.server.app import app
@@ -61,6 +62,17 @@ def get_pools():
         'grid_add_label': 'Create',
         'grid_add_view_type': 'PoolCreateModal' if not identity.current.anonymous else 'null',
     })
+
+_typeahead_split_pattern = re.compile(r'[-\s]+')
+@app.route('/pools/+typeahead')
+def pools_typeahead():
+    if 'q' in request.args:
+        pools = SystemPool.query.filter(SystemPool.name.like('%%%s%%' % request.args['q']))
+    else:
+        pools = SystemPool.query
+    data = [{'name': pool.name, 'tokens': _typeahead_split_pattern.split(pool.name.strip())}
+            for pool in pools.values(SystemPool.name)]
+    return jsonify(data=data)
 
 def _get_pool_by_name(pool_name, lockmode=False):
     """Get system pool by name, reporting HTTP 404 if the system pool is not found"""

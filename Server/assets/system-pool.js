@@ -53,6 +53,7 @@
         },
         render: function () {
             this.$el.html(this.template(this.model.attributes));
+            this.$('input[name="pool"]').beaker_typeahead('pool-name');
             this.$('button[type=submit]').prop('disabled', true);
         },
         update_button_state: function () {
@@ -67,7 +68,7 @@
                 var new_pool = this.$('input[name=pool]').val();
                 if (_.contains(this.model.get('pools'), new_pool)) {
                     // nothing to do
-                    this.$('input[name=pool]').val('');
+                    this.$('input[name=pool]').typeahead('setQuery', '');
                     return false;
                 } else {
                     // If the pool does not exist, create it after confirming
