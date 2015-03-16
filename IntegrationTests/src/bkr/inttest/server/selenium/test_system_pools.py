@@ -31,7 +31,8 @@ class SystemPoolHTTPTest(DatabaseTestCase):
             self.owner = data_setup.create_user(password='theowner')
             self.system = data_setup.create_system(owner=self.owner, shared=False)
             self.pool = data_setup.create_system_pool(owning_user=self.owner)
-            self.user = data_setup.create_user()
+            self.user = data_setup.create_user(password='password')
+            self.group = data_setup.create_group()
             self.pool.systems[:] = [self.system]
 
     def test_create_system_pool(self):
@@ -75,6 +76,19 @@ class SystemPoolHTTPTest(DatabaseTestCase):
             self.assertEquals(self.pool.description, 'newdescription')
             self.assertEquals(self.pool.owner.user_name, self.user.user_name)
 
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': self.user.user_name,
+                                                  'password': 'password'}).raise_for_status()
+        response = patch_json(get_server_base() +
+                              'pools/%s/' % self.pool.name, session=s,
+                              data={'name': 'newname',
+                                    'description': 'newdescription',
+                                    'owner': {'group_name': self.group.group_name}})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.pool.owner, self.group)
+            self.assertFalse(self.pool.owning_user)
 
 class SystemPoolAccessPolicyHTTPTest(DatabaseTestCase):
     """

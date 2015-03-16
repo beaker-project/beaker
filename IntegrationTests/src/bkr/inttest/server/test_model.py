@@ -241,22 +241,23 @@ class TestSystemPool(DatabaseTestCase):
         self.assertRaises(ValueError, lambda: data_setup.create_system_pool(name='pool-1/'))
 
     def test_system_pool_owner(self):
-        group = data_setup.create_group()
         user1 = data_setup.create_user()
+        pool = data_setup.create_system_pool(owning_user=user1)
+        session.flush()
+        self.assertEquals(pool.owner, user1)
+
+        # change owner to group
+        group = data_setup.create_group()
+        pool.owning_user = None
+        pool.owning_group = group
+        session.flush()
+        self.assertEquals(pool.owner, group)
+        self.assertFalse(pool.has_owner(user1))
+
+        # check ownership
         user1.groups.append(group)
-        data_setup.create_system_pool(name='pool-1', owning_group=group)
         session.flush()
-
-        pool = SystemPool.by_name('pool-1')
         self.assertTrue(pool.has_owner(user1))
-
-        user2 = data_setup.create_user()
-        pool.owning_group = None
-        pool.owning_user = user2
-        session.flush()
-
-        self.assertFalse(pool.has_owner(user=user1))
-        self.assertTrue(pool.has_owner(user=user2))
 
     def test_system_pool_access_policy(self):
         system1 = data_setup.create_system()

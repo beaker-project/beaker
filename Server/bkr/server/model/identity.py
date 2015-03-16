@@ -135,8 +135,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
     tasks = relationship('Task', back_populates='uploader')
 
     activity_type = UserActivity
-    system_pools = relationship('SystemPool', back_populates='owning_user',
-                                cascade='all, delete, delete-orphan')
+    system_pools = relationship('SystemPool', back_populates='owning_user')
     _unnormalized_username_pattern = re.compile(r'^\s|\s\s|\s$')
     @validates('user_name')
     def validate_user_name(self, key, value):
