@@ -203,6 +203,28 @@ var BeakerBackgridPaginator = Backbone.View.extend({
     },
 });
 
+var BeakerBackgridAddButton = Backbone.View.extend({
+    tagName: 'div',
+    className: 'grid-add',
+    events: {
+        'click button': 'add',
+    },
+    initialize: function (options) {
+        this.label = options.label || 'Add';
+        this.view_type = options.view_type;
+    },
+    render: function () {
+        var button = $('<button type="button" class="btn btn-primary"/>')
+            .append('<i class="fa fa-plus"></i>')
+            .append(' ' + this.label);
+        this.$el.empty().append(button);
+        return this;
+    },
+    add: function (evt) {
+        new this.view_type({collection: this.collection});
+    },
+});
+
 window.BeakerGrid = Backbone.View.extend({
     initialize: function (options) {
         var collection = options.collection;
@@ -223,19 +245,30 @@ window.BeakerGrid = Backbone.View.extend({
         this.bottom_paginator = new BeakerBackgridPaginator({
             collection: collection,
         });
+        if (!_.isEmpty(options.add_view_type)) {
+            this.add_button = new BeakerBackgridAddButton({
+                collection: collection,
+                label: options.add_label,
+                view_type: options.add_view_type,
+            });
+        }
         this.render();
         this.listenTo(collection, 'request', this.fetch_started);
         this.listenTo(collection, 'error', this.fetch_error);
         this.listenTo(collection, 'sync', this.fetch_success);
     },
     render: function () {
-        this.$el.empty()
-            .append(this.filter_control.render().el)
-            .append(this.top_paginator.render().el)
-            .append(this.grid.render().el)
-            .append(this.bottom_paginator.render().el);
+        this.$el.empty();
+        this.$el.append(this.filter_control.render().el);
+        this.$el.append(this.top_paginator.render().el);
+        this.$el.append(this.grid.render().el);
+        if (this.add_button)
+            this.$el.append(this.add_button.render().el);
+        this.$el.append(this.bottom_paginator.render().el);
     },
     fetch_started: function (collection, xhr) {
+        if (collection != this)
+            return; // event is actually for a model in the collection
         // abort the last pending request to handle the case 2 in
         // https://github.com/jashkenas/backbone/pull/1325#issuecomment-11146707
         if (!_.isUndefined(this.previous_request) && this.previous_request.readyState != 4)
@@ -259,6 +292,8 @@ window.BeakerGrid = Backbone.View.extend({
         }
     },
     fetch_error: function (collection, xhr) {
+        if (collection != this)
+            return; // event is actually for a model in the collection
         if ( xhr.statusText != 'abort' ) {
             this.grid.body.$el.empty();
             // can't put a <div/> inside a <tbody/> so it goes at the bottom instead
@@ -268,7 +303,9 @@ window.BeakerGrid = Backbone.View.extend({
                     xhr.statusText + ': ' + xhr.responseText)); 
         }
     },
-    fetch_success: function () {
+    fetch_success: function (collection) {
+        if (collection != this)
+            return; // event is actually for a model in the collection
         this.$('.alert').remove();
         this.$('.loading-overlay').remove();
         this.$('.backgrid-initial-loading-indicator').remove();

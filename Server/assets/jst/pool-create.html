@@ -1,0 +1,17 @@
+<form>
+  <div class="modal-header">
+    <a href="#" class="close" data-dismiss="modal" aria-hidden="true">&times;</a>
+    <h3>Create pool</h3>
+  </div>
+  <div class="modal-body">
+    <input type="text" name="name" class="input-block-level"
+        placeholder="Pool name" required maxlength="255"
+        pattern="[^\s/]([^/]*[^\s/])?"
+        title="System pool name of up to 255 characters, excluding /"/>
+  </div>
+  <div class="modal-footer">
+    <div class="sync-status"/>
+    <button type="button" class="btn" data-dismiss="modal" data-loading-text="Cancel">Cancel</button>
+    <button type="submit" class="btn btn-primary" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Creating&hellip;">Create</button>
+  </div>
+</form>

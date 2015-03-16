@@ -58,6 +58,8 @@ def get_pools():
         'grid_collection_data': json_result,
         'grid_collection_url': request.base_url,
         'grid_view_type': 'PoolsView',
+        'grid_add_label': 'Create',
+        'grid_add_view_type': 'PoolCreateModal' if not identity.current.anonymous else 'null',
     })
 
 def _get_pool_by_name(pool_name, lockmode=False):
@@ -157,7 +159,10 @@ def add_pool():
         pool.record_activity(user=u, service=u'HTTP',
                      action=u'Created', field=u'Pool',
                      new=unicode(pool))
-    return '', 201
+    response = jsonify(pool.__json__())
+    response.status_code = 201
+    response.headers.add('Location', url(pool.href))
+    return response
 
 @app.route('/pools/<pool_name>/', methods=['PATCH'])
 @auth_required

@@ -1,6 +1,6 @@
 import requests
 from bkr.server.model import session, SystemAccessPolicy, SystemPermission, \
-        Group, SystemPool
+        Group, SystemPool, User
 from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, check_pool_search_results
@@ -22,6 +22,26 @@ class SystemPoolsGridTest(WebDriverTestCase):
         b.find_element_by_class_name('grid-filter').submit()
         check_pool_search_results(b, present=[pool], absent=[other_pool])
 
+    def test_create_button_is_absent_when_not_logged_in(self):
+        b = self.browser
+        b.get(get_server_base() + 'pools/')
+        b.find_element_by_xpath('//div[@id="grid" and '
+                'not(.//button[normalize-space(string(.))="Create"])]')
+
+    def test_create_pool(self):
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'pools/')
+        b.find_element_by_xpath('//button[normalize-space(string(.))="Create"]')\
+            .click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('name').send_keys('inflatable')
+        modal.find_element_by_tag_name('form').submit()
+        import time; time.sleep(5) # XXX replace when pool page is implemented
+        with session.begin():
+            pool = SystemPool.by_name(u'inflatable')
+            self.assertEquals(pool.owner, User.by_user_name(data_setup.ADMIN_USER))
+
 class SystemPoolHTTPTest(DatabaseTestCase):
     """
     Directly tests the HTTP interface used by the pool editing page.
@@ -39,11 +59,16 @@ class SystemPoolHTTPTest(DatabaseTestCase):
         s = requests.Session()
         s.post(get_server_base() + 'login', data={'user_name': self.owner.user_name,
                                                   'password': 'theowner'}).raise_for_status()
-        response = post_json(get_server_base() +
-                'pools/', session=s,
-                data={'name': 'newtest',
-                      'description': 'newtestdesciprtion'})
-        response.raise_for_status()
+        data = {
+            'name': 'newtest',
+            'description': 'newtestdesciprtion',
+        }
+        response = post_json(get_server_base() + 'pools/', session=s, data=data)
+        self.assertEquals(response.status_code, 201)
+        self.assertEquals(response.json()['name'], data['name'])
+        self.assertEquals(response.json()['description'], data['description'])
+        self.assertEquals(response.headers['Location'],
+                get_server_base() + 'pools/newtest/')
         with session.begin():
             pool = SystemPool.by_name('newtest')
             self.assertEquals(pool.name, 'newtest')
