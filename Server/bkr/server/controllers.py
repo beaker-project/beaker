@@ -1180,12 +1180,6 @@ class Root(RPCRoot):
         return serve_file(filename)
 
 
-    #@expose(template='bkr.server.templates.system_pool')
-    @expose
-    def pools(self):
-        return ""
-
-
 #    @expose(template='bkr.server.templates.activity')
 #    def activity(self, *args, **kw):
 # TODO This is mainly for testing
