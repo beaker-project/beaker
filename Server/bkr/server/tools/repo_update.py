@@ -75,7 +75,7 @@ class RepoSyncer(yum.YumBase):
         log.info('Syncing packages from %s to %s', self.repo_url, self.output_dir)
         self.doRepoSetup()
         # have to list every possible arch here, ughhhh
-        self.doSackSetup(archlist='noarch i386 i686 x86_64 ia64 ppc ppc64 s390 s390x'.split())
+        self.doSackSetup(archlist='noarch armv7hl aarch64 i386 i686 x86_64 ia64 ppc ppc64 ppc64le s390 s390x'.split())
         repo, = self.repos.listEnabled()
         repo.copy_local = True
         package_sack = yum.packageSack.ListPackageSack(
