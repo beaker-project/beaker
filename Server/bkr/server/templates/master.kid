@@ -36,6 +36,7 @@ from bkr.server.reports import Reports
                     <li><a href="${tg.url('/available/')}">Available</a></li>
                     <li><a href="${tg.url('/free/')}">Free</a></li>
                     <li><a href="${tg.url('/removed/')}">Removed</a></li>
+                    <li><a href="${tg.url('/pools/')}">Pools</a></li>
                     <li><a href="${tg.url('/reserveworkflow/')}">Reserve</a></li>
                 </ul>
             </li>
