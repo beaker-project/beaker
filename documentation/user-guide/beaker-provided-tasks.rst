@@ -57,6 +57,7 @@ specific hardware requirement may have been specified (See:
 good idea to run this task on every system to ensure that the hardware
 details are correctly updated in Beaker's database.
 
+.. _command-task:
 
 /distribution/command
 =====================

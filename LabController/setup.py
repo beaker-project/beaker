@@ -48,7 +48,7 @@ else:
 
 setup(
     name = "bkr.labcontroller",
-    version='19.2',
+    version='19.3',
     license = "GPLv2+",
 
     install_requires=[

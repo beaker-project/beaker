@@ -429,3 +429,41 @@ Beaker 19.2
   did not take effect for ``https://`` connections. (Contributed by Matt Jia)
 * :issue:`1173446`: The :guilabel:`Provision` tab on the system page now always
   shows a link to the Reserve Workflow. (Contributed by Dan Callaghan)
+
+Beaker 19.3
+~~~~~~~~~~~
+
+* :issue:`856687`: Beaker client workflow commands accept a new option
+  :option:`--ks-append <bkr --ks-append>`, for appending additional commands to 
+  the kickstart. (Contributed by Matt Jia)
+* :issue:`1124140`: The documentation now covers the :doc:`JSON APIs for
+  systems <../../server-api/http>` added since Beaker 0.15. (Contributed by Dan 
+  Callaghan)
+* :issue:`1183239`: Fixed incorrect query generation when a recipe's host
+  requirements contain an ``<arch/>`` filter inside an ``<or/>`` element. 
+  Previously these filters would trigger a runaway database query which could 
+  consume all temp table space. (Contributed by Dan Callaghan)
+* :issue:`1182545`: Fixed handling of date formats when searching systems by
+  date added or date inventoried. (Contributed by Matt Jia)
+* :issue:`1171936`: Beaker now detects and reports invalid sh-style syntax in
+  kickstart metadata: for example, an unterminated ``'`` quote. (Contributed by 
+  Dan Callaghan)
+* :issue:`1193746`: Fixed an issue with redirects in JSON collection APIs,
+  where query string parameters would be discarded. (Contributed by Dan 
+  Callaghan)
+
+.. not worth reporting: :issue:`1064634`: Point users at Stack Overflow as an additional help resource
+
+Version 4.0-86 of the /distribution/virt/install task for guest recipes has 
+also been released:
+
+* :issue:`1180595`: Updated to support the ppc64 architecture. (Contributed by
+  Ján Stanček)
+* :issue:`1187266`: Removed spurious RPM dependency on ``virt-manager``, which
+  is not available on all architectures and releases. (Contributed by Dan 
+  Callaghan)
+
+A new core task, :ref:`/distribution/command <command-task>` version 1.1-4, has 
+also been released.
+
+.. the above is :issue:`1018013`

@@ -258,19 +258,6 @@ Options for job configuration:
 
    Sets parameter <name> to <value> for all tasks in the job.
 
-.. option:: --repo <url>
-
-   Make the yum repository at <url> available during initial installation of
-   the system and afterwards. This option may be specified multiple times.
-   The installation may fail if the repo is not actually available.
-
-.. option:: --repo-post <url>
-
-   Make the yum repository at <url> available AFTER the installation. This 
-   option may be specified multiple times. The repo config will be appended to
-   the kickstart's %post section. Whether or not the installation succeeds is
-   not affected by the availability of the repo.
-
    .. versionadded:: 0.14.3
 
 .. option:: --ignore-panic 
@@ -315,10 +302,6 @@ Options for installation:
 .. option:: --method <method>
 
    Installation source method (nfs, http, ftp) [default: nfs].
- 
-.. option:: --ks-meta <options>
-
-   Pass kickstart metadata <options> when generating kickstart.
 
 .. option:: --kernel-options <opts>
 
@@ -331,6 +314,27 @@ Options for installation:
    Pass additional kernel options for after installation. The options string is 
    applied on top of any post-install kernel options which are set by default 
    for the chosen system and distro.
+ 
+.. option:: --ks-append <commands>
+
+   Specify additional kickstart commands to add to the base kickstart file.
+
+.. option:: --ks-meta <options>
+
+   Pass kickstart metadata <options> when generating kickstart.
+
+.. option:: --repo <url>
+
+   Make the yum repository at <url> available during initial installation of
+   the system and afterwards. This option may be specified multiple times.
+   The installation may fail if the repo is not actually available.
+
+.. option:: --repo-post <url>
+
+   Make the yum repository at <url> available AFTER the installation. This 
+   option may be specified multiple times. The repo config will be appended to
+   the kickstart's %post section. Whether or not the installation succeeds is
+   not affected by the availability of the repo.
 
 .. option:: --kickstart <filename>
 

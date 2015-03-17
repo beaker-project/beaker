@@ -356,3 +356,17 @@ install
             job = Job.by_id(job_id)
             self.assertEquals(job.recipesets[0].recipes[0].kernel_options,
                     "sshd=1")
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=856687
+    def test_ks_append(self):
+        first_ks = 'append1'
+        second_ks = 'append2'
+        out = run_client(['bkr', 'workflow-simple',
+                '--dryrun', '--prettyxml',
+                '--ks-append', first_ks,
+                '--ks-append', second_ks,
+                '--arch', self.distro_tree.arch.arch,
+                '--family', self.distro.osversion.osmajor.osmajor,
+                '--task', self.task.name])
+        self.assertIn("<ks_append>\n<![CDATA[%s]]>\t\t\t\t</ks_append>" % first_ks, out)
+        self.assertIn("<ks_append>\n<![CDATA[%s]]>\t\t\t\t</ks_append>" % second_ks, out)
