@@ -19,7 +19,7 @@ from bkr.inttest import data_setup, get_server_base, \
         assertions, with_transaction, DatabaseTestCase
 from bkr.server.model import Arch, Key, Key_Value_String, Key_Value_Int, System, \
         Provision, ProvisionFamily, ProvisionFamilyUpdate, Hypervisor, \
-        SystemStatus, LabInfo, ReleaseAction, PowerType
+        SystemStatus, LabInfo, ReleaseAction, PowerType, SystemPool
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, check_system_search_results, \
         delete_and_confirm, logout, click_menu_item, BootstrapSelect, wait_for_ajax_loading
@@ -362,6 +362,23 @@ class SystemViewTestWD(WebDriverTestCase):
         with session.begin():
             session.refresh(system)
             self.assert_(system.date_modified > orig_date_modified)
+
+    def test_add_nonexistent_pool(self):
+        b = self.browser
+        login(b)
+        self.go_to_system_view(tab='Pools')
+        b.find_element_by_name('pool').send_keys('rockpool')
+        b.find_element_by_class_name('system-pool-add').submit()
+        # confirmation modal should appear
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_xpath('.//p[text()="Pool does not exist. Create it?"]')
+        modal.find_element_by_xpath('.//button[text()="OK"]').click()
+        b.find_element_by_xpath('//ul[@class="list-group system-pools-list"]'
+                '/li[a/text()="rockpool"]')
+        with session.begin():
+            session.expire_all()
+            pool = SystemPool.by_name(u'rockpool')
+            self.assertIn(pool, self.system.pools)
 
     def test_remove_pool(self):
         with session.begin():

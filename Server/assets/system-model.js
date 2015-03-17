@@ -193,7 +193,7 @@ window.System = Backbone.Model.extend({
     add_to_pool: function (pool, options) {
         var model = this;
         options = options || {};
-        $.ajax({
+        return $.ajax({
             url: beaker_url_prefix + 'pools/' + encodeURIComponent(pool) + '/systems/',
             type: 'POST',
             contentType: 'application/json',
@@ -203,9 +203,8 @@ window.System = Backbone.Model.extend({
                 var can_remove_from_pool = model.get('can_remove_from_pool');
                 can_remove_from_pool[pool] = true;
                 model.set({'pools': model.get('pools').concat([pool]), 'can_remove_from_pool': can_remove_from_pool});
-                if (!(_.contains(model.get('all_pools'), pool))) {
-                    model.set('all_pools', model.get('all_pools').concat([pool]));
-                }
+                if (options.success)
+                    options.success(model, data, options);
             },
             error: function (jqxhr, status, error) {
                 if (options.error)

@@ -521,7 +521,6 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['can_lend'] = False
             data['can_return_loan'] = False
             data['can_reserve'] = False
-        data['all_pools'] = [pool.name for pool in SystemPool.query.all()]
         return data
 
     @classmethod

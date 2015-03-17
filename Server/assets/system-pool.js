@@ -43,9 +43,6 @@
     var SystemAddPoolForm = Backbone.View.extend({
         template: JST['system-add-pool'],
         events: {
-            'change input[name=pool]': 'update_button_state',
-            'input input[name=pool]': 'update_button_state',
-            'keyup input[name=pool]': 'update_button_state',
             'submit form': 'submit',
         },
         initialize: function () {
@@ -54,44 +51,49 @@
         render: function () {
             this.$el.html(this.template(this.model.attributes));
             this.$('input[name="pool"]').beaker_typeahead('pool-name');
-            this.$('button[type=submit]').prop('disabled', true);
         },
-        update_button_state: function () {
-            this.$('.alert').remove();
-            var $input = this.$('input[name=pool]');
-            var allow_submission = ($input.val() && $input.get(0).checkValidity());
-            this.$('button[type=submit]').prop('disabled', this.saving || !allow_submission);
-        },
-
         submit: function (evt) {
             if (evt.currentTarget.checkValidity()) {
+                this.$('.alert').remove();
                 var new_pool = this.$('input[name=pool]').val();
                 if (_.contains(this.model.get('pools'), new_pool)) {
                     // nothing to do
                     this.$('input[name=pool]').typeahead('setQuery', '');
                     return false;
-                } else {
-                    // If the pool does not exist, create it after confirming
-                    if (!(_.contains(this.model.get('all_pools'), new_pool))) {
-                        bootbox.confirm_as_promise('Pool does not exist. Create it?').done(_.bind(this.add_to_pool, this, new_pool));
-                    } else {
-                        this.add_to_pool(new_pool);
-                    }
                 }
+                this.$('button').button('loading');
+                var model = this.model;
+                model.add_to_pool(new_pool)
+                    // if it fails with a 404, offer to create the pool
+                    .then(function () { }, function (xhr, status, error) {
+                        if (xhr.status == 404) {
+                            return bootbox.confirm_as_promise('<p>Pool does not exist. Create it?</p>')
+                                .then(null, function () { return xhr; })
+                                // confirmation received, create it
+                                .then(function () {
+                                    return $.ajax({
+                                        url: beaker_url_prefix + 'pools/',
+                                        type: 'POST',
+                                        contentType: 'application/json',
+                                        data: JSON.stringify({'name': new_pool}),
+                                        dataType: 'text',
+                                    });
+                                })
+                                // creation succeeded, add it again
+                                .then(function () { return model.add_to_pool(new_pool); });
+                        } else {
+                            return xhr;
+                        }
+                    })
+                    // on success, re-render
+                    .done(_.bind(this.render, this))
+                    // any other failure, we display
+                    .fail(_.bind(this.error, this))
             }
             evt.preventDefault();
         },
-
-        add_to_pool: function(new_pool) {
-            this.saving = true;
-            this.$('btn').button('loading');
-            this.model.add_to_pool(new_pool,
-                                   {success: _.bind(this.render, this),
-                                    error: _.bind(this.error, this)});
-        },
-
-        error: function (model, xhr) {
-            this.$('btn').button('reset');
+        error: function (xhr) {
+            this.$('button').button('reset');
             this.$el.append(
                 $('<div class="alert alert-error"/>')
                     .text(xhr.statusText + ': ' + xhr.responseText));

@@ -115,6 +115,31 @@ class SystemPoolHTTPTest(DatabaseTestCase):
             self.assertEquals(self.pool.owner, self.group)
             self.assertFalse(self.pool.owning_user)
 
+    def test_add_system_to_pool(self):
+        with session.begin():
+            other_system = data_setup.create_system(owner=self.owner)
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': self.owner.user_name,
+                'password': 'theowner'}).raise_for_status()
+        response = post_json(get_server_base() + 'pools/%s/systems/' % self.pool.name,
+                session=s, data={'fqdn': other_system.fqdn})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertItemsEqual(self.pool.systems, [self.system, other_system])
+
+        # adding to a pool that doesn't exist is a 404
+        response = post_json(get_server_base() + 'pools/nosuchpool/systems/',
+                session=s, data={'fqdn': other_system.fqdn})
+        self.assertEquals(response.status_code, 404)
+        self.assertEquals(response.text, 'System pool nosuchpool does not exist')
+
+        # adding a system that doesn't exist is a 400
+        response = post_json(get_server_base() + 'pools/%s/systems/' % self.pool.name,
+                session=s, data={'fqdn': 'nosuchsystem'})
+        self.assertEquals(response.status_code, 400)
+        self.assertEquals(response.text, "System 'nosuchsystem' does not exist")
+
 class SystemPoolAccessPolicyHTTPTest(DatabaseTestCase):
     """
     Directly tests the HTTP interface used by the access policy widget.

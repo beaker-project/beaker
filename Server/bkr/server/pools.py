@@ -243,18 +243,13 @@ def add_system_to_pool(pool_name):
     """
     u = identity.current.user
     data = read_json_request(request)
-    fqdn = data['fqdn']
-    system = _get_system_by_FQDN(fqdn)
+    pool = _get_pool_by_name(pool_name, lockmode='update')
+    if 'fqdn' not in data:
+        raise BadRequest400('System FQDN not specified')
     try:
-        pool = _get_pool_by_name(pool_name, lockmode='update')
+        system = System.by_fqdn(data['fqdn'], u)
     except NoResultFound:
-        pool = SystemPool(name=pool_name, description=pool_name,
-                          owning_user=identity.current.user)
-        pool.record_activity(user=u, service=u'HTTP',
-                             action=u'Created', field=u'Pool',
-                             new=unicode(pool))
-        pool.access_policy = SystemAccessPolicy()
-        pool.access_policy.add_rule(SystemPermission.view, everybody=True)
+        raise BadRequest400("System '%s' does not exist" % data['fqdn'])
     if not pool in system.pools:
         if pool.can_edit(u) and system.can_edit(u):
             system.record_activity(user=u, service=u'HTTP',
