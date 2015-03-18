@@ -227,7 +227,7 @@ var BeakerBackgridAddButton = Backbone.View.extend({
 
 window.BeakerGrid = Backbone.View.extend({
     initialize: function (options) {
-        var collection = options.collection;
+        var collection = this.collection = options.collection;
         this.grid = new Backgrid.Grid({
             className: 'backgrid table table-striped table-hover table-condensed',
             collection: collection,
@@ -267,7 +267,7 @@ window.BeakerGrid = Backbone.View.extend({
         this.$el.append(this.bottom_paginator.render().el);
     },
     fetch_started: function (collection, xhr) {
-        if (collection != this)
+        if (collection != this.collection)
             return; // event is actually for a model in the collection
         // abort the last pending request to handle the case 2 in
         // https://github.com/jashkenas/backbone/pull/1325#issuecomment-11146707
@@ -292,7 +292,7 @@ window.BeakerGrid = Backbone.View.extend({
         }
     },
     fetch_error: function (collection, xhr) {
-        if (collection != this)
+        if (collection != this.collection)
             return; // event is actually for a model in the collection
         if ( xhr.statusText != 'abort' ) {
             this.grid.body.$el.empty();
@@ -304,7 +304,7 @@ window.BeakerGrid = Backbone.View.extend({
         }
     },
     fetch_success: function (collection) {
-        if (collection != this)
+        if (collection != this.collection)
             return; // event is actually for a model in the collection
         this.$('.alert').remove();
         this.$('.loading-overlay').remove();
