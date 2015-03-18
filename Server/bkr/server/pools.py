@@ -9,7 +9,7 @@ from flask import jsonify, request
 from bkr.server import identity
 from bkr.server.app import app
 from bkr.server.model import System, SystemPool, SystemAccessPolicy, \
-    SystemAccessPolicyRule, User, Group, SystemPermission
+    SystemAccessPolicyRule, User, Group, SystemPermission, Activity
 from bkr.server.flask_util import auth_required, \
     convert_internal_errors, read_json_request, BadRequest400, \
     Forbidden403, MethodNotAllowed405, NotFound404, Conflict409, \
@@ -118,9 +118,9 @@ def _get_owner(data):
 
 @app.route('/pools/', methods=['POST'])
 @auth_required
-def add_pool():
+def create_pool():
     """
-    Adds a new system pool to Beaker. The request must be 
+    Creates a new system pool in Beaker. The request must be 
     :mimetype:`application/x-www-form-urlencoded` or 
     :mimetype:`application/json`.
 
@@ -422,4 +422,41 @@ def delete_access_policy_rules(pool_name):
     for rule in query:
         rule.record_deletion(service=u'HTTP')
         session.delete(rule)
+    return '', 204
+
+
+@app.route('/pools/<pool_name>/', methods=['DELETE'])
+@auth_required
+def delete_pool(pool_name):
+    """
+    Deletes a system pool
+
+    :param pool_name: System pool's name
+
+    """
+    pool = _get_pool_by_name(pool_name, lockmode='update')
+    u = identity.current.user
+    if not pool.can_edit(u):
+        raise Forbidden403('Cannot delete pool %s' % pool_name)
+
+    systems = System.query.filter(System.pools.contains(pool))
+    System.record_bulk_activity(systems, user=identity.current.user,
+                                service=u'HTTP', action=u'Removed',
+                                field=u'Pool',
+                                old=unicode(pool),
+                                new=None)
+    # Since we are deleting the pool, we will have to change the active
+    # access policy for all systems using the pool's policy to their
+    # custom policy
+    systems = System.query.filter(System.active_access_policy == pool.access_policy)
+    for system in systems:
+        system.active_access_policy = system.custom_access_policy
+    System.record_bulk_activity(systems, user=identity.current.user,
+                                service=u'HTTP',
+                                field=u'Active Access Policy', action=u'Changed',
+                                old = 'Pool policy: %s' % pool_name,
+                                new = 'Custom access policy')
+    session.delete(pool)
+    activity = Activity(u, u'HTTP', u'Deleted', u'Pool', pool_name)
+    session.add(activity)
     return '', 204

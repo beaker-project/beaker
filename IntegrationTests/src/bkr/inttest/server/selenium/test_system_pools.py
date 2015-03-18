@@ -1,10 +1,11 @@
 import requests
 from bkr.server.model import session, SystemAccessPolicy, SystemPermission, \
-        Group, SystemPool, User
+        Group, SystemPool, User, Activity
 from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, check_pool_search_results
 from bkr.inttest.server.requests_utils import put_json, post_json, patch_json
+from sqlalchemy.orm.exc import NoResultFound
 
 class SystemPoolsGridTest(WebDriverTestCase):
 
@@ -140,6 +141,60 @@ class SystemPoolHTTPTest(DatabaseTestCase):
         self.assertEquals(response.status_code, 400)
         self.assertEquals(response.text, "System 'nosuchsystem' does not exist")
 
+
+    def test_delete_system_pool(self):
+        with session.begin():
+            system = data_setup.create_system()
+            random_user = data_setup.create_user(password='password')
+            pool_owner = data_setup.create_user(password='password')
+            pool_name = data_setup.unique_name('mypool%s')
+            pool = data_setup.create_system_pool(name=pool_name,
+                                                 owning_user=pool_owner,
+                                                 systems=[system])
+            pool.access_policy.add_rule(user=self.user,
+                                        permission=SystemPermission.edit_system)
+            system.active_access_policy = pool.access_policy
+
+        unicode_pool = unicode(pool)
+        self.assertIn(pool, system.pools)
+        self.assertTrue(system.active_access_policy.grants
+                        (self.user, SystemPermission.edit_system))
+        # first as a random user
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': random_user.user_name,
+                                                  'password': 'password'}).raise_for_status()
+        response = s.delete(get_server_base() + 'pools/%s/' % pool_name)
+        self.assertEquals(response.status_code, 403)
+
+        # now as the pool owner
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': pool_owner.user_name,
+                                                  'password': 'password'}).raise_for_status()
+        response = s.delete(get_server_base() + 'pools/%s/' % pool_name)
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            with self.assertRaises(NoResultFound):
+                SystemPool.by_name(pool_name)
+
+            self.assertNotIn(pool, system.pools)
+            self.assertFalse(system.active_access_policy.grants
+                             (self.user, SystemPermission.edit_system))
+
+            self.assertEquals(system.activity[-1].field_name, 'Pool')
+            self.assertEquals(system.activity[-1].action, 'Removed')
+            self.assertEquals(system.activity[-1].old_value, unicode_pool)
+
+            self.assertEquals(system.activity[-2].field_name, 'Active Access Policy')
+            self.assertEquals(system.activity[-2].old_value, 'Pool policy: %s' % pool_name)
+            self.assertEquals(system.activity[-2].new_value, 'Custom access policy')
+
+            self.assertEquals(1, Activity.query
+                              .filter(Activity.field_name == u'Pool')
+                              .filter(Activity.action == u'Deleted')
+                              .filter(Activity.old_value == pool_name).count(),
+                              'Expected to find activity record for pool deletion')
+
 class SystemPoolAccessPolicyHTTPTest(DatabaseTestCase):
     """
     Directly tests the HTTP interface used by the access policy widget.
@@ -261,5 +316,4 @@ class SystemPoolAccessPolicyHTTPTest(DatabaseTestCase):
             session.expire_all()
             self.assertFalse(self.pool.access_policy.grants
                              (user, SystemPermission.edit_system))
-
 

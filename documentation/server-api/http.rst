@@ -215,9 +215,9 @@ System pools
 ------------
 
 .. autoflask:: bkr.server.wsgi:app
-   :endpoints: get_pools, add_pool, get_pool, update_pool, add_system_to_pool,
-     remove_system_from_pool, get_access_policy, save_access_policy,
-     add_access_policy_rule, delete_access_policy_rules
+   :endpoints: get_pools, get_pool, create_pool, update_pool, delete_pool,
+     add_system_to_pool, remove_system_from_pool, get_access_policy,
+     save_access_policy, add_access_policy_rule, delete_access_policy_rules
 
 Activity
 --------
