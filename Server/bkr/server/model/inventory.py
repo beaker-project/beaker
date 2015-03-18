@@ -1667,7 +1667,7 @@ class SystemPool(DeclarativeMappedObject, ActivityMixin):
 
     def can_edit_policy(self, user):
         return (self.can_edit(user) or \
-            self.access_policy.grants(SystemPermission.edit_policy, user))
+            self.access_policy.grants(user, SystemPermission.edit_policy))
 
     @property
     def href(self):

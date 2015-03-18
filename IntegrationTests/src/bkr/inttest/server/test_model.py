@@ -260,31 +260,32 @@ class TestSystemPool(DatabaseTestCase):
         self.assertTrue(pool.has_owner(user1))
 
     def test_system_pool_access_policy(self):
-        system1 = data_setup.create_system()
-        system2 = data_setup.create_system()
+        system1 = data_setup.create_system(shared=False)
+        system2 = data_setup.create_system(shared=False)
         pool = data_setup.create_system_pool(name='pool-1',
                                              systems=[system1, system2])
         policy = pool.access_policy
-        perm = SystemPermission.reserve
+        perm1 = SystemPermission.reserve
         user = data_setup.create_user()
-        policy.add_rule(perm, user=user)
+        policy.add_rule(perm1, user=user)
+        user1 = data_setup.create_user()
+        policy.add_rule(SystemPermission.edit_policy, user=user1)
 
         session.flush()
 
-        self.assertEquals(len(policy.rules), 2)
-        self.assertEquals(policy.rules[1].permission, perm)
-        self.assertEquals(policy.rules[1].user, user)
-        self.assertTrue(policy.grants(user, perm))
+        # check pool policy rules
+        self.assertTrue(policy.grants(user, perm1))
         self.assert_(SystemAccessPolicy.query
                      .filter(SystemAccessPolicy.id == policy.id)
-                     .filter(SystemAccessPolicy.grants(user, perm)).count())
-
+                     .filter(SystemAccessPolicy.grants(user, perm1)).count())
+        self.assertTrue(pool.can_edit_policy(user1))
         other_user = data_setup.create_user()
-        self.assertFalse(policy.grants(other_user, perm))
+        self.assertFalse(policy.grants(other_user, perm1))
 
-        # assign the pool policy to the system
+        # assign the pool policy to system1
         system1.active_access_policy = policy
-        self.assertTrue(system1.active_access_policy.grants(user, perm))
+        self.assertTrue(system1.active_access_policy.grants(user, perm1))
+        self.assertFalse(system2.active_access_policy.grants(user, perm1))
 
     def test_system_pool_access_policy_deletion(self):
         system1 = data_setup.create_system()
