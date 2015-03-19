@@ -26,12 +26,21 @@ window.SystemPoolHeading = Backbone.View.extend({
     },
     events: {
         'click .edit': 'edit',
+        'click .delete': 'delete',
     },
     render: function () {
         this.$el.html(this.template(this.model.attributes));
     },
     edit: function () {
         new SystemPoolEditModal({model: this.model});
+    },
+    'delete': function () {
+        var model = this.model, $del_btn = this.$('button.delete');
+        $del_btn.button('loading');
+        bootbox.confirm_as_promise('<p>Are you sure you want to delete this pool?</p>')
+            .fail(function () { $del_btn.button('reset'); })
+            .then(function () { return model.destroy(); })
+            .done(function () { window.location = beaker_url_prefix + 'pools/'; });
     },
 });
 

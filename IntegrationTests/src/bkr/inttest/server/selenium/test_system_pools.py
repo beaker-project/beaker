@@ -78,6 +78,21 @@ class SystemPoolEditTest(WebDriverTestCase):
         b.find_element_by_xpath('//div[@id="system-pool-info" and '
                 'not(.//button[normalize-space(string(.))="Edit"])]')
 
+    def test_delete_pool(self):
+        b = self.browser
+        login(b)
+        self.go_to_pool_edit()
+        b.find_element_by_xpath('//button[contains(string(.), "Delete")]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_xpath('.//p[text()="Are you sure you want to '
+                'delete this pool?"]')
+        modal.find_element_by_xpath('.//button[text()="OK"]').click()
+        # once it's deleted we are returned to the pools grid
+        b.find_element_by_xpath('.//title[text()="Pools"]')
+        with session.begin():
+            self.assertEquals(SystemPool.query.filter(
+                    SystemPool.name == self.pool.name).count(), 0)
+
     def test_page_info_display(self):
         self.go_to_pool_edit()
         b = self.browser
