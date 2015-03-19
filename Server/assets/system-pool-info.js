@@ -45,13 +45,19 @@ window.SystemPoolHeading = Backbone.View.extend({
 });
 
 window.SystemPoolDescription = Backbone.View.extend({
-    template: JST['system-pool-description'],
     initialize: function () {
         this.listenTo(this.model, 'change:description', this.render);
         this.render();
     },
     render: function () {
-        this.$el.html(this.template(this.model.attributes));
+        var description = this.model.get('description');
+        if (description) {
+            this.$el.html(marked(this.model.get('description'),
+                    {sanitize: true, smartypants: true}));
+        } else {
+            this.$el.empty();
+        }
+        return this;
     },
 });
 

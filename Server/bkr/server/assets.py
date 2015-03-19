@@ -61,6 +61,7 @@ def _create_env(source_dir, output_dir, **kwargs):
             'backbone/backbone.js',
             'backbone-pageable/lib/backbone-pageable.js',
             'backgrid/lib/backgrid.js',
+            'marked/lib/marked.js',
             # ours
             webassets.Bundle(
                 'jst/*/*.html',

@@ -38,3 +38,6 @@
 [submodule "bootstrap-datepicker"]
 	path = Server/assets/bootstrap-datepicker
 	url = https://github.com/eternicode/bootstrap-datepicker.git
+[submodule "marked"]
+	path = Server/assets/marked
+	url = https://github.com/chjj/marked.git

@@ -47,6 +47,7 @@ Source10:        https://github.com/medialize/URI.js/archive/40a89137c5bc297f734
 Source11:        https://github.com/makeusabrew/bootbox/archive/ed5c62a02ab1eb512c38f4be1d0f6774c51a85c6/bootbox-ed5c62a02ab1eb512c38f4be1d0f6774c51a85c6.tar.gz
 Source12:        https://github.com/ifightcrime/bootstrap-growl/archive/eba6d7685c842f83764290c9ab5e82f7d4ffea22/bootstrap-growl-eba6d7685c842f83764290c9ab5e82f7d4ffea22.tar.gz
 Source13:       https://github.com/eternicode/bootstrap-datepicker/archive/b374f23971817d507bded0dc16892e87a6d2fe42/bootstrap-datepicker-b374f23971817d507bded0dc16892e87a6d2fe42.tar.gz
+Source14:       https://github.com/chjj/marketd/archive/2b5802f258c5e23e48366f2377fbb4c807f47658/marked-2b5802f258c5e23e48366f2377fbb4c807f47658.tar.gz
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
@@ -333,6 +334,7 @@ tar -C Server/assets/URI.js --strip-components=1 -xzf %{SOURCE10}
 tar -C Server/assets/bootbox --strip-components=1 -xzf %{SOURCE11}
 tar -C Server/assets/bootstrap-growl --strip-components=1 -xzf %{SOURCE12}
 tar -C Server/assets/bootstrap-datepicker --strip-components=1 -xzf %{SOURCE13}
+tar -C Server/assets/marked --strip-components=1 -xzf %{SOURCE14}
 
 %build
 make \

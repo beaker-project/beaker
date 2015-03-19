@@ -58,7 +58,8 @@ class SystemPoolEditTest(WebDriverTestCase):
     def setUp(self):
         with session.begin():
             self.user = data_setup.create_user()
-            self.pool = data_setup.create_system_pool(owning_user=self.user)
+            self.pool = data_setup.create_system_pool(owning_user=self.user,
+                    description=u'Systems for *doing* things.\n\nhttp://pool.com')
         self.browser = self.get_browser()
 
     def go_to_pool_edit(self, system_pool=None, tab=None):
@@ -103,9 +104,11 @@ class SystemPoolEditTest(WebDriverTestCase):
         # owner
         pool_info.find_element_by_xpath('.//h1/small[contains(text(), %s)]' % \
                                    self.pool.owner.display_name)
-        # description
-        pool_info.find_element_by_xpath('.//p[text()="%s"]' % \
-                           self.pool.description)
+        # description (rendered as Markdown)
+        pool_info.find_element_by_xpath(
+                './/p[string(.)="Systems for doing things." and em/text()="doing"]')
+        pool_info.find_element_by_xpath(
+                './/p/a[@href="http://pool.com" and text()="http://pool.com"]')
 
     def test_update_pool(self):
         with session.begin():
