@@ -112,18 +112,13 @@ class System_Modify(BeakerCommand):
             system_attr['owner'] = {'user_name': owner}
         if condition:
             system_attr['status'] = condition.title()
-        system_policy = {}
         if pool:
-            system_policy['pool_name'] = pool
+            system_attr['active_access_policy'] = {'pool_name': pool}
         if custom_policy:
-            system_policy['custom'] = True
+            system_attr['active_access_policy'] = {'custom': True}
 
         requests_session = self.requests_session()
         for fqdn in args:
-            if system_attr:
-                system_update_url = 'systems/%s/' % urllib.quote(fqdn, '')
-                res = requests_session.patch(system_update_url, json=system_attr)
-            if system_policy:
-                update_url = 'systems/%s/active-access-policy/' % urllib.quote(fqdn, '')
-                res = requests_session.put(update_url, json=system_policy)
+            system_update_url = 'systems/%s/' % urllib.quote(fqdn, '')
+            res = requests_session.patch(system_update_url, json=system_attr)
             res.raise_for_status()

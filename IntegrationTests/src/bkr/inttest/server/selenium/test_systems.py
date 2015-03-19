@@ -7,6 +7,7 @@
 # (at your option) any later version.
 
 import logging
+import requests
 from urlparse import urljoin
 from urllib import urlencode, urlopen
 import uuid
@@ -20,8 +21,9 @@ from bkr.inttest import data_setup, get_server_base, with_transaction, \
         DummyVirtManager, DatabaseTestCase
 from bkr.inttest.assertions import assert_sorted
 from bkr.server import dynamic_virt
-from bkr.server.model import Cpu, Key, Key_Value_String, System, SystemStatus
+from bkr.server.model import Cpu, Key, Key_Value_String, System, SystemStatus, SystemPermission
 from bkr.inttest.server.webdriver_utils import check_system_search_results, login
+from bkr.inttest.server.requests_utils import patch_json
 
 def atom_xpath(expr):
     return lxml.etree.XPath(expr, namespaces={'atom': 'http://www.w3.org/2005/Atom'})
@@ -341,3 +343,85 @@ kernel http://example.com/ipxe-test/F20/x86_64/os/pxeboot/vmlinuz console=tty0 c
 initrd http://example.com/ipxe-test/F20/x86_64/os/pxeboot/initrd
 boot
 """ % recipe.rendered_kickstart.link)
+
+class SystemDetailsUpdateHTTPTest(DatabaseTestCase):
+    """
+    Directly tests the HTTP interface for updating system details
+    """
+    def setUp(self):
+        with session.begin():
+            self.owner = data_setup.create_user(password='theowner')
+            self.system = data_setup.create_system(owner=self.owner, shared=False)
+            self.policy = self.system.custom_access_policy
+            self.policy.add_rule(everybody=True, permission=SystemPermission.reserve)
+            self.privileged_group = data_setup.create_group()
+            self.policy.add_rule(group=self.privileged_group,
+                                 permission=SystemPermission.edit_system)
+
+    def test_set_active_policy_from_pool(self):
+        with session.begin():
+            user = data_setup.create_user()
+            pool = data_setup.create_system_pool()
+            pool.systems.append(self.system)
+            pool.access_policy.add_rule(
+                permission=SystemPermission.edit_system, user=user)
+
+        with session.begin():
+            self.assertFalse(self.system.active_access_policy.grants
+                             (user, SystemPermission.edit_system))
+
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': self.owner.user_name,
+                'password': 'theowner'}).raise_for_status()
+        response = patch_json(get_server_base() +
+                              'systems/%s/' % self.system.fqdn, session=s,
+                              data={'active_access_policy': {'pool_name': pool.name}},
+                         )
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertTrue(self.system.active_access_policy.grants
+                            (user, SystemPermission.edit_system))
+
+        # attempt to set active policy to a pool policy when the system
+        # is not in the pool
+        with session.begin():
+            pool = data_setup.create_system_pool()
+            session.expire_all()
+        response = patch_json(get_server_base() +
+                              'systems/%s/' % self.system.fqdn, session=s,
+                              data={'active_access_policy': {'pool_name': pool.name}},
+                        )
+        self.assertEquals(response.status_code, 400)
+        self.assertEquals(response.text,
+                          'To use a pool policy, the system must be in the pool first')
+
+    def test_set_active_policy_to_custom_policy(self):
+        with session.begin():
+            user1 = data_setup.create_user()
+            user2 = data_setup.create_user()
+            self.system.custom_access_policy.add_rule(
+                permission=SystemPermission.edit_system, user=user1)
+            pool = data_setup.create_system_pool()
+            pool.access_policy.add_rule(
+                permission=SystemPermission.edit_system, user=user2)
+            self.system.active_access_policy = pool.access_policy
+
+        self.assertFalse(self.system.active_access_policy.grants 
+                        (user1, SystemPermission.edit_system))
+        self.assertTrue(self.system.active_access_policy.grants
+                         (user2, SystemPermission.edit_system))
+
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': self.owner.user_name,
+                'password': 'theowner'}).raise_for_status()
+        response = patch_json(get_server_base() +
+                              'systems/%s/' % self.system.fqdn, session=s,
+                              data={'active_access_policy': {'custom': True}},
+                         )
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertTrue(self.system.active_access_policy.grants \
+                            (user1, SystemPermission.edit_system))
+

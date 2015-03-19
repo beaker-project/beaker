@@ -416,6 +416,10 @@ def update_system(fqdn):
     :jsonparam string mac_address: MAC address of the default network interface.
     :jsonparam int memory: Amount of memory (MB) installed in the system.
     :jsonparam int numa_nodes: Number of nodes in the system's NUMA topology.
+    :jsonparam object active_access_policy: JSON object containing a ``pool_name``
+      key with the name of the system pool or a ``custom`` key set to True to change
+      the active access policy for the system
+
     :status 200: System was updated.
     :status 400: Invalid data was given.
     :status 409: Attempted to change the lab controller while the system is 
@@ -423,9 +427,16 @@ def update_system(fqdn):
       which lab controller it is attached to.
     """
     system = _get_system_by_FQDN(fqdn)
-    if not system.can_edit(identity.current.user):
-        raise Forbidden403('Cannot edit system')
     data = read_json_request(request)
+    new_policy = None
+    # A user can have edit_policy permission, but may not have
+    # edit_system permission, hence we check this here separately
+    if 'active_access_policy' in data:
+        if not system.can_edit_policy(identity.current.user):
+            raise Forbidden403('Cannot edit system access policy')
+        new_policy = data.pop('active_access_policy')
+    if data and not system.can_edit(identity.current.user):
+        raise Forbidden403('Cannot edit system')
     # helper for recording activity below
     def record_activity(field, old, new, action=u'Changed'):
         system.record_activity(user=identity.current.user, service=u'HTTP',
@@ -638,6 +649,27 @@ def update_system(fqdn):
         if changed:
             # XXX clear checksum!?
             system.date_modified = datetime.datetime.utcnow()
+        if new_policy:
+            if system.active_access_policy.system_pool:
+                old_policy = 'Pool policy: %s' % system.active_access_policy.system_pool.name
+            else:
+                old_policy = 'Custom Access Policy'
+            if 'pool_name' in new_policy:
+                pool_name = new_policy['pool_name']
+                pool = SystemPool.by_name(pool_name)
+                if pool not in system.pools:
+                    raise BadRequest400('To use a pool policy, the system must be in the pool first')
+                pool_policy = pool.access_policy
+                system.active_access_policy = pool_policy
+                record_activity(u'Active Access Policy',
+                                old_policy,
+                                'Pool policy: %s' % pool_name)
+            if 'custom' in new_policy:
+                system.active_access_policy = system.custom_access_policy
+                record_activity(u'Active Access Policy',
+                                old_policy,
+                                'Custom access policy')
+
     response = jsonify(system.__json__())
     if renamed:
         response.headers.add('Location', url('/view/%s' % system.fqdn))
@@ -1067,56 +1099,6 @@ def get_active_access_policy(fqdn):
         raise BadRequest400('Only one filtering criteria allowd')
 
     return filtered_policy(policy)
-
-@app.route('/systems/<fqdn>/active-access-policy/', methods=['PUT'])
-@auth_required
-def change_active_access_policy(fqdn):
-    """
-    Set the currently active access policy for a system. A system can be configured
-    to use a shared access policy from a pool, or to use the custom access policy
-    defined on the system itself.
-
-    :param fqdn: The system's FQDN
-
-    The request body must be a JSON object in one of the following forms:
-
-    ``{"pool_name": <name>}``: Use a shared access policy from the named pool.
-
-    ``{"custom": True}``: Use the custom access policy defined on this system.
-
-    """
-    data = read_json_request(request)
-    if ('custom' not in data and 'pool_name' not in data) or \
-       'custom' in data and 'pool_name' in data:
-        raise BadRequest400('Must specify either custom or pool parameter')
-    system = _get_system_by_FQDN(fqdn)
-    if not system.can_edit_policy(identity.current.user):
-        raise Forbidden403('Cannot edit system access policy')
-    if system.active_access_policy.system_pool:
-        old_policy = 'Pool policy: %s' % system.active_access_policy.system_pool.name
-    else:
-        old_policy = 'Custom Access Policy'
-    if 'pool_name' in data:
-        pool_name = data['pool_name']
-        with convert_internal_errors():
-            pool = SystemPool.by_name(pool_name)
-        if pool not in system.pools:
-            raise BadRequest400('To use a pool policy, the system must be in the pool first')
-        pool_policy = pool.access_policy
-        system.active_access_policy = pool_policy
-        system.record_activity(user=identity.current.user, service=u'HTTP',
-                               field=u'Active Access Policy', action=u'Changed',
-                               old = old_policy,
-                               new = 'Pool policy: %s' % pool_name,)
-    if 'custom' in data:
-        if data.get('custom'):
-            system.active_access_policy = system.custom_access_policy
-            system.record_activity(user=identity.current.user, service=u'HTTP',
-                                   field=u'Active Access Policy', action=u'Changed',
-                                   old = old_policy,
-                                   new = 'Custom access policy')
-
-    return '', 204
 
 @app.route('/systems/<fqdn>/installations/', methods=['POST'])
 def provision_system(fqdn):
