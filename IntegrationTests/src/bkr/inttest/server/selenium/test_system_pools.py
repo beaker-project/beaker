@@ -128,6 +128,12 @@ class SystemPoolHTTPTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             self.assertItemsEqual(self.pool.systems, [self.system, other_system])
+            self.assertEquals(self.pool.activity[-1].field_name, 'System')
+            self.assertEquals(self.pool.activity[-1].action, 'Added')
+            self.assertEquals(self.pool.activity[-1].new_value, unicode(other_system))
+            self.assertEquals(other_system.activity[-1].field_name, 'Pool')
+            self.assertEquals(other_system.activity[-1].action, 'Added')
+            self.assertEquals(other_system.activity[-1].new_value, unicode(self.pool))
 
         # adding to a pool that doesn't exist is a 404
         response = post_json(get_server_base() + 'pools/nosuchpool/systems/',
@@ -140,6 +146,30 @@ class SystemPoolHTTPTest(DatabaseTestCase):
                 session=s, data={'fqdn': 'nosuchsystem'})
         self.assertEquals(response.status_code, 400)
         self.assertEquals(response.text, "System 'nosuchsystem' does not exist")
+
+
+    def test_remove_system_from_pool(self):
+        with session.begin():
+            system = data_setup.create_system(owner=self.owner)
+            pool = data_setup.create_system_pool(systems=[system])
+        self.assertIn(system, pool.systems)
+        s = requests.Session()
+
+        # A system owner or a pool owner can remove a system from a pool
+        s.post(get_server_base() + 'login', data={'user_name': self.owner.user_name,
+                                                  'password': 'theowner'}).raise_for_status()
+        response = s.delete(get_server_base() + 'pools/%s/systems?fqdn=%s' % (pool.name, system.fqdn))
+        response.raise_for_status()
+
+        with session.begin():
+            session.expire_all()
+            self.assertNotIn(system, pool.systems)
+            self.assertEquals(pool.activity[-1].field_name, 'System')
+            self.assertEquals(pool.activity[-1].action, 'Removed')
+            self.assertEquals(pool.activity[-1].old_value, unicode(system))
+            self.assertEquals(system.activity[-1].field_name, 'Pool')
+            self.assertEquals(system.activity[-1].action, 'Removed')
+            self.assertEquals(system.activity[-1].old_value, unicode(pool))
 
 
     def test_delete_system_pool(self):

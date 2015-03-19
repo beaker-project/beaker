@@ -258,6 +258,9 @@ def add_system_to_pool(pool_name):
                                    new=unicode(pool))
             system.pools.append(pool)
             system.date_modified = datetime.datetime.utcnow()
+            pool.record_activity(user=u, service=u'HTTP',
+                                 action=u'Added', field=u'System', old=None,
+                                 new=unicode(system))
         else:
             if not pool.can_edit(u):
                 raise Forbidden403('You do not have permission to '
@@ -288,10 +291,10 @@ def remove_system_from_pool(pool_name):
         if pool.can_edit(u) or system.can_edit(u):
             system.pools.remove(pool)
             system.record_activity(user=u, service=u'HTTP',
-                                   action=u'Removed', field=u'Pool', old=pool, new=None)
+                                   action=u'Removed', field=u'Pool', old=unicode(pool), new=None)
             system.date_modified = datetime.datetime.utcnow()
             pool.record_activity(user=u, service=u'HTTP',
-                       action=u'Removed', field=u'System', old=system, new=None)
+                       action=u'Removed', field=u'System', old=unicode(system), new=None)
         else:
             raise Forbidden403('You do not have permission to modify system %s'
                                'or remove systems from pool %s' % (system.fqdn, pool.name))
