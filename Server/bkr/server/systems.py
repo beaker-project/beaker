@@ -12,7 +12,7 @@ from sqlalchemy import and_, desc
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm.exc import NoResultFound
 from flask import request, jsonify, redirect as flask_redirect
-from turbogears import expose, controllers, flash, redirect, url
+from turbogears import expose, controllers, flash, url
 from bkr.server import identity, mail
 from bkr.server.bexceptions import BX, InsufficientSystemPermissions
 from bkr.server.model import System, SystemActivity, SystemStatus, SystemPool, \
@@ -348,7 +348,7 @@ def add_system():
     # convenient because it lets us use a traditional browser form without AJAX 
     # handling, and for now we're redirecting to /view/FQDN until that is moved 
     # to /systems/FQDN/
-    return flask_redirect(url(u'/view/%s#essentials' % system.fqdn))
+    return flask_redirect(url(system.href))
 
 # XXX need to move /view/FQDN to /systems/FQDN/
 @app.route('/systems/<fqdn>/', methods=['GET'])
@@ -672,7 +672,7 @@ def update_system(fqdn):
 
     response = jsonify(system.__json__())
     if renamed:
-        response.headers.add('Location', url('/view/%s' % system.fqdn))
+        response.headers.add('Location', url(system.href))
     return response
 
 # For compat only. Separate function so that it doesn't appear in the docs.
@@ -1125,13 +1125,12 @@ def provision_system(fqdn):
     data = read_json_request(request)
     with convert_internal_errors():
         if not data['distro_tree'] or 'id' not in data['distro_tree']:
-            raise ValueError('No distro tree specified')
+            raise BadRequest400('No distro tree specified')
         distro_tree = DistroTree.by_id(data['distro_tree']['id'])
         user = identity.current.user
         if user.rootpw_expired:
-            raise ValueError('Your root password has expired, you must '
+            raise Forbidden403('Your root password has expired, you must '
                     'change or clear it in order to provision.')
-            redirect(u"/view/%s" % system.fqdn)
         install_options = system.manual_provision_install_options(distro_tree)\
                 .combined_with(InstallOptions.from_strings(data.get('ks_meta'),
                     data.get('koptions'), data.get('koptions_post')))
