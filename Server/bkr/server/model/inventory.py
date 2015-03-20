@@ -535,7 +535,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
         else:
             clause = cls.visible_to_user(user)
         return cls.query.outerjoin(System.lab_controller)\
-                .outerjoin(System.custom_access_policy)\
+                .outerjoin(System.active_access_policy)\
                 .filter(clause)
 
     @hybrid_method
@@ -543,7 +543,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
         if user.is_admin() or user.has_permission(u'secret_visible'):
             return True
         return ((self.custom_access_policy and
-                 self.custom_access_policy.grants(user, SystemPermission.view)) or
+                 self.active_access_policy.grants(user, SystemPermission.view)) or
                 self.owner == user or
                 self.loaned == user or
                 self.user == user)
@@ -559,8 +559,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
 
     @hybrid_property
     def visible_to_anonymous(self):
-        return (self.custom_access_policy and
-                self.custom_access_policy.grants_everybody(SystemPermission.view))
+        return (self.active_access_policy and
+                self.active_access_policy.grants_everybody(SystemPermission.view))
 
     @visible_to_anonymous.expression
     def visible_to_anonymous(cls): #pylint: disable=E0213
@@ -757,8 +757,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
             return True
         if user.is_admin():
             return True
-        if (self.custom_access_policy and
-            self.custom_access_policy.grants(user, SystemPermission.edit_policy)):
+        if (self.active_access_policy and
+            self.active_access_policy.grants(user, SystemPermission.edit_policy)):
             return True
         return False
 
@@ -773,8 +773,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
             return True
         if user.is_admin():
             return True
-        if (self.custom_access_policy and
-            self.custom_access_policy.grants(user, SystemPermission.edit_system)):
+        if (self.active_access_policy and
+            self.active_access_policy.grants(user, SystemPermission.edit_system)):
             return True
         return False
 
@@ -797,9 +797,9 @@ class System(DeclarativeMappedObject, ActivityMixin):
             return True
         if user.is_admin():
             return True
-        if (self.custom_access_policy and
-            self.custom_access_policy.grants(user, SystemPermission.edit_system) or
-            self.custom_access_policy.grants(user, SystemPermission.view_power)):
+        if (self.active_access_policy and
+            self.active_access_policy.grants(user, SystemPermission.edit_system) or
+            self.active_access_policy.grants(user, SystemPermission.view_power)):
             return True
         return False
 
@@ -824,8 +824,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
         if user.is_admin():
             return True
         # Anyone else needs the "loan_any" permission
-        if (self.custom_access_policy and
-            self.custom_access_policy.grants(user, SystemPermission.loan_any)):
+        if (self.active_access_policy and
+            self.active_access_policy.grants(user, SystemPermission.loan_any)):
             return True
         return False
 
@@ -840,8 +840,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
         # "loan_self" only lets you take an unloaned system and update the
         # details on a loan already granted to you
         if ((not self.loaned or self.loaned == user) and
-                self.custom_access_policy and
-                self.custom_access_policy.grants(user,
+                self.active_access_policy and
+                self.active_access_policy.grants(user,
                                                  SystemPermission.loan_self)):
             return True
         return False
@@ -874,8 +874,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
         if self.loaned and self.loaned == user:
             return True
         # Anyone else needs the "reserve" permission
-        if (self.custom_access_policy and
-            self.custom_access_policy.grants(user, SystemPermission.reserve)):
+        if (self.active_access_policy and
+            self.active_access_policy.grants(user, SystemPermission.reserve)):
             return True
         # Beaker admins can effectively reserve any system, but need to
         # grant themselves the appropriate permissions first (or loan the
@@ -924,8 +924,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
         if self.can_configure_netboot(user):
             return True
         # Anyone else needs the "control_system" permission
-        if (self.custom_access_policy and
-            self.custom_access_policy.grants(user, SystemPermission.control_system)):
+        if (self.active_access_policy and
+            self.active_access_policy.grants(user, SystemPermission.control_system)):
             return True
         return False
 
