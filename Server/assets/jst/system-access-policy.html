@@ -1,0 +1,28 @@
+<form>
+  <div class="active-access-policy-chooser">
+    <label class="radio select-beside">
+      <input type="radio" name="policy" value="pool" <% if (readonly) { %>disabled<% } %>/>
+      Use policy from pool:
+    </label>
+    <select name="pool_name" <% if (readonly) { %>disabled<% } %>>
+      <% _.each(pools, function (pool) { %>
+      <option value="<%- pool %>"><%- pool %></option>
+      <% }) %>
+    </select>
+
+    <label class="radio">
+      <input type="radio" name="policy" value="custom" <% if (readonly) { %>disabled<% } %>/>
+      Use custom access policy
+    </label>
+  </div>
+
+  <div class="access-policy"/>
+
+  <% if (!readonly) { %>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary" disabled>Save changes</button>
+      <button type="reset" class="btn" data-loading-text="Revert" disabled>Revert</button>
+      <span class="sync-status"></span>
+    </div>
+  <% } %>
+</form>

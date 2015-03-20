@@ -17,13 +17,8 @@ window.AccessPolicyView = Backbone.View.extend({
         'keypress .group-rows input[type=text]': 'add_group_on_enter',
         'click    .user-rows button.add': 'add_user',
         'keypress .user-rows input[type=text]': 'add_user_on_enter',
-        'submit   form': 'submit',
-        'reset    form': 'reset',
     },
     initialize: function (options) {
-        this.dirty = false;
-        this.request_in_progress = false;
-        this.listenTo(this.model, 'change', this.render);
         this.readonly = options.readonly;
         this.render();
     },
@@ -50,47 +45,6 @@ window.AccessPolicyView = Backbone.View.extend({
         // set up typeaheads
         this.$('.group-rows input[type=text]').beaker_typeahead('group-name');
         this.$('.user-rows input[type=text]').beaker_typeahead('user-name');
-    },
-    update_button_state: function () {
-        this.$('.form-actions button').prop('disabled',
-                (!this.dirty || this.request_in_progress));
-    },
-    sync_started: function () {
-        this.request_in_progress = true;
-        this.update_button_state();
-    },
-    sync_complete: function () {
-        this.dirty = false;
-        this.request_in_progress = false;
-        this.update_button_state();
-        this.$('.dirty').removeClass('dirty');
-        this.$('.sync-status').empty();
-    },
-    sync_error: function (model, xhr) {
-        this.request_in_progress = false;
-        this.update_button_state();
-        var msg = 'Server request failed: ' + xhr.statusText;
-        if (xhr.status >= 400 && xhr.status < 500)
-            msg += ': ' + xhr.responseText;
-        this.$('.sync-status').empty().append(
-                $('<span class="alert alert-error"/>').text(msg));
-    },
-    submit: function (evt) {
-        evt.preventDefault();
-        if (this.request_in_progress) return false;
-        this.$('.sync-status').html('<i class="fa fa-spinner fa-spin"></i> Saving&hellip;');
-        this.sync_started();
-        this.model.save_access_policy({
-                success: _.bind(this.sync_complete, this),
-                error: _.bind(this.sync_error, this)});
-    },
-    reset: function (evt) {
-        evt.preventDefault();
-        if (this.request_in_progress) return false;
-        this.$('.sync-status').html('<i class="fa fa-spinner fa-spin"></i> Loading&hellip;');
-        this.model.fetch({
-                success: _.bind(this.render, this),
-                error: _.bind(this.sync_error, this)});
     },
     add_group: function () {
         var $input = this.$('#access-policy-group-input');
@@ -220,8 +174,7 @@ window.AccessPolicyView = Backbone.View.extend({
         } else {
             this.$('.everybody-row tr').addClass('dirty');
         }
-        this.dirty = true;
-        this.update_button_state();
+        this.trigger('changed_access_policy_rules');
     },
 })
 

@@ -279,6 +279,7 @@ class SystemPoolAccessPolicyWebUITest(WebDriverTestCase):
         checkbox.click()
         check_policy_row_is_dirty(b, 'anotherpoirot')
         pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        pane.find_element_by_xpath('.//span[@class="sync-status" and not(node())]')
         check_policy_row_is_not_dirty(b, 'anotherpoirot')
 
         # refresh to check it is persisted
@@ -299,6 +300,7 @@ class SystemPoolAccessPolicyWebUITest(WebDriverTestCase):
         checkbox.click()
         check_policy_row_is_dirty(b, 'psidekicks')
         pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        pane.find_element_by_xpath('.//span[@class="sync-status" and not(node())]')
         # "psidekicks" row is completely absent now due to having no permissions
         check_policy_row_is_absent(b, 'psidekicks')
 
@@ -323,6 +325,7 @@ class SystemPoolAccessPolicyWebUITest(WebDriverTestCase):
         find_policy_checkbox(b, 'marple', 'Edit this policy').click()
         check_policy_row_is_dirty(b, 'marple')
         pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        pane.find_element_by_xpath('.//span[@class="sync-status" and not(node())]')
         check_policy_row_is_not_dirty(b, 'marple')
 
         # refresh to check it has been persisted
@@ -402,6 +405,7 @@ class SystemPoolAccessPolicyWebUITest(WebDriverTestCase):
         # grant anotherpoirot edit_policy permission
         find_policy_checkbox(b, 'anotherpoirot', 'Edit this policy').click()
         pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        pane.find_element_by_xpath('.//span[@class="sync-status" and not(node())]')
         logout(b)
         login(b, user='anotherpoirot', password='testing')
         self.go_to_pool_edit()

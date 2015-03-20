@@ -1,5 +1,4 @@
-<form>
-  <table class="table table-bordered table-hover">
+<table class="table table-bordered table-hover access-policy-table">
     <thead>
       <tr>
         <th></th>
@@ -43,12 +42,4 @@
     <tbody class="everybody-row">
       <!-- everybody row goes here -->
     </tbody>
-  </table>
-  <% if (!readonly) { %>
-    <div class="form-actions">
-      <button type="submit" class="btn btn-primary">Save changes</button>
-      <button type="reset" class="btn">Revert</button>
-      <span class="sync-status"></span>
-    </div>
-  <% } %>
-</form>
+</table>

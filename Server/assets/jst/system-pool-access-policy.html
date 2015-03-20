@@ -1,0 +1,11 @@
+<form>
+  <div class="access-policy"/>
+
+  <% if (!readonly) { %>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary" disabled>Save changes</button>
+      <button type="reset" class="btn" data-loading-text="Revert" disabled>Revert</button>
+      <span class="sync-status"></span>
+    </div>
+  <% } %>
+</form>

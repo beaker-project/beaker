@@ -38,15 +38,18 @@ window.SystemAccessPolicy = Backbone.Model.extend({
     save_access_policy: function (options) {
         var model = this;
         options = options || {};
-        this.save({}, {
-            success: function (data, status, jqxhr) {
-                // We refresh the entire system since permissions are likely to 
-                // have changed. Don't invoke the success/error callbacks until 
-                // the refresh is complete.
-                this.system.fetch({success: options.success, error: options.error});
-            },
-            error: options.error,
-        });
+        return this.save()
+            // We refresh the entire system since permissions are likely to 
+            // have changed.
+            .then(function () { return model.system.fetch(); })
+            .done(function (data, status, jqxhr) {
+                if (options.success)
+                    options.success(model, data, options);
+            })
+            .fail(function (jqxhr, status, error) {
+                if (options.error)
+                    options.error(model, jqxhr, options);
+            });
     },
 });
 
@@ -109,13 +112,19 @@ window.SystemPoolAccessPolicy = Backbone.Model.extend({
         return data;
     },
     save_access_policy: function (options) {
-        this.save({}, {
-            success: function (data, status, jqxhr) {
-                // to refresh the can_edit_policy attribute
-                this.system_pool.fetch({success: options.success, error: options.error});
-            },
-            error: options.error,
-        });
+        var model = this;
+        options = options || {};
+        return this.save()
+            // to refresh the can_edit_policy attribute
+            .then(function () { return model.system_pool.fetch(); })
+            .done(function (data, status, jqxhr) {
+                if (options.success)
+                    options.success(model, data, options);
+            })
+            .fail(function (jqxhr, status, error) {
+                if (options.error)
+                    options.error(model, jqxhr, options);
+            });
     },
 });
 

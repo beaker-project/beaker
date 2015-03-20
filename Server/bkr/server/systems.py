@@ -418,7 +418,7 @@ def update_system(fqdn):
     :jsonparam int numa_nodes: Number of nodes in the system's NUMA topology.
     :jsonparam object active_access_policy: JSON object containing a ``pool_name``
       key with the name of the system pool or a ``custom`` key set to True to change
-      the active access policy for the system
+      the active access policy for the system.
 
     :status 200: System was updated.
     :status 400: Invalid data was given.

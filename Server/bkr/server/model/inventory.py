@@ -428,6 +428,12 @@ class System(DeclarativeMappedObject, ActivityMixin):
             'queue_size': None,
             'pools': [pool.name for pool in self.pools],
         }
+        if self.active_access_policy.system_pool:
+            data['active_access_policy'] = {'type':'pool',
+                                     'pool_name':self.active_access_policy.system_pool.name
+                                     }
+        else:
+            data['active_access_policy'] = {'type':'custom'}
         if self.lab_controller:
             data['lab_controller_id'] = self.lab_controller.id
         if identity.current.user and self.can_view_power(identity.current.user):

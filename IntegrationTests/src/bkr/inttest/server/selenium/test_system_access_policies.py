@@ -10,9 +10,10 @@ from bkr.server.model import session, SystemAccessPolicy, SystemPermission, \
 from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, logout, \
-find_policy_checkbox, check_policy_row_is_dirty, \
-check_policy_row_is_not_dirty, check_policy_row_is_absent
+    find_policy_checkbox, check_policy_row_is_dirty, \
+    check_policy_row_is_not_dirty, check_policy_row_is_absent
 from bkr.inttest.server.requests_utils import put_json
+from selenium.webdriver.support.ui import Select
 
 class SystemAccessPolicyWebUITest(WebDriverTestCase):
 
@@ -82,6 +83,7 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
         checkbox.click()
         check_policy_row_is_dirty(b, 'poirot')
         pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        pane.find_element_by_xpath('.//span[@class="sync-status" and not(node())]')
         check_policy_row_is_not_dirty(b, 'poirot')
 
         # refresh to check it is persisted
@@ -101,6 +103,7 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
         checkbox.click()
         check_policy_row_is_dirty(b, 'sidekicks')
         pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        pane.find_element_by_xpath('.//span[@class="sync-status" and not(node())]')
         # "sidekicks" row is completely absent now due to having no permissions
         check_policy_row_is_absent(b, 'sidekicks')
 
@@ -125,6 +128,7 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
         find_policy_checkbox(b, 'marple', 'Edit this policy').click()
         check_policy_row_is_dirty(b, 'marple')
         pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        pane.find_element_by_xpath('.//span[@class="sync-status" and not(node())]')
         check_policy_row_is_not_dirty(b, 'marple')
 
         # refresh to check it has been persisted
@@ -204,11 +208,13 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
         # grant poirot edit_policy permission
         find_policy_checkbox(b, 'poirot', 'Edit this policy').click()
         pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        pane.find_element_by_xpath('.//span[@class="sync-status" and not(node())]')
         logout(b)
         login(b, user='poirot', password='testing')
         b.get(get_server_base() + 'view/%s/' % self.system.fqdn)
         b.find_element_by_link_text('Access Policy').click()
         pane = b.find_element_by_id('access-policy')
+
         # remove self edit_policy permission
         find_policy_checkbox(b, 'poirot', 'Edit this policy').click()
         pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
@@ -216,6 +222,98 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
         pane.find_element_by_xpath('.//table[not(.//input[@type="checkbox" and not(@disabled)])]')
         pane.find_element_by_xpath('.//table[not(.//input[@type="text"])]')
 
+    def test_active_access_policy_selection(self):
+        with session.begin():
+            user = data_setup.create_user()
+            owner = data_setup.create_user(password='password')
+            system = data_setup.create_system(owner=owner)
+            data_setup.create_system_pool(systems=[system])
+            pool2 = data_setup.create_system_pool(systems=[system])
+            pool2.access_policy.add_rule(user=user,
+                                         permission=SystemPermission.edit_system)
+        b = self.browser
+        login(b, owner.user_name, password='password')
+        b.get(get_server_base() + 'view/%s/' % system.fqdn)
+        b.find_element_by_link_text('Access Policy').click()
+        pane = b.find_element_by_id('access-policy')
+        # Currently the system is using its custom access policy
+        self.assertTrue(pane.find_element_by_xpath(
+            '//label[contains(string(.), "Use custom access policy")]'
+            '/input[@type="radio"]').is_selected())
+
+        # change to pool policy
+        pane.find_element_by_xpath(
+                           '//label[contains(string(.), "Use policy from pool:")]'
+                           '/input[@type="radio"]').click()
+        Select(pane.find_element_by_name('pool_name')).select_by_visible_text(pool2.name)
+        pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        # wait for the request to complete
+        pane.find_element_by_xpath('.//span[@class="sync-status" and not(node())]')
+        # check if the policy change has persisted
+        b.get(get_server_base() + 'view/%s/' % system.fqdn)
+        b.find_element_by_link_text('Access Policy').click()
+        self.assertTrue(b.find_element_by_xpath(
+                                        '//label[contains(string(.), "Use policy from pool:")]'
+                                        '/input[@type="radio"]').is_selected())
+        selected_options = Select(b.find_element_by_name('pool_name')).\
+                           all_selected_options
+        self.assertTrue(len(selected_options), 1)
+        self.assertEquals(selected_options[0].text, pool2.name)
+        self.assertFalse(b.find_element_by_xpath(
+                                         '//label[contains(string(.), "Use custom access policy")]'
+                                         '/input[@type="radio"]').is_selected())
+        with session.begin():
+            session.expire_all()
+            self.assertTrue(system.active_access_policy.grants(user,
+                                                   SystemPermission.edit_system))
+        logout(b)
+        # no change allowed when not logged in/no right privileges
+        b.get(get_server_base() + 'view/%s/' % system.fqdn)
+        b.find_element_by_link_text('Access Policy').click()
+        self.assertFalse(b.find_element_by_xpath(
+                                         '//label[contains(string(.), "Use policy from pool:")]'
+                                         '/input[@type="radio"]').is_enabled())
+        selected_options = Select(b.find_element_by_name('pool_name')). \
+                           all_selected_options
+        self.assertEquals(selected_options[0].text, pool2.name)
+        self.assertFalse(b.find_element_by_xpath(
+            '//label[contains(string(.), "Use custom access policy")]'
+            '/input[@type="radio"]').is_enabled())
+
+    def test_give_away_permission(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            owner = data_setup.create_user(password='password')
+            system = data_setup.create_system(owner=owner)
+            pool = data_setup.create_system_pool(systems=[system])
+            pool.access_policy.add_rule(user=user,
+                                        permission=SystemPermission.edit_policy)
+            system.active_access_policy = pool.access_policy
+        b = self.browser
+        login(b, user=user.user_name, password='password')
+        b.get(get_server_base() + 'view/%s/' % system.fqdn)
+        b.find_element_by_link_text('Access Policy').click()
+        pane = b.find_element_by_id('access-policy')
+        # Currently the system is using a pool access policy
+        self.assertTrue(pane.find_element_by_xpath(
+            '//label[contains(string(.), "Use policy from pool:")]'
+            '/input[@type="radio"]').is_selected())
+        # change to custom access policy
+        pane.find_element_by_xpath(
+                           '//label[contains(string(.), "Use custom access policy")]'
+                           '/input[@type="radio"]').click()
+        pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        pane.find_element_by_xpath('//div[@id="access-policy" and not (.//div[@class="form-actions"])]')
+        self.assertTrue(pane.find_element_by_xpath(
+            '//label[contains(string(.), "Use custom access policy")]'
+            '/input[@type="radio"]').is_selected())
+        # The radio buttons should be read only
+        self.assertFalse(b.find_element_by_xpath(
+            '//label[contains(string(.), "Use policy from pool:")]'
+            '/input[@type="radio"]').is_enabled())
+        self.assertFalse(b.find_element_by_xpath(
+            '//label[contains(string(.), "Use custom access policy")]'
+            '/input[@type="radio"]').is_enabled())
 
 class SystemAccessPolicyHTTPTest(DatabaseTestCase):
     """
