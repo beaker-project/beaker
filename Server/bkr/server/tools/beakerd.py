@@ -739,7 +739,7 @@ def _system_count_metrics_for_query_grouped(name, grouping, query):
 def system_count_metrics():
     _system_count_metrics_for_query('all', System.query)
     _system_count_metrics_for_query('shared', System.query
-            .outerjoin(System.custom_access_policy)
+            .outerjoin(System.active_access_policy)
             .filter(SystemAccessPolicy.grants_everybody(SystemPermission.reserve)))
     _system_count_metrics_for_query_grouped('by_arch', Arch.arch,
             System.query.join(System.arch))

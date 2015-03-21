@@ -1856,6 +1856,27 @@ class TestBeakerdMetrics(DatabaseTestCase):
         for k, v in other_labs.iteritems():
             self.assertEqual((k, v), (k, 0))
 
+    def test_system_count_metrics_uses_active_access_policy(self):
+        lc = data_setup.create_labcontroller()
+        # not shared
+        data_setup.create_system(lab_controller=lc, shared=False)
+        # shared via custom access policy
+        data_setup.create_system(lab_controller=lc, shared=True)
+        # shared via pool policy
+        shared_via_pool = data_setup.create_system(lab_controller=lc, shared=True)
+        pool = data_setup.create_system_pool(systems=[shared_via_pool])
+        pool.access_policy.add_rule(SystemPermission.reserve, everybody=True)
+        shared_via_pool.active_access_policy = pool.access_policy
+        # restricted via pool policy
+        restricted_via_pool = data_setup.create_system(lab_controller=lc, shared=True)
+        restrictive_pool = data_setup.create_system_pool(systems=[shared_via_pool])
+        restricted_via_pool.active_access_policy = restrictive_pool.access_policy
+        session.flush()
+        beakerd.system_count_metrics()
+        shared_count, = [value for name, value in beakerd.metrics.calls
+                if name == 'gauges.systems_idle_automated.shared']
+        self.assertEquals(shared_count, 2)
+
     def test_recipe_count_metrics(self):
         gauges = [
             'gauges.recipes_scheduled',
