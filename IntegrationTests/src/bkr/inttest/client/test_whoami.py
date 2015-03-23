@@ -4,7 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from bkr.server.model import session
+from bkr.server.model import session, Permission
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, create_client_config, ClientError, \
         ClientTestCase
@@ -14,6 +14,23 @@ class WhoAmITest(ClientTestCase):
     def test_whoami(self):
         out = run_client(['bkr', 'whoami'])
         self.assertIn(data_setup.ADMIN_USER, out)
+
+    def test_whoami_proxy_user(self):
+        with session.begin():
+            group = data_setup.create_group()
+            proxy_perm = Permission.by_name(u'proxy_auth')
+            group.permissions.append(proxy_perm)
+            proxied_user = data_setup.create_user()
+            proxying_user = data_setup.create_user(password='password')
+            proxying_user.groups.append(group)
+        out = run_client(['bkr', 'whoami',
+                          '--proxy-user', proxied_user.user_name],
+                         config=\
+                         create_client_config(
+                             username=proxying_user.user_name,
+                             password='password'))
+        self.assertIn("'username': '%s'" % proxied_user.user_name, out)
+        self.assertIn("'proxied_by_username': '%s'" % proxying_user.user_name, out)
 
     def test_wrong_password(self):
         with self.assertRaises(ClientError) as assertion:

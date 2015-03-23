@@ -74,6 +74,16 @@ These options are applicable to all :program:`bkr` subcommands.
    Authenticate using <password>. This option is only applicable when 
    :option:`--username` is also passed.
 
+.. option:: --proxy-user <username>
+
+   Impersonate <username> in order to perform actions on their behalf.
+
+   This option can only be used when the authenticating user is a member of
+   a group which has been granted 'proxy_user' permission by the Beaker
+   administrator. Typically this permission is granted to service accounts
+   so that a trusted script can perform actions on behalf of any other
+   Beaker user.
+
 .. _workflow-options:
 
 Workflow options

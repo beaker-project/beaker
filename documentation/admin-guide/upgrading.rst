@@ -84,7 +84,7 @@ upgrade procedures described above, with the following differences:
 ==============  ================
 Beaker release  Database version
 ==============  ================
-19              TBA
+19              ``53942581687f``
 0.18            ``431e4e2ccbba``
 0.17            ``431e4e2ccbba``
 0.16            ``2f38ab976d17``

@@ -266,13 +266,15 @@ class ClientCommandContainer(CommandContainer):
         self.conf.load_from_conf(conf)
         self.conf.load_from_dict(kwargs)
 
-    def set_hub(self, username=None, password=None, auto_login=True):
+    def set_hub(self, username=None, password=None, auto_login=True, proxy_user=None):
         if username:
             if password is None:
                 password = password_prompt(default_value=password)
             self.conf["AUTH_METHOD"] = "password"
             self.conf["USERNAME"] = username
             self.conf["PASSWORD"] = password
+        if proxy_user:
+            self.conf["PROXY_USER"] = proxy_user
 
         self.hub = HubProxy(conf=self.conf, auto_login=auto_login)
 
