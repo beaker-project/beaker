@@ -73,6 +73,7 @@ var SystemPoolEditModal = Backbone.View.extend({
     initialize: function () {
         this.render();
         this.$el.modal();
+        this.$('[name=description]').focus();
     },
     owner_type_changed: function () {
         // We also disable the invisible inputs so that the browser doesn't 
@@ -104,7 +105,6 @@ var SystemPoolEditModal = Backbone.View.extend({
         this.$('input[name="user_name"]').beaker_typeahead('user-name');
         this.$('input[name="group_name"]').beaker_typeahead('group-name');
         this.owner_type_changed();
-        this.$('input').first().focus();
     },
     submit: function (evt) {
         evt.preventDefault();
