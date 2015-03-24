@@ -47,6 +47,9 @@
         $('.system-nav a[href="#power"]').one('show', function () {
             system.command_queue.fetch({reset: true});
         });
+        $('.system-nav a[href="#cockpit"]').one('show', function () {
+            new SystemCockpitView({model: system, el: $('#cockpit')});
+        });
     });
   </script>
  </head>
@@ -64,6 +67,7 @@
       <li class="nav-header">Control</li>
       <li><a data-toggle="tab" href="#power">Power</a></li>
       <li><a data-toggle="tab" href="#provision">Provision</a></li>
+      <li><a data-toggle="tab" href="#cockpit">Cockpit UI</a></li>
       <li class="nav-header">Access</li>
       <li><a data-toggle="tab" href="#owner">Owner</a></li>
       <li><a data-toggle="tab" href="#pools">Pools</a></li>
@@ -105,6 +109,7 @@
     </span>
    </div>
       <div class="tab-pane" id="power"></div>
+      <div class="tab-pane" id="cockpit"></div>
       <div class="tab-pane" id="power-settings"></div>
       <div class="tab-pane" id="scheduler-settings"></div>
    <div class="tab-pane" id="notes">
