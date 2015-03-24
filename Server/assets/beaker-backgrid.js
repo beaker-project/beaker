@@ -8,6 +8,27 @@
 
 ;(function () {
 
+window.BackgridMarkdownCell = Backgrid.StringCell.extend({
+    className: 'markdown-cell',
+    render: function () {
+        var value = this.model.get(this.column.get('name')) || '';
+        this.$el.html(marked(value, {sanitize: true, smartypants: true}));
+        return this;
+    },
+});
+
+/** Cell type which renders the value as Markdown and then just takes the first 
+ * paragraph, truncated to a reasonable width. */
+window.BackgridTruncatedMarkdownCell = Backgrid.StringCell.extend({
+    className: 'truncated-markdown-cell',
+    render: function () {
+        var value = this.model.get(this.column.get('name')) || '';
+        var rendered = $('<body>').html(marked(value, {sanitize: true, smartypants: true}));
+        this.$el.empty().append(rendered.find('p:first').contents());
+        return this;
+    },
+});
+
 window.BackgridUserCell = Backgrid.Cell.extend({
     className: 'user-cell',
     formatter: {

@@ -34,7 +34,7 @@ window.PoolsView = BeakerGrid.extend({
         options.columns = [
             {name: 'name', label: 'Name', cell: PoolNameCell, editable: false},
             {name: 'owner', label: 'Owner', cell: PoolOwnerCell, editable: false, sortable: false},
-            {name: 'description', label: 'Description', cell: 'string', editable: false},
+            {name: 'description', label: 'Description', cell: BackgridTruncatedMarkdownCell, editable: false},
         ];
         options.query_builder_columns = [
             {name: 'name', label: 'Name'},
