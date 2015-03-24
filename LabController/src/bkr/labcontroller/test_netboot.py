@@ -107,6 +107,9 @@ class NetBootTestCase(unittest.TestCase):
                             "Missing persistent %r file: %r" %
                                                (category, path))
 
+    def check_netbootloader_leak(self, config):
+        self.assertNotIn('netbootloader=', open(config).read())
+
     def make_filenames(self, paths):
         return [os.path.join(self.tftp_root, *parts) for parts in paths]
 
@@ -238,6 +241,7 @@ timeout 0
 label local
     localboot 0
 ''')
+        self.check_netbootloader_leak(pxelinux_config_path)
         netboot.clear_pxelinux(TEST_FQDN, self.tftp_root)
         self.assert_(not os.path.exists(pxelinux_config_path))
 
@@ -298,7 +302,7 @@ title Beaker scheduled job for fqdn.example.invalid
     kernel /images/fqdn.example.invalid/kernel console=ttyS0,115200 ks=http://lol/ netboot_method=efigrub
     initrd /images/fqdn.example.invalid/initrd
 ''')
-
+        self.check_netbootloader_leak(grub_config_path)
         netboot.clear_efigrub(TEST_FQDN, self.tftp_root)
         self.assert_(not os.path.exists(grub_config_path))
 
@@ -352,7 +356,6 @@ class ZpxeTest(NetBootTestCase):
         self.assertEquals(open(os.path.join(self.tftp_root, 's390x',
                 's_fqdn.example.invalid_conf')).read(),
                 '')
-
         netboot.clear_zpxe(TEST_FQDN, self.tftp_root)
         self.assertEquals(open(os.path.join(self.tftp_root, 's390x',
                 's_fqdn.example.invalid')).read(),
@@ -378,7 +381,7 @@ image=/images/fqdn.example.invalid/kernel
     read-only
     root=/dev/ram
 ''')
-
+        self.check_netbootloader_leak(elilo_config_path)
         netboot.clear_elilo(TEST_FQDN, self.tftp_root)
         self.assert_(not os.path.exists(elilo_config_path))
 
@@ -401,7 +404,7 @@ image=/images/fqdn.example.invalid/kernel
 ''')
         yaboot_symlink_path = os.path.join(self.tftp_root, 'ppc', '7f0000ff')
         self.assertEquals(os.readlink(yaboot_symlink_path), '../yaboot')
-
+        self.check_netbootloader_leak(yaboot_config_path)
         netboot.clear_yaboot(TEST_FQDN, self.tftp_root)
         self.assert_(not os.path.exists(yaboot_config_path))
         self.assert_(not os.path.exists(yaboot_symlink_path))
@@ -430,6 +433,7 @@ initrd /images/fqdn.example.invalid/initrd
 
 boot
 """)
+            self.check_netbootloader_leak(path)
         grub2_symlink_path = os.path.join(self.tftp_root, 'ppc', '7f0000ff-grub2')
         self.assertEquals(os.readlink(grub2_symlink_path), '../boot/grub2/powerpc-ieee1275/core.elf')
 
@@ -452,7 +456,7 @@ initrd /images/fqdn.example.invalid/initrd
 boot
 """)
         self.assertEquals(open(grub_default_path).read(), 'exit\n')
-
+        self.check_netbootloader_leak(grub_config_path)
         netboot.clear_aarch64(TEST_FQDN, self.tftp_root)
         self.assertFalse(os.path.exists(grub_config_path))
 
@@ -482,6 +486,7 @@ kernel ::/images/fqdn.example.invalid/kernel
 initrd ::/images/fqdn.example.invalid/initrd
 append ks=http://lol/ ksdevice=bootif netboot_method=petitboot
 """)
+        self.check_netbootloader_leak(petitboot_config_path)
         netboot.clear_petitboot(TEST_FQDN, self.tftp_root)
         self.assertFalse(os.path.exists(petitboot_config_path))
 
@@ -500,7 +505,7 @@ class NetbootloaderTest(ImagesBaseTestCase):
         # this tests ppc64 netboot creation
         grub2_config_file = os.path.join(self.tftp_root, 'bootloader', TEST_FQDN, 'grub.cfg-7F0000FF')
         self.assertTrue(os.path.exists(grub2_config_file))
-
+        self.check_netbootloader_leak(grub2_config_file)
         # Clear
         netboot.clear_netbootloader_directory(TEST_FQDN)
 

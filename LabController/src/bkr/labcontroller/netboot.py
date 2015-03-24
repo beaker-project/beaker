@@ -608,8 +608,7 @@ add_bootloader("zpxe", configure_zpxe, clear_zpxe, set(["s390", "s390x"]))
 add_bootloader("petitboot", configure_petitboot, clear_petitboot)
 
 # Custom bootloader stuff
-def configure_netbootloader_directory(fqdn, kernel_options):
-    netbootloader, _ = extract_arg('netbootloader=', kernel_options)
+def configure_netbootloader_directory(fqdn, kernel_options, netbootloader):
     tftp_root = get_tftp_root()
     if netbootloader:
         fqdn_dir = os.path.join(tftp_root, 'bootloader', fqdn)
@@ -640,12 +639,14 @@ def configure_all(fqdn, arch, distro_tree_id,
     fetch_images(distro_tree_id, kernel_url, initrd_url, fqdn)
     if not basedir:
         basedir = get_tftp_root()
+    netbootloader, kernel_options = extract_arg('netbootloader=',
+                                                kernel_options)
     for bootloader in BOOTLOADERS.values():
         if bootloader.arches and arch not in bootloader.arches:
             # Arch constrained bootloader and this system doesn't match
             continue
         bootloader.configure(fqdn, kernel_options, basedir)
-    configure_netbootloader_directory(fqdn, kernel_options)
+    configure_netbootloader_directory(fqdn, kernel_options, netbootloader)
 
 def clear_all(fqdn, basedir=None):
     """Clear images and all bootloader files for given fqdn"""
