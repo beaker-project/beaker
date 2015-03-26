@@ -7,7 +7,7 @@
 </head>
 <body>
   <script type="text/javascript">
-    var system_pool = new SystemPool(${tg.to_json(system_pool)}, {parse: true, url: ${tg.to_json(tg.url('/pools/%s/' % system_pool.name))}});
+    var system_pool = new SystemPool(${tg.to_json(system_pool)}, {parse: true, url: ${tg.to_json(tg.url(system_pool.href))}});
     $(function () {
         new SystemPoolInfo({model: system_pool, el: $('#system-pool-info')});
         new SystemPoolSystemsView({model: system_pool, el: $('#systems')});

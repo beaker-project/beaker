@@ -66,7 +66,7 @@ class SystemPoolEditTest(WebDriverTestCase):
         if system_pool is None:
             system_pool = self.pool
         b = self.browser
-        b.get(get_server_base() + 'pools/%s/' % system_pool.name)
+        b.get(get_server_base() + system_pool.href)
         b.find_element_by_xpath('//title[normalize-space(text())="%s"]' % \
             system_pool.name)
         if tab:
@@ -79,10 +79,12 @@ class SystemPoolEditTest(WebDriverTestCase):
         b.find_element_by_xpath('//div[@id="system-pool-info" and '
                 'not(.//button[normalize-space(string(.))="Edit"])]')
 
-    def test_delete_pool(self):
+    def delete_pool(self, pool=None):
+        if pool is None:
+            pool = self.pool
         b = self.browser
         login(b)
-        self.go_to_pool_edit()
+        self.go_to_pool_edit(pool)
         b.find_element_by_xpath('//button[contains(string(.), "Delete")]').click()
         modal = b.find_element_by_class_name('modal')
         modal.find_element_by_xpath('.//p[text()="Are you sure you want to '
@@ -92,7 +94,16 @@ class SystemPoolEditTest(WebDriverTestCase):
         b.find_element_by_xpath('.//title[text()="Pools"]')
         with session.begin():
             self.assertEquals(SystemPool.query.filter(
-                    SystemPool.name == self.pool.name).count(), 0)
+                    SystemPool.name == pool.name).count(), 0)
+
+    def test_delete_pool(self):
+        self.delete_pool()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1206011
+    def test_can_delete_pool_with_uri_chars_in_name(self):
+        with session.begin():
+            pool = data_setup.create_system_pool(name=u'$@$#@!')
+        self.delete_pool(pool)
 
     def test_page_info_display(self):
         self.go_to_pool_edit()
