@@ -69,9 +69,9 @@ def wait_for_ajax_loading(browser, class_name):
             class_name)) == 0)
 
 def _activity_row_xpath(activity):
-    return ('string(tr/td[1])="%s" and string(tr/td[2])="%s" and '
-            'string(tr/td[5])="%s" and string(tr/td[6])="%s" and '
-            'string(tr/td[7])="%s" and string(tr/td[8])="%s"'
+    return ('tr/td[1]/a/text()="%s" and tr/td[2]/text()="%s" and '
+            'tr/td[5]/text()="%s" and tr/td[6]/text()="%s" and '
+            'tr/td[7]/text()="%s" and tr/td[8]/text()="%s"'
             % (activity.user.user_name, activity.service,
                activity.field_name, activity.action,
                activity.old_value, activity.new_value))
@@ -98,7 +98,7 @@ def check_pool_search_results(browser, present=[], absent=[]):
     for pool in absent:
         try:
             browser.find_element_by_xpath('//div[@id="grid"]/table'
-                    '/tbody[not(string(tr/td[1])="%s")]' % pool.name)
+                '/tbody[not(tr/td[1]/a/text()="%s")]' % pool.name)
         except NoSuchElementException:
             raise AssertionError('Grid was missing or contained '
                     'pool which was expected to be absent: %r'
@@ -106,7 +106,7 @@ def check_pool_search_results(browser, present=[], absent=[]):
     for pool in present:
         try:
             browser.find_element_by_xpath('//div[@id="grid"]/table'
-                    '/tbody[string(tr/td[1])="%s"]' % pool.name)
+                '/tbody[tr/td[1]/a/text()="%s"]' % pool.name)
         except NoSuchElementException:
             raise AssertionError('Grid was missing or did not contain '
                     'pool: %r' % pool)
