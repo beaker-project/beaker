@@ -12,7 +12,7 @@ from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, logout, \
 check_pool_search_results, BootstrapSelect, find_policy_checkbox,\
 check_policy_row_is_dirty, check_policy_row_is_not_dirty, \
-check_policy_row_is_absent
+check_policy_row_is_absent, click_menu_item
 from bkr.inttest.server.requests_utils import put_json, post_json, patch_json
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -51,6 +51,18 @@ class SystemPoolsGridTest(WebDriverTestCase):
         with session.begin():
             pool = SystemPool.by_name(u'inflatable')
             self.assertEquals(pool.owner, User.by_user_name(data_setup.ADMIN_USER))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1203981
+    def test_mine_pools(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            pool = data_setup.create_system_pool(owning_user=user)
+            other_pool = data_setup.create_system_pool()
+        b = self.browser
+        login(b, user=user.user_name, password='password')
+        b.get(get_server_base() + 'pools/')
+        click_menu_item(b, 'Hello, %s' % user.user_name, 'My System Pools')
+        check_pool_search_results(b, present=[pool], absent=[other_pool])
 
 
 class SystemPoolEditTest(WebDriverTestCase):
