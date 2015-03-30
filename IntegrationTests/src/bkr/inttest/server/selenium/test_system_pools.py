@@ -524,7 +524,14 @@ class SystemPoolHTTPTest(DatabaseTestCase):
         with session.begin():
             system = data_setup.create_system(owner=self.owner)
             pool = data_setup.create_system_pool(systems=[system])
+            pool.access_policy.add_rule(user=self.user,
+                                        permission=SystemPermission.edit_system)
+            system.active_access_policy = pool.access_policy
+
         self.assertIn(system, pool.systems)
+        self.assertTrue(system.active_access_policy.grants
+                        (self.user, SystemPermission.edit_system))
+
         s = requests.Session()
 
         # A system owner or a pool owner can remove a system from a pool
@@ -539,10 +546,16 @@ class SystemPoolHTTPTest(DatabaseTestCase):
             self.assertEquals(pool.activity[-1].field_name, 'System')
             self.assertEquals(pool.activity[-1].action, 'Removed')
             self.assertEquals(pool.activity[-1].old_value, unicode(system))
-            self.assertEquals(system.activity[-1].field_name, 'Pool')
-            self.assertEquals(system.activity[-1].action, 'Removed')
-            self.assertEquals(system.activity[-1].old_value, unicode(pool))
+            self.assertEquals(system.activity[-2].field_name, 'Pool')
+            self.assertEquals(system.activity[-2].action, 'Removed')
+            self.assertEquals(system.activity[-2].old_value, unicode(pool))
+            self.assertEquals(system.activity[-1].field_name, 'Active Access Policy')
+            self.assertEquals(system.activity[-1].action, 'Changed')
+            self.assertEquals(system.activity[-1].old_value, 'Pool policy: %s' % unicode(pool))
+            self.assertEquals(system.activity[-1].new_value, 'Custom access policy')
 
+        self.assertFalse(system.active_access_policy.grants
+                         (self.user, SystemPermission.edit_system))
 
     def test_delete_system_pool(self):
         with session.begin():

@@ -289,6 +289,13 @@ def remove_system_from_pool(pool_name):
     pool = _get_pool_by_name(pool_name, lockmode='update')
     if pool in system.pools:
         if pool.can_edit(u) or system.can_edit(u):
+            if system.active_access_policy == pool.access_policy:
+                system.active_access_policy = system.custom_access_policy
+                system.record_activity(user=u, service=u'HTTP',
+                                       field=u'Active Access Policy',
+                                       action=u'Changed',
+                                       old = 'Pool policy: %s' % pool_name,
+                                       new = 'Custom access policy')
             system.pools.remove(pool)
             system.record_activity(user=u, service=u'HTTP',
                                    action=u'Removed', field=u'Pool', old=unicode(pool), new=None)
