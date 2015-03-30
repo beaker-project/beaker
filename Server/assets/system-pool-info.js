@@ -40,7 +40,14 @@ window.SystemPoolHeading = Backbone.View.extend({
         bootbox.confirm_as_promise('<p>Are you sure you want to delete this pool?</p>')
             .fail(function () { $del_btn.button('reset'); })
             .then(function () { return model.destroy(); })
+            .fail(_.bind(this.delete_error, this))
             .done(function () { window.location = beaker_url_prefix + 'pools/'; });
+    },
+    delete_error: function(xhr) {
+        $.bootstrapGrowl('<h4>Failed to delete</h4> ' +
+                xhr.statusText + ': ' + xhr.responseText,
+                {type: 'error'});
+        this.$('button.delete').button('reset');
     },
 });
 

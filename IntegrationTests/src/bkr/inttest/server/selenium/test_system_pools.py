@@ -117,6 +117,22 @@ class SystemPoolEditTest(WebDriverTestCase):
             pool = data_setup.create_system_pool(name=u'$@$#@!')
         self.delete_pool(pool)
 
+    def test_delete_non_existing_pool(self):
+        with session.begin():
+            pool = data_setup.create_system_pool()
+        b = self.browser
+        login(b)
+        self.go_to_pool_edit(pool)
+        session.delete(pool)
+        session.flush()
+        b.find_element_by_xpath('//button[contains(string(.), "Delete")]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_xpath('.//p[text()="Are you sure you want to '
+                'delete this pool?"]')
+        modal.find_element_by_xpath('.//button[text()="OK"]').click()
+        self.assertIn('System pool %s does not exist' % pool.name,
+                b.find_element_by_class_name('alert-error').text)
+
     def test_page_info_display(self):
         self.go_to_pool_edit()
         b = self.browser
