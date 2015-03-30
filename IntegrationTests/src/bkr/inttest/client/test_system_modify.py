@@ -4,7 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from bkr.server.model import session, SystemStatus, SystemPermission
+from bkr.server.model import session, SystemStatus, SystemPermission, Hypervisor
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError, ClientTestCase
 
@@ -82,6 +82,21 @@ class ModifySystemTest(ClientTestCase):
             self.fail('Must raise')
         except ClientError as e:
             self.assertIn('option --condition: invalid choice', e.stderr_output)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1206978
+    def test_change_hypervisor(self):
+        with session.begin():
+            system = data_setup.create_system(hypervisor=None)
+        # set to KVM
+        run_client(['bkr', 'system-modify', '--host-hypervisor=KVM', system.fqdn])
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals(system.hypervisor, Hypervisor.by_name(u'KVM'))
+        # set back to none (bare metal)
+        run_client(['bkr', 'system-modify', '--host-hypervisor=', system.fqdn])
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals(system.hypervisor, None)
 
     def test_modify_active_access_policy(self):
         with session.begin():

@@ -36,6 +36,14 @@ Options
    Change the system condition to <condition>. Valid values are *Automated*, 
    *Manual*, *Broken*, and *Removed*.
 
+.. option:: --host-hypervisor <type>
+
+   Change the system's host hypervisor type to <type>.
+
+   For systems which are virtualized, this field indicates which virtualization 
+   technology is used by the host. An empty value indicates that the system is 
+   bare metal (not a virtual guest).
+
 .. option:: --pool-policy <poolname>
 
    Change the active access policy to that of the system pool
@@ -89,20 +97,24 @@ class System_Modify(BeakerCommand):
         self.parser.add_option('--condition', type='choice',
                 choices=['Automated', 'Manual', 'Broken', 'Removed'],
                 help='Change condition: Automated, Manual, Broken, Removed')
+        self.parser.add_option('--host-hypervisor', metavar='TYPE',
+                help='Change host hypervisor to TYPE')
         self.parser.add_option('--pool-policy', metavar='POOL',
                 help='Change active access policy to the access policy of POOL')
-        self.parser.add_option('--use-custom-policy', action='store_true', default=False,
+        self.parser.add_option('--use-custom-policy', action='store_true', default=None,
                 help="Change active access policy to the system's custom access policy")
 
     def run(self, *args, **kwargs):
-        owner = kwargs.pop('owner', None)
-        condition = kwargs.pop('condition', None)
-        pool = kwargs.get('pool_policy', None)
-        custom_policy = kwargs.get('use_custom_policy', False)
+        owner = kwargs.pop('owner')
+        condition = kwargs.pop('condition')
+        host_hypervisor = kwargs.pop('host_hypervisor')
+        pool = kwargs.get('pool_policy')
+        custom_policy = kwargs.get('use_custom_policy')
 
         self.set_hub(**kwargs)
 
-        if not any([owner, condition, pool, custom_policy]):
+        if not any(option is not None for option in
+                [owner, condition, host_hypervisor, pool, custom_policy]):
             self.parser.error('At least one option is required, specifying what to change')
         if pool and custom_policy:
             self.parser.error('Only one of --pool-policy or'
@@ -112,6 +124,10 @@ class System_Modify(BeakerCommand):
             system_attr['owner'] = {'user_name': owner}
         if condition:
             system_attr['status'] = condition.title()
+        if host_hypervisor == '':
+            system_attr['hypervisor'] = None
+        elif host_hypervisor:
+            system_attr['hypervisor'] = host_hypervisor
         if pool:
             system_attr['active_access_policy'] = {'pool_name': pool}
         if custom_policy:
