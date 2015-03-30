@@ -9,6 +9,11 @@
 
 set -e
 
+if [[ "$1" == "--next-major" ]] ; then
+    next_major=1
+    shift
+fi
+
 if [ $# -eq 0 ] ; then
     echo "Usage: $1 -bs|-bb <rpmbuild-options...>" >&2
     echo "Hint: -bs builds SRPM, -bb builds RPM, refer to rpmbuild(8)" >&2
@@ -22,9 +27,16 @@ commitsha=$(git rev-parse --short HEAD)
 if [ "$commitcount" -gt 0 ] ; then
     # git builds count as a pre-release of the next version
     version="${version%%[a-z]*}" # strip non-numeric suffixes like "rc1"
-    rpmver="${version%.*}.$((${version##*.} + 1))"
+    if [ -z "$next_major" ] ; then
+        # normally we just increment the last portion of the version
+        version="${version%.*}.$((${version##*.} + 1))"
+    else
+        # ... but if --next-major is given we increment the first portion
+        version="$((${version%%.*} + 1)).0"
+    fi
+    rpmver="${version}"
     rpmrel="0.git.${commitcount}.${commitsha}"
-    version="${version%.*}.$((${version##*.} + 1)).git.${commitcount}.${commitsha}"
+    version="${version}.git.${commitcount}.${commitsha}"
 fi
 
 workdir="$(mktemp -d)"
