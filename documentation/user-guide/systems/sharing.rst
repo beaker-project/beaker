@@ -103,6 +103,30 @@ System reservations made through the automated scheduler can only be
 terminated by cancelling the relevant job rather than by returning the system
 directly through the web UI or command-line client.
 
+.. _shared-access-policies:
+
+Shared access policies
+----------------------
+
+In addition to setting the access policy on a system directly, you can
+share the same policy across many systems by using a :term:`pool
+access policy`.
+
+Start by creating a new system pool, or pick an existing one. Add all
+the systems as members of the pool. You can then configure each system
+to use the pool's access policy.
+
+You can add systems to a pool on the :ref:`pool page <system-pools>`
+or by using :ref:`bkr pool-add <bkr-pool-add>`.
+
+You can set a system to use a pool policy on the :guilabel:`Access
+Policy` tab of the system page or by specifying the :option:`--pool-policy <bkr
+system-modify --pool-policy>` option to :program:`bkr system-modify`.
+
+You can update a pool's access policy on the pool page or by specifying the
+:option:`--pool <bkr policy-grant --pool>` option to :program:`bkr
+policy-grant` and :program:`bkr-policy-revoke`.
+
 Notify CC list
 --------------
 

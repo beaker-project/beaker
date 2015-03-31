@@ -14,6 +14,7 @@ and control systems, jobs and other components of a Beaker installation.
 .. toctree::
 
    systems
+   interface/pools
    distros
    jobs
    recipes

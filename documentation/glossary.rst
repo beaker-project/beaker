@@ -6,6 +6,10 @@ Glossary
    access policy
        See :term:`system access policy`.
 
+   active access policy
+      The currently effective system access policy. See :term:`system
+      access policy` and :ref:`system-access-policies`.
+
    ack
        Short for "acknowledgment". When reviewing Beaker job results, this 
        means that a result has been reviewed and is valid. See also 
@@ -77,6 +81,12 @@ Glossary
        this means that a result has been reviewed but is waived. See also 
        :term:`ack`, :term:`waiver`.
 
+   pool access policy
+       The :term:`system access policy` which is defined for a :term:`system
+       pool` so that systems in the pool can share a common access
+       policy. This does not regulate access to the system pool
+       itself.
+
    quiescent period
        The 'quiescent period' is the minimum amount of time (in seconds)
        between power operations.
@@ -118,6 +128,13 @@ Glossary
        has complete control over their system. When someone reports a problem 
        or requests a loan for the system, Beaker emails the request to the 
        system owner (and the rest of the notify CC list) for their attention.
+
+   system pool
+       A collection of systems form a system pool. A system pool can
+       be created by any Beaker user and the owner can changed to
+       either another user or another :term:`group`. A system pool has
+       an :term:`pool access policy` associated with it. Refer to
+       :ref:`system-pools` and :ref:`shared-access-policies`.
 
    system user
        The Beaker user who currently holds a reservation on a system (they are 

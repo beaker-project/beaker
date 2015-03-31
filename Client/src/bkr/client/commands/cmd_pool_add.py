@@ -61,7 +61,7 @@ Add the system "fqdn1.example.com" to the "beakerdevs" system pool::
 See also
 --------
 
-:manpage:`bkr(1)`, :manpage:`bkr-pool-add(1)`
+:manpage:`bkr(1)`, :manpage:`bkr-pool-remove(1)`
 
 """
 

@@ -3,9 +3,7 @@ Groups
 
 Users can be grouped together in groups. Any Beaker user can create a group and 
 add users to it, while Beaker administrators can also define groups that are 
-populated automatically from an LDAP directory. Systems can also be added to 
-groups. If a shared system belongs to a group, it can only be used by members 
-of that group.
+populated automatically from an LDAP directory.
 
 Viewing groups
 --------------
@@ -26,7 +24,7 @@ Editing a group
 ---------------
 
 To edit a group, select :menuselection:`Hello --> My Groups` and click on the 
-name of the group you wish to edit. From here you can add users and systems, as 
+name of the group you wish to edit. From here you can add users as 
 well as changing the group's display name and group name.
 
 Group activity
