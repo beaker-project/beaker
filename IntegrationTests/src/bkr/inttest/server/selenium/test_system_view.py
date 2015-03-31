@@ -445,6 +445,33 @@ class SystemViewTestWD(WebDriverTestCase):
             session.refresh(system)
             self.assert_(system.date_modified == orig_date_modified)
 
+    def test_remove_pool_updates_active_access_policy(self):
+        with session.begin():
+            system = data_setup.create_system()
+            pool = data_setup.create_system_pool()
+            system.pools.append(pool)
+            system.active_access_policy = pool.access_policy
+
+        b = self.browser
+        login(b)
+        self.go_to_system_view(system=system, tab='Access Policy')
+        self.assertTrue(b.find_element_by_xpath(
+            '//label[contains(string(.), "Use policy from pool:")]'
+            '/input[@type="radio"]').is_selected())
+        # remove from pool
+        self.go_to_system_view(system=system, tab='Pools')
+        b.find_element_by_link_text(pool.name)
+        b.find_element_by_xpath('//li[contains(a/text(), "%s")]/button' % pool.name).click()
+        b.find_element_by_xpath('//div[@id="list-system-pools" and '
+                                'not(./ul/li)]')
+
+        # check for the active access policy
+        self.go_to_system_view(system=system, tab='Access Policy')
+        # The system should be set to using its custom access policy
+        self.assertTrue(b.find_element_by_xpath(
+            '//label[contains(string(.), "Use custom access policy")]'
+            '/input[@type="radio"]').is_selected())
+
     def test_unprivileged_user_cannot_see_power_settings(self):
         with session.begin():
             self.system.power.power_passwd = u'midnight'

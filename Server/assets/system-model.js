@@ -295,12 +295,9 @@ window.System = Backbone.Model.extend({
             type: 'DELETE',
             contentType: 'application/json',
             success: function (data, status, jqxhr) {
-                var pools = model.get('pools');
-                var pool_index = _.indexOf(pools, pool);
-                pools.splice(pool_index, 1);
-                model.set('pools', pools);
-                // XXX: better way?
-                model.trigger('change');
+                // Removing a system from a pool can lead to potential change
+                // in active_access_policy
+                model.fetch();
             },
             error: function (jqxhr, status, error) {
                 if (options.error)
