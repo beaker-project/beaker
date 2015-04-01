@@ -191,7 +191,8 @@ SearchBar.prototype.createValueField = function(current, vals) {
     for (index = 0;index < current_attrs_length ;index++) {
         var node_name = current_attrs[index].nodeName
         var node_val = current_attrs[index].nodeValue
-        if ( node_name != 'type' &&  node_name != 'class')
+        // we only need to clone id, name and value
+        if ( node_name == 'id' || node_name == 'name' || node_name == 'value')
             clone_attrs[node_name] =node_val
     }
     var table_value_lower = this.tableField.value.toLowerCase()
