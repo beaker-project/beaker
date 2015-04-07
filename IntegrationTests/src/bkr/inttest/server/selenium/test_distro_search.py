@@ -93,6 +93,21 @@ class Search(WebDriverTestCase):
         check_distro_search_results(b, present=[self.distro_one],
                                     absent=[self.distro_two, self.distro_three])
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1207727
+    def test_search_by_name(self):
+        b = self.browser
+        b.get(get_server_base() + 'distros')
+        b.find_element_by_link_text('Show Search Options').click()
+        wait_for_animation(b, '#searchform')
+        b.find_element_by_xpath("//select[@id='distrosearch_0_table']/option[@value='Name']").click()
+        b.find_element_by_xpath('//input[@id="distrosearch_0_value" and '
+                            'not(contains(@title, "date in YYYY-MM-DD format"))]')
+        b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').clear()
+        b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').send_keys(self.distro_one.name)
+        b.find_element_by_id('searchform').submit()
+        check_distro_search_results(b, present=[self.distro_one],
+                    absent=[self.distro_two, self.distro_three])
+
     def test_search_by_osmajor(self):
         b = self.browser
         b.get(get_server_base() + 'distros')
