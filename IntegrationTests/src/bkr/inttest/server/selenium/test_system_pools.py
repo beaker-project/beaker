@@ -64,6 +64,20 @@ class SystemPoolsGridTest(WebDriverTestCase):
         click_menu_item(b, 'Hello, %s' % user.user_name, 'My System Pools')
         check_pool_search_results(b, present=[pool], absent=[other_pool])
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1209736
+    def test_pool_with_closing_script_tag_in_description(self):
+        # Actually this bug affects many other things besides just the pools 
+        # grid, but this is a convenient place to test for it.
+        with session.begin():
+            pool = data_setup.create_system_pool(
+                    description=u'I am haxxing you lolz. </script>HAX')
+            other_pool = data_setup.create_system_pool()
+        b = self.browser
+        b.get(get_server_base() + 'pools/')
+        b.find_element_by_class_name('search-query').send_keys(
+                'name:"%s"' % pool.name)
+        b.find_element_by_class_name('grid-filter').submit()
+        check_pool_search_results(b, present=[pool], absent=[other_pool])
 
 class SystemPoolEditTest(WebDriverTestCase):
 
