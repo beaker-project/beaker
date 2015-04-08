@@ -522,6 +522,25 @@ class SystemViewTestWD(WebDriverTestCase):
             if activities_to_find:
                 raise AssertionError('Could not find activity entries for %s' % ' '.join(activities_to_find))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1209736
+    def test_power_settings_with_closing_script_tag(self):
+        bad_value = u'lols</script>HAX'
+        b = self.browser
+        login(b)
+        self.go_to_system_view(tab='Power Settings')
+        tab = b.find_element_by_id('power-settings')
+        tab.find_element_by_name('power_password').clear()
+        tab.find_element_by_name('power_password').send_keys(bad_value)
+        tab.find_element_by_tag_name('form').submit()
+        # wait for changes to save
+        tab.find_element_by_xpath('.//button[text()="Save Changes"]')
+        # re-open the page and make sure it renders properly
+        self.go_to_system_view(tab='Power Settings')
+        tab = b.find_element_by_id('power-settings')
+        self.assertEquals(
+                tab.find_element_by_name('power_password').get_attribute('value'),
+                bad_value)
+
     #https://bugzilla.redhat.com/show_bug.cgi?id=1145867
     def test_new_power_settings(self):
         with session.begin():
