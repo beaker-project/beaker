@@ -71,7 +71,6 @@ The following kernel options are treated specially by Beaker:
     kernel command line and appends it to the boot loader configuration.
 
 ``netbootloader=<tftp path to bootloader>``
-
     Netboot loader image to use. Beaker creates a symlink so the TFTP
     path :file:`bootloader/{fqdn}/image` serves the specified
     image.

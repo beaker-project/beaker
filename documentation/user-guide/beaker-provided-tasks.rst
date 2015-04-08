@@ -163,6 +163,8 @@ The ``/distribution/virt/start`` task is used for starting a virtual machine,
 via ``virsh start``. Please see :ref:`virt-install-task` for examples on how to
 use it with ``/distribution/virt/install``.
 
+.. _distribution-rebuild-task:
+
 /distribution/rebuild
 =====================
 

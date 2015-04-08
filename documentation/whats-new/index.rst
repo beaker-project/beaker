@@ -5,6 +5,9 @@ This document covers major changes to Beaker in each release. It is aimed
 at users and administrators of existing Beaker installations that are
 being upgraded to a new version.
 
+For general instructions about how to upgrade your Beaker installation to a new 
+version, see :doc:`../admin-guide/upgrading`.
+
 
 .. For developers
 
@@ -16,16 +19,32 @@ being upgraded to a new version.
    sensible order.
 
 
-Unreleased changes
-------------------
+.. commented out for release
 
-The following changes will appear in the next Beaker release.
+    Unreleased changes
+    ------------------
+
+    The following changes will appear in the next Beaker release.
+
+    .. toctree::
+       :maxdepth: 2
+       :glob:
+
+       next/*
+
+
+Beaker 20
+---------
+
+Beaker 20 introduces system pools, and the ability to apply the same access 
+policy across many systems.
+This release also brings support for configurable netboot loaders and several 
+other enhancements.
 
 .. toctree::
    :maxdepth: 2
-   :glob:
 
-   next/*
+   release-20
 
 
 Beaker 19
