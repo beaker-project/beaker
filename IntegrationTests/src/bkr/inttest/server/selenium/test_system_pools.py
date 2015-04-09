@@ -263,7 +263,7 @@ class SystemPoolAccessPolicyWebUITest(WebDriverTestCase):
     def test_read_only_view(self):
         b = self.browser
         self.go_to_pool_edit()
-        b.find_element_by_link_text('Access Policy').click()
+        b.find_element_by_link_text('System Access Policy').click()
         self.check_checkboxes()
         # in read-only view, all checkboxes should be disabled
         # and user/group inputs should be absent
@@ -277,14 +277,14 @@ class SystemPoolAccessPolicyWebUITest(WebDriverTestCase):
         b = self.browser
         login(b, user=self.pool_owner.user_name, password='owner')
         self.go_to_pool_edit()
-        b.find_element_by_link_text('Access Policy').click()
+        b.find_element_by_link_text('System Access Policy').click()
         self.check_checkboxes()
 
     def test_add_rule(self):
         b = self.browser
         login(b, user=self.pool_owner.user_name, password='owner')
         self.go_to_pool_edit()
-        b.find_element_by_link_text('Access Policy').click()
+        b.find_element_by_link_text('System Access Policy').click()
 
         # grant loan_any permission to anotherpoirot user
         pane = b.find_element_by_id('access-policy')
@@ -298,14 +298,14 @@ class SystemPoolAccessPolicyWebUITest(WebDriverTestCase):
 
         # refresh to check it is persisted
         self.go_to_pool_edit()
-        b.find_element_by_link_text('Access Policy').click()
+        b.find_element_by_link_text('System Access Policy').click()
         self.assertTrue(find_policy_checkbox(b, 'anotherpoirot', 'Loan to anyone').is_selected())
 
     def test_remove_rule(self):
         b = self.browser
         login(b, user=self.pool_owner.user_name, password='owner')
         self.go_to_pool_edit()
-        b.find_element_by_link_text('Access Policy').click()
+        b.find_element_by_link_text('System Access Policy').click()
 
         # revoke loan_self permission from psidekicks group
         pane = b.find_element_by_id('access-policy')
@@ -320,7 +320,7 @@ class SystemPoolAccessPolicyWebUITest(WebDriverTestCase):
 
         # refresh to check it is persisted
         self.go_to_pool_edit()
-        b.find_element_by_link_text('Access Policy').click()
+        b.find_element_by_link_text('System Access Policy').click()
         pane = b.find_element_by_id('access-policy')
         self.assertNotIn('psidekicks', pane.text)
 
@@ -330,7 +330,7 @@ class SystemPoolAccessPolicyWebUITest(WebDriverTestCase):
         b = self.browser
         login(b, user=self.pool_owner.user_name, password='owner')
         self.go_to_pool_edit()
-        b.find_element_by_link_text('Access Policy').click()
+        b.find_element_by_link_text('System Access Policy').click()
 
         # grant edit_policy permission to marple user
         pane = b.find_element_by_id('access-policy')
@@ -344,7 +344,7 @@ class SystemPoolAccessPolicyWebUITest(WebDriverTestCase):
 
         # refresh to check it has been persisted
         self.go_to_pool_edit()
-        b.find_element_by_link_text('Access Policy').click()
+        b.find_element_by_link_text('System Access Policy').click()
         self.assertTrue(find_policy_checkbox(b, 'marple', 'Edit this policy').is_selected())
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1076322
@@ -352,7 +352,7 @@ class SystemPoolAccessPolicyWebUITest(WebDriverTestCase):
         b = self.browser
         login(b, user=self.pool_owner.user_name, password='owner')
         self.go_to_pool_edit()
-        b.find_element_by_link_text('Access Policy').click()
+        b.find_element_by_link_text('System Access Policy').click()
         pane = b.find_element_by_id('access-policy')
         # type the group name before it exists
         with session.begin():
@@ -377,7 +377,7 @@ class SystemPoolAccessPolicyWebUITest(WebDriverTestCase):
         b = self.browser
         login(b, user=self.pool_owner.user_name, password='owner')
         self.go_to_pool_edit()
-        b.find_element_by_link_text('Access Policy').click()
+        b.find_element_by_link_text('System Access Policy').click()
         pane = b.find_element_by_id('access-policy')
         pane.find_element_by_link_text('test?123#1234').click()
         b.find_element_by_xpath('//h1[text()="Group test?123#1234"]')
@@ -387,7 +387,7 @@ class SystemPoolAccessPolicyWebUITest(WebDriverTestCase):
         b = self.browser
         login(b, user=self.pool_owner.user_name, password='owner')
         self.go_to_pool_edit()
-        b.find_element_by_link_text('Access Policy').click()
+        b.find_element_by_link_text('System Access Policy').click()
 
         pane = b.find_element_by_id('access-policy')
         pane.find_element_by_xpath('.//input[@placeholder="Username"]')\
@@ -404,7 +404,7 @@ class SystemPoolAccessPolicyWebUITest(WebDriverTestCase):
         b = self.browser
         login(b, user=self.pool_owner.user_name, password='owner')
         self.go_to_pool_edit()
-        b.find_element_by_link_text('Access Policy').click()
+        b.find_element_by_link_text('System Access Policy').click()
         pane = b.find_element_by_id('access-policy')
         find_policy_checkbox(b, 'Everybody', 'View')
         for checkbox in pane.find_elements_by_xpath('.//input[@type="checkbox"]'):
@@ -414,7 +414,7 @@ class SystemPoolAccessPolicyWebUITest(WebDriverTestCase):
         b = self.browser
         login(b, user=self.pool_owner.user_name, password='owner')
         self.go_to_pool_edit()
-        b.find_element_by_link_text('Access Policy').click()
+        b.find_element_by_link_text('System Access Policy').click()
         pane = b.find_element_by_id('access-policy')
         # grant anotherpoirot edit_policy permission
         find_policy_checkbox(b, 'anotherpoirot', 'Edit this policy').click()
@@ -423,7 +423,7 @@ class SystemPoolAccessPolicyWebUITest(WebDriverTestCase):
         logout(b)
         login(b, user='anotherpoirot', password='testing')
         self.go_to_pool_edit()
-        b.find_element_by_link_text('Access Policy').click()
+        b.find_element_by_link_text('System Access Policy').click()
         pane = b.find_element_by_id('access-policy')
         # remove self edit_policy permission
         find_policy_checkbox(b, 'anotherpoirot', 'Edit this policy').click()
