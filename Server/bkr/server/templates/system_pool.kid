@@ -17,7 +17,7 @@
   <div id="system-pool-info"></div>
   <ul class="nav nav-tabs system-pool-nav">
     <li><a data-toggle="tab" href="#systems">Systems</a></li>
-    <li><a data-toggle="tab" href="#access-policy">Access Policy</a></li>
+    <li><a data-toggle="tab" href="#access-policy">System Access Policy</a></li>
   </ul>
   <div class="tab-content system-pool-tabs">
     <div class="tab-pane" id="systems"></div>
