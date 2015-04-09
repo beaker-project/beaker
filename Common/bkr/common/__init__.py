@@ -2,4 +2,4 @@
 # code in bkr.__init__), the version details are retrieved from here in
 # order to correctly handle module shadowing on sys.path
 
-__version__ = '19.3'
+__version__ = '20.0rc1'
