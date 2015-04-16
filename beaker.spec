@@ -230,7 +230,11 @@ Requires:       %{name}-server = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
 Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       python-nose >= 0.10
+%if 0%{?rhel}
 Requires:       selenium-python >= 2.12
+%else
+Requires:       python-selenium >= 2.12
+%endif
 Requires:       Xvfb
 Requires:       firefox
 Requires:       lsof
