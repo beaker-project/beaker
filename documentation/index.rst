@@ -26,11 +26,10 @@ Resources
 
       <h3>for administrators</h3>
 
-   * `Beaker in a box (10 minute quick start) <../in-a-box/>`_
-
    .. toctree::
       :maxdepth: 1
 
+      in-a-box/index
       admin-guide/index
       architecture-guide/index
 
