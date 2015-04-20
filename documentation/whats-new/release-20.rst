@@ -59,16 +59,6 @@ layout.
 
 (Contributed by Amit Saha in :issue:`1156036`.)
 
-Cockpit embedded on the system page
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-A new tab :guilabel:`Cockpit UI` has been added to the system page. If the 
-system is powered on and has the `Cockpit <http://cockpit-project.org/>`_ 
-system management tool installed, an embedded version of Cockpit will be shown 
-on the tab. You can use this to perform administrative tasks on the system.
-
-(Contributed by Matt Jia in :issue:`1197929`.)
-
 Workflow commands accept :option:`--reserve`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
