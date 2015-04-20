@@ -9,6 +9,7 @@
 # Removed upload_task_log() and upload_file()
 import os
 import base64
+import ssl
 import xmlrpclib
 import urlparse
 from bkr.common.pyconfig import PyConfigParser, ImproperlyConfigured
@@ -48,11 +49,16 @@ class HubProxy(object):
         if transport is not None:
             self._transport = transport
         else:
+            transport_args = {}
             if self._hub_url.startswith("https://"):
                 TransportClass = retry_request_decorator(SafeCookieTransport)
+                if hasattr(ssl, 'create_default_context') and self._conf.get('CA_CERT'):
+                    ssl_context = ssl.create_default_context()
+                    ssl_context.load_verify_locations(cafile=self._conf['CA_CERT'])
+                    transport_args['context'] = ssl_context
             else:
                 TransportClass = retry_request_decorator(CookieTransport)
-            self._transport = TransportClass()
+            self._transport = TransportClass(**transport_args)
 
         self._hub = xmlrpclib.ServerProxy(
                 "%s/%s/" % (self._hub_url, self._client_type),
