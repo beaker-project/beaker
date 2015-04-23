@@ -3,22 +3,29 @@ computers.
 
 See our [homepage](http://beaker-project.org) for further documentation and 
 information about the Beaker project.
+The [Developer guide](https://beaker-project.org/dev/guide/) in particular 
+might be useful if you are working on Beaker.
 
 
 Repo Layout
 -----------
 
 * Server/
+    + assets/
+      Source files for static assets (JavaScript, LESS) which are served to the 
+      web browser. The webassets module manages compilation and minification of 
+      the raw source files into a form suitable for serving to the browser.
+
     + bkr/server/tools/
       Various modules that are run as ancillary processes to the server.
-  
+
     + bkr/server/config/
       These are application specific configuration items.
 
     + bkr/server/kickstarts/
       Kickstart templates that are served to the lab controller
       for provisioning test systems. See the
-      [admin guide](http://beaker-project.org/guide/Administration-Customizing_Kickstarts.html)
+      [admin guide](https://beaker-project.org/docs/admin-guide/kickstarts.html)
       for further details.
 
     + bkr/server/snippets/
@@ -26,18 +33,22 @@ Repo Layout
       kickstart templates as needed.
 
     + bkr/server/static/
-      Contains javascript, images and css files.
+      Legacy static assets (not managed by the webassets module). No new assets 
+      are added here.
 
     + bkr/server/templates/
-      Templates of controllers and custom widgets are found here.
+      Kid templates for TurboGears controller methods and TurboGears widgets.
+
+    + bkr/server/alembic/versions/
+      Alembic database migration scripts.
 
 
 * LabController/
   This contains all the source code for the lab controller.
 
     + addDistro/
-      Scripts to run on the import of distros,
-      See [the installation guide](http://beaker-project.org/guide/Installation-Setup_Lab_Controller-AddDistro_Jobs.html)
+      Scripts to run on the import of distros.
+      See the [admin guide](https://beaker-project.org/docs/admin-guide/distro-import.html#automated-jobs-for-new-distros)
       for details.
 
     + apache/beaker-lab-controller.conf
@@ -77,28 +88,22 @@ Repo Layout
 
     + src/bkr/client/
       Modules that are shared and utilized by various commands.
-   
+
     + src/bkr/client/commands
-      Each module in this directory corresponds to a different primary arg to
-      be passed to the `bkr` command.
-
-    + doc/
-      Contains command documentation in reStructuredText format.
-      Each module in *src/bkr/client/commands/* should have a corresponding 
-      *.rst* file in this directory.
+      Each module in this directory corresponds to a different subcommand for 
+      the `bkr` client. Man pages for each subcommand are included as 
+      a module-level docstring in reStructuredText format.
 
 
-* pub_doc/
-  Contains the 'Beaker Guide' in  docbook format, as seen 
-  [here](http://beaker-project.org/guide/).
-
-
-* rel-eng/
-  Contains hooks for building Beaker packages via tito.
+* documentation/
+  Beaker's [documentation](https://beaker-project.org/docs/) in 
+  reStructuredText format.
 
 
 * SchemaUpgrades/
-  Manual changes co-coinciding with upgrades are documented in this directory.
+  Legacy database upgrade instructions, for Beaker versions up to 0.8.2. Newer 
+  database upgrades are managed by Alembic, with migration scripts added to 
+  Server/bkr/server/alembic/versions/.
 
 
 * Common/
@@ -110,7 +115,12 @@ Repo Layout
       here. This does not include database schemas.
 
 
-* Tasks/
-  Basic tasks that perform a utilitarian function are kept here. These are
-  tasks that can be relevant to any Beaker installation. Each tasks' path is
-  reflective of its name.
+* Misc/
+  Utilities and scripts which are used for developing Beaker but which do not 
+  form part of the source tree itself.
+
+    + rpmbuild.sh
+      Builds SRPM or RPM development packages from the current git HEAD 
+      revision.
+      For example, `Misc/rpmbuild.sh -bb` will perform a local RPM build 
+      resulting in packages like `beaker-*-20.1-0.git.2.2dff0c7.noarch.rpm`.
