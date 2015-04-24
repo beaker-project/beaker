@@ -206,12 +206,16 @@ class TestUpdateStatusReserved(DatabaseTestCase):
         """
         with session.begin():
             recipe = data_setup.create_recipe(
-                task_list=[Task.by_name(u'/distribution/install')],
+                task_list=[Task.by_name(u'/distribution/install')] * 2,
                 reservesys=True)
             job = data_setup.create_job_for_recipes([recipe])
             job_id = job.id
             data_setup.mark_recipe_running(recipe)
-            job._mark_dirty()
+            data_setup.mark_recipe_installation_finished(recipe)
+            # we want at least one task to be Completed here
+            # https://bugzilla.redhat.com/show_bug.cgi?id=1195558
+            job.recipesets[0].recipes[0].tasks[0].stop()
+            job.recipesets[0].recipes[0].tasks[1].start()
         beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.by_id(job_id)
