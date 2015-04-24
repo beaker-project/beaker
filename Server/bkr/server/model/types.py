@@ -27,9 +27,9 @@ class TaskStatus(DeclEnum):
         ('waiting',   u'Waiting',   dict(severity=7, finished=False, queued=False)),
         ('running',   u'Running',   dict(severity=5, finished=False, queued=False)),
         ('reserved',  u'Reserved',  dict(severity=45, finished=False, queued=False)),
-        ('completed', u'Completed', dict(severity=50, finished=True, queued=False)),
+        ('completed', u'Completed', dict(severity=70, finished=True, queued=False)),
         ('cancelled', u'Cancelled', dict(severity=60, finished=True, queued=False)),
-        ('aborted',   u'Aborted',   dict(severity=70, finished=True, queued=False)),
+        ('aborted',   u'Aborted',   dict(severity=50, finished=True, queued=False)),
     ]
 
     @classmethod

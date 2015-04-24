@@ -1,7 +1,7 @@
-<job result="Fail" status="Completed">
+<job result="Fail" status="Aborted">
 	<whiteboard/>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -31,7 +31,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -62,7 +62,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -93,7 +93,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -124,7 +124,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -155,7 +155,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Aborted" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -186,7 +186,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -217,7 +217,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -248,7 +248,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Aborted" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -279,7 +279,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -310,7 +310,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -341,7 +341,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -508,7 +508,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -538,7 +538,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -568,7 +568,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -598,7 +598,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -628,7 +628,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -658,7 +658,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -688,7 +688,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -718,7 +718,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -781,7 +781,7 @@
 				<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
 				<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
 			</guestrecipe>
-			<guestrecipe result="Fail" status="Completed" whiteboard="">
+			<guestrecipe result="Fail" status="Cancelled" whiteboard="">
 				<distroRequires>
 					<distro_name op="=" value="BlueShoeLinux5-5"/>
 				</distroRequires>
@@ -849,7 +849,7 @@
 				<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
 				<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
 			</guestrecipe>
-			<guestrecipe result="Warn" status="Completed" whiteboard="">
+			<guestrecipe result="Warn" status="Cancelled" whiteboard="">
 				<distroRequires>
 					<distro_name op="=" value="BlueShoeLinux5-5"/>
 				</distroRequires>
@@ -889,7 +889,7 @@
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
 			<hostRequires/>
-			<guestrecipe result="Warn" status="Completed" whiteboard="">
+			<guestrecipe result="Warn" status="Cancelled" whiteboard="">
 				<distroRequires>
 					<distro_name op="=" value="BlueShoeLinux5-5"/>
 				</distroRequires>
@@ -957,7 +957,7 @@
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
 			<hostRequires/>
-			<guestrecipe result="Warn" status="Completed" whiteboard="">
+			<guestrecipe result="Warn" status="Cancelled" whiteboard="">
 				<distroRequires>
 					<distro_name op="=" value="BlueShoeLinux5-5"/>
 				</distroRequires>
@@ -985,7 +985,7 @@
 				<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
 				<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
 			</guestrecipe>
-			<guestrecipe result="Warn" status="Completed" whiteboard="">
+			<guestrecipe result="Warn" status="Cancelled" whiteboard="">
 				<distroRequires>
 					<distro_name op="=" value="BlueShoeLinux5-5"/>
 				</distroRequires>
@@ -1020,7 +1020,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -1049,7 +1049,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -1078,7 +1078,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -1107,7 +1107,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -1167,7 +1167,7 @@
 				<task name="/fake/Task/task20" result="Warn" status="Cancelled"/>
 				<task name="/fake/Task/task21" result="Warn" status="Cancelled"/>
 			</guestrecipe>
-			<guestrecipe result="Warn" status="Completed" whiteboard="">
+			<guestrecipe result="Warn" status="Cancelled" whiteboard="">
 				<distroRequires>
 					<distro_name op="=" value="BlueShoeLinux5-5"/>
 				</distroRequires>
@@ -1202,7 +1202,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -1231,7 +1231,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -1260,7 +1260,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -1289,7 +1289,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -1318,7 +1318,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -1346,7 +1346,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -1374,7 +1374,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
@@ -1402,7 +1402,7 @@
 		</recipe>
 	</recipeSet>
 	<recipeSet>
-		<recipe result="Warn" status="Completed" whiteboard="">
+		<recipe result="Warn" status="Cancelled" whiteboard="">
 			<distroRequires>
 				<distro_name op="=" value="BlueShoeLinux5-5"/>
 			</distroRequires>
