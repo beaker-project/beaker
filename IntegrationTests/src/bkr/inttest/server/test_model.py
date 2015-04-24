@@ -50,10 +50,17 @@ class SchemaSanityTest(DatabaseTestCase):
         if engine.url.drivername != 'mysql':
             raise SkipTest('not using MySQL')
         for table in engine.table_names():
-            self.assertEquals(engine.scalar(
+            # We don't control the creation of alembic_version, so if the 
+            # server default is MyISAM alembic_version will end up using that. 
+            # It doesn't really matter though.
+            if table == 'alembic_version':
+                continue
+            engine_used = engine.scalar(
                     'SELECT engine FROM information_schema.tables '
                     'WHERE table_schema = DATABASE() AND table_name = %s',
-                    table), 'InnoDB')
+                    table)
+            self.assertEquals(engine_used, 'InnoDB',
+                    'MySQL storage engine for table %s should be InnoDB' % table)
 
 class ModelInitializationTest(DatabaseTestCase):
 
