@@ -38,7 +38,7 @@ from bkr.server.model import (Job, RecipeSet, RetentionTag, TaskBase,
 
 from bkr.common.bexceptions import BeakerException, BX
 
-import xmltramp
+from bkr.server.util import xmltramp_parse_untrusted
 from bkr.server.jobxml import XmlJob
 import cgi
 from bkr.server.job_utilities import Utility
@@ -334,7 +334,7 @@ class Jobs(RPCRoot):
         # xml.sax (and thus, xmltramp) expect raw bytes, not unicode
         if isinstance(jobxml, unicode):
             jobxml = jobxml.encode('utf8')
-        xml = xmltramp.parse(jobxml)
+        xml = xmltramp_parse_untrusted(jobxml)
         xmljob = XmlJob(xml)
         job = self.process_xmljob(xmljob,identity.current.user,
                 ignore_missing_tasks=ignore_missing_tasks)
@@ -390,7 +390,7 @@ class Jobs(RPCRoot):
                             options = {'xsd_errors': job_schema.error_log},
                             value = dict(textxml=textxml, confirmed=True),
                         )
-                xmljob = XmlJob(xmltramp.parse(textxml))
+                xmljob = XmlJob(xmltramp_parse_untrusted(textxml))
                 job = self.process_xmljob(xmljob,identity.current.user)
                 session.flush()
             except Exception,err:
