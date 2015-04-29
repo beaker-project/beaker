@@ -10,6 +10,7 @@ from bkr.server.helpers import make_edit_link, make_remove_link
 from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar, HorizontalForm
 from bkr.server.admin_page import AdminPage
 from bkr.server.model import Key
+from bkr.server import identity
 
 class KeyTypes(AdminPage):
     # For XMLRPC methods in this class.
@@ -34,7 +35,8 @@ class KeyTypes(AdminPage):
 
         self.search_col = Key.key_name
         self.search_mapper = Key
-    
+
+    @identity.require(identity.in_group("admin"))
     @expose(template='bkr.server.templates.form')
     def new(self, **kw):
         return dict(
@@ -45,6 +47,7 @@ class KeyTypes(AdminPage):
             value = kw,
         )
 
+    @identity.require(identity.in_group("admin"))
     @expose(template='bkr.server.templates.form')
     def edit(self,**kw):
         values = []
@@ -62,7 +65,8 @@ class KeyTypes(AdminPage):
             options = {},
             value = values,
         )
-    
+
+    @identity.require(identity.in_group("admin"))
     @expose()
     @error_handler(edit)
     def save(self, **kw):
@@ -85,18 +89,20 @@ class KeyTypes(AdminPage):
         results = self.process_search(**kw)
         if results:
             keytypes = results.order_by(Key.key_name)
+        can_edit = identity.current.user and identity.current.user.is_admin()
         keytypes_grid = myPaginateDataGrid(fields=[
-                                  ('Key', lambda x: make_edit_link(x.key_name, x.id)),
+                                  ('Key', lambda x: make_edit_link(x.key_name, x.id) if can_edit else x.key_name),
                                   ('Numeric', lambda x: x.numeric),
-                                  (' ', lambda x: make_remove_link(x.id)),
+                                  (' ', lambda x: make_remove_link(x.id) if can_edit else None),
                               ],
-                              add_action='./new')
+                              add_action='./new' if can_edit else None)
         return dict(title="Key Types", 
                     grid = keytypes_grid, 
                     search_widget = self.search_widget_form,
                     alpha_nav_bar = AlphaNavBar(list_by_letters,self.search_name),
                     list = keytypes)
 
+    @identity.require(identity.in_group("admin"))
     @expose()
     def remove(self, **kw):
         remove = Key.by_id(kw['id'])

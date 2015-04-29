@@ -11,22 +11,8 @@ from kid import Element, XML
 from bkr.server.widgets import AlphaNavBar, myPaginateDataGrid, HorizontalForm
 from bkr.server.model import PowerType
 from bkr.server.admin_page import AdminPage
-
-def make_link(url, text):
-    # make a <a> element
-    a = Element('a', href='./' + url)
-    a.text = text
-    return a
- 	
-def make_edit_link(power):
-    # make a edit link
-    return make_link(url  = 'edit?id=%s' % power.id,
-                     text = power.name)
-
-def make_remove_link(power):
-    # make a remove link
-    return XML('<a class="btn" href="remove?id=%s">'
-            '<i class="fa fa-times"/> Remove</a>' % power.id)
+from bkr.server import identity
+from bkr.server.helpers import make_link, make_edit_link, make_remove_link
 
 def get_power_type(power):
     # return powertype name
@@ -55,8 +41,8 @@ class PowerTypes(AdminPage):
 
         self.search_col = PowerType.name
         self.search_mapper = PowerType
-      
 
+    @identity.require(identity.in_group("admin"))
     @expose(template='bkr.server.templates.form')
     def new(self, **kw):
         return dict(
@@ -67,6 +53,7 @@ class PowerTypes(AdminPage):
             value = kw,
         )
 
+    @identity.require(identity.in_group("admin"))
     @expose(template='bkr.server.templates.form')
     def edit(self,**kw):
         title = _(u'New Power Type')
@@ -86,7 +73,8 @@ class PowerTypes(AdminPage):
             options = {},
             value = values,
         )
-    
+
+    @identity.require(identity.in_group("admin"))
     @expose()
     @error_handler(edit)
     def save(self, **kw):
@@ -120,12 +108,12 @@ class PowerTypes(AdminPage):
         results = self.process_search(**kw)
         if results:
             powertypes = results
-
+        can_edit = identity.current.user and identity.current.user.is_admin()
         powertypes_grid = myPaginateDataGrid(fields=[
-                                  ('Power Type', make_edit_link),
-                                  (' ', make_remove_link),
+                                  ('Power Type', lambda x: make_edit_link(x.name, x.id) if can_edit else x.name),
+                                  (' ', lambda x: make_remove_link(x.id) if can_edit else None ),
                               ],
-                              add_action='./new')
+                              add_action='./new' if can_edit else None)
         
 
         return dict(title="Power Types", 
@@ -134,10 +122,10 @@ class PowerTypes(AdminPage):
                     alpha_nav_bar = AlphaNavBar(list_by_letters,'power'),
                     list = powertypes)
 
+    @identity.require(identity.in_group("admin"))
     @expose()
     def remove(self, **kw):
         remove = PowerType.by_id(kw['id'])
         session.delete(remove)
         flash( _(u"%s Deleted") % remove.name )
         raise redirect(".")
-
