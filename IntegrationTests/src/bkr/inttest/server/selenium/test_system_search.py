@@ -540,6 +540,19 @@ class Search(WebDriverTestCase):
         b.find_element_by_id('searchform').submit()
         check_system_search_results(b, present=[old_system], absent=[new_system])
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1215024
+    def test_closing_script_tag_escaped_in_search_bar(self):
+        with session.begin():
+            Key.lazy_create(key_name=u'</script>')
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Show Search Options').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('Key/Value')
+        Select(b.find_element_by_name('systemsearch-0.keyvalue'))\
+            .select_by_visible_text('</script>')
+
 
 class SystemVisibilityTest(WebDriverTestCase):
 
