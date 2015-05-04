@@ -94,7 +94,7 @@ AckPanel.prototype.get_response_comment = function (id) {
 AckPanel.prototype.show_comment = function(result) {
         var rs_id = result.rs_id
         var comment = result.comment
-        var newspan = $('<span></span>').attr('id','comment_remote_response_text_' + rs_id).attr('title','Comment for RS# ' + rs_id).html(comment)
+        var newspan = $('<span></span>').attr('id','comment_remote_response_text_' + rs_id).attr('title','Comment for RS# ' + rs_id).text(comment)
         $('#response_'+rs_id).after(newspan)
 
         $('#comment_remote_response_text_' + rs_id).dialog({height:200,
@@ -103,8 +103,8 @@ AckPanel.prototype.show_comment = function(result) {
                                                         'Edit' : function() {
                                                                 $(this).dialog('close') 
                                                                 var t_box = $("<textarea></textarea>").
-                                                                                html(newspan.
-                                                                                text()).attr('title','Edit RS# '+ rs_id+' comment').
+                                                                                text(comment).
+                                                                                attr('title','Edit RS# '+ rs_id+' comment').
                                                                                 attr('id','comment_textbox_' + rs_id)
                                                                                 //addClass('hidden');
 
