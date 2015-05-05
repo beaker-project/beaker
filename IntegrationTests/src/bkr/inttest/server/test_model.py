@@ -1160,6 +1160,20 @@ class WatchdogTest(DatabaseTestCase):
         self.assertNotIn(hostrecipe.watchdog, expired_watchdogs)
         self.assertNotIn(guestrecipe.watchdog, expired_watchdogs)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1210540
+    def test_exclude_dirty_job_from_expired(self):
+        recipe = data_setup.create_recipe()
+        job = data_setup.create_job_for_recipes([recipe])
+        data_setup.mark_job_running(job)
+        recipe.extend(0)
+        session.flush()
+        expired_watchdogs = Watchdog.by_status(status=u'expired').all()
+        self.assertIn(recipe.watchdog, expired_watchdogs)
+        job._mark_dirty()
+        session.flush()
+        expired_watchdogs = Watchdog.by_status(status=u'expired').all()
+        self.assertNotIn(recipe.watchdog, expired_watchdogs)
+
 
 class DistroTreeTest(DatabaseTestCase):
 

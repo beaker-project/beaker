@@ -194,7 +194,9 @@ class Watchdog(DeclarativeMappedObject):
         if status == 'active':
             watchdog_query = watchdog_query.filter(any_recipe_has_active_watchdog)
         elif status == 'expired':
-            watchdog_query = watchdog_query.filter(not_(any_recipe_has_active_watchdog))
+            watchdog_query = watchdog_query.join(RecipeSet.job)\
+                .filter(not_(Job.is_dirty))\
+                .filter(not_(any_recipe_has_active_watchdog))
         else:
             return None
         return watchdog_query
