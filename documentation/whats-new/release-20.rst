@@ -272,3 +272,28 @@ A number of bug fixes are also included in this release:
 .. purely internal implementation details:
    * :issue:`1124804`: Switch to SQLAlchemy "back_populates" directive (Contributed by Dan Callaghan)
    * :issue:`1196511`: no released busybox in beaker repos for rhel7 ppc64le (Contributed by Dan Callaghan)
+
+Maintenance updates
+-------------------
+
+The following fixes have been included in Beaker 20 maintenance updates.
+
+Beaker 20.1
+~~~~~~~~~~~
+
+This release fixes four security vulnerabilities:
+
+* :issue:`1215034`: Modifying key types and power types is now properly
+  restricted to Beaker administrators. Previously these operations were 
+  unintentionally available to all users, including anonymous users. 
+  (Contributed by Matt Jia)
+* :issue:`1215020`: DTDs and XML entities are no longer accepted in job XML
+  submitted to Beaker. This prevents a type of attack called "XXE" where an 
+  authenticated user can cause Beaker to disclose the contents of files on the 
+  server's filesystem. (Contributed by Dan Callaghan)
+* :issue:`1215030`: Recipe set comments are no longer interpreted as HTML,
+  they are now interpreted as plain text and HTML characters are escaped. This 
+  prevents authenticated users from performing ``<script>`` injection attacks 
+  using recipe set comments. (Contributed by Dan Callaghan)
+* :issue:`1215024`: Closing ``</script>`` tags are now properly escaped in the
+  JavaScript source for the advanced search bar. (Contributed by Dan Callaghan)
