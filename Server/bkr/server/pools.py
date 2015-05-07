@@ -202,7 +202,7 @@ def update_pool(pool_name):
     with convert_internal_errors():
         renamed = False
         if 'name' in data:
-            new_name = data['name'].lower()
+            new_name = data['name']
             if new_name != pool.name:
                 if SystemPool.query.filter(SystemPool.name == new_name).count():
                     raise Conflict409('System pool %s already exists' % new_name)
