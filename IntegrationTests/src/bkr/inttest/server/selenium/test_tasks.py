@@ -24,14 +24,6 @@ class TestSubmitTask(WebDriverTestCase):
         self.browser = self.get_browser()
         login(self.browser, user=self.uploader.user_name, password=u'upload')
 
-    @classmethod
-    def teardownClass(cls):
-        basepath = (turbogears.config.get('basepath.rpms'))
-        # These may be missing if a test failed or wasn't run. We shouldn't
-        # confuse matters further by complaining that they're missing.
-        unlink_ignore(os.path.join(basepath, 'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm'))
-        unlink_ignore(os.path.join(basepath, 'tmp-distribution-beaker-dummy_for_bz681143-1.0-1.noarch.rpm'))
-
     def assert_task_upload_flash_OK(self, name):
         expected = '%s Added/Updated' % name
         actual = self.browser.find_element_by_class_name('flash').text
@@ -47,6 +39,9 @@ class TestSubmitTask(WebDriverTestCase):
                 pkg_resources.resource_filename('bkr.inttest.server',
                                                 'task-rpms/tmp-distribution-beaker-task_test-1.1-0.noarch.rpm'))
         b.find_element_by_xpath('//button[text()="Upload"]').click()
+        self.addCleanup(unlink_ignore,
+                os.path.join(turbogears.config.get('basepath.rpms'),
+                'tmp-distribution-beaker-task_test-1.1-0.noarch.rpm'))
         self.assert_task_upload_flash_OK(test_package_name)
         # ...and make sure it worked...
         b.find_element_by_name('simplesearch').send_keys(test_package_name)
@@ -63,6 +58,9 @@ class TestSubmitTask(WebDriverTestCase):
                 pkg_resources.resource_filename('bkr.inttest.server',
                                                 'task-rpms/tmp-distribution-beaker-task_test-2.0-5.noarch.rpm'))
         b.find_element_by_xpath('//button[text()="Upload"]').click()
+        self.addCleanup(unlink_ignore,
+                os.path.join(turbogears.config.get('basepath.rpms'),
+                'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm'))
         self.assert_task_upload_flash_OK(test_package_name)
         # ...and make sure everything was updated
         b.find_element_by_name('simplesearch').send_keys(test_package_name)
@@ -132,6 +130,9 @@ class TestSubmitTask(WebDriverTestCase):
             pkg_resources.resource_filename('bkr.inttest.server',
                                             'task-rpms/tmp-distribution-beaker-dummy_for_bz681143-1.0-1.noarch.rpm'))
         b.find_element_by_xpath('//button[text()="Upload"]').click()
+        self.addCleanup(unlink_ignore,
+                os.path.join(turbogears.config.get('basepath.rpms'),
+                'tmp-distribution-beaker-dummy_for_bz681143-1.0-1.noarch.rpm'))
         self.assert_task_upload_flash_OK(test_package_name)
         b.find_element_by_name('simplesearch').send_keys(test_package_name)
         b.find_element_by_id('simpleform').submit()
@@ -212,6 +213,9 @@ class TestSubmitTask(WebDriverTestCase):
                 'task-rpms/tmp-distribution-beaker-arm-related-arches-1.0-0.noarch.rpm')
         b.find_element_by_id('task_task_rpm').send_keys(rpm_path)
         b.find_element_by_xpath('//button[text()="Upload"]').click()
+        self.addCleanup(unlink_ignore,
+                os.path.join(turbogears.config.get('basepath.rpms'),
+                'tmp-distribution-beaker-arm-related-arches-1.0-0.noarch.rpm'))
         self.assert_task_upload_flash_OK('/distribution/beaker/arm-related-arches')
 
 if __name__ == "__main__":
