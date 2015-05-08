@@ -15,7 +15,7 @@ Synopsis
 
 | :program:`bkr list-systems` [*options*]
 |       [:option:`--available` | :option:`--free` | :option:`--mine`]
-|       [:option:`--type` <type>] [:option:`--status` <status>] [:option:`--group` <group>]
+|       [:option:`--type` <type>] [:option:`--status` <status>] [:option:`--pool` <pool>]
 |       [:option:`--arch` <arch>] [:option:`--dev-vendor-id` <vendorid>]
 |       [:option:`--dev-device-id` <deviceid>] [:option:`--dev-driver` <driver>]
 |       [:option:`--dev-description` <description>] [:option:`--dev-sub-vendor-id` <subvendorid>]
@@ -32,8 +32,8 @@ Options
 .. option:: --available
 
    Limit to systems which would be available to be scheduled by the current 
-   user. This will exclude any systems whose access controls (group membership, 
-   shared setting, etc) prevent the current user from running jobs on them.
+   user. This will exclude any systems whose access policy prevent the current 
+   user from running jobs on them.
 
    Note that this does *not* exclude systems which are currently occupied by 
    other users. Use :option:`--free` for that.
@@ -64,9 +64,13 @@ mutually exclusive.
    Limit to systems whose status is <status>, for example ``Automated``, 
    ``Manual``, or ``Broken``.
 
+.. option:: --pool <pool>
+
+   Limit to systems which are in <pool>
+
 .. option:: --group <group>
 
-   Limit to systems which are in <group>.
+   Compatibility alias for :option:`--pool`.
 
 .. option:: --arch <arch>
 
@@ -120,10 +124,10 @@ the exit status will be 1.
 Examples
 --------
 
-List automated systems which belong to the kernel group and are not currently 
-in use::
+List automated systems which are in the kernel-hw pool and are not currently in 
+use::
 
-    bkr list-systems --free --type=Machine --status=Automated --group=kernel
+    bkr list-systems --free --type=Machine --status=Automated --pool=kernel-hw
 
 See also
 --------
@@ -132,6 +136,7 @@ See also
 """
 
 import sys
+import optparse
 import urllib
 import urllib2
 import lxml.etree
@@ -170,8 +175,10 @@ class List_Systems(BeakerCommand):
                 help='Only include systems of TYPE')
         self.parser_add_option('--status', metavar='STATUS', table='System/Status',
                 help='Only include systems with STATUS')
-        self.parser_add_option('--group', metavar='GROUP', table='System/Group',
-                help='Only include systems in GROUP')
+        self.parser_add_option('--pool', metavar='POOL', table='System/Pools',
+                help='Only include systems in POOL')
+        self.parser_add_option('--group', metavar='GROUP', table='System/Pools',
+                help=optparse.SUPPRESS_HELP)
         self.parser_add_option('--arch', metavar='ARCH', table='System/Arch',
                 help='Only include systems with ARCH')
         self.parser_add_option('--dev-vendor-id', metavar='VENDOR-ID',
