@@ -8,7 +8,7 @@ from turbogears import validators, url, config
 from kid import Element
 import time
 import turbogears as tg
-from turbojson import jsonify
+from bkr.server.stdvars import jsonify_for_html
 from turbogears.widgets.rpc import RPC
 from sqlalchemy import distinct
 import re
@@ -176,7 +176,7 @@ class InlineRemoteForm(RPC, InlineForm):
     def update_params(self, d):
         super(InlineRemoteForm, self).update_params(d)
         d['form_attrs']['onSubmit'] = "return !remoteFormRequest(this, '%s', %s);" % (
-            d.get("update", ''), jsonify.encode(self.get_options(d)))
+            d.get("update", ''), jsonify_for_html(self.get_options(d)))
 
 
 class RadioButtonList(SelectionField):
@@ -306,7 +306,7 @@ class DeleteLinkWidgetAJAX(DeleteLinkWidget):
             raise ValueError('Missing arguments to %s: %s' %
                 (self.__class__.__name__, ','.join(dict(missing).keys())))
         params['action_type'] = params.get('action_type', 'delete')
-        params['data'] = jsonify.encode(params['data'])
+        params['data'] = jsonify_for_html(params['data'])
         return super(DeleteLinkWidgetAJAX, self).display(value, **params)
 
 
@@ -525,7 +525,7 @@ class AckPanel(RadioButtonList):
 
     javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui-1.9.2.min.js', order=3),
                   LocalJSLink('bkr','/static/javascript/loader_v2.js'),
-                  LocalJSLink('bkr','/static/javascript/response_v4.js')]
+                  LocalJSLink('bkr','/static/javascript/response_v6.js')]
 
     css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     params = ['widget_name','unreal_response','comment_id','comment_class']
@@ -686,7 +686,7 @@ class SearchBar(RepeatingFormField):
         self.fields = [table_field, operation_field, value_field]
         new_selects = []
         self.extra_callbacks = {} 
-        self.search_object = jsonify.encode(table)
+        self.search_object = jsonify_for_html(table)
             
         if extra_selects is not None: 
             new_class = [] 
@@ -726,7 +726,7 @@ class SearchBar(RepeatingFormField):
                         log.error('Quick searches expects vals as <column>-<operation>-<value>. The following is incorrect: %s' % (elem)) 
                     else: 
                         self.quickly_searches.append((name, '%s-%s-%s' % (vals[0],vals[1],vals[2])))
-        self.date_picker = jsonify.encode(kw.get('date_picker',list()) )
+        self.date_picker = jsonify_for_html(kw.get('date_picker',list()) )
         controllers = kw.get('table_search_controllers',dict())  
         self.table_search_controllers_stringified = str(controllers)
         self.extra_callbacks_stringified = str(self.extra_callbacks)
@@ -743,7 +743,7 @@ class SearchBar(RepeatingFormField):
                 json_this = {} 
                 for elem in params['options']['result_columns']: 
                     json_this.update({elem : 1})
-                params['default_result_columns'] = jsonify.encode(json_this)     
+                params['default_result_columns'] = jsonify_for_html(json_this)
             else:
                 params['default_result_columns'] = 'null'
             if 'col_options' in params['options']:
@@ -1152,7 +1152,7 @@ class ReportProblemForm(RemoteForm):
         if d['recipe']:
             d['hidden_fields'].append(HiddenField(name='recipe_id', attrs={'value' : d['recipe'].id}))
         d['submit'].attrs.update({'onClick' :  "return ! system_action_remote_form_request('%s', %s, '%s');" % (
-            d['options']['name'], jsonify.encode(self.get_options(d)), d['action'])})
+            d['options']['name'], jsonify_for_html(self.get_options(d)), d['action'])})
 
 
 class RecipeActionWidget(CompoundWidget):
@@ -1220,8 +1220,8 @@ class ProductWidget(SingleSelectField, RPC):
         d['attrs']['class'] = 'input-block-level'
         d['attrs']['onchange'] = "ProductChange('%s',%s, %s)" % (
             url(d.get('action')),
-            jsonify.encode({'id': d.get('job_id')}),
-            jsonify.encode(self.get_options(d)),
+            jsonify_for_html({'id': d.get('job_id')}),
+            jsonify_for_html(self.get_options(d)),
             )
 
 class RetentionTagWidget(SingleSelectField, RPC): #FIXME perhaps I shoudl create a parent that both Retention and Priority inherit from
@@ -1247,8 +1247,8 @@ class RetentionTagWidget(SingleSelectField, RPC): #FIXME perhaps I shoudl create
         d['attrs']['id'] = 'job_retentiontag'
         d['attrs']['onchange'] = "RetentionTagChange('%s',%s, %s)" % (
             url(d.get('action')),
-            jsonify.encode({'id': d.get('job_id')}),
-            jsonify.encode(self.get_options(d)),
+            jsonify_for_html({'id': d.get('job_id')}),
+            jsonify_for_html(self.get_options(d)),
             )
 
 
@@ -1309,7 +1309,7 @@ class JobWhiteboard(RPC, CompoundWidget):
     def update_params(self, d):
         super(JobWhiteboard, self).update_params(d)
         d['form_attrs']['onsubmit'] = "return !remoteFormRequest(this, null, %s);" % (
-            jsonify.encode(self.get_options(d)))
+            jsonify_for_html(self.get_options(d)))
 
 
 class TaskActionWidget(RPC):
@@ -1334,8 +1334,8 @@ class TaskActionWidget(RPC):
         super(TaskActionWidget, self).update_params(d)
         d['task_details']['onclick'] = "TaskDisable('%s',%s, %s); return false;" % (
             d.get('action'),
-            jsonify.encode({'t_id': d['task_details'].get('t_id')}),
-            jsonify.encode(self.get_options(d)),
+            jsonify_for_html({'t_id': d['task_details'].get('t_id')}),
+            jsonify_for_html(self.get_options(d)),
             )
 
 class JobActionWidget(CompoundWidget):

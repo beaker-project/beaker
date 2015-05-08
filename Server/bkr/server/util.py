@@ -229,3 +229,24 @@ def convert_db_lookup_error(msg):
         yield
     except NoResultFound:
         raise DatabaseLookupError(msg)
+
+def xmltramp_parse_untrusted(s):
+    """
+    Like xmltramp.parse but for untrusted (user-supplied) input.
+    """
+    from StringIO import StringIO
+    import xmltramp
+    from xml.sax import make_parser
+    from xml.sax.handler import feature_namespaces
+    class SafeSeeder(xmltramp.Seeder):
+        def resolveEntity(self, publicId, systemId):
+            raise ValueError('XML entity with id %s not permitted' % (publicId or systemId))
+        def skippedEntity(self, name):
+            raise ValueError('Undeclared XML entity &%s;' % name)
+    seeder = SafeSeeder()
+    parser = make_parser()
+    parser.setFeature(feature_namespaces, 1)
+    parser.setContentHandler(seeder)
+    parser.setEntityResolver(seeder)
+    parser.parse(StringIO(s))
+    return seeder.result
