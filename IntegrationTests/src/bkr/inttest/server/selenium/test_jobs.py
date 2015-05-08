@@ -745,6 +745,38 @@ class NewJobTest(WebDriverTestCase):
                 'Failed to import job because of: '
                 'Error parsing ks_meta: No closing quotation')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1215020
+    def test_xml_external_entities_are_rejected(self):
+        b = self.browser
+        login(b)
+        b.get(get_server_base())
+        click_menu_item(b, 'Scheduler', 'New Job')
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write('''
+            <!DOCTYPE foo [
+            <!ELEMENT foo ANY >
+            <!ENTITY xxe SYSTEM "file:///etc/passwd" >]>
+            <job>
+                <whiteboard>&xxe;</whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        xml_file.flush()
+        b.find_element_by_id('jobs_filexml').send_keys(xml_file.name)
+        b.find_element_by_xpath('//button[text()="Submit Data"]').click()
+        b.find_element_by_xpath('//button[text()="Queue"]').click()
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                'Failed to import job because of: '
+                'XML entity with id file:///etc/passwd not permitted')
+
 
 class JobAttributeChangeTest(WebDriverTestCase):
 
