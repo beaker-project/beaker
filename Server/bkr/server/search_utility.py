@@ -152,7 +152,8 @@ class MyColumn(object):
     relation to another mapped object.
     """
     def __init__(self,relations=None, col_type=None,
-            column_name=None, column=None, eagerload=True, aliased=True, **kw):
+            column_name=None, column=None, eagerload=True, aliased=True,
+            hidden=False, **kw):
             if type(col_type) != type(''):
                 raise TypeError('col_type var passed to %s must be string' % self.__class__.__name__)
 
@@ -162,6 +163,9 @@ class MyColumn(object):
             self._column_name = column_name
             self._eagerload = eagerload
             self._aliased = aliased
+            # Hidden columns are for backwards compatibility, we honour 
+            # searches using them but we don't offer the column in the UI.
+            self.hidden = hidden
 
     def column_join(self, query):
         return_query = None
@@ -1002,20 +1006,17 @@ class SystemObject(object):
         of fields that can be searched after any field filtering has
         been applied
         """
-        try:           
-            searchable_columns = [k for (k,v) in cls.searchable_columns.iteritems()]
-            if 'exclude' in kw:
-                if type(kw['without']) == type(()):
-                    for i in kw['exclude']:
-                        try:
-                            del searchable_columns[i]
-                        except KeyError,e:
-                            log.error('Cannot remove column %s from searchable column in class %s as it is not a searchable column in the first place' % (i,cls.__name__))
-            return searchable_columns
-        except AttributeError,(e):
-            log.debug('Unable to access searchable_columns of class %s' % cls.__name__)
-            return []
-    
+        searchable_columns = [k for (k,v) in cls.searchable_columns.iteritems()
+                if v is None or not v.hidden]
+        if 'exclude' in kw:
+            if type(kw['without']) == type(()):
+                for i in kw['exclude']:
+                    try:
+                        del searchable_columns[i]
+                    except KeyError,e:
+                        log.error('Cannot remove column %s from searchable column in class %s as it is not a searchable column in the first place' % (i,cls.__name__))
+        return searchable_columns
+
     @classmethod
     def search_operators(cls,field):
         """
@@ -1067,6 +1068,12 @@ class System(SystemObject):
                           'LoanComment': MyColumn(
                                             column=model.System.loan_comment,
                                             col_type='string'),
+                          'Group'       : AliasedColumn(col_type='string',
+                                                        column_name='name',
+                                                        eagerload=False,
+                                                        onclause=model.System.pools,
+                                                        relations=[model.SystemPool],
+                                                        hidden=True),
                           'Pools'       : AliasedColumn(col_type='string',
                                                         column_name='name',
                                                         eagerload=False,

@@ -254,6 +254,24 @@ class TestSystemsAtomFeed(DatabaseTestCase):
         self.assertFalse(self.feed_contains_system(feed, 'nopool.system'))
         self.assertTrue(self.feed_contains_system(feed, 'inpool.system'))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1217158
+    def test_filter_by_group(self):
+        # System groups became pools in Beaker 20.0 but we need to continue 
+        # supporting System/Group search (mapped to pools) for old clients.
+        with session.begin():
+            pool = data_setup.create_system_pool()
+            nopool = data_setup.create_system()
+            inpool = data_setup.create_system()
+            inpool.pools.append(pool)
+        feed_url = urljoin(get_server_base(), '?' + urlencode({
+                'tg_format': 'atom',
+                'systemsearch-0.table': 'System/Group',
+                'systemsearch-0.operation': 'is',
+                'systemsearch-0.value': pool.name}))
+        feed = lxml.etree.parse(urlopen(feed_url)).getroot()
+        self.assertFalse(self.feed_contains_system(feed, nopool.fqdn))
+        self.assertTrue(self.feed_contains_system(feed, inpool.fqdn))
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=690063
     def test_xml_filter(self):
         with session.begin():
