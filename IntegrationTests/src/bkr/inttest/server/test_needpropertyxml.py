@@ -848,6 +848,44 @@ class SystemFilteringTest(DatabaseTestCase):
             """,
             present=[small_disk], absent=[big_disk, two_disks])
 
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1197074
+        # use logical operators inside <disk>
+        self.check_filter("""
+            <hostRequires>
+                <disk>
+                    <and>
+                        <size op="&gt;" value="10" units="GB" />
+                        <phys_sector_size op="=" value="4" units="KiB" />
+                    </and>
+                </disk>
+            </hostRequires>
+            """,
+            present=[big_disk], absent=[small_disk, two_disks])
+
+        self.check_filter("""
+            <hostRequires>
+                <disk>
+                    <or>
+                        <size op="&gt;" value="10" units="GB" />
+                        <phys_sector_size op="=" value="4" units="KiB" />
+                    </or>
+                </disk>
+            </hostRequires>
+            """,
+            present=[big_disk, two_disks], absent=[small_disk])
+
+        self.check_filter("""
+            <hostRequires>
+                <disk>
+                    <not>
+                        <sector_size op="!=" value="512" />
+                        <phys_sector_size op="=" value="4" units="KiB" />
+                    </not>
+                </disk>
+            </hostRequires>
+            """,
+            present=[small_disk, two_disks], absent=[big_disk])
+
     # <group> is deprecated, but we keep the tests to prevent regressive behaviour
     def test_group(self):
         pool_a = data_setup.create_system_pool()

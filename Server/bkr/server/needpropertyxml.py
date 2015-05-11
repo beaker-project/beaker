@@ -133,6 +133,9 @@ class ElementWrapper(object):
     def filter(self, joins):
         return (joins, None)
 
+    def filter_disk(self):
+        return None
+
     def filter_openstack_flavors(self, flavors, lab_controller):
         return []
 
@@ -159,6 +162,15 @@ class XmlAnd(ElementWrapper):
         if not queries:
             return (joins, None)
         return (joins, and_(*queries))
+
+    def filter_disk(self):
+        queries = []
+        for child in self:
+            if callable(getattr(child, 'filter_disk', None)):
+                query = child.filter_disk()
+                if query is not None:
+                    queries.append(query)
+        return and_(*queries)
 
     def filter_openstack_flavors(self, flavors, lab_controller):
         result = set(flavors)
@@ -191,6 +203,15 @@ class XmlOr(ElementWrapper):
             return (joins, None)
         return (joins, or_(*queries))
 
+    def filter_disk(self):
+        queries = []
+        for child in self:
+            if callable(getattr(child, 'filter_disk', None)):
+                query = child.filter_disk()
+                if query is not None:
+                    queries.append(query)
+        return or_(*queries)
+
     def filter_openstack_flavors(self, flavors, lab_controller):
         result = set()
         for child in self:
@@ -221,6 +242,15 @@ class XmlNot(ElementWrapper):
         if not queries:
             return (joins, None)
         return (joins, not_(and_(*queries)))
+
+    def filter_disk(self):
+        queries = []
+        for child in self:
+            if callable(getattr(child, 'filter_disk', None)):
+                query = child.filter_disk()
+                if query is not None:
+                    queries.append(query)
+        return not_(and_(*queries))
 
 
 class XmlDistroArch(ElementWrapper):
@@ -1047,6 +1077,9 @@ class XmlDiskPhysSectorSize(ElementWrapper):
 
 class XmlDisk(XmlAnd):
     subclassDict = {
+        'and': XmlAnd,
+        'or': XmlOr,
+        'not': XmlNot,
         'model': XmlDiskModel,
         'size': XmlDiskSize,
         'sector_size': XmlDiskSectorSize,
