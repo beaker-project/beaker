@@ -1,17 +1,31 @@
+<div class="alert alert-info hardware-scan-status">
+  <% if (!_.isEmpty(in_progress_scan)) { %>
+  Hardware scan in progress:
+  <a href="/recipes/<%- encodeURIComponent(in_progress_scan['recipe_id']) %>">R:<%- in_progress_scan['recipe_id'] %></a>
+  (<em><%- in_progress_scan['status'] %></em>).
+<% } else { %>
 <% if (hardware_scan_date) { %>
-  <div class="alert alert-info">Hardware scan was last run
+  Hardware scan was last run
   <time datetime="<%- moment.utc(hardware_scan_date).toISOString() %>"
         title="<%- hardware_scan_date %>">
     <%- moment.utc(hardware_scan_date).local().fromNow() %></time>.
-  </div>
 <% } else { %>
-  <p>Hardware scan has never been run.</p>
+   Hardware scan has never been run.
 <% } %>
+<% } %>
+<% if (can_change_hardware) { %>
+<button type="button" class="btn scan btn-info"
+        <% if (!_.isEmpty(in_progress_scan)) { %>disabled="disabled"<% } %>
+        data-loading-text="<i class='fa fa-refresh fa-spin'></i> Submitting job&hellip;">
+  <i class="fa fa-refresh"></i> Scan
+</button>
+<% } %>
+</div>
 <section>
 <h3>
   System
   <% if (can_change_hardware) { %>
-    <button type="button" class="btn edit"><i class="fa fa-pencil-square-o"></i> Edit</button>
+  <button type="button" class="btn edit"><i class="fa fa-pencil-square-o"></i> Edit</button>
   <% } %>
 </h3>
 <table class="table table-vertical">

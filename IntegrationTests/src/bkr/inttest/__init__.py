@@ -320,6 +320,7 @@ def setup_package():
         data_setup.create_task(name=u'/distribution/reservesys',
                 requires=u'emacs vim-enhanced unifdef sendmail'.split())
         data_setup.create_task(name=u'/distribution/utils/dummy')
+        data_setup.create_task(name=u'/distribution/inventory')
         data_setup.create_distro()
 
     if not os.path.exists(turbogears.config.get('basepath.rpms')):

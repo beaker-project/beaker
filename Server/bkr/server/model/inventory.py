@@ -27,7 +27,7 @@ from sqlalchemy.orm.attributes import NEVER_SET
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.associationproxy import association_proxy
-from turbogears import url
+from turbogears import url, config
 from turbogears.config import get
 from turbogears.database import session
 from bkr.server import identity, metrics, mail
@@ -362,6 +362,9 @@ class System(DeclarativeMappedObject, ActivityMixin):
     active_access_policy = relationship('SystemAccessPolicy', uselist=False,
                                         foreign_keys=[active_access_policy_id])
     activity_type = SystemActivity
+    hardware_scan_recipes = relationship('Recipe',
+                                         secondary='system_hardware_scan_recipe_map',
+                                         lazy='dynamic')
 
     def __init__(self, fqdn=None, status=SystemStatus.broken, contact=None, location=None,
                        model=None, type=SystemType.machine, serial=None, vendor=None,
@@ -426,6 +429,13 @@ class System(DeclarativeMappedObject, ActivityMixin):
         host_requires.appendChild(xmland)
         return host_requires
 
+    def find_current_hardware_scan_recipe(self):
+        in_progress_states = [s for s in TaskStatus if not s.finished]
+        from . import Recipe
+        current_scan = self.hardware_scan_recipes.\
+                       filter(Recipe.status.in_(in_progress_states)).first()
+        return current_scan
+
     def __json__(self):
         # Delayed import to avoid circular dependency
         from . import Recipe
@@ -457,6 +467,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             'has_console': False, # IMPLEMENTME
             'created_date': self.date_added,
             'hardware_scan_date': self.date_lastcheckin,
+            'in_progress_scan': self.find_current_hardware_scan_recipe(),
             'hypervisor': self.hypervisor,
             'possible_hypervisors': Hypervisor.query.all(),
             'model': self.model,
@@ -1316,7 +1327,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
         query = query.join((trees_subquery, trees_subquery.c.inner_distro_id == Distro.id))
         return query
 
-    def distro_trees(self, only_in_lab=True, query=None):
+    def distro_trees(self, only_in_lab=True, query=None, osmajor_name=None):
         """
         List of distro trees that support this system
         """
@@ -1324,6 +1335,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
             query = DistroTree.query
         query = query.join(DistroTree.distro, Distro.osversion, OSVersion.osmajor)\
                 .options(contains_eager(DistroTree.distro, Distro.osversion, OSVersion.osmajor))
+        if osmajor_name:
+            query = query.filter(OSMajor.osmajor==osmajor_name)
         if only_in_lab:
             query = query.filter(DistroTree.lab_controller_assocs.any(
                     LabControllerDistroTree.lab_controller == self.lab_controller))
@@ -1339,6 +1352,38 @@ class System(DeclarativeMappedObject, ActivityMixin):
                     ExcludeOSVersion.arch_id == DistroTree.arch_id))
                     .correlate(DistroTree.__table__)))
         return query
+
+    def distro_tree_for_inventory(self):
+        supported_distro_trees = None
+        inventory_osmajors = config.get('beaker.inventory_osmajors')
+        for osmajor in inventory_osmajors:
+            supported_distro_trees = self.distro_trees(osmajor_name=osmajor)
+            if supported_distro_trees.count():
+                break
+        # if none of the "preferred" distro trees were found
+        # pick the most recent RELEASED tree
+        # If no RELEASED tree, pick the most recent one
+        if not supported_distro_trees.count():
+            supported_distro_trees = self.distro_trees()
+
+        # Prefer x86_64 over i386, ppc64 over ppc64le, s390x over s390
+        if supported_distro_trees.count():
+            supported_distro_tree_archs = [dt.arch.arch for dt in supported_distro_trees.all()]
+            if 'x86_64' in  supported_distro_tree_archs and len(supported_distro_tree_archs) != 1:
+                supported_distro_trees = supported_distro_trees.filter(DistroTree.arch==Arch.by_name('x86_64'))
+            if 'ppc64' in supported_distro_tree_archs and len(supported_distro_tree_archs) != 1:
+                supported_distro_trees = supported_distro_trees.filter(DistroTree.arch==Arch.by_name('ppc64'))
+            if 's390x' in  supported_distro_tree_archs and len(supported_distro_tree_archs) != 1:
+                supported_distro_trees = supported_distro_trees.filter(DistroTree.arch==Arch.by_name('s390x'))
+
+            released = supported_distro_trees.filter(Distro.tags.contains('RELEASED'))
+            if released.count():
+                distro_tree = released.order_by(Distro.date_created.desc()).first()
+            else:
+                distro_tree = supported_distro_trees.order_by(Distro.date_created.desc()).first()
+            return distro_tree
+        else:
+            return None
 
     def action_release(self, service=u'Scheduler'):
         # Attempt to remove Netboot entry and turn off machine

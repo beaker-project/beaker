@@ -225,3 +225,10 @@ Activity
 .. autoflask:: bkr.server.wsgi:app
    :endpoints: get_activity, get_distro_activity, get_distro_tree_activity,
      get_group_activity, get_lab_controller_activity, get_systems_activity
+
+Jobs
+----
+
+.. autoflask:: bkr.server.wsgi:app
+   :endpoints: submit_inventory_job
+

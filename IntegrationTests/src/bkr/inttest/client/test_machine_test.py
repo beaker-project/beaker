@@ -14,7 +14,6 @@ class MachineTestTest(ClientTestCase):
     @with_transaction
     def setUp(self):
         self.system = data_setup.create_system()
-        data_setup.create_task(name=u'/distribution/inventory')
         self.distro = data_setup.create_distro(tags=[u'STABLE'])
         data_setup.create_distro_tree(distro=self.distro)
 

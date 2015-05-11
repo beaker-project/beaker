@@ -18,6 +18,7 @@ import xml.dom.minidom
 from collections import defaultdict
 import uuid
 import urlparse
+import urllib
 import netaddr
 from kid import Element
 from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
@@ -33,7 +34,7 @@ from turbogears.config import get
 from turbogears.database import session
 from bkr.common.helpers import makedirs_ignore
 from bkr.server import identity, metrics, mail, dynamic_virt
-from bkr.server.bexceptions import BX, BeakerException, StaleTaskStatusException
+from bkr.server.bexceptions import BX, BeakerException, StaleTaskStatusException, DatabaseLookupError
 from bkr.server.helpers import make_link, make_fake_link
 from bkr.server.hybrid import hybrid_method, hybrid_property
 from bkr.server.installopts import InstallOptions, global_install_options
@@ -102,6 +103,17 @@ system_recipe_map = Table('system_recipe_map', DeclarativeMappedObject.metadata,
                 primary_key=True),
         mysql_engine='InnoDB',
 )
+
+system_hardware_scan_recipe_map = Table('system_hardware_scan_recipe_map', DeclarativeMappedObject.metadata,
+        Column('system_id', Integer,
+                ForeignKey('system.id', onupdate='CASCADE', ondelete='CASCADE'),
+                primary_key=True),
+        Column('recipe_id', Integer,
+                ForeignKey('recipe.id', onupdate='CASCADE', ondelete='CASCADE'),
+                primary_key=True),
+        mysql_engine='InnoDB',
+)
+
 
 recipe_tag_map = Table('recipe_tag_map', DeclarativeMappedObject.metadata,
         Column('tag_id', Integer,
@@ -863,6 +875,48 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         return job
 
     @classmethod
+    def inventory_system_job(cls, distro_tree, **kw):
+        """ Create a new inventory job and schedule it"""
+        if not kw.get('owner'):
+            owner = identity.current.user
+        else:
+            owner = kw.get('owner')
+        job = Job(ttasks=0, owner=owner, retention_tag=RetentionTag.get_default())
+        if kw.get('whiteboard'):
+            job.whiteboard = kw.get('whiteboard')
+        if job.owner.rootpw_expired:
+            raise ValueError(u'Your root password has expired,' 
+                             'please change or clear it in order to submit jobs.')
+        recipeSet = RecipeSet(ttasks=2)
+        recipe = MachineRecipe(ttasks=2)
+        if kw.get('whiteboard'):
+            recipe.whiteboard = kw.get('whiteboard')
+        # Include the XML definition so that cloning this job will act as expected.
+        recipe.distro_requires = distro_tree.to_xml().toxml()
+        recipe.distro_tree = distro_tree
+        system = kw.get('system')
+        # Some extra sanity checks, to help out the user
+        if system.status == SystemStatus.removed:
+            raise ValueError(u'%s is removed' % system)
+        if not system.can_reserve(job.owner):
+            raise ValueError(u'You do not have access to reserve %s' % system)
+        recipe.host_requires = u'<hostRequires force="%s" />' % system.fqdn
+        recipe.systems.append(system)
+        # Add Install task
+        install_task = RecipeTask.from_task(Task.by_name(u'/distribution/install'))
+        recipe.tasks.append(install_task)
+        # Add inventory task
+        inventory_task = RecipeTask.from_task(Task.by_name(u'/distribution/inventory'))
+        recipe.tasks.append(inventory_task)
+        recipeSet.recipes.append(recipe)
+        job.recipesets.append(recipeSet)
+        job.ttasks += recipeSet.ttasks
+        system.hardware_scan_recipes.append(recipe)
+        session.add(job)
+        session.flush()
+        return job
+
+    @classmethod
     def marked_for_deletion(cls):
         return cls.query.filter(and_(cls.to_delete!=None, cls.deleted==None))
 
@@ -1019,6 +1073,11 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         """ return link to cancel this job
         """
         return url("/jobs/cancel?id=%s" % self.id)
+
+    @property
+    def href(self):
+        """Returns a relative URL for job's page."""
+        return urllib.quote(u'/jobs/%s' % self.id)
 
     def is_owner(self,user):
         if self.owner == user:
@@ -2527,6 +2586,13 @@ class Recipe(TaskBase, DeclarativeMappedObject):
     @property
     def first_task(self):
         return self.dyn_tasks.order_by(RecipeTask.id).first()
+
+    def __json__(self):
+        data = {'recipe_id': self.id,
+                'status': self.status,
+                'job_id': self.recipeset.job.id,
+            }
+        return data
 
 class GuestRecipe(Recipe):
 

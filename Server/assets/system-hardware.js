@@ -73,6 +73,7 @@ window.SystemHardwareDetailsView = Backbone.View.extend({
     template: JST['system-hardware-details'],
     events: {
         'click .edit': 'edit',
+        'click .scan': 'scan',
     },
     initialize: function () {
         this.listenTo(this.model, 'change', this.render);
@@ -83,6 +84,31 @@ window.SystemHardwareDetailsView = Backbone.View.extend({
     },
     edit: function () {
         new SystemHardwareDetailsEdit({model: this.model});
+    },
+    scan: function (evt) {
+        this.$('.alert-error').remove();
+        model = this.model
+        $(evt.currentTarget).button('loading');
+        $.ajax({
+            url: beaker_url_prefix + 'jobs/+inventory',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({'fqdn': model.get('fqdn')}),
+            success: function (response, status, jqxhr) {
+                model.set({'in_progress_scan': {'recipe_id': response['recipe_id'],
+                                                'status': response['status']}});
+                $(evt.currentTarget).button('reset');
+            },
+            error: function (xhr, status, error) {
+                $('.hardware-scan-status').after(
+                    $('<div class="alert alert-error"/>')
+                        .text('Server request failed: ' + xhr.statusText + ': ' +
+                              xhr.responseText));
+                $(evt.currentTarget).button('reset');
+
+            },
+        });
+
     },
 });
 

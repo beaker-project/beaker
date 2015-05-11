@@ -13,7 +13,7 @@ from werkzeug.exceptions import HTTPException
 from flask import request, redirect
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server import identity
-from bkr.server.bexceptions import BX, InsufficientSystemPermissions
+from bkr.server.bexceptions import BX, InsufficientSystemPermissions, DatabaseLookupError
 from bkr.server.search_utility import lucene_to_sqlalchemy
 
 # http://flask.pocoo.org/snippets/45/
@@ -194,7 +194,7 @@ def convert_internal_errors():
         yield
     except InsufficientSystemPermissions as exc:
         raise Forbidden403(unicode(exc))
-    except (BX, NoResultFound, ValueError) as exc:
+    except (BX, NoResultFound, ValueError, DatabaseLookupError) as exc:
         raise BadRequest400(unicode(exc))
 
 def auth_required(f):

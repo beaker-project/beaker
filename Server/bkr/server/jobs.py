@@ -22,6 +22,7 @@ from bkr.server.needpropertyxml import XmlHost
 from bkr.server.installopts import InstallOptions
 from bkr.server.controller_utilities import _custom_status, _custom_result, \
     restrict_http_method
+from bkr.server.app import app
 import pkg_resources
 import lxml.etree
 import logging
@@ -37,11 +38,14 @@ from bkr.server.model import (Job, RecipeSet, RetentionTag, TaskBase,
                               RecipeSetActivity, System, RecipeReservationRequest)
 
 from bkr.common.bexceptions import BeakerException, BX
+from bkr.server.flask_util import auth_required, convert_internal_errors, BadRequest400, Conflict409
+from flask import request, jsonify
 
 from bkr.server.util import xmltramp_parse_untrusted
 from bkr.server.jobxml import XmlJob
 import cgi
 from bkr.server.job_utilities import Utility
+
 
 log = logging.getLogger(__name__)
 
@@ -996,5 +1000,33 @@ class Jobs(RPCRoot):
                           )
         return return_dict
 
+@app.route('/jobs/+inventory', methods=['POST'])
+@auth_required
+def submit_inventory_job():
+    """
+    Submit a inventory job with the most suitable distro selected automatically.
+
+    :jsonparam string fqdn: Fully-qualified domain name for the system.
+    """
+    if 'fqdn' not in request.json:
+        raise BadRequest400('Missing the fqdn parameter')
+    fqdn = request.json['fqdn']
+    try:
+        system = System.by_fqdn(fqdn, identity.current.user)
+    except NoResultFound:
+        raise BadRequest400('System not found: %s' % fqdn)
+    if system.find_current_hardware_scan_recipe():
+        raise Conflict409('Hardware scanning already in progress')
+    distro = system.distro_tree_for_inventory()
+    if not distro:
+        raise BadRequest400('Could not find a compatible distro for hardware scanning available to this system')
+    job_details = {}
+    job_details['system'] = system
+    job_details['whiteboard'] = 'Update Inventory for %s' % fqdn
+    with convert_internal_errors():
+        job = Job.inventory_system_job(distro, **job_details)
+    r = jsonify(system.find_current_hardware_scan_recipe().__json__())
+    r.headers.add('Location', url(job.href))
+    return r
 # for sphinx
 jobs = Jobs

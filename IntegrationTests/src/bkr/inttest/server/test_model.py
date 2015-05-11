@@ -1007,6 +1007,34 @@ class TestJob(DatabaseTestCase):
         self.check_progress_bar(job.progress_bar,
                                 33.333, 66.667, 0, 0, 0)
 
+    def test_create_inventory_job(self):
+        lc = data_setup.create_labcontroller()
+        system = data_setup.create_system(arch=[u'i386', u'x86_64'])
+        system.lab_controller = lc
+        distro_tree1 = data_setup.create_distro_tree(osmajor='RedHatEnterpriseLinux6',
+                                                     distro_tags=['RELEASED'],
+                                                     lab_controllers=[lc])
+        session.flush()
+        distro_tree = system.distro_tree_for_inventory()
+        job_details = {}
+        job_details['system'] = system
+        job_details['whiteboard'] = 'Update Inventory for %s' % system.fqdn
+        job_details['owner'] = User.by_user_name(data_setup.ADMIN_USER)
+        job = Job.inventory_system_job(distro_tree, **job_details)
+        job_xml = job.recipesets[0].recipes[0].to_xml(clone=True).toxml()
+        self.assertIn('<distroRequires>'
+                      '<and>'
+                      '<distro_family op="=" value="RedHatEnterpriseLinux6"/>'
+                      '<distro_variant op="=" value="Server"/>'
+                      '<distro_name op="=" value="%s"/>'
+                      '<distro_arch op="=" value="i386"/>'
+                      '</and>'
+                      '</distroRequires>' % distro_tree1.distro.name,
+                      job_xml)
+        self.assertIn('<hostRequires force="%s"/>' % system.fqdn,
+                      job_xml)
+        self.assertIn('<task name="/distribution/inventory" role="STANDALONE"/>',
+                      job_xml)
 
 class DistroTreeByFilterTest(DatabaseTestCase):
 
@@ -2197,6 +2225,106 @@ class RecipeTaskResultTest(DatabaseTestCase):
         self.assertEquals(rtr.short_path, u'Cancelled it')
         rtr = RecipeTaskResult(recipetask=rt, path=u'/', log='Cancelled it')
         self.assertEquals(rtr.short_path, u'Cancelled it')
+
+
+class TestSystemInventoryDistro(DatabaseTestCase):
+
+    def setUp(self):
+        with session.begin():
+            self.lc = data_setup.create_labcontroller()
+            self.system1 = data_setup.create_system(arch=[u'i386', u'x86_64'])
+            self.system1.lab_controller = self.lc
+            self.system2 = data_setup.create_system(arch=[u'i386'])
+            self.system2.lab_controller = self.lc
+            self.system3 = data_setup.create_system(arch=[u'ppc64', u'ppc64le'])
+            self.system3.lab_controller = self.lc
+            self.system4 = data_setup.create_system(arch=[u'ppc64le'])
+            self.system4.lab_controller = self.lc
+            self.system5 = data_setup.create_system(arch=[u's390', u's390x'])
+            self.system5.lab_controller = self.lc
+            self.system6 = data_setup.create_system(arch=[u's390'])
+            self.system6.lab_controller = self.lc
+            self.system7 = data_setup.create_system(arch=[u'aarch64'])
+            self.system7.lab_controller = self.lc
+            self.distro_tree1 = data_setup.create_distro_tree(osmajor='RedHatEnterpriseLinux6',
+                                                              distro_tags=['RELEASED'],
+                                                              lab_controllers=[self.lc])
+            self.distro_tree2 = data_setup.create_distro_tree(osmajor='RedHatEnterpriseLinux6',
+                                                              arch=u'x86_64',
+                                                              distro_tags=['RELEASED'],
+                                                              lab_controllers=[self.lc])
+            self.distro_tree3 = data_setup.create_distro_tree(osmajor='RedHatEnterpriseLinux7',
+                                                              arch=u'ppc64',
+                                                              distro_tags=['RELEASED'],
+                                                              lab_controllers=[self.lc])
+            self.distro_tree4 = data_setup.create_distro_tree(osmajor='RedHatEnterpriseLinux7',
+                                                              arch=u'ppc64le',
+                                                              distro_tags=['RELEASED'],
+                                                              lab_controllers=[self.lc])
+            self.distro_tree5 = data_setup.create_distro_tree(osmajor='RedHatEnterpriseLinux6',
+                                                              arch=u's390x',
+                                                              distro_tags=['RELEASED'],
+                                                              lab_controllers=[self.lc])
+            self.distro_tree6 = data_setup.create_distro_tree(osmajor='RedHatEnterpriseLinux6',
+                                                              arch=u's390',
+                                                              distro_tags=['RELEASED'],
+                                                              lab_controllers=[self.lc])
+            self.distro_tree7 = data_setup.create_distro_tree(osmajor='RedHatEnterpriseLinux7',
+                                                              arch=u'aarch64',
+                                                              lab_controllers=[self.lc])
+
+            # setup a system in a different LC with only a Fedora distro
+            self.lc1 = data_setup.create_labcontroller()
+            self.system8 = data_setup.create_system(arch=['i386', 'x86_64'])
+            self.system8.lab_controller = self.lc1
+            self.distro_tree8 = data_setup.create_distro_tree(osmajor='Fedora22',
+                                                              arch=u'i386',
+                                                              distro_tags=['RELEASED'],
+                                                              lab_controllers=[self.lc1])
+            # setup a system in a different LC with a unknown distro
+            self.lc2 = data_setup.create_labcontroller()
+            self.system9 = data_setup.create_system(arch=['i386', 'x86_64'])
+            self.system9.lab_controller = self.lc2
+            self.distro_tree9 = data_setup.create_distro_tree(osmajor='MyDistro',
+                                                              arch=u'x86_64',
+                                                              distro_tags=['RELEASED'],
+                                                              lab_controllers=[self.lc2])
+
+    def test_select_inventory_distro_tree_released(self):
+        # For system1, x86_64 tree should be preferred
+        with session.begin():
+            self.assertEquals(self.system1.distro_tree_for_inventory(), self.distro_tree2)
+        # For system2, i386 tree should be chosen
+        with session.begin():
+            self.assertEquals(self.system2.distro_tree_for_inventory(), self.distro_tree1)
+
+        # For system3, ppc64 tree should be preferred
+        with session.begin():
+            self.assertEquals(self.system3.distro_tree_for_inventory(), self.distro_tree3)
+        # For system4, ppc64le tree should be chosen
+        with session.begin():
+            self.assertEquals(self.system4.distro_tree_for_inventory(), self.distro_tree4)
+
+        # For system5, s390x tree should be preferred
+        with session.begin():
+            self.assertEquals(self.system5.distro_tree_for_inventory(), self.distro_tree5)
+        # For system6, s390 tree should be chosen
+        with session.begin():
+            self.assertEquals(self.system6.distro_tree_for_inventory(), self.distro_tree6)
+
+        # For system8, the Fedora22 tree should be found
+        # tests that we keep looking for the recognized distros till
+        # we find one.
+        with session.begin():
+            self.assertEquals(self.system8.distro_tree_for_inventory(), self.distro_tree8)
+
+    def test_distro_tree_for_inventory_no_released_tree(self):
+        with session.begin():
+            self.assertEquals(self.system7.distro_tree_for_inventory(), self.distro_tree7)
+
+    def test_distro_tree_for_inventory_no_preferred_tree(self):
+        with session.begin():
+            self.assertEquals(self.system9.distro_tree_for_inventory(), self.distro_tree9)
 
 if __name__ == '__main__':
     unittest.main()

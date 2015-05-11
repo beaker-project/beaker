@@ -7,6 +7,7 @@
 # (at your option) any later version.
 
 import unittest2 as unittest
+import requests
 import logging
 import time
 import re
@@ -20,6 +21,7 @@ from bkr.inttest.server.webdriver_utils import login, is_text_present, logout, \
 from bkr.inttest import data_setup, with_transaction, get_server_base
 from bkr.server.model import RetentionTag, Product, Distro, Job, GuestRecipe, \
     User
+from bkr.inttest.server.requests_utils import post_json
 
 class TestViewJob(WebDriverTestCase):
 
@@ -1027,3 +1029,37 @@ class TestJobsGrid(WebDriverTestCase):
         self.check_job_row(rownum=1, job_t_id=job3.t_id, group=group2)
         self.check_job_row(rownum=2, job_t_id=job2.t_id, group=group1)
         self.check_job_row(rownum=3, job_t_id=job1.t_id, group=None)
+
+class SystemUpdateInventoryHTTPTest(WebDriverTestCase):
+    """
+    Directly tests the HTTP interface for updating system inventory
+    """
+    def setUp(self):
+        with session.begin():
+            self.owner = data_setup.create_user(password='theowner')
+            self.lc = data_setup.create_labcontroller()
+            self.system1 = data_setup.create_system(owner=self.owner,
+                                                    arch=[u'i386', u'x86_64'])
+            self.system1.lab_controller = self.lc
+            self.distro_tree1 = data_setup.create_distro_tree(osmajor='RedHatEnterpriseLinux6',
+                                                              distro_tags=['RELEASED'],
+                                                              lab_controllers=[self.lc])
+    def test_submit_inventory_job(self):
+        s = requests.Session()
+        response = s.post(get_server_base() + 'jobs/+inventory')
+        self.assertEquals(response.status_code, 401)
+        s.post(get_server_base() + 'login',
+               data={'user_name': self.owner.user_name,
+                     'password': 'theowner'}).raise_for_status()
+        response = post_json(get_server_base() + 'jobs/+inventory',
+                             session=s,
+                             data={'fqdn': self.system1.fqdn})
+        response.raise_for_status()
+        self.assertIn('recipe_id', response.text)
+
+        # Non-existent system
+        response = post_json(get_server_base() + 'jobs/+inventory',
+                             session=s,
+                             data={'fqdn': 'i.donotexist.name'})
+        self.assertEquals(response.status_code, 400)
+        self.assertIn('System not found: i.donotexist.name', response.text)

@@ -149,6 +149,20 @@ class SystemViewTestWD(WebDriverTestCase):
             session.refresh(self.system)
             self.assert_(self.system.date_modified > orig_date_modified)
 
+    def test_submit_inventory_job(self):
+        b = self.browser
+        login(b)
+        self.go_to_system_view(tab='Details')
+        tab = b.find_element_by_id('details')
+        tab.find_element_by_xpath('.//button[normalize-space(string(.))="Scan"]').click()
+        tab.find_element_by_xpath('.//button[normalize-space(string(.))="Scan" and @disabled="disabled"]')
+        with session.begin():
+            session.refresh(self.system)
+            recipe = self.system.find_current_hardware_scan_recipe()
+            recipe_id, status = recipe.id, recipe.status
+        self.assertIn('Hardware scan in progress: R:%s (%s)' % (recipe_id, status),
+                      tab.find_element_by_xpath('//div[contains(@class, "hardware-scan-status")]').text)
+
     def test_change_status(self):
         orig_date_modified = self.system.date_modified
         b = self.browser
