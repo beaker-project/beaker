@@ -44,6 +44,10 @@ BeakerCommandContainer.register_module(bkr.client.commands, prefix="cmd_")
 
 def main():
     global conf
+    if not conf:
+        sys.stderr.write("Configuration file not found. Please create an /etc/beaker/client.conf "
+                 "or ~/.beaker_client/config configuration file.\n")
+        return 1
     command_container = BeakerCommandContainer(conf=conf)
     formatter = IndentedHelpFormatter(max_help_position=60, width=120)
     parser = BeakerOptionParser(version=__version__,
