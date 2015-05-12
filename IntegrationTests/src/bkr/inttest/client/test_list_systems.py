@@ -274,3 +274,17 @@ class ListSystemsTest(ClientTestCase):
         except ClientError,e:
             self.assertEquals(e.status, 1)
             self.assert_('Invalid date format' in e.stderr_output, e.stderr_output)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1217158
+    def test_filter_by_pool(self):
+        with session.begin():
+            pool = data_setup.create_system_pool()
+            inpool = data_setup.create_system()
+            pool.systems.append(inpool)
+            nopool = data_setup.create_system()
+        out = run_client(['bkr', 'list-systems', '--pool', pool.name])
+        self.assertEquals([inpool.fqdn], out.splitlines())
+
+        # --group is a hidden compatibility alias for --pool
+        out = run_client(['bkr', 'list-systems', '--group', pool.name])
+        self.assertEquals([inpool.fqdn], out.splitlines())

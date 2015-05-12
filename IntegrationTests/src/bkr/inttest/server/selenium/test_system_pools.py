@@ -218,6 +218,13 @@ class SystemPoolEditTest(WebDriverTestCase):
             session.refresh(pool)
             self.assertNotIn(system, pool.systems)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1213203
+    def test_remove_system_button_is_absent_when_not_logged_in(self):
+        b = self.browser
+        self.go_to_pool_edit()
+        b.find_element_by_xpath('//div[@id="systems" and '
+                'not(.//button[normalize-space(string(.))="Remove"])]')
+
 
 class SystemPoolAccessPolicyWebUITest(WebDriverTestCase):
 

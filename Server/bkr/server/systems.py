@@ -1209,6 +1209,8 @@ def system_command(fqdn):
     :param fqdn: The system's fully-qualified domain name.
     :jsonparam string action: Action to be queued: ``on``, ``off``, 
       ``interrupt``, ``clear_netboot``.
+    :jsonparam bool only_if_current_user_matches: Queue a power command only
+      if the current user matches the system user.
     """
     system = _get_system_by_FQDN(fqdn)
     if not system.lab_controller:
@@ -1217,6 +1219,10 @@ def system_command(fqdn):
         raise Forbidden403('You do not have permission to control this system')
     # We accept JSON or form-encoded for convenience
     if request.json:
+        if 'only_if_current_user_matches' in request.json:
+            if request.json['only_if_current_user_matches'] and system.user is not None \
+                and system.user != identity.current.user:
+                raise Forbidden403('You are not the current user of the system')
         if 'action' not in request.json:
             raise BadRequest400('Missing action key')
         action = request.json['action']

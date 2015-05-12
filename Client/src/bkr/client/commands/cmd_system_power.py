@@ -27,8 +27,8 @@ Options
 
 .. option:: --action <action>
 
-   Perform the given power action. Valid actions are ``on``, ``off``, ``interrupt``
-   and ``reboot``. The default is ``reboot``.
+   Perform the given power action. Valid actions are ``on``, ``off``, ``interrupt``,
+   ``reboot`` and ``none``. Use ``none`` if no action needed. The default is ``reboot``.
 
 .. option:: --clear-netboot
 
@@ -55,6 +55,10 @@ Power off a particular system::
 
     bkr system-power --action off system2.example.invalid
 
+Clear netboot on a particular system::
+
+    bkr system-power --action none --clear-netboot
+
 See also
 --------
 
@@ -67,7 +71,7 @@ class System_Power(BeakerCommand):
     """Control power for a system"""
     enabled = True
 
-    valid_actions = ('on', 'off', 'interrupt', 'reboot')
+    valid_actions = ('on', 'off', 'interrupt', 'reboot', 'none')
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <fqdn>" % self.normalized_name
@@ -90,6 +94,22 @@ class System_Power(BeakerCommand):
             self.parser.error('Power action must be one of: %r'
                     % (self.valid_actions,))
 
+        json_data = {
+            'only_if_current_user_matches': True
+        }
+        if kwargs['force']:
+           json_data['only_if_current_user_matches'] = False
         self.set_hub(**kwargs)
-        self.hub.systems.power(kwargs['action'], fqdn,
-                kwargs['clear_netboot'], kwargs['force'])
+        requests_session = self.requests_session()
+        actions = []
+        if kwargs['clear_netboot']:
+            actions.append('clear_netboot')
+        if kwargs['action'] != 'none':
+            if kwargs['action'] == 'reboot':
+                actions.extend(['off', 'on'])
+            else:
+                actions.append(kwargs['action'])
+        for action in actions:
+            json_data['action'] = action
+            res = requests_session.post('systems/%s/commands/' % fqdn, json=json_data)
+            res.raise_for_status()
