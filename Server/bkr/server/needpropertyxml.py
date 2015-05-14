@@ -1064,6 +1064,23 @@ class XmlDisk(XmlAnd):
             return (joins, System.disks.any())
         return (joins, System.disks.any(and_(*clauses)))
 
+class XmlDiskSpace(ElementWrapper):
+    """
+    Filter systems by total disk space
+    """
+    def _bytes_value(self):
+        value = self.get_xml_attr('value', int, None)
+        units = self.get_xml_attr('units', unicode, 'bytes')
+        if value:
+            return value * bytes_multiplier(units)
+
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self._bytes_value()
+        query = None
+        if value:
+            query = getattr(System.diskspace, op)(value)
+        return (joins, query)
 
 class XmlCpu(XmlAnd):
     subclassDict = {
@@ -1119,6 +1136,7 @@ class XmlHost(XmlAnd):
                     'cpu': XmlCpu,
                     'device': XmlDevice,
                     'disk': XmlDisk,
+                    'diskspace': XmlDiskSpace,
                     'pool': XmlPool,
                     # for backward compatibility
                     'group': XmlPool,

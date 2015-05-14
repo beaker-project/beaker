@@ -619,6 +619,14 @@ the Free Software Foundation; either version 2 of the License, or
         </a:documentation>
         <oneOrMore><ref name="diskreq" /></oneOrMore>
       </element>
+      <element name="diskspace">
+        <a:documentation xml:lang="en">
+          Selects systems by total disk space.
+        </a:documentation>
+        <ref name="op"/>
+        <ref name="bytes_units"/>
+        <attribute name="value"/>
+      </element>
       <element name="group">
         <a:documentation xml:lang="en">
           Deprecated.  Use &lt;pool&gt; instead.

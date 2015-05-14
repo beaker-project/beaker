@@ -606,6 +606,15 @@ class System(DeclarativeMappedObject, ActivityMixin):
                 cls.user == user)
 
     @hybrid_property
+    def diskspace(self):
+        return sum(disk.size for disk in self.disks)
+
+    @diskspace.expression
+    def diskspace(cls): #pylint: disable=E0213
+        return select([func.sum(Disk.size)]).\
+                where(Disk.system_id == cls.id).label('diskspace')
+
+    @hybrid_property
     def visible_to_anonymous(self):
         return (self.active_access_policy and
                 self.active_access_policy.grants_everybody(SystemPermission.view))
