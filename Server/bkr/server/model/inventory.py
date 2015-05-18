@@ -1686,16 +1686,19 @@ class SystemPool(DeclarativeMappedObject, ActivityMixin):
             'name': self.name,
             'description':self.description,
             'owner': self.owner,
-            'systems': [system.fqdn for system in self.systems],
             'access_policy': self.access_policy,
         }
         if identity.current.user:
             user = identity.current.user
             data['can_edit'] = self.can_edit(user)
             data['can_edit_policy'] = self.can_edit_policy(user)
+            data['systems'] = [system.fqdn if system.visible_to_user(user)
+                                    else '<restricted>' for system in self.systems]
         else:
             data['can_edit'] = False
             data['can_edit_policy'] = False
+            data['systems'] = [system.fqdn if system.visible_to_anonymous
+                        else '<restricted>' for system in self.systems]
         return data
 
     @validates('owning_group', 'owning_user')

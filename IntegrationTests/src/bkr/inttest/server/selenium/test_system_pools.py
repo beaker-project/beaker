@@ -225,6 +225,30 @@ class SystemPoolEditTest(WebDriverTestCase):
         b.find_element_by_xpath('//div[@id="systems" and '
                 'not(.//button[normalize-space(string(.))="Remove"])]')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1217283
+    def test_secret_system(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            system = data_setup.create_system()
+            pool = data_setup.create_system_pool()
+            pool.systems.append(system)
+            system.active_access_policy = pool.access_policy
+        b = self.browser
+        login(b)
+        self.go_to_pool_edit(system_pool=pool, tab='System Access Policy')
+        pane = b.find_element_by_id('access-policy')
+        find_policy_checkbox(b, 'Everybody', 'View').click()
+        pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        logout(b)
+        self.go_to_pool_edit(system_pool=pool, tab='Systems')
+        b.find_element_by_xpath('//div[@id="systems" and '
+                                'not(.//a/text()="%s")]' % system.fqdn)
+        b.find_element_by_xpath('//li/em[contains(text(), "system with restricted visibility")]')
+        login(b, user.user_name, password='password')
+        self.go_to_pool_edit(system_pool=pool, tab='Systems')
+        # user has no access to see the system
+        b.find_element_by_xpath('//li/em[contains(text(), "system with restricted visibility")]')
+
 
 class SystemPoolAccessPolicyWebUITest(WebDriverTestCase):
 
