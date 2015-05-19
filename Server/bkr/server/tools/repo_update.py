@@ -99,7 +99,8 @@ class RepoSyncer(yum.YumBase):
         return has_new_packages
 
 def update_repos(baseurl, basepath):
-    for osmajor in OSMajor.query:
+    # We only sync repos for the OS majors that have existing trees in the lab controllers.
+    for osmajor in OSMajor.in_any_lab():
         # urlgrabber < 3.9.1 doesn't handle unicode urls
         osmajor = unicode(osmajor).encode('utf8')
         dest = "%s/%s" % (basepath,osmajor)
