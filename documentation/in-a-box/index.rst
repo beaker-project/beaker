@@ -30,9 +30,12 @@ Setting up Ansible
 ------------------
 
 Ansible is connecting with remote machines over SSH, so we need to set up
-passwordless ssh key authentication from your user to root on the host machine::
+passwordless ssh key authentication for your user account on the host machine::
 
-    ssh-copy-id root@localhost
+    ssh-copy-id <user>@localhost
+
+Using SSH keys is encouraged but password authentication can also be used where
+needed by supplying the option --ask-pass to ansible.
 
 Setting up libvirt and test systems
 -----------------------------------
@@ -40,7 +43,7 @@ Setting up libvirt and test systems
 We will use Ansible to create a virtual network called beaker and three
 test systems on your host system::
 
-   ansible-playbook -i hosts setup_libvirt_and_virt.yml
+   ansible-playbook -i hosts setup_libvirt_and_virt.yml --ask-become-pass
 
 .. note::
 
