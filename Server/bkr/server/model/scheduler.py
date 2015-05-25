@@ -875,8 +875,10 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         return job
 
     @classmethod
-    def inventory_system_job(cls, distro_tree, **kw):
-        """ Create a new inventory job and schedule it"""
+    def inventory_system_job(cls, distro_tree, dryrun=False, **kw):
+        """ Create a new inventory job and return the job XML.
+        If this is not a dry run, then also submit the job
+        """
         if not kw.get('owner'):
             owner = identity.current.user
         else:
@@ -889,8 +891,10 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
                              'please change or clear it in order to submit jobs.')
         recipeSet = RecipeSet(ttasks=2)
         recipe = MachineRecipe(ttasks=2)
+
         if kw.get('whiteboard'):
             recipe.whiteboard = kw.get('whiteboard')
+
         # Include the XML definition so that cloning this job will act as expected.
         recipe.distro_requires = distro_tree.to_xml().toxml()
         recipe.distro_tree = distro_tree
@@ -911,10 +915,14 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         recipeSet.recipes.append(recipe)
         job.recipesets.append(recipeSet)
         job.ttasks += recipeSet.ttasks
-        system.hardware_scan_recipes.append(recipe)
-        session.add(job)
-        session.flush()
-        return job
+        job_xml = job.to_xml(clone=True).toxml()
+        # We have the XML now, so if dry run, roll back
+        if dryrun:
+            session.rollback()
+        else:
+            system.hardware_scan_recipes.append(recipe)
+            session.flush()
+        return job_xml
 
     @classmethod
     def marked_for_deletion(cls):
@@ -2049,7 +2057,7 @@ class Recipe(TaskBase, DeclarativeMappedObject):
                 ks_appends.appendChild(ks_append.to_xml())
         recipe.appendChild(ks_appends)
 
-        if not self.is_queued() and not clone:
+        if not clone and not self.is_queued():
             roles = xmldoc.createElement("roles")
             for role in self.roles_to_xml():
                 roles.appendChild(role)
@@ -2590,7 +2598,7 @@ class Recipe(TaskBase, DeclarativeMappedObject):
     def __json__(self):
         data = {'recipe_id': self.id,
                 'status': self.status,
-                'job_id': self.recipeset.job.id,
+                'job_id': self.recipeset.job.t_id,
             }
         return data
 
@@ -2945,7 +2953,7 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
             if self.fetch_subdir:
                 fetch.setAttribute('subdir', self.fetch_subdir)
             task.appendChild(fetch)
-        if not self.is_queued() and not clone:
+        if not clone and not self.is_queued():
             roles = xmldoc.createElement("roles")
             for role in self.roles_to_xml():
                 roles.appendChild(role)

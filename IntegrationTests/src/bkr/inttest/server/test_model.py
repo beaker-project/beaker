@@ -1020,8 +1020,7 @@ class TestJob(DatabaseTestCase):
         job_details['system'] = system
         job_details['whiteboard'] = 'Update Inventory for %s' % system.fqdn
         job_details['owner'] = User.by_user_name(data_setup.ADMIN_USER)
-        job = Job.inventory_system_job(distro_tree, **job_details)
-        job_xml = job.recipesets[0].recipes[0].to_xml(clone=True).toxml()
+        job_xml = Job.inventory_system_job(distro_tree, **job_details)
         self.assertIn('<distroRequires>'
                       '<and>'
                       '<distro_family op="=" value="RedHatEnterpriseLinux6"/>'

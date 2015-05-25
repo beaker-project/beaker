@@ -1006,11 +1006,20 @@ def submit_inventory_job():
     """
     Submit a inventory job with the most suitable distro selected automatically.
 
+    Returns a dictionary consisting of the job_id, recipe_id, status (recipe status) 
+    and the job XML. If ``dryrun`` is set to ``True`` in the request, the first three 
+    are set to ``None``.
+
     :jsonparam string fqdn: Fully-qualified domain name for the system.
+    :jsonparam bool dryrun: If True, do not submit the job
     """
     if 'fqdn' not in request.json:
         raise BadRequest400('Missing the fqdn parameter')
     fqdn = request.json['fqdn']
+    if 'dryrun' in request.json:
+        dryrun = request.json['dryrun']
+    else:
+        dryrun = False
     try:
         system = System.by_fqdn(fqdn, identity.current.user)
     except NoResultFound:
@@ -1024,9 +1033,17 @@ def submit_inventory_job():
     job_details['system'] = system
     job_details['whiteboard'] = 'Update Inventory for %s' % fqdn
     with convert_internal_errors():
-        job = Job.inventory_system_job(distro, **job_details)
-    r = jsonify(system.find_current_hardware_scan_recipe().__json__())
-    r.headers.add('Location', url(job.href))
+        job_xml = Job.inventory_system_job(distro, dryrun=dryrun, **job_details)
+    r = {}
+    if not dryrun:
+        r = system.find_current_hardware_scan_recipe().__json__()
+    else:
+        r = {'recipe_id': None,
+             'status': None,
+             'job_id': None,
+        }
+    r['job_xml'] = job_xml
+    r = jsonify(r)
     return r
 # for sphinx
 jobs = Jobs
