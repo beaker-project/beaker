@@ -43,17 +43,23 @@ BeakerCommandContainer.register_module(bkr.client.commands, prefix="cmd_")
 
 
 def main():
+
     global conf
-    if not conf:
-        sys.stderr.write("Configuration file not found. Please create an /etc/beaker/client.conf "
-                 "or ~/.beaker_client/config configuration file.\n")
-        return 1
     command_container = BeakerCommandContainer(conf=conf)
     formatter = IndentedHelpFormatter(max_help_position=60, width=120)
     parser = BeakerOptionParser(version=__version__,
             conflict_handler='resolve',
             command_container=command_container,
             default_command="help", formatter=formatter)
+
+    # This is parser.run(), but with more sensible error handling
+    cmd, cmd_opts, cmd_args = parser.parse_args()
+
+    if not cmd_opts.hub and not conf:
+        sys.stderr.write("Configuration file not found. Please create an /etc/beaker/client.conf "
+                 "or ~/.beaker_client/config configuration file.\n")
+        return 1
+
 
     # Need to deal with the possibility that requests is not importable...
     try:
@@ -62,8 +68,6 @@ def main():
     except ImportError:
         maybe_http_error = ()
 
-    # This is parser.run(), but with more sensible error handling
-    cmd, cmd_opts, cmd_args = parser.parse_args()
     try:
         return cmd.run(*cmd_args, **cmd_opts.__dict__)
     except krbV.Krb5Error, e:
