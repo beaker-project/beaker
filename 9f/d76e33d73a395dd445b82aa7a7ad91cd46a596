@@ -1,0 +1,9 @@
+Ready-for-Checks+1: Matt Jia <mjia@redhat.com>
+Code-Review+1: Dan Callaghan <dcallagh@redhat.com>
+Code-Review+2: Amit Saha <asaha@redhat.com>
+Verified+1: Matt Jia <mjia@redhat.com>
+Submitted-by: Matt Jia <mjia@redhat.com>
+Submitted-at: Tue, 02 Jun 2015 23:51:15 +0000
+Reviewed-on: http://gerrit.beaker-project.org/4208
+Project: beaker
+Branch: refs/heads/release-20
