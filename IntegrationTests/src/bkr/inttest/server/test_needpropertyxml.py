@@ -936,6 +936,18 @@ class SystemFilteringTest(DatabaseTestCase):
             present=[system_a, system_ab, system_b],
             absent=[system_0])
 
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1226076
+        self.check_filter("""
+            <hostRequires>
+                <or>
+                    <group op="=" value="%s" />
+                    <group op="=" value="%s" />
+                </or>
+            </hostRequires>
+            """ % (pool_a.name, pool_b.name),
+            present=[system_a, system_ab, system_b],
+            absent=[system_0])
+
     def test_system_pool(self):
         pool_a = data_setup.create_system_pool()
         pool_b = data_setup.create_system_pool()

@@ -352,9 +352,9 @@ class XmlPool(ElementWrapper):
             except NoResultFound:
                 return (joins, None)
             if op == '__eq__':
-                query = System.pools.contains(pool)
+                query = System.pools.any(SystemPool.id == pool.id)
             else:
-                query = not_(System.pools.contains(pool))
+                query = not_(System.pools.any(SystemPool.id == pool.id))
         else:
             # - '!=' - search for system which is member of any pool
             # - '==' - search for system which is not member of any pool
