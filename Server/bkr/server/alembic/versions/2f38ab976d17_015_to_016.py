@@ -17,7 +17,8 @@ down_revision = '49a4a1e3779a'
 
 from alembic import op
 import sqlalchemy as sa
-from bkr.server.alembic.migration_utils import add_enum_value, drop_enum_value
+from bkr.server.alembic.migration_utils import add_enum_value, drop_enum_value, \
+    drop_fk
 
 def upgrade():
     op.execute("""
@@ -68,6 +69,7 @@ def upgrade():
     op.drop_table('install')
 
 def downgrade():
+    drop_fk('recipe_task', ['task_id'])
     op.execute("""
         ALTER TABLE recipe_task
         DROP name,
@@ -76,6 +78,8 @@ def downgrade():
         DROP fetch_subdir,
         MODIFY task_id INT NOT NULL
         """)
+    op.create_foreign_key(None, 'recipe_task', 'task',
+                ['task_id'], ['id'])
     op.execute("DELETE FROM system_access_policy_rule WHERE permission = 'view'")
     drop_enum_value('system_access_policy_rule', 'permission', 'view', nullable=False)
     op.drop_column('command_queue', 'quiescent_period')

@@ -17,7 +17,8 @@ down_revision = '2d4258bf3f16'
 
 from alembic import op
 import sqlalchemy as sa
-from bkr.server.alembic.migration_utils import find_fk, create_fk_if_absent
+from bkr.server.alembic.migration_utils import find_fk, create_fk_if_absent,\
+    drop_fk
 
 def upgrade():
     # This was an oversight in commit d8df7f836 for bug 598781.
@@ -73,8 +74,11 @@ def upgrade():
         op.alter_column('log_recipe_task_result', 'recipe_task_result_id',
                 existing_type=sa.Integer, nullable=False)
     # This was an oversight in commit e591d682 for bug 595801.
+    drop_fk('job', ['retention_tag_id'])
     op.alter_column('job', 'retention_tag_id',
             existing_type=sa.Integer, nullable=False)
+    op.create_foreign_key(None, 'job', 'retention_tag',
+                ['retention_tag_id'], ['id'])
     # This was an oversight in commit eb8cded8 for bug 560695.
     op.alter_column('lab_controller', 'disabled',
             existing_type=sa.Boolean, nullable=False)

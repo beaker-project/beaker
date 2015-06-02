@@ -54,6 +54,12 @@ def find_index(table, columns):
         if info['column_names'] == columns:
             return info['name']
 
+def drop_fk(table,columns):
+    """
+    Find and drop the forign key constraint which applies to the given columns.
+    """
+    op.drop_constraint(find_fk(table, columns), table, type_='foreignkey')
+
 # When altering a MySQL ENUM column to add a new value, we can only add it at 
 # the end. Similarly values can only be removed from the end. The enum values 
 # must not be re-ordered, otherwise it will change the data stored in the 
