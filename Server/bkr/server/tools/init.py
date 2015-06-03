@@ -36,10 +36,13 @@ def init_db(metadata):
     metadata.create_all()
 
     def stamp(rev, context):
-        current = context._current_rev()
-        head = context.script.get_revision('head')
-        context._update_current_rev(current, head.revision)
-        return []
+        try:
+            return context.script._stamp_revs('head', rev)
+        except AttributeError: # alembic < 0.7
+            current = context._current_rev()
+            head = context.script.get_revision('head')
+            context._update_current_rev(current, head.revision)
+            return []
     run_alembic_operation(metadata, stamp)
 
 def populate_db(user_name=None, password=None, user_display_name=None,
@@ -196,7 +199,8 @@ def populate_db(user_name=None, password=None, user_display_name=None,
 
 def upgrade_db(metadata):
     def upgrade(rev, context):
-        if rev is None:
+        # In alembic 0.7, rev could be an empty set.
+        if not rev:
             # This means the database is not stamped. Normally Alembic treats 
             # that as the "base" revision (for us that's Beaker 0.11) but 
             # actually the db could be anything from 0.11 to 0.18 (or even 
@@ -230,7 +234,11 @@ def upgrade_db(metadata):
                         '(you must manually migrate old databases '
                         'up to 0.11 before running beaker-init)')
             logger.info('Treating unstamped database as version %s' % rev)
-            context._update_current_rev(None, rev)
+            try:
+                context._update_current_rev(None, rev)
+            except AttributeError:
+                # In alembic 0.7, we donnot need to stamp.
+                pass
         return context.script._upgrade_revs('head', rev)
     run_alembic_operation(metadata, upgrade)
 
