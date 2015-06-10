@@ -1,6 +1,6 @@
 [Unit]
 Description=Beaker scheduler
-After=mysqld.service
+After=mysqld.service mariadb.service
 
 [Service]
 Type=forking
