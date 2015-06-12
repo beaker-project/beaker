@@ -107,7 +107,7 @@ logvol /{{ partname }} --name={{ lvmname }} --vgname=TestVolume00{{ is_lvm }} --
 {% endif %}
 {% endfor %}
 
-{% else %}
+{% elif no_autopart is undefined%}
 {#
 ## No special partitions requested. Let Anaconda do what it thinks is right.
 ## If autopart_type is specified and a compatible distro is being used

@@ -3238,3 +3238,41 @@ part /boot --size 200 --recommended --asprimary --fstype ext4 --ondisk=vdb
         ''', self.system)
         compare_expected('AtomicHost-defaults', recipe.id,
                     recipe.rendered_kickstart.kickstart)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1198881
+    def test_no_autopart(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="no_autopart">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <ks_appends>
+                            <ks_append>
+part raid.01 --size=20480 --ondisk=sda
+part raid.02 --size=20480 --ondisk=sdb
+part raid.03 --size=20480 --ondisk=sdc
+volgroup bootvg --pesize=32768 pv.01
+                            </ks_append>
+                        </ks_appends>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+
+        self.assertNotIn('autopart',
+                      recipe.rendered_kickstart.kickstart)
+        part_lines = [r'''part raid.01 --size=20480 --ondisk=sda''',
+                      r'''part raid.02 --size=20480 --ondisk=sdb''',
+                      r'''part raid.03 --size=20480 --ondisk=sdc''',
+                      r'''volgroup bootvg --pesize=32768 pv.01''']
+        for line in part_lines:
+            self.assert_(line in recipe.rendered_kickstart.kickstart.splitlines(),
+                         recipe.rendered_kickstart.kickstart)

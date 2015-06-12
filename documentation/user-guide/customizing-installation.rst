@@ -260,6 +260,13 @@ correspond to the similarly-named kickstart option.
     (local X server), and ``vnc`` (graphical interface over VNC). The default 
     mode is either ``text`` or ``cmdline``, depending on arch and distro.
 
+``no_autopart``
+    Omits the ``autopart`` command. By default when no specific partitions are
+    requested for a recipe, the kickstart will include ``autopart`` which causes
+    the installer to automatically select a suitable partition layout. Set this
+    variable if you want to supply explicit partitioning commands in some other
+    way, for example in a ``<ks_append/>`` section.
+
 ``no_<type>_repos``
     Omits repos of the given type. Valid types include ``variant``, ``addon``, 
     ``optional``, and ``debug``. You can find which repo types are available 
