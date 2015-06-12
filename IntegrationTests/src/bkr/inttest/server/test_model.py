@@ -13,6 +13,7 @@ import pkg_resources
 import shutil
 import lxml.etree
 import email
+from mock import patch
 import inspect
 import kid
 from turbogears.database import session
@@ -28,7 +29,7 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task, TaskResult, \
         Group, User, ActivityMixin, SystemAccessPolicy, SystemPermission, \
         RecipeTask, RecipeTaskResult, DeclarativeMappedObject, OSVersion, \
-        RecipeReservationRequest, ReleaseAction, SystemPool
+        RecipeReservationRequest, ReleaseAction, SystemPool, CommandStatus
 
 from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
@@ -892,6 +893,31 @@ class SystemReleaseAction(DatabaseTestCase):
         session.flush()
         self.assertEqual(system.release_action, ReleaseAction.power_off)
 
+class CommandActivityTest(DatabaseTestCase):
+
+    @patch('bkr.server.model.inventory.metrics')
+    def test_command_completion_metrics(self, mock_metrics):
+        # set up a completed command
+        lc = data_setup.create_labcontroller(fqdn=u'whitehouse.gov')
+        system = data_setup.create_system(lab_controller=lc)
+        command = system.action_power(action=u'on', service=u'testdata')
+        session.flush()
+        command.change_status(CommandStatus.completed)
+        # set up a failed command
+        lc = data_setup.create_labcontroller(fqdn=u'borgen.dk')
+        system = data_setup.create_system(lab_controller=lc)
+        command = system.action_power(action=u'off', service=u'testdata')
+        session.flush()
+        command.change_status(CommandStatus.failed)
+        # check metrics
+        counters = [
+            'counters.system_commands_completed.all',
+            'counters.system_commands_completed.by_lab.whitehouse_gov',
+            'counters.system_commands_failed.all',
+            'counters.system_commands_failed.by_lab.borgen_dk',
+        ]
+        for counter in counters:
+            mock_metrics.increment.assert_any_call(counter)
 
 class TestJob(DatabaseTestCase):
 

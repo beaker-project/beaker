@@ -168,8 +168,15 @@ class CommandActivity(Activity):
                     'Status for command %s updated in another transaction'
                     % self.id)
         self.status = new_status
+        # update metrics counters if command has finished
         if self.status.finished:
-            metrics.increment('counters.system_commands_%s' % self.status.name)
+            categories = ['all']
+            if self.system.lab_controller:
+                categories.append('by_lab.%s'
+                        % self.system.lab_controller.fqdn.replace('.', '_'))
+            for category in categories:
+                metrics.increment('counters.system_commands_%s.%s'
+                        % (self.status.name, category))
 
     def log_to_system_history(self):
         self.system.record_activity(user=self.user, service=self.service,
