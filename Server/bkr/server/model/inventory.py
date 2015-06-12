@@ -174,6 +174,10 @@ class CommandActivity(Activity):
             if self.system.lab_controller:
                 categories.append('by_lab.%s'
                         % self.system.lab_controller.fqdn.replace('.', '_'))
+            if self.system.power and self.system.power.power_type:
+                categories.append('by_power_type.%s'
+                        % self.system.power.power_type.name)
+            categories.extend('by_arch.%s' % arch.arch for arch in self.system.arch)
             for category in categories:
                 metrics.increment('counters.system_commands_%s.%s'
                         % (self.status.name, category))

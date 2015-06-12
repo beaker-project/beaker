@@ -899,13 +899,15 @@ class CommandActivityTest(DatabaseTestCase):
     def test_command_completion_metrics(self, mock_metrics):
         # set up a completed command
         lc = data_setup.create_labcontroller(fqdn=u'whitehouse.gov')
-        system = data_setup.create_system(lab_controller=lc)
+        system = data_setup.create_system(lab_controller=lc, arch=u'i386')
+        data_setup.configure_system_power(system, power_type=u'ilo')
         command = system.action_power(action=u'on', service=u'testdata')
         session.flush()
         command.change_status(CommandStatus.completed)
         # set up a failed command
         lc = data_setup.create_labcontroller(fqdn=u'borgen.dk')
-        system = data_setup.create_system(lab_controller=lc)
+        system = data_setup.create_system(lab_controller=lc, arch=u'x86_64')
+        data_setup.configure_system_power(system, power_type=u'drac')
         command = system.action_power(action=u'off', service=u'testdata')
         session.flush()
         command.change_status(CommandStatus.failed)
@@ -913,8 +915,12 @@ class CommandActivityTest(DatabaseTestCase):
         counters = [
             'counters.system_commands_completed.all',
             'counters.system_commands_completed.by_lab.whitehouse_gov',
+            'counters.system_commands_completed.by_arch.i386',
+            'counters.system_commands_completed.by_power_type.ilo',
             'counters.system_commands_failed.all',
             'counters.system_commands_failed.by_lab.borgen_dk',
+            'counters.system_commands_failed.by_arch.x86_64',
+            'counters.system_commands_failed.by_power_type.drac',
         ]
         for counter in counters:
             mock_metrics.increment.assert_any_call(counter)

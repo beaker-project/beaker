@@ -24,7 +24,8 @@ from bkr.server.model import (Job, RecipeSet, Recipe, MachineRecipe,
         GuestRecipe, RecipeVirtStatus, TaskStatus, TaskPriority, LabController,
         Watchdog, System, DistroTree, LabControllerDistroTree, SystemStatus,
         VirtResource, SystemResource, GuestResource, Arch,
-        SystemAccessPolicy, SystemPermission, ConfigItem, CommandActivity)
+        SystemAccessPolicy, SystemPermission, ConfigItem, CommandActivity,
+        Power, PowerType)
 from bkr.server.model.scheduler import machine_guest_map
 from bkr.server.needpropertyxml import XmlHost
 from bkr.server.util import load_config_or_exit, log_traceback
@@ -762,6 +763,11 @@ def system_command_metrics():
     _system_command_metrics_for_query('all', CommandActivity.query)
     _system_command_metrics_for_query_grouped('by_lab', LabController.fqdn,
             CommandActivity.query.join(CommandActivity.system).join(System.lab_controller))
+    _system_command_metrics_for_query_grouped('by_arch', Arch.arch,
+            CommandActivity.query.join(CommandActivity.system).join(System.arch))
+    _system_command_metrics_for_query_grouped('by_power_type', PowerType.name,
+            CommandActivity.query.join(CommandActivity.system).join(System.power)
+                .join(Power.power_type))
 
 # Dirty jobs
 def dirty_job_metrics():

@@ -1937,12 +1937,17 @@ class TestBeakerdMetrics(DatabaseTestCase):
 
     def test_system_command_metrics(self, mock_metrics):
         lc = data_setup.create_labcontroller(fqdn=u'testcommandmetrics.invalid')
-        system = data_setup.create_system(lab_controller=lc)
+        system = data_setup.create_system(lab_controller=lc, arch=u'x86_64')
+        data_setup.configure_system_power(system, power_type=u'drac')
         command = system.enqueue_command(u'on', service=u'testdata')
+
+        categories = ['all', 'by_lab.testcommandmetrics_invalid',
+                'by_arch.x86_64', 'by_power_type.drac']
+
         session.flush()
         beakerd.system_command_metrics()
         log.debug('Metrics calls were: %s', mock_metrics.measure.call_args_list)
-        for category in ['all', 'by_lab.testcommandmetrics_invalid']:
+        for category in categories:
             mock_metrics.measure.assert_any_call(
                     'gauges.system_commands_queued.%s' % category, 1)
             mock_metrics.measure.assert_any_call(
@@ -1953,7 +1958,7 @@ class TestBeakerdMetrics(DatabaseTestCase):
         session.flush()
         beakerd.system_command_metrics()
         log.debug('Metrics calls were: %s', mock_metrics.measure.call_args_list)
-        for category in ['all', 'by_lab.testcommandmetrics_invalid']:
+        for category in categories:
             mock_metrics.measure.assert_any_call(
                     'gauges.system_commands_queued.%s' % category, 0)
             mock_metrics.measure.assert_any_call(
