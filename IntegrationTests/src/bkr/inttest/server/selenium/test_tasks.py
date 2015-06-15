@@ -218,5 +218,18 @@ class TestSubmitTask(WebDriverTestCase):
                 'tmp-distribution-beaker-arm-related-arches-1.0-0.noarch.rpm'))
         self.assert_task_upload_flash_OK('/distribution/beaker/arm-related-arches')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1226443
+    def test_unrecognised_fields_in_testinfo_are_ignored(self):
+        b = self.browser
+        b.get(get_server_base() + 'tasks/new')
+        rpm_path = pkg_resources.resource_filename('bkr.inttest.server',
+                'task-rpms/tmp-distribution-beaker-dummy_for_bz1226443-1.0-1.noarch.rpm')
+        b.find_element_by_id('task_task_rpm').send_keys(rpm_path)
+        b.find_element_by_xpath('//button[text()="Upload"]').click()
+        self.addCleanup(unlink_ignore,
+                os.path.join(turbogears.config.get('basepath.rpms'),
+                'tmp-distribution-beaker-dummy_for_bz1226443-1.0-1.noarch.rpm'))
+        self.assert_task_upload_flash_OK('/distribution/beaker/dummy_for_bz1226443')
+
 if __name__ == "__main__":
     unittest.main()
