@@ -876,6 +876,44 @@ class SystemFilteringTest(DatabaseTestCase):
             """,
             present=[two_disks], absent=[one_disk])
 
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1197074
+        # use logical operators inside <disk>
+        self.check_filter("""
+            <hostRequires>
+                <disk>
+                    <and>
+                        <size op="&gt;" value="10" units="GB" />
+                        <phys_sector_size op="=" value="4" units="KiB" />
+                    </and>
+                </disk>
+            </hostRequires>
+            """,
+            present=[big_disk], absent=[small_disk, two_disks])
+
+        self.check_filter("""
+            <hostRequires>
+                <disk>
+                    <or>
+                        <size op="&gt;" value="10" units="GB" />
+                        <phys_sector_size op="=" value="4" units="KiB" />
+                    </or>
+                </disk>
+            </hostRequires>
+            """,
+            present=[big_disk, two_disks], absent=[small_disk])
+
+        self.check_filter("""
+            <hostRequires>
+                <disk>
+                    <not>
+                        <sector_size op="!=" value="512" />
+                        <phys_sector_size op="=" value="4" units="KiB" />
+                    </not>
+                </disk>
+            </hostRequires>
+            """,
+            present=[small_disk, two_disks], absent=[big_disk])
+
     # <group> is deprecated, but we keep the tests to prevent regressive behaviour
     def test_group(self):
         pool_a = data_setup.create_system_pool()
@@ -923,6 +961,18 @@ class SystemFilteringTest(DatabaseTestCase):
                 </and>
             </hostRequires>
             """,
+            present=[system_a, system_ab, system_b],
+            absent=[system_0])
+
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1226076
+        self.check_filter("""
+            <hostRequires>
+                <or>
+                    <group op="=" value="%s" />
+                    <group op="=" value="%s" />
+                </or>
+            </hostRequires>
+            """ % (pool_a.name, pool_b.name),
             present=[system_a, system_ab, system_b],
             absent=[system_0])
 

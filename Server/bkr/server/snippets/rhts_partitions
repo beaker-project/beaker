@@ -40,6 +40,9 @@ part /boot --size 200 --recommended --asprimary
 {%- if fstype %} --fstype {{ fstype }}{% endif %}
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 {% endif %}
+{% elif distro_tree is arch('aarch64') %}
+part /boot/efi --fstype vfat --size 200 --recommended
+{%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 {% else %}
 part /boot --size 200 --recommended --asprimary
 {%- if fstype %} --fstype {{ fstype }}{% endif %}
