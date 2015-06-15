@@ -1797,7 +1797,7 @@ class TestBeakerdMetrics(DatabaseTestCase):
                 recipe.recipeset.job.update_status()
         except Exception, e:
             session.rollback()
-            self.fail('setUp failed with: %s' % unicode(e))
+            raise
 
     def tearDown(self):
         session.rollback()
