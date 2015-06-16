@@ -848,34 +848,6 @@ class SystemFilteringTest(DatabaseTestCase):
             """,
             present=[small_disk], absent=[big_disk, two_disks])
 
-    # https://bugzilla.redhat.com/show_bug.cgi?id=1187402
-    def test_filtering_by_diskspace(self):
-        one_disk = data_setup.create_system()
-        one_disk.disks[:] = [Disk(size=8000000000, sector_size=512, phys_sector_size=512)]
-        two_disks = data_setup.create_system()
-        two_disks.disks[:] = [Disk(size=500000000000, sector_size=512, phys_sector_size=512),
-                              Disk(size=8000000000, sector_size=4096, phys_sector_size=4096)]
-        self.check_filter("""
-            <hostRequires>
-                <diskspace op="&gt;" value="500" units="GB"/>
-            </hostRequires>
-            """,
-            present=[two_disks], absent=[one_disk])
-
-        self.check_filter("""
-            <hostRequires>
-                <diskspace op="&lt;" value="50" units="GB"/>
-            </hostRequires>
-            """,
-            present=[one_disk], absent=[two_disks])
-
-        self.check_filter("""
-            <hostRequires>
-                <diskspace op="==" value="508" units="GB"/>
-            </hostRequires>
-            """,
-            present=[two_disks], absent=[one_disk])
-
         # https://bugzilla.redhat.com/show_bug.cgi?id=1197074
         # use logical operators inside <disk>
         self.check_filter("""
@@ -913,6 +885,34 @@ class SystemFilteringTest(DatabaseTestCase):
             </hostRequires>
             """,
             present=[small_disk, two_disks], absent=[big_disk])
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1187402
+    def test_filtering_by_diskspace(self):
+        one_disk = data_setup.create_system()
+        one_disk.disks[:] = [Disk(size=8000000000, sector_size=512, phys_sector_size=512)]
+        two_disks = data_setup.create_system()
+        two_disks.disks[:] = [Disk(size=500000000000, sector_size=512, phys_sector_size=512),
+                              Disk(size=8000000000, sector_size=4096, phys_sector_size=4096)]
+        self.check_filter("""
+            <hostRequires>
+                <diskspace op="&gt;" value="500" units="GB"/>
+            </hostRequires>
+            """,
+            present=[two_disks], absent=[one_disk])
+
+        self.check_filter("""
+            <hostRequires>
+                <diskspace op="&lt;" value="50" units="GB"/>
+            </hostRequires>
+            """,
+            present=[one_disk], absent=[two_disks])
+
+        self.check_filter("""
+            <hostRequires>
+                <diskspace op="==" value="508" units="GB"/>
+            </hostRequires>
+            """,
+            present=[two_disks], absent=[one_disk])
 
     # <group> is deprecated, but we keep the tests to prevent regressive behaviour
     def test_group(self):
