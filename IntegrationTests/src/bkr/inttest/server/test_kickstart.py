@@ -2004,6 +2004,27 @@ install
         k = recipe.rendered_kickstart.kickstart
         self.assert_('repo --name=fedora-updates' not in k, k)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1202075
+    def test_disable_repos_configured_by_fedora_release(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="no_updates_repos">
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-18" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('yum-config-manager --disable fedora' in k, k)
+        self.assert_('yum-config-manager --disable updates' in k, k)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=869758
     def test_repo_url_containing_yum_variable(self):
         # Anaconda can't substitute yum variables like $releasever, so to avoid

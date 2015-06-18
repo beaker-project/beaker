@@ -267,9 +267,7 @@ correspond to the similarly-named kickstart option.
     tree page.
 
 ``no_updates_repos``
-    Omits the fedora-updates repo for Fedora. Note that fedora-updates will 
-    still be enabled after installation, this configuration is supplied by the 
-    distro and Beaker does not control it.
+    Omits the fedora-updates repo for Fedora.
 
 ``no_clock_sync``
     Omits additional packages and scripts which ensure the system clock is 

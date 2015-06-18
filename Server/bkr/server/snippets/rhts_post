@@ -1,3 +1,11 @@
+{% if distro.osversion.osmajor.name == 'Fedora' %}
+# Disable yum repos supplied by fedora-release in favour of Beaker-supplied repos
+# (this will match the repos used during installation).
+yum-config-manager --disable fedora
+{% if no_updates_repos is defined%}
+yum-config-manager --disable updates
+{% endif %}
+{% endif %}
 set -x
 {% snippet 'fetch_wrapper' %}
 
