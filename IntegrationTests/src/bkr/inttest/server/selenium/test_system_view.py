@@ -19,7 +19,7 @@ from bkr.inttest import data_setup, get_server_base, \
         assertions, with_transaction, DatabaseTestCase
 from bkr.server.model import Arch, Key, Key_Value_String, Key_Value_Int, System, \
         Provision, ProvisionFamily, ProvisionFamilyUpdate, Hypervisor, \
-        SystemStatus, LabInfo, ReleaseAction, PowerType, SystemPool
+        SystemStatus, LabInfo, ReleaseAction, PowerType, SystemPool, RecipeTask
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, check_system_search_results, \
         delete_and_confirm, logout, click_menu_item, BootstrapSelect, wait_for_ajax_loading
@@ -977,6 +977,22 @@ class SystemViewTestWD(WebDriverTestCase):
         tab.find_element_by_xpath('.//table[contains(@class, "table") and '
                 'not(.//td[3]/a[contains(text(), "%s")]) and '
                 './/td[3]/a[contains(text(), "%s")]]' % (dt.distro.name, self.distro_tree.distro.name))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1232979
+    def test_external_task_name_on_executed_tasks_grid(self):
+        with session.begin():
+            recipe = data_setup.create_recipe(task_name=u'/distribution/install')
+            external_task = RecipeTask.from_fetch_url(url='git://example.com/externaltasks/example#master',
+                                        subdir='examples')
+            recipe.tasks.extend([external_task])
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_running(recipe, system=self.system)
+        b = self.browser
+        login(b)
+        self.go_to_system_view(self.system, tab=u'Executed Tasks')
+        tab = b.find_element_by_id('tasks')
+        tab.find_element_by_xpath('.//table[contains(@class, "table") and '
+                'normalize-space(.//td[2]/text())="%s"]' % external_task.name)
 
     def test_add_cc(self):
         with session.begin():

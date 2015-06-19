@@ -101,10 +101,8 @@ window.BackgridTaskCell = Backgrid.Cell.extend({
         this.$el.empty();
         var name = this.model.get(this.column.get('name'));
         var task = this.model.get('task');
-        if (!_.isEmpty(task)) {
-            this.$el.html(this.template({name: name,
-                                         task: task}));
-        }
+        this.$el.html(this.template({name: name,
+                                     task: task}));
         return this;
     },
 });
