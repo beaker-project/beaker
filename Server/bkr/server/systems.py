@@ -20,7 +20,7 @@ from bkr.server.model import System, SystemActivity, SystemStatus, SystemPool, \
         SystemPermission, SystemAccessPolicyRule, ImageType, KernelType, \
         VirtResource, Hypervisor, Numa, LabController, SystemType, \
         CommandActivity, Power, PowerType, ReleaseAction, Task, \
-        Recipe, RecipeSet, RecipeTask, RecipeResource, Job
+        Recipe, RecipeSet, RecipeTask, RecipeResource, Job, TaskStatus
 from bkr.server.installopts import InstallOptions
 from bkr.server.kickstart import generate_kickstart
 from bkr.server.app import app
@@ -747,24 +747,34 @@ def reserve(fqdn):
 def update_reservation(fqdn):
     """
     Updates the system's current reservation. The only permitted update is to 
-    end the reservation (returning the system), and this is only permitted when 
-    the reservation was "manual" (not made by the scheduler).
+    end the reservation (returning the system).
 
     :param fqdn: The system's fully-qualified domain name.
     :jsonparam string finish_time: Must be the string ``now``, indicating that 
       the reservation should end now. The system will be returned.
     """
     system = _get_system_by_FQDN(fqdn)
+    if not system.can_unreserve(identity.current.user):
+        raise Forbidden403('Cannot return system')
     data = read_json_request(request)
     # This interprets both PATCH and PUT as PATCH
     finish_time = data.get('finish_time')
     with convert_internal_errors():
         if finish_time == "now":
-            reservation = system.unreserve_manually_reserved(service=u'HTTP',
+            open_reservation = system.open_reservation
+            if not open_reservation:
+                raise BadRequest400('System %s is not currently reserved' % fqdn)
+            if open_reservation.type == 'recipe':
+                recipe = open_reservation.recipe
+                if recipe.status != TaskStatus.reserved:
+                    raise BadRequest400('Cannot return system with running R:%s' % recipe.id)
+                recipe.return_reservation()
+            else:
+                system.unreserve(service=u'HTTP', reservation=open_reservation,
                     user=identity.current.user)
         else:
             raise ValueError('Reservation durations are not configurable')
-    return jsonify(reservation.__json__())
+    return jsonify(open_reservation.__json__())
 
 # For compat only. Separate function so that it doesn't appear in the docs.
 @app.route('/systems/<fqdn>/reservations/+current', methods=['PUT'])

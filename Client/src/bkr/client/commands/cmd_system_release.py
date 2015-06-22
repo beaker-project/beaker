@@ -20,8 +20,8 @@ Synopsis
 Description
 -----------
 
-Releases a Beaker system which has been manually reserved (using :program:`bkr 
-system-reserve` or the Beaker web UI).
+Releases a Beaker system which has been reserved (using :program:`bkr
+system-reserve` or the Beaker web UI or the <reservesys/> in the job XML).
 
 Options
 -------
@@ -57,6 +57,7 @@ See also
 :manpage:`bkr(1)`
 """
 
+import urllib
 from bkr.client import BeakerCommand
 
 class System_Release(BeakerCommand):
@@ -69,4 +70,6 @@ class System_Release(BeakerCommand):
     def run(self, *args, **kwargs):
         self.set_hub(**kwargs)
         for fqdn in args:
-            self.hub.systems.release(fqdn)
+            update_url = 'systems/%s/reservations/+current' % urllib.quote(fqdn, '')
+            requests_session = self.requests_session()
+            res = requests_session.patch(update_url, json={'finish': 'now'})
