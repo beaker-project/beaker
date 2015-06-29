@@ -396,7 +396,7 @@ class TaskBase(object):
         try:
             class_str = cls.t_id_types[task_type]
         except KeyError:
-            raise BeakerException(_('You have have specified an invalid task type:%s' % task_type))
+            raise BeakerException(_('You have specified an invalid task type:%s' % task_type))
 
         class_ref = globals()[class_str]
         try:

@@ -54,6 +54,7 @@ import bkr.server.systems
 import bkr.server.reserve_workflow
 import bkr.server.pools
 import bkr.server.jobs
+import bkr.server.recipes
 
 @app.before_first_request
 def init():

@@ -219,6 +219,12 @@ System pools
      add_system_to_pool, remove_system_from_pool, get_access_policy,
      save_access_policy, add_access_policy_rule, delete_access_policy_rules
 
+Recipes
+------------
+
+.. autoflask:: bkr.server.wsgi:app
+   :endpoints: extend_watchdog, extend_watchdog_by_taskspec, extend_watchdog_by_fqdn
+
 Activity
 --------
 

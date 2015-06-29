@@ -26,8 +26,13 @@ import cherrypy
 
 from bkr.server.model import (Recipe, RecipeSet, TaskStatus, Job, System,
                               MachineRecipe, SystemResource, VirtResource,
-                              LogRecipe, LogRecipeTask,
-                              LogRecipeTaskResult)
+                              LogRecipe, LogRecipeTask, LogRecipeTaskResult,
+                              RecipeResource, TaskBase)
+from bkr.server.app import app
+from bkr.server.flask_util import BadRequest400, NotFound404, \
+    auth_required, read_json_request
+from flask import request, jsonify
+from bkr.server.bexceptions import BeakerException
 
 import logging
 log = logging.getLogger(__name__)
@@ -464,7 +469,11 @@ class Recipes(RPCRoot):
             search_bar=None)
 
     @expose(template="bkr.server.templates.recipe")
-    def default(self, id):
+    def default(self, id, *args, **kwargs):
+        # When flask returns a 404, it falls back to here so we need to
+        # raise a cherrypy 404.
+        if cherrypy.request.method == 'POST':
+            raise cherrypy.HTTPError(404)
         try:
             recipe = Recipe.by_id(id)
         except InvalidRequestError:
@@ -476,6 +485,76 @@ class Recipes(RPCRoot):
         return dict(title   = 'Recipe',
                     recipe_widget        = self.recipe_widget,
                     recipe               = recipe)
+
+def _get_recipe_by_id(id):
+    """Get recipe by id, reporting HTTP 404 if the recipe is not found"""
+    try:
+        return Recipe.by_id(id)
+    except NoResultFound:
+        raise NotFound404('Recipe not found')
+
+def _extend_watchdog(recipe_id, data):
+    recipe = _get_recipe_by_id(recipe_id)
+    kill_time = data.get('kill_time')
+    if not kill_time:
+        raise BadRequest400('Time not specified')
+    return jsonify({'seconds': recipe.extend(kill_time)})
+
+@app.route('/recipes/<recipe_id>/watchdog', methods=['POST'])
+@auth_required
+def extend_watchdog(recipe_id):
+    """
+    Extend the watchdog for a recipe.
+
+    :param recipe_id: The id of the recipe.
+    :jsonparam string kill_time: Time in seconds to extend the watchdog by.
+    """
+    data = read_json_request(request)
+    return _extend_watchdog(recipe_id, data)
+
+@app.route('/recipes/by-taskspec/<taskspec>/watchdog', methods=['POST'])
+@auth_required
+def extend_watchdog_by_taskspec(taskspec):
+    """
+    Extend the watchdog for a recipe identified by a taskspec. The valid type
+    of a taskspec is either R(recipe) or T(recipe-task).
+    See :ref:`Specifying tasks <taskspec>` in :manpage:`bkr(1)`.
+
+    :param taskspec: A taskspec argument that identifies a recipe or recipe task.
+    :jsonparam string kill_time: Time in seconds to extend the watchdog by.
+    """
+    if not taskspec.startswith(('R', 'T')):
+        raise BadRequest400('Taskspec type must be one of [R, T]')
+
+    try:
+        obj = TaskBase.get_by_t_id(taskspec)
+    except BeakerException as exc:
+        raise NotFound404(unicode(exc))
+
+    if isinstance(obj, Recipe):
+        recipe = obj
+    else:
+        recipe = obj.recipe
+    data = read_json_request(request)
+    return _extend_watchdog(recipe.id, data)
+
+@app.route('/recipes/by-fqdn/<fqdn>/watchdog', methods=['POST'])
+@auth_required
+def extend_watchdog_by_fqdn(fqdn):
+    """
+    Extend the watchdog for a recipe that is running on the system.
+
+    :param fqdn: The system's fully-qualified domain name.
+    :jsonparam string kill_time: Time in seconds to extend the watchdog by.
+    """
+    try:
+        recipe = Recipe.query.join(Recipe.watchdog, Recipe.resource)\
+            .filter(RecipeResource.fqdn == fqdn)\
+            .filter(Recipe.status == TaskStatus.running).one()
+    except NoResultFound:
+        raise NotFound404('Cannot find any recipe running on %s' % fqdn)
+    data = read_json_request(request)
+    return _extend_watchdog(recipe.id, data)
 
 # hack for Sphinx
 recipes = Recipes

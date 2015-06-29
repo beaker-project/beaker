@@ -16,15 +16,18 @@ bkr watchdog-extend: Extend Beaker watchdog time
 Synopsis
 --------
 
-:program:`bkr watchdog-extend` [:option:`--by` <seconds>] [*options*] <task_id>...
+|  :program:`bkr watchdog-extend` [*options*] [<taskspec> | <fqdn>]
+|       [:option:`--by` <seconds>]
 
 Description
 -----------
 
-Extends the watchdog time for one or more recipe-tasks.
+Extends the watchdog time for one or more recipes by specifying one
+or more <taskspec> arguments or <fqdn> arguments.
 
-Note that the <task_id> arguments are *not* in the same format as the 
-<taskspec> argument accepted by other Beaker commands.
+The format of the <taskspec> arguments is either R:<recipe_id>
+or T:<recipe_task_id>. The <fqdn> arguments are used for specifying
+recipes that are running on the systems.
 
 Options
 -------
@@ -44,9 +47,14 @@ Non-zero on error, otherwise zero.
 Examples
 --------
 
-Extend the watchdog for recipe-task 12345 by 1 hour::
+Extend the watchdog for recipe 12345 by 1 hour::
 
-    bkr watchdog-extend --by=3600 12345
+    bkr watchdog-extend --by=3600 R:12345
+
+Extend the watchdog for recipe 12345 by 1 hour running on system
+system.example.com::
+
+    bkr watchdog-extend --by=3600 system.example.com
 
 See also
 --------
@@ -54,11 +62,12 @@ See also
 :manpage:`bkr(1)`
 """
 
+import urllib
 from bkr.client import BeakerCommand
 from optparse import OptionValueError
 
 class Watchdog_Extend(BeakerCommand):
-    """Extend Task's Watchdog"""
+    """Extend Recipe's Watchdog"""
     enabled = True
 
     def options(self):
@@ -67,17 +76,33 @@ class Watchdog_Extend(BeakerCommand):
             default=7200, type="int",
             help="Time in seconds to extend the watchdog by.",
         )
-
-        self.parser.usage = "%%prog %s [options] <task_id>..." % self.normalized_name
+        self.parser.usage = "%%prog %s [options] [<taskspec> | <fqdn>]..." % self.normalized_name
 
 
     def run(self, *args, **kwargs):
         extend_by = kwargs.pop("by", None)
-
         if not args:
-            self.parser.error('Please specify one or more task ids.')
-
+            self.parser.error('Please either specify one or more <taskspec> arguments or system FQDNs')
+        taskspecs = []
+        systems = []
+        for arg in args:
+            if ':' in arg:
+                taskspecs.append(arg)
+            # for back compatibility to support plain task id
+            elif arg.isdigit():
+                taskspecs.append('T:%s' % arg)
+            else:
+                systems.append(arg)
+        if taskspecs:
+            self.check_taskspec_args(taskspecs, permitted_types=['R', 'T'])
         self.set_hub(**kwargs)
-        for task_id in args:
-            print self.hub.recipes.tasks.extend(task_id, extend_by)
+        requests_session = self.requests_session()
+        for s in systems:
+            res = requests_session.post('recipes/by-fqdn/%s/watchdog' %
+                                        urllib.quote(s, ''), json={'kill_time': extend_by})
+            res.raise_for_status()
 
+        for t in taskspecs:
+            res = requests_session.post('recipes/by-taskspec/%s/watchdog' %
+                                        urllib.quote(t), json={'kill_time': extend_by})
+            res.raise_for_status()
