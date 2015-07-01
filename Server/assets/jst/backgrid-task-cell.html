@@ -1,5 +1,5 @@
-<% if (task) { %>
-    <a href="<%- window.beaker_url_prefix %>tasks/<%- task.id %>" title="<%- name %>"><%- name %></a>
+<% if (!_.isEmpty(task)) { %>
+    <%= task.toHTML() %>
 <% } else { %>
     <%- name %>
 <% } %>

@@ -80,7 +80,12 @@ window.SystemActivity = BeakerPageableCollection.extend({
     },
 });
 
-window.Task = Backbone.Model.extend({});
+window.Task = Backbone.Model.extend({
+    _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>tasks/<%- id %>" title="<%- name %>"><%- name %></a>'),
+    toHTML: function () {
+        return this._toHTML_template(this.attributes);
+    },
+});
 
 window.RecipeTask = Backbone.Model.extend({
     parse: function (data) {

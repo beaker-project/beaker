@@ -6,11 +6,12 @@
 
 import requests
 from turbogears.database import session
-from bkr.server.model import SystemStatus
+from bkr.server.model import SystemStatus, TaskStatus
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base
 from bkr.inttest.server.webdriver_utils import login, is_text_present
 from bkr.inttest.server.requests_utils import login as requests_login, put_json
+
 
 class SystemReturnTestWD(WebDriverTestCase):
 
@@ -36,7 +37,7 @@ class SystemReturnTestWD(WebDriverTestCase):
                 'systems/%s/reservations/+current' % system.fqdn,
                 session=s, data=dict(finish_time='now'))
         self.assertEquals(response.status_code, 400)
-        self.assertEquals(response.text, 'Currently running %s' % recipe.t_id)
+        self.assertEquals(response.text, 'Cannot return system with running %s' % recipe.t_id)
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=1007789
     def test_can_return_manual_reservation_when_automated(self):
@@ -83,7 +84,7 @@ class SystemReturnTestWD(WebDriverTestCase):
                 'systems/%s/reservations/+current' % system.fqdn,
                 session=s, data=dict(finish_time='now'))
         self.assertEquals(response.status_code, 403)
-        self.assertIn('cannot unreserve system', response.text)
+        self.assertIn('Cannot return system', response.text)
 
     def test_return_with_no_lc(self):
         with session.begin():
@@ -106,3 +107,26 @@ class SystemReturnTestWD(WebDriverTestCase):
         b.find_element_by_link_text('Return').click()
         b.find_element_by_xpath('//div[contains(@class, "system-quick-usage")]'
                 '//span[@class="label" and text()="Idle"]')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1102442
+    def test_system_reserved_on_recipe(self):
+        with session.begin():
+            user = data_setup.create_user(password=u'password')
+            lc = data_setup.create_labcontroller()
+            system = data_setup.create_system(owner=user, lab_controller=lc)
+            recipe = data_setup.create_recipe(reservesys=True)
+            job = data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_tasks_finished(recipe, system=system)
+            job.update_status()
+        self.assertEquals(recipe.status, TaskStatus.reserved)
+        s = requests.Session()
+        requests_login(s, user.user_name, 'password')
+        response = put_json(get_server_base() +
+                'systems/%s/reservations/+current' % system.fqdn,
+                session=s, data=dict(finish_time='now'))
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            job.update_status()
+            self.assertEquals(job.status, TaskStatus.completed)
+            self.assertEquals(system.user, None)
