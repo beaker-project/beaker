@@ -297,3 +297,69 @@ This release fixes four security vulnerabilities:
   using recipe set comments. (Contributed by Dan Callaghan)
 * :issue:`1215024`: Closing ``</script>`` tags are now properly escaped in the
   JavaScript source for the advanced search bar. (Contributed by Dan Callaghan)
+
+
+Beaker 20.2
+~~~~~~~~~~~
+
+* :issue:`1226076`: Fixed a problem with the handling of ``<group/>`` and
+  ``<pool/>`` elements in ``<hostRequires/>`` which would cause the filter to 
+  match incorrect systems, and in some cases exhaust temp table space on the 
+  database. (Contributed by Matt Jia)
+* :issue:`1212517`: The :program:`bkr` client is now compatible with the
+  SSL-related changes in Python 2.7.9. (Contributed by Dan Callaghan)
+* :issue:`1181700`: The :program:`bkr system-power` command now accepts
+  :option:`--action=none <bkr system-power --action>` in conjunction with 
+  :option:`--clear-netboot <bkr system-power --clear-netboot>` to allow 
+  clearing a system's netboot configuration without rebooting it. (Contributed 
+  by Matt Jia)
+* :issue:`1128002`, :issue:`1128004`: Beaker can now perform automatic hardware
+  scanning on aarch64 and ppc64le distros. (Contributed by Amit Saha)
+* :issue:`1217695`: The pre-defined host filters for the :option:`--host-filter
+  <bkr --host-filter>` option have been updated to exclude virtualized systems 
+  for CPU-based filters, and a number of new CPU-based filters have been added. 
+  (Contributed by Michael Petlan)
+* :issue:`1235317`: Beaker now treats Red Hat Gluster Storage 3 like Red Hat
+  Enterprise Linux 6 for kickstart templating purposes. (Contributed by Dan 
+  Callaghan)
+* :issue:`1197074`: The ``<or/>`` and ``<and/>`` elements now have their
+  expected effect inside the ``<disk/>`` element in ``<hostRequires/>``. 
+  Previously they were ignored. (Contributed by Matt Jia)
+* :issue:`1217158`: The :option:`--pool <bkr list-systems --pool>` option
+  replaces the :option:`--group` option for :program:`bkr list-systems`. The 
+  old option is still accepted as an alias for compatibility. (Contributed by 
+  Dan Callaghan)
+* :issue:`1219965`: The kickstart templates now define an EFI System Partition
+  when using custom partitioning on aarch64, for compatibility with systems 
+  which have UEFI firmware. (Contributed by Matt Jia)
+* :issue:`1217283`: When a user views the list of systems on the pool page,
+  systems which they do not have permission to view will now appear as 
+  :guilabel:`(system with restricted visibility)`. (Contributed by Matt Jia)
+* :issue:`1213203`: In the list of systems on the pool page, the Remove button
+  now correctly appears only when the user has permission to remove the system.  
+  Previously the button would always appear. (Contributed by Matt Jia)
+* :issue:`1212725`: The :program:`bkr` client now reports a meaningful error
+  message when no configuration file was loaded, rather than attempting to 
+  connect to localhost. (Contributed by Matt Jia)
+
+Version 1.2-6 of the ``/distribution/inventory`` task has also been released:
+
+* :issue:`1211850`: Fixed false positives in checking if virtualization
+  features are disabled by the BIOS, which could occur if the system has "kvm" 
+  in its hostname. (Contributed by Amit Saha)
+
+Version 4.66 of the ``rhts`` test development and execution library has also 
+been released:
+
+* :issue:`1219920`: The :program:`rhts-lint` command (invoked when building and
+  uploading task RPMs) now ignores unrecognised fields in :file:`testinfo.desc` 
+  rather than reporting a warning and failing the build. (Contributed by Dan 
+  Callaghan)
+* :issue:`1219971`: Fixed an issue which would cause :program:`make rpm` to
+  incorrectly attempt to upload the task to Beaker when invoked on a Beaker 
+  test system. (Contributed by Dan Callaghan)
+
+.. dev only:
+   * :issue:`1197917`: tests fail because alembic_version can be created in 
+   MyISAM if that is the server default
+   * :issue:`1213928`: README is obsolete after split (3b19605)
