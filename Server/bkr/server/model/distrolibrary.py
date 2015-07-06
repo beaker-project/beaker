@@ -323,6 +323,9 @@ class OSMajor(DeclarativeMappedObject):
                 'RedHatEnterpriseLinuxClient', 'RedHatEnterpriseLinuxServerGrid',
                 'CentOS'):
             rhel = version
+        if self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3',
+                'RedHatGlusterStorage3'):
+            rhel = '6'
         if name == 'Fedora':
             fedora = version
         # %end
@@ -335,23 +338,19 @@ class OSMajor(DeclarativeMappedObject):
         # autopart --type
         ks_meta['has_autopart_type'] = True
         if rhel in ('3', '4', '5', '6') or \
-                self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3') or \
                 (fedora and fedora != 'rawhide' and int(fedora) < 18):
             del ks_meta['has_autopart_type']
         # chrony
         ks_meta['has_chrony'] = True
-        if rhel in ('3', '4', '5', '6') or \
-                self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3'):
+        if rhel in ('3', '4', '5', '6'):
             del ks_meta['has_chrony']
         # GPT on BIOS
         ks_meta['has_gpt_bios_support'] = True
-        if rhel in ('3', '4', '5', '6') or \
-                self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3'):
+        if rhel in ('3', '4', '5', '6'):
             del ks_meta['has_gpt_bios_support']
         # bootloader --leavebootorder
         ks_meta['has_leavebootorder'] = True
         if rhel in ('3', '4', '5', '6') or \
-                self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3') or \
                 (fedora and fedora != 'rawhide' and int(fedora) < 18):
             del ks_meta['has_leavebootorder']
         # repo --cost
@@ -361,7 +360,6 @@ class OSMajor(DeclarativeMappedObject):
         # systemd vs. SysV init
         ks_meta['has_systemd'] = True
         if rhel in ('3', '4', '5', '6') or \
-                self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3') or \
                 (fedora and fedora != 'rawhide' and int(fedora) < 15):
             del ks_meta['has_systemd']
         # unsupported_hardware
@@ -374,8 +372,7 @@ class OSMajor(DeclarativeMappedObject):
         elif rhel == '4':
             ks_meta['yum'] = 'yum-2.2.2-1.rhts.EL4.noarch.rpm'
         # mode
-        if rhel == '6' or \
-                self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3'):
+        if rhel == '6':
             ks_meta['mode'] = 'cmdline'
         if rhel in ('4', '5'):
             ks_meta['mode'] = ''
