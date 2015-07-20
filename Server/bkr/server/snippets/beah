@@ -31,10 +31,14 @@ cat << EOF > /etc/beah.conf
 # see /etc/beah.conf.default for commented configuration
 
 [DEFAULT]
-# Turn on more verbose logging and redirect to console. This is useful for
-# debugging harness' problems.
+# Turn on more verbose logging. This is useful for debugging harness' problems.
 LOG=Info
+{# On systemd distros, systemd will capture all beah output and send it to the 
+ # journal and the system console for us. #}
+{% if has_systemd is undefined %}
+# Also send logs to /dev/console.
 CONSOLE_LOG=Console
+{% endif %}
 # To turn on debug logging uncomment the following line. Warning: this is
 # rather verbose! This also requires LOG to be Debug.
 #DEVEL=True
