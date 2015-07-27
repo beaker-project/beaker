@@ -63,6 +63,9 @@ using centos-6 box as the base images of the VM, you can change it by modifying
 the Vagrantfile file. For more information, refer to `Vagrant <https://docs.vagrantup.com/v2/>`_
 documentation.
 
+In case the playbook fails during provisioning, you can re-run the playbook
+against a partially provisioned VM by running ``vagrant provision`` again.
+
 To be able to provision the test systems, passwordless login for the root user
 is required to set up from the VM to your host system. First, ssh to the VM::
 
@@ -72,15 +75,31 @@ Then run::
 
     ssh-copy-id root@192.168.120.1
 
+Verifying the server installation
+---------------------------------
+
+Visiting `http://beaker-server-lc.beaker/bkr/
+<http://beaker-server-lc.beaker/bkr/>`_ from your hosts systems's browser should
+show the beaker systems page.
+
+Configure the :program:`bkr` client to use your local Beaker server (see
+:ref:`installing-bkr-client`). You can run ``bkr whoami`` to check that is
+working.
+
+
 Setup server to run job
 -----------------------
 
-We will now add a few task RPMS to ensure we can run jobs. Run this playbook on your host system
-(assuming you have set your beaker client configuration successfully — running ``bkr whoami`` is
-the easiest way to check that)::
+We will now upload a few task RPMs to Beaker so that we can run jobs. The
+following playbook uses the :program:`bkr` client to upload the tasks::
 
-    ansible-playbook -i hosts add_beaker_tasks.yml
+    ansible-playbook -i hosts --ask-become-pass add_beaker_tasks.yml
 
-If everything has completed successfully, now we are all set up and you should be
-able to visit ``http://beaker-server-lc.beaker/bkr/`` from your host system's browser
-and login as the admin user with password admin.
+Next steps
+----------
+
+You can now proceed to
+:ref:`adding tasks <adding-tasks>`,
+:ref:`importing distros <importing-distros>`,
+:ref:`adding systems <adding-systems>`, and
+:ref:`running jobs <jobs>`.
