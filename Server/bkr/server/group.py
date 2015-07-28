@@ -13,8 +13,9 @@ from bkr.server.bexceptions import BX
 from bkr.server.app import app
 from bkr.server import mail, identity
 
-from bkr.server.model import (Group, Permission, User, UserGroup,
-                              Activity, GroupActivity, SystemPool)
+from bkr.server.model import (Group, GroupMembershipType, Permission, User,
+                              UserGroup, Activity, GroupActivity,
+                              SystemPool)
 from bkr.server.util import absolute_url
 from bkr.server.flask_util import auth_required, \
     convert_internal_errors, read_json_request, BadRequest400, \
@@ -47,7 +48,7 @@ class Groups(RPCRoot):
             user = User.by_user_name(kw['member_name'])
             service = 'XMLRPC'
 
-        if group.ldap:
+        if group.membership_type == GroupMembershipType.ldap:
             raise GroupOwnerModificationForbidden('An LDAP group does not have an owner')
 
         if not group.can_edit(identity.current.user):
@@ -102,7 +103,7 @@ class Groups(RPCRoot):
             user = User.by_user_name(kw['member_name'])
             service = 'XMLRPC'
 
-        if group.ldap:
+        if group.membership_type == GroupMembershipType.ldap:
             raise GroupOwnerModificationForbidden('An LDAP group does not have an owner')
 
         if not group.can_edit(identity.current.user):
@@ -176,16 +177,13 @@ class Groups(RPCRoot):
                     field=u'Group', action=u'Created')
             group.display_name = display_name
             group.group_name = group_name
-            group.ldap = ldap
             group.root_password = password
-            user = identity.current.user
-
-            if not ldap:
-                group.add_member(user, is_owner=True, service=u'XMLRPC',
-                        agent=identity.current.user)
-
-            if group.ldap:
+            if ldap:
+                group.membership_type = GroupMembershipType.ldap
                 group.refresh_ldap_members()
+            else:
+                group.add_member(identity.current.user, is_owner=True,
+                        service=u'XMLRPC', agent=identity.current.user)
             return 'Group created: %s.' % group_name
         else:
             raise BX(_(u'Group already exists: %s.' % group_name))
@@ -227,7 +225,7 @@ class Groups(RPCRoot):
         except NoResultFound:
             raise BX(_(u'Group does not exist: %s.' % group_name))
 
-        if group.ldap:
+        if group.membership_type == GroupMembershipType.ldap:
             if not identity.current.user.is_admin():
                 raise BX(_(u'Only admins can modify LDAP groups'))
             if kw.get('add_member', None) or kw.get('remove_member', None):
@@ -407,8 +405,14 @@ def create_group():
     :jsonparam string root_password: Optional root password for group jobs.
       If this is not set, group jobs will use the root password preferences of 
       the job submitter.
-    :jsonparam bool ldap: Populate group membership from LDAP. Only Beaker 
-      administrators can set this to true.
+    :jsonparam string membership_type: Specifies how group membership is populated.
+      Possible values are:
+
+      * normal: Group is initially empty, members are explicitly added and removed by
+        group owner.
+      * ldap: Membership is populated from the LDAP group with the same group name.
+      * inverted: Group contains all Beaker users *except* users who have been explicitly
+        excluded by the group owner.
 
     :status 201: The group was successfully created.
     """
@@ -418,8 +422,9 @@ def create_group():
         raise BadRequest400('Missing group_name key')
     if 'display_name' not in data:
         raise BadRequest400('Missing display_name key')
-    if data.get('ldap') and not Group.can_create_ldap(user):
-        raise BadRequest400('Only admins can create LDAP groups')
+    # for backwards compatibility
+    if data.pop('ldap', False):
+        data['membership_type'] = 'ldap'
     try:
         Group.by_name(data['group_name'])
     except NoResultFound:
@@ -433,10 +438,12 @@ def create_group():
         session.add(group)
         group.record_activity(user=user, service=u'HTTP',
                 field=u'Group', action=u'Created')
-        if data.get('ldap'):
-            group.ldap = True
+        if data.get('membership_type'):
+            group.membership_type = GroupMembershipType.from_string(
+                data['membership_type'])
+        if group.membership_type == GroupMembershipType.ldap:
             group.refresh_ldap_members()
-        else: # LDAP groups don't have owners
+        else: # LDAP groups don't have any owners
             group.add_member(user, is_owner=True, agent=identity.current.user)
     response = jsonify(group.__json__())
     response.status_code = 201
@@ -495,8 +502,8 @@ def update_group(group_name):
     :jsonparam string display_name: Display name of the group.
     :jsonparam string root_password: Optional password. Can be an empty string.
       If empty, group jobs will use the root password preferences of the job submitter.
-    :jsonparam boolean ldap: Used to populate group members from LDAP. If true,
-      LDAP must be configured and only admins can update this.
+    :jsonparam string membership_type: New membership type for the group.
+      See `POST /groups/` for more information.
 
     :status 200: Group was updated.
     :status 400: Invalid data was given.
@@ -523,12 +530,17 @@ def update_group(group_name):
             new_root_password = data['root_password']
             if new_root_password != group.root_password:
                 group.set_root_password(user, u'HTTP', new_root_password)
-        if 'ldap' in data:
-            if not group.can_edit_ldap(user):
+        # for backwards compatibility
+        if data.pop('ldap', False):
+            data['membership_type'] = 'ldap'
+        if 'membership_type' in data:
+            new_type = GroupMembershipType.from_string(
+                    data['membership_type'])
+            if (new_type == GroupMembershipType.ldap and not
+                group.can_edit_ldap(user)):
                 raise BadRequest400('Cannot edit LDAP group %s' % group)
-            ldap = data['ldap']
-            if ldap != group.ldap:
-                group.ldap = ldap
+            if new_type != group.membership_type:
+                group.membership_type = new_type
     response = jsonify(group.to_json())
     if renamed:
         response.headers.add('Location', absolute_url(group.href))

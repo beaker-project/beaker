@@ -9,7 +9,7 @@ import crypt
 from bkr.inttest import data_setup, with_transaction, mail_capture
 from bkr.inttest.client import run_client, ClientError, create_client_config, \
         ClientTestCase
-from bkr.server.model import Group, Activity, User
+from bkr.server.model import Group, Activity, User, GroupMembershipType
 from turbogears.database import session
 
 class GroupModifyTest(ClientTestCase):
@@ -30,7 +30,8 @@ class GroupModifyTest(ClientTestCase):
             self.admin_client_config = create_client_config(username=admin.user_name,
                                                             password='password')
 
-            self.fake_ldap_group = data_setup.create_group(ldap=True)
+            self.fake_ldap_group = data_setup.create_group(
+                    membership_type=GroupMembershipType.ldap)
 
         self.mail_capture = mail_capture.MailCaptureThread()
         self.mail_capture.start()

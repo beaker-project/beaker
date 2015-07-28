@@ -18,11 +18,11 @@ from bkr.server.installopts import InstallOptions
 from .base import DeclarativeMappedObject, MappedObject
 from .types import (TaskStatus, CommandStatus, TaskResult, TaskPriority,
         SystemStatus, SystemType, ReleaseAction, ImageType, ResourceType,
-        RecipeVirtStatus, SystemPermission, UUID, MACAddress)
+        RecipeVirtStatus, SystemPermission, UUID, MACAddress, GroupMembershipType)
 from .activity import Activity, ActivityMixin
 from .config import ConfigItem
 from .identity import (User, Group, Permission, SSHPubKey,
-        UserGroup, UserActivity, GroupActivity)
+        UserGroup, ExcludedUserGroup, UserActivity, GroupActivity)
 from .lab import LabController, LabControllerActivity
 from .distrolibrary import (Arch, KernelType, OSMajor, OSVersion,
         OSMajorInstallOptions, Distro, DistroTree, DistroTreeImage,
@@ -60,8 +60,6 @@ class ExternalReport(DeclarativeMappedObject):
 
 # Delayed property definitions due to circular dependencies
 class_mapper(Group).add_properties({
-    'dyn_users': dynamic_loader(User, secondary=UserGroup.__table__, viewonly=True,
-        primaryjoin=and_(UserGroup.group_id == Group.group_id)),
     'dyn_owners': dynamic_loader(User, secondary=UserGroup.__table__, viewonly=True,
         primaryjoin=and_(UserGroup.group_id == Group.group_id,
                          UserGroup.is_owner == True)),

@@ -96,8 +96,9 @@ class RemoveAccountTest(ClientTestCase):
             self.assertEqual(owned_system.activity[0].old_value, user.user_name)
             self.assertEqual(owned_system.activity[0].new_value, data_setup.ADMIN_USER)
             # group membership/ownership should be removed
-            self.assertEqual([], user.groups)
+            self.assertNotIn(group, user.groups)
             self.assertNotIn(user, group.users)
+            self.assertFalse(group.has_owner(user))
             self.assertEqual(group.activity[-1].field_name, u'User')
             self.assertEqual(group.activity[-1].action, u'Removed')
             self.assertEqual(group.activity[-1].old_value, user.user_name)

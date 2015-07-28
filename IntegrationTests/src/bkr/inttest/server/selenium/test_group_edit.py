@@ -7,7 +7,8 @@
 import crypt
 import requests
 from turbogears.database import session
-from bkr.server.model import Group, User, Activity, UserGroup, SystemPermission
+from bkr.server.model import Group, User, Activity, UserGroup, \
+    SystemPermission, GroupMembershipType
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction, \
     mail_capture, DatabaseTestCase
@@ -25,6 +26,7 @@ class TestGroupsWD(WebDriverTestCase):
             self.user = data_setup.create_user(password='password')
             self.group = data_setup.create_group(owner=self.user)
             self.perm1 = data_setup.create_permission()
+
         self.browser = self.get_browser()
         self.clear_password = 'gyfrinachol'
         self.hashed_password = '$1$NaCl$O34mAzBXtER6obhoIodu8.'
@@ -397,7 +399,7 @@ class TestGroupsWD(WebDriverTestCase):
 
     def test_cannot_modify_membership_of_a_ldap_group(self):
         with session.begin():
-            group = data_setup.create_group(ldap=True)
+            group = data_setup.create_group(membership_type=GroupMembershipType.ldap)
             group.add_member(data_setup.create_user())
         login(self.browser)
         b = self.browser
@@ -414,7 +416,7 @@ class TestGroupsWD(WebDriverTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
     def test_cannot_modify_ownership_of_a_ldap_group(self):
         with session.begin():
-            group = data_setup.create_group(ldap=True)
+            group = data_setup.create_group(membership_type=GroupMembershipType.ldap)
         login(self.browser)
         b = self.browser
         self.go_to_group_page(group)
@@ -753,7 +755,7 @@ class GroupHTTPTest(DatabaseTestCase):
             self.assertEquals(group.activity[-3].service, u'HTTP')
             self.assertEquals('blapppy7', group.root_password)
 
-    def test_create_ldap_group(self):
+    def test_create_ldap_group_with_old_format(self):
         s = requests.Session()
         requests_login(s)
         response = post_json(get_server_base() + 'groups/', session=s, data={
@@ -764,8 +766,26 @@ class GroupHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             group = Group.by_name(u'my_ldap_group')
-            self.assertEquals(group.ldap, True)
+            self.assertEquals(group.membership_type, GroupMembershipType.ldap)
             self.assertEquals(group.users, [User.by_user_name(u'my_ldap_user')])
+            # The LDAP group should have no owner.
+            self.assertEquals(len(group.owners()), 0)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
+    def test_create_ldap_group_with_new_format(self):
+        s = requests.Session()
+        requests_login(s)
+        response = post_json(get_server_base() + 'groups/', session=s, data={
+            'group_name': u'another_my_ldap_group',
+            'display_name': u'Another My LDAP group',
+            'membership_type': u'ldap',
+        })
+        response.raise_for_status()
+        with session.begin():
+            group = Group.by_name(u'another_my_ldap_group')
+            self.assertEquals(group.membership_type, GroupMembershipType.ldap)
+            self.assertEquals(group.users,
+                    [User.by_user_name(u'another_my_ldap_user')])
             # The LDAP group should have no owner.
             self.assertEquals(len(group.owners()), 0)
 
@@ -784,6 +804,30 @@ class GroupHTTPTest(DatabaseTestCase):
             self.assertEquals(self.group.group_name, u'newname')
             self.assertEquals(self.group.display_name, u'newdisplayname')
             self.assertEquals(self.group.root_password, u'$1$NaCl$O34mAzBXtER6obhoIodu8.')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
+    def test_update_a_group_to_LDAP_group_with_old_format(self):
+        s = requests.Session()
+        requests_login(s)
+        response = patch_json(get_server_base() +
+                'groups/%s' % self.group.group_name, session=s,
+                data={'ldap': True})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.group.membership_type, GroupMembershipType.ldap)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
+    def test_update_a_group_to_LDAP_group_with_new_format(self):
+        s = requests.Session()
+        requests_login(s)
+        response = patch_json(get_server_base() +
+                'groups/%s' % self.group.group_name, session=s,
+                data={'membership_type': u'ldap'})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.group.membership_type, GroupMembershipType.ldap)
 
     def test_cannot_update_group_with_empty_name_or_display_name(self):
         s = requests.Session()
@@ -923,7 +967,7 @@ class GroupHTTPTest(DatabaseTestCase):
     def test_cannot_add_member_to_ldap_group(self):
         with session.begin():
             user = data_setup.create_user(password=u'password')
-            ldap_group = data_setup.create_group(ldap=True)
+            ldap_group = data_setup.create_group(membership_type=GroupMembershipType.ldap)
         s = requests.Session()
         s.post(get_server_base() + 'login', data={'user_name': data_setup.ADMIN_USER,
                                                   'password': data_setup.ADMIN_PASSWORD}).raise_for_status()
@@ -988,7 +1032,7 @@ class GroupHTTPTest(DatabaseTestCase):
     def test_cannot_modify_ownership_of_a_LDAP_group(self):
         with session.begin():
             user = data_setup.create_user(password=u'password')
-            ldap_group = data_setup.create_group(ldap=True)
+            ldap_group = data_setup.create_group(membership_type=GroupMembershipType.ldap)
         s = requests.Session()
         s.post(get_server_base() + 'login', data={'user_name': data_setup.ADMIN_USER,
                                                   'password': data_setup.ADMIN_PASSWORD}). \

@@ -147,6 +147,14 @@ class SystemPermission(DeclEnum):
         ('reserve',        u'reserve',        dict(label=_(u'Reserve'))),
     ]
 
+class GroupMembershipType(DeclEnum):
+
+    symbols = [
+        ('normal',   u'normal',   dict(label=_(u'Normal'))),
+        ('ldap',     u'ldap',     dict(label=_(u'LDAP'))),
+        ('inverted', u'inverted', dict(label=_(u'Inverted'))),
+    ]
+
 class UUID(TypeDecorator):
     """
     Database type for storing UUIDs as BINARY(16).

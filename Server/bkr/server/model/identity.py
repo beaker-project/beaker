@@ -19,15 +19,17 @@ from sqlalchemy import (Table, Column, ForeignKey, Integer, Unicode,
         UnicodeText, String, DateTime, Boolean, UniqueConstraint)
 from sqlalchemy.orm import mapper, relationship, validates, synonym
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.sql import not_, and_, or_, exists
 from turbogears.config import get
 from turbogears.database import session
 from bkr.server.bexceptions import BX, NoChangeException
 from bkr.server.util import convert_db_lookup_error
 from bkr.server import identity
+from bkr.server.hybrid import hybrid_method, hybrid_property
 from .base import DeclarativeMappedObject
 from .activity import Activity, ActivityMixin
 from .config import ConfigItem, ConfigValueInt, ConfigValueString
-
+from .types import GroupMembershipType
 
 log = logging.getLogger(__name__)
 
@@ -124,6 +126,8 @@ class User(DeclarativeMappedObject, ActivityMixin):
             primaryjoin=user_id == UserActivity.object_id)
     group_user_assocs = relationship('UserGroup', back_populates='user',
             cascade='all, delete-orphan')
+    excluded_group_user_assocs = relationship('ExcludedUserGroup', back_populates='user',
+            cascade='all,delete-orphan')
     sshpubkeys = relationship('SSHPubKey', back_populates='user')
     reservations = relationship('Reservation', back_populates='user',
             order_by='Reservation.start_time.desc()')
@@ -390,12 +394,21 @@ class User(DeclarativeMappedObject, ActivityMixin):
     def is_admin(self):
         return u'admin' in [group.group_name for group in self.groups]
 
-    def in_group(self,check_groups):
+    @hybrid_method
+    def in_group(self, check_groups):
         my_groups = [group.group_name for group in self.groups]
         for my_g in check_groups:
             if my_g in my_groups:
                 return True
         return False
+
+    @in_group.expression
+    def in_group(cls, group): #pylint: disable=E0213
+        if group.membership_type == GroupMembershipType.inverted:
+            return not_(cls.excluded_group_user_assocs.any(
+                        ExcludedUserGroup.group == group))
+        else:
+            return cls.group_user_assocs.any(UserGroup.group == group)
 
     def has_permission(self, requested_permission):
         """ Check if user has requested permission """
@@ -409,7 +422,8 @@ class User(DeclarativeMappedObject, ActivityMixin):
 
     @property
     def groups(self):
-        return [assoc.group for assoc in self.group_user_assocs]
+        return session.object_session(self).query(Group)\
+                .filter(Group.has_member(self)).all()
 
 
 class Group(DeclarativeMappedObject, ActivityMixin):
@@ -426,7 +440,8 @@ class Group(DeclarativeMappedObject, ActivityMixin):
     display_name = Column(Unicode(255))
     _root_password = Column('root_password', String(255), nullable=True,
         default=None)
-    ldap = Column(Boolean, default=False, nullable=False, index=True)
+    membership_type = Column(GroupMembershipType.db_type(), nullable=False,
+            default=GroupMembershipType.normal, index=True)
     created = Column(DateTime, default=datetime.utcnow)
     activity = relationship(GroupActivity, back_populates='object',
             cascade='all, delete-orphan')
@@ -434,6 +449,8 @@ class Group(DeclarativeMappedObject, ActivityMixin):
             secondary=group_permission_table)
     user_group_assocs = relationship('UserGroup', back_populates='group',
             cascade='all, delete-orphan')
+    excluded_user_group_assocs = relationship('ExcludedUserGroup',
+            back_populates='group', cascade='all, delete-orphan')
     system_access_policy_rules = relationship('SystemAccessPolicyRule',
             back_populates='group', cascade='all, delete, delete-orphan')
     jobs = relationship('Job', back_populates='group', cascade_backrefs=False)
@@ -464,12 +481,18 @@ class Group(DeclarativeMappedObject, ActivityMixin):
         return 'Group(group_name=%r, display_name=%r)' % (self.group_name, self.display_name)
 
     def __json__(self):
-        return {
+        data = {
             'id': self.group_id,
             'group_name': self.group_name,
             'display_name': self.display_name,
-            'ldap': self.ldap,
+            'membership_type': self.membership_type,
         }
+        # for backwards compatibility only:
+        if self.membership_type == GroupMembershipType.ldap:
+            data['ldap'] = True
+        else:
+            data['ldap'] = False
+        return data
 
     def to_json(self):
         """
@@ -478,11 +501,17 @@ class Group(DeclarativeMappedObject, ActivityMixin):
         data = self.__json__()
         data.update({
             'created': self.created,
-            'members': [user for user in self.users],
             'owners': [user for user in self.owners()],
             'permissions':[permission.permission_name
                            for permission in self.permissions],
         })
+        if self.membership_type == GroupMembershipType.inverted:
+            data['members'] = []
+            data['excluded_users'] = [euga.user for euga in
+                    self.excluded_user_group_assocs]
+        else:
+            data['members'] = [uga.user for uga in self.user_group_assocs]
+            data['excluded_users'] = []
         if identity.current.user:
             user = identity.current.user
             data['can_edit'] = self.can_edit(user)
@@ -568,8 +597,9 @@ class Group(DeclarativeMappedObject, ActivityMixin):
             group_owners = self.owners()
             if len(group_owners)==1 and group_owners[0].user_id == int(member_id):
                 return False
-
         return True
+
+    can_exclude_member = can_remove_member
 
     @classmethod
     def can_create_ldap(self, user):
@@ -617,7 +647,7 @@ class Group(DeclarativeMappedObject, ActivityMixin):
                                  old=old_display_name, new=display_name)
 
     def can_modify_membership(self, user):
-        return not self.ldap and self.can_edit(user)
+        return self.membership_type != GroupMembershipType.ldap and self.can_edit(user)
 
     can_modify_ownership = can_modify_membership
 
@@ -651,9 +681,28 @@ class Group(DeclarativeMappedObject, ActivityMixin):
         self.record_activity(user=agent, service=service, field=u'Owner',
                              action='Removed', old=user.user_name, new=None)
 
+    def exclude_user(self, user, service=u'HTTP', agent=None):
+        if not self.membership_type == GroupMembershipType.inverted:
+            raise RuntimeError('Cannot exclude users from normal groups')
+        if self.has_owner(user):
+            self.revoke_ownership(user)
+        self.excluded_user_group_assocs.append(ExcludedUserGroup(user=user))
+        self.record_activity(user=agent, service=service, field=u'User',
+                             action='Excluded', old=None, new=unicode(user))
+
+    def readd_user(self, user, service=u'HTTP', agent=None):
+        if not self.membership_type == GroupMembershipType.inverted:
+            raise RuntimeError('Cannot re-add users to normal groups')
+        assoc, = [euga for euga in self.excluded_user_group_assocs
+                if euga.user == user]
+        self.excluded_user_group_assocs.remove(assoc)
+        self.record_activity(user=agent, service=service,
+                             action=u'Re-added', field=u'User',
+                             old=unicode(user), new=None)
+
     def refresh_ldap_members(self, ldapcon=None):
         """Refresh the group from LDAP and record changes as group activity"""
-        assert self.ldap
+        assert self.membership_type == GroupMembershipType.ldap
         assert get('identity.ldap.enabled', False)
         if ldapcon is None:
             ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
@@ -704,9 +753,59 @@ class Group(DeclarativeMappedObject, ActivityMixin):
             raise ValueError('Group %s must be not more than 255 characters long' % text)
         return name
 
+    @hybrid_method
+    def has_member(self, user):
+        return ((
+            self.membership_type != GroupMembershipType.inverted and
+            any(user.id == assoc.user.id for assoc in
+                            self.user_group_assocs)
+            )
+            or
+            (self.membership_type == GroupMembershipType.inverted and
+            not any(user.id == assoc.user.id for assoc in
+                            self.excluded_user_group_assocs)
+            ))
+
+    @has_member.expression
+    def has_member(cls, user): #pylint: disable=E0213
+        return or_(
+                and_(cls.membership_type != GroupMembershipType.inverted,
+                     cls.user_group_assocs.any(UserGroup.user == user)),
+                and_(cls.membership_type == GroupMembershipType.inverted,
+                     not_(cls.excluded_user_group_assocs.any(ExcludedUserGroup.user == user)))
+                )
+
+    @hybrid_property
+    def dyn_users(self):
+        return session.object_session(self).query(User)\
+                .filter(User.in_group(self))
+
+    @dyn_users.expression
+    def dyn_users(cls): #pylint: disable=E0213
+        # To satisfy the groups grid which supports filtering by group members, we
+        # need to create a customized any() method to handle the dynamic relationship
+        # with UserGroup and ExcludedUserGroup tables.
+        class GroupDynamicUsers(object):
+            def any(self, clause):
+                return or_(
+                    and_(Group.membership_type != GroupMembershipType.inverted,
+                         exists([1],
+                            from_obj=UserGroup.__table__.join(User.__table__),
+                            whereclause=and_(UserGroup.group_id == Group.group_id,
+                                             clause))
+                    ),
+                    and_(Group.membership_type == GroupMembershipType.inverted,
+                         not_(exists([1],
+                             from_obj=ExcludedUserGroup.__table__.join(User.__table__),
+                             whereclause=and_(ExcludedUserGroup.group_id == Group.group_id,
+                                         clause)))
+                    )
+                )
+        return GroupDynamicUsers()
+
     @property
     def users(self):
-        return [assoc.user for assoc in self.user_group_assocs]
+        return self.dyn_users.all()
 
 
 class UserGroup(DeclarativeMappedObject):
@@ -722,6 +821,21 @@ class UserGroup(DeclarativeMappedObject):
             primary_key=True, index=True)
     group = relationship(Group, back_populates='user_group_assocs')
     is_owner = Column(Boolean, nullable=False, default=False)
+
+
+class ExcludedUserGroup(DeclarativeMappedObject):
+
+    __tablename__ = 'excluded_user_group'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    user_id = Column(Integer, ForeignKey('tg_user.user_id',
+            onupdate='CASCADE', ondelete='CASCADE'),
+            primary_key=True, index=True)
+    user = relationship(User, back_populates='excluded_group_user_assocs')
+    group_id = Column(Integer, ForeignKey('tg_group.group_id',
+            onupdate='CASCADE', ondelete='CASCADE'),
+            primary_key=True, index=True)
+    group = relationship(Group, back_populates='excluded_user_group_assocs')
+
 
 class Permission(DeclarativeMappedObject):
     """

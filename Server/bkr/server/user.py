@@ -25,7 +25,7 @@ import cherrypy
 from datetime import datetime
 
 from bkr.server.model import User, Job, System, SystemActivity, TaskStatus, \
-    SystemAccessPolicyRule
+    SystemAccessPolicyRule, GroupMembershipType
 
 
 class UserFormSchema(validators.Schema):
@@ -255,8 +255,9 @@ class Users(AdminPage):
                                    old=u'%s' % user, new=u'%s' % newowner)
         # Remove the user from all groups
         for group in user.groups:
-            group.remove_member(user=user,
-                    agent=identity.current.user, service=method)
+            if not group.membership_type == GroupMembershipType.inverted:
+                group.remove_member(user=user,
+                        agent=identity.current.user, service=method)
         # Finally remove the user
         user.removed=datetime.utcnow()
 

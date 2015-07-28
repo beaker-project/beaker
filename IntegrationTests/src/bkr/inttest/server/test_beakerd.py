@@ -17,7 +17,7 @@ from bkr.server.model import TaskStatus, Job, System, User, \
         Group, SystemStatus, SystemActivity, Recipe, Cpu, LabController, \
         Provision, TaskPriority, RecipeSet, RecipeTaskResult, Task, SystemPermission,\
         MachineRecipe, GuestRecipe, LabControllerDistroTree, DistroTree, \
-        TaskResult, CommandActivity, CommandStatus
+        TaskResult, CommandActivity, CommandStatus, GroupMembershipType
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import not_
 from turbogears.database import session, get_engine
@@ -813,6 +813,29 @@ class TestBeakerd(DatabaseTestCase):
             system.custom_access_policy.add_rule(
                     permission=SystemPermission.reserve, group=group)
         self.check_user_can_run_job_on_system(user, system)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
+    def test_shared_group_system_with_user_in_inverted_group(self):
+        with session.begin():
+            group = data_setup.create_group(membership_type=GroupMembershipType.inverted)
+            user = data_setup.create_user()
+            system = data_setup.create_system(lab_controller=self.lab_controller,
+                    shared=False)
+            system.custom_access_policy.add_rule(
+                permission=SystemPermission.reserve, group=group)
+        self.check_user_can_run_job_on_system(user, system)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
+    def test_shared_group_system_with_user_excluded_from_inverted_group(self):
+        with session.begin():
+            group = data_setup.create_group(membership_type=GroupMembershipType.inverted)
+            user = data_setup.create_user()
+            group.exclude_user(user)
+            system = data_setup.create_system(lab_controller=self.lab_controller,
+                    shared=False)
+            system.custom_access_policy.add_rule(
+                permission=SystemPermission.reserve, group=group)
+        self.check_user_cannot_run_job_on_system(user, system)
 
     def test_shared_group_system_with_admin_not_in_group(self):
         with session.begin():

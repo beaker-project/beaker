@@ -29,7 +29,8 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task, TaskResult, \
         Group, User, ActivityMixin, SystemAccessPolicy, SystemPermission, \
         RecipeTask, RecipeTaskResult, DeclarativeMappedObject, OSVersion, \
-        RecipeReservationRequest, ReleaseAction, SystemPool, CommandStatus
+        RecipeReservationRequest, ReleaseAction, SystemPool, CommandStatus, \
+        GroupMembershipType
 
 from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
@@ -1487,6 +1488,24 @@ class UserTest(DatabaseTestCase):
         self.assertEquals(activity.object, user)
         self.assertEquals(activity.user, admin)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
+    def test_check_user_groups(self):
+        user1 = data_setup.create_user()
+        group = data_setup.create_group()
+        group.add_member(user1)
+        # create an inverted group made up of everyone
+        inverted_group = data_setup.create_group(
+                membership_type=GroupMembershipType.inverted)
+        user2 = data_setup.create_user()
+        group.add_member(user2)
+        inverted_group.exclude_user(user2)
+        session.flush()
+        session.expire_all()
+        self.assertIn(group, user1.groups)
+        self.assertIn(inverted_group, user1.groups)
+        self.assertIn(group, user2.groups)
+
+
 class GroupTest(DatabaseTestCase):
 
     def setUp(self):
@@ -1575,7 +1594,9 @@ class GroupTest(DatabaseTestCase):
 
     def test_populate_ldap_group(self):
         group = Group(group_name=u'beakerdevs',
-                display_name=u'Beaker Developers', ldap=True)
+                display_name=u'Beaker Developers',
+                membership_type=GroupMembershipType.ldap)
+        session.add(group)
         session.flush()
         group.refresh_ldap_members()
         session.flush()
@@ -1590,11 +1611,13 @@ class GroupTest(DatabaseTestCase):
     def test_add_remove_ldap_members(self):
         # billybob will be removed, dcallagh will be added
         group = Group(group_name=u'beakerdevs',
-                display_name=u'Beaker Developers', ldap=True)
+                display_name=u'Beaker Developers',
+                membership_type=GroupMembershipType.ldap)
+        session.add(group)
         old_member = data_setup.create_user(user_name=u'billybob')
         group.add_member(old_member)
-        self.assertEquals(group.users, [old_member])
         session.flush()
+        self.assertIn(old_member, group.users)
         group.refresh_ldap_members()
         session.flush()
         session.expire_all()
@@ -1609,6 +1632,42 @@ class GroupTest(DatabaseTestCase):
         self.assertEquals(group.activity[2].old_value, None)
         self.assertEquals(group.activity[2].new_value, u'dcallagh')
         self.assertEquals(group.activity[2].service, u'LDAP')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
+    def test_add_or_remove_a_normal_group_members(self):
+        user = data_setup.create_user()
+        user2 = data_setup.create_user()
+        group = data_setup.create_group()
+        group.add_member(user)
+        group.add_member(user2)
+        session.flush()
+        session.expire_all()
+        self.assertIn(user, group.users)
+        self.assertIn(user2, group.users)
+        group.remove_member(user2)
+        session.flush()
+        session.expire_all()
+        self.assertNotIn(user2, group.users)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
+    def test_check_group_users_in_a_normal_group(self):
+        user = data_setup.create_user()
+        group = data_setup.create_group()
+        group.add_member(user)
+        session.flush()
+        session.expire_all()
+        self.assertIn(user, group.users)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
+    def test_check_group_users_in_an_inverted_group(self):
+        group = data_setup.create_group(membership_type=GroupMembershipType.inverted)
+        user = data_setup.create_user()
+        user2 = data_setup.create_user()
+        group.exclude_user(user2)
+        session.flush()
+        session.expire_all()
+        self.assertIn(user, group.users)
+        self.assertNotIn(user2, group.users)
 
 
 class TaskTypeTest(DatabaseTestCase):

@@ -5,7 +5,7 @@
 # (at your option) any later version.
 
 from turbogears.database import session
-from bkr.server.model import Group, User
+from bkr.server.model import Group, GroupMembershipType, User
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError, create_client_config, \
         ClientTestCase
@@ -80,7 +80,7 @@ class GroupCreateTest(ClientTestCase):
                           group_name])
 
         group = Group.by_name(group_name)
-        self.assertEquals(group.ldap, True)
+        self.assertEquals(group.membership_type, GroupMembershipType.ldap)
         self.assertEquals(group.users, [User.by_user_name(u'asaha')])
 
         with session.begin():

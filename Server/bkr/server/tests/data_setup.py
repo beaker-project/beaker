@@ -16,8 +16,9 @@ from sqlalchemy.orm.exc import NoResultFound
 import turbogears.config, turbogears.database
 from turbogears.database import session, metadata
 from bkr.server.bexceptions import DatabaseLookupError
-from bkr.server.model import LabController, User, Group, UserGroup, Distro, DistroTree, Arch, \
-        OSMajor, OSVersion, SystemActivity, Task, MachineRecipe, System, \
+from bkr.server.model import LabController, User, Group, UserGroup, \
+        Distro, DistroTree, Arch, OSMajor, OSVersion, \
+        SystemActivity, Task, MachineRecipe, System, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
         Device, TaskResult, TaskStatus, Job, RecipeSet, TaskPriority, \
         LabControllerDistroTree, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor, \
@@ -27,7 +28,8 @@ from bkr.server.model import LabController, User, Group, UserGroup, Distro, Dist
         LogRecipeTaskResult, TaskType, SystemResource, GuestRecipe, \
         GuestResource, VirtResource, SystemStatusDuration, SystemAccessPolicy, \
         SystemPermission, DistroTreeImage, ImageType, KernelType, \
-        RecipeReservationRequest, OSMajorInstallOptions, SystemPool
+        RecipeReservationRequest, OSMajorInstallOptions, SystemPool, \
+        GroupMembershipType
 
 log = logging.getLogger(__name__)
 
@@ -127,7 +129,7 @@ def add_system_lab_controller(system,lc):
     system.lab_controller = lc
 
 def create_group(permissions=None, group_name=None, display_name=None,
-        owner=None, ldap=False, root_password=None):
+        owner=None, membership_type=GroupMembershipType.normal, root_password=None):
     # tg_group.group_name column is VARCHAR(16)
     if group_name is None:
         group_name = unique_name(u'group%s')
@@ -138,8 +140,9 @@ def create_group(permissions=None, group_name=None, display_name=None,
         group.display_name = u'Group %s' % group_name
     else:
         group.display_name = display_name
-    group.ldap = ldap
-    if ldap:
+
+    group.membership_type = membership_type
+    if group.membership_type == GroupMembershipType.ldap:
         assert owner is None, 'LDAP groups cannot have owners'
     if not owner:
         owner = create_user(user_name=unique_name(u'group_owner_%s'))

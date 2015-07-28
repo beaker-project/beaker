@@ -6,14 +6,15 @@
 
 from turbogears.database import session
 from bkr.inttest import data_setup, DatabaseTestCase
-from bkr.server.model import Group, User
+from bkr.server.model import Group, GroupMembershipType, User
 
 class RefreshLdapTest(DatabaseTestCase):
 
     def test_refresh_ldap_group_membership(self):
         with session.begin():
             group = Group(group_name=u'alp',
-                    display_name=u'Australian Labor Party', ldap=True)
+                    display_name=u'Australian Labor Party',
+                    membership_type=GroupMembershipType.ldap)
             old_member = data_setup.create_user(user_name=u'krudd')
             group.add_member(old_member)
         from bkr.server.tools.refresh_ldap import refresh_ldap

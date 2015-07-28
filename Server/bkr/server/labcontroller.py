@@ -98,6 +98,7 @@ def find_user_or_create(user_name):
     if user is None:
         user = User(user_name=user_name)
         user.user_name = user_name
+        session.add(user)
     return user
 
 def update_user(user, display_name=None, email_address=None, password=''):

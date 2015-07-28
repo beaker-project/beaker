@@ -89,6 +89,21 @@ mail: bz1095010@example.invalid
 # slappasswd -s password
 userPassword: {SSHA}6NdtGTtF0ZPPWAW5Ivd3N0az8jYlRChl
 
+dn: uid=another_my_ldap_user,ou=users,dc=example,dc=invalid
+objectClass: top
+objectClass: person
+objectClass: organizationalperson
+objectClass: inetorgperson
+objectClass: posixAccount
+cn: Another My LDAP User
+givenName: Another
+sn: My LDAP User
+uid: another_my_ldap_user
+uidNumber: 15554
+gidNumber: 15554
+homeDirectory: /home/lol
+mail: another_my_ldap_user@example.invalid
+
 dn: cn=my_ldap_group,ou=groups,dc=example,dc=invalid
 objectClass: top
 objectClass: posixGroup
@@ -116,3 +131,10 @@ objectClass: posixGroup
 gidNumber: 5520
 cn: wyfp
 memberUid: asaha
+
+dn: cn=another_my_ldap_group,ou=groups,dc=example,dc=invalid
+objectClass: top
+objectClass: posixGroup
+gidNumber: 5521
+cn: another_my_ldap_group
+memberUid: another_my_ldap_user

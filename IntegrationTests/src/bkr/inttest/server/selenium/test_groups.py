@@ -9,7 +9,7 @@ from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, \
         check_group_search_results, logout
-from bkr.server.model import session, Group
+from bkr.server.model import session, Group, GroupMembershipType
 
 
 class GroupsGridTest(WebDriverTestCase):
@@ -29,9 +29,10 @@ class GroupsGridTest(WebDriverTestCase):
         b.find_element_by_class_name('grid-filter').submit()
         check_group_search_results(b, present=[group], absent=[other_group])
 
-    def test_can_search_by_member_username(self):
+    def test_can_search_normal_groups_by_member_username(self):
         with session.begin():
-            group = data_setup.create_group()
+            group = data_setup.create_group(
+                    group_name=data_setup.unique_name(u'aardvark%s'))
             member = data_setup.create_user()
             group.add_member(member)
             other_group = data_setup.create_group(
@@ -73,6 +74,23 @@ class GroupsGridTest(WebDriverTestCase):
         self.assertEqual(
             b.find_element_by_class_name('search-query').get_attribute('value'),
             'member.user_name:%s' % user.user_name)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
+    def test_can_search_inverted_groups_by_member_username(self):
+        with session.begin():
+            member = data_setup.create_user()
+            group = data_setup.create_group(
+                    group_name=data_setup.unique_name(u'aardvark%s'))
+            inverted_group = data_setup.create_group(
+               group_name=data_setup.unique_name(u'aardvark%s'),
+               membership_type=GroupMembershipType.inverted)
+        b = self.browser
+        b.get(get_server_base() + 'groups/')
+        b.find_element_by_class_name('search-query').send_keys(
+                'member.user_name:%s' % member.user_name)
+        b.find_element_by_class_name('grid-filter').submit()
+        check_group_search_results(b, present=[inverted_group],
+                absent=[group])
 
 
 class GroupCreationTest(WebDriverTestCase):

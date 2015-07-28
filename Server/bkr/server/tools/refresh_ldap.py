@@ -20,13 +20,13 @@ from turbogears import config
 from bkr.common import __version__
 from bkr.log import log_to_stream
 from bkr.server.util import load_config_or_exit
-from bkr.server.model import session, Group
+from bkr.server.model import session, Group, GroupMembershipType
 
 def refresh_ldap():
     with session.begin():
         # reuse a single LDAP connection for efficiency
         ldapcon = ldap.initialize(config.get('identity.soldapprovider.uri'))
-        for group in Group.query.filter(Group.ldap == True):
+        for group in Group.query.filter(Group.membership_type == GroupMembershipType.ldap):
             group.refresh_ldap_members(ldapcon)
 
 def main():

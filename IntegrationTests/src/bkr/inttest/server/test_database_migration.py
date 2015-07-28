@@ -13,7 +13,7 @@ from bkr.server.tools.init import upgrade_db, downgrade_db
 from sqlalchemy.orm import create_session
 from sqlalchemy.sql import func
 from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, User, \
-        OSMajor, OSMajorInstallOptions
+        OSMajor, OSMajorInstallOptions, GroupMembershipType
 
 def has_initial_sublist(larger, prefix):
     """ Return true iff list *prefix* is an initial sublist of list 
@@ -526,10 +526,10 @@ class MigrationTest(unittest.TestCase):
                 "VALUES (2, 3, 1)")
         # run migration
         upgrade_db(self.migration_metadata)
+        colonel = self.migration_session.query(Group).get(3)
         # check that bob is removed from the group
         bob = self.migration_session.query(User).get(2)
-        self.assertEquals([], bob.groups)
-        colonel = self.migration_session.query(Group).get(3)
+        self.assertNotIn(colonel, bob.groups)
         self.assertNotIn(bob, colonel.users)
         self.assertEqual(colonel.activity[0].field_name, u'User')
         self.assertEqual(colonel.activity[0].action, u'Removed')
@@ -580,3 +580,21 @@ class MigrationTest(unittest.TestCase):
         self.assertEqual(pool.activity[0].old_value, u'<grant loan_self to fred>')
         self.assertEqual(pool.activity[0].service, u'Migration')
         self.assertEqual(pool.activity[0].user.user_name, u'admin')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
+    def test_migrate_ldap_groups(self):
+        group_name = u'my_ldap_group'
+        connection = self.migration_metadata.bind.connect()
+        # populate empty database
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/21.sql'))
+        connection.execute(
+                "INSERT INTO tg_group (group_name, ldap) "
+                "VALUES ('%s', 1)" % group_name)
+        # run migration
+        upgrade_db(self.migration_metadata)
+        # check that the group row was created
+        group = self.migration_session.query(Group)\
+                .filter(Group.group_name == group_name).one()
+        self.assertEqual(group.group_name, group_name)
+        self.assertEqual(group.membership_type, GroupMembershipType.ldap)
