@@ -30,7 +30,7 @@ from bkr.server.model import (Recipe, RecipeSet, TaskStatus, Job, System,
                               RecipeResource, TaskBase)
 from bkr.server.app import app
 from bkr.server.flask_util import BadRequest400, NotFound404, \
-    auth_required, read_json_request
+    auth_required, read_json_request, convert_internal_errors
 from flask import request, jsonify
 from bkr.server.bexceptions import BeakerException
 
@@ -498,7 +498,9 @@ def _extend_watchdog(recipe_id, data):
     kill_time = data.get('kill_time')
     if not kill_time:
         raise BadRequest400('Time not specified')
-    return jsonify({'seconds': recipe.extend(kill_time)})
+    with convert_internal_errors():
+        seconds = recipe.extend(kill_time)
+    return jsonify({'seconds': seconds})
 
 @app.route('/recipes/<recipe_id>/watchdog', methods=['POST'])
 @auth_required

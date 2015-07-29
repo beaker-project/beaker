@@ -40,6 +40,18 @@ class WatchdogExtend(ClientTestCase):
         except ClientError, e:
             self.assert_('Taskspec type must be one of [R, T]' in e.stderr_output)
 
+    def test_nonexistent_watchdog(self):
+        with session.begin():
+            recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_complete(recipe)
+        try:
+            run_client(['bkr', 'watchdog-extend', recipe.t_id])
+            self.fail('Must raise')
+        except ClientError as e:
+            self.assertIn('No watchdog exists for recipe %s' % recipe.id,
+                           e.stderr_output)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1206700
     def test_watchdog_extend_by_fqdn(self):
         with session.begin():
