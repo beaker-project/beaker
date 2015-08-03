@@ -46,6 +46,9 @@ Resources
       alternative-harnesses/index
       architecture-guide/index
 
+   * `Beaker development documentation <../dev/guide>`_
+
+
 Getting further help
 ====================
 
