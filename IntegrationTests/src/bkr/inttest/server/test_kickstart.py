@@ -2022,8 +2022,14 @@ install
             </job>
             ''', self.system)
         k = recipe.rendered_kickstart.kickstart
-        self.assert_('yum-config-manager --disable fedora' in k, k)
-        self.assert_('yum-config-manager --disable updates' in k, k)
+        self.assert_('''
+sed -i -e '/\[fedora\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora.repo
+'''
+    in k, k)
+        self.assert_('''
+sed -i -e '/\[updates\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora-updates.repo
+'''
+    in k, k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=869758
     def test_repo_url_containing_yum_variable(self):

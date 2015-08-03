@@ -110,7 +110,7 @@ python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstar
 %post --log=/dev/console
 # Disable yum repos supplied by fedora-release in favour of Beaker-supplied repos
 # (this will match the repos used during installation).
-yum-config-manager --disable fedora
+sed -i -e '/\[fedora\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora.repo
 set -x
 # Some distros have curl in their minimal install set, others have wget.
 # We define a wrapper function around the best available implementation
