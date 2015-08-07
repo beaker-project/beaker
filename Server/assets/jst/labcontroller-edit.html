@@ -1,0 +1,28 @@
+<form class="edit-labcontroller">
+  <div class="modal-header">
+    <a href="#" class="close" data-dismiss="modal" aria-hidden="true">&times;</a>
+    <h3><%- title %></h3>
+  </div>
+  <div class="modal-body">
+    <label for="fqdn">FQDN</label>
+    <input type="text" class="input-block-level" id="fqdn" name="fqdn" placeholder="FQDN" required />
+    <label for="user_name">Username</label>
+    <input type="text" class="input-block-level" id="user_name" name="user_name" placeholder="Username" required />
+    <label for="password">Password</label>
+    <input type="password" class="input-block-level" id="password" name="password" placeholder="Password" />
+    <span class="help-block">Username and password are the credentials which the lab controller must use when authenticating to Beaker.</span>
+    <label for="email_address">Email Address</label>
+    <input type="text" class="input-block-level" id="email_address" name="email_address" placeholder="Email Address" required />
+    <% if (show_disabled) { %>
+        <label class="checkbox">
+        <input type="checkbox" name="disabled" />
+        Disabled
+        </label>
+    <% } %>
+    </div>
+  <div class="modal-footer">
+    <div class="sync-status" />
+    <button type="button" class="btn" data-dismiss="modal" data-loading-text="Cancel">Cancel</button>
+    <button type="submit" class="btn btn-primary" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Saving&hellip; "> Save </button>
+  </div>
+</form>

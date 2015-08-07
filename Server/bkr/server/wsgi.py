@@ -57,6 +57,8 @@ import bkr.server.jobs
 import bkr.server.recipesets
 import bkr.server.recipes
 import bkr.server.power
+import bkr.server.labcontroller
+
 
 @app.before_first_request
 def init():

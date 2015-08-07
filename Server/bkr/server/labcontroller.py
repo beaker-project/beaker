@@ -5,120 +5,281 @@
 # (at your option) any later version.
 
 from turbogears.database import session
-from turbogears import url, expose, flash, validate, error_handler, \
-                       redirect, paginate, config
-from kid import XML
+from turbogears import config
 from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import make_edit_link
-from bkr.server.widgets import LabControllerDataGrid, LabControllerForm
 from bkr.server.distrotrees import DistroTrees
 from bkr.common.helpers import total_seconds
 from bkr.common.bexceptions import BX
-from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm.exc import NoResultFound
 import cherrypy
 from datetime import datetime, timedelta
 import urlparse
 
+from flask import request, jsonify
+from bkr.server.app import app
+from bkr.server.flask_util import auth_required, read_json_request, \
+    BadRequest400, Forbidden403, NotFound404, request_wants_json, \
+    render_tg_template, convert_internal_errors, Conflict409
+from bkr.server.util import absolute_url
 from bkr.server.model import \
-    LabController, LabControllerActivity, User, Group, OSMajor, OSVersion, \
+    LabController, User, Group, OSMajor, OSVersion, \
     Arch, Distro, DistroTree, DistroTreeRepo, DistroTreeImage, \
     DistroTreeActivity, LabControllerDistroTree, ImageType, KernelType, \
-    System, SystemStatus, SystemActivity, \
+    System, SystemStatus, \
     Watchdog, CommandActivity, CommandStatus
 
 import logging
 log = logging.getLogger(__name__)
 
+
+def find_labcontroller_or_raise404(fqdn):
+    """Returns a lab controller object or raises a NotFound404 error if the lab
+    controller does not exist in the database."""
+    try:
+        labcontroller = LabController.by_name(fqdn)
+    except NoResultFound:
+        raise NotFound404('Lab controller %s does not exist' % fqdn)
+    return labcontroller
+
+def restore_labcontroller(labcontroller):
+    """
+    Restores a disabled and removed lab controller.
+    """
+    labcontroller.removed = None
+    labcontroller.disabled = False
+
+    labcontroller.record_activity(
+        user=identity.current.user, service=u'HTTP',
+        field=u'Disabled', action=u'Changed', old=unicode(True), new=unicode(False))
+    labcontroller.record_activity(
+        user=identity.current.user, service=u'HTTP',
+        field=u'Removed', action=u'Changed', old=unicode(True), new=unicode(False))
+
+def remove_labcontroller(labcontroller):
+    """
+    Disables and marks a lab controller as removed.
+    """
+    labcontroller.removed = datetime.utcnow()
+
+    # de-associate systems
+    systems = System.query.filter(System.lab_controller == labcontroller)
+    System.record_bulk_activity(systems, user=identity.current.user,
+                                service=u'HTTP', action=u'Changed', field=u'lab_controller',
+                                old=labcontroller.fqdn, new=None)
+    systems.update({'lab_controller_id': None}, synchronize_session=False)
+
+    # cancel running recipes
+    watchdogs = Watchdog.by_status(labcontroller=labcontroller,
+                                   status='active')
+    for w in watchdogs:
+        w.recipe.recipeset.job.cancel(msg='LabController %s has been deleted' % labcontroller.fqdn)
+
+    # remove distro trees
+    distro_tree_assocs = LabControllerDistroTree.query\
+        .filter(LabControllerDistroTree.lab_controller == labcontroller)\
+        .join(LabControllerDistroTree.distro_tree)
+    DistroTree.record_bulk_activity(
+        distro_tree_assocs, user=identity.current.user,
+        service=u'HTTP', action=u'Removed', field=u'lab_controller_assocs',
+        old=labcontroller.fqdn, new=None)
+    distro_tree_assocs.delete(synchronize_session=False)
+    labcontroller.disabled = True
+    labcontroller.record_activity(
+        user=identity.current.user, service=u'HTTP',
+        field=u'Disabled', action=u'Changed', old=unicode(False), new=unicode(True))
+    labcontroller.record_activity(
+        user=identity.current.user, service=u'HTTP',
+        field=u'Removed', action=u'Changed', old=unicode(False), new=unicode(True))
+
+def find_user_or_create(user_name):
+    user = User.by_user_name(user_name)
+    if user is None:
+        user = User(user_name=user_name)
+        user.user_name = user_name
+    return user
+
+def update_user(user, display_name=None, email_address=None, password=''):
+    if user.lab_controller:
+        raise BadRequest400(
+            'User %s is already associated with lab controller %s' % (
+                user, user.lab_controller))
+    user.display_name = display_name or user.display_name
+    user.email_address = email_address or user.email_address
+    if password:
+        user.password = password
+
+    group = Group.by_name(u'lab_controller')
+    if group not in user.groups:
+        group.add_member(user, agent=identity.current.user)
+    return user
+
+@app.route('/labcontrollers/<fqdn>', methods=['PATCH'])
+@auth_required
+def update_labcontroller(fqdn):
+    """
+    Updates attributes of the lab controller identified by it's FQDN. The
+    request body must be a json object or only the FQDN if
+    that is the only value to be updated.
+
+    :param string fqdn: Lab controller's new fully-qualified domain name.
+    :jsonparam string user_name: User name associated with the lab controller.
+    :jsonparam string email_address: Email of the user account associated with the lab controller.
+    :jsonparam string password: Optional password for the user account used to login.
+    :jsonparam string removed: If True, detaches all systems, cancels all
+        running recipes and removes associated distro trees. If False, restores
+        the lab controller.
+    :jsonparam bool disabled: Whether the lab controller should be disabled. New
+        recipes are not scheduled on a lab controller while it is disabled.
+    :status 200: LabController updated.
+    :status 400: Invalid data was given.
+    """
+    labcontroller = find_labcontroller_or_raise404(fqdn)
+    if not labcontroller.can_edit(identity.current.user):
+        raise Forbidden403('Cannot edit lab controller')
+
+    data = read_json_request(request)
+
+    # should the lab controller be removed?
+    if data.get('removed', False) and not labcontroller.removed:
+        remove_labcontroller(labcontroller)
+
+    # should the controller be restored?
+    if data.get('removed') is False and labcontroller.removed:
+        restore_labcontroller(labcontroller)
+
+    fqdn_changed = False
+    new_fqdn = data.get('fqdn', fqdn)
+    if labcontroller.fqdn != new_fqdn:
+        lc = None
+        try:
+            lc = LabController.by_name(new_fqdn)
+        except NoResultFound:
+            pass
+        if lc is not None:
+            raise BadRequest400('FQDN %s already in use' % new_fqdn)
+
+        labcontroller.record_activity(
+            user=identity.current.user, service=u'HTTP',
+            field=u'fqdn', action=u'Changed', old=labcontroller.fqdn, new=new_fqdn)
+        labcontroller.fqdn = new_fqdn
+        fqdn_changed = True
+
+    if 'user_name' in data:
+        user = find_user_or_create(data['user_name'])
+        if labcontroller.user != user:
+            user = update_user(
+                user,
+                display_name=fqdn,
+                email_address=data.get('email_address'),
+                password=data.get('password', '')
+            )
+            labcontroller.record_activity(
+                user=identity.current.user, service=u'HTTP',
+                field=u'User', action=u'Changed',
+                old=labcontroller.user.user_name, new=user.user_name)
+            labcontroller.user = user
+
+    if labcontroller.disabled != data.get('disabled', labcontroller.disabled):
+        labcontroller.record_activity(
+            user=identity.current.user, service=u'HTTP',
+            field=u'disabled', action=u'Changed',
+            old=unicode(labcontroller.disabled), new=data['disabled'])
+        labcontroller.disabled = data['disabled']
+
+    response = jsonify(labcontroller.__json__())
+    if fqdn_changed:
+        response.headers.add('Location', absolute_url(labcontroller.href))
+    return response
+
+@app.route('/labcontrollers/<fqdn>', methods=['GET'])
+def get_labcontroller(fqdn):
+    """Returns detailed information about a lab controller in JSON.
+
+    :param fqdn: The lab controllers FQDN
+    """
+    labcontroller = find_labcontroller_or_raise404(fqdn)
+    return jsonify(labcontroller.__json__())
+
+@app.route('/labcontrollers/', methods=['GET'])
+def get_labcontrollers():
+    """Returns a JSON collection of all labcontrollers defined in Beaker."""
+    labcontrollers = LabController.query.order_by(LabController.fqdn).all()
+    if request_wants_json():
+        return jsonify(entries=labcontrollers)
+    can_edit = identity.current.user is not None and identity.current.user.is_admin()
+    return render_tg_template('bkr.server.templates.labcontrollers', {
+        'title': 'Lab Controllers',
+        'labcontrollers': labcontrollers,
+        'labcontrollers_url': absolute_url('/labcontrollers/'),
+        'can_edit': can_edit,
+    })
+
+@app.route('/labcontrollers/', methods=['POST'])
+@auth_required
+def create_labcontroller():
+    """
+    Creates a new lab controller. The request must be :mimetype:`application/json`.
+
+    :jsonparam string fqdn: Lab controller's new fully-qualified domain name.
+    :jsonparam string user_name: User name associated with the lab controller.
+    :jsonparam string email_address: Email of the user account associated with the lab controller.
+    :jsonparam string password: Optional password for the user account used to login.
+    :status 201: The lab controller was successfully created.
+    :status 400: Invalid data was given.
+    """
+    data = read_json_request(request)
+    return _create_labcontroller_helper(data)
+
+def _create_labcontroller_helper(data):
+    with convert_internal_errors():
+        if LabController.query.filter_by(fqdn=data['fqdn']).count():
+            raise Conflict409('Lab Controller %s already exists' % data['fqdn'])
+
+        user = find_user_or_create(data['user_name'])
+        user = update_user(
+            user=user,
+            display_name=data['fqdn'],
+            email_address=data.get('email_address'),
+            password=data.get('password', '')
+        )
+        labcontroller = LabController(fqdn=data['fqdn'], disabled=False)
+        labcontroller.record_activity(
+            user=identity.current.user, service=u'HTTP',
+            action=u'Changed', field=u'FQDN', old=u'', new=data['fqdn'])
+
+        labcontroller.user = user
+        labcontroller.record_activity(
+            user=identity.current.user, service=u'HTTP',
+            action=u'Changed', field=u'User', old=u'', new=user.user_name)
+
+        # For backwards compatibility
+        labcontroller.record_activity(
+            user=identity.current.user, service=u'HTTP',
+            action=u'Changed', field=u'Disabled', old=u'', new=unicode(labcontroller.disabled))
+
+        session.add(labcontroller)
+
+    response = jsonify(labcontroller.__json__())
+    response.status_code = 201
+    return response
+
+# backwards compatibility
+# Remove me once https://bugzilla.redhat.com/show_bug.cgi?id=1211119 is fixed
+@app.route('/labcontrollers/save', methods=['POST'])
+@auth_required
+def save_labcontroller():
+    data = request.form
+    return _create_labcontroller_helper(dict(user_name=data['lusername'],
+                                             email_address=data['email'],
+                                             password=data['lpassword'],
+                                             fqdn=data['fqdn']))
+
+
 class LabControllers(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
-
-    labcontroller_form = LabControllerForm()
-
-    @identity.require(identity.in_group("admin"))
-    @expose(template='bkr.server.templates.form-post')
-    def new(self, **kw):
-        return dict(
-            form = self.labcontroller_form,
-            action = './save',
-            options = {},
-            value = kw,
-            title='New Lab Controller'
-        )
-
-    @identity.require(identity.in_group("admin"))
-    @expose(template='bkr.server.templates.form-post')
-    def edit(self, id, **kw):
-        options = {}
-        if id:
-            labcontroller = LabController.by_id(id)
-            options.update({'user' : labcontroller.user})
-        else:
-            labcontroller=None
-
-        return dict(
-            form = self.labcontroller_form,
-            action = './save',
-            options = options,
-            value = labcontroller,
-            title='Edit Lab Controller'
-        )
-
-    @identity.require(identity.in_group("admin"))
-    @expose()
-    @validate(form=labcontroller_form)
-    @error_handler(edit)
-    def save(self, **kw):
-        if kw.get('id'):
-            labcontroller = LabController.by_id(kw['id'])
-        else:
-            labcontroller =  LabController()
-            session.add(labcontroller)
-        if labcontroller.fqdn != kw['fqdn']:
-            activity = LabControllerActivity(identity.current.user,
-                'WEBUI', 'Changed', 'FQDN', labcontroller.fqdn, kw['fqdn'])
-            labcontroller.fqdn = kw['fqdn']
-            labcontroller.write_activity.append(activity)
-
-        # labcontroller.user is used by the lab controller to login here
-        try:
-            # pick up an existing user if it exists.
-            luser = User.query.filter_by(user_name=kw['lusername']).one()
-        except InvalidRequestError:
-            # Nope, create from scratch
-            luser = User()
-        if labcontroller.user != luser:
-            if labcontroller.user is None:
-                old_user_name = None
-            else:
-                old_user_name = labcontroller.user.user_name
-            activity = LabControllerActivity(identity.current.user, 'WEBUI',
-                'Changed', 'User', old_user_name, unicode(kw['lusername']))
-            labcontroller.user = luser
-            labcontroller.write_activity.append(activity)
-
-        # Make sure user is a member of lab_controller group
-        group = Group.by_name(u'lab_controller')
-        if group not in luser.groups:
-            luser.groups.append(group)
-        luser.display_name = kw['fqdn']
-        luser.email_address = kw['email']
-        luser.user_name = kw['lusername']
-
-        if kw['lpassword']:
-            luser.password = kw['lpassword']
-        if labcontroller.disabled != kw['disabled']:
-            activity = LabControllerActivity(identity.current.user, 'WEBUI',
-                'Changed', 'Disabled', unicode(labcontroller.disabled), 
-                unicode(kw['disabled']))
-            labcontroller.disabled = kw['disabled']
-            labcontroller.write_activity.append(activity)
-
-        flash( _(u"%s saved" % labcontroller.fqdn) )
-        redirect(".")
 
     @cherrypy.expose
     @identity.require(identity.in_group("lab_controller"))
@@ -465,86 +626,3 @@ class LabControllers(RPCRoot):
             dt['available'] = [(lc, url) for lc, url in dt['available']
                     if lc == lab_controller.fqdn]
         return distro_trees
-
-    def make_lc_remove_link(self, lc):
-        if lc.removed is not None:
-            return XML('<a class="btn" href="unremove?id=%s">'
-                    '<i class="fa fa-plus"/> Re-Add</a>' % lc.id)
-        else:
-            return XML('<a class="btn" href="#" onclick="has_watchdog(\'%s\')">'
-                    '<i class="fa fa-times"/> Remove</a>' % lc.id)
-
-    @identity.require(identity.in_group("admin"))
-    @expose(template="bkr.server.templates.grid")
-    @paginate('list', limit=None)
-    def index(self):
-        labcontrollers = session.query(LabController)
-
-        labcontrollers_grid = LabControllerDataGrid(fields=[
-                                  ('FQDN', lambda x: make_edit_link(x.fqdn,x.id)),
-                                  ('Disabled', lambda x: x.disabled),
-                                  ('Removed', lambda x: x.removed),
-                                  (' ', lambda x: self.make_lc_remove_link(x)),
-                              ],
-                              add_action='./new')
-        return dict(title="Lab Controllers", 
-                    grid = labcontrollers_grid,
-                    search_bar = None,
-                    list = labcontrollers)
-
-
-    @identity.require(identity.in_group("admin"))
-    @expose()
-    def unremove(self, id):
-        labcontroller = LabController.by_id(id)
-        labcontroller.removed = None
-        labcontroller.disabled = False
-
-        labcontroller.record_activity(user=identity.current.user, service=u'WEBUI',
-                field=u'Disabled', action=u'Changed', old=unicode(True), new=unicode(False))
-        labcontroller.record_activity(user=identity.current.user, service=u'WEBUI',
-                field=u'Removed', action=u'Changed', old=unicode(True), new=unicode(False))
-        flash('Successfully re-added %s' % labcontroller.fqdn)
-        redirect(url('.'))
-
-    @expose('json')
-    def has_active_recipes(self, id):
-        labcontroller = LabController.by_id(id)
-        count = Watchdog.by_status(labcontroller=labcontroller, status='active').count()
-        if count:
-            return {'has_active_recipes' : True}
-        else:
-            return {'has_active_recipes' : False}
-
-    @identity.require(identity.in_group("admin"))
-    @expose()
-    def remove(self, id, *args, **kw):
-        labcontroller = LabController.by_id(id)
-        labcontroller.removed = datetime.utcnow()
-        # de-associate systems
-        systems = System.query.filter(System.lab_controller == labcontroller)
-        System.record_bulk_activity(systems, user=identity.current.user,
-                service=u'WEBUI', action=u'Changed', field=u'lab_controller',
-                old=labcontroller.fqdn, new=None)
-        systems.update({'lab_controller_id': None}, synchronize_session=False)
-        # cancel running recipes
-        watchdogs = Watchdog.by_status(labcontroller=labcontroller, 
-            status='active')
-        for w in watchdogs:
-            w.recipe.recipeset.job.cancel(msg='LabController %s has been deleted' % labcontroller.fqdn)
-        # remove distro trees
-        distro_tree_assocs = LabControllerDistroTree.query\
-            .filter(LabControllerDistroTree.lab_controller == labcontroller)\
-            .join(LabControllerDistroTree.distro_tree)
-        DistroTree.record_bulk_activity(distro_tree_assocs, user=identity.current.user,
-                service=u'WEBUI', action=u'Removed', field=u'lab_controller_assocs',
-                old=labcontroller.fqdn, new=None)
-        distro_tree_assocs.delete(synchronize_session=False)
-        labcontroller.disabled = True
-        labcontroller.record_activity(user=identity.current.user, service=u'WEBUI',
-                field=u'Disabled', action=u'Changed', old=unicode(False), new=unicode(True))
-        labcontroller.record_activity(user=identity.current.user, service=u'WEBUI',
-                field=u'Removed', action=u'Changed', old=unicode(False), new=unicode(True))
-
-        flash( _(u"%s removed") % labcontroller.fqdn )
-        raise redirect(".")

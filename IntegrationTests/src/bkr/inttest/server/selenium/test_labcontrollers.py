@@ -4,44 +4,54 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import time
+import re
+import requests
 import datetime
 import xmlrpclib
 from threading import Thread, Event
 from turbogears.database import session
+from sqlalchemy.orm.exc import NoResultFound
+
 from bkr.inttest.server.selenium import XmlRpcTestCase, \
     WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login
-from bkr.inttest import data_setup, get_server_base, fix_beakerd_repodata_perms
+from bkr.inttest.server.requests_utils import login as web_login
+from bkr.inttest import data_setup, get_server_base,\
+    fix_beakerd_repodata_perms, DatabaseTestCase
+from bkr.inttest.server.requests_utils import patch_json, post_json
 from bkr.server.model import Distro, DistroTree, Arch, ImageType, Job, \
-        System, SystemStatus, TaskStatus, CommandActivity, CommandStatus, \
-        KernelType, LabController, Recipe, Activity, User, OSMajor, OSVersion
+    System, SystemStatus, TaskStatus, CommandActivity, CommandStatus, \
+    KernelType, LabController, User, OSMajor, OSVersion, LabControllerActivity, \
+    Group
 from bkr.server.tools import beakerd
 from bkr.server.wsgi import app
 from bkr.server import identity
 
-class LabControllerViewTest(WebDriverTestCase):
+
+class LabControllerCreateTest(WebDriverTestCase):
 
     def setUp(self):
         self.browser = self.get_browser()
         login(self.browser)
 
-    def _add_lc(self, lc_name, lc_email):
+    def _add_lc(self, lc_name, lc_email=None, lc_username=None):
+        lc_email = lc_email or data_setup.unique_name('me@my%s.com')
+        lc_username = lc_username or data_setup.unique_name('host/myname%s')
         b = self.browser
         b.get(get_server_base() + 'labcontrollers')
-        b.find_element_by_link_text('Add').click()
+        b.find_element_by_class_name('labcontroller-add').click()
         b.find_element_by_name('fqdn').send_keys(lc_name)
-        b.find_element_by_name('email').send_keys(lc_email)
-        b.find_element_by_name('lusername').send_keys('host/' + lc_name)
-        b.find_element_by_id('form').submit()
+        b.find_element_by_name('email_address').send_keys(lc_email)
+        b.find_element_by_name('user_name').send_keys(lc_username)
+        b.find_element_by_class_name('edit-labcontroller').submit()
 
     def test_lab_controller_add(self):
         b = self.browser
         lc_name = data_setup.unique_name('lc%s.com')
         lc_email = data_setup.unique_name('me@my%s.com')
-        self._add_lc(lc_name, lc_email)
-        self.assert_('%s saved' % lc_name in
-            b.find_element_by_css_selector('.flash').text)
+        lc_username = data_setup.unique_name('operator%s')
+        self._add_lc(lc_name, lc_email, lc_username)
+        b.find_element_by_xpath('//li[contains(., "%s")]' % lc_name)
 
         # check activity
         with session.begin():
@@ -51,38 +61,52 @@ class LabControllerViewTest(WebDriverTestCase):
             self.assertEquals(lc.activity[0].new_value, u'False')
             self.assertEquals(lc.activity[1].field_name, u'User')
             self.assertEquals(lc.activity[1].action, u'Changed')
-            self.assertEquals(lc.activity[1].new_value, u'host/' + lc_name)
+            self.assertEquals(lc.activity[1].new_value, lc_username)
             self.assertEquals(lc.activity[2].field_name, u'FQDN')
             self.assertEquals(lc.activity[2].action, u'Changed')
             self.assertEquals(lc.activity[2].new_value, lc_name)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=998374
-    # https://bugzilla.redhat.com/show_bug.cgi?id=1064710
     def test_cannot_add_duplicate_lc(self):
         with session.begin():
             existing_lc = data_setup.create_labcontroller()
         self._add_lc(existing_lc.fqdn, existing_lc.user.email_address)
         b = self.browser
-        self.assertEquals(b.find_element_by_xpath(
-                '//input[@name="fqdn"]/following-sibling::span').text,
-                'FQDN is not unique')
-        self.assertEquals(b.find_element_by_xpath(
-                '//input[@name="lusername"]/following-sibling::span').text,
-                'Username is in use by a different lab controller')
+        self.assertEquals(b.find_element_by_class_name('alert-error').text,
+                          'CONFLICT: Lab Controller %s already exists' % existing_lc.fqdn)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1064710
+    def test_cannot_add_lc_with_used_username(self):
+        with session.begin():
+            existing_lc = data_setup.create_labcontroller()
+        self._add_lc(data_setup.unique_name('lc.dummy.%s.com'), lc_username=existing_lc.user.user_name)
+        b = self.browser
+        expected = re.compile(r'User %s is already associated with lab controller %s' % (
+            existing_lc.user.user_name, existing_lc.fqdn))
+        self.assertRegexpMatches(
+            b.find_element_by_class_name('alert-error').text, expected)
+
+class LabControllerViewTest(WebDriverTestCase):
+
+    def setUp(self):
+        with session.begin():
+            self.lc = data_setup.create_labcontroller()
+        self.browser = self.get_browser()
+        login(self.browser)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=998374
     def test_cannot_change_fqdn_to_duplicate(self):
         with session.begin():
-            lc = data_setup.create_labcontroller()
             other_lc = data_setup.create_labcontroller()
         b = self.browser
-        b.get(get_server_base() + 'labcontrollers/edit?id=%s' % lc.id)
+        b.get(get_server_base() + 'labcontrollers')
+        b.find_element_by_xpath('//li[contains(., "%s")]//button[contains(., "Edit")]' % self.lc.fqdn).click()
         b.find_element_by_name('fqdn').clear()
         b.find_element_by_name('fqdn').send_keys(other_lc.fqdn)
-        b.find_element_by_id('form').submit()
-        self.assertEquals(b.find_element_by_xpath(
-                '//input[@name="fqdn"]/following-sibling::span').text,
-                'FQDN is not unique')
+        b.find_element_by_class_name('edit-labcontroller').submit()
+        self.assertEquals(
+            b.find_element_by_class_name('alert-error').text,
+                'BAD REQUEST: FQDN %s already in use' % other_lc.fqdn)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1064710
     def test_cannot_change_username_to_duplicate(self):
@@ -90,45 +114,42 @@ class LabControllerViewTest(WebDriverTestCase):
         # you can't change it to a user account that is already being used by 
         # another LC.
         with session.begin():
-            lc = data_setup.create_labcontroller()
             other_lc = data_setup.create_labcontroller()
         b = self.browser
-        b.get(get_server_base() + 'labcontrollers/edit?id=%s' % lc.id)
-        b.find_element_by_name('lusername').clear()
-        b.find_element_by_name('lusername').send_keys(other_lc.user.user_name)
-        b.find_element_by_id('form').submit()
-        self.assertEquals(b.find_element_by_xpath(
-                '//input[@name="lusername"]/following-sibling::span').text,
-                'Username is in use by a different lab controller')
+        b.get(get_server_base() + 'labcontrollers')
+        b.find_element_by_xpath('//li[contains(., "%s")]//button[contains(., "Edit")]' % self.lc.fqdn).click()
+        b.find_element_by_name('user_name').clear()
+        b.find_element_by_name('user_name').send_keys(other_lc.user.user_name)
+        b.find_element_by_class_name('edit-labcontroller').submit()
+        expected = re.compile(r'User %s is already associated with lab controller %s' % (
+            other_lc.user.user_name, other_lc.fqdn))
+        self.assertRegexpMatches(
+            b.find_element_by_class_name('alert-error').text, expected)
 
     def test_lab_controller_remove(self):
         b = self.browser
         with session.begin():
-            lc = data_setup.create_labcontroller()
             # When an LC is removed, we de-associate all systems, cancel all 
             # running recipes, and remove all distro tree associations. So this 
             # test creates a system, job, and distro tree in the lab to cover 
             # all those cases.
-            sys = data_setup.create_system(lab_controller=lc)
-            job = data_setup.create_running_job(lab_controller=lc)
-            distro_tree = data_setup.create_distro_tree(lab_controllers=[lc])
+            sys = data_setup.create_system(lab_controller=self.lc)
+            job = data_setup.create_running_job(lab_controller=self.lc)
+            distro_tree = data_setup.create_distro_tree(lab_controllers=[self.lc])
         b.get(get_server_base() + 'labcontrollers')
-        b.find_element_by_xpath("//table[@id='widget']/tbody/tr/"
-            "td[preceding-sibling::td/a[normalize-space(text())='%s']]"
-            "/a[normalize-space(text())='Remove']" % lc.fqdn).click()
-        # confirm deletion
-        b.find_element_by_xpath('//button[@type="button" and .//text()="Delete"]').click()
-        self.assert_('%s removed' % lc.fqdn in
-            b.find_element_by_css_selector('.flash').text)
+        b.find_element_by_xpath('//li[contains(., "%s")]//button[contains(., "Remove")]' % self.lc.fqdn).click()
+        b.find_element_by_xpath('//button[@type="button" and .//text()="OK"]').click()
+        # Wait for the 'remove' request to finish by waiting for the 'Restore' button to appear
+        b.find_element_by_xpath('//li[contains(., "%s")]//button[contains(., "Restore")]' % self.lc.fqdn)
         with session.begin():
             session.expire_all()
             # check lc activity
-            self.assertEquals(lc.activity[0].field_name, u'Removed')
-            self.assertEquals(lc.activity[0].action, u'Changed')
-            self.assertEquals(lc.activity[0].new_value, u'True')
-            self.assertEquals(lc.activity[1].field_name, u'Disabled')
-            self.assertEquals(lc.activity[1].action, u'Changed')
-            self.assertEquals(lc.activity[1].new_value, u'True')
+            self.assertEquals(self.lc.activity[0].field_name, u'Removed')
+            self.assertEquals(self.lc.activity[0].action, u'Changed')
+            self.assertEquals(self.lc.activity[0].new_value, u'True')
+            self.assertEquals(self.lc.activity[1].field_name, u'Disabled')
+            self.assertEquals(self.lc.activity[1].action, u'Changed')
+            self.assertEquals(self.lc.activity[1].new_value, u'True')
             # check system activity
             self.assertEquals(sys.activity[0].field_name, u'lab_controller')
             self.assertEquals(sys.activity[0].action, u'Changed')
@@ -138,8 +159,93 @@ class LabControllerViewTest(WebDriverTestCase):
             self.assertEquals(job.status, TaskStatus.cancelled)
             # check distro tree activity
             self.assertEquals(distro_tree.activity[0].field_name,
-                    u'lab_controller_assocs')
+                              u'lab_controller_assocs')
             self.assertEquals(distro_tree.activity[0].action, u'Removed')
+
+    def test_remove_and_restore(self):
+        with session.begin():
+            system = data_setup.create_system()
+            system.lab_controller = self.lc
+            distro_tree = data_setup.create_distro_tree(lab_controllers=[self.lc])
+        self.assert_(any(lca.lab_controller == self.lc
+                         for lca in distro_tree.lab_controller_assocs))
+
+        # Remove and wait until the request has finished by waiting for the
+        # 'Restore' button to appear
+        b = self.browser
+        b.get(get_server_base() + 'labcontrollers/')
+        b.find_element_by_xpath(
+            '//li[contains(., "%s")]//button[contains(., "Remove")]' % self.lc.fqdn).click()
+        b.find_element_by_xpath('//button[@type="button" and .//text()="OK"]').click()
+        b.find_element_by_xpath(
+            '//li[contains(., "%s")]//button[contains(., "Restore")]' % self.lc.fqdn)
+        with session.begin():
+            session.refresh(self.lc)
+            self.assertTrue(self.lc.removed)
+            session.refresh(system)
+            self.assert_(system.lab_controller is None)
+            session.refresh(distro_tree)
+            self.assert_(not any(lca.lab_controller == self.lc
+                                 for lca in distro_tree.lab_controller_assocs))
+
+        # Restore
+        b.get(get_server_base() + 'labcontrollers/')
+        b.find_element_by_xpath(
+            '//li[contains(., "%s")]//button[contains(., "Restore")]' % self.lc.fqdn).click()
+        # Lab Controller is restored identified by Edit and 'Remove' buttons
+        b.find_element_by_xpath(
+            '//li[contains(., "%s")]//button[contains(., "Remove")]' % self.lc.fqdn)
+        b.find_element_by_xpath(
+            '//li[contains(., "%s")]//button[contains(., "Edit")]' % self.lc.fqdn)
+
+    def test_shows_list_when_permissions_insufficient(self):
+        with session.begin():
+            self.user = data_setup.create_user(password='asdf')
+
+        b = self.get_browser()
+        login(b, user=self.user.user_name, password='asdf')
+        b.get(get_server_base() + 'labcontrollers')
+        b.find_element_by_xpath('//body[not(.//li[contains(., "%s")]//button[contains(., "Remove")])]' % self.lc.fqdn)
+
+    def test_updates_labcontroller(self):
+        new_values = dict(
+            fqdn=data_setup.unique_name('lc.foo.%s.com'),
+            user_name=data_setup.unique_name('user1%s'),
+            password='asdf',
+            email_address='new_user_test@beaker-project.org',
+        )
+        b = self.browser
+        b.get(get_server_base() + 'labcontrollers/')
+        b.find_element_by_xpath('//li[contains(., "%s")]//button[contains(., "Edit")]' % self.lc.fqdn).click()
+        b.find_element_by_name('fqdn').clear()
+        b.find_element_by_name('fqdn').send_keys(new_values['fqdn'])
+        b.find_element_by_name('user_name').clear()
+        b.find_element_by_name('user_name').send_keys(new_values['user_name'])
+        b.find_element_by_name('email_address').clear()
+        b.find_element_by_name('email_address').send_keys(new_values['email_address'])
+        b.find_element_by_name('password').send_keys(new_values['password'])
+        b.find_element_by_class_name('edit-labcontroller').submit()
+        b.find_element_by_xpath('//li[contains(., "%s")]//button[contains(., "Edit")]' % new_values['fqdn'])
+
+        with session.begin():
+            session.refresh(self.lc)
+            self.assertEqual(self.lc.fqdn, new_values['fqdn'])
+            self.assertEqual(self.lc.user.user_name, new_values['user_name'])
+            self.assertEqual(self.lc.user.email_address, new_values['email_address'])
+            self.assertFalse(self.lc.removed)
+            self.assertFalse(self.lc.disabled)
+
+    def test_disables_labcontroller(self):
+        b = self.browser
+        b.get(get_server_base() + 'labcontrollers/')
+        b.find_element_by_xpath('//li[contains(., "%s")]//button[contains(., "Edit")]' % self.lc.fqdn).click()
+        b.find_element_by_name('disabled').click()
+        b.find_element_by_class_name('edit-labcontroller').submit()
+        b.find_element_by_xpath('//li[contains(., "Disabled")]')
+
+        with session.begin():
+            session.refresh(self.lc)
+            self.assertTrue(self.lc.disabled)
 
 
 class AddDistroTreeXmlRpcTest(XmlRpcTestCase):
@@ -697,3 +803,256 @@ class TestPowerFailures(XmlRpcTestCase):
         self.assertEquals(queued_commands[1]['netboot']['arch'], 'i386')
         self.assertEquals(queued_commands[1]['netboot']['distro_tree_id'],
                           distro_tree.id)
+
+
+class LabControllerHTTPTest(DatabaseTestCase):
+
+    def setUp(self):
+        self.lc_fqdn = u'lab.domain.com'
+        with session.begin():
+            self.lc_user = data_setup.create_admin(password='theowner')
+            self.user_password = '_'
+            self.user = data_setup.create_user(password=self.user_password)
+            self.lc = data_setup.create_labcontroller(fqdn=self.lc_fqdn,
+                                                      user=self.lc_user)
+
+    def test_no_labcontroller(self):
+        """Not existing lab controller results in a 404."""
+        response = requests.get(
+            get_server_base() + 'labcontrollers/doesnotexist',
+            headers={'Accept': 'application/json'})
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(response.text.endswith('does not exist'))
+
+    def test_creates_labcontroller_with_new_user(self):
+        """Verify that we can create a new lab controller."""
+        s = requests.Session()
+        web_login(s)
+        fqdn = data_setup.unique_name('lc%s.com')
+        data = {'fqdn': fqdn,
+                'user_name': 'mjia',
+                'password': '',
+                'email_address': 'mjia@beaker-project.org'}
+        response = post_json(
+            get_server_base() + '/labcontrollers/', session=s, data=data)
+
+        self.assertEqual(response.status_code, 201)
+        with session.begin():
+            lc = LabController.query.filter_by(fqdn=data['fqdn']).one()
+            self.assertEqual(lc.user.user_name, data['user_name'])
+            self.assertEqual(lc.user.email_address, data['email_address'])
+            self.assertIn(Group.by_name(u'lab_controller'), lc.user.groups)
+
+    def test_creates_labcontroller_with_existing_user(self):
+        """Verify that a new lab controller is created with an existing user."""
+        with session.begin():
+            user_name = 'Frank'
+            display_name = 'Beaker Boyz'
+            data_setup.create_user(user_name=user_name,
+                                   display_name=display_name,
+                                   email_address='bbz@beaker-project.org')
+
+        s = requests.Session()
+        web_login(s)
+        response = post_json(
+            get_server_base() + '/labcontrollers/',
+            session=s,
+            data={'fqdn': 'lc1.beer.newtest',
+                  'user_name': user_name,
+                  'display_name': display_name,
+                  'email_address': 'different@redhat.com',
+            })
+
+        self.assertEqual(response.status_code, 201)
+        with session.begin():
+            lc = LabController.query.filter_by(fqdn='lc1.beer.newtest').one()
+            self.assertEqual(lc.user.user_name, user_name)
+            self.assertEqual(lc.user.email_address, 'different@redhat.com')
+            self.assertIn(Group.by_name(u'lab_controller'), lc.user.groups)
+
+    def test_creates_labcontroller_with_existing_labcontroller_user(self):
+        """Verifies adding a new lab controller with a user associated to an
+        existing lab controller results in an error."""
+        s = requests.Session()
+        web_login(s)
+        data = {'fqdn': 'lc1.beer.newtest',
+                'user_name': self.lc.user.user_name}
+
+        response = post_json(
+            get_server_base() + '/labcontrollers/', session=s, data=data)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(re.search('is already associated with lab controller', response.text))
+
+    def test_get_labcontroller_json(self):
+        """Can successfully retrieve lab controller details in JSON."""
+        response = requests.get(
+            get_server_base() + 'labcontrollers/' + self.lc.fqdn,
+            headers={'Accept': 'application/json'}
+        )
+        expected = {
+            u'fqdn': self.lc.fqdn,
+            u'id': self.lc.id,
+            u'disabled': self.lc.disabled,
+            u'is_removed': bool(self.lc.removed),
+            u'removed': self.lc.removed,
+            u'display_name': self.lc.user.display_name,
+            u'email_address': self.lc.user.email_address,
+            u'user_name': self.lc.user.user_name
+        }
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(expected, response.json())
+
+    def test_no_change_with_incorrect_data(self):
+        """Lab controllers don't change if different data is passed."""
+        s = requests.Session()
+        web_login(s)
+        response = patch_json(
+            get_server_base() + 'labcontrollers/' + self.lc.fqdn,
+            session=s,
+            data={'ignored': '_'})
+        self.assertEquals(response.status_code, 200)
+
+    def test_no_permission(self):
+        """Authorised users with improper permissions can not change the lab
+        controller.
+        """
+        # guard so we can be sure the test does pass because this user got all
+        # of a sudden admin rights
+        self.assertFalse(self.lc.can_edit(self.user))
+
+        s = requests.Session()
+        web_login(s, self.user, password=self.user_password)
+        response = patch_json(
+            get_server_base() + 'labcontrollers/' + self.lc.fqdn,
+            session=s,
+            data={'user_name': self.user.user_name})
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(re.search('Cannot edit lab controller', response.text))
+
+    def test_renames_successfully(self):
+        """Renames the lab controller successfully."""
+        data = {'fqdn': data_setup.unique_name('lc%s.com'),
+                'user_name': self.lc.user.user_name,
+                'email_address': self.lc.user.email_address}
+
+        s = requests.Session()
+        web_login(s)
+        response = patch_json(
+            get_server_base() + 'labcontrollers/' + self.lc.fqdn, session=s, data=data)
+
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()['fqdn'], data['fqdn'])
+        self.assertEqual(get_server_base() + 'labcontrollers/%s' % data['fqdn'],
+                         response.headers['Location'])
+        with session.begin():
+            lc = LabController.by_name(data['fqdn'])
+            self.assertRaises(NoResultFound, LabController.by_name, self.lc.fqdn)
+            self.assertTrue(lc)
+
+    def test_renames_duplicated_labcontroller_errors(self):
+        """Verify that we get a useful error message if we rename to an
+        existing lab controller."""
+        with session.begin():
+            lc = data_setup.create_labcontroller()
+
+        s = requests.Session()
+        web_login(s)
+        response = patch_json(get_server_base() + 'labcontrollers/' + self.lc.fqdn,
+                              session=s,
+                              data={'fqdn': lc.fqdn})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertRegexpMatches(
+            response.text,
+            re.compile(r'FQDN %s already in use' % lc.fqdn)
+        )
+
+    def test_disables_labcontroller_successfully(self):
+        with session.begin():
+            session.refresh(self.lc)
+            self.assertFalse(self.lc.disabled)
+
+        s = requests.Session()
+        web_login(s)
+        response = patch_json(get_server_base() + 'labcontrollers/' + self.lc.fqdn,
+                              session=s,
+                              data={'disabled': True})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['disabled'])
+
+        with session.begin():
+            session.refresh(self.lc)
+            self.assertTrue(self.lc.disabled)
+            self.assertEqual(self.lc.activity[0].action, 'Changed')
+            self.assertEqual(self.lc.activity[0].field_name, 'disabled')
+
+    def test_changes_user_successfully(self):
+        """Changes the lab controller credentials successfully."""
+        with session.begin():
+            group = Group.by_name('lab_controller')
+            self.assertNotIn(group, self.user.groups)
+
+        s = requests.Session()
+        web_login(s)
+        response = patch_json(
+            get_server_base() + 'labcontrollers/' + self.lc.fqdn,
+            session=s,
+            data={'user_name': self.user.user_name})
+        self.assertEqual(response.status_code, 200)
+
+        with session.begin():
+            for obj in [self.lc, self.user, group]:
+                session.refresh(obj)
+
+            self.assertDictEqual({
+                'id': self.lc.id,
+                'fqdn': self.lc.fqdn,
+                'disabled': self.lc.disabled,
+                'is_removed': bool(self.lc.removed),
+                'removed': self.lc.removed,
+                'display_name': self.lc.fqdn,
+                'email_address': self.user.email_address,
+                'user_name': self.user.user_name,
+            }, response.json())
+            self.assertEqual(self.lc.fqdn, self.user.display_name)
+            self.assertIn(group, self.lc.user.groups)
+
+    def test_removed_labcontroller_can_be_restored(self):
+        """Verifies that a removed lab controller can be restored."""
+        with session.begin():
+            self.lc.disabled = True
+            self.lc.removed = datetime.datetime.utcnow()
+
+        s = requests.Session()
+        web_login(s)
+        response = patch_json(
+            get_server_base() + '/labcontrollers/' + self.lc.fqdn,
+            session=s,
+            data={'removed': False})
+
+        self.assertEquals(response.status_code, 200)
+
+        with session.begin():
+            session.expire_all()
+            self.assertFalse(self.lc.disabled)
+            self.assertIsNone(self.lc.removed)
+
+    # backwards compatibility
+    # remove me once https://bugzilla.redhat.com/show_bug.cgi?id=1211119 is fixed
+    def test_save_creates_labcontroller(self):
+        s = requests.Session()
+        web_login(s)
+        fqdn = data_setup.unique_name('lc%s.com')
+        data = {'fqdn': fqdn,
+                'lusername': 'host/dev-kvm',
+                'lpassword': 'testing',
+                'email': 'root@dev-kvm.org'}
+        response = s.post(
+            get_server_base() + '/labcontrollers/save', data=data)
+
+        self.assertEqual(response.status_code, 201)
+        with session.begin():
+            lc = LabController.query.filter_by(fqdn=data['fqdn']).one()
+            self.assertEqual(lc.user.user_name, data['lusername'])
+            self.assertEqual(lc.user.email_address, data['email'])

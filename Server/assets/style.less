@@ -289,7 +289,11 @@ input.tt-hint {
 
 .list-group-mixin {
     max-width: 35em;
-    .btn {
+    li > .btn {
+        float: right;
+        margin-top: -5px;
+    }
+    li > .btn-group {
         float: right;
         margin-top: -5px;
     }
@@ -305,6 +309,7 @@ input.tt-hint {
 @import "powertypes.less";
 @import "group.less";
 @import "clone-job.less";
+@import "labcontrollers.less";
 
 // Site-specific styles. The beaker-server package creates site.less as 
 // a symlink to /dev/null if it doesn't exist. Admins can overwrite the symlink 

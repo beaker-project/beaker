@@ -4,11 +4,11 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import urllib
 from sqlalchemy import (Column, ForeignKey, Integer, Unicode, Boolean,
         DateTime)
 from sqlalchemy.orm import relationship, synonym
 from sqlalchemy.orm.exc import NoResultFound
-from turbogears.database import session
 from .base import DeclarativeMappedObject
 from .activity import Activity, ActivityMixin
 from .identity import User
@@ -57,6 +57,18 @@ class LabController(DeclarativeMappedObject, ActivityMixin):
     def __repr__(self):
         return "%s" % (self.fqdn)
 
+    def __json__(self):
+        return {
+            'id': self.id,
+            'fqdn': self.fqdn,
+            'disabled': bool(self.disabled),
+            'is_removed': bool(self.removed),
+            'removed': self.removed,
+            'user_name': self.user.user_name,
+            'email_address': self.user.email_address,
+            'display_name': self.user.display_name,
+        }
+
     @classmethod
     def by_id(cls, id):
         try:
@@ -77,3 +89,11 @@ class LabController(DeclarativeMappedObject, ActivityMixin):
         if valid:
             all = cls.query.filter_by(removed=None)
         return [(lc.id, lc.fqdn) for lc in all]
+
+    def can_edit(self, user):
+        return user.is_admin()
+
+    @property
+    def href(self):
+        """Returns a relative URL."""
+        return urllib.quote((u'/labcontrollers/%s' % self.fqdn).encode('utf8'))

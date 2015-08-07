@@ -1,0 +1,25 @@
+<span class="<%- disabled ? 'disabled' : '' %>">
+<%- fqdn %>
+</span>
+<div class="btn-group">
+  <% if (can_edit || false) { %>
+    <% if (!is_removed) { %>
+        <button type="button" class="btn labcontroller-edit" data-labcontroller-edit="<%- fqdn %>"><i class="fa fa-edit"></i> Edit</button>
+        <button type="button" class="btn btn-danger labcontroller-remove" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Removing&hellip;" data-labcontroller-remove="<%- fqdn %>"><i class="fa fa-trash"></i> Remove</button>
+    <% } else { %>
+        <button type="button" class="btn labcontroller-restore" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Restoring&hellip;" data-labcontroller-restore="<%- fqdn %>"><i class="fa fa-plus"></i> Restore</button>
+    <% } %>
+  <% } %>
+</div>
+<!-- only show Disabled if the lab controller is not removed. You can't enable a removed lab controller anyway //-->
+<% if (disabled && !is_removed) { %>
+<small>Disabled</small>
+<% } %>
+
+<% if (is_removed) { %>
+<small>Removed
+  <time datetime="<%- moment.utc(removed).toISOString() %>" title="<%- removed %>">
+    <%- moment.utc(removed).local().fromNow() %>
+  </time>
+</small>
+<% } %>

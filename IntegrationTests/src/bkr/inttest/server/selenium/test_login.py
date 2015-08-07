@@ -29,6 +29,14 @@ class LoginTest(WebDriverTestCase):
         self.user = data_setup.create_user(password=self.password)
         self.browser = self.get_browser()
 
+    def test_message_when_permissions_insufficient(self):
+        b = self.browser
+        login(b, self.user.user_name, self.password)
+        b.get(get_server_base() + 'configuration')
+        b.find_element_by_xpath('//title[text() = "Forbidden"]')
+        self.assertEqual(b.find_element_by_css_selector('#reasons').text,
+                         'Not member of group: admin')
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=660527
     def test_referer_redirect(self):
         with session.begin():
@@ -84,15 +92,6 @@ class LoginTest(WebDriverTestCase):
         b.find_element_by_link_text('Log in').click()
         self.assertEquals(b.find_element_by_css_selector('#message').text,
                 'Please log in.')
-
-    def test_message_when_permissions_insufficient(self):
-        b = self.browser
-        login(b, self.user.user_name, self.password)
-        b.get(get_server_base() + 'labcontrollers')
-        # XXX should check for 403 response code
-        b.find_element_by_xpath('//title[text()="Forbidden"]')
-        self.assertEquals(b.find_element_by_css_selector('#reasons').text,
-                'Not member of group: admin')
 
     def test_message_when_password_mistyped(self):
         b = self.browser

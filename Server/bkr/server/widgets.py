@@ -32,7 +32,6 @@ from bkr.server.model import TaskStatus
 from bkr.server.assets import get_assets_env
 from bkr.server.bexceptions import BeakerException
 from bkr.server.helpers import make_link
-from bkr.server.validators import LabControllerFormValidator
 from bkr.server.util import VALID_FQDN_REGEX
 import logging
 log = logging.getLogger(__name__)
@@ -424,11 +423,6 @@ class myPaginateDataGrid(PaginateDataGrid):
     template = "bkr.server.templates.my_paginate_datagrid"
     params = ['add_action', 'add_script']
 
-class LabControllerDataGrid(myPaginateDataGrid):
-    javascript = [LocalJSLink('bkr','/static/javascript/lab_controller_remove.js'),
-                  LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js', order=3),]
-    css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
-
 class SingleSelectFieldJSON(SingleSelectField):
     params = ['for_column']
     def __init__(self,*args,**kw):
@@ -452,38 +446,6 @@ class TextFieldJSON(TextField):
                 'field_id' : self.field_id,             
                }
 
-
-class LabControllerFormSchema(validators.Schema):
-    fqdn = validators.UnicodeString(not_empty=True, max=256, strip=True)
-    lusername = validators.UnicodeString(not_empty=True)
-    email = validators.Email(not_empty=True)
-    chained_validators = [LabControllerFormValidator('id', 'fqdn', 'lusername', 'email')]
-
-
-class LabControllerForm(HorizontalForm):
-    action = 'save_data'
-    submit_text = _(u'Save')
-    fields = [
-              HiddenField(name='id'),
-              TextField(name='fqdn', label=_(u'FQDN')),
-              TextField(name='lusername',
-                       label=_(u'Username')),
-              PasswordField(name='lpassword',
-                            label=_(u'Password')),
-              TextField(name='email', 
-                        label=_(u'Lab Controller Email Address')),
-              CheckBox(name='disabled',
-                       label=_(u'Disabled'),
-                       default=False),
-             ]
-    validator = LabControllerFormSchema()
-
-    def update_params(self, d):
-        super(LabControllerForm, self).update_params(d)
-        if 'user' in d['options']:
-            d['value']['lusername'] = d['options']['user'].user_name
-            d['value']['email'] = d['options']['user'].email_address
-            
 
 class NestedGrid(CompoundWidget):
     template = "bkr.server.templates.inner_grid" 
