@@ -44,10 +44,12 @@ window.SystemPoolHeading = Backbone.View.extend({
             .done(function () { window.location = beaker_url_prefix + 'pools/'; });
     },
     delete_error: function(xhr) {
-        $.bootstrapGrowl('<h4>Failed to delete</h4> ' +
-                xhr.statusText + ': ' + xhr.responseText,
-                {type: 'error'});
-        this.$('button.delete').button('reset');
+        if (!_.isEmpty(xhr)) {
+            $.bootstrapGrowl('<h4>Failed to delete</h4> ' +
+                  xhr.statusText + ': ' + xhr.responseText,
+                    {type: 'error'});
+            this.$('button.delete').button('reset');
+        }
     },
 });
 

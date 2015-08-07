@@ -17,6 +17,7 @@ from bkr.inttest.server.requests_utils import put_json, post_json, patch_json
 from bkr.inttest.server.requests_utils import login as send_login
 from sqlalchemy.orm.exc import NoResultFound
 
+
 class SystemPoolsGridTest(WebDriverTestCase):
 
     def setUp(self):
@@ -270,6 +271,19 @@ class SystemPoolEditTest(WebDriverTestCase):
         self.go_to_pool_edit(system_pool=pool, tab='Systems')
         # user has no access to see the system
         b.find_element_by_xpath('//li/em[contains(text(), "system with restricted visibility")]')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1251294
+    def test_cancel_deleting_pool(self):
+        b = self.browser
+        login(b)
+        self.go_to_pool_edit()
+        b.find_element_by_xpath('//button[contains(string(.), "Delete")]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_xpath('.//p[text()="Are you sure you want to '
+               'delete this pool?"]')
+        modal.find_element_by_xpath('.//button[text()="Cancel"]').click()
+        # test if the bootbox is closed properly
+        b.find_element_by_xpath('//div[not(contains(@class, "modal"))]')
 
 
 class SystemPoolAccessPolicyWebUITest(WebDriverTestCase):
