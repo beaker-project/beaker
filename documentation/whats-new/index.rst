@@ -33,6 +33,21 @@ version, see :doc:`../admin-guide/upgrading`.
        next/*
 
 
+Beaker 21
+---------
+
+Beaker 21 simplifies the process for system owners to run hardware scans on 
+their Beaker systems, reducing it to a single click or CLI command.
+This release also includes an improved version of the 
+:program:`beaker-system-scan` tool, providing broader hardware support and more 
+accurate hardware information for Beaker systems.
+
+.. toctree::
+   :maxdepth: 2
+
+   release-21
+
+
 Beaker 20
 ---------
 
