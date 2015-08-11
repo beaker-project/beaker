@@ -310,10 +310,8 @@ cat << EOF > /etc/beah.conf
 # see /etc/beah.conf.default for commented configuration
 
 [DEFAULT]
-# Turn on more verbose logging and redirect to console. This is useful for
-# debugging harness' problems.
+# Turn on more verbose logging. This is useful for debugging harness' problems.
 LOG=Info
-CONSOLE_LOG=Console
 # To turn on debug logging uncomment the following line. Warning: this is
 # rather verbose! This also requires LOG to be Debug.
 #DEVEL=True
