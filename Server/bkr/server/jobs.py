@@ -215,10 +215,8 @@ class Jobs(RPCRoot):
             'maxid'
                 Maximum Job ID of the jobs to search
 
-        Returns a two-element array. The first element is an array of JobIDs
-        of the form ``'J:123'``, suitable to be passed to the
-        :meth:`jobs.delete_jobs` method. The second element is a human-readable
-        count of the number of Jobs matched. Does not return deleted jobs.
+        Returns an array of JobIDs of the form ``'J:123'``, suitable to be passed
+        to the :meth:`jobs.delete_jobs` method. Does not return deleted jobs.
         """
 
         # if  min/max/both IDs have been specified, filter it right here
