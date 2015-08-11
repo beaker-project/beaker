@@ -308,6 +308,9 @@ Beaker 20.2
   database. (Contributed by Matt Jia)
 * :issue:`1212517`: The :program:`bkr` client is now compatible with the
   SSL-related changes in Python 2.7.9. (Contributed by Dan Callaghan)
+* :issue:`1102442`: The :program:`bkr system-release` command can now also
+  release a system which is held by a recipe in Reserved status (using 
+  ``<reservesys/>``). (Contributed by Matt Jia)
 * :issue:`1181700`: The :program:`bkr system-power` command now accepts
   :option:`--action=none <bkr system-power --action>` in conjunction with 
   :option:`--clear-netboot <bkr system-power --clear-netboot>` to allow 
