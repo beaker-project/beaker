@@ -349,8 +349,8 @@ class MigrationTest(unittest.TestCase):
         connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (1, "test.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
         connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (2, "test1.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
         connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (3, "test2.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
-        connection.execute('INSERT INTO tg_group(group_id, group_name) VALUES (3, "group1")')
-        connection.execute('INSERT INTO tg_group(group_id, group_name) VALUES (4, "group2")')
+        connection.execute('INSERT INTO tg_group(group_id, group_name, ldap) VALUES (3, "group1", FALSE)')
+        connection.execute('INSERT INTO tg_group(group_id, group_name, ldap) VALUES (4, "group2", FALSE)')
         connection.execute('INSERT INTO system_group(system_id, group_id) VALUES (1, 3)')
         connection.execute('INSERT INTO system_group(system_id, group_id) VALUES (2, 3)')
         connection.execute('INSERT INTO system_group(system_id, group_id) VALUES (1, 4)')
@@ -367,8 +367,8 @@ class MigrationTest(unittest.TestCase):
                                'Pool migrated from group group2'],
                               [pool.description for pool in created_pools])
         expected_system_pool_owners = {
-            'group1': 'group1',
-            'group2': 'group2',
+            u'group1': u'group1',
+            u'group2': u'group2',
         }
         for pool in expected_system_pool_owners.keys():
             p = self.migration_session.query(SystemPool).filter(SystemPool.name == pool).one()
@@ -376,9 +376,9 @@ class MigrationTest(unittest.TestCase):
                               self.migration_session.query(Group).filter(Group.group_name == pool).one())
 
         expected_system_pools_map = {
-            'test.fqdn.name': ['group1', 'group2'],
-            'test1.fqdn.name': ['group1'],
-            'test2.fqdn.name': ['group2'],
+            u'test.fqdn.name': [u'group1', u'group2'],
+            u'test1.fqdn.name': [u'group1'],
+            u'test2.fqdn.name': [u'group2'],
         }
         for system in expected_system_pools_map.keys():
             s = self.migration_session.query(System).filter(System.fqdn == system).one()
