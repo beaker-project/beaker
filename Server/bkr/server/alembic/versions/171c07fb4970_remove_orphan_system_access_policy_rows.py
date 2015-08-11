@@ -21,10 +21,21 @@ from sqlalchemy.dialects import mysql
 
 def upgrade():
     op.execute("""
-        DELETE FROM system_access_policy WHERE
-        NOT EXISTS (SELECT 1 FROM system WHERE custom_access_policy_id =
-        system_access_policy.id) AND NOT EXISTS(SELECT 1 FROM system_pool
-        WHERE access_policy_id = system_access_policy.id)
+        DELETE FROM system_access_policy_rule
+        USING system_access_policy
+        INNER JOIN system_access_policy_rule
+            ON system_access_policy_rule.policy_id = system_access_policy.id
+        WHERE NOT EXISTS
+            (SELECT 1 FROM system WHERE custom_access_policy_id = system_access_policy.id)
+        AND NOT EXISTS
+            (SELECT 1 FROM system_pool WHERE access_policy_id = system_access_policy.id)
+        """)
+    op.execute("""
+        DELETE FROM system_access_policy
+        WHERE NOT EXISTS
+            (SELECT 1 FROM system WHERE custom_access_policy_id = system_access_policy.id)
+        AND NOT EXISTS
+            (SELECT 1 FROM system_pool WHERE access_policy_id = system_access_policy.id)
         """)
 def downgrade():
     pass # no downgrade because we are fixing up old data

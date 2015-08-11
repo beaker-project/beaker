@@ -11,7 +11,7 @@ from turbogears import config
 from turbogears.database import metadata
 from bkr.server.tools.init import upgrade_db, downgrade_db
 from sqlalchemy.orm import create_session
-from bkr.server.model import SystemPool, System, Group, User
+from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, User
 
 def has_initial_sublist(larger, prefix):
     """ Return true iff list *prefix* is an initial sublist of list 
@@ -108,6 +108,13 @@ class MigrationTest(unittest.TestCase):
         connection = self.migration_metadata.bind.connect()
         connection.execute(pkg_resources.resource_string('bkr.inttest.server',
                 'database-dumps/19.sql'))
+        upgrade_db(self.migration_metadata)
+        self.check_migrated_schema()
+
+    def test_from_20(self):
+        connection = self.migration_metadata.bind.connect()
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/20.sql'))
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
@@ -426,3 +433,29 @@ class MigrationTest(unittest.TestCase):
                       migration_metadata.tables['system_access_policy'].columns.keys())
         self.assertNotIn('system_access_policy_id',
                       migration_metadata.tables['system_pool'].columns.keys())
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1198914
+    def test_delete_orphaned_system_access_policies(self):
+        connection = self.migration_metadata.bind.connect()
+        # populate empty database
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/20.sql'))
+        # access policy 1 is referenced, access policy 2 is an orphan
+        connection.execute("INSERT INTO system_access_policy (id) VALUES (1)")
+        connection.execute("INSERT INTO system_access_policy_rule "
+                "(policy_id, user_id, group_id, permission) "
+                "VALUES (1, NULL, NULL, 'view')")
+        connection.execute("INSERT INTO system "
+                "(fqdn, date_added, owner_id, type, status, kernel_type_id, "
+                " custom_access_policy_id, active_access_policy_id) "
+                "VALUES ('test.example.invalid', '2015-01-01', 1, 1, 1, 1, 1, 1)")
+        connection.execute("INSERT INTO system_access_policy (id) VALUES (2)")
+        connection.execute("INSERT INTO system_access_policy_rule "
+                "(policy_id, user_id, group_id, permission) "
+                "VALUES (2, NULL, NULL, 'view')")
+        # run migration
+        upgrade_db(self.migration_metadata)
+        # check that access policy 2 has been deleted
+        self.assertEquals(
+                self.migration_session.query(SystemAccessPolicy).filter_by(id=2).count(),
+                0)
