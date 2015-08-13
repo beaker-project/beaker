@@ -49,12 +49,8 @@ def main():
     if not options.release_note_file:
         parser.error('Must specify where the release notes file is')
 
-    # We only care about the milestone
-    states = None
-    sprint = None
-    release = None
     milestone = options.milestone
-    bugs = get_bugs(milestone, release, sprint, states)
+    bugs = get_bugs(milestone=milestone)
     if not bugs:
         print 'There are no bugs for milestone %s' % milestone
         return 0
