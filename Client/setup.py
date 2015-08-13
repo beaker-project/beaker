@@ -13,7 +13,7 @@ def bash_completion_dir():
 
 setup(
     name = "bkr.client",
-    version='20.2',
+    version='21.0rc1',
     license = "GPLv2+",
 
     packages=find_packages('src'),
