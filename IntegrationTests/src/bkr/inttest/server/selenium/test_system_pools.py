@@ -197,7 +197,7 @@ class SystemPoolEditTest(WebDriverTestCase):
         modal.find_element_by_name('group_name').clear()
         modal.find_element_by_name('group_name').send_keys(group.group_name)
         modal.find_element_by_xpath('.//button[text()="Save changes"]').click()
-        b.find_element_by_xpath('//body[not(.//div[@id="modal"])]')
+        b.find_element_by_xpath('//body[not(.//h3[text()="Edit system pool"])]')
         with session.begin():
             session.refresh(pool)
             self.assertEqual(pool.description, 'newdescription')
