@@ -15,10 +15,10 @@ from bkr.server.flask_util import auth_required, \
     Forbidden403, MethodNotAllowed405, NotFound404, Conflict409, \
     UnsupportedMediaType415, request_wants_json, render_tg_template, \
     json_collection
+from bkr.server.util import absolute_url
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm.exc import NoResultFound
 from turbogears.database import session
-from turbogears import  url
 from bkr.server.systems import _get_system_by_FQDN, _edit_access_policy_rules
 import datetime
 
@@ -173,7 +173,7 @@ def create_pool():
                      new=unicode(pool))
     response = jsonify(pool.__json__())
     response.status_code = 201
-    response.headers.add('Location', url(pool.href))
+    response.headers.add('Location', absolute_url(pool.href))
     return response
 
 @app.route('/pools/<pool_name>/', methods=['PATCH'])
@@ -223,7 +223,7 @@ def update_pool(pool_name):
 
     response = jsonify(pool.__json__())
     if renamed:
-        response.headers.add('Location', url(pool.href))
+        response.headers.add('Location', absolute_url(pool.href))
     return response
 
 # For compat only. Separate function so that it doesn't appear in the docs.

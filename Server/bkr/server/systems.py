@@ -12,7 +12,7 @@ from sqlalchemy import and_, desc
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm.exc import NoResultFound
 from flask import request, jsonify, redirect as flask_redirect
-from turbogears import expose, controllers, flash, url
+from turbogears import expose, controllers, flash
 from bkr.server import identity, mail
 from bkr.server.bexceptions import BX, InsufficientSystemPermissions
 from bkr.server.model import System, SystemActivity, SystemStatus, SystemPool, \
@@ -29,6 +29,7 @@ from bkr.server.flask_util import BadRequest400, Unauthorised401, \
         Conflict409, UnsupportedMediaType415, ServiceUnavailable503, \
         convert_internal_errors, auth_required, read_json_request, \
         json_collection
+from bkr.server.util import absolute_url
 from turbogears.database import session
 import cherrypy
 from bkr.server.cherrypy_util import PlainTextHTTPException
@@ -348,7 +349,7 @@ def add_system():
     # convenient because it lets us use a traditional browser form without AJAX 
     # handling, and for now we're redirecting to /view/FQDN until that is moved 
     # to /systems/FQDN/
-    return flask_redirect(url(system.href))
+    return flask_redirect(absolute_url(system.href))
 
 # XXX need to move /view/FQDN to /systems/FQDN/
 @app.route('/systems/<fqdn>/', methods=['GET'])
@@ -672,7 +673,7 @@ def update_system(fqdn):
 
     response = jsonify(system.__json__())
     if renamed:
-        response.headers.add('Location', url(system.href))
+        response.headers.add('Location', absolute_url(system.href))
     return response
 
 # For compat only. Separate function so that it doesn't appear in the docs.

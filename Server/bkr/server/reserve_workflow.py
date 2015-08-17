@@ -4,7 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from turbogears import expose, url
+from turbogears import expose
 from flask import request
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server import identity
@@ -14,6 +14,7 @@ from bkr.server.flask_util import BadRequest400, \
 from bkr.server.model import (Distro, Job, System, Arch, OSMajor, DistroTag,
         SystemType, OSVersion, DistroTree, LabController, MachineRecipe)
 from bkr.server.bexceptions import DatabaseLookupError
+from bkr.server.util import absolute_url
 
 import logging
 log = logging.getLogger(__name__)
@@ -52,7 +53,7 @@ def doit():
     job_details['koptions_post'] = request.form.get('koptions_post')
     with convert_internal_errors():
         job = Job.provision_system_job(distro_trees, **job_details)
-    return 'Created %s' % job.t_id, 201, [('Location', url('/jobs/%s' % job.id))]
+    return 'Created %s' % job.t_id, 201, [('Location', absolute_url('/jobs/%s' % job.id))]
 
 class ReserveWorkflow:
 
