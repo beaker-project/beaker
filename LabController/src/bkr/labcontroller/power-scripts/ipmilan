@@ -6,4 +6,4 @@ if [ "$power_mode" == interrupt ] ; then
 fi
 /bin/ping -c 1 "$power_address" > /dev/null || ( echo "PING TIME OUT"; exit 1)
 # use power_id to pass in additional options like -P, Use Lanplus
-fence_ipmilan -v -i "$power_address" $power_id -l "$power_user" -p "$power_pass" -o "$power_mode"
+fence_ipmilan -v -a "$power_address" $power_id -l "$power_user" -p "$power_pass" -o "$power_mode"
