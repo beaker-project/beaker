@@ -682,7 +682,20 @@ class PushXmlRpcTest(XmlRpcTestCase):
             session.refresh(system)
             self.assertEquals(system.activity[0].service, u'XMLRPC')
             self.assertEquals(system.activity[0].action, u'Added')
-            self.assertEquals(system.activity[0].field_name, 'Disk')
+            self.assertEquals(system.activity[0].field_name, u'Disk:model')
+            self.assertEquals(system.activity[0].new_value, u'Virtio Block Device')
+            self.assertEquals(system.activity[1].service, u'XMLRPC')
+            self.assertEquals(system.activity[1].action, u'Added')
+            self.assertEquals(system.activity[1].field_name, u'Disk:phys_sector_size')
+            self.assertEquals(system.activity[1].new_value, u'512')
+            self.assertEquals(system.activity[2].service, u'XMLRPC')
+            self.assertEquals(system.activity[2].action, u'Added')
+            self.assertEquals(system.activity[2].field_name, u'Disk:sector_size')
+            self.assertEquals(system.activity[2].new_value, u'512')
+            self.assertEquals(system.activity[3].service, u'XMLRPC')
+            self.assertEquals(system.activity[3].action, u'Added')
+            self.assertEquals(system.activity[3].field_name, u'Disk:size')
+            self.assertEquals(system.activity[3].new_value, u'8589934592')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=708172
     def test_memory_is_updated(self):
@@ -694,29 +707,44 @@ class PushXmlRpcTest(XmlRpcTestCase):
             session.refresh(system)
             self.assertEquals(system.memory, 1024)
 
-    def test_disk_is_updated(self):
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1253103
+    def test_disks_are_updated(self):
         with session.begin():
             system = data_setup.create_system()
 
+        # We test with multiple identical disks, because that is very common in
+        # real systems and it tickles some corner cases on the server side.
         testdict = dict(model='foo',
                         phys_sector_size=4096,
                         sector_size=4096,
                         size=str(500107837440))
-        self.server.push(system.fqdn, dict(Disk=dict(Disks=[testdict])))
+        self.server.push(system.fqdn, dict(Disk=dict(Disks=[testdict, testdict])))
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.disks[0].model, testdict['model'])
-            self.assertEquals(system.disks[0].size, int(testdict['size']))
-            self.assertEquals(system.disks[0].sector_size, testdict['sector_size'])
-            self.assertEquals(system.disks[0].phys_sector_size,
-                    testdict['phys_sector_size'])
+            self.assertEquals(len(system.disks), 2)
+            self.assertEquals(system.disks[0].model, u'foo')
+            self.assertEquals(system.disks[0].size, 500107837440)
+            self.assertEquals(system.disks[0].sector_size, 4096)
+            self.assertEquals(system.disks[0].phys_sector_size, 4096)
+            self.assertEquals(system.disks[1].model, u'foo')
+            self.assertEquals(system.disks[1].size, 500107837440)
+            self.assertEquals(system.disks[1].sector_size, 4096)
+            self.assertEquals(system.disks[1].phys_sector_size, 4096)
 
         # make sure we can update a system with existing disks
         testdict['model'] = 'newer'
-        self.server.push(system.fqdn, dict(Disk=dict(Disks=[testdict])))
+        self.server.push(system.fqdn, dict(Disk=dict(Disks=[testdict, testdict])))
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.disks[0].model, testdict['model'])
+            self.assertEquals(len(system.disks), 2)
+            self.assertEquals(system.disks[0].model, u'newer')
+            self.assertEquals(system.disks[0].size, 500107837440)
+            self.assertEquals(system.disks[0].sector_size, 4096)
+            self.assertEquals(system.disks[0].phys_sector_size, 4096)
+            self.assertEquals(system.disks[1].model, u'newer')
+            self.assertEquals(system.disks[1].size, 500107837440)
+            self.assertEquals(system.disks[1].sector_size, 4096)
+            self.assertEquals(system.disks[1].phys_sector_size, 4096)
 
     def test_hypervisor_none(self):
         with session.begin():
