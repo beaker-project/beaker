@@ -207,13 +207,13 @@ READAHEAD_COLLECT="no"
 READAHEAD_COLLECT_ON_RPM="no"
 EOF
 fi
-systemctl disable systemd-readahead-collect
+systemctl disable systemd-readahead-collect.service
 
 if [ -e /etc/sysconfig/ntpdate ] ; then
-    systemctl enable ntpdate
+    systemctl enable ntpdate.service
 fi
 if [ -e "/etc/sysconfig/ntpd" ]; then
-    systemctl enable ntpd
+    systemctl enable ntpd.service
     GOT_G=$(/bin/cat /etc/sysconfig/ntpd | grep -E '^OPTIONS' | grep '\-g')
 
     if [ -z "$GOT_G" ]; then
@@ -228,10 +228,10 @@ if [ -e /etc/chrony.conf ] ; then
     # setting iburst should speed up initial sync
     # https://bugzilla.redhat.com/show_bug.cgi?id=787042#c12
     echo NTPSERVERARGS=iburst >>/etc/sysconfig/network
-    systemctl disable ntpd
-    systemctl disable ntpdate
-    systemctl enable chronyd
-    systemctl enable chrony-wait
+    systemctl disable ntpd.service
+    systemctl disable ntpdate.service
+    systemctl enable chronyd.service
+    systemctl enable chrony-wait.service
 fi
 
 if efibootmgr &>/dev/null ; then
@@ -321,9 +321,9 @@ INTERFACE=
 
 EOF
 
-systemctl enable beah-srv
-systemctl enable beah-beaker-backend
-systemctl enable beah-fwd-backend
+systemctl enable beah-srv.service
+systemctl enable beah-beaker-backend.service
+systemctl enable beah-fwd-backend.service
 
 #Add test user account
 useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test

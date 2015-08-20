@@ -191,13 +191,13 @@ READAHEAD_COLLECT="no"
 READAHEAD_COLLECT_ON_RPM="no"
 EOF
 fi
-systemctl disable systemd-readahead-collect
+systemctl disable systemd-readahead-collect.service
 
 if [ -e /etc/sysconfig/ntpdate ] ; then
-    systemctl enable ntpdate
+    systemctl enable ntpdate.service
 fi
 if [ -e "/etc/sysconfig/ntpd" ]; then
-    systemctl enable ntpd
+    systemctl enable ntpd.service
     GOT_G=$(/bin/cat /etc/sysconfig/ntpd | grep -E '^OPTIONS' | grep '\-g')
 
     if [ -z "$GOT_G" ]; then
@@ -212,10 +212,10 @@ if [ -e /etc/chrony.conf ] ; then
     # setting iburst should speed up initial sync
     # https://bugzilla.redhat.com/show_bug.cgi?id=787042#c12
     echo NTPSERVERARGS=iburst >>/etc/sysconfig/network
-    systemctl disable ntpd
-    systemctl disable ntpdate
-    systemctl enable chronyd
-    systemctl enable chrony-wait
+    systemctl disable ntpd.service
+    systemctl disable ntpdate.service
+    systemctl enable chronyd.service
+    systemctl enable chrony-wait.service
 fi
 
 if efibootmgr &>/dev/null ; then
@@ -341,7 +341,7 @@ TimeoutStartSec=0
 WantedBy=default.target
 EOF
 
-systemctl enable docker beaker-harness-docker
+systemctl enable docker.service beaker-harness-docker.service
 # Some tasks may be using these directories (legacy!), so we create these on the host
 # so that they are available when the host's /mnt is volume mounted
 mkdir -p /mnt/testarea /mnt/scratchspace

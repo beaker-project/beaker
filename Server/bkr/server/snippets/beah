@@ -52,9 +52,9 @@ INTERFACE=
 EOF
 
 {% if has_systemd is defined %}
-systemctl enable beah-srv
-systemctl enable beah-beaker-backend
-systemctl enable beah-fwd-backend
+systemctl enable beah-srv.service
+systemctl enable beah-beaker-backend.service
+systemctl enable beah-fwd-backend.service
 {% else %}
 chkconfig --level 345 beah-srv on
 chkconfig --level 345 beah-beaker-backend on

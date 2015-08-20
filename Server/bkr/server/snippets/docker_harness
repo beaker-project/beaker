@@ -94,7 +94,7 @@ TimeoutStartSec=0
 WantedBy=default.target
 EOF
 
-systemctl enable docker beaker-harness-docker
+systemctl enable docker.service beaker-harness-docker.service
 # Some tasks may be using these directories (legacy!), so we create these on the host
 # so that they are available when the host's /mnt is volume mounted
 mkdir -p /mnt/testarea /mnt/scratchspace
