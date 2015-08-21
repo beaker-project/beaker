@@ -11,7 +11,9 @@ from turbogears import config
 from turbogears.database import metadata
 from bkr.server.tools.init import upgrade_db, downgrade_db
 from sqlalchemy.orm import create_session
-from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, User
+from sqlalchemy.sql import func
+from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, User, \
+        OSMajor, OSMajorInstallOptions
 
 def has_initial_sublist(larger, prefix):
     """ Return true iff list *prefix* is an initial sublist of list 
@@ -459,3 +461,42 @@ class MigrationTest(unittest.TestCase):
         self.assertEquals(
                 self.migration_session.query(SystemAccessPolicy).filter_by(id=2).count(),
                 0)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1244996
+    def test_delete_duplicate_osmajor_install_options(self):
+        connection = self.migration_metadata.bind.connect()
+        # populate empty database
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/20.sql'))
+        # RedHatEnterpriseLinux6 has duplicate rows in osmajor_install_options,
+        # RedHatEnterpriseLinux7 just has one row
+        connection.execute(
+                "INSERT INTO osmajor (id, osmajor) "
+                "VALUES (1, 'RedHatEnterpriseLinux6')")
+        connection.execute(
+                "INSERT INTO osmajor_install_options (osmajor_id, arch_id, ks_meta) "
+                "VALUES (1, NULL, 'testone'), (1, NULL, 'testtwo')")
+        connection.execute(
+                "INSERT INTO osmajor (id, osmajor) "
+                "VALUES (2, 'RedHatEnterpriseLinux7')")
+        connection.execute(
+                "INSERT INTO osmajor_install_options (osmajor_id, arch_id, ks_meta) "
+                "VALUES (2, NULL, 'testthree')")
+        # run migration
+        upgrade_db(self.migration_metadata)
+        # check that there is only one row per osmajor-arch combination
+        row_counts = self.migration_session.query(OSMajorInstallOptions.osmajor_id,
+                    OSMajorInstallOptions.arch_id, func.count())\
+                .group_by(OSMajorInstallOptions.osmajor_id,
+                    OSMajorInstallOptions.arch_id)
+        for osmajor_id, arch_id, count in row_counts:
+            self.assertEquals(count, 1,
+                    'Expected to find only one row in osmajor_install_options '
+                    'for osmajor_id %s, arch_id %s' % (osmajor_id, arch_id))
+        # check that the most recent install options are kept, older ones are deleted
+        installopts = self.migration_session.query(OSMajorInstallOptions)\
+                .join(OSMajorInstallOptions.osmajor)\
+                .filter(OSMajor.osmajor == u'RedHatEnterpriseLinux6',
+                        OSMajorInstallOptions.arch == None)\
+                .one()
+        self.assertEquals(installopts.ks_meta, u'testtwo')
