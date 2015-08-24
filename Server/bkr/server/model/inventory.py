@@ -1791,6 +1791,8 @@ class SystemPool(DeclarativeMappedObject, ActivityMixin):
 
     @validates('name')
     def validate_name(self, key, name):
+        if not name:
+            raise ValueError('Pool name cannot be empty')
         if '/' in name:
             raise ValueError('Pool name cannot contain "/"')
         if name != name.strip():

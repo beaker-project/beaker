@@ -14,6 +14,7 @@ check_pool_search_results, BootstrapSelect, find_policy_checkbox,\
 check_policy_row_is_dirty, check_policy_row_is_not_dirty, \
 check_policy_row_is_absent, click_menu_item
 from bkr.inttest.server.requests_utils import put_json, post_json, patch_json
+from bkr.inttest.server.requests_utils import login as send_login
 from sqlalchemy.orm.exc import NoResultFound
 
 class SystemPoolsGridTest(WebDriverTestCase):
@@ -184,6 +185,27 @@ class SystemPoolEditTest(WebDriverTestCase):
             session.refresh(pool)
             self.assertEqual(pool.description, 'newdescription')
             self.assertEqual(pool.owner, group)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1254381
+    def test_cannot_update_with_empty_name(self):
+        """Verifies that the pool cannot be updated with an empty name."""
+        self.assertTrue(self.pool.name, "Cannot run test with empty pool name in fixture")
+
+        b = self.browser
+        login(b)
+        self.go_to_pool_edit(system_pool=self.pool)
+        b.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
+
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('name').clear()
+        modal.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        self.assertTrue(modal.find_element_by_css_selector('input[name="name"]:required:invalid'))
+
+        # verify that the pool's name is not modified and the name not empty due
+        # to the validation error
+        with session.begin():
+            session.refresh(self.pool)
+            self.assertTrue(self.pool.name)
 
     def test_add_system(self):
         with session.begin():
@@ -536,6 +558,21 @@ class SystemPoolHTTPTest(DatabaseTestCase):
             session.expire_all()
             self.assertEquals(self.pool.owner, self.group)
             self.assertFalse(self.pool.owning_user)
+
+    def test_cannot_update_system_pool_with_empty_name(self):
+        """Verify that updating a system pool with an empty name returns an error."""
+        self.assertTrue(self.pool.name, "Cannot run test with empty pool name in fixture")
+
+        s = requests.Session()
+        send_login(s, self.owner, 'theowner')
+        response = patch_json(get_server_base() + 'pools/%s/' % self.pool.name,
+                              session=s,
+                              data={'name': ''})
+        self.assertEqual(400, response.status_code)
+        self.assertEqual('Pool name cannot be empty', response.text)
+        with session.begin():
+            session.refresh(self.pool)
+            self.assertTrue(self.pool.name)
 
     def test_add_system_to_pool(self):
         with session.begin():
