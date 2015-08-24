@@ -188,7 +188,7 @@ class Job_List(BeakerCommand):
 
     def run(self,*args, **kwargs):
         family = kwargs.pop('family', None)
-        tag = kwargs.pop('tag', None)
+        tags = kwargs.pop('tag', None)
         product = kwargs.pop('product', None)
         complete_days = kwargs.pop('completeDays', None)
         owner = kwargs.pop('owner', None)
@@ -210,7 +210,7 @@ class Job_List(BeakerCommand):
         if complete_days is not None and complete_days < 1:
             self.parser.error('Please pass a positive integer to completeDays')
 
-        if complete_days is None and tag is None and family is None and product is None\
+        if complete_days is None and tags is None and family is None and product is None\
                 and owner is None and mine is None and whiteboard is None:
             self.parser.error('Please pass either the completeDays time delta, a tag, product, family, or owner')
 
@@ -220,7 +220,7 @@ class Job_List(BeakerCommand):
         self.set_hub(**kwargs)
         if mine:
             self.hub._login()
-        jobs = self.hub.jobs.filter(dict(tag=tag,
+        jobs = self.hub.jobs.filter(dict(tags=tags,
                                         daysComplete=complete_days,
                                         family=family,
                                         product=product,
