@@ -161,6 +161,12 @@ Bug fixes
 
 A number of bug fixes are also included in this release:
 
+* :issue:`1252503`: Fixed a regression in Beaker client 20.2 which would cause
+  :program:`bkr system-release` to exit successfully even though it had not 
+  released the system. (Contributed by Matt Jia)
+* :issue:`1253103`: Beaker's disk records for systems are now properly updated. 
+  Previously, old disk entries would be left behind in some cases when a disk was 
+  removed or changed. (Contributed by Dan Callaghan)
 * :issue:`1213225`: The :program:`beaker-repo-update` tool no longer attempts
   to fetch harness packages for distros which do not exist in any Beaker lab. 
   This avoids the situation where Beaker's database may contain references to 
@@ -180,6 +186,9 @@ A number of bug fixes are also included in this release:
   a migration script. (Contributed by Matt Jia)
 * :issue:`1211465`: Beaker is now compatible with Alembic 0.7, which is
   included in EPEL7. (Contributed by Matt Jia)
+* :issue:`653317`: Due to the changes in :program:`bkr watchdog-extend`
+  described above, the error message shown when the user supplies an invalid task 
+  ID is now clearer. (Contributed by Matt Jia)
 
 .. unreleased bugs on develop:
    * :issue:`1249923`: receive 500 internal error when extending the watchdog for an already finished recipe (Contributed by Matt Jia)
@@ -204,3 +213,6 @@ A number of bug fixes are also included in this release:
    * :issue:`1212310`: [beaker-system-scan] cpu flags are duplicated on S/390 with multiple CPUs
    * :issue:`1223115`: [lshw] inventory task fails on mustang with KeyError on procCpu.tags['hardware']
    * :issue:`1212307`: [beaker-system-scan] misidentifies cpu information on ia64
+
+.. harness repo administrivia:
+   * :issue:`1250335`: no released busybox in beaker repos for rhel-7.2 arch64
