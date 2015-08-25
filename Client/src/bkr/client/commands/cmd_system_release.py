@@ -72,4 +72,5 @@ class System_Release(BeakerCommand):
         for fqdn in args:
             update_url = 'systems/%s/reservations/+current' % urllib.quote(fqdn, '')
             requests_session = self.requests_session()
-            res = requests_session.patch(update_url, json={'finish': 'now'})
+            res = requests_session.patch(update_url, json={'finish_time': 'now'})
+            res.raise_for_status()

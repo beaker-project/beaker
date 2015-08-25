@@ -1225,24 +1225,48 @@ class System(DeclarativeMappedObject, ActivityMixin):
                         field=u'Arch', old=None, new=new_arch.arch)
 
     def updateDisk(self, diskinfo):
-        currentDisks = []
-        self.disks = getattr(self, 'disks', [])
-
-        for disk in diskinfo['Disks']:
-            disk = Disk(**disk)
-            if disk not in self.disks:
-                self.disks.append(disk)
-                self.record_activity(user=identity.current.user,
-                        service=u'XMLRPC', action=u'Added',
-                        field=u'Disk', old=None, new=disk.size)
-            currentDisks.append(disk)
-
-        for disk in self.disks:
-            if disk not in currentDisks:
-                self.disks.remove(disk)
+        for olddisk in list(self.disks):
+            exists = False
+            for newdisk in diskinfo['Disks']:
+                if olddisk.matches(newdisk):
+                    exists = True
+                    break
+            if not exists:
+                self.disks.remove(olddisk)
                 self.record_activity(user=identity.current.user,
                         service=u'XMLRPC', action=u'Removed',
-                        field=u'Disk', old=disk.size, new=None)
+                        field=u'Disk:size', old=unicode(olddisk.size))
+                self.record_activity(user=identity.current.user,
+                        service=u'XMLRPC', action=u'Removed',
+                        field=u'Disk:sector_size', old=unicode(olddisk.sector_size))
+                self.record_activity(user=identity.current.user,
+                        service=u'XMLRPC', action=u'Removed',
+                        field=u'Disk:phys_sector_size', old=unicode(olddisk.phys_sector_size))
+                self.record_activity(user=identity.current.user,
+                        service=u'XMLRPC', action=u'Removed',
+                        field=u'Disk:model', old=olddisk.model)
+
+        for newdisk in diskinfo['Disks']:
+            exists = False
+            for olddisk in self.disks:
+                if olddisk.matches(newdisk):
+                    exists = True
+                    break
+            if not exists:
+                self.disks.append(Disk(**newdisk))
+                self.record_activity(user=identity.current.user,
+                        service=u'XMLRPC', action=u'Added',
+                        field=u'Disk:size', new=unicode(newdisk['size']))
+                self.record_activity(user=identity.current.user,
+                        service=u'XMLRPC', action=u'Added',
+                        field=u'Disk:sector_size', new=unicode(newdisk['sector_size']))
+                self.record_activity(user=identity.current.user,
+                        service=u'XMLRPC', action=u'Added',
+                        field=u'Disk:phys_sector_size',
+                        new=unicode(newdisk['phys_sector_size']))
+                self.record_activity(user=identity.current.user,
+                        service=u'XMLRPC', action=u'Added',
+                        field=u'Disk:model', new=unicode(newdisk['model']))
 
     def updateDevices(self, deviceinfo):
         currentDevices = []
@@ -2274,6 +2298,17 @@ class Disk(DeclarativeMappedObject):
         self.sector_size = int(sector_size)
         self.phys_sector_size = int(phys_sector_size)
         self.model = model
+
+    def matches(self, other):
+        """
+        Accepts a dict of disk attributes and returns True if all the 
+        attributes of this disk match the other (regardless of database 
+        identity).
+        """
+        return (self.size == other['size'] and
+                self.sector_size == other['sector_size'] and
+                self.phys_sector_size == other['phys_sector_size'] and
+                self.model == other['model'])
 
 class PowerType(DeclarativeMappedObject):
 
