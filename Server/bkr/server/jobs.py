@@ -263,7 +263,7 @@ class Jobs(RPCRoot):
         if owner:
             jobs = Job.by_owner(owner, jobs)
         if whiteboard:
-            jobs = Job.by_whiteboard(whiteboard, jobs)
+            jobs = jobs.filter(Job.whiteboard == whiteboard)
 
         jobs = Job.sanitise_jobs(jobs)
 
