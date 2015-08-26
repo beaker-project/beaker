@@ -42,6 +42,22 @@ class JobListTest(ClientTestCase):
         out = run_client(['bkr', 'job-list', '--whiteboard', 'foobar'])
         self.assert_(self.jobs[0].t_id not in out, out)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1229938
+    def test_list_jobs_by_retention_tag(self):
+        with session.begin():
+            job_tagged_scratch = data_setup.create_completed_job(
+                    retention_tag=u'scratch')
+            job_tagged_audit = data_setup.create_completed_job(
+                    retention_tag=u'audit', product=data_setup.create_product())
+        out = run_client(['bkr', 'job-list', '--format=json', '--tag=audit'])
+        joblist = json.loads(out)
+        self.assertIn(job_tagged_audit.t_id, joblist)
+        self.assertNotIn(job_tagged_scratch.t_id, joblist)
+        out = run_client(['bkr', 'job-list', '--format=json', '--tag=scratch'])
+        joblist = json.loads(out)
+        self.assertIn(job_tagged_scratch.t_id, joblist)
+        self.assertNotIn(job_tagged_audit.t_id, joblist)
+
     #https://bugzilla.redhat.com/show_bug.cgi?id=816490
     def test_list_jobs_by_jid(self):
         out = run_client(['bkr', 'job-list', '--min-id', '{0}'.format(self.jobs[1].id)])

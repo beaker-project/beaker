@@ -82,3 +82,12 @@ class WorkflowTest(unittest.TestCase):
                 requestedTasks=[{'name': '/example', 'arches': []}])
         xml = recipe.toxml(prettyxml=True)
         self.assertIn('<distro_name op="like" value="RHEL-7.1%"/>', xml)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1010355
+    def test_hostrequire_accepts_like_operator(self):
+        recipeTemplate = BeakerRecipe()
+        recipeTemplate.addBaseRequires(hostrequire=['hostname like %.khw.%'])
+        recipe = self.command.processTemplate(recipeTemplate,
+                requestedTasks=[{'name': '/example', 'arches': []}])
+        xml = recipe.toxml()
+        self.assertIn('<hostname op="like" value="%.khw.%"/>', xml)

@@ -728,7 +728,7 @@ class BeakerRecipeBase(BeakerBase):
                 systemType.setAttribute('op', '=')
                 systemType.setAttribute('value', '%s' % systype)
                 self.addHostRequires(systemType)
-            p2 = re.compile(r'([\!=<>]+|&gt;|&lt;)')
+            p2 = re.compile(r'\s*([\!=<>]+|&gt;|&lt;|(?<=\s)like(?=\s))\s*')
             for keyvalue in keyvalues:
                 key, op, value = p2.split(keyvalue,3)
                 mykeyvalue = self.doc.createElement('key_value')
