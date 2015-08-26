@@ -52,6 +52,23 @@ class SystemPoolsGridTest(WebDriverTestCase):
             pool = SystemPool.by_name(u'inflatable')
             self.assertEquals(pool.owner, User.by_user_name(data_setup.ADMIN_USER))
 
+    def test_empty_pool_name_triggers_validation(self):
+        """Adding a pool with an empty name triggers a validation error."""
+        with session.begin():
+            system_pools_count = session.query(SystemPool).count()
+
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'pools/')
+        b.find_element_by_xpath('//button[normalize-space(string(.))="Create"]')\
+            .click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_tag_name('form').submit()
+
+        self.assertTrue(modal.find_element_by_css_selector('input[name="name"]:required:invalid'))
+        with session.begin():
+            self.assertEqual(system_pools_count, session.query(SystemPool).count())
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1203981
     def test_mine_pools(self):
         with session.begin():
