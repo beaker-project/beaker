@@ -207,3 +207,26 @@ class JobUploadTest(XmlRpcTestCase):
             self.fail('should raise')
         except xmlrpclib.Fault, e:
             self.assertIn('notexist is not a valid user name', e.faultString)
+
+class JobFilterTest(XmlRpcTestCase):
+
+    def setUp(self):
+        self.server = self.get_server()
+
+    def test_can_filter_by_whiteboard(self):
+        with session.begin():
+            excluded_job = data_setup.create_completed_job(whiteboard=u'whiteboard')
+            included_job = data_setup.create_completed_job(whiteboard=u'blackboard')
+        result = self.server.jobs.filter(dict(whiteboard=u'blackboard'))
+        self.assertItemsEqual(result, [included_job.t_id])
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1229937
+    def test_can_filter_by_whiteboard_in_combination_with_other_filters(self):
+        with session.begin():
+            job_owner = data_setup.create_user()
+            excluded_job = data_setup.create_completed_job(whiteboard=u'blackboard')
+            included_job = data_setup.create_completed_job(whiteboard=u'blackboard',
+                    owner=job_owner)
+        result = self.server.jobs.filter(
+                dict(whiteboard=u'blackboard', owner=job_owner.user_name))
+        self.assertItemsEqual(result, [included_job.t_id])

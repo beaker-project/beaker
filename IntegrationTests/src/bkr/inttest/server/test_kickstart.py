@@ -3282,3 +3282,25 @@ volgroup bootvg --pesize=32768 pv.01
         for line in part_lines:
             self.assert_(line in recipe.rendered_kickstart.kickstart.splitlines(),
                          recipe.rendered_kickstart.kickstart)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1255210
+    def test_systemctl_service_suffix(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-18" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        k = recipe.rendered_kickstart.kickstart
+        self.assertIn('systemctl enable beah-srv.service', k)
+        self.assertIn('systemctl enable beah-beaker-backend.service', k)
+        self.assertIn('systemctl enable beah-fwd-backend.service', k)

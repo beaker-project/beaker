@@ -1217,7 +1217,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
 
     def updateArch(self, archinfo):
         for arch in archinfo:
-            new_arch = Arch.lazy_create(arch=arch)
+            new_arch = Arch.by_name(arch)
             if new_arch not in self.arch:
                 self.arch.append(new_arch)
                 self.record_activity(user=identity.current.user,
@@ -1791,6 +1791,8 @@ class SystemPool(DeclarativeMappedObject, ActivityMixin):
 
     @validates('name')
     def validate_name(self, key, name):
+        if not name:
+            raise ValueError('Pool name cannot be empty')
         if '/' in name:
             raise ValueError('Pool name cannot contain "/"')
         if name != name.strip():

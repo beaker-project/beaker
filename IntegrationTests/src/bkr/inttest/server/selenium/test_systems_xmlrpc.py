@@ -20,7 +20,7 @@ from bkr.inttest.assertions import assert_datetime_within, \
 from bkr.inttest import data_setup, with_transaction
 from bkr.server.model import User, Cpu, Key, Key_Value_String, Key_Value_Int, \
         System, SystemActivity, Provision, Hypervisor, SSHPubKey, ConfigItem, \
-        RenderedKickstart, SystemStatus, ReleaseAction
+        RenderedKickstart, SystemStatus, ReleaseAction, Arch
 
 class ReserveSystemXmlRpcTest(XmlRpcTestCase):
 
@@ -607,15 +607,15 @@ class PushXmlRpcTest(XmlRpcTestCase):
 
     def test_system_activity_shows_changes_for_arches(self):
         with session.begin():
-            system = data_setup.create_system()
-        self.server.push(system.fqdn, {'Arch': ['sparc32']})
+            system = data_setup.create_system(arch=u'ppc')
+        self.server.push(system.fqdn, {'Arch': ['ppc64']})
         with session.begin():
             session.refresh(system)
             self.assertEquals(system.activity[0].service, u'XMLRPC')
             self.assertEquals(system.activity[0].action, u'Added')
             self.assertEquals(system.activity[0].field_name, u'Arch')
             self.assertEquals(system.activity[0].old_value, None)
-            self.assertEquals(system.activity[0].new_value, u'sparc32')
+            self.assertEquals(system.activity[0].new_value, u'ppc64')
             self.assertEquals(system.activity[1].service, u'XMLRPC')
             self.assertEquals(system.activity[1].action, u'Changed')
             self.assertEquals(system.activity[1].field_name, u'checksum')
@@ -793,6 +793,15 @@ class PushXmlRpcTest(XmlRpcTestCase):
         # DeviceClass('NONE') already exists now, so do it again
         # and check that nothing blows up
         self.server.push(system2.fqdn, device_data)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1253111
+    def test_unrecognised_arches_are_not_automatically_created(self):
+        with session.begin():
+            system = data_setup.create_system(arch=u'x86_64')
+        with self.assertRaisesRegexp(xmlrpclib.Fault, 'No such arch'):
+            self.server.push(system.fqdn, {'Arch': ['x86-64']})
+        with session.begin():
+            self.assertEquals(Arch.query.filter_by(arch=u'x86-64').count(), 0)
 
 class SystemHistoryXmlRpcTest(XmlRpcTestCase):
 
