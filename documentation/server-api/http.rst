@@ -238,3 +238,8 @@ Jobs
 .. autoflask:: bkr.server.wsgi:app
    :endpoints: submit_inventory_job
 
+Power types
+-----------
+
+.. autoflask:: bkr.server.wsgi:app
+   :endpoints: get_powertypes, delete_powertype, create_powertype

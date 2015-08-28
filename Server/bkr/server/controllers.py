@@ -18,7 +18,6 @@ from bkr.server.model import (TaskBase, Device, System,
         ExcludeOSVersion, OSVersion, Provision, ProvisionFamily,
         ProvisionFamilyUpdate, SystemStatus, Key_Value_Int, Key_Value_String,
                               SystemAccessPolicy, SystemPermission, MachineRecipe, DistroTag, SystemPool)
-from bkr.server.power import PowerTypes
 from bkr.server.keytypes import KeyTypes
 from bkr.server.CSV_import_export import CSV
 from bkr.server.group import Groups
@@ -132,7 +131,6 @@ class Devices:
 
 
 class Root(RPCRoot): 
-    powertypes = PowerTypes()
     keytypes = KeyTypes()
     devices = Devices()
     groups = Groups()

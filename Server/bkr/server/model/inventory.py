@@ -2347,6 +2347,10 @@ class PowerType(DeclarativeMappedObject):
             q = cls.query.filter(PowerType.name.like('%s%%' % name))
         return q
 
+    def __json__(self):
+        return dict(id=self.id, name=self.name)
+
+
 class Power(DeclarativeMappedObject):
 
     __tablename__ = 'power'

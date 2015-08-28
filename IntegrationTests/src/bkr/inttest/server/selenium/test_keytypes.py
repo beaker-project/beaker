@@ -32,25 +32,17 @@ class KeyTypesTest(WebDriverTestCase):
     def test_anonymous(self):
         b = self.browser
         b.get(get_server_base() + 'keytypes/')
-        try:
-            b.find_element_by_link_text('Add')
-            self.fail('Must fail')
-        except NoSuchElementException:
-            pass
-        try:
-            b.find_element_by_link_text('Remove')
-            self.fail('Must fail')
-        except NoSuchElementException:
-            pass
-        b.get(get_server_base() + 'powertypes/save')
+        b.find_element_by_xpath('//div[@class="container-fluid"]//table[@id="widget"][not(tbody/tr/td/a)]')
+        b.find_element_by_xpath('//div[@class="container-fluid" and not(//a[text()="Add"])]')
+        b.get(get_server_base() + 'keytypes/save')
         self.assertEquals(b.find_element_by_css_selector('#message').text,
                 'Please log in.')
-        b.get(get_server_base() + 'powertypes/new')
+        b.get(get_server_base() + 'keytypes/new')
         self.assertEquals(b.find_element_by_css_selector('#message').text,
                 'Please log in.')
-        b.get(get_server_base() + 'powertypes/edit')
+        b.get(get_server_base() + 'keytypes/edit')
         self.assertEquals(b.find_element_by_css_selector('#message').text,
                 'Please log in.')
-        b.get(get_server_base() + 'powertypes/remove')
+        b.get(get_server_base() + 'keytypes/remove')
         self.assertEquals(b.find_element_by_css_selector('#message').text,
                 'Please log in.')

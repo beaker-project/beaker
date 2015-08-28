@@ -4,128 +4,81 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from turbogears.database import session
-from turbogears import (expose, flash, widgets, error_handler,
-                        redirect, paginate, url)
-from kid import Element, XML
-from bkr.server.widgets import AlphaNavBar, myPaginateDataGrid, HorizontalForm
-from bkr.server.model import PowerType
-from bkr.server.admin_page import AdminPage
+from flask import jsonify, request
+from sqlalchemy.orm.exc import NoResultFound
+
+from bkr.server.model import session, PowerType, System, Power, Activity
 from bkr.server import identity
-from bkr.server.helpers import make_link, make_edit_link, make_remove_link
-
-def get_power_type(power):
-    # return powertype name
-    return make_link(url  = '../powertypes/edit?id=%s' % power.powertype.id,
-                     text = power.powertype.name)
-
-class PowerTypes(AdminPage):
-    # For XMLRPC methods in this class.
-    exposed = False
-
-    id         = widgets.HiddenField(name='id')
-    name       = widgets.TextField(name='name', label=_(u'Name'))
-
-    form = HorizontalForm(
-        'powertypes',
-        fields = [id, name],
-        action = 'save_data',
-        submit_text = _(u'Save'),
-    )
+from bkr.server.app import app
+from bkr.server.util import url
+from bkr.server.flask_util import admin_auth_required, read_json_request,\
+    convert_internal_errors, BadRequest400, NotFound404,\
+    Conflict409, request_wants_json, render_tg_template
 
 
-    def __init__(self,*args,**kw):
-        kw['search_url'] =  url("/powertypes/by_name?anywhere=1"),
-        kw['search_name'] = 'power'
-        super(PowerTypes,self).__init__(*args,**kw)
+@app.route('/powertypes/', methods=['GET'])
+@admin_auth_required
+def get_powertypes():
+    """Returns a JSON collection of all power types defined in Beaker."""
+    result = PowerType.query.order_by(PowerType.name).all()
+    if request_wants_json():
+        return jsonify(power_types=result)
+    return render_tg_template('bkr.server.templates.power_types', {
+        'title': 'Power Types',
+        'power_types': result,
+        'power_types_url': url('/powertypes/'),
+        'user_can_edit': identity.current.user is not None and identity.current.user.is_admin()
+    })
 
-        self.search_col = PowerType.name
-        self.search_mapper = PowerType
 
-    @identity.require(identity.in_group("admin"))
-    @expose(template='bkr.server.templates.form')
-    def new(self, **kw):
-        return dict(
-            form = self.form,
-            title=_(u'New Power Type'),
-            action = './save',
-            options = {},
-            value = kw,
-        )
+@app.route('/powertypes/<id>', methods=['DELETE'])
+@admin_auth_required
+def delete_powertype(id):
+    """
+    Deletes a power type by the given id.
 
-    @identity.require(identity.in_group("admin"))
-    @expose(template='bkr.server.templates.form')
-    def edit(self,**kw):
-        title = _(u'New Power Type')
-        values = []
-        if kw.get('id'):
-            powertype = PowerType.by_id(kw['id'])
-            title = powertype.name
-            values = dict(
-                id         = powertype.id,
-                name       = powertype.name,
-            )
-        
-        return dict(
-            form = self.form,
-            title=title,
-            action = './save',
-            options = {},
-            value = values,
-        )
+    :param id: The id of the power type to be deleted.
+    :status 204: Power type successfully deleted.
+    :status 400: Power type is referenced by systems.
+    :status 404: Power type can not be found.
+    """
+    try:
+        powertype = PowerType.by_id(id)
+    except NoResultFound:
+        raise NotFound404('Power type: %s does not exist' % id)
 
-    @identity.require(identity.in_group("admin"))
-    @expose()
-    @error_handler(edit)
-    def save(self, **kw):
-        if kw['id']:
-            edit = PowerType.by_id(kw['id'])
-            edit.name = kw['name']
-        elif kw.get('name'):
-            new = PowerType(name=kw['name'])
-            session.add(new)
-        else:
-            flash(_(u"Invalid Power Type entry"))
-            redirect(".")
-        flash( _(u"OK") )
-        redirect(".")
+    systems_referenced = System.query.join(System.power).filter(
+        Power.power_type == powertype).count()
+    if systems_referenced:
+        raise BadRequest400('Power type %s still referenced by %i systems' % (
+            powertype.name, systems_referenced))
 
-    @expose(format='json')
-    def by_name(self,input,*args,**kw): 
-        if 'anywhere' in kw:
-            search = PowerType.list_by_name(input,find_anywhere=True)
-        else:
-            search = PowerType.list_by_name(input)
+    session.delete(powertype)
 
-        powers = [elem.name for elem in search]
-        return dict(matches=powers)
+    activity = Activity(identity.current.user, u'HTTP', u'Deleted', u'PowerType', powertype.name)
+    session.add(activity)
 
-    @expose(template="bkr.server.templates.admin_grid")
-    @paginate('list', default_order='name', limit=20)
-    def index(self,*args,**kw):
-        powertypes = session.query(PowerType)
-        list_by_letters = set([elem.name[0].capitalize() for elem in powertypes if elem.name])
-        results = self.process_search(**kw)
-        if results:
-            powertypes = results
-        can_edit = identity.current.user and identity.current.user.is_admin()
-        powertypes_grid = myPaginateDataGrid(fields=[
-                                  ('Power Type', lambda x: make_edit_link(x.name, x.id) if can_edit else x.name),
-                                  (' ', lambda x: make_remove_link(x.id) if can_edit else None ),
-                              ],
-                              add_action='./new' if can_edit else None)
-        
+    return '', 204
 
-        return dict(title="Power Types", 
-                    grid = powertypes_grid,
-                    search_widget = self.search_widget_form,
-                    alpha_nav_bar = AlphaNavBar(list_by_letters,'power'),
-                    list = powertypes)
 
-    @identity.require(identity.in_group("admin"))
-    @expose()
-    def remove(self, **kw):
-        remove = PowerType.by_id(kw['id'])
-        session.delete(remove)
-        flash( _(u"%s Deleted") % remove.name )
-        raise redirect(".")
+
+@app.route('/powertypes/', methods=['POST'])
+@admin_auth_required
+def create_powertype():
+    """
+    Creates a new power type. The request must be :mimetype:`application/json`.
+
+    :jsonparam string name: Name for the power type.
+    :status 201: The power type was successfully created.
+    """
+    data = read_json_request(request)
+    with convert_internal_errors():
+        if PowerType.query.filter_by(**data).count():
+            raise Conflict409('Power type %s already exists' % data['name'])
+        powertype = PowerType(**data)
+        activity = Activity(identity.current.user, u'HTTP', u'Created', u'PowerType', powertype.name)
+        session.add_all([powertype, activity])
+
+    response = jsonify(powertype.__json__())
+    response.status_code = 201
+    return response

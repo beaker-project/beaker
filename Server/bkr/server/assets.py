@@ -107,6 +107,8 @@ def _create_env(source_dir, output_dir, **kwargs):
             'system-pool-access-policy.js',
             'system-pool-info.js',
             'system-pool-systems.js',
+            'power-types-model.js',
+            'power-types.js',
             filters=['uglifyjs'],
             output='beaker-%(version)s.js')
     return env
