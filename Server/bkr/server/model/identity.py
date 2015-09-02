@@ -12,6 +12,7 @@ import random
 import string
 import re
 import cracklib
+import urllib
 from kid import Element
 import passlib.context
 from sqlalchemy import (Table, Column, ForeignKey, Integer, Unicode,
@@ -23,9 +24,11 @@ from turbogears.config import get
 from turbogears.database import session
 from bkr.server.bexceptions import BX, NoChangeException
 from bkr.server.util import convert_db_lookup_error
+from bkr.server import identity
 from .base import DeclarativeMappedObject
 from .activity import Activity, ActivityMixin
 from .config import ConfigItem, ConfigValueInt, ConfigValueString
+
 
 log = logging.getLogger(__name__)
 
@@ -141,8 +144,8 @@ class User(DeclarativeMappedObject, ActivityMixin):
     def validate_user_name(self, key, value):
         if not value:
             raise ValueError('User must have a username')
-        # Reject username values which would be normalized into a different 
-        # value according to the LDAP normalization rules [RFC4518]. For 
+        # Reject username values which would be normalized into a different
+        # value according to the LDAP normalization rules [RFC4518]. For
         # sanity we always enforce this, even if LDAP is not being used.
         if self._unnormalized_username_pattern.search(value):
             raise ValueError('Username %r contains unnormalized whitespace')
@@ -224,7 +227,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
             elif(len(objects) > 1):
                 return None
             attrs = objects[0][1]
-            # LDAP normalization rules means that we might have found a user 
+            # LDAP normalization rules means that we might have found a user
             # who doesn't actually match the username we were given.
             if attrs['uid'][0].decode('utf8') != user_name:
                 return None
@@ -438,8 +441,12 @@ class Group(DeclarativeMappedObject, ActivityMixin):
     activity_type = GroupActivity
 
     @classmethod
-    def by_name(cls, name):
-        return cls.query.filter_by(group_name=name).one()
+    def by_name(cls, name, lockmode=False):
+        if lockmode:
+            return cls.query.with_lockmode(lockmode).filter(cls.group_name ==
+                                                            name).one()
+        else:
+            return cls.query.filter_by(group_name=name).one()
 
     @classmethod
     def by_id(cls, id):
@@ -457,10 +464,39 @@ class Group(DeclarativeMappedObject, ActivityMixin):
 
     def __json__(self):
         return {
-            'id': self.id,
+            'id': self.group_id,
             'group_name': self.group_name,
             'display_name': self.display_name,
+            'ldap': self.ldap,
         }
+
+    def to_json(self):
+        """
+        Get a full list of JSON representation data.
+        """
+        data = self.__json__()
+        data.update({
+            'members': [user for user in self.users],
+            'owners': [user for user in self.users if self.has_owner(user)],
+            'permissions':[permission.permission_name
+                           for permission in self.permissions],
+        })
+        if identity.current.user:
+            user = identity.current.user
+            data['can_edit'] = self.can_edit(user)
+            if self.can_edit(user) or user in self.users:
+                data['root_password'] = self.root_password
+            data['can_edit_ldap'] = self.can_edit_ldap(user)
+            data['can_modify_membership'] = self.can_modify_membership(user)
+            data['can_add_permission'] = self.can_add_permission(user)
+            data['can_view_rootpassword'] = user in self.users or self.can_edit(user)
+        else:
+            data['can_edit'] = False
+            data['can_edit_ldap'] = False
+            data['can_modify_membership'] = False
+            data['can_add_permission'] = False
+            data['can_view_rootpassword'] = False
+        return data
 
     @classmethod
     def list_by_name(cls, name, find_anywhere=False):
@@ -494,13 +530,17 @@ class Group(DeclarativeMappedObject, ActivityMixin):
                 # bkr.server.validators.StrongPassword
                 cracklib.VeryFascistCheck(password)
             except ValueError, msg:
-                msg = re.sub(r'^it is', 'the password is', str(msg))
+                msg = re.sub(r'^it', 'the password', str(msg))
                 raise ValueError(msg)
             else:
                 self._root_password = password
         else:
             self._root_password = None
 
+    @property
+    def href(self):
+        """Returns a relative URL for this group's page."""
+        return '/groups/%s' % urllib.quote(self.group_name.encode('utf8'), '')
 
     def owners(self):
         return UserGroup.query.filter_by(group_id=self.group_id,
@@ -527,6 +567,12 @@ class Group(DeclarativeMappedObject, ActivityMixin):
 
         return True
 
+    def can_edit_ldap(self, user):
+        return user.is_admin() and get('identity.ldap.enabled', False)
+
+    def can_add_permission(self, user):
+        return user.is_admin()
+
     def is_protected_group(self):
         """Some group names are predefined by Beaker and cannot be modified"""
         return self.group_name in (u'admin', u'queue_admin', u'lab_controller')
@@ -538,12 +584,11 @@ class Group(DeclarativeMappedObject, ActivityMixin):
                 field=u'Root Password', old='*****', new='*****')
 
     def set_name(self, user, service, group_name):
-        """Set a group's name and record any change as group activity
-
-        Passing None or the empty string means "leave this value unchanged"
+        """
+        Set a group's name and record any change as group activity
         """
         old_group_name = self.group_name
-        if group_name and group_name != old_group_name:
+        if group_name != old_group_name:
             if self.is_protected_group():
                 raise BX(_(u'Cannot rename protected group %r as %r'
                                               % (old_group_name, group_name)))
@@ -553,19 +598,48 @@ class Group(DeclarativeMappedObject, ActivityMixin):
                                  old=old_group_name, new=group_name)
 
     def set_display_name(self, user, service, display_name):
-        """Set a group's display name and record any change as group activity
-
-        Passing None or the empty string means "leave this value unchanged"
+        """
+        Set a group's display name and record any change as group activity
         """
         old_display_name = self.display_name
-        if display_name and display_name != old_display_name:
+        if display_name != old_display_name:
             self.display_name = display_name
             self.record_activity(user=user, service=service,
                                  field=u'Display Name',
                                  old=old_display_name, new=display_name)
 
     def can_modify_membership(self, user):
-        return not self.ldap and (self.has_owner(user) or user.is_admin())
+        return not self.ldap and self.can_edit(user)
+
+    def add_member(self, user, is_owner=False, service=u'HTTP'):
+        self.user_group_assocs.append(UserGroup(user=user, is_owner=is_owner))
+        self.record_activity(user=user, service=service,
+                             action=u'Added', field=u'User', old=None,
+                             new=unicode(user))
+        if is_owner:
+            self.record_activity(user=user, service=service,
+                                 action=u'Added', field=u'Owner', old=None,
+                                 new=unicode(user))
+
+    def remove_member(self, user, service=u'HTTP'):
+        assoc, = [a for a in self.user_group_assocs if a.user == user]
+        self.user_group_assocs.remove(assoc)
+        self.record_activity(user=user, service=service,
+                             action=u'Removed', field=u'User', old=unicode(user),
+                             new=None)
+
+    def grant_ownership(self, user, service=u'HTTP'):
+        assoc, = [a for a in self.user_group_assocs if a.user == user]
+        assoc.is_owner = True
+        self.record_activity(user=user, service=service,
+                             action=u'Added', field=u'Owner', old=None,
+                             new=unicode(user))
+
+    def revoke_ownership(self, user, service=u'HTTP'):
+        assoc, = [a for a in self.user_group_assocs if a.user == user]
+        assoc.is_owner = False
+        self.record_activity(user=user, service=service, field=u'Owner',
+                             action='Removed', old=user.user_name, new=None)
 
     def refresh_ldap_members(self, ldapcon=None):
         """Refresh the group from LDAP and record changes as group activity"""
@@ -580,16 +654,10 @@ class Group(DeclarativeMappedObject, ActivityMixin):
         removed_members = existing.difference(refreshed)
         for user in removed_members:
             log.debug('Removing %r from %r', user, self)
-            self.users.remove(user)
-            self.activity.append(GroupActivity(user=None, service=u'LDAP',
-                    action=u'Removed', field_name=u'User',
-                    old_value=user.user_name, new_value=None))
+            self.remove_member(user, service=u'LDAP')
         for user in added_members:
             log.debug('Adding %r to %r', user, self)
-            self.users.append(user)
-            self.activity.append(GroupActivity(user=None, service=u'LDAP',
-                    action=u'Added', field_name=u'User', old_value=None,
-                    new_value=user.user_name))
+            self.add_member(user, service=u'LDAP')
 
     def _ldap_members(self, ldapcon):
         # Supports only RFC2307 style, with group members listed by username in
@@ -610,6 +678,21 @@ class Group(DeclarativeMappedObject, ActivityMixin):
             if user is not None:
                 users.append(user)
         return users
+
+    @validates('group_name', 'display_name')
+    def validate_name(self, key, name):
+        if key == 'group_name':
+            text = 'name'
+        else:
+            text = 'display name'
+        if not name:
+            raise ValueError('Group %s cannot be empty' % text)
+        if name != name.strip():
+            raise ValueError('Group %s must not contain leading '
+                             'or trailing whitespace' % text)
+        if len(name) > 255:
+            raise ValueError('Group %s must be not more than 255 characters long' % text)
+        return name
 
     users = association_proxy('user_group_assocs','user',
             creator=lambda user: UserGroup(user=user))
@@ -654,6 +737,9 @@ class Permission(DeclarativeMappedObject):
     def __init__(self, permission_name):
         super(Permission, self).__init__()
         self.permission_name = permission_name
+
+    def __unicode__(self):
+        return self.permission_name
 
 class SSHPubKey(DeclarativeMappedObject):
 

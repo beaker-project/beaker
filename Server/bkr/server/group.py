@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -11,23 +10,25 @@ from turbogears.database import session
 from sqlalchemy.orm.exc import NoResultFound
 import cherrypy
 from cherrypy import response
-from kid import XML
-from flask import jsonify, request
+from flask import jsonify, request, redirect as flask_redirect
 from bkr.server.validators import StrongPassword
 from bkr.server.helpers import make_link
-from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, \
-    GroupPermissions, DeleteLinkWidgetForm, LocalJSLink, AutoCompleteField, \
-    HorizontalForm, InlineForm, InlineRemoteForm
+from bkr.server.widgets import myPaginateDataGrid, DeleteLinkWidgetForm, \
+    HorizontalForm
 from bkr.server.admin_page import AdminPage
-from bkr.server.bexceptions import BX, BeakerException
+from bkr.server.bexceptions import BX
 from bkr.server.controller_utilities import restrict_http_method
 from bkr.server.app import app
 from bkr.server import mail, identity
 
 from bkr.server.model import (Group, Permission, User, UserGroup,
                               Activity, GroupActivity, SystemPool)
-from bkr.server.util import convert_db_lookup_error
+from bkr.server.util import absolute_url
 from bkr.server.bexceptions import DatabaseLookupError
+from bkr.server.flask_util import auth_required, \
+    convert_internal_errors, read_json_request, BadRequest400, \
+    Forbidden403, MethodNotAllowed405, NotFound404, Conflict409, \
+    request_wants_json, render_tg_template, admin_auth_required
 
 import logging
 log = logging.getLogger(__name__)
@@ -79,40 +80,7 @@ class Groups(AdminPage):
     # For XMLRPC methods in this class.
     exposed = True
     group_id     = widgets.HiddenField(name='group_id')
-    auto_users    = AutoCompleteField(name='user',
-                                     search_controller = url("/users/by_name"),
-                                     search_param = "input",
-                                     result_name = "matches")
-
-    search_groups = AutoCompleteField(name='group',
-                                     search_controller = url("/groups/by_name?anywhere=1"),
-                                     search_param = "name",
-                                     result_name = "groups")
-
-    search_permissions = AutoCompleteField(name='permissions',
-                                     search_controller = url("/groups/get_permissions"),
-                                     search_param = "input",
-                                     result_name = "matches")
-
     group_form = GroupForm()
-
-    permissions_form = InlineRemoteForm(
-        'Permissions',
-        fields = [search_permissions, group_id],
-        submit_text = _(u'Add'),
-        on_success = 'add_group_permission_success(http_request.responseText)',
-        on_failure = 'add_group_permission_failure(http_request.responseText)',
-        before = 'before_group_permission_submit()',
-        after = 'after_group_permission_submit()',
-    )
-
-    group_user_form = InlineForm(
-        'GroupUser',
-        fields = [group_id, auto_users],
-        action = 'save_data',
-        submit_text = _(u'Add'),
-    )
-
     delete_link = DeleteLinkWidgetForm()
 
     def __init__(self,*args,**kw):
@@ -135,35 +103,6 @@ class Groups(AdminPage):
         groups =  [match.group_name for match in search]
         return dict(matches=groups)
 
-    @expose(format='json')
-    @identity.require(identity.not_anonymous())
-    def remove_group_permission(self, group_id, permission_id):
-        try:
-            group = Group.by_id(group_id)
-        except DatabaseLookupError:
-            log.exception('Group id %s is not a valid Group to remove' % group_id)
-            return ['0']
-
-        if not group.can_edit(identity.current.user):
-            log.exception('User %d does not have edit permissions for Group id %s'
-                          % (identity.current.user.user_id, group_id))
-            response.status = 403
-            return ['You are not an owner of group %s' % group]
-
-        try:
-            permission = Permission.by_id(permission_id)
-        except NoResultFound:
-            log.exception('Permission id %s is not a valid Permission to remove' % permission_id)
-            return ['0']
-        group.permissions.remove(permission)
-        return ['1']
-
-    @expose(format='json')
-    def get_permissions(self, input):
-        results = Permission.by_name(input, anywhere=True)
-        permission_names = [result.permission_name for result in results]
-        return dict(matches=permission_names)
-
     @identity.require(identity.not_anonymous())
     @expose(template='bkr.server.templates.form')
     def new(self, **kw):
@@ -173,95 +112,6 @@ class Groups(AdminPage):
             action = './save_new',
             options = {},
             value = kw,
-        )
-
-    def show_members(self, group):
-        can_edit = False
-        if identity.current.user:
-            can_edit = group.can_modify_membership(identity.current.user)
-
-        def show_ownership_status(member):
-            is_owner = member.is_owner
-            if can_edit:
-                if is_owner:
-                    return XML('<a class="btn change_ownership_remove" '
-                            'href="revoke_owner?group_id=%s&amp;id=%s">'
-                            '<i class="fa fa-times"/> Remove</a>'
-                            % (group.group_id, member.user_id))
-                else:
-                    return XML('<a class="btn change_ownership_add" '
-                            'href="grant_owner?group_id=%s&amp;id=%s">'
-                            '<i class="fa fa-plus"/> Add</a>'
-                            % (group.group_id, member.user_id))
-            else:
-                is_owner = 'Yes' if is_owner else 'No'
-                return is_owner
-
-        def remove_button(member):
-            return XML('<a class="btn" href="removeUser?group_id=%s&amp;id=%s">'
-                    '<i class="fa fa-times"/> Remove</a>' % (group.group_id, member.user_id))
-
-        user_fields = [
-            ('User', lambda x: x.user.user_name)
-        ]
-
-        user_fields.append(('Group Ownership', show_ownership_status))
-        if can_edit:
-            user_fields.append(('Group Membership', remove_button))
-
-        return BeakerDataGrid(name='group_members_grid', fields=user_fields)
-
-
-
-    @expose(template='bkr.server.templates.group_form')
-    def edit(self, group_id=None, group_name=None, **kw):
-        # Not just for editing, also provides a read-only view
-        if group_id is not None:
-            try:
-                group = Group.by_id(group_id)
-            except DatabaseLookupError:
-                log.exception('Group id %s is not a valid group id' % group_id)
-                flash(_(u'Need a valid group to search on'))
-                redirect('../groups/mine')
-        elif group_name is not None:
-            try:
-                group = Group.by_name(group_name)
-            except NoResultFound:
-                log.exception('Group name %s is not a valid group name' % group_name)
-                flash(_(u'Need a valid group to search on'))
-                redirect('../groups/mine')
-        else:
-            redirect('../groups/mine')
-
-        usergrid = self.show_members(group)
-
-        can_edit = False
-        if identity.current.user:
-            can_edit = group.can_edit(identity.current.user)
-
-        permissions_fields = [('Permission', lambda x: x.permission_name)]
-        if can_edit:
-            permissions_fields.append((' ', lambda x: XML(
-                    '<a class="btn" href="#" id="remove_permission_%s">'
-                    '<i class="fa fa-times"/> Remove</a>' % x.permission_id)))
-        group_permissions_grid = BeakerDataGrid(name='group_permission_grid',
-                fields=permissions_fields)
-        group_permissions = GroupPermissions()
-
-        return dict(
-            form = self.group_form,
-            user_form = self.group_user_form,
-            group_edit_js = LocalJSLink('bkr', '/static/javascript/group_users_v2.js'),
-            action = './save',
-            user_action = './save_user',
-            options = {},
-            value = group,
-            group_pw = group.root_password,
-            usergrid = usergrid,
-            disabled_fields=[],
-            group_permissions = group_permissions,
-            group_form = self.permissions_form,
-            group_permissions_grid = group_permissions_grid,
         )
 
     def _new_group(self, group_id, display_name, group_name, ldap,
@@ -311,118 +161,6 @@ class Groups(AdminPage):
         flash( _(u"OK") )
         redirect("mine")
 
-    @expose()
-    @validate(form=group_form)
-    @error_handler(edit)
-    @identity.require(identity.not_anonymous())
-    def save(self, group_id=None, display_name=None, group_name=None,
-        ldap=False, root_password=None, **kwargs):
-
-        user = identity.current.user
-
-        if ldap and not user.is_admin():
-            flash(_(u'Only admins can create LDAP groups'))
-            redirect('mine')
-
-        try:
-            group = Group.by_id(group_id)
-        except DatabaseLookupError:
-            flash( _(u"Group %s does not exist." % group_id) )
-            redirect('mine')
-
-        try:
-            Group.by_name(group_name)
-        except NoResultFound:
-            pass
-        else:
-            if group_name != group.group_name:
-                flash(_(u'Failed to update group %s: Group name already exists: %s' % 
-                        (group.group_name, group_name)))
-                redirect('mine')
-
-        if not group.can_edit(user):
-            flash(_(u'You are not an owner of group %s' % group))
-            redirect('../groups/mine')
-
-        try:
-            group.set_name(user, u'WEBUI', group_name)
-            group.set_display_name(user, u'WEBUI', display_name)
-            group.ldap = ldap
-            group.set_root_password(user, u'WEBUI', root_password)
-        except BeakerException, err:
-            session.rollback()
-            flash(_(u'Failed to update group %s: %s' %
-                                                    (group.group_name, err)))
-            redirect('.')
-
-        flash( _(u"OK") )
-        redirect("mine")
-
-    @identity.require(identity.in_group("admin"))
-    @expose(format='json')
-    def save_group_permissions(self, **kw):
-        try:
-            permission_name = kw['permissions']['text']
-        except KeyError:
-            log.exception('Permission not submitted correctly')
-            response.status = 403
-            return ['Permission not submitted correctly']
-        try:
-            permission = Permission.by_name(permission_name)
-        except NoResultFound:
-            log.exception('Invalid permission: %s' % permission_name)
-            response.status = 403
-            return ['Invalid permission value']
-        try:
-            group_id = kw['group_id']
-        except KeyError:
-            log.exception('Group id not submitted')
-            response.status = 403
-            return ['No group id given']
-        try:
-            group = Group.by_id(group_id)
-        except NoResultFound:
-            log.exception('Group id %s is not a valid group id' % group_id)
-            response.status = 403
-            return ['Invalid Group Id']
-
-        group = Group.by_id(group_id)
-        if permission not in group.permissions:
-            group.permissions.append(permission)
-        else:
-            response.status = 403
-            return ['%s already exists in group %s' %
-                (permission.permission_name, group.group_name)]
-
-        return {'name':permission_name, 'id':permission.permission_id}
-
-    @expose()
-    @error_handler(edit)
-    @identity.require(identity.not_anonymous())
-    def save_user(self, **kw):
-        user = User.by_user_name(kw['user']['text'])
-        if user is None:
-            flash(_(u"Invalid user %s" % kw['user']['text']))
-            redirect("./edit?group_id=%s" % kw['group_id'])
-        group = Group.by_id(kw['group_id'])
-
-        if not group.can_modify_membership(identity.current.user):
-            flash(_(u'You are not an owner of group %s' % group))
-            redirect('../groups/mine')
-
-        if user not in group.users:
-            group.users.append(user)
-            activity = GroupActivity(identity.current.user, u'WEBUI', u'Added', u'User', u"", user.user_name)
-            group.activity.append(activity)
-            mail.group_membership_notify(user, group,
-                                         agent=identity.current.user,
-                                         action='Added')
-            flash( _(u"OK") )
-            redirect("./edit?group_id=%s" % kw['group_id'])
-        else:
-            flash( _(u"User %s is already in Group %s" %(user.user_name, group.group_name)))
-            redirect("./edit?group_id=%s" % kw['group_id'])
-
     @expose(template="bkr.server.templates.grid")
     @paginate('list', default_order='group_name', limit=20)
     def index(self, *args, **kw):
@@ -448,8 +186,10 @@ class Groups(AdminPage):
             try:
                 if x.can_edit(identity.current.user) and not x.is_protected_group():
                     return self.delete_link.display(dict(group_id=x.group_id),
-                                             action=url('remove'),
-                                             action_text='Delete Group')
+                        # Hack it for now as the url is conflict with the url in
+                        # flask.
+                        action=url('remove/'),
+                        action_text='Delete Group')
                 else:
                     return ''
             except AttributeError:
@@ -579,34 +319,6 @@ class Groups(AdminPage):
 
     @identity.require(identity.not_anonymous())
     @expose()
-    def removeUser(self, group_id=None, id=None, **kw):
-        group = Group.by_id(group_id)
-
-        if not group.can_modify_membership(identity.current.user):
-            flash(_(u'You are not an owner of group %s' % group))
-            redirect('../groups/mine')
-
-        if not group.can_remove_member(identity.current.user, id):
-            flash(_(u'Cannot remove member'))
-            redirect('../groups/edit?group_id=%s' % group_id)
-
-        groupUsers = group.users
-        for user in groupUsers:
-            if user.user_id == int(id):
-                group.users.remove(user)
-                removed = user
-                activity = GroupActivity(identity.current.user, u'WEBUI', u'Removed', u'User', removed.user_name, u"")
-                group.activity.append(activity)
-                mail.group_membership_notify(user, group,
-                                             agent=identity.current.user,
-                                             action='Removed')
-                flash(_(u"%s Removed" % removed.display_name))
-                redirect("../groups/edit?group_id=%s" % group_id)
-        flash( _(u"No user %s in group %s" % (id, removed.display_name)))
-        raise redirect("../groups/edit?group_id=%s" % group_id)
-
-    @identity.require(identity.not_anonymous())
-    @expose()
     @restrict_http_method('post')
     def remove(self, **kw):
         u = identity.current.user
@@ -614,19 +326,19 @@ class Groups(AdminPage):
             group = Group.by_id(kw['group_id'])
         except DatabaseLookupError:
             flash(unicode('Invalid group or already removed'))
-            redirect('../groups/mine')
+            redirect('/groups/mine')
 
         if not group.can_edit(u):
             flash(_(u'You are not an owner of group %s' % group))
-            redirect('../groups/mine')
+            redirect('/groups/mine')
 
         if group.is_protected_group():
             flash(_(u'This group %s is predefined and cannot be deleted' % group))
-            redirect('../groups/mine')
+            redirect('/groups/mine')
 
         if group.jobs:
             flash(_(u'Cannot delete a group which has associated jobs'))
-            redirect('../groups/mine')
+            redirect('/groups/mine')
 
         # Record the access policy rules that will be removed
         # before deleting the group
@@ -642,19 +354,7 @@ class Groups(AdminPage):
         activity = Activity(u, u'WEBUI', u'Removed', u'Group', group.display_name, u"")
         session.add(activity)
         flash( _(u"%s deleted") % group.display_name )
-        raise redirect(".")
-
-    @expose(format='json')
-    def get_group_users(self, group_id=None, *args, **kw):
-        try:
-            group = Group.by_id(group_id)
-        except DatabaseLookupError:
-            log.exception('Group id %s is not a valid group id' % group_id)
-            response.status = 403
-            return ['Invalid Group Id']
-
-        users = group.users
-        return [(user.user_id, user.display_name) for user in users]
+        raise redirect('/groups/mine')
 
     # XML-RPC method for creating a group
     @identity.require(identity.not_anonymous())
@@ -869,6 +569,280 @@ class Groups(AdminPage):
 
         return users
 
+def _get_group_by_name(group_name, lockmode=False):
+    """Get group by name, reporting HTTP 404 if the group is not found"""
+    try:
+        return Group.by_name(group_name, lockmode)
+    except NoResultFound:
+        raise NotFound404('Group %s does not exist' % group_name)
+
+@app.route('/groups/<group_name>', methods=['GET'])
+def get_group(group_name):
+    """
+    Provides detailed information about a group in JSON format.
+
+    :param group_name: Group's name.
+    """
+    group = _get_group_by_name(group_name)
+    if request_wants_json():
+        return jsonify(group.to_json())
+    return render_tg_template('bkr.server.templates.group', {
+        'title': group.group_name,
+        'group': group,
+    })
+
+# To support the old urls that look like groups/edit?group_id=13 or
+# groups/edit?group_name=abc
+@app.route('/groups/edit', methods=['GET'])
+def get_group_by_id_or_name():
+    """
+    Created for backwards compatibility. Will redirect to /groups/<group_name>.
+
+    :queryparam group_id: Group's id.
+    :queryparam group_name: Group's name.
+    """
+    if 'group_id' in request.args:
+        with convert_internal_errors():
+            group = Group.by_id(request.args['group_id'])
+    elif 'group_name' in request.args:
+        group = _get_group_by_name(request.args['group_name'])
+    else:
+        raise NotFound404
+    return flask_redirect(absolute_url(group.href))
+
+@app.route('/groups/<group_name>', methods=['PATCH'])
+@auth_required
+def update_group(group_name):
+    """
+    Updates attributes of an existing group. The request body must be a JSON
+    object containing one or more of the following keys.
+
+    :jsonparam string group_name: New name for the group.
+    :jsonparam string display_name: Display name of the group.
+    :jsonparam string root_password: Optional password. Can be an empty string.
+      If empty, group jobs will use the root password preferences of the job submitter.
+    :jsonparam boolean ldap: Used to populate group members from LDAP. If true,
+      LDAP must be configured and only admins can update this.
+
+    :status 200: Group was updated.
+    :status 400: Invalid data was given.
+    """
+    group = _get_group_by_name(group_name)
+    if not group.can_edit(identity.current.user):
+        raise Forbidden403('Cannot edit group')
+    data = read_json_request(request)
+    with convert_internal_errors():
+        user = identity.current.user
+        renamed = False
+        if 'group_name' in data:
+            new_name = data['group_name']
+            if new_name != group.group_name:
+                if Group.query.filter(Group.group_name == new_name).count():
+                    raise Conflict409('Group %s already exists' % new_name)
+                group.set_name(user, u'HTTP', new_name)
+                renamed = True
+        if 'display_name' in data:
+            new_display_name = data['display_name']
+            if new_display_name != group.display_name:
+                group.set_display_name(user, u'HTTP', new_display_name)
+        if 'root_password' in data:
+            new_root_password = data['root_password']
+            if new_root_password != group.root_password:
+                group.set_root_password(user, u'HTTP', new_root_password)
+        if 'ldap' in data:
+            if not group.can_edit_ldap(user):
+                raise BadRequest400('Cannot edit LDAP group %s' % group)
+            ldap = data['ldap']
+            if ldap != group.ldap:
+                group.ldap = ldap
+    response = jsonify(group.to_json())
+    if renamed:
+        response.headers.add('Location', absolute_url(group.href))
+    return response
+
+def _get_user_by_username(user_name):
+    user = User.by_user_name(user_name)
+    if not user:
+        raise NotFound404('User %s does not exist' % user_name)
+    return user
+
+@app.route('/groups/<group_name>/members/', methods=['POST'])
+@auth_required
+def add_group_membership(group_name):
+    """
+    Add a user to a group.
+
+    :param group_name: Group's name.
+    :jsonparam string user_name: User's username.
+    :jsonparam boolean is_owner: If true, the given user will become one of the
+      group owners.
+
+    """
+    u = identity.current.user
+    data = read_json_request(request)
+    group = _get_group_by_name(group_name, lockmode='update')
+    if not group.can_edit(identity.current.user):
+        raise Forbidden403('Cannot edit group %s' % group_name)
+    if group.ldap:
+        raise Forbidden403('Cannot edit membership of LDAP group %s' % group_name)
+    if 'user_name' not in data:
+        raise BadRequest400('User not specified')
+    user = _get_user_by_username(data['user_name'])
+    is_owner = data.get('is_owner', False)
+    if user not in group.users:
+        group.add_member(user, is_owner=is_owner)
+        mail.group_membership_notify(user, group, agent=u, action='Added')
+    else:
+        raise Conflict409('User %s is already a member of group %s' % (user.user_name, group_name))
+    return '', 204
+
+@app.route('/groups/<group_name>/members/', methods=['DELETE'])
+@auth_required
+def remove_group_membership(group_name):
+    """
+    Remove a user from a group. If the user has the group ownership, it will be
+    revoked.
+
+    :param group_name: Group's name.
+    :jsonparam string user_name: User's username.
+
+    """
+    u = identity.current.user
+    group = _get_group_by_name(group_name, lockmode='update')
+    if not group.can_edit(identity.current.user):
+        raise Forbidden403('Cannot edit group %s' % group_name)
+    if group.ldap:
+        raise Forbidden403('Cannot edit membership of LDAP group %s' % group_name)
+    if 'user_name' not in request.args:
+        raise MethodNotAllowed405
+    user = _get_user_by_username(request.args['user_name'])
+    if not group.can_remove_member(u, user.id):
+        raise Forbidden403('Cannot remove user %s from group %s' % (user, group_name))
+    if user in group.users:
+        group.remove_member(user)
+        mail.group_membership_notify(user, group, agent=identity.current.user,
+                                     action='Removed')
+    else:
+        raise Conflict409('User %s is not a member of group %s' % (user.user_name, group_name))
+    return '', 204
+
+@app.route('/groups/<group_name>/owners/', methods=['POST'])
+@auth_required
+def grant_ownership(group_name):
+    """
+    Grant group ownership to a user. The user can either be the group member or
+    not. If the user is not the group member, it will be added first.
+
+    :param group_name: Group's name.
+    :jsonparam string user_name: User's username.
+
+    """
+    u = identity.current.user
+    data = read_json_request(request)
+    group = _get_group_by_name(group_name, lockmode='update')
+    if not group.can_edit(identity.current.user):
+        raise Forbidden403('Cannot edit group %s' % group_name)
+    if 'user_name' not in data:
+        raise BadRequest400('User not specified')
+    user_name = data['user_name']
+    user = _get_user_by_username(user_name)
+    if not group.has_owner(user):
+        if user in group.users:
+            group.grant_ownership(user)
+        else:
+            if group.ldap:
+                raise BadRequest400('User %s is not a member of LDAP group %s'
+                    % (user_name, group_name))
+            group.add_member(user, is_owner=True)
+    else:
+        raise Conflict409('User %s is already an owner of group %s' % (user.user_name, group_name))
+    return '', 204
+
+@app.route('/groups/<group_name>/owners/', methods=['DELETE'])
+@auth_required
+def revoke_ownership(group_name):
+    """
+
+    Revoke group ownership from an existing group user.
+
+    :param group_name: Group's name.
+    :queryparam user_name: User's username.
+
+    """
+    u = identity.current.user
+    group = _get_group_by_name(group_name, lockmode='update')
+    if not group.can_edit(identity.current.user):
+        raise Forbidden403('Cannot edit group %s' % group_name)
+    if 'user_name' not in request.args:
+        raise MethodNotAllowed405
+    user = _get_user_by_username(request.args['user_name'])
+    if user not in group.users:
+        raise BadRequest400('User is not a member of group %s' % group_name)
+    if group.has_owner(user):
+        if len(group.owners())==1 and not u.is_admin():
+            raise Forbidden403('Cannot remove the only owner')
+        group.revoke_ownership(user)
+    else:
+        raise Conflict409('User %s is not an owner of group %s' % (user.user_name, group_name))
+    return '', 204
+
+def _get_permission_by_name(permission_name):
+    try:
+        return Permission.by_name(permission_name)
+    except NoResultFound:
+        # Needs to return 400 as the resource exists but the given parameter is bad.
+        raise BadRequest400("Permission '%s' does not exist" % permission_name)
+
+@app.route('/groups/<group_name>/permissions/', methods=['POST'])
+@admin_auth_required
+def add_permission(group_name):
+    """
+    Add a permission to a group.
+
+    :param group_name: Group's name.
+    :jsonparam permission_name: Permission's name.
+
+    """
+    u = identity.current.user
+    data = read_json_request(request)
+    group = _get_group_by_name(group_name, lockmode='update')
+    if 'permission_name' not in data:
+        raise BadRequest400('Permission name not specified')
+    permission = _get_permission_by_name(data['permission_name'])
+    if permission not in group.permissions:
+        group.permissions.append(permission)
+        group.record_activity(user=u, service=u'HTTP',
+                             action=u'Added', field=u'Permission', old=None,
+                             new=unicode(permission))
+    return '', 204
+
+@app.route('/groups/<group_name>/permissions/', methods=['DELETE'])
+@auth_required
+def remove_permission(group_name):
+    """
+    Remove a permission from a group.
+
+    :param group_name: Group's name.
+    :queryparam permission_name: Permission's name.
+
+    """
+    u = identity.current.user
+    group = _get_group_by_name(group_name, lockmode='update')
+    if not group.can_edit(u):
+        raise Forbidden403('Cannot edit group %s' % group_name)
+    if 'permission_name' not in request.args:
+        raise MethodNotAllowed405
+    permission_name = request.args['permission_name']
+    permission = _get_permission_by_name(permission_name)
+    if permission in group.permissions:
+        group.permissions.remove(permission)
+        group.record_activity(user=u, service=u'HTTP',
+                             action=u'Removed', field=u'Permission',
+                             old=unicode(permission), new=None)
+    else:
+        raise Conflict409('Group %s does not have permission %s' % (group_name, permission_name))
+    return '', 204
+
 @app.route('/groups/+typeahead')
 def groups_typeahead():
     if 'q' in request.args:
@@ -878,6 +852,17 @@ def groups_typeahead():
     data = [{'group_name': group.group_name, 'display_name': group.display_name,
              'tokens': [group.group_name]}
             for group in groups.values(Group.group_name, Group.display_name)]
+    return jsonify(data=data)
+
+@app.route('/permissions/+typeahead')
+def permissions_typeahead():
+    if 'q' in request.args:
+        permissions = Permission.by_name(request.args['q'], anywhere=True)
+    else:
+        permissions = Permission.query.all()
+    data = [{'permission_name': permission.permission_name,
+             'tokens': [permission.permission_name]}
+            for permission in permissions]
     return jsonify(data=data)
 
 # for sphinx

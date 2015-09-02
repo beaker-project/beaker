@@ -1,0 +1,26 @@
+<form>
+<div class="modal-header">
+  <a href="#" class="close" data-dismiss="modal" aria-hidden="true">&times;</a>
+  <h3>Edit group</h3>
+</div>
+<div class="modal-body">
+  <label for="name">Name</label>
+  <input type="text" id="group_name" name="group_name" placeholder="Name" required maxlength="255"
+        pattern="[^\s](.*[^\s])?"/>
+  <label for="display_name">Display Name</label>
+  <input type="text" id="display_name" name="display_name" placeholder="Display Name" required maxlength="255"
+        pattern="[^\s](.*[^\s])?"/>
+  <label for="display_name">Root Password</label>
+  <input type="text" id="root_password" name="root_password" placeholder="Root Password"/>
+  <% if (can_edit_ldap) { %>
+  <div class="checkbox">
+      <label><input type="checkbox" name="ldap"> Populate group membership from LDAP</label>
+  </div>
+  <% } %>
+</div>
+<div class="modal-footer">
+  <div class="sync-status"/>
+  <button type="button" class="btn" data-dismiss="modal" data-loading-text="Cancel">Cancel</button>
+  <button type="submit" class="btn btn-primary" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Saving&hellip;">Save changes</button>
+</div>
+</form>

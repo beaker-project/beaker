@@ -73,6 +73,20 @@ $.fn.beaker_typeahead = function (type) {
             limit: 10,
             template: JST['beaker-typeaheads/system-fqdn'],
         },
+        'permission-name': {
+            name: 'beaker-permission-name',
+            prefetch: {
+                url: beaker_url_prefix + 'permissions/+typeahead',
+                filter: results_filter,
+            },
+            remote: {
+                url: beaker_url_prefix + 'permissions/+typeahead?q=%QUERY',
+                filter: results_filter,
+            },
+            valueKey: 'permission_name',
+            limit: 10,
+            template: JST['beaker-typeaheads/permission-name'],
+        },
     })[type];
     this.typeahead(options);
 

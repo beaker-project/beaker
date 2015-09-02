@@ -169,7 +169,7 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
         b.find_element_by_link_text('Access Policy').click()
         pane = b.find_element_by_id('access-policy')
         pane.find_element_by_link_text('test?123#123').click()
-        b.find_element_by_xpath('//h1[text()="Group test?123#123"]')
+        b.find_element_by_xpath('//title[normalize-space(text())="test?123#123"]')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1086506
     def test_add_rule_for_nonexistent_user(self):

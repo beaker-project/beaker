@@ -1469,9 +1469,6 @@ class GroupTest(DatabaseTestCase):
         # Setting the same name is a no-op
         group.set_name(None, u'TEST', orig_name)
         self.assertEquals(len(group.activity), 0)
-        # As is setting None
-        group.set_name(None, u'TEST', None)
-        self.assertEquals(len(group.activity), 0)
         # Now check changing the name is properly recorded
         new_name = u'beakerteam'
         group.set_name(None, u'TEST', new_name)
@@ -1488,9 +1485,6 @@ class GroupTest(DatabaseTestCase):
         session.flush()
         # Setting the same name is a no-op
         group.set_display_name(None, u'TEST', orig_display_name)
-        self.assertEquals(len(group.activity), 0)
-        # As is setting None
-        group.set_display_name(None, u'TEST', None)
         self.assertEquals(len(group.activity), 0)
         # Now check changing the name is properly recorded
         new_display_name = u'Beaker Team'

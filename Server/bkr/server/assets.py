@@ -109,6 +109,10 @@ def _create_env(source_dir, output_dir, **kwargs):
             'system-pool-systems.js',
             'power-types-model.js',
             'power-types.js',
+            'group-details.js',
+            'group-members.js',
+            'group-owners.js',
+            'group-permissions.js',
             filters=['uglifyjs'],
             output='beaker-%(version)s.js')
     return env
@@ -136,12 +140,12 @@ def build_assets():
 
 def list_asset_sources(source_dir):
     """
-    Returns a list of paths (relative to the given source_dir) of all asset 
+    Returns a list of paths (relative to the given source_dir) of all asset
     sources files defined in the assets environment.
     """
-    # This is called during package build, so we create a new env specially to 
+    # This is called during package build, so we create a new env specially to
     # refer to the given source dir.
-    # We aren't going to produce any generated files so output_dir is unused 
+    # We aren't going to produce any generated files so output_dir is unused
     # and cache can be discarded.
     source_dir = os.path.abspath(source_dir)
     cache_dir = tempfile.mkdtemp(prefix='beaker-build-assets-cache')
@@ -154,7 +158,7 @@ def list_asset_sources(source_dir):
                 paths.append(os.path.relpath(path, source_dir))
         # site.less should be skipped because it's a symlink
         paths.remove('site.less')
-        # font-awesome is currently not managed by webassets because webassets 
+        # font-awesome is currently not managed by webassets because webassets
         # breaks on non-UTF8 input files
         paths.extend([
             'font-awesome/fonts/fontawesome-webfont.eot',

@@ -198,7 +198,7 @@ class SystemPoolEditTest(WebDriverTestCase):
         modal.find_element_by_name('group_name').clear()
         modal.find_element_by_name('group_name').send_keys(group.group_name)
         modal.find_element_by_xpath('.//button[text()="Save changes"]').click()
-        b.find_element_by_xpath('//body[not(.//h3[text()="Edit system pool"])]')
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
         with session.begin():
             session.refresh(pool)
             self.assertEqual(pool.description, 'newdescription')
@@ -464,7 +464,7 @@ class SystemPoolAccessPolicyWebUITest(WebDriverTestCase):
         b.find_element_by_link_text('System Access Policy').click()
         pane = b.find_element_by_id('access-policy')
         pane.find_element_by_link_text('test?123#1234').click()
-        b.find_element_by_xpath('//h1[text()="Group test?123#1234"]')
+        b.find_element_by_xpath('//title[normalize-space(text())="test?123#1234"]')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1086506
     def test_add_rule_for_nonexistent_user(self):

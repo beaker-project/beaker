@@ -1,0 +1,13 @@
+<% if (ldap) { %>
+<p>Members populated from LDAP:</p>
+<% } else { %>
+<p>
+The following users are members of this group:
+</p>
+<% } %>
+<div>
+<% if (_.isEmpty(members)) { %>
+(none)
+<% } %>
+<ul class="list-group group-members-list"></ul>
+</div>

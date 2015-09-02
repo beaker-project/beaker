@@ -243,3 +243,10 @@ Power types
 
 .. autoflask:: bkr.server.wsgi:app
    :endpoints: get_powertypes, delete_powertype, create_powertype
+
+Groups
+------
+
+.. autoflask:: bkr.server.wsgi:app
+   :endpoints: get_group, update_group, add_group_membership, remove_group_membership,
+     grant_ownership, revoke_ownership, add_permission, remove_permission

@@ -36,7 +36,8 @@ class TestViewJob(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'jobs/%s' % job.id)
         b.find_element_by_link_text("%s" % job.group).click()
-        b.find_element_by_xpath('//h1[text()="%s"]' % group.display_name)
+        b.find_element_by_xpath('.//h1[normalize-space(text())="%s"]' % \
+                                       group.group_name)
 
     def test_cc_list(self):
         with session.begin():
