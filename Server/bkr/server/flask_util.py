@@ -206,6 +206,16 @@ def auth_required(f):
         return f(*args, **kwds)
     return wrapper
 
+def admin_auth_required(f):
+    """Decorator that reports a 403 error if the user is not an admin"""
+    @auth_required
+    @functools.wraps(f)
+    def wrapper(*args, **kwds):
+        if not identity.current.user.is_admin():
+            raise Forbidden403("You are not a member of the admin group")
+        return f(*args, **kwds)
+    return wrapper
+
 def read_json_request(request):
     """Helper that throws a 400 error if the request has no JSON data"""
     data = request.json
