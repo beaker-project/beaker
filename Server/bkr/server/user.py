@@ -185,7 +185,7 @@ class Users(AdminPage):
 
     @cherrypy.expose
     @identity.require(identity.in_group('admin'))
-    def remove_account(self, username):
+    def remove_account(self, username, newowner=None):
         """
         Remove a user account.
 
@@ -195,18 +195,26 @@ class Users(AdminPage):
         account for further login.
 
         :param username: An existing username
+        :param newowner: An optional username to assign all systems to.
         :type username: string
         """
+        kwargs = {}
 
         try:
             user = User.by_user_name(username)
         except InvalidRequestError:
             raise BX(_('Invalid User %s ' % username))
 
+        if newowner:
+            owner = User.by_user_name(newowner)
+            if owner is None:
+                raise BX(_('Invalid user name for owner %s' % newowner))
+            kwargs['newowner'] = owner
+
         if user.removed:
             raise BX(_('User already removed %s' % username))
 
-        self._remove(user=user, method='XMLRPC')
+        self._remove(user=user, method='XMLRPC', **kwargs)
 
     def _disable(self, user, method,
                  msg='Your account has been temporarily disabled'):
@@ -215,7 +223,6 @@ class Users(AdminPage):
         Job.cancel_jobs_by_user(user, msg)
 
     def _remove(self, user, method, **kw):
-
         if user == identity.current.user:
             raise BX(_('You cannot remove yourself'))
 
@@ -233,11 +240,12 @@ class Users(AdminPage):
                     old=u'%s' % system.loaned, new=u'None')
             system.loaned = None
         # Change the owner to the caller
+        newowner = kw.get('newowner', identity.current.user)
         for system in System.query.filter(System.owner==user):
-            system.owner = identity.current.user
+            system.owner = newowner
             system.record_activity(user=identity.current.user, service=method,
                     action=u'Changed', field=u'Owner',
-                    old=u'%s' % user, new=u'%s' % identity.current.user)
+                                   old=u'%s' % user, new=u'%s' % newowner)
         # Finally remove the user
         user.removed=datetime.utcnow()
 
