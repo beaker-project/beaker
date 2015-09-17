@@ -20,10 +20,9 @@ Description
 
 Remove a Beaker user account.
 
-Removing a user account cancels any running job(s), returns all
-the systems in use by the user, modifies the ownership of the
-systems owned to the admin closing the account, and disables the
-account for further login.
+Removing a user account cancels any running job(s), returns all the systems in
+use by the user, modifies by default the ownership of the systems owned to the
+admin closing the account, and disables the account for further login.
 
 
 Common :program:`bkr` options are described in the :ref:`Options
@@ -41,6 +40,10 @@ Close the accounts of users, user1 and user2::
 
     bkr remove-account user1 user2
 
+Close the account of user1 and assign their systems to user2::
+
+    bkr remove-account --new-owner=user2 user1
+
 See also
 --------
 
@@ -54,7 +57,14 @@ class Remove_Account(BeakerCommand):
     enabled=True
 
     def options(self):
-        self.parser.usage = "%%prog %s" % self.normalized_name
+        self.parser.usage = '%%prog %s' % self.normalized_name
+        self.parser.add_option(
+            '--new-owner',
+            metavar='USERNAME',
+            help=('Transfer ownership of any systems currently owned by '
+                  'the closed accounts to USERNAME [default: '
+                  'the admin running this command]')
+        )
 
     def run(self, *args, **kwargs):
 
@@ -63,4 +73,4 @@ class Remove_Account(BeakerCommand):
 
         self.set_hub(**kwargs)
         for username in args:
-            self.hub.users.remove_account(username)
+            self.hub.users.remove_account(username, kwargs.get('new_owner'))

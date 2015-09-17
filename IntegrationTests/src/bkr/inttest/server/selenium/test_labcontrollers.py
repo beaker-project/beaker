@@ -568,6 +568,23 @@ class TestPowerFailures(XmlRpcTestCase):
             self.assertEqual(system_activity.action, 'on')
             self.assertTrue(system_activity.new_value.startswith('Failed'))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=916302
+    def test_system_not_marked_broken_for_failed_interrupt_commands(self):
+        """The recipe is not aborted if the action command is interrupt which is
+        only supported by ipmilan power types."""
+        with session.begin():
+            system = data_setup.create_system(lab_controller=self.lab_controller,
+                                              status=SystemStatus.automated)
+            system.action_power(u'interrupt')
+            command = system.command_queue[0]
+
+        self.server.labcontrollers.mark_command_running(command.id)
+        self.server.labcontrollers.mark_command_failed(command.id,
+                                                       u'needs moar powa')
+        with session.begin():
+            self.assertEqual(SystemStatus.automated, system.status)
+            self.assertNotEqual(SystemStatus.broken, system.status)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=720672
     def test_manual_system_status_not_changed(self):
         with session.begin():

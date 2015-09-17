@@ -398,7 +398,9 @@ class LabControllers(RPCRoot):
             raise ValueError('Command %s not running' % command_id)
         cmd.change_status(CommandStatus.failed)
         cmd.new_value = message
-        if cmd.system.status == SystemStatus.automated:
+        # Ignore failures for 'interrupt' commands because most power types
+        # don't support it and will report a "failure" in that case.
+        if cmd.action != 'interrupt' and cmd.system.status == SystemStatus.automated:
             cmd.system.mark_broken(reason=u'Power command failed: %s' % message)
         cmd.log_to_system_history()
         return True

@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -8,7 +7,7 @@ from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client, create_client_config, ClientError, \
         ClientTestCase
-from bkr.server.model import TaskStatus, Job
+from bkr.server.model import TaskStatus, Job, User
 from bkr.server.tools import beakerd
 
 class RemoveAccountTest(ClientTestCase):
@@ -16,7 +15,7 @@ class RemoveAccountTest(ClientTestCase):
     def test_admin_delete_self(self):
         try:
             run_client(['bkr', 'remove-account', 'admin'])
-            fail('Must fail or die')
+            self.fail('Must fail or die')
         except ClientError, e:
             self.assertIn('You cannot remove yourself', e.stderr_output)
 
@@ -51,7 +50,6 @@ class RemoveAccountTest(ClientTestCase):
             self.assertIn('Not member of group: admin', e.stderr_output)
 
     def test_account_close_job_cancel(self):
-
         with session.begin():
             user1 = data_setup.create_user()
             job = data_setup.create_job(owner=user1)
@@ -69,3 +67,30 @@ class RemoveAccountTest(ClientTestCase):
             self.assertEquals(job.status, TaskStatus.cancelled)
             self.assertIn('User %s removed' % user1.user_name,
                           job.recipesets[0].recipes[0].tasks[0].results[0].log)
+
+    def test_close_account_transfer_ownership(self):
+        with session.begin():
+            new_owner = data_setup.create_user()
+            user = data_setup.create_user()
+            system = data_setup.create_system(owner=user)
+
+        run_client(['bkr', 'remove-account', '--new-owner=%s' % new_owner.user_name, user.user_name])
+
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(system.owner, new_owner)
+
+    def test_invalid_newowner_errors(self):
+        """If an invalid username is passed as a new owner, we expect the
+        command to error without changing the system."""
+        invalid_username = 'asdfasdfasdf'
+        with session.begin():
+            user = data_setup.create_user()
+            data_setup.create_system()
+            self.assertFalse(session.query(User).filter_by(user_name=invalid_username).count())
+
+        try:
+            run_client(['bkr', 'remove-account', '--new-owner=%s' % invalid_username, user.user_name])
+            self.fail('Expected client to fail due to invalid new owner')
+        except ClientError, e:
+            self.assertIn('Invalid user name for owner', e.stderr_output)
