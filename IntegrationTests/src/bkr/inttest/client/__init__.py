@@ -77,6 +77,30 @@ def run_client(args, config=None, input=None, **kwargs):
 
 default_client_config = None
 
+
+dev_wizard_command = os.path.join(os.path.dirname(__file__),
+                                  '..', '..', '..', '..', 'run-wizard.sh')
+wizard_command = os.environ.get('BEAKER_WIZARD_COMMAND', dev_wizard_command)
+
+def start_wizard(args, env=None, **kwargs):
+    env = dict(env or os.environ)
+    env['PYTHONUNBUFFERED'] = '1'
+    return subprocess.Popen(args,
+                            executable=wizard_command,
+                            stdout=subprocess.PIPE,
+                            stdin=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            env=env,
+                            **kwargs)
+
+def run_wizard(args, input=None, **kwargs):
+    p = start_wizard(args, **kwargs)
+    out, err = p.communicate(input)
+    if p.returncode:
+        raise ClientError(args, p.returncode, err)
+    assert err == '', err
+    return out
+
 def setup_package():
     global default_client_config
     default_client_config = create_client_config()
