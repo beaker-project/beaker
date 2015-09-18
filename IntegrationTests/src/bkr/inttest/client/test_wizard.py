@@ -39,3 +39,41 @@ class TestWizard(BaseWizardTestCase):
 
         out = run_wizard(['beaker-wizard'], cwd=namespace_path)
         self.assertRegexpMatches(out, re.compile(r'\bNamespace\b.*%s' % namespace, re.I), out)
+
+
+class TestTypesTest(BaseWizardTestCase):
+
+    def create_basedir(self, dirs=None):
+        if dirs is None:
+            dirs = ['CoreOS', 'wget']
+        basedir = os.path.join(self.tempdir, *dirs)
+        os.makedirs(basedir)
+        return basedir
+
+    def assertRegexpInMakefile(self, regexp, basedir):
+        makefile_path = os.path.join(basedir, 'Makefile')
+        with open(makefile_path, 'r') as f:
+            contents = f.read()
+            self.assertRegexpMatches(contents, regexp, contents)
+
+    def test_creates_successfully_custom_test_type(self):
+        basedir = self.create_basedir()
+
+        expected = ['mytesttype', 'test1']
+        out = run_wizard(['beaker-wizard', os.path.join(*expected)], cwd=basedir)
+        self.assertRegexpMatches(out, re.compile(r'\bwritten\b'))
+        self.assertTrue(
+            os.path.exists(os.path.join(basedir, *expected)), out
+        )
+        self.assertRegexpInMakefile(re.compile(r'Type:\s+%s' % expected[0]),
+                                    os.path.join(basedir, *expected))
+
+    def test_creates_default_test_type(self):
+        basedir = self.create_basedir()
+
+        expected = ['Library', 'test1']
+        out = run_wizard(['beaker-wizard', os.path.join(*expected)], cwd=basedir)
+        self.assertRegexpMatches(out, re.compile(r'\bwritten\b'))
+        self.assertTrue(
+            os.path.exists(os.path.join(basedir, *expected)), out
+        )

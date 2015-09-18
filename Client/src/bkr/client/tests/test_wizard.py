@@ -4,9 +4,10 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import StringIO
 from datetime import date
 import unittest2 as unittest
-from mock import Mock
+from mock import Mock, patch
 from bkr.client import wizard
 
 EXPECTED_GPL_HEADER = ("Copyright (c) %s %s.\n" %
@@ -133,3 +134,16 @@ class ReleasesTest(unittest.TestCase):
     def test_default_excludes_rhel4_rhel5(self):
         self.assertEqual(self.releases.data,
                 ['-RHEL4', '-RHELClient5', '-RHELServer5'])
+
+
+class TypeTest(unittest.TestCase):
+
+    @patch('sys.stdout', new_callable=StringIO.StringIO)
+    def test_prints_full_heading(self, cpt_stdout):
+        type = wizard.Type()
+        type.heading()
+        cpt_stdout.seek(0)
+        printout = cpt_stdout.read()
+        self.assertRegexpMatches(printout, r'\bWhat is the type of test?\b')
+        self.assertRegexpMatches(printout, r'\bRecommended values\b')
+        self.assertRegexpMatches(printout, r'\bPossible values\b')
