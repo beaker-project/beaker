@@ -1,0 +1,7 @@
+<ul class="unstyled">
+ <% _.each(logs, function (log) { %>
+ <li>
+     <a href="<%- log.href %>" title="<%- log.path %>"><%- log.path %></a>
+ </li>
+ <% }) %>
+</ul>

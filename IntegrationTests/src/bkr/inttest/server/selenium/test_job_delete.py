@@ -123,6 +123,5 @@ class JobDeleteWD(WebDriverTestCase):
         b.find_element_by_xpath("//table[@id='widget']/tbody[not(./tr)]")
         recipe = job.recipesets[0].recipes[0]
         b.get(get_server_base() + 'recipes/%d' % recipe.id)
-        warn_text = b.find_element_by_class_name('flash').text
-        self.assertTrue('Invalid R:%s, has been deleted' %
-            recipe.id in warn_text)
+        self.assertTrue('Job %s is deleted' %
+            job.id in b.find_element_by_tag_name('pre').text)

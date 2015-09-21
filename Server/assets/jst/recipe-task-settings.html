@@ -1,0 +1,20 @@
+<% if (fetch_url) { %>
+    <h4>Fetch URL</h4>
+    <p><%- fetch_url %></p>
+    <% if (fetch_subdir) { %>
+        <h4>Fetch Subdirectory</h4>
+        <p><%- fetch_subdir %></p>
+    <% } else { %>
+        <em class="muted">(none)</em>
+    <% } %>
+<% } %>
+<h4>Task Parameters</h4>
+<% if (!_.isEmpty(params)) { %>
+    <% _.each(params, function (param) { %>
+        <div class="recipe-task-parameter"><code><%- param.name %></code><span class="recipe-task-parameter-equals">=</span><code><%- param.value %></code></div>
+    <% })%>
+<% } else { %>
+    <div><em class="muted">(none)</em></div>
+<% } %>
+<h4>Role</h4>
+<div><code><%- role %></code></div>

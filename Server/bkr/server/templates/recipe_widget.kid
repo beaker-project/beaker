@@ -82,7 +82,7 @@
 </div>
 <script type="text/javascript">
 $(function () {
-    new RecipeTasksView({el: $('#recipe${recipe.id}'), recipe_id: ${recipe.id}});
+    new RecipeTasksOldView({el: $('#recipe${recipe.id}'), recipe_id: ${recipe.id}});
 });
 </script>
 </div>

@@ -9,15 +9,16 @@ import logging
 import re
 import requests
 from turbogears.database import session
-from unittest2 import SkipTest
 
-from bkr.server.model import TaskStatus, TaskResult, RecipeTaskResult
+from bkr.server.model import TaskStatus, TaskResult, RecipeTaskResult, Task
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_text_present
 from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
 from bkr.inttest.assertions import assert_sorted
 from bkr.inttest.server.requests_utils import post_json, patch_json, \
-        login as requests_login
+        put_json, login as requests_login
+from bkr.inttest.assertions import assert_datetime_within
+
 
 class TestRecipesDataGrid(WebDriverTestCase):
 
@@ -85,6 +86,7 @@ class TestRecipesDataGrid(WebDriverTestCase):
             cell_values.append(int(m.group(1)))
         assert_sorted(cell_values)
 
+
 class TestRecipeView(WebDriverTestCase):
 
     def setUp(self):
@@ -98,50 +100,25 @@ class TestRecipeView(WebDriverTestCase):
                     distro_tree=self.distro_tree, server_log=True)
             for recipe in self.job.all_recipes:
                 recipe.system = self.system
-
         self.browser = self.get_browser()
-        login(self.browser, user=user.user_name, password='password')
 
-    def go_to_recipe_view(self, recipe):
+    def go_to_recipe_view(self, recipe=None, tab=None):
+        if recipe is None:
+            recipe = self.job.recipesets[0].recipes[0]
         b = self.browser
-        b.get(get_server_base() + 'recipes/mine')
-        b.find_element_by_link_text(recipe.t_id).click()
-
-    def test_recipe_systems(self):
-        with session.begin():
-            self.system.user = self.user
-            queued_job = data_setup.create_job(owner=self.user,
-                    distro_tree=self.distro_tree)
-            data_setup.mark_job_queued(queued_job)
-            the_recipe = queued_job.recipesets[0].recipes[0]
-            the_recipe.systems[:] = [self.system]
-        b = self.browser
-        self.go_to_recipe_view(the_recipe)
-        b.find_element_by_xpath('//td[preceding-sibling::th[text()='
-            '"Possible Systems"]]/a').click()
-
-        # Make sure our system link is there
-        b.find_element_by_link_text(self.system.fqdn)
-        # Make sure out user link is there
-        b.find_element_by_link_text(self.system.user.user_name)
-        # Make sure we only have one system against our recipe
-        system_rows = b.find_elements_by_xpath('//table[@id="widget"]/tbody/tr')
-        self.assert_(len(system_rows) == 1)
+        b.get(get_server_base() + 'recipes/%s' % recipe.id)
+        if tab:
+            b.find_element_by_xpath('//ul[contains(@class, "recipe-nav")]'
+                    '//a[text()="%s"]' % tab).click()
 
     def test_log_url_looks_right(self):
         b = self.browser
-        some_job = self.job
-        r = some_job.recipesets[0].recipes[0]
-        self.go_to_recipe_view(r)
-        b.find_element_by_xpath('//div[@id="recipe%s"]//a[text()="Show Results"]' % r.id).click()
-        rt_log_server_link = b.find_element_by_xpath("//tr[@class='pass_recipe_%s recipe_%s']//td[position()=4]//a" % (r.id, r.id)).get_attribute('href')
-        self.assertEquals(rt_log_server_link,
-                get_server_base() + 'recipes/%s/tasks/%s/logs/tasks/dummy.txt'
-                % (r.id, r.tasks[0].id))
-        b.find_element_by_xpath('//div[@id="recipe%s"]//button[text()="Logs"]' % r.id).click()
-        r_server_link = b.find_element_by_xpath("//table/tbody//tr[position()=6]/td//a").get_attribute('href')
-        self.assertEquals(r_server_link,
-                get_server_base() + 'recipes/%s/logs/recipe_path/dummy.txt' % r.id)
+        self.go_to_recipe_view(tab='Installation')
+        tab = b.find_element_by_id('recipe-installation')
+        log_link = tab.find_element_by_xpath('//span[@class="main-log"]/a')
+        self.assertEquals(log_link.get_attribute('href'),
+            get_server_base() + 'recipes/%s/logs/recipe_path/dummy.txt' %
+                    self.job.recipesets[0].recipes[0].id)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1072133
     def test_watchdog_time_remaining_display(self):
@@ -153,263 +130,218 @@ class TestRecipeView(WebDriverTestCase):
             recipe.watchdog.kill_time = (datetime.datetime.utcnow() +
                     datetime.timedelta(seconds=83 * 60 + 30))
         self.go_to_recipe_view(recipe)
-        b.find_element_by_link_text('Show Results').click()
-        duration = b.find_element_by_xpath('//tr[contains(@class, "recipe_%s")][1]'
-                '//div[@class="task-duration"]' % recipe.id)
-        self.assertRegexpMatches(duration.text, r'^Time Remaining 1:23:\d\d$')
+        duration = b.find_element_by_class_name('recipe-watchdog-time-remaining')
+        self.assertRegexpMatches(duration.text, r'^Remaining watchdog time: 01:\d\d:\d\d')
         with session.begin():
             recipe.watchdog.kill_time = (datetime.datetime.utcnow() +
                     datetime.timedelta(days=2, seconds=83 * 60 + 30))
         self.go_to_recipe_view(recipe)
-        duration = b.find_element_by_xpath('//tr[contains(@class, "recipe_%s")][1]'
-                '//div[@class="task-duration"]' % recipe.id)
-        self.assertRegexpMatches(duration.text, r'^Time Remaining 2 days, 1:23:\d\d$')
-
-    def test_task_pagination(self):
-        with session.begin():
-            num_of_tasks = 35
-            the_tasks = [data_setup.create_task() for t in range(num_of_tasks)]
-            the_recipe = data_setup.create_recipe(task_list=the_tasks)
-            the_job = data_setup.create_job_for_recipes([the_recipe], owner=self.user)
-
-        b = self.browser
-        self.go_to_recipe_view(the_recipe)
-        b.find_element_by_xpath('//div[@id="recipe%s"]//a[text()="Show Results"]'
-                % the_recipe.id).click()
-        for t in the_job.recipesets[0].recipes[0].tasks:
-            self.assertTrue(is_text_present(b, "T:%s" %t.id))
+        duration = b.find_element_by_class_name('recipe-watchdog-time-remaining')
+        self.assertRegexpMatches(duration.text, r'^Remaining watchdog time: 49:\d\d:\d\d')
 
     def test_task_versions_are_shown(self):
         with session.begin():
-            recipe = self.job.recipesets[0].recipes[0]
+            recipe = data_setup.create_recipe()
+            job = data_setup.create_job_for_recipes([recipe])
             recipetask = recipe.tasks[0]
             recipetask.version = u'1.10-23'
         b = self.browser
-        self.go_to_recipe_view(recipe)
-        b.find_element_by_xpath('//div[@id="recipe%s"]//a[text()="Show Results"]'
-                % recipe.id).click()
-        tasks_table = b.find_element_by_xpath('//div[@id="recipe%s"]'
-                '//table[contains(@class, "tasks")]' % recipe.id)
-        self.assertIn('1.10-23',
-                tasks_table.find_element_by_xpath('//tr[td/a/text()="%s"]/td[2]'
-                    % recipetask.t_id).text)
+        self.go_to_recipe_view(recipe, tab='Tasks')
+        self.assertIn('1.10-23', b.find_element_by_xpath('//div[@id="task%s"]'
+                '//span[contains(@class, "task-version")]' % recipetask.id).text)
 
-    # https://bugzilla.redhat.com/show_bug.cgi?id=751330
-    def test_fetching_large_results_is_not_too_slow(self):
-        raise SkipTest('"slowness" is too subjective')
-        with session.begin():
-            tasks = [data_setup.create_task() for _ in range(700)]
-            recipe = data_setup.create_recipe(task_list=tasks)
-            for rt in recipe.tasks:
-                rt.results = [RecipeTaskResult(path=u'result_%d' % i,
-                        result=TaskResult.pass_, score=i) for i in range(10)]
-            job = data_setup.create_job_for_recipes([recipe], owner=self.user)
-
+    def test_anonymous_cannot_edit_whiteboard(self):
         b = self.browser
-        self.go_to_recipe_view(recipe)
-        b.find_element_by_xpath('//div[@id="recipe%s"]//a[text()="Show Results"]'
-                % recipe.id).click()
-        # Let's set a wait time of 30 seconds and try to find the results table.
-        # If the server is taking too long to return our results,
-        # we will get a NoSuchElementException below.
-        b.implicitly_wait(30)
-        b.find_element_by_xpath('//div[@id="task_items_%s"]//table' % recipe.id)
+        self.go_to_recipe_view()
+        b.find_element_by_xpath('//div[@class="recipe-page-header" and '
+                'not(.//button[normalize-space(string(.))="Edit"])]')
 
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=674025
-    def test_task_anchor_on_recipe_page(self):
+    def test_authenticated_user_can_edit_whiteboard(self):
         with session.begin():
             job = data_setup.create_job(owner=self.user)
             recipe = job.recipesets[0].recipes[0]
-            task = recipe.tasks[0]
         b = self.browser
-        # bkr/recipes/id#task<id>
-        b.get(get_server_base() + 'recipes/%s#task%s' % (recipe.id, task.id))
-        # "Show Results" should be activated for the recipe
-        b.find_element_by_css_selector('#recipe%s .results-tab.active' % recipe.id)
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=674025
-    # OLD, DEPRECATED JOB PAGE ONLY
-    def test_task_anchor_on_job_page(self):
-        with session.begin():
-            self.user.use_old_job_page = True
-            recipes = [data_setup.create_recipe(distro_tree=self.distro_tree) for _ in range(10)]
-            job = data_setup.create_job_for_recipes(recipes, owner=self.user)
-        b = self.browser
-        # bkr/jobs/id#task<id>
-        # for multi recipe jobs, only the recipe to which the task belongs should be visible
-        # choose a recipe and task somewhere in the middle
-        task = job.recipesets[0].recipes[6].tasks[0].id
-        recipe = recipes[6]
-        b.get(get_server_base() + 'jobs/%s#task%s' %(job.id,task))
-        # "Show Results" should be activated for the recipe
-        b.find_element_by_css_selector('#recipe%s .results-tab.active' % recipe.id)
-        recipes.remove(recipe)
-        for r in recipes:
-            # "Hide Results" should be activated for the recipe
-            b.find_element_by_css_selector('#recipe%s .hide-results-tab.active' % r.id)
-
-    def test_no_failed_results(self):
-        with session.begin():
-            the_recipe = data_setup.create_recipe()
-            job = data_setup.create_job_for_recipes([the_recipe],
-                                                    owner=self.user)
-
-        b = self.browser
-        # Recipe without failed results should not show the button
-        self.go_to_recipe_view(the_recipe)
-        b.find_element_by_xpath(
-            '//div[@id="recipe%s" and not(.//a[text()="Show Failed Results"])]'
-            % the_recipe.id)
-
-    def check_task_not_loaded(self, recipe, task):
-        fmt = '//div[@id="recipe%s" and not(.//a[text()="T:%s"])]'
-        self.browser.find_element_by_xpath(fmt % (recipe.id, task.id))
-
-    def check_task_visible(self, recipe, task):
-        fmt = '//div[@id="recipe%s"]//a[text()="T:%s"]'
-        t = self.browser.find_element_by_xpath(fmt % (recipe.id, task.id))
-        msg = "R:%s T:%s unexpectedly hidden"
-        self.assertTrue(t.is_displayed(), msg % (recipe.id, task.id))
-
-    def check_task_hidden(self, recipe, task):
-        fmt = '//div[@id="recipe%s"]//a[text()="T:%s"]'
-        t = self.browser.find_element_by_xpath(fmt % (recipe.id, task.id))
-        msg = "R:%s T:%s unexpectedly visible"
-        self.assertFalse(t.is_displayed(), msg % (recipe.id, task.id))
-
-    def test_show_all_results(self):
-        with session.begin():
-            tasks = [data_setup.create_task() for t in range(5)]
-            recipe = data_setup.create_recipe(task_list=tasks)
-            job = data_setup.create_job_for_recipes([recipe], owner=self.user)
-
-        b = self.browser
+        login(b)
         self.go_to_recipe_view(recipe)
-        # Tasks should only be loaded on demand
-        for t in recipe.tasks:
-            self.check_task_not_loaded(recipe, t)
-        # Full result tab should have all tasks
-        b.find_element_by_xpath(
-                '//div[@id="recipe%s"]//a[text()="Show Results"]'
-                % recipe.id).click()
-        for t in recipe.tasks:
-            self.check_task_visible(recipe, t)
-        # Clicking "Hide" should hide all tasks again
-        b.find_element_by_xpath(
-                '//div[@id="recipe%s"]//a[text()="Hide"]'
-                % recipe.id).click()
-        for t in recipe.tasks:
-            self.check_task_hidden(recipe, t)
-
-    def test_show_failed_results(self):
-        # To check correct display of failed results
-        #   - create 3 recipes with 2 tasks each
-        #   - for each recipe, mark the first task as failed in some way
-        #     (Fail, Warn, Panic)
-        #   - check clicking "Show Failed Results" tab shows only the first
-        #   - check clicking "Hide" hides the loaded task
-        status_result_pairs = []
-        for result in (TaskResult.fail, TaskResult.warn, TaskResult.panic):
-            for status in (TaskStatus.completed, TaskStatus.cancelled,
-                            TaskStatus.aborted):
-                status_result_pairs.append((status, result))
-
+        b.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('whiteboard').clear()
+        modal.find_element_by_name('whiteboard').send_keys('testwhiteboard')
+        modal.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
         with session.begin():
-            recipes = []
-            for __ in status_result_pairs:
-                tasks = [data_setup.create_task() for i in range(2)]
-                recipe = data_setup.create_recipe(task_list=tasks)
-                recipes.append(recipe)
-            job = data_setup.create_job_for_recipes(recipes, owner=self.user)
-            data_setup.mark_job_queued(job)
-            data_setup.mark_job_running(job)
-            for recipe, (status, result) in zip(recipes, status_result_pairs):
-                task_result = RecipeTaskResult(path=u'failure_result',
-                                                result=result)
-                recipe.tasks[0].results = [task_result]
-                recipe.tasks[0].status = status
-                recipe.tasks[1].start()
-            job.update_status()
+            session.refresh(recipe)
+            self.assertEqual(recipe.whiteboard, 'testwhiteboard')
 
+
+    def test_first_faild_task_should_expand_when_first_loading(self):
+        with session.begin():
+            recipe = data_setup.create_recipe(task_list=[
+                Task.by_name(u'/distribution/install'),
+                Task.by_name(u'/distribution/reservesys')
+            ])
+            job = data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_tasks_finished(recipe, result=TaskResult.fail)
+            job.update_status()
         b = self.browser
-        for recipe in recipes:
-            failed, incomplete = recipe.tasks
-            expected_result = failed.results[0].result
-            # These assertions ensure the task setup code above is correct
-            self.assertEqual(recipe.status, TaskStatus.running)
-            self.assertEqual(recipe.result, expected_result)
-            self.assertEqual(failed.result, expected_result)
-            self.assertEqual(incomplete.result, TaskResult.new)
-            self.go_to_recipe_view(recipe)
-            # Tasks should only be loaded on demand
-            for t in recipe.tasks:
-                self.check_task_not_loaded(recipe, t)
-            # Failed result tab should only load the first task
-            b.find_element_by_xpath(
-                '//div[@id="recipe%s"]//a[text()="Show Failed Results"]'
-                    % recipe.id).click()
-            self.check_task_visible(recipe, failed)
-            self.check_task_not_loaded(recipe, incomplete)
-            # Clicking "Hide" should hide the loaded task
-            b.find_element_by_xpath(
-                    '//div[@id="recipe%s"]//a[text()="Hide"]'
-                    % recipe.id).click()
-            self.check_task_hidden(recipe, failed)
-            self.check_task_not_loaded(recipe, incomplete)
+        self.go_to_recipe_view(recipe, tab='Tasks')
+        tab = b.find_element_by_id('recipe-tasks')
+        # The in class is an indication that a task is expanded.
+        tab.find_element_by_xpath('//div[@id="recipe-task-details-%s" and '
+            'contains(@class, "in")]' % recipe.tasks[0].id)
+
+    def test_task_without_failed_results_should_not_expand(self):
+        with session.begin():
+            recipe = data_setup.create_recipe(task_list=[
+                Task.by_name(u'/distribution/install'),
+                Task.by_name(u'/distribution/reservesys')
+            ])
+            job = data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_tasks_finished(recipe, result=TaskResult.pass_)
+            job.update_status()
+        b = self.browser
+        self.go_to_recipe_view(recipe, tab='Tasks')
+        tab = b.find_element_by_id('recipe-tasks')
+        for task in recipe.tasks:
+            tab.find_element_by_xpath('//div[@id="recipe-task-details-%s" and '
+                    'not(contains(@class, "in"))]' % task.id)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=706435
-    def test_task_result_datetimes_are_localised(self):
+    def test_task_start_time_is_localised(self):
+        with session.begin():
+            recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_running(recipe)
         b = self.browser
-        recipe = self.job.recipesets[0].recipes[0]
-        self.go_to_recipe_view(recipe)
-        b.find_element_by_xpath('//a[text()="Show Results"]').click()
-        b.find_element_by_xpath(
-                '//div[@id="recipe-%d-results"]//table' % recipe.id)
-        recipe_task_start, recipe_task_finish, recipe_task_duration = \
-                b.find_elements_by_xpath(
-                    '//div[@id="recipe-%d-results"]//table'
-                    '/tbody/tr[1]/td[3]/div' % recipe.id)
-        self.check_datetime_localised(recipe_task_start.text.strip())
-        self.check_datetime_localised(recipe_task_finish.text.strip())
-        self.check_datetime_localised(b.find_element_by_xpath(
-                '//div[@id="recipe-%d-results"]//table'
-                '/tbody/tr[2]/td[3]' % recipe.id).text)
+        self.go_to_recipe_view(recipe, tab='Tasks')
+        tab = b.find_element_by_id('recipe-tasks')
+        start_time = tab.find_element_by_xpath('//div[@id="task%s"]'
+                '//div[@class="task-start-time"]/time' % recipe.tasks[0].id)
+        self.check_datetime_localised(start_time.get_attribute('title'))
 
     def check_datetime_localised(self, dt):
         self.assert_(re.match(r'\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d [-+]\d\d:\d\d$', dt),
                 '%r does not look like a localised datetime' % dt)
 
-    def test_return_system_reservation(self):
-        b = self.browser
+    def test_anonymous_cannot_edit_reservation(self):
         with session.begin():
-            recipe = data_setup.create_recipe(
-                task_list=[data_setup.create_task()],
-                reservesys=True,
-                reservesys_duration=1800,
-            )
-            job = data_setup.create_job_for_recipes([recipe], owner=self.user)
-            data_setup.mark_recipe_tasks_finished(job.recipesets[0].recipes[0])
-            job.update_status()
+            recipe = data_setup.create_recipe(reservesys=True)
+            job = data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_job_running(job)
+        b = self.browser
+        self.go_to_recipe_view(recipe, tab='Reservation')
+        b.find_element_by_xpath('//div[@id="recipe-reservation" and '
+                'not(.//button[normalize-space(string(.))="Edit"])]')
 
-        self.go_to_recipe_view(recipe)
-        b.find_element_by_xpath('//span[@class="statusReserved"]')
-        duration = b.find_element_by_xpath('//span[@class="reservation_duration"]').text
-        self.assertRegexpMatches(duration, r'(0:\d\d:\d\d remaining)')
-        b.find_element_by_link_text('Release System').click()
-        b.find_element_by_xpath('//h1[text()="Release reserved system for Recipe %s"]' % recipe.id) 
-        b.find_element_by_xpath('//form[@id="end_recipe_reservation"]//input[@type="submit"]').click()
-        flash_text = b.find_element_by_class_name('flash').text
-        self.assertEquals('Successfully released reserved system for %s' % recipe.t_id, 
-                          flash_text)
+    def test_authenticated_user_can_request_reservation(self):
+        with session.begin():
+            recipe = data_setup.create_recipe()
+            job = data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_job_running(job)
+        b = self.browser
+        login(b)
+        self.go_to_recipe_view(recipe, tab='Reservation')
+        tab = b.find_element_by_id('recipe-reservation')
+        tab.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_xpath('.//button[text()="Yes"]').click()
+        modal.find_element_by_name('duration').clear()
+        modal.find_element_by_name('duration').send_keys('300')
+        modal.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
+        self.assertIn('The system will be reserved for 00:05:00 at the end of the recipe',
+            tab.text)
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(recipe.reservation_request.duration, 300)
+
+    def test_authenticated_user_can_edit_reservation(self):
+        with session.begin():
+            recipe = data_setup.create_recipe(reservesys=True)
+            job = data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_job_running(job)
+        b = self.browser
+        login(b)
+        self.go_to_recipe_view(recipe, tab='Reservation')
+        tab = b.find_element_by_id('recipe-reservation')
+        tab.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('duration').clear()
+        modal.find_element_by_name('duration').send_keys('300')
+        modal.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(recipe.reservation_request.duration, 300)
+
+    def test_anonymous_cannot_extend_or_return_reservation(self):
+        with session.begin():
+            recipe = data_setup.create_recipe(reservesys=True)
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_complete(recipe)
+        b = self.browser
+        self.go_to_recipe_view(recipe, tab='Reservation')
+        #No extend button
+        b.find_element_by_xpath('//div[@id="recipe-reservation" and '
+                'not(.//button[normalize-space(string(.))="Extend the reservation"])]')
+
+        #No return button
+        b.find_element_by_xpath('//div[@id="recipe-reservation" and '
+                'not(.//button[normalize-space(string(.))="Return the reservation"])]')
+
+    def test_authenticated_user_can_extend_reservation(self):
+        with session.begin():
+            recipe = data_setup.create_recipe(reservesys=True)
+            job = data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_tasks_finished(recipe)
+            job.update_status()
+        b = self.browser
+        login(b)
+        self.go_to_recipe_view(recipe, tab='Reservation')
+        tab = b.find_element_by_id('recipe-reservation')
+        tab.find_element_by_xpath('.//button[contains(text(), "Extend the reservation")]')\
+                .click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('kill_time').clear()
+        modal.find_element_by_name('kill_time').send_keys('600')
+        modal.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
+        with session.begin():
+            session.expire_all()
+            assert_datetime_within(recipe.watchdog.kill_time,
+                    tolerance=datetime.timedelta(seconds=10),
+                    reference=datetime.datetime.utcnow() + datetime.timedelta(seconds=600))
+
+    def test_authenticated_user_can_return_reservation(self):
+        with session.begin():
+            recipe = data_setup.create_recipe(reservesys=True)
+            job = data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_tasks_finished(recipe)
+            job.update_status()
+        b = self.browser
+        login(b)
+        self.go_to_recipe_view(recipe, tab='Reservation')
+        tab = b.find_element_by_id('recipe-reservation')
+        tab.find_element_by_xpath('.//button[contains(text(), "Return the reservation")]')\
+                .click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_xpath('.//button[text()="OK"]').click()
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
+        # The `Return the reservtion` button should be gone.
+        tab.find_element_by_xpath('//div[not(.//button[normalize-space(string(.))='
+                '"Return the reservation"])]')
+        with session.begin():
+            session.expire_all()
+            self.assertLessEqual(recipe.status_watchdog(), 0)
 
     def test_opening_recipe_page_marks_it_as_reviewed(self):
         with session.begin():
             recipe = self.job.recipesets[0].recipes[0]
             self.assertEqual(recipe.get_reviewed_state(self.user), False)
         b = self.browser
+        login(b, user=self.user.user_name, password='password')
         self.go_to_recipe_view(recipe)
-        b.find_element_by_xpath('//h1[normalize-space(string(.))="Job: %s"]' % self.job.t_id)
+        b.find_element_by_xpath('//h1[contains(string(.), "%s")]' % recipe.t_id)
         with session.begin():
             self.assertEqual(recipe.get_reviewed_state(self.user), True)
 
@@ -438,6 +370,17 @@ class RecipeHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         json = response.json()
         self.assertEquals(json['t_id'], self.recipe.t_id)
+
+    def test_410_for_deleted_job(self):
+        with session.begin():
+            job = data_setup.create_completed_job()
+            job.soft_delete()
+            recipe = job.recipesets[0].recipes[0]
+        response = requests.get(get_server_base() +
+                'recipes/%s' % recipe.id,
+                headers={'Accept': 'application/json'})
+        self.assertEqual(response.status_code, 410)
+        self.assertRegexpMatches(response.text, 'Job %s is deleted' % job.id)
 
     def test_get_recipe_log(self):
         with session.begin():
@@ -542,6 +485,7 @@ class RecipeHTTPTest(DatabaseTestCase):
                 'recipes/%s/reservation-request' % self.recipe_with_reservation_request.id,
                 session=s, data={'reserve': False})
         response.raise_for_status()
+
         with session.begin():
             session.expire_all()
             self.assertFalse(self.recipe_with_reservation_request.reservation_request)

@@ -1,0 +1,36 @@
+<form class="form-horizontal">
+<div class="modal-header">
+  <a href="#" class="close" data-dismiss="modal" aria-hidden="true">&times;</a>
+  <h3>Edit the reservation</h3>
+</div>
+<div class="modal-body">
+    <div class="control-group">
+        <label class="control-label" for="reserve" style="white-space: nowrap;">
+          Reserve the system?
+        </label>
+        <div class="controls">
+            <div class="btn-group" data-toggle="buttons-radio">
+            <button type="button" class="btn" data-reserve="true">Yes</button>
+            <button type="button" class="btn" data-reserve="false">No</button>
+            </div>
+        </div>
+    </div>
+    <div class="control-group recipe-reservation-duration">
+        <label class="control-label" for="duration">
+            Time to reserve
+        </label>
+        <div class="controls">
+            <div class="input-append">
+                <input type="number" step="1" id="duration" name="duration"
+                    min="1" required/>
+                <span class="add-on">seconds</span>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal-footer">
+  <div class="sync-status"/>
+  <button type="button" class="btn" data-dismiss="modal" data-loading-text="Cancel">Cancel</button>
+  <button type="submit" class="btn btn-primary" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Saving&hellip;">Save changes</button>
+</div>
+</form>

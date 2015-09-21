@@ -30,7 +30,7 @@ from bkr.server.model import (Recipe, RecipeSet, TaskStatus, Job, System,
                               LogRecipe, LogRecipeTask, LogRecipeTaskResult,
                               RecipeResource, TaskBase, RecipeReservationRequest)
 from bkr.server.app import app
-from bkr.server.flask_util import BadRequest400, NotFound404, \
+from bkr.server.flask_util import BadRequest400, NotFound404, Gone410, \
     Forbidden403, auth_required, read_json_request, convert_internal_errors, \
     request_wants_json, render_tg_template
 from flask import request, jsonify, redirect as flask_redirect
@@ -462,7 +462,7 @@ class Recipes(RPCRoot):
         return dict(title='Recipe Systems', grid=grid, list=recipe.systems,
             search_bar=None)
 
-    @expose(template="bkr.server.templates.recipe")
+    @expose(template="bkr.server.templates.recipe-old")
     def default(self, id, *args, **kwargs):
         # When flask returns a 404, it falls back to here so we need to
         # raise a cherrypy 404.
@@ -498,9 +498,18 @@ def get_recipe(id):
     :param id: Recipe's id.
     """
     recipe = _get_recipe_by_id(id)
+    if recipe.recipeset.job.is_deleted:
+        return Gone410('Job %s is deleted' % recipe.recipeset.job.id)
     if request_wants_json():
         return jsonify(recipe.__json__())
-    return NotFound404('Fall back to old recipe page')
+    if identity.current.user and identity.current.user.use_old_job_page:
+        return NotFound404('Fall back to old recipe page')
+    if identity.current.user:
+        recipe.set_reviewed_state(identity.current.user, True)
+    return render_tg_template('bkr.server.templates.recipe', {
+        'title': recipe.t_id,
+        'recipe': recipe,
+    })
 
 def _record_activity(recipe, field, old, new, action=u'Changed'):
     recipe.record_activity(user=identity.current.user, service=u'HTTP',
@@ -583,18 +592,17 @@ def update_reservation_request(id):
                 recipe.reservation_request = reservation_request
                 _record_activity(recipe, u'Reservation Request', None,
                         reservation_request.duration, 'Changed')
+            return jsonify(recipe.reservation_request.__json__())
         else:
             if recipe.reservation_request:
                 session.delete(recipe.reservation_request)
                 _record_activity(recipe, u'Reservation Request',
                         recipe.reservation_request.duration, None)
-    return jsonify(recipe.reservation_request.__json__())
+            return jsonify(RecipeReservationRequest.empty_json())
 
 def _extend_watchdog(recipe_id, data):
     recipe = _get_recipe_by_id(recipe_id)
     kill_time = data.get('kill_time')
-    if not kill_time:
-        raise BadRequest400('Time not specified')
     with convert_internal_errors():
         seconds = recipe.extend(kill_time)
     return jsonify({'seconds': seconds})

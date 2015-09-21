@@ -1,0 +1,37 @@
+<div class="task-icon" id="recipe-task-icon-<%- id %>" data-toggle="collapse" data-target="#recipe-task-details-<%- id %>">
+    <i class="fa fa-caret-right fa-lg"></i>
+</div>
+<div class="task-id">
+    <abbr title="Recipe Task">T</abbr>:<%- id %>
+</div>
+<div class="task-start-time">
+  <% if (start_time) { %>
+    <time datetime="<%- moment.utc(start_time).toISOString() %>"
+          title="<%- start_time %>">
+          <%- start_time_diff %>
+    </time>
+  <% } %>
+</div>
+<div class="task-metadata">
+    <span class="task-name">
+        <% if (task) { %>
+            <a href="<%- beaker_url_prefix %>tasks/<%- task.get('id') %>"><%- task.get('name') %></a>
+        <% } else { %>
+            <%- task.get('name') %>
+        <% } %>
+    </span>
+    <% if (!_.isEmpty(version)) { %>
+      <span class="task-version"><%- version %></span>
+    <% } %>
+    <% if (!_.isEmpty(role) && role != "None" && role != "STANDALONE") { %>
+       <span class="task-role">
+         Role: <%- role %>
+       </span>
+    <% } %>
+</div>
+<div class="task-logs">
+    <% /* task logs go here */ %>
+</div>
+<div class="recipe-task-status">
+    <% /* populated by the render() method */ %>
+</div>

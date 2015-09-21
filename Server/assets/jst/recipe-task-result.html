@@ -1,0 +1,25 @@
+<div class="task-result-id">
+    <abbr title="Recipe Task Result">TR</abbr>:<%- id %>
+</div>
+<div class="task-result-start-time">
+    <time datetime="<%- moment.utc(start_time).toISOString() %>"
+          title="<%- start_time %>">
+          <%- start_time_diff %>
+    </time>
+</div>
+<div class="task-result-path">
+    <% if ((_.isEmpty(path) || path == '/') && !_.isEmpty(message)) { %>
+        <em><%- message %></em>
+    <% } else { %>
+        <%- path %>
+    <% } %>
+</div>
+<div class="task-result-logs">
+    <% /* task result logs go here */ %>
+</div>
+<div class="task-result-result">
+    <% if (score != 0) { %>
+        <%- score %>
+    <% } %>
+    <span class="label label-result-<%- result.toLowerCase() %>"><%- result %></span>
+</div>

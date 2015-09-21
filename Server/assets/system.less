@@ -65,23 +65,7 @@
 }
 
 .system-quick-info {
-    // Matches the style of .page-header immediately above it.
-    border-bottom: 1px solid @grayLighter;
-    margin-bottom: @baseLineHeight;
-    display: flex;
-    flex-flow: row nowrap;
-    > div {
-        margin-bottom: @baseLineHeight;
-        // vertical border between columns
-        margin-right: 2em;
-        border-right: 1px solid @grayLighter;
-        padding-right: 2em;
-        &:last-child {
-            margin-right: 0;
-            border-right: none;
-            padding-right: 0;
-        }
-    }
+    .quick-info;
     .system-quick-usage {
         /* The quick usage box can be quite narrow in a lot of cases, so we 
          * force a minimum width on it to prevent it from being too 

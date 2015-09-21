@@ -20,7 +20,8 @@ window.Job = Backbone.Model.extend({
             recipeset.on('change cancelled', update_activity);
         });
     },
-    _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>jobs/<%- id %>"><%- t_id %></a>'),
+    _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>jobs/<%- id %>" \
+        title="<%- truncated_whiteboard(whiteboard) %>"><%- t_id %></a>'),
     toHTML: function () {
         return this._toHTML_template(this.attributes);
     },
@@ -198,12 +199,123 @@ window.Recipe = Backbone.Model.extend({
                 return recipe;
             });
         }
+        if (!_.isEmpty(data['distro_tree'])) {
+            if (this.get('distro_tree')) {
+                var distro_tree = this.get('distro_tree') || new DistroTree();
+                distro_tree.set(distro_tree.parse(data['distro_tree']));
+                data['distro_tree'] = distro_tree;
+            } else {
+                data['distro_tree'] = new DistroTree(data['distro_tree'], {parse: true});
+            }
+        }
+        if (!_.isEmpty(data['resource'])) {
+            if (this.get('resource')) {
+                var resource = this.get('resource') || new RecipeResource();
+                resource.set(resource.parse(data['resource']));
+                data['resource'] = resource;
+            } else {
+                data['resource'] = new RecipeResource(data['resource'], {parse: true});
+            }
+        }
+        if (!_.isEmpty(data['tasks'])) {
+            var tasks = this.get('tasks') || [];
+            data['tasks'] = _.map(data['tasks'], function (taskdata, i) {
+                var task = tasks[i];
+                if (task) {
+                    task.set(task.parse(taskdata));
+                } else {
+                    task = new RecipeTask(taskdata, {parse: true});
+                }
+                task.set({recipe: recipe}, {silent: true});
+                return task;
+            });
+        }
+        if (!_.isEmpty(data['reservation_request'])) {
+            if (this.get('reservation_request')) {
+                var reservation_request = this.get('reservation_request') ||
+                    new RecipeReservationRequest();
+                reservation_request.set(data['reservation_request']);
+                data['reservation_request'] = reservation_request;
+            } else {
+                data['reservation_request'] = new RecipeReservationRequest(
+                    data['reservation_request'],
+                    {recipe: this});
+            }
+        }
         return data;
     },
     _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>recipes/<%- id %>"><%- t_id %></a>'),
     toHTML: function () {
         return this._toHTML_template(this.attributes);
     },
+    update_reservation: function (kill_time) {
+        var model = this;
+        return $.ajax({
+            url: this.url + '/watchdog',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({'kill_time': parseInt(kill_time)}),
+            dataType: 'json'
+        }).done(function () {
+            return model.fetch(); // refresh recipe
+        });
+    },
+});
+
+window.Task = Backbone.Model.extend({
+    _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>tasks/<%- id %>"><%- name %></a>'),
+    toHTML: function () {
+        return this._toHTML_template(this.attributes);
+    },
+});
+
+window.RecipeTask = Backbone.Model.extend({
+    parse: function (data) {
+        var recipe_task = this;
+        data['task'] = !_.isEmpty(data['task']) ? new Task(data['task']) : null;
+        data['distro_tree'] = !_.isEmpty(data['distro_tree']) ? new DistroTree(data['distro_tree'], {parse: true}) : null;
+        if (!_.isEmpty(data['results'])) {
+            var results = this.get('results') || [];
+            data['results'] = _.map(data['results'], function (resultdata, i) {
+                var result = results[i];
+                if (result) {
+                    result.set(result.parse(resultdata));
+                } else {
+                    result = new RecipeTaskResult(resultdata);
+                }
+                result.set({recipe_task: recipe_task}, {silent: true});
+                return result;
+            });
+        }
+        return data;
+    },
+});
+
+window.RecipeTaskResult = Backbone.Model.extend({});
+
+window.RecipeResource = Backbone.Model.extend({
+    parse: function (data) {
+        data['system'] = !_.isEmpty(data['system']) ? new System(data['system']) : null;
+        return data;
+    },
+});
+
+window.RecipeReservationRequest = Backbone.Model.extend({
+    initialize: function (attributes, options) {
+        this.recipe = options.recipe;
+        // ensure the 'reserve' attribute is filled in
+        if (!_.has(attributes, 'reserve')) {
+            this.set('reserve', (attributes['id'] != null));
+        }
+    },
+    url: function () {
+        return _.result(this.recipe, 'url') + '/reservation-request';
+    },
+    // Set model.isNew() to always return False as we want to send a `PATCH` request
+    // to the server all the time when saving the model.
+    isNew: function () {
+        return false;
+    }
 });
 
 window.JobActivity = Backbone.Collection.extend({

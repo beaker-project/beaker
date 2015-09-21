@@ -10,14 +10,16 @@
  * Given the raw (plain text) whiteboard, returns the first paragraph of the 
  * the whiteboard with all markup stripped, truncated to 100 characters.
  */
-var truncated_whiteboard = function (raw_whiteboard) {
-    var length_limit = 100;
-    var rendered = $('<body/>').html(marked(raw_whiteboard,
-            {sanitize: true, smartypants: false}));
-    var first_line = rendered.find('p:first').text();
-    if (first_line.length > 100)
-        first_line = first_line.substr(0, 99) + '\u2026';
-    return first_line;
+window.truncated_whiteboard = function (raw_whiteboard) {
+    if (!_.isNull(raw_whiteboard)) {
+        var length_limit = 100;
+        var rendered = $('<body/>').html(marked(raw_whiteboard,
+                {sanitize: true, smartypants: false}));
+        var first_line = rendered.find('p:first').text();
+        if (first_line.length > 100)
+            first_line = first_line.substr(0, 99) + '\u2026';
+        return first_line;    
+    } 
 };
 
 window.JobHeaderView = Backbone.View.extend({

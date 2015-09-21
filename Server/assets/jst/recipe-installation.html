@@ -1,0 +1,30 @@
+<div class="recipe-installation-summary">
+    <div>
+        <% if (installation && installation.install_finished) { %>
+            <div>Installation of <%= distro_tree.toHTML() %> finished.</div>
+        <% } else if (status == 'Running') { %>
+        <% /* When https://bugzilla.redhat.com/show_bug.cgi?id=991245 is implemented we can check for 'Installing' status here instead */ %>
+            <div>Installing <%= distro_tree.toHTML() %>.</div>
+        <% } else if (installation && installation.rebooted && status == 'Aborted') { %>
+            <div>Installation of <%= distro_tree.toHTML() %> aborted.</div>
+        <% } else { %>
+            <div>Installation of <%= distro_tree.toHTML() %> not started.</div>
+        <% } %>
+    </div>
+    <div class="recipe-installation-logs">
+        <% /* installation logs go here */ %>
+    </div>
+    <div class="recipe-installation-status">
+        <% if (installation && installation.install_finished) { %>
+            <span class="label label-success">Completed</span>
+        <% } else if (status == 'Running') { %>
+        <% /* When https://bugzilla.redhat.com/show_bug.cgi?id=991245 is implemented we can check for 'Installing' status here instead */ %>
+            Installing
+        <% } else if (status == 'Aborted' || status == 'Cancelled') { %>
+            <span class="label label-warning"><%- status %></span>
+        <% } %>
+    </div>
+</div>
+<div id="recipe-installation-details" class="recipe-installation-details">
+    <% /* populated by the render() method */ %>
+</div>

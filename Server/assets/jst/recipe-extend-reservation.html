@@ -1,0 +1,19 @@
+<form>
+  <div class="modal-header">
+    <a href="#" class="close" data-dismiss="modal" aria-hidden="true">&times;</a>
+    <h3>Extend reservation</h3>
+  </div>
+  <div class="modal-body">
+    <div class="input-append">
+        <input type="number" step="1" id="kill_time" name="kill_time"
+            placeholder="Time in seconds" required />
+        <span class="add-on">s</span>
+    </div>
+    <span class="help-block">Extends the reservation from now.</span>
+  </div>
+  <div class="modal-footer">
+    <div class="sync-status"/>
+    <button type="button" class="btn" data-dismiss="modal" data-loading-text="Cancel">Cancel</button>
+    <button type="submit" class="btn btn-primary" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Extending&hellip;">Save changes</button>
+  </div>
+</form>

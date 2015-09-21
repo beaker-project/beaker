@@ -12,7 +12,7 @@
     </span>
   <% } %>
   <span class="recipe-distro">
-    <%- distro_tree.distro.name %> <%- distro_tree.variant %> <%- distro_tree.arch %>
+    <%- distro_tree && distro_tree.toString() %>
   </span>
   <span class="recipe-resource">
     <%- resource && resource.fqdn %>

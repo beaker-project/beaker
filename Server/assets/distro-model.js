@@ -26,6 +26,10 @@ window.DistroTree = Backbone.Model.extend({
     toHTML: function () {
         return this._toHTML_template(this.attributes);
     },
+    _toString_template: _.template('<%- distro.get("name") %> <%- variant %> <%- arch %>'),
+    toString: function() {
+        return this._toString_template(this.attributes);
+    }
 });
 
 })();

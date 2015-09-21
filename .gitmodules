@@ -41,3 +41,6 @@
 [submodule "marked"]
 	path = Server/assets/marked
 	url = https://github.com/chjj/marked.git
+[submodule "moment-duration-format"]
+	path = Server/assets/moment-duration-format
+	url = https://github.com/jsmreese/moment-duration-format.git

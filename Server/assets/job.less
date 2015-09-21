@@ -33,24 +33,7 @@
     margin-left: 15px;
 }
 .job-info {
-    // Matches the style of .page-header immediately above it.
-    padding-bottom: (@baseLineHeight / 2) - 1;
-    margin-bottom: @baseLineHeight;
-    border-bottom: 1px solid @grayLighter;
-    display: flex;
-    flex-flow: row nowrap;
-    > div {
-        margin-bottom: @baseLineHeight;
-        // vertical border between columns
-        margin-right: 2em;
-        border-right: 1px solid @grayLighter;
-        padding-right: 2em;
-        &:last-child {
-            margin-right: 0;
-            border-right: none;
-            padding-right: 0;
-        }
-    }
+    .quick-info;
 }
 .modal.job-activity {
     width: 80%;
@@ -144,21 +127,6 @@
         // job-level buttons.
         .btn { padding: 4px 12px; }
     }
-    .recipe-status {
-        text-align: right;
-        white-space: nowrap;
-        .label {
-            font-size: 1em;
-        }
-        .progress-text {
-            margin-right: 0.5em;
-        }
-        .progress {
-            display: inline-block;
-            min-width: 200px;
-            margin-bottom: 0;
-        }
-    }
     .guestrecipe .recipe-id {
         // Guest recipe ids are indented from their host recipe, to reflect the
         // hierarchy.
@@ -177,6 +145,9 @@
     }
     div.comment, div.recipeset-comment-form {
         padding: 0 14px;
+    }
+    form {
+        margin: 0;
     }
     div.comment + div.comment, div.comments + div.recipeset-comment-form {
         padding-top: 1em;

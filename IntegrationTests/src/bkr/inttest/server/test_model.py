@@ -1330,7 +1330,7 @@ class WatchdogTest(DatabaseTestCase):
         recipe = data_setup.create_recipe()
         job = data_setup.create_job_for_recipes([recipe])
         data_setup.mark_job_running(job)
-        recipe.extend(0)
+        recipe.extend(-1)
         session.flush()
         expired_watchdogs = Watchdog.by_status(status=u'expired').all()
         self.assertIn(recipe.watchdog, expired_watchdogs)

@@ -68,6 +68,9 @@
 @import "bootstrap-select-bs2fixes.less";
 @import "datatables-bootstrap.less";
 @import "backgrid.less";
+// copy from boostrap 3 panels https://github.com/twbs/bootstrap/blob/v3.3.6/less/panels.less
+// and adjust the variables to match Boostrap 2.3.
+@import "panels.less";
 
 // overrides for Bootstrap variables
 @sansFontFamily:  "Liberation Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -310,6 +313,7 @@ input.tt-hint {
 }
 
 @import "master.less";
+@import "quick-info.less";
 @import "system.less";
 @import "system-pool.less";
 @import "job.less";
@@ -323,6 +327,8 @@ input.tt-hint {
 @import "group.less";
 @import "clone-job.less";
 @import "labcontrollers.less";
+@import "recipe.less";
+@import "job-and-recipe.less";
 
 // Site-specific styles. The beaker-server package creates site.less as 
 // a symlink to /dev/null if it doesn't exist. Admins can overwrite the symlink 

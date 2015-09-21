@@ -20,6 +20,7 @@ import uuid
 import urlparse
 import urllib
 import netaddr
+import numbers
 from kid import Element
 from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
         Integer, Unicode, DateTime, Boolean, UnicodeText, String, Numeric)
@@ -34,8 +35,7 @@ from turbogears.config import get
 from turbogears.database import session
 from lxml import etree
 from lxml.builder import E
-
-from bkr.common.helpers import makedirs_ignore
+from bkr.common.helpers import makedirs_ignore, total_seconds
 from bkr.server import identity, metrics, mail, dynamic_virt
 from bkr.server.bexceptions import BX, BeakerException, StaleTaskStatusException, DatabaseLookupError
 from bkr.server.helpers import make_link, make_fake_link
@@ -381,6 +381,14 @@ class Log(object):
             return 0
         else:
             return 1
+
+    def __json__(self):
+        return {
+            'id': self.id,
+            'start_time': self.start_time,
+            'path': self.combined_path,
+            'href': url(self.href),
+        }
 
 class LogRecipe(Log, DeclarativeMappedObject):
     type = 'R'
@@ -1646,6 +1654,7 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
             'comments': self.comments,
             'clone_href': self.clone_link(),
             'machine_recipes': list(self.machine_recipes),
+            'queue_time': self.queue_time,
         }
         if identity.current.user:
             u = identity.current.user
@@ -1660,6 +1669,12 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
             data['can_cancel'] = False
             data['can_comment'] = False
             data['can_waive'] = False
+        return data
+
+    def to_json(self, include_job=False):
+        data = self.__json__()
+        if include_job:
+            data['job'] = self.job.__json__()
         return data
 
     def all_logs(self, load_parent=True):
@@ -1909,7 +1924,20 @@ class RecipeReservationRequest(DeclarativeMappedObject):
         return {
             'id': self.id,
             'recipe_id': self.recipe_id,
-            'duration': self.duration,
+            'duration': self.duration
+        }
+
+    @classmethod
+    def empty_json(cls):
+        """
+        Returns the JSON representation of a default empty reservation request,
+        to be used in the cases where a recipe does not have a reservation request
+        yet.
+        """
+        return {
+            'id': None,
+            'recipe_id': None,
+            'duration': None
         }
 
 
@@ -2255,8 +2283,8 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         """ set _partitions """
         self._partitions = value
 
-    def _partitionsKSMeta(self):
-        """ Parse partitions xml into ks_meta variable which cobbler will understand """
+    def _parse_partitions(self):
+        """ Parse partitions xml """
         partitions = []
         try:
             prs = xml.dom.minidom.parseString(self.partitions)
@@ -2270,10 +2298,23 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             type = partition.getAttribute('type') or 'part'
             size = partition.getAttribute('size') or '5'
             if fs:
-                partitions.append('%s:%s:%s:%s' % (name, type, size, fs))
+                partitions.append(dict(name=name, type=type, size=size, fs=fs))
             else:
-                partitions.append('%s:%s:%s' % (name, type, size))
+                partitions.append(dict(name=name, type=type, size=size))
+        return partitions
+
+    def _partitionsKSMeta(self):
+        """ Add partitions into ks_meta variable which cobbler will understand """
+        partitions = []
+        for partition in self._parse_partitions():
+            if partition.get('fs'):
+                partitions.append('%s:%s:%s:%s' % (partition['name'],
+                    partition['type'], partition['size'], partition['fs']))
+            else:
+                partitions.append('%s:%s:%s' % (partition['name'],
+                    partition['type'], partition['size']))
         return ';'.join(partitions)
+
     partitionsKSMeta = property(_partitionsKSMeta)
 
     def queue(self):
@@ -2361,7 +2402,6 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
 
     def return_reservation(self):
         self.extend(0)
-        self.recipeset.job._mark_dirty()
 
     def _abort_cancel(self, status, msg=None):
         """
@@ -2617,8 +2657,19 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         """
         if not self.watchdog:
             raise BX(_('No watchdog exists for recipe %s' % self.id))
-        self.watchdog.kill_time = datetime.utcnow() + timedelta(
-                                                              seconds=kill_time)
+        if not isinstance(kill_time, numbers.Number):
+            raise TypeError('Pass number of seconds to extend the watchdog by')
+        if kill_time:
+            self.watchdog.kill_time = datetime.utcnow() + timedelta(
+                    seconds=kill_time)
+        else:
+            # kill_time of zero is a special case, it means someone wants to 
+            # end the recipe right now.
+            self.watchdog.kill_time = datetime.utcnow()
+            # We need to mark the job as dirty so that update_status will take
+            # notice and finish the recipe. beaker-watchdog won't be monitoring
+            # this recipe since it's no longer active, from its point of view.
+            self.recipeset.job._mark_dirty()
         return self.status_watchdog()
 
     def status_watchdog(self):
@@ -2700,6 +2751,11 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
     def first_task(self):
         return self.dyn_tasks.order_by(RecipeTask.id).first()
 
+    @property
+    def href(self):
+        """Returns a relative URL for recipe's page."""
+        return urllib.quote(u'/recipes/%s' % self.id)
+
     def can_edit(self, user=None):
         """Returns True iff the given user can edit this recipe"""
         return self.recipeset.job.can_edit(user)
@@ -2736,18 +2792,38 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             'result': self.result,
             'whiteboard': self.whiteboard,
             'distro_tree': self.distro_tree,
-            'resource': self.resource,
             'role': self.role,
+            'resource': self.resource,
+            'installation': self.installation,
             'ntasks': self.ntasks,
             'ptasks': self.ptasks,
             'wtasks': self.wtasks,
             'ftasks': self.ftasks,
             'ktasks': self.ktasks,
             'ttasks': self.ttasks,
+            'tasks': self.tasks,
+            'start_time': self.start_time,
+            'finish_time': self.finish_time,
+            'ks_meta': self.ks_meta,
+            'kernel_options': self.kernel_options,
+            'kernel_options_post': self.kernel_options_post,
+            'packages': [package.package for package in self.custom_packages],
+            'ks_appends': [ks_append.ks_append for ks_append in self.ks_appends],
+            'repos': [{'name': repo.name, 'url': repo.url} for repo in self.repos],
+            'partitions': self._parse_partitions(),
+            'logs': self.logs,
             # for backwards compatibility only:
             'recipe_id': self.id,
             'job_id': self.recipeset.job.t_id,
         }
+        if self.watchdog:
+            data['time_remaining_seconds'] = int(total_seconds(self.time_remaining))
+        else:
+            data['time_remaining_seconds'] = None
+        if  self.reservation_request:
+            data['reservation_request'] = self.reservation_request.__json__()
+        else:
+            data['reservation_request'] = RecipeReservationRequest.empty_json()
         if identity.current.user:
             u = identity.current.user
             data['can_edit'] = self.can_edit(u)
@@ -2757,6 +2833,12 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             data['can_edit'] = False
             data['can_update_reservation_request'] = False
             data['reviewed'] = None
+        return data
+
+    def to_json(self, include_recipeset=False):
+        data = self.__json__()
+        if include_recipeset:
+            data['recipeset'] = self.recipeset.to_json(include_job=True)
         return data
 
 
@@ -3071,9 +3153,16 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
             't_id': self.t_id,
             'task': self.task,
             'distro_tree': self.recipe.distro_tree,
+            'fetch_url': self.fetch_url,
+            'fetch_subdir': self.fetch_subdir,
+            'role': self.role,
             'start_time': self.start_time,
             'finish_time': self.finish_time,
             'result': self.result,
+            'params': self.params,
+            'results': self.results,
+            'is_finished': self.is_finished(),
+            'logs': self.logs,
         }
 
     def filepath(self):
@@ -3398,6 +3487,13 @@ class RecipeTaskParam(DeclarativeMappedObject):
         param.set("value", "%s" % self.value)
         return param
 
+    def __json__(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'value': self.value
+        }
+
 
 class RecipeRepo(DeclarativeMappedObject):
     """
@@ -3630,6 +3726,19 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
             return self.log or './'
         return self.short_path or './'
 
+    def __json__(self):
+        data = {
+            'id': self.id,
+            'path': self.path,
+            'message': self.log,
+            'result': self.result,
+            'score': self.score,
+            'start_time': self.start_time,
+            'logs': self.logs,
+        }
+        return data
+
+
 class RecipeResource(DeclarativeMappedObject):
     """
     Base class for things on which a recipe can be run.
@@ -3652,6 +3761,11 @@ class RecipeResource(DeclarativeMappedObject):
 
     def __unicode__(self):
         return unicode(self.fqdn)
+
+    def __json__(self):
+        return {
+            'fqdn': self.fqdn,
+        }
 
     @staticmethod
     def _lowest_free_mac():
@@ -3708,10 +3822,9 @@ class SystemResource(RecipeResource):
                 self.reservation)
 
     def __json__(self):
-        return {
-            'fqdn': self.fqdn,
-            'system': self.system,
-        }
+        data = super(SystemResource, self).__json__()
+        data['system'] = self.system
+        return data
 
     @property
     def mac_address(self):
@@ -3776,10 +3889,9 @@ class VirtResource(RecipeResource):
         self.lab_controller = lab_controller
 
     def __json__(self):
-        return {
-            'fqdn': self.fqdn,
-            'instance_id': self.instance_id,
-        }
+        data = super(VirtResource, self).__json__()
+        data['instance_id'] = self.instance_id
+        return data
 
     @property
     def link(self):
@@ -3838,9 +3950,6 @@ class GuestResource(RecipeResource):
     def __repr__(self):
         return '%s(fqdn=%r, mac_address=%r)' % (self.__class__.__name__,
                 self.fqdn, self.mac_address)
-
-    def __json__(self):
-        return {'fqdn': self.fqdn}
 
     @property
     def link(self):

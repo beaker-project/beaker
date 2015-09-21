@@ -37,6 +37,7 @@ class SystemAction(WebDriverTestCase):
             cls.problem_reporter = data_setup.create_user(password=u'password',
                 display_name=data_setup.unique_name('Crusher Lady%s'),
                 email_address=cls.reporter_email_address)
+            cls.problem_reporter.use_old_job_page = True
 
     def setUp(self):
         b = self.browser = self.get_browser()

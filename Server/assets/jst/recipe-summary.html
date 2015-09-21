@@ -1,0 +1,29 @@
+<p>
+  <% if (start_time) { %>
+  Started
+  <time datetime="<%- moment.utc(start_time).toISOString() %>"
+        title="<%- start_time %>">
+    <%- moment.utc(start_time).local().fromNow() %></time><% if (is_finished) { %> and
+        finished in
+        <time datetime="<%- moment.utc(finish_time).toISOString() %>"
+              title="<%- finish_time %>">
+        <%- moment.utc(moment(finish_time,"DD/MM/YYYY HH:mm:ss").diff(moment(start_time,"DD/MM/YYYY HH:mm:ss"))).format("HH:mm:ss")%></time><% } %>.
+  <% } else if (recipeset.get('queue_time')) { %>
+  Queued
+  <time datetime="<%- moment.utc(recipeset.get('queue_time')).toISOString() %>"
+      title="<%- recipeset.get('queue_time') %>">
+  <%- moment.utc(recipeset.get('queue_time')).local().fromNow() %></time>.<% } %>
+</p>
+<p>
+  Using <%= distro_tree.toHTML() %><%
+  if (!_.isEmpty(resource)) { %>
+      <br/>on <%
+      if (!_.isEmpty(resource.get('system'))) {
+          %><%= resource.get('system').toHTML() %><%
+      } else {
+          %><%- resource.get('fqdn') %><%
+      } %><%
+  } %><% if (!_.isEmpty(role) && role != 'None' && role != 'STANDALONE' && role != 'RECIPE_MEMBERS') { %>
+      <br/>with role <%- role %><%
+  } %>.
+</p>
