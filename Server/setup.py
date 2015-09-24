@@ -15,7 +15,6 @@ from setuptools.command.install import install as _install
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'Common'))
 sys.path.insert(1, os.path.dirname(__file__))
-from bkr.server import assets
 
 description = (
   "Beaker is a system for full stack software integration testing "
@@ -152,6 +151,7 @@ class InstallAssets(Command):
         self.source_dir = 'assets'
 
     def run(self):
+        from bkr.server import assets
         for filename in assets.list_asset_sources(self.source_dir):
             source_path = os.path.join(self.source_dir, filename)
             dest_path = os.path.join(self.install_dir, filename)
