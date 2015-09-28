@@ -85,7 +85,7 @@ class TaskSchemaTest(SchemaTestBase):
 class JobSchemaTest(SchemaTestBase):
 
     @classmethod
-    def setupClass(cls):
+    def setUpClass(cls):
         cls.schema_doc = lxml.etree.parse(pkg_resources.resource_stream(
             'bkr.common', 'schema/beaker-job.rng'))
 

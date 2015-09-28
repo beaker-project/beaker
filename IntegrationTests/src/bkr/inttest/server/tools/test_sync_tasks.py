@@ -21,7 +21,7 @@ _current_dir = os.path.dirname(__file__)
 class TestTaskLibrarySync(DatabaseTestCase):
 
     @classmethod
-    def setupClass(cls):
+    def setUpClass(cls):
         cls.task_server = Process('http_server.py',
                 args=[sys.executable, _http_server, '--base', _sync_tasks_dir],
                 listen_port=19998)
@@ -29,7 +29,7 @@ class TestTaskLibrarySync(DatabaseTestCase):
         cls.task_url = 'http://localhost:19998/'
 
     @classmethod
-    def teardownClass(cls):
+    def tearDownClass(cls):
         cls.task_server.stop()
 
     def run_as_script(self, remote=None, debug=True, force=True):

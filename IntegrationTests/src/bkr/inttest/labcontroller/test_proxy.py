@@ -578,7 +578,7 @@ class PostrebootTest(LabControllerTestCase):
 class LogUploadTestRestartProxy(LabControllerTestCase):
 
     @classmethod
-    def setupClass(cls):
+    def setUpClass(cls):
         if daemons_running_externally():
             raise SkipTest('Too hard to control daemon process')
 

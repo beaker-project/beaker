@@ -16,7 +16,7 @@ from bkr.inttest import data_setup
 class SystemAction(WebDriverTestCase):
 
     @classmethod
-    def setupClass(cls):
+    def setUpClass(cls):
         with session.begin():
             cls.owner_email_address = data_setup.unique_name(u'picard%s@starfleet.gov')
             cls.system_owner = data_setup.create_user(

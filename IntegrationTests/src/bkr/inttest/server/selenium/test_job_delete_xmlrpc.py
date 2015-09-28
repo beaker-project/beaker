@@ -15,7 +15,7 @@ from bkr.inttest import data_setup
 class TestJobDelete(XmlRpcTestCase):
 
     @classmethod
-    def setupClass(cls):
+    def setUpClass(cls):
         with session.begin():
             cls.product_one = data_setup.create_product()
             cls.product_two = data_setup.create_product()
@@ -60,5 +60,5 @@ class TestJobDelete(XmlRpcTestCase):
             self.fail("Did not find %s when deleting by job-id" % (self.scratch_job.t_id))
 
     @classmethod
-    def teardownClass(cls):
+    def tearDownClass(cls):
         pass

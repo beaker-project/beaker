@@ -17,7 +17,7 @@ class Search(WebDriverTestCase):
     
     @classmethod
     @with_transaction
-    def setupClass(cls):
+    def setUpClass(cls):
         # Each distro needs to have a tree in some lab controller, otherwise it 
         # won't show up in search results.
         data_setup.create_labcontroller()

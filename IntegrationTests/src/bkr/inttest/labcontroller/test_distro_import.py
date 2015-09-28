@@ -38,7 +38,7 @@ class DistroImportTest(LabControllerTestCase):
     maxDiff = None
 
     @classmethod
-    def setupClass(cls):
+    def setUpClass(cls):
         cls.distro_server = Process('http_server.py', [sys.executable,
                     pkg_resources.resource_filename('bkr.inttest', 'http_server.py'),
                     '--base',  _compose_test_dir],
@@ -47,7 +47,7 @@ class DistroImportTest(LabControllerTestCase):
         cls.distro_url = 'http://localhost:19998/'
 
     @classmethod
-    def teardownClass(cls):
+    def tearDownClass(cls):
         cls.distro_server.stop()
 
     def setUp(self):

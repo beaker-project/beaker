@@ -15,7 +15,7 @@ class PxemenuTest(LabControllerTestCase):
     maxDiff = None
 
     @classmethod
-    def setupClass(cls):
+    def setUpClass(cls):
         # Need to populate a directory with fake images, and serve it over 
         # HTTP, so that beaker-pxemenu can download the images when it builds 
         # the menus.
@@ -31,7 +31,7 @@ class PxemenuTest(LabControllerTestCase):
         cls.tftp_dir = tempfile.mkdtemp()
 
     @classmethod
-    def teardownClass(cls):
+    def tearDownClass(cls):
         shutil.rmtree(cls.distro_dir, ignore_errors=True)
         shutil.rmtree(cls.tftp_dir, ignore_errors=True)
         cls.distro_server.stop()
