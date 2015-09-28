@@ -36,7 +36,6 @@ from sqlalchemy.sql import not_
 from sqlalchemy.exc import OperationalError
 import netaddr
 from bkr.inttest import data_setup, DatabaseTestCase
-from nose.plugins.skip import SkipTest
 import turbogears
 import os
 import yum
@@ -49,7 +48,7 @@ class SchemaSanityTest(DatabaseTestCase):
     def test_all_tables_use_innodb(self):
         engine = DeclarativeMappedObject.metadata.bind
         if engine.url.drivername != 'mysql':
-            raise SkipTest('not using MySQL')
+            raise unittest.SkipTest('not using MySQL')
         for table in engine.table_names():
             # We don't control the creation of alembic_version, so if the 
             # server default is MyISAM alembic_version will end up using that. 

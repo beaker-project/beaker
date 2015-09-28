@@ -8,7 +8,7 @@ import datetime
 import logging
 import re
 from turbogears.database import session
-from nose.plugins.skip import SkipTest
+from unittest2 import SkipTest
 
 from bkr.server.model import TaskStatus, TaskResult, RecipeTaskResult
 from bkr.inttest.server.selenium import WebDriverTestCase

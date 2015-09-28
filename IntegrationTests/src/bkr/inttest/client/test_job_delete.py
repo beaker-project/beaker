@@ -5,7 +5,7 @@
 # (at your option) any later version.
 
 import os
-from nose.plugins.skip import SkipTest
+from unittest2 import SkipTest
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction, start_process, \
     stop_process, CONFIG_FILE, edit_file

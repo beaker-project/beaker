@@ -9,7 +9,6 @@ import unittest2 as unittest
 import tempfile
 import random
 import shutil
-from nose.plugins.skip import SkipTest
 from bkr.labcontroller import netboot
 from bkr.common.helpers import makedirs_ignore
 
@@ -118,7 +117,7 @@ class LoaderImagesTest(NetBootTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=866765
     def test_pxelinux_is_populated(self):
         if not os.path.exists('/usr/share/syslinux'):
-            raise SkipTest('syslinux is not installed')
+            raise unittest.SkipTest('syslinux is not installed')
         netboot.copy_default_loader_images()
         pxelinux_path = os.path.join(self.tftp_root, 'pxelinux.0')
         self.assertTrue(os.path.exists(pxelinux_path))

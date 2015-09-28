@@ -9,7 +9,7 @@ from bkr.inttest import data_setup
 from bkr.inttest.client import start_client, run_client, ClientError, \
         ClientTestCase
 import time
-from nose.plugins.skip import SkipTest
+from unittest2 import SkipTest
 
 class JobWatchTest(ClientTestCase):
 

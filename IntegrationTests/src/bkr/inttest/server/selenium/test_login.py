@@ -8,10 +8,9 @@ import sys
 import os
 import turbogears.config
 from turbogears.database import session
-import unittest
 import xmlrpclib
 from hashlib import sha1
-from nose.plugins.skip import SkipTest
+from unittest2 import SkipTest
 try:
     import krbV
 except ImportError:

@@ -9,7 +9,7 @@ import time
 import logging
 import pkg_resources
 from turbogears.database import session
-from nose.plugins.skip import SkipTest
+from unittest2 import SkipTest
 from bkr.server.model import LabController, PowerType, CommandStatus
 from bkr.labcontroller.config import get_conf
 from bkr.inttest import data_setup, Process

@@ -16,7 +16,6 @@ import errno
 from lxml import etree
 from tempfile import mkdtemp
 from shutil import copy, rmtree
-from nose.plugins.skip import SkipTest
 from sqlalchemy.schema import MetaData, Table, Column
 from sqlalchemy.types import Integer, Unicode
 from turbogears.config import get, update
@@ -113,7 +112,7 @@ class TaskLibraryTest(unittest.TestCase):
             self.tasklibrary.update_repo()
         except OSError, e:
             if e.errno is errno.ENOENT:
-                raise SkipTest('Could not find createrepo_c')
+                raise unittest.SkipTest('Could not find createrepo_c')
 
     def test_invalid_createrepo_command_fail(self):
         update({'beaker.createrepo_command': 'iamnotarealcommand'})

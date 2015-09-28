@@ -9,7 +9,7 @@ import datetime
 import os
 import errno
 import shutil
-from nose.plugins.skip import SkipTest
+from unittest2 import SkipTest
 import tempfile
 import subprocess
 import sys
