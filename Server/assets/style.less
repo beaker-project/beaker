@@ -62,7 +62,10 @@
 @import "font-awesome/less/font-awesome.less";
 @import "typeahead.js-bootstrap.less";
 @import "bootstrap-datepicker/less/datepicker.less";
-@import (less) "bootstrap-select/bootstrap-select.css";
+@import "bootstrap-select/less/bootstrap-select.less";
+// bootstrap-select is now targetting Boostrap 3, we need to apply a few tweaks
+// to make it look right for Bootstrap 2.3
+@import "bootstrap-select-bs2fixes.less";
 @import "datatables-bootstrap.less";
 @import "backgrid.less";
 

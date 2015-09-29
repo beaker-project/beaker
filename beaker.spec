@@ -40,7 +40,7 @@ Source3:        https://github.com/twitter/typeahead.js/archive/2bd1119ecdd5ed4b
 Source4:        https://github.com/jashkenas/underscore/archive/edbf2952c2b71f81c6449aef384bdf233a0d63bc/underscore-edbf2952c2b71f81c6449aef384bdf233a0d63bc.tar.gz
 Source5:        https://github.com/jashkenas/backbone/archive/53f77901a4ea9c7cf75d3db93ddddf491998d90f/backbone-53f77901a4ea9c7cf75d3db93ddddf491998d90f.tar.gz
 Source6:        https://github.com/moment/moment/archive/604c7942de38749e768ff8e327301ea6917c7c73/moment-604c7942de38749e768ff8e327301ea6917c7c73.tar.gz
-Source7:        https://github.com/silviomoreto/bootstrap-select/archive/c0c90090e5abeb5c10291430ae2a1778371f5630/bootstrap-select-c0c90090e5abeb5c10291430ae2a1778371f5630.tar.gz
+Source7:        https://github.com/silviomoreto/bootstrap-select/archive/005d84efe1679d3c83f02bcd4a8cc5f89d500afc/bootstrap-select-005d84efe1679d3c83f02bcd4a8cc5f89d500afc.tar.gz
 Source8:        https://github.com/wyuenho/backgrid/archive/ff4b033d6f33b3af543e735869b225f4ac984acf/backgrid-ff4b033d6f33b3af543e735869b225f4ac984acf.tar.gz
 Source9:        https://github.com/wyuenho/backbone-pageable/archive/61912d577bb5289a80654e89deeb8dc505f283bd/backbone-pageable-61912d577bb5289a80654e89deeb8dc505f283bd.tar.gz
 Source10:        https://github.com/medialize/URI.js/archive/40a89137c5bc297f73467290c39ca596f891dcb9/URI.js-40a89137c5bc297f73467290c39ca596f891dcb9.tar.gz
