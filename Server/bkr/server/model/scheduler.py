@@ -580,10 +580,12 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
     # Total Panic tasks
     ktasks = Column(Integer, default=0)
     recipesets = relationship('RecipeSet', back_populates='job')
-    _job_ccs = relationship('JobCc', back_populates='job')
+    _job_ccs = relationship('JobCc', back_populates='job',
+            cascade='all, delete-orphan')
 
     activity = relationship(JobActivity, back_populates='object',
-                            cascade='all, delete-orphan')
+                cascade='all, delete-orphan',
+                order_by=[JobActivity.__table__.c.id.desc()])
     activity_type = JobActivity
 
     def __init__(self, ttasks=0, owner=None, whiteboard=None,
@@ -604,6 +606,48 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
 
     stop_types = ['abort','cancel']
     max_by_whiteboard = 20
+
+    def __json__(self):
+        data = {
+            'id': self.id,
+            't_id': self.t_id,
+            'submitter': self.submitter,
+            'owner': self.owner,
+            'group': self.group,
+            'status': self.status,
+            'is_finished': self.is_finished(),
+            'result': self.result,
+            'whiteboard': self.whiteboard,
+            'cc': [cc.email_address for cc in self._job_ccs],
+            'submitted_time': self.recipesets[0].queue_time,
+            'retention_tag': self.retention_tag.tag,
+            'product': self.product.name if self.product else None,
+            'ntasks': self.ntasks,
+            'ptasks': self.ptasks,
+            'wtasks': self.wtasks,
+            'ftasks': self.ftasks,
+            'ktasks': self.ktasks,
+            'ttasks': self.ttasks,
+            'recipesets': self.recipesets,
+        }
+        if identity.current.user:
+            u = identity.current.user
+            data['can_change_retention_tag'] = self.can_change_retention_tag(u)
+            if data['can_change_retention_tag']:
+                data['possible_retention_tags'] = RetentionTag.query.all()
+            data['can_change_product'] = self.can_change_product(u)
+            if data['can_change_product']:
+                data['possible_products'] = Product.query.all()
+            data['can_cancel'] = self.can_cancel(u)
+            data['can_delete'] = self.can_delete(u)
+            data['can_edit'] = self.can_edit(u)
+        else:
+            data['can_change_retention_tag'] = False
+            data['can_change_product'] = False
+            data['can_cancel'] = False
+            data['can_delete'] = False
+            data['can_edit'] = False
+        return data
 
     @classmethod
     def mine(cls, owner):
@@ -1072,6 +1116,16 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
     def all_logs(self):
         return sum([rs.all_logs for rs in self.recipesets], [])
 
+    @property
+    def all_activity(self):
+        """
+        A list of all activity records from this job and its recipe sets, 
+        combined in the proper order.
+        """
+        return sorted(
+                sum((rs.activity for rs in self.recipesets), self.activity),
+                key=lambda a: a.created, reverse=True)
+
     def clone_link(self):
         """ return link to clone this job
         """
@@ -1248,6 +1302,10 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
             can_stop = user.has_permission('stop_task')
         return can_stop
 
+    def can_edit(self, user=None):
+        """Returns True iff the given user can edit the job metadata"""
+        return self._can_administer(user) or self._can_administer_old(user)
+
     def can_change_priority(self, user=None):
         """Return True iff the given user can change the priority"""
         can_change = self._can_administer(user) or self._can_administer_old(user)
@@ -1338,6 +1396,18 @@ class Product(DeclarativeMappedObject):
     def __init__(self, name):
         super(Product, self).__init__()
         self.name = name
+
+    def __repr__(self):
+        return '%s(%r)' % (self.__class__.__name__, self.name)
+
+    def __unicode__(self):
+        return self.name
+
+    def __str__(self):
+        return unicode(self).encode('utf8')
+
+    def __json__(self):
+        return {'name': self.name}
 
     @classmethod
     def by_id(cls, id):
@@ -1450,8 +1520,22 @@ class RetentionTag(BeakerTag):
     def get_transient(cls):
         return cls.query.filter(cls.expire_in_days != 0).all()
 
-    def __repr__(self, *args, **kw):
+    def __repr__(self):
+        return '%s(tag=%r, needs_product=%r, expire_in_days=%r)' % (
+                self.__class__.__name__, self.tag, self.needs_product,
+                self.expire_in_days)
+
+    def __unicode__(self):
         return self.tag
+
+    def __str__(self):
+        return unicode(self).encode('utf8')
+
+    def __json__(self):
+        return {
+            'tag': self.tag,
+            'needs_product': self.needs_product,
+        }
 
 class Response(DeclarativeMappedObject):
 
@@ -1563,6 +1647,22 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
         self.ttasks = ttasks
         self.priority = priority
 
+    def __json__(self):
+        return {
+            'id': self.id,
+            't_id': self.t_id,
+            'status': self.status,
+            'is_finished': self.is_finished(),
+            'ntasks': self.ntasks,
+            'ptasks': self.ptasks,
+            'wtasks': self.wtasks,
+            'ftasks': self.ftasks,
+            'ktasks': self.ktasks,
+            'ttasks': self.ttasks,
+            'priority': self.priority,
+            'machine_recipes': list(self.machine_recipes),
+        }
+
     def get_log_dirs(self):
         logs = []
         for recipe in self.recipes:
@@ -1602,6 +1702,14 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
     def can_cancel(self, user=None):
         """Returns True iff the given user can cancel this recipeset"""
         return self.job.can_cancel(user)
+
+    def can_change_priority(self, user):
+        """
+        Is the given user permitted to change the priority of this recipe 
+        set?
+        See also #allowed_priorities
+        """
+        return self.job.can_change_priority(user)
 
     def build_ancestors(self, *args, **kw):
         """
@@ -2596,10 +2704,26 @@ class Recipe(TaskBase, DeclarativeMappedObject):
         return self.dyn_tasks.order_by(RecipeTask.id).first()
 
     def __json__(self):
-        data = {'recipe_id': self.id,
-                'status': self.status,
-                'job_id': self.recipeset.job.t_id,
-            }
+        data = {
+            'id': self.id,
+            't_id': self.t_id,
+            'status': self.status,
+            'is_finished': self.is_finished(),
+            'result': self.result,
+            'whiteboard': self.whiteboard,
+            'distro_tree': self.distro_tree,
+            'resource': self.resource,
+            'role': self.role,
+            'ntasks': self.ntasks,
+            'ptasks': self.ptasks,
+            'wtasks': self.wtasks,
+            'ftasks': self.ftasks,
+            'ktasks': self.ktasks,
+            'ttasks': self.ttasks,
+            # for backwards compatibility only:
+            'recipe_id': self.id,
+            'job_id': self.recipeset.job.t_id,
+        }
         return data
 
 class GuestRecipe(Recipe):
@@ -2673,6 +2797,11 @@ class MachineRecipe(Recipe):
             back_populates='hostrecipe')
 
     systemtype = 'Machine'
+
+    def __json__(self):
+        data = super(MachineRecipe, self).__json__()
+        data.update({'guest_recipes': self.guests})
+        return data
 
     def to_xml(self, clone=False, from_recipeset=False):
         recipe = xmldoc.createElement("recipe")
@@ -3524,6 +3653,12 @@ class SystemResource(RecipeResource):
                 self.__class__.__name__, self.fqdn, self.system,
                 self.reservation)
 
+    def __json__(self):
+        return {
+            'fqdn': self.fqdn,
+            'system': self.system,
+        }
+
     @property
     def mac_address(self):
         # XXX the type of system.mac_address should be changed to MACAddress,
@@ -3587,6 +3722,12 @@ class VirtResource(RecipeResource):
         self.instance_id = instance_id
         self.lab_controller = lab_controller
 
+    def __json__(self):
+        return {
+            'fqdn': self.fqdn,
+            'instance_id': self.instance_id,
+        }
+
     @property
     def link(self):
         span = Element('span')
@@ -3644,6 +3785,9 @@ class GuestResource(RecipeResource):
     def __repr__(self):
         return '%s(fqdn=%r, mac_address=%r)' % (self.__class__.__name__,
                 self.fqdn, self.mac_address)
+
+    def __json__(self):
+        return {'fqdn': self.fqdn}
 
     @property
     def link(self):

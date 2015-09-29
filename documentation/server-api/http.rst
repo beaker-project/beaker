@@ -219,8 +219,21 @@ System pools
      add_system_to_pool, remove_system_from_pool, get_access_policy,
      save_access_policy, add_access_policy_rule, delete_access_policy_rules
 
+Jobs
+----
+
+.. autoflask:: bkr.server.wsgi:app
+   :endpoints: get_job, update_job, update_job_status, delete_job,
+     get_job_activity, submit_inventory_job
+
+Recipe sets
+-----------
+
+.. autoflask:: bkr.server.wsgi:app
+   :endpoints: get_recipeset, update_recipeset, update_recipeset_status
+
 Recipes
-------------
+-------
 
 .. autoflask:: bkr.server.wsgi:app
    :endpoints: extend_watchdog, extend_watchdog_by_taskspec, extend_watchdog_by_fqdn
@@ -231,12 +244,6 @@ Activity
 .. autoflask:: bkr.server.wsgi:app
    :endpoints: get_activity, get_distro_activity, get_distro_tree_activity,
      get_group_activity, get_lab_controller_activity, get_systems_activity
-
-Jobs
-----
-
-.. autoflask:: bkr.server.wsgi:app
-   :endpoints: submit_inventory_job
 
 Power types
 -----------

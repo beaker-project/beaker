@@ -18,10 +18,12 @@ from selenium.webdriver.support.ui import Select
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_text_present, logout, \
         click_menu_item
-from bkr.inttest import data_setup, with_transaction, get_server_base
+from bkr.inttest import data_setup, with_transaction, get_server_base, \
+        DatabaseTestCase
 from bkr.server.model import RetentionTag, Product, Distro, Job, GuestRecipe, \
-    User
-from bkr.inttest.server.requests_utils import post_json
+        User, TaskStatus, TaskPriority
+from bkr.inttest.server.requests_utils import post_json, patch_json, \
+        login as requests_login
 
 class TestViewJob(WebDriverTestCase):
 
@@ -1064,3 +1066,394 @@ class SystemUpdateInventoryHTTPTest(WebDriverTestCase):
                              data={'fqdn': 'i.donotexist.name'})
         self.assertEquals(response.status_code, 400)
         self.assertIn('System not found: i.donotexist.name', response.text)
+
+
+class JobHTTPTest(DatabaseTestCase):
+    """
+    Directly tests the HTTP interface used by the job page.
+    """
+
+    def setUp(self):
+        with session.begin():
+            self.owner = data_setup.create_user(password='theowner')
+            self.job = data_setup.create_job(owner=self.owner,
+                    retention_tag=u'scratch')
+
+    def test_get_job(self):
+        response = requests.get(get_server_base() + 'jobs/%s' % self.job.id,
+                headers={'Accept': 'application/json'})
+        response.raise_for_status()
+        json = response.json()
+        self.assertEquals(json['id'], self.job.id)
+        self.assertEquals(json['owner']['user_name'], self.owner.user_name)
+
+    def test_get_job_xml(self):
+        response = requests.get(get_server_base() + 'jobs/%s.xml' % self.job.id)
+        response.raise_for_status()
+        self.assertEquals(response.status_code, 200)
+        self.assertEquals(self.job.to_xml().toprettyxml(), response.content)
+
+    def test_set_job_whiteboard(self):
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = patch_json(get_server_base() + 'jobs/%s' % self.job.id,
+                session=s, data={'whiteboard': 'newwhiteboard'})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.job.whiteboard, 'newwhiteboard')
+            self.assertEquals(self.job.activity[0].field_name, u'Whiteboard')
+            self.assertEquals(self.job.activity[0].action, u'Changed')
+            self.assertEquals(self.job.activity[0].new_value, u'newwhiteboard')
+
+    def test_set_retention_tag_and_product(self):
+        with session.begin():
+            retention_tag = data_setup.create_retention_tag(needs_product=True)
+            product = data_setup.create_product()
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = patch_json(get_server_base() +
+                'jobs/%s' % self.job.id, session=s,
+                data={'retention_tag': retention_tag.tag, 'product': product.name})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.job.retention_tag, retention_tag)
+            self.assertEquals(self.job.product, product)
+            self.assertEquals(self.job.activity[0].field_name, u'Product')
+            self.assertEquals(self.job.activity[0].action, u'Changed')
+            self.assertEquals(self.job.activity[0].old_value, None)
+            self.assertEquals(self.job.activity[0].new_value, product.name)
+            self.assertEquals(self.job.activity[1].field_name, u'Retention Tag')
+            self.assertEquals(self.job.activity[1].action, u'Changed')
+            self.assertEquals(self.job.activity[1].old_value, u'scratch')
+            self.assertEquals(self.job.activity[1].new_value, retention_tag.tag)
+
+    def test_cannot_set_product_if_retention_tag_does_not_need_one(self):
+        with session.begin():
+            retention_tag = data_setup.create_retention_tag(needs_product=False)
+            product = data_setup.create_product()
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = patch_json(get_server_base() +
+                'jobs/%s' % self.job.id, session=s,
+                data={'retention_tag': retention_tag.tag, 'product': product.name})
+        self.assertEquals(response.status_code, 400)
+        self.assertEquals(
+                'Cannot change retention tag as it does not support a product',
+                response.text)
+        # Same thing, but the retention tag is already set and we are just setting the product.
+        with session.begin():
+            self.job.retention_tag = retention_tag
+        response = patch_json(get_server_base() + 'jobs/%s' % self.job.id,
+                session=s, data={'product': product.name})
+        self.assertEquals(response.status_code, 400)
+        self.assertEquals(
+                'Cannot change product as the current retention tag does not support a product',
+                response.text)
+
+    def test_set_retention_tag_without_product(self):
+        with session.begin():
+            retention_tag = data_setup.create_retention_tag(needs_product=False)
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = patch_json(get_server_base() +
+                'jobs/%s' % self.job.id, session=s,
+                data={'retention_tag': retention_tag.tag})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.job.retention_tag, retention_tag)
+            self.assertEquals(self.job.product, None)
+            self.assertEquals(self.job.activity[0].field_name, u'Retention Tag')
+            self.assertEquals(self.job.activity[0].action, u'Changed')
+            self.assertEquals(self.job.activity[0].old_value, u'scratch')
+            self.assertEquals(self.job.activity[0].new_value, retention_tag.tag)
+        # Same thing, but with {product: null} which is equivalent.
+        response = patch_json(get_server_base() +
+                'jobs/%s' % self.job.id, session=s,
+                data={'retention_tag': retention_tag.tag, 'product': None})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.job.retention_tag, retention_tag)
+            self.assertEquals(self.job.product, None)
+
+    def test_set_retention_tag_clearing_product(self):
+        # The difference here compared with the test case above is that in this 
+        # case, the job already has a retention tag and a product set, we are 
+        # changing it to a different retention tag which requires the product 
+        # to be cleared.
+        with session.begin():
+            old_retention_tag = data_setup.create_retention_tag(needs_product=True)
+            self.job.retention_tag = old_retention_tag
+            self.job.product = data_setup.create_product()
+            retention_tag = data_setup.create_retention_tag(needs_product=False)
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = patch_json(get_server_base() +
+                'jobs/%s' % self.job.id, session=s,
+                data={'retention_tag': retention_tag.tag, 'product': None})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.job.retention_tag, retention_tag)
+            self.assertEquals(self.job.product, None)
+            self.assertEquals(self.job.activity[0].field_name, u'Product')
+            self.assertEquals(self.job.activity[0].action, u'Changed')
+            self.assertEquals(self.job.activity[0].new_value, None)
+            self.assertEquals(self.job.activity[1].field_name, u'Retention Tag')
+            self.assertEquals(self.job.activity[1].action, u'Changed')
+            self.assertEquals(self.job.activity[1].old_value, old_retention_tag.tag)
+            self.assertEquals(self.job.activity[1].new_value, retention_tag.tag)
+
+    def test_cannot_set_retention_tag_without_product_if_tag_needs_one(self):
+        with session.begin():
+            retention_tag = data_setup.create_retention_tag(needs_product=True)
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = patch_json(get_server_base() +
+                'jobs/%s' % self.job.id, session=s,
+                data={'retention_tag': retention_tag.tag})
+        self.assertEquals(response.status_code, 400)
+        self.assertEquals(
+                'Cannot change retention tag as it requires a product',
+                response.text)
+        # Same thing, but with {product: null} which is equivalent.
+        response = patch_json(get_server_base() +
+                'jobs/%s' % self.job.id, session=s,
+                data={'retention_tag': retention_tag.tag, 'product': None})
+        self.assertEquals(response.status_code, 400)
+        self.assertEquals(
+                'Cannot change retention tag as it requires a product',
+                response.text)
+
+    def test_set_product(self):
+        with session.begin():
+            retention_tag = data_setup.create_retention_tag(needs_product=True)
+            product = data_setup.create_product()
+            self.job.retention_tag = retention_tag
+            self.job.product = product
+            other_product = data_setup.create_product()
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = patch_json(get_server_base() +
+                'jobs/%s' % self.job.id, session=s,
+                data={'product': other_product.name})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.job.product, other_product)
+            self.assertEquals(self.job.activity[0].field_name, u'Product')
+            self.assertEquals(self.job.activity[0].action, u'Changed')
+            self.assertEquals(self.job.activity[0].old_value, product.name)
+            self.assertEquals(self.job.activity[0].new_value, other_product.name)
+
+    def test_set_cc(self):
+        with session.begin():
+            self.job.cc = [u'capn-crunch@example.com']
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = patch_json(get_server_base() +
+                'jobs/%s' % self.job.id, session=s,
+                data={'cc': ['captain-planet@example.com']})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.job.cc, ['captain-planet@example.com'])
+            self.assertEquals(self.job.activity[0].field_name, u'Cc')
+            self.assertEquals(self.job.activity[0].action, u'Removed')
+            self.assertEquals(self.job.activity[0].old_value, u'capn-crunch@example.com')
+            self.assertEquals(self.job.activity[1].field_name, u'Cc')
+            self.assertEquals(self.job.activity[1].action, u'Added')
+            self.assertEquals(self.job.activity[1].new_value, u'captain-planet@example.com')
+
+    def test_invalid_email_address_in_cc_is_rejected(self):
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = patch_json(get_server_base() + 'jobs/%s' % self.job.id,
+                session=s, data={'cc': ['bork;one1']})
+        self.assertEquals(response.status_code, 400)
+        self.assertEquals(
+                "Invalid email address u'bork;one1' in cc: "
+                "An email address must contain a single @",
+                response.text)
+
+    def test_other_users_cannot_delete_job(self):
+        with session.begin():
+            data_setup.mark_job_complete(self.job)
+            user = data_setup.create_user(password=u'other')
+        s = requests.Session()
+        requests_login(s, user=user, password=u'other')
+        response = s.delete(get_server_base() + 'jobs/%s' % self.job.id)
+        self.assertEquals(response.status_code, 403)
+        self.assertEquals('Insufficient permissions: Cannot delete job', response.text)
+
+    def test_delete_job(self):
+        with session.begin():
+            data_setup.mark_job_complete(self.job)
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = s.delete(get_server_base() + 'jobs/%s' % self.job.id)
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertTrue(self.job.to_delete)
+
+    def test_cannot_delete_running_job(self):
+        with session.begin():
+            data_setup.mark_job_running(self.job)
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = s.delete(get_server_base() + 'jobs/%s' % self.job.id)
+        self.assertEquals(response.status_code, 400)
+        self.assertEquals('Cannot delete running job', response.text)
+
+    def test_anonymous_cannot_update_status(self):
+        response = post_json(get_server_base() + 'jobs/%s/status' % self.job.id,
+                data={'status': u'Cancelled'})
+        self.assertEquals(response.status_code, 401)
+
+    def test_other_users_cannot_update_status(self):
+        with session.begin():
+            user = data_setup.create_user(password=u'other')
+        s = requests.Session()
+        requests_login(s, user=user, password=u'other')
+        response = post_json(get_server_base() + 'jobs/%s/status' % self.job.id,
+                data={'status': u'Cancelled'})
+        self.assertEquals(response.status_code, 401)
+
+    def test_cancel_job(self):
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = post_json(get_server_base() + 'jobs/%s/status' % self.job.id,
+                session=s, data={'status': u'Cancelled'})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.job.update_status()
+            self.assertEquals(self.job.status, TaskStatus.cancelled)
+            self.assertEquals(self.job.activity[0].field_name, u'Status')
+            self.assertEquals(self.job.activity[0].action, u'Cancelled')
+
+    def test_get_job_activity(self):
+        with session.begin():
+            self.job.record_activity(user=self.job.owner, service=u'testdata',
+                    field=u'green', action=u'blorp', new=u'something')
+        response = requests.get(get_server_base() +
+                'jobs/%s/activity/' % self.job.id,
+                headers={'Accept': 'application/json'})
+        response.raise_for_status()
+        json = response.json()
+        self.assertEquals(len(json['entries']), 1, json['entries'])
+        self.assertEquals(json['entries'][0]['user']['user_name'],
+                self.job.owner.user_name)
+        self.assertEquals(json['entries'][0]['field_name'], u'green')
+        self.assertEquals(json['entries'][0]['action'], u'blorp')
+        self.assertEquals(json['entries'][0]['new_value'], u'something')
+
+class RecipeSetHTTPTest(DatabaseTestCase):
+    """
+    Directly tests the HTTP interface for recipe sets used by the job page.
+    """
+
+    def setUp(self):
+        with session.begin():
+            self.owner = data_setup.create_user(password='theowner')
+            self.job = data_setup.create_job(owner=self.owner,
+                    retention_tag=u'scratch', priority=TaskPriority.normal)
+
+    def test_get_recipeset(self):
+        response = requests.get(get_server_base() +
+                'recipesets/%s' % self.job.recipesets[0].id,
+                headers={'Accept': 'application/json'})
+        response.raise_for_status()
+        json = response.json()
+        self.assertEquals(json['t_id'], self.job.recipesets[0].t_id)
+
+    def test_anonymous_cannot_change_recipeset(self):
+        response = patch_json(get_server_base() +
+                'recipesets/%s' % self.job.recipesets[0].id,
+                data={'priority': u'Low'})
+        self.assertEquals(response.status_code, 401)
+
+    def test_other_users_cannot_change_recipeset(self):
+        with session.begin():
+            user = data_setup.create_user(password=u'other')
+        s = requests.Session()
+        requests_login(s, user=user, password=u'other')
+        response = patch_json(get_server_base() +
+                'recipesets/%s' % self.job.recipesets[0].id,
+                session=s, data={'priority': u'Low'})
+        self.assertEquals(response.status_code, 403)
+
+    def test_job_owner_can_reduce_priority(self):
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = patch_json(get_server_base() +
+                'recipesets/%s' % self.job.recipesets[0].id,
+                session=s, data={'priority': u'Low'})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            recipeset = self.job.recipesets[0]
+            self.assertEquals(recipeset.priority, TaskPriority.low)
+            self.assertEquals(recipeset.activity[0].field_name, u'Priority')
+            self.assertEquals(recipeset.activity[0].action, u'Changed')
+            self.assertEquals(recipeset.activity[0].new_value, u'Low')
+
+    def test_job_owner_cannot_increase_priority(self):
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = patch_json(get_server_base() +
+                'recipesets/%s' % self.job.recipesets[0].id,
+                session=s, data={'priority': u'Urgent'})
+        self.assertEquals(response.status_code, 403)
+
+    def test_admin_can_increase_priority(self):
+        s = requests.Session()
+        requests_login(s)
+        response = patch_json(get_server_base() +
+                'recipesets/%s' % self.job.recipesets[0].id,
+                session=s, data={'priority': u'Urgent'})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            recipeset = self.job.recipesets[0]
+            self.assertEquals(recipeset.priority, TaskPriority.urgent)
+            self.assertEquals(recipeset.activity[0].user.user_name,
+                    data_setup.ADMIN_USER)
+            self.assertEquals(recipeset.activity[0].field_name, u'Priority')
+            self.assertEquals(recipeset.activity[0].action, u'Changed')
+            self.assertEquals(recipeset.activity[0].new_value, u'Urgent')
+
+    def test_anonymous_cannot_update_status(self):
+        response = post_json(get_server_base() +
+                'recipesets/%s/status' % self.job.recipesets[0].id,
+                data={'status': u'Cancelled'})
+        self.assertEquals(response.status_code, 401)
+
+    def test_other_users_cannot_update_status(self):
+        with session.begin():
+            user = data_setup.create_user(password=u'other')
+        s = requests.Session()
+        requests_login(s, user=user, password=u'other')
+        response = post_json(get_server_base() +
+                'recipesets/%s/status' % self.job.recipesets[0].id,
+                session=s, data={'status': u'Cancelled'})
+        self.assertEquals(response.status_code, 403)
+
+    def test_cancel_recipeset(self):
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = post_json(get_server_base() +
+                'recipesets/%s/status' % self.job.recipesets[0].id,
+                session=s, data={'status': u'Cancelled'})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.job.update_status()
+            recipeset = self.job.recipesets[0]
+            self.assertEquals(recipeset.status, TaskStatus.cancelled)
+            self.assertEquals(recipeset.activity[0].field_name, u'Status')
+            self.assertEquals(recipeset.activity[0].action, u'Cancelled')

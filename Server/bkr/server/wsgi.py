@@ -54,6 +54,7 @@ import bkr.server.systems
 import bkr.server.reserve_workflow
 import bkr.server.pools
 import bkr.server.jobs
+import bkr.server.recipesets
 import bkr.server.recipes
 import bkr.server.power
 

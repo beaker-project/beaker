@@ -5,17 +5,96 @@
 # (at your option) any later version.
 
 from turbogears import (expose, flash, widgets, redirect)
+from flask import request, jsonify
 from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.orm.exc import NoResultFound
 from bkr.common.bexceptions import BX
 from bkr.server import identity
+from bkr.server.app import app
+from bkr.server.flask_util import auth_required, convert_internal_errors, \
+    BadRequest400, NotFound404, Forbidden403, read_json_request
+from bkr.server.model import RecipeSet, TaskStatus, TaskPriority
 from bkr.server.xmlrpccontroller import RPCRoot
 
 import cherrypy
 
-from bkr.server.model import RecipeSet
-
 import logging
 log = logging.getLogger(__name__)
+
+def _get_rs_by_id(id):
+    try:
+        return RecipeSet.by_id(id)
+    except NoResultFound:
+        raise NotFound404('Recipe set %s not found' % id)
+
+@app.route('/recipesets/<int:id>', methods=['GET'])
+def get_recipeset(id):
+    """
+    Provides detailed information about a recipe set in JSON format.
+
+    :param id: ID of the recipe set.
+    """
+    recipeset = _get_rs_by_id(id)
+    return jsonify(recipeset.__json__())
+
+@app.route('/recipesets/<int:id>', methods=['PATCH'])
+@auth_required
+def update_recipeset(id):
+    """
+    Updates the attributes of a recipe set. The request must be 
+    :mimetype:`application/json`.
+
+    :param id: ID of the recipe set.
+    :jsonparam string priority: Priority for the recipe set. Must be one of 
+      'Low', 'Medium', 'Normal', 'High', or 'Urgent'. This can only be changed 
+      while a recipe set is still queued. Job owners can generally only 
+      *decrease* the priority of their recipe set, queue admins can increase 
+      it.
+    """
+    recipeset = _get_rs_by_id(id)
+    data = read_json_request(request)
+    def record_activity(field, old=None, new=None, action=u'Changed'):
+        recipeset.record_activity(user=identity.current.user, service=u'HTTP',
+                action=action, field=field, old=old, new=new)
+    with convert_internal_errors():
+        if 'priority' in data:
+            priority = TaskPriority.from_string(data['priority'])
+            if (not recipeset.can_change_priority(identity.current.user) or
+                    priority not in recipeset.allowed_priorities(identity.current.user)):
+                raise Forbidden403('Cannot set recipe set %s priority to %s'
+                        % (recipeset.id, priority))
+            record_activity(u'Priority', old=recipeset.priority.value, new=priority.value)
+            recipeset.priority = priority
+    return jsonify(recipeset.__json__())
+
+@app.route('/recipesets/<int:id>/status', methods=['POST'])
+@auth_required
+def update_recipeset_status(id):
+    """
+    Updates the status of a recipe set. The request must be :mimetype:`application/json`.
+
+    Currently the only allowed value for status is 'Cancelled', which has the 
+    effect of cancelling all recipes in the recipe set that have not finished yet.
+
+    :param id: ID of the recipe set.
+    :jsonparam string status: The new status. Must be 'Cancelled'.
+    :jsonparam string msg: A message describing the reason for updating the status.
+    """
+    recipeset = _get_rs_by_id(id)
+    if not recipeset.can_cancel(identity.current.user):
+        raise Forbidden403('Cannot update recipe set status')
+    data = read_json_request(request)
+    if 'status' not in data:
+        raise BadRequest400('Missing status')
+    status = TaskStatus.from_string(data['status'])
+    msg = data.get('msg', None) or None
+    if status != TaskStatus.cancelled:
+        raise BadRequest400('Status must be "Cancelled"')
+    with convert_internal_errors():
+        recipeset.record_activity(user=identity.current.user, service=u'HTTP',
+                field=u'Status', action=u'Cancelled')
+        recipeset.cancel(msg=msg)
+    return '', 204
 
 class RecipeSets(RPCRoot):
     # For XMLRPC methods in this class.
