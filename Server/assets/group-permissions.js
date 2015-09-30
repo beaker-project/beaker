@@ -94,9 +94,9 @@ var GroupAddPermissionForm = Backbone.View.extend({
     },
     error: function (jqxhr, status, error) {
         this.$('button').button('reset');
-        $.bootstrapGrowl('<h4>Failed to add group permission</h4> ' +
-              jqxhr.statusText + ': ' + jqxhr.responseText,
-                {type: 'error'});
+        this.$el.append(
+            $('<div class="alert alert-error"/>')
+            .text(jqxhr.statusText + ': ' + jqxhr.responseText));
     },
 });
 

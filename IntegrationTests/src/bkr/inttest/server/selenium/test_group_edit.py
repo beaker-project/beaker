@@ -58,8 +58,8 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_name('group_permission').send_keys('dummy_perm')
         b.find_element_by_class_name('add-permission').submit()
         #Test that it has not been dynamically added
-        self.assertIn("BAD REQUEST: Permission 'dummy_perm' does not exist",
-                               b.find_element_by_class_name('alert-error').text)
+        b.find_element_by_xpath('//div[contains(@class, "alert-error") and '
+            'contains(string(.), "%s")]' % "Permission 'dummy_perm' does not exist")
 
         #Double check that it wasn't added to the permissions
         b.find_element_by_xpath('//div/ul[@class="list-group group-permissions-list" and '
@@ -347,9 +347,8 @@ class TestGroupsWD(WebDriverTestCase):
 
         # remove self when I am the only owner of the group
         b.find_element_by_xpath('//li[contains(a/text(), "%s")]/button' % self.user.user_name).click()
-        self.assertIn('Cannot remove user %s from group %s' % (self.user.user_name, group_name),
-                               b.find_element_by_class_name('alert-error').text)
-
+        b.find_element_by_xpath('//div[contains(@class, "alert-error") and '
+            'contains(string(.), "Cannot remove user %s from group %s")]' % (self.user.user_name, group_name))
         # admin should be able to remove an owner, even if only one
         logout(b)
         #login back as admin
@@ -399,8 +398,8 @@ class TestGroupsWD(WebDriverTestCase):
 
         # attempt to remove admin user
         b.find_element_by_xpath('//li[contains(a/text(), "%s")]/button' % data_setup.ADMIN_USER).click()
-        self.assertIn('Cannot remove user %s from group admin' % data_setup.ADMIN_USER,
-                               b.find_element_by_class_name('alert-error').text)
+        b.find_element_by_xpath('//div[contains(@class, "alert-error") and '
+            'contains(string(.), "Cannot remove user %s from group admin")]' % data_setup.ADMIN_USER)
 
     def test_removing_self_from_owned_group(self):
         """
