@@ -585,8 +585,7 @@ class TestGroupsWD(WebDriverTestCase):
             '//a[text()="Owners"]').click()
         b.find_element_by_xpath('//div/ul[@class="list-group group-owners-list"]'
             '/li[contains(a/text(), "%s")]/button' % user.user_name).click()
-        self.assertIn('Cannot remove the only owner',
-                       b.find_element_by_class_name('alert-error').text)
+        b.find_element_by_xpath('//div[contains(@class, "alert-error") and contains(string(.), "Cannot remove the only owner")]')
         # add a new user as owner
         b.find_element_by_xpath('//ul[contains(@class, "group-nav")]'
             '//a[text()="Members"]').click()
