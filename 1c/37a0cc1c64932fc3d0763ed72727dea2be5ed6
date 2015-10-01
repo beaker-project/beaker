@@ -1,0 +1,6 @@
+Ready-for-Checks+1: Roman Joost <rjoost@redhat.com>
+Code-Review+1: Matt Jia <mjia@redhat.com>
+Verified-1: Beaker Jenkins
+Reviewed-on: http://gerrit.beaker-project.org/4419
+Project: beaker
+Branch: refs/heads/develop
