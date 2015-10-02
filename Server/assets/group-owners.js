@@ -49,8 +49,9 @@ window.GroupOwnersListView = Backbone.View.extend({
             new GroupAddOwnerForm({model: this.model}).$el
                 .appendTo(this.$el);
         }
+        var owners = _.sortBy(this.model.get('owners'), function (o) { return o.get('user_name'); });
         var model = this.model;
-        _.each(model.get('owners'), function(owner) {
+        _.each(owners, function(owner) {
             var view = new GroupOwnersListItemView({model: model,
                                                     owner: owner});
             this.$('.group-owners-list').append(view.el);

@@ -49,8 +49,9 @@ window.GroupMembersListView = Backbone.View.extend({
             new GroupAddMemberForm({model: this.model}).$el
                 .appendTo(this.$el);
         }
+        var members = _.sortBy(this.model.get('members'), function (m) { return m.get('user_name'); });
         var model = this.model;
-        _.each(model.get('members'), function(member) {
+        _.each(members, function(member) {
             var view = new GroupMembersListItemView({model: model,
                                                      member: member});
             this.$('.group-members-list').append(view.el);
