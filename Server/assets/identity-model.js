@@ -31,48 +31,68 @@ window.Group = Backbone.Model.extend({
     },
     //TODO: use Backbone-relational.js or similar to handle model relationships.
     add_member: function (user_name) {
+        var model = this;
         return $.ajax({
             url: this.url + '/members/',
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({'user_name': user_name}),
+        }).then(function () {
+            return model.fetch(); // refresh group membership
         });
     },
     remove_member: function (user_name) {
+        var model = this;
         return $.ajax({
             url: this.url + '/members/' + '?user_name=' + encodeURIComponent(user_name),
             type: 'DELETE',
             contentType: 'application/json',
+        }).then(function () {
+            return model.fetch(); // refresh group membership
         });
     },
     add_owner: function (user_name) {
+        var model = this;
         return $.ajax({
             url: this.url + '/owners/',
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({'user_name': user_name}),
+        }).then(function () {
+            return model.fetch(); // refresh group ownership
         });
     },
     remove_owner: function (user_name) {
+        var model = this;
         return $.ajax({
             url: this.url + '/owners/' + '?user_name=' + encodeURIComponent(user_name),
             type: 'DELETE',
             contentType: 'application/json'
+        }).then(function () {
+            return model.fetch(); // refresh group ownership
         });
     },
     add_permission: function (permission) {
+        var model = this;
         return $.ajax({
             url: this.url + '/permissions/',
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({'permission_name': permission}),
+        }).done(function () {
+            // manually add it, cheaper than refreshing from the server
+            model.set({'permissions': model.get('permissions').concat([permission])});
         });
     },
     remove_permission: function (permission) {
+        var model = this;
         return $.ajax({
             url: this.url + '/permissions/' + '?permission_name=' + encodeURIComponent(permission),
             type: 'DELETE',
             contentType: 'application/json'
+        }).done(function () {
+            // manually remove it, cheaper than refreshing from the server
+            model.set({'permissions': _.without(model.get('permissions'), permission)});
         });
     },
 });

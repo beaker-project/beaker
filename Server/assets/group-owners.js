@@ -24,9 +24,6 @@ window.GroupOwnersListItemView = Backbone.View.extend({
        var model = this.model;
        $(evt.currentTarget).button('loading');
        model.remove_owner(this.owner.get('user_name'))
-        .done(function(){
-             model.fetch();
-        })
         .fail(function (jqxhr, status, error) {
              $(evt.currentTarget).button('reset');
              $.bootstrapGrowl('<h4>Failed to remove group owner</h4> ' +
@@ -89,7 +86,6 @@ var GroupAddOwnerForm = Backbone.View.extend({
         evt.preventDefault();
     },
     success: function () {
-        this.model.fetch();
         this.$('button').button('reset');
     },
     error: function (jqxhr, status, error) {

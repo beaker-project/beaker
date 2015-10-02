@@ -24,9 +24,6 @@ window.GroupMembersListItemView = Backbone.View.extend({
        var model = this.model;
        $(evt.currentTarget).button('loading');
        model.remove_member(this.member.get('user_name'))
-        .done(function(){
-             model.fetch();
-        })
         .fail(function (jqxhr, status, error) {
              $(evt.currentTarget).button('reset');
              $.bootstrapGrowl('<h4>Failed to remove group member</h4> ' +
@@ -89,7 +86,6 @@ var GroupAddMemberForm = Backbone.View.extend({
         evt.preventDefault();
     },
     success: function () {
-        this.model.fetch();
         this.$('button').button('reset');
     },
     error: function (jqxhr, status, error) {
