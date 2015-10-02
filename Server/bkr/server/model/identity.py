@@ -611,34 +611,34 @@ class Group(DeclarativeMappedObject, ActivityMixin):
     def can_modify_membership(self, user):
         return not self.ldap and self.can_edit(user)
 
-    def add_member(self, user, is_owner=False, service=u'HTTP'):
+    def add_member(self, user, is_owner=False, service=u'HTTP', agent=None):
         self.user_group_assocs.append(UserGroup(user=user, is_owner=is_owner))
-        self.record_activity(user=user, service=service,
+        self.record_activity(user=agent, service=service,
                              action=u'Added', field=u'User', old=None,
                              new=unicode(user))
         if is_owner:
-            self.record_activity(user=user, service=service,
+            self.record_activity(user=agent, service=service,
                                  action=u'Added', field=u'Owner', old=None,
                                  new=unicode(user))
 
-    def remove_member(self, user, service=u'HTTP'):
+    def remove_member(self, user, service=u'HTTP', agent=None):
         assoc, = [a for a in self.user_group_assocs if a.user == user]
         self.user_group_assocs.remove(assoc)
-        self.record_activity(user=user, service=service,
+        self.record_activity(user=agent, service=service,
                              action=u'Removed', field=u'User', old=unicode(user),
                              new=None)
 
-    def grant_ownership(self, user, service=u'HTTP'):
+    def grant_ownership(self, user, service=u'HTTP', agent=None):
         assoc, = [a for a in self.user_group_assocs if a.user == user]
         assoc.is_owner = True
-        self.record_activity(user=user, service=service,
+        self.record_activity(user=agent, service=service,
                              action=u'Added', field=u'Owner', old=None,
                              new=unicode(user))
 
-    def revoke_ownership(self, user, service=u'HTTP'):
+    def revoke_ownership(self, user, service=u'HTTP', agent=None):
         assoc, = [a for a in self.user_group_assocs if a.user == user]
         assoc.is_owner = False
-        self.record_activity(user=user, service=service, field=u'Owner',
+        self.record_activity(user=agent, service=service, field=u'Owner',
                              action='Removed', old=user.user_name, new=None)
 
     def refresh_ldap_members(self, ldapcon=None):

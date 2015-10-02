@@ -690,7 +690,7 @@ def add_group_membership(group_name):
     user = _get_user_by_username(data['user_name'])
     is_owner = data.get('is_owner', False)
     if user not in group.users:
-        group.add_member(user, is_owner=is_owner)
+        group.add_member(user, is_owner=is_owner, agent=identity.current.user)
         mail.group_membership_notify(user, group, agent=u, action='Added')
     else:
         raise Conflict409('User %s is already a member of group %s' % (user.user_name, group_name))
@@ -719,7 +719,7 @@ def remove_group_membership(group_name):
     if not group.can_remove_member(u, user.id):
         raise Forbidden403('Cannot remove user %s from group %s' % (user, group_name))
     if user in group.users:
-        group.remove_member(user)
+        group.remove_member(user, agent=identity.current.user)
         mail.group_membership_notify(user, group, agent=identity.current.user,
                                      action='Removed')
     else:
@@ -748,12 +748,12 @@ def grant_ownership(group_name):
     user = _get_user_by_username(user_name)
     if not group.has_owner(user):
         if user in group.users:
-            group.grant_ownership(user)
+            group.grant_ownership(user, agent=identity.current.user)
         else:
             if group.ldap:
                 raise BadRequest400('User %s is not a member of LDAP group %s'
                     % (user_name, group_name))
-            group.add_member(user, is_owner=True)
+            group.add_member(user, is_owner=True, agent=identity.current.user)
     else:
         raise Conflict409('User %s is already an owner of group %s' % (user.user_name, group_name))
     return '', 204
@@ -781,7 +781,7 @@ def revoke_ownership(group_name):
     if group.has_owner(user):
         if len(group.owners())==1 and not u.is_admin():
             raise Forbidden403('Cannot remove the only owner')
-        group.revoke_ownership(user)
+        group.revoke_ownership(user, agent=identity.current.user)
     else:
         raise Conflict409('User %s is not an owner of group %s' % (user.user_name, group_name))
     return '', 204
