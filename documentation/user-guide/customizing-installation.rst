@@ -353,6 +353,13 @@ installer or distro features. Beaker populates these variables
 automatically by inspecting the distro name and version. They can be
 overridden if necessary for custom distros.
 
+``boot_partition_size``
+    Recommended size of the ``/boot`` partition according to the product 
+    documentation. This is only populated for RHEL 6 and older releases, where 
+    the installer does not support the ``--recommended`` option for the 
+    ``part`` command. In newer releases the installer correctly determines the 
+    recommended size.
+
 ``docker_package``
     The package name for Docker container engine is ``docker-io`` on
     Fedora 20/21 and ``docker`` starting with Fedora rawhide (`bugzilla report
