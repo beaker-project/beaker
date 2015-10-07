@@ -778,27 +778,29 @@ class DistroTree(DeclarativeMappedObject, ActivityMixin):
         if rhel and (int(rhel) <= 6 or (int(rhel) == 7 and osminor == '0')):
             netbootloader['ppc64'] = 'yaboot'
             netbootloader['ppc64le'] = 'yaboot'
+        # for s390, s390x and armhfp, we default to ''
+        kernel_options = {'netbootloader': netbootloader.get(self.arch.arch, '')}
 
-        conflicts = {'conflicts_groups' : []}
+        if self.arch.arch in ['ppc', 'ppc64', 'ppc64le']:
+            kernel_options['leavebootorder'] = None
+
+        ks_meta = {'conflicts_groups' : []}
         if name in ('RedHatEnterpriseLinux', 'RedHatEnterpriseLinuxServer',
             'RedHatEnterpriseLinuxClient'):
             if int(rhel) >= 5:
-                conflicts['conflicts_groups'] = ["conflicts"]
+                ks_meta['conflicts_groups'] = ["conflicts"]
 
             if (int(rhel) >= 6) and self.variant:
-                conflicts['conflicts_groups'] = ["conflicts-%s" % self.variant.lower()]
+                ks_meta['conflicts_groups'] = ["conflicts-%s" % self.variant.lower()]
 
         if (name == 'CentOS') and (int(rhel) >= 6):
-            conflicts['conflicts_groups'] = [
+            ks_meta['conflicts_groups'] = [
                                                 "conflicts-client",
                                                 "conflicts-server",
                                                 "conflicts-workstation",
                                             ]
-        yield InstallOptions(conflicts, {}, {})
 
-        # for s390, s390x and armhfp, we default to ''
-        kernel_options = {'netbootloader': netbootloader.get(self.arch.arch, '')}
-        yield InstallOptions({}, kernel_options, {})
+        yield InstallOptions(ks_meta, kernel_options, {})
         yield osmajor.default_install_options()
         # arch=None means apply to all arches
         if None in osmajor.install_options_by_arch:
