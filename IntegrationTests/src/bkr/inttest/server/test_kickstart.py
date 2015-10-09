@@ -566,7 +566,7 @@ class KickstartTest(unittest.TestCase):
             ''', self.system)
 
         ondisk_lines = [r'''clearpart --drives /dev/sda --all --initlabel''',
-                       r'''part /boot --size 200 --recommended --asprimary --ondisk=/dev/sda''',
+                       r'''part /boot --size 250 --recommended --asprimary --ondisk=/dev/sda''',
                        r'''part / --size 1024 --grow --ondisk=/dev/sda''',
                        r'''part swap --recommended --ondisk=/dev/sda''']
 
@@ -596,7 +596,7 @@ class KickstartTest(unittest.TestCase):
             </job>
             ''', self.system)
 
-        part_lines = [r'''part /boot --size 200 --recommended --asprimary''',
+        part_lines = [r'''part /boot --size 250 --recommended --asprimary''',
                       r'''part / --size 1024 --grow''',
                       r'''part swap --recommended''',
                       r'''part /home --size=5120 --fstype ext4''']
@@ -1360,7 +1360,7 @@ class KickstartTest(unittest.TestCase):
             </job>
             ''', self.system)
         self.assert_('''
-part /boot --size 200 --recommended --asprimary
+part /boot --size 250 --recommended --asprimary
 part / --size 1024 --grow
 part swap --recommended
 part pv.001 --size=25605
@@ -2255,7 +2255,7 @@ sed -i -e '/\[updates\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora-up
             </job>
             ''', self.system)
         self.assert_('''
-part /boot --size 200 --recommended --asprimary
+part /boot --size 250 --recommended --asprimary
 part / --size 1024 --grow --fstype btrfs
 part swap --recommended
 
@@ -2282,7 +2282,7 @@ part swap --recommended
             </job>
             ''', self.system)
         self.assert_('''
-part /boot --size 200 --recommended --asprimary --fstype ext4
+part /boot --size 250 --recommended --asprimary --fstype ext4
 part / --size 1024 --grow --fstype ext4
 part swap --recommended
 
@@ -2576,7 +2576,7 @@ done
             ''', self.system)
 
         self.assertIn('''
-part /boot --size 200 --recommended --asprimary
+part /boot --recommended --asprimary
 part / --size 1024 --grow
 part swap --recommended
 ''',
@@ -2619,7 +2619,7 @@ btrfs /mnt/testarea2 --label=mnt_testarea2 btrfs.mnt_testarea2
             ''', self.system)
 
         self.assertIn('''
-part /boot --size 200 --recommended --asprimary
+part /boot --size 250 --recommended --asprimary
 part / --size 1024 --grow
 part swap --recommended
 ''',
@@ -2661,7 +2661,7 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
             </job>
             ''', efi_system)
         ks = recipe.rendered_kickstart.kickstart
-        self.assertIn('\npart /boot/efi --fstype vfat --size 200 --recommended\n', ks)
+        self.assertIn('\npart /boot/efi --fstype vfat --size 250 --recommended\n', ks)
         self.assertNotIn('\npart /boot ', ks)
         # also check when combined with ondisk
         recipe = self.provision_recipe('''
@@ -2684,7 +2684,7 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
             </job>
             ''', efi_system)
         ks = recipe.rendered_kickstart.kickstart
-        self.assertIn('\npart /boot/efi --fstype vfat --size 200 '
+        self.assertIn('\npart /boot/efi --fstype vfat --size 250 '
                 '--recommended --ondisk=vdb\n', ks)
         self.assertNotIn('\npart /boot ', ks)
 
@@ -2760,7 +2760,7 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
             ks = recipe.rendered_kickstart.kickstart
             self.assertIn('''
 part None --fstype 'PPC PReP Boot' --size 8
-part /boot --size 200 --recommended --asprimary
+part /boot --recommended --asprimary
 ''', ks)
             self.assertIn('\npart /mnt --size=10240 --fstype ext4\n', ks)
             # also check when combined with ondisk and fstype
@@ -2783,7 +2783,7 @@ part /boot --size 200 --recommended --asprimary
             ks = recipe.rendered_kickstart.kickstart
             self.assertIn('''
 part None --fstype 'PPC PReP Boot' --size 8 --ondisk=vdb
-part /boot --size 200 --recommended --asprimary --fstype ext4 --ondisk=vdb
+part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
 ''', ks)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1219965
@@ -2809,7 +2809,7 @@ part /boot --size 200 --recommended --asprimary --fstype ext4 --ondisk=vdb
             </job>
             ''', efi_system)
         ks = recipe.rendered_kickstart.kickstart
-        self.assertIn('\npart /boot/efi --fstype vfat --size 200 --recommended\n', ks)
+        self.assertIn('\npart /boot/efi --fstype vfat --recommended\n', ks)
         self.assertNotIn('\npart /boot ', ks)
         # also check when combined with ondisk
         recipe = self.provision_recipe('''
@@ -2831,9 +2831,102 @@ part /boot --size 200 --recommended --asprimary --fstype ext4 --ondisk=vdb
             </job>
             ''', efi_system)
         ks = recipe.rendered_kickstart.kickstart
-        self.assertIn('\npart /boot/efi --fstype vfat --size 200 '
-                '--recommended --ondisk=vdb\n', ks)
+        self.assertIn('\npart /boot/efi --fstype vfat --recommended --ondisk=vdb\n', ks)
         self.assertNotIn('\npart /boot ', ks)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1262098
+    def test_boot_partition_size(self):
+        # On RHEL7 and later we just use --recommended, for earlier RHELs that 
+        # doesn't work so we have to supply a size.
+        # We use fstype= here to trigger custom partitioning.
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="fstype=ext4">
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-rawhide" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        self.assertIn('\npart /boot --recommended --asprimary --fstype ext4\n',
+                recipe.rendered_kickstart.kickstart)
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="fstype=xfs">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        self.assertIn('\npart /boot --recommended --asprimary --fstype xfs\n',
+                recipe.rendered_kickstart.kickstart)
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="fstype=ext4">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        self.assertIn('\npart /boot --size 250 --recommended --asprimary --fstype ext4\n',
+                recipe.rendered_kickstart.kickstart)
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="fstype=ext3">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL5-Server-U8" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        self.assertIn('\npart /boot --size 250 --recommended --asprimary --fstype ext3\n',
+                recipe.rendered_kickstart.kickstart)
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="fstype=ext3">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL4-U9" />
+                            <distro_variant op="=" value="AS" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        self.assertIn('\npart /boot --size 200 --recommended --asprimary --fstype ext3\n',
+                recipe.rendered_kickstart.kickstart)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=854229
     def test_swapsize(self):

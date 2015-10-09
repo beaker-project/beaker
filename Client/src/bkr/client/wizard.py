@@ -345,6 +345,7 @@ WizardVersion = "2.3.0"
 RegExpPackage    = re.compile("^(?![._+-])[.a-zA-Z0-9_+-]+(?<![._-])$")
 RegExpPath       = re.compile("^(?![/-])[a-zA-Z0-9/_-]+(?<![/-])$")
 RegExpTestName   = re.compile("^(?!-)[a-zA-Z0-9-_]+(?<!-)$")
+RegExpTypeName   = re.compile("\w(?:[\w-]*\w)?")
 RegExpBug        = re.compile("^\d+$")
 RegExpBugLong    = re.compile("^bz\d+$")
 RegExpBugPrefix  = re.compile("^bz")
@@ -1026,7 +1027,7 @@ class Options:
                 self.opt.bugs = self.arg[1:]
                 # parsing namespace/package/type/path/testname
                 self.testinfo = self.arg[0]
-                regex = re.compile("^(?:(?:(?:/?%s/)?([^/]+)/)?%s/)?(?:([^/]+)/)?([^/]+)$" %
+                regex = re.compile("^(?:(?:(?:/?%s/)?([^/]+)/)?(%s)/)?(?:([^/]+)/)?([^/]+)$" %
                     (Namespace().match(), Type().match()))
                 matched = regex.match(self.testinfo)
                 if matched:
@@ -1677,24 +1678,43 @@ class Package(Inquisitor):
         return RegExpPackage.match(self.data)
 
 
-class Type(SingleChoice):
+class Type(Inquisitor):
     """ Test type """
 
     def init(self):
         self.name = "Test type"
         self.question = "What is the type of test?"
-        self.description = "Test type must be exactly one from the list above."
+        self.description = "Specify the type of the test. Hints above."
+        self.proposed = 0
+        self.proposedname = ""
         self.list = """Regression Performance Stress Certification
             Security Durations Interoperability Standardscompliance
             Customeracceptance Releasecriterium Crasher Tier1 Tier2
             Alpha KernelTier1 KernelTier2 Multihost MultihostDriver
             Install FedoraTier1 FedoraTier2 KernelRTTier1
             KernelReporting Sanity Library""".split()
+        self.dirs = [os.path.join(o) for o in os.listdir('.') if os.path.isdir(os.path.join('.',o)) and not o.startswith('.')]
         if self.options: self.default(self.options.type())
 
     def match(self):
         """ Return regular expression matching valid data """
-        return "(" + "|".join(self.list) + ")"
+        return RegExpTypeName.pattern
+
+    def heading(self):
+        Inquisitor.heading(self)
+        print wrapText("Recommended values: " + ", ".join(sorted(self.dirs)))
+        print wrapText("Possible values: " + ", ".join(self.list))
+
+    def propose(self):
+        """ Try to find nearest match in the list"""
+        self.proposed = 1
+        self.proposedname = self.data
+        self.description = "Type '%s' does not exist. Confirm creating a new type." % self.proposedname
+        self.describe()
+        for item in self.list:
+            if re.search(self.data, item, re.I):
+                self.pref = item
+                return
 
     def suggestSkeleton(self):
         """ For multihost tests and library suggest proper skeleton """
@@ -1702,8 +1722,13 @@ class Type(SingleChoice):
             return "multihost"
         elif self.data == "Library":
             return "library"
+
+    def valid(self):
+        if self.data in self.list or self.data in self.dirs or (self.proposed == 1 and self.proposedname == self.data):
+            return True
         else:
-            return None
+            self.propose()
+            return False
 
 
 class Path(Inquisitor):

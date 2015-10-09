@@ -14,19 +14,22 @@ clearpart --all --initlabel
 ## Arch Specific Boot requirements
 #}
 {% if distro_tree is arch('ia64') %}
-part /boot/efi --fstype vfat --size 200 --recommended
+part /boot/efi --fstype vfat
+{%- if boot_partition_size %} --size {{ boot_partition_size }}{% endif %} --recommended
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 {% elif distro_tree is arch('ppc', 'ppc64', 'ppc64le') %}
 part None --fstype 'PPC PReP Boot' --size 8
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 
-part /boot --size 200 --recommended --asprimary
+part /boot
+{%- if boot_partition_size %} --size {{ boot_partition_size }}{% endif %} --recommended --asprimary
 {%- if fstype %} --fstype {{ fstype }}{% endif %}
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 {% elif distro_tree is arch('i386', 'x86_64') %}
 {% if system and system.has_efi %}
 {# x86 EFI #}
-part /boot/efi --fstype vfat --size 200 --recommended
+part /boot/efi --fstype vfat
+{%- if boot_partition_size %} --size {{ boot_partition_size }}{% endif %} --recommended
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 {% else %}
 {# x86 BIOS #}
@@ -36,15 +39,18 @@ part biosboot --size 1 --fstype biosboot
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 
 {% endif %}
-part /boot --size 200 --recommended --asprimary
+part /boot
+{%- if boot_partition_size %} --size {{ boot_partition_size }}{% endif %} --recommended --asprimary
 {%- if fstype %} --fstype {{ fstype }}{% endif %}
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 {% endif %}
 {% elif distro_tree is arch('aarch64') %}
-part /boot/efi --fstype vfat --size 200 --recommended
+part /boot/efi --fstype vfat
+{%- if boot_partition_size %} --size {{ boot_partition_size }}{% endif %} --recommended
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 {% else %}
-part /boot --size 200 --recommended --asprimary
+part /boot
+{%- if boot_partition_size %} --size {{ boot_partition_size }}{% endif %} --recommended --asprimary
 {%- if fstype %} --fstype {{ fstype }}{% endif %}
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 {% endif %}
