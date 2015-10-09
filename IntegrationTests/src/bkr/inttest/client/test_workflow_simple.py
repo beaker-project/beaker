@@ -370,3 +370,16 @@ install
                 '--task', self.task.name])
         self.assertIn("<ks_append>\n<![CDATA[%s]]>\t\t\t\t</ks_append>" % first_ks, out)
         self.assertIn("<ks_append>\n<![CDATA[%s]]>\t\t\t\t</ks_append>" % second_ks, out)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1220652
+    def test_no_default_install_method(self):
+        # Not specifying a method in ks_meta means Beaker picks one. We want 
+        # that to be the default behaviour if --method is not given.
+        out = run_client(['bkr', 'workflow-simple', '--distro', self.distro.name,
+                '--task', self.task.name])
+        self.assertTrue(out.startswith('Submitted:'), out)
+        m = re.search('J:(\d+)', out)
+        job_id = m.group(1)
+        with session.begin():
+            job = Job.by_id(job_id)
+            self.assertEquals(job.recipesets[0].recipes[0].ks_meta, u'')

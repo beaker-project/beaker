@@ -378,8 +378,8 @@ class BeakerWorkflow(BeakerCommand):
         installation_options = OptionGroup(self.parser, 'Options for installation')
         installation_options.add_option(
             "--method",
-            default="nfs",
-            help="Installation source method (nfs, http, ftp) [default: %default]",
+            default=None,
+            help="Installation source method (nfs, http, ftp)",
         )
         installation_options.add_option(
             "--kernel-options", metavar="OPTIONS",
