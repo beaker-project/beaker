@@ -490,12 +490,14 @@ class Group(DeclarativeMappedObject, ActivityMixin):
             data['can_modify_membership'] = self.can_modify_membership(user)
             data['can_add_permission'] = self.can_add_permission(user)
             data['can_view_rootpassword'] = user in self.users or self.can_edit(user)
+            data['can_delete'] = self.can_edit(user) and not self.is_protected_group()
         else:
             data['can_edit'] = False
             data['can_edit_ldap'] = False
             data['can_modify_membership'] = False
             data['can_add_permission'] = False
             data['can_view_rootpassword'] = False
+            data['can_delete'] = False
         return data
 
     @classmethod

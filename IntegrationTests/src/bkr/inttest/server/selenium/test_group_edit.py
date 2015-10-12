@@ -7,14 +7,15 @@
 import crypt
 import requests
 from turbogears.database import session
-from bkr.server.model import Group, User, Activity, UserGroup
+from bkr.server.model import Group, User, Activity, UserGroup, SystemPermission
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction, \
     mail_capture, DatabaseTestCase
 from bkr.inttest.server.webdriver_utils import login, logout, \
         wait_for_animation, check_group_search_results
 from bkr.inttest.assertions import wait_for_condition
-from bkr.inttest.server.requests_utils import put_json, post_json, patch_json
+from bkr.inttest.server.requests_utils import put_json, post_json, \
+        patch_json, login as requests_login
 import email
 
 class TestGroupsWD(WebDriverTestCase):
@@ -722,19 +723,64 @@ class TestGroupsWD(WebDriverTestCase):
             group.group_name)
         b.find_element_by_xpath('.//button[contains(text(), "Edit")]')
 
-    # https://bugzilla.redhat.com/show_bug.cgi?id=1102617
-    def test_cannot_delete_protected_group_by_admin(self):
-        with session.begin():
-            user = data_setup.create_admin(password='password')
-            admin_group = Group.by_name('admin')
+    def test_owner_can_delete_group(self):
+        self.assertTrue(self.group.has_owner(self.user))
         b = self.browser
-        login(b, user=user.user_name, password='password')
-        b.get(get_server_base() + 'groups/')
-        self.assert_('Delete' not in b.find_element_by_xpath("//tr[(td[1]/a[text()='%s'])]"
-                                                    % admin_group.group_name).text)
-        b.get(get_server_base() + 'groups/mine')
-        self.assert_('Delete' not in b.find_element_by_xpath("//tr[(td[1]/a[text()='%s'])]"
-                                                    % admin_group.group_name).text)
+        login(b, user=self.user.user_name, password='password')
+        b.get(get_server_base() + 'groups/%s' % self.group.group_name)
+        b.find_element_by_xpath('//button[normalize-space(string(.))="Delete"]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_xpath('.//p[text()="Are you sure you want to '
+                'delete this group?"]')
+        modal.find_element_by_xpath('.//button[text()="OK"]').click()
+        # redirects to Groups grid
+        b.find_element_by_xpath('//title[text()="Groups"]')
+        with session.begin():
+            self.assertEqual(0,
+                    Group.query.filter_by(group_id=self.group.group_id).count())
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=978225
+    def test_deleting_an_already_deleted_group(self):
+        b = self.browser
+        login(b)
+        # Let the page load, and then delete the group in "another window".
+        self.go_to_group_page()
+        with session.begin():
+            session.delete(self.group)
+        b.find_element_by_xpath('//button[normalize-space(string(.))="Delete"]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_xpath('.//p[text()="Are you sure you want to '
+                'delete this group?"]')
+        modal.find_element_by_xpath('.//button[text()="OK"]').click()
+        b.find_element_by_xpath('//div[contains(@class, "alert-error") and '
+                'contains(string(.), "Group %s does not exist")]' % self.group.group_name)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1102617
+    def test_cannot_delete_protected_group(self):
+        with session.begin():
+            admin_group = Group.by_name(u'admin')
+        b = self.browser
+        login(b)
+        self.go_to_group_page(admin_group)
+        b.find_element_by_xpath('.//div[@class="page-header" and '
+                'not(.//button[normalize-space(string(.))="Delete"])]')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=968865
+    def test_anonymous_cannot_see_delete_button(self):
+        b = self.browser
+        self.go_to_group_page()
+        b.find_element_by_xpath('.//div[@class="page-header" and '
+                'not(.//button[normalize-space(string(.))="Delete"])]')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=968865
+    def test_unprivileged_user_cannot_see_delete_button(self):
+        with session.begin():
+            unprivileged = data_setup.create_user(password=u'unprivileged')
+        b = self.browser
+        login(b, user=unprivileged.user_name, password=u'unprivileged')
+        self.go_to_group_page()
+        b.find_element_by_xpath('.//div[@class="page-header" and '
+                'not(.//button[normalize-space(string(.))="Delete"])]')
 
     def test_cannot_update_group_with_empty_name(self):
         b = self.browser
@@ -1098,3 +1144,95 @@ class GroupHTTPTest(DatabaseTestCase):
             session.refresh(group)
             self.assertFalse(group.has_owner(user))
             self.assertEqual(group.owners(), [])
+
+    def test_delete_group(self):
+        s = requests.Session()
+        requests_login(s, user=self.user.user_name, password=u'password')
+        response = s.delete(get_server_base() + 'groups/%s' % self.group.group_name)
+        response.raise_for_status()
+        with session.begin():
+            self.assertEquals(0,
+                Group.query.filter_by(group_id=self.group.group_id).count())
+            self.assertEquals(1, Activity.query
+                .filter(Activity.field_name == u'Group')
+                .filter(Activity.action == u'Removed')
+                .filter(Activity.old_value == self.group.display_name).count(),
+                'Expected to find activity record for group removal')
+
+    def test_regular_member_cannot_delete_group(self):
+        with session.begin():
+            member = data_setup.create_user(password=u'unprivileged')
+            self.group.add_member(member)
+        s = requests.Session()
+        requests_login(s, user=member.user_name, password=u'unprivileged')
+        response = s.delete(get_server_base() + 'groups/%s' % self.group.group_name)
+        self.assertEquals(response.status_code, 403)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1102617
+    def test_cannot_delete_protected_group(self):
+        # 'admin' group is created by beaker-init, it always exists
+        s = requests.Session()
+        requests_login(s)
+        response = s.delete(get_server_base() + 'groups/admin')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text, "Group 'admin' is predefined and cannot be deleted")
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=968843
+    def test_cannot_delete_group_which_has_submitted_jobs(self):
+        with session.begin():
+            job = data_setup.create_job(owner=self.user, group=self.group)
+        s = requests.Session()
+        requests_login(s, user=self.user.user_name, password=u'password')
+        response = s.delete(get_server_base() + 'groups/%s' % self.group.group_name)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text,
+                'Cannot delete a group which has associated jobs')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1085703
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1132730
+    def test_deleting_group_with_access_policy_references(self):
+        """
+        When deleting a group which is granted permissions in a system access 
+        policy, the access policy rules should be removed.
+        """
+        with session.begin():
+            group = data_setup.create_group(group_name=u'LNP')
+            system = data_setup.create_system(shared=False)
+            system.custom_access_policy.add_rule(group=group,
+                    permission=SystemPermission.edit_system)
+            # There will be two rules, one is the default "everyone view".
+            self.assertEqual(len(system.custom_access_policy.rules), 2)
+        s = requests.Session()
+        requests_login(s)
+        response = s.delete(get_server_base() + 'groups/%s' % group.group_name)
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(len(system.custom_access_policy.rules), 1)
+            self.assertEquals(system.activity[0].field_name, u'Access Policy Rule')
+            self.assertEquals(system.activity[0].action, u'Removed')
+            self.assertEquals(system.activity[0].old_value,
+                    '<grant edit_system to Group LNP>')
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1199368
+    def test_deleting_group_with_pool(self):
+        """
+        When deleting a group which owns a system pool, the pool should 
+        become owned by the user doing the deletion.
+        """
+        with session.begin():
+            user = data_setup.create_user(password='testing')
+            group = data_setup.create_group(owner=user)
+            pool = data_setup.create_system_pool(owning_group=group)
+        s = requests.Session()
+        requests_login(s)
+        response = s.delete(get_server_base() + 'groups/%s' % group.group_name)
+        response.raise_for_status()
+        with session.begin():
+            session.refresh(pool)
+            self.assertIsNone(pool.owning_group)
+            self.assertEquals(pool.owning_user.user_name, data_setup.ADMIN_USER)
+            self.assertEquals(pool.activity[-1].action, u'Changed')
+            self.assertEquals(pool.activity[-1].field_name, u'Owner')
+            self.assertEquals(pool.activity[-1].old_value, 'Group %s' % group.group_name)
+            self.assertEquals(pool.activity[-1].new_value, data_setup.ADMIN_USER)

@@ -12,18 +12,16 @@ from cherrypy import response
 from flask import jsonify, request, redirect as flask_redirect
 from bkr.server.validators import StrongPassword
 from bkr.server.helpers import make_link
-from bkr.server.widgets import myPaginateDataGrid, DeleteLinkWidgetForm, \
+from bkr.server.widgets import myPaginateDataGrid, \
     HorizontalForm
 from bkr.server.admin_page import AdminPage
 from bkr.server.bexceptions import BX
-from bkr.server.controller_utilities import restrict_http_method
 from bkr.server.app import app
 from bkr.server import mail, identity
 
 from bkr.server.model import (Group, Permission, User, UserGroup,
                               Activity, GroupActivity, SystemPool)
 from bkr.server.util import absolute_url
-from bkr.server.bexceptions import DatabaseLookupError
 from bkr.server.flask_util import auth_required, \
     convert_internal_errors, read_json_request, BadRequest400, \
     Forbidden403, MethodNotAllowed405, NotFound404, Conflict409, \
@@ -75,7 +73,6 @@ class Groups(AdminPage):
     exposed = True
     group_id     = widgets.HiddenField(name='group_id')
     group_form = GroupForm()
-    delete_link = DeleteLinkWidgetForm()
 
     def __init__(self,*args,**kw):
         kw['search_url'] =  url("/groups/by_name?anywhere=1")
@@ -176,25 +173,11 @@ class Groups(AdminPage):
         if groups is None:
             groups = session.query(Group)
 
-        def get_remove_link(x):
-            try:
-                if x.can_edit(identity.current.user) and not x.is_protected_group():
-                    return self.delete_link.display(dict(group_id=x.group_id),
-                        # Hack it for now as the url is conflict with the url in
-                        # flask.
-                        action=url('remove/'),
-                        action_text='Delete Group')
-                else:
-                    return ''
-            except AttributeError:
-                return ''
-
         group_name = ('Group Name', lambda group: make_link(
                 'edit?group_id=%s' % group.group_id, group.group_name))
         display_name = ('Display Name', lambda x: x.display_name)
-        remove_link = ('', get_remove_link)
 
-        grid_fields =  [group_name, display_name, remove_link]
+        grid_fields =  [group_name, display_name]
         grid = myPaginateDataGrid(fields=grid_fields,
                 add_action='./new' if not identity.current.anonymous else None)
         return_dict = dict(title=u"Groups",
@@ -306,45 +289,6 @@ class Groups(AdminPage):
         """
         return self.grant_owner(group_name=group,
                            member_name=kw['member_name'])
-
-    @identity.require(identity.not_anonymous())
-    @expose()
-    @restrict_http_method('post')
-    def remove(self, **kw):
-        u = identity.current.user
-        try:
-            group = Group.by_id(kw['group_id'])
-        except DatabaseLookupError:
-            flash(unicode('Invalid group or already removed'))
-            redirect('/groups/mine')
-
-        if not group.can_edit(u):
-            flash(_(u'You are not an owner of group %s' % group))
-            redirect('/groups/mine')
-
-        if group.is_protected_group():
-            flash(_(u'This group %s is predefined and cannot be deleted' % group))
-            redirect('/groups/mine')
-
-        if group.jobs:
-            flash(_(u'Cannot delete a group which has associated jobs'))
-            redirect('/groups/mine')
-
-        # Record the access policy rules that will be removed
-        # before deleting the group
-        for rule in group.system_access_policy_rules:
-            rule.record_deletion()
-
-        # For any system pool owned by this group, unset owning_group
-        # and set owning_user to the user deleting this group
-        pools = SystemPool.query.filter_by(owning_group_id=group.group_id)
-        for pool in pools:
-            pool.change_owner(user=u, service='WEBUI')
-        session.delete(group)
-        activity = Activity(u, u'WEBUI', u'Removed', u'Group', group.display_name, u"")
-        session.add(activity)
-        flash( _(u"%s deleted") % group.display_name )
-        raise redirect('/groups/mine')
 
     # XML-RPC method for creating a group
     @identity.require(identity.not_anonymous())
@@ -649,6 +593,37 @@ def update_group(group_name):
     if renamed:
         response.headers.add('Location', absolute_url(group.href))
     return response
+
+@app.route('/groups/<group_name>', methods=['DELETE'])
+@auth_required
+def delete_group(group_name):
+    """
+    Deletes a group.
+
+    :status 204: Group was successfully deleted.
+    :status 400: Group cannot be deleted because it is a predefined group, or
+      because it has associated jobs.
+    """
+    group = _get_group_by_name(group_name)
+    if not group.can_edit(identity.current.user):
+        raise Forbidden403('Cannot edit group')
+    if group.is_protected_group():
+        raise BadRequest400("Group '%s' is predefined and cannot be deleted"
+                % group.group_name)
+    if group.jobs:
+        raise BadRequest400('Cannot delete a group which has associated jobs')
+    # Record the access policy rules that will be removed
+    for rule in group.system_access_policy_rules:
+        rule.record_deletion()
+    # For any system pool owned by this group, unset owning_group
+    # and set owning_user to the user deleting this group
+    pools = SystemPool.query.filter_by(owning_group=group)
+    for pool in pools:
+        pool.change_owner(user=identity.current.user, service=u'HTTP')
+    session.delete(group)
+    activity = Activity(identity.current.user, u'HTTP', u'Removed', u'Group', group.display_name)
+    session.add(activity)
+    return '', 204
 
 def _get_user_by_username(user_name):
     user = User.by_user_name(user_name)

@@ -1,7 +1,12 @@
 <div class="page-header">
     <h1><%- group_name %> <small><%- display_name %></small>
+      <div class="btn-group">
         <% if (can_edit) { %>
           <button class="btn edit"><i class="fa fa-pencil-square-o"></i> Edit</button>
         <% } %>
+        <% if (can_delete) { %>
+          <button class="btn btn-danger delete" data-loading-text="<i class='fa fa-trash-o fa-spin'></i> Deleting&hellip;"><i class="fa fa-trash-o"></i> Delete</button>
+        <% } %>
+      </div>
     </h1>
 </div>

@@ -25,12 +25,30 @@ window.GroupPageHeaderView = Backbone.View.extend({
     },
     events: {
         'click .edit': 'edit',
+        'click .delete': 'delete',
     },
     render: function () {
       this.$el.html(this.template(this.model.attributes));
     },
     edit: function () {
         new GroupEditModal({model: this.model});
+    },
+    'delete': function () {
+        var model = this.model, $del_btn = this.$('button.delete');
+        $del_btn.button('loading');
+        bootbox.confirm_as_promise('<p>Are you sure you want to delete this group?</p>')
+            .fail(function () { $del_btn.button('reset'); })
+            .then(function () { return model.destroy(); })
+            .fail(_.bind(this.delete_error, this))
+            .done(function () { window.location = beaker_url_prefix + 'groups/'; });
+    },
+    delete_error: function(xhr) {
+        if (!_.isEmpty(xhr)) {
+            $.bootstrapGrowl('<h4>Failed to delete</h4> ' +
+                  xhr.statusText + ': ' + xhr.responseText,
+                    {type: 'error'});
+            this.$('button.delete').button('reset');
+        }
     },
 });
 
