@@ -73,6 +73,7 @@
                 this.$('input[type=text][name=power_type_name]').val('');
                 return;
             }
+            this.$('button').button('loading');
             this.collection.create({name: name}, {
                 wait: true,
                 success: _.bind(this.success, this),

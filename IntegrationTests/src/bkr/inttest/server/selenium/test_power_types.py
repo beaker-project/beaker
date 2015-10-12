@@ -40,8 +40,10 @@ class TestPowerTypeEdit(WebDriverTestCase):
 
         powertype = PowerType.query.first()
         self.assertTrue(powertype.name)
-        b.find_element_by_css_selector('form input[name=power_type_name]').send_keys(powertype.name)
-        b.find_element_by_name('btn_add_power_type').click()
+        form = b.find_element_by_class_name('add-power-type')
+        form.find_element_by_name('power_type_name').send_keys(powertype.name)
+        form.submit()
+        form.find_element_by_xpath('.//button[normalize-space(string(.))="Add"]')
 
         with session.begin():
             PowerType.query.filter_by(name=powertype.name).one()
@@ -56,6 +58,8 @@ class TestPowerTypeEdit(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'powertypes/')
         b.find_element_by_xpath('//li[contains(., "%s")]/button' % pt.name).click()
+        b.find_element_by_xpath('//ul[contains(@class, "power-types-list") and '
+                'not(./li[contains(., "%s")])]' % pt.name)
 
         with session.begin():
             session.expire_all()
