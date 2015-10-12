@@ -345,7 +345,6 @@ WizardVersion = "2.3.0"
 RegExpPackage    = re.compile("^(?![._+-])[.a-zA-Z0-9_+-]+(?<![._-])$")
 RegExpPath       = re.compile("^(?![/-])[a-zA-Z0-9/_-]+(?<![/-])$")
 RegExpTestName   = re.compile("^(?!-)[a-zA-Z0-9-_]+(?<!-)$")
-RegExpTypeName   = re.compile("\w(?:[\w-]*\w)?")
 RegExpBug        = re.compile("^\d+$")
 RegExpBugLong    = re.compile("^bz\d+$")
 RegExpBugPrefix  = re.compile("^bz")
@@ -360,6 +359,14 @@ RegExpScript     = re.compile("\.(sh|py|pl)$")
 RegExpMetadata   = re.compile("(\$\(METADATA\):\s+Makefile.*)$", re.S)
 RegExpTest       = re.compile("TEST=(\S+)", re.S)
 RegExpVersion    = re.compile("TESTVERSION=([\d.]+)", re.S)
+
+# Suggested test types (these used to be enforced)
+SuggestedTestTypes = """Regression Performance Stress Certification
+            Security Durations Interoperability Standardscompliance
+            Customeracceptance Releasecriterium Crasher Tier1 Tier2
+            Alpha KernelTier1 KernelTier2 Multihost MultihostDriver
+            Install FedoraTier1 FedoraTier2 KernelRTTier1
+            KernelReporting Sanity Library""".split()
 
 # Guesses
 GuessAuthorLogin = pwd.getpwuid(os.getuid())[0]
@@ -1027,12 +1034,20 @@ class Options:
                 self.opt.bugs = self.arg[1:]
                 # parsing namespace/package/type/path/testname
                 self.testinfo = self.arg[0]
-                regex = re.compile("^(?:(?:(?:/?%s/)?([^/]+)/)?(%s)/)?(?:([^/]+)/)?([^/]+)$" %
-                    (Namespace().match(), Type().match()))
-                matched = regex.match(self.testinfo)
-                if matched:
-                    (self.opt.namespace, self.opt.package, self.opt.type, \
-                            self.opt.path, self.opt.name) = matched.groups()
+                path_components = os.path.normpath(self.testinfo.rstrip('/')).split('/')
+                if len(path_components) >= 1:
+                    self.opt.name = path_components.pop(-1)
+                if len(path_components) >= 3 and re.match(Namespace().match() + '$', path_components[0]):
+                    self.opt.namespace = path_components.pop(0)
+                    self.opt.package = path_components.pop(0)
+                    self.opt.type = path_components.pop(0)
+                elif len(path_components) >= 2 and path_components[1] in SuggestedTestTypes:
+                    self.opt.package = path_components.pop(0)
+                    self.opt.type = path_components.pop(0)
+                elif len(path_components) >= 1:
+                    self.opt.type = path_components.pop(0)
+                if path_components:
+                    self.opt.path = '/'.join(path_components)
 
         # try to connect to bugzilla
         self.bugzilla = None
@@ -1687,18 +1702,9 @@ class Type(Inquisitor):
         self.description = "Specify the type of the test. Hints above."
         self.proposed = 0
         self.proposedname = ""
-        self.list = """Regression Performance Stress Certification
-            Security Durations Interoperability Standardscompliance
-            Customeracceptance Releasecriterium Crasher Tier1 Tier2
-            Alpha KernelTier1 KernelTier2 Multihost MultihostDriver
-            Install FedoraTier1 FedoraTier2 KernelRTTier1
-            KernelReporting Sanity Library""".split()
+        self.list = SuggestedTestTypes
         self.dirs = [os.path.join(o) for o in os.listdir('.') if os.path.isdir(os.path.join('.',o)) and not o.startswith('.')]
         if self.options: self.default(self.options.type())
-
-    def match(self):
-        """ Return regular expression matching valid data """
-        return RegExpTypeName.pattern
 
     def heading(self):
         Inquisitor.heading(self)

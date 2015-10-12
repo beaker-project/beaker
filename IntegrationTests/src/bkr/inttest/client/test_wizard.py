@@ -32,48 +32,70 @@ class TestWizard(BaseWizardTestCase):
         out = run_wizard(['beaker-wizard', 'bogus', '--help'], cwd=self.tempdir)
         self.assertRegexpMatches(out, re.compile(r'\bBeaker Wizard\b', re.I), out)
 
-    def test_wizard_matches_correct_namespace(self):
-        namespace = 'CoreOS'
-        namespace_path = os.path.join(self.tempdir, namespace)
-        os.mkdir(namespace_path)
+    def test_wizard_guesses_package_from_cwd(self):
+        # When run with no args, beaker-wizard guesses the package from the cwd 
+        # and uses defaults for everything else.
+        package = 'bash'
+        test_path = os.path.join(self.tempdir, package)
+        os.mkdir(test_path)
 
-        out = run_wizard(['beaker-wizard'], cwd=namespace_path)
-        self.assertRegexpMatches(out, re.compile(r'\bNamespace\b.*%s' % namespace, re.I), out)
+        out = run_wizard(['beaker-wizard'], cwd=test_path)
+        self.assertIn('Package : %s' % package, out)
 
+    def test_wizard_guesses_values_from_test_name(self):
+        # When given a test name, beaker-wizard creates its output in that 
+        # subdirectory and also guesses some values based on the directory 
+        # structure. Here we cover each of the possibilities described in the 
+        # man page.
 
-class TestTypesTest(BaseWizardTestCase):
+        # TESTNAME
+        out = run_wizard(['beaker-wizard', 'test-it-works'], cwd=self.tempdir)
+        self.assertIn('Test name : test-it-works', out)
 
-    def create_basedir(self, dirs=None):
-        if dirs is None:
-            dirs = ['CoreOS', 'wget']
-        basedir = os.path.join(self.tempdir, *dirs)
-        os.makedirs(basedir)
-        return basedir
+        # TYPE/TESTNAME
+        out = run_wizard(['beaker-wizard', 'Sanity/test-it-works'], cwd=self.tempdir)
+        self.assertIn('Test type : Sanity', out)
+        self.assertIn('Test name : test-it-works', out)
 
-    def assertRegexpInMakefile(self, regexp, basedir):
-        makefile_path = os.path.join(basedir, 'Makefile')
-        with open(makefile_path, 'r') as f:
-            contents = f.read()
-            self.assertRegexpMatches(contents, regexp, contents)
+        # TYPE/PATH/TESTNAME
+        out = run_wizard(['beaker-wizard', 'Sanity/http/test-it-works'], cwd=self.tempdir)
+        self.assertIn('Test type : Sanity', out)
+        self.assertIn('Relative path : http', out)
+        self.assertIn('Test name : test-it-works', out)
 
+        # PACKAGE/TYPE/NAME
+        out = run_wizard(['beaker-wizard', 'wget/Sanity/test-it-works'], cwd=self.tempdir)
+        self.assertIn('Package : wget', out)
+        self.assertIn('Test type : Sanity', out)
+        self.assertIn('Relative path : None', out)
+        self.assertIn('Test name : test-it-works', out)
+
+        # PACKAGE/TYPE/PATH/NAME
+        out = run_wizard(['beaker-wizard', 'wget/Sanity/http/test-it-works'], cwd=self.tempdir)
+        self.assertIn('Package : wget', out)
+        self.assertIn('Test type : Sanity', out)
+        self.assertIn('Relative path : http', out)
+        self.assertIn('Test name : test-it-works', out)
+
+        # NAMESPACE/PACKAGE/TYPE/NAME
+        out = run_wizard(['beaker-wizard', 'distribution/wget/Sanity/test-it-works'], cwd=self.tempdir)
+        self.assertIn('Namespace : distribution', out)
+        self.assertIn('Package : wget', out)
+        self.assertIn('Test type : Sanity', out)
+        self.assertIn('Relative path : None', out)
+        self.assertIn('Test name : test-it-works', out)
+
+        # NAMESPACE/PACKAGE/TYPE/PATH/NAME
+        out = run_wizard(['beaker-wizard', 'distribution/wget/Sanity/http/test-it-works'], cwd=self.tempdir)
+        self.assertIn('Namespace : distribution', out)
+        self.assertIn('Package : wget', out)
+        self.assertIn('Test type : Sanity', out)
+        self.assertIn('Relative path : http', out)
+        self.assertIn('Test name : test-it-works', out)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1184907
     def test_creates_successfully_custom_test_type(self):
-        basedir = self.create_basedir()
-
-        expected = ['mytesttype', 'test1']
-        out = run_wizard(['beaker-wizard', os.path.join(*expected)], cwd=basedir)
-        self.assertRegexpMatches(out, re.compile(r'\bwritten\b'))
-        self.assertTrue(
-            os.path.exists(os.path.join(basedir, *expected)), out
-        )
-        self.assertRegexpInMakefile(re.compile(r'Type:\s+%s' % expected[0]),
-                                    os.path.join(basedir, *expected))
-
-    def test_creates_default_test_type(self):
-        basedir = self.create_basedir()
-
-        expected = ['Library', 'test1']
-        out = run_wizard(['beaker-wizard', os.path.join(*expected)], cwd=basedir)
-        self.assertRegexpMatches(out, re.compile(r'\bwritten\b'))
-        self.assertTrue(
-            os.path.exists(os.path.join(basedir, *expected)), out
-        )
+        out = run_wizard(['beaker-wizard', 'http/test1'], cwd=self.tempdir)
+        self.assertIn('Test type : http', out)
+        self.assertIn('Relative path : None', out)
+        self.assertIn('Test name : test1', out)
