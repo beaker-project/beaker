@@ -8,7 +8,6 @@ from turbogears import redirect, config, expose, \
         paginate, url
 from turbogears.database import session
 from sqlalchemy.orm.exc import NoResultFound
-import cherrypy
 from cherrypy import response
 from flask import jsonify, request, redirect as flask_redirect
 from bkr.server.validators import StrongPassword
@@ -33,17 +32,12 @@ from bkr.server.flask_util import auth_required, \
 import logging
 log = logging.getLogger(__name__)
 
-class GroupOwnerModificationForbidden(BX, cherrypy.HTTPError):
+class GroupOwnerModificationForbidden(BX):
 
     def __init__(self, message):
         # XXX: Call base class __init__?
         self._message = message
         self.args = [message]
-
-    def set_response(self):
-        response.status = 403
-        response.body = self._message
-        response.headers['content-type'] = 'application/json'
 
 class GroupFormSchema(validators.Schema):
     display_name = validators.UnicodeString(not_empty=True,
@@ -210,8 +204,6 @@ class Groups(AdminPage):
                            list = groups)
         return return_dict
 
-    @identity.require(identity.not_anonymous())
-    @expose(format='json')
     def revoke_owner(self, group_id=None, id=None, **kw):
 
         if group_id is not None and id is not None:
@@ -267,8 +259,6 @@ class Groups(AdminPage):
         return self.revoke_owner(group_name=group,
                                  member_name=kw['member_name'])
 
-    @identity.require(identity.not_anonymous())
-    @expose(format='json')
     def grant_owner(self, group_id=None, id=None, **kw):
 
         if group_id is not None and id is not None:

@@ -310,26 +310,6 @@ class DeleteLinkWidgetAJAX(DeleteLinkWidget):
         return super(DeleteLinkWidgetAJAX, self).display(value, **params)
 
 
-class GroupPermissions(Widget):
-
-    javascript = [LocalJSLink('bkr', '/static/javascript/group_permission_v4.js'),
-        LocalJSLink('bkr', '/static/javascript/util.js'),
-        LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js', order=3),]
-    css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
-    member_widgets = ['form', 'grid']
-    template = """
-        <div xmlns:py="http://purl.org/kid/ns#">
-            <script type='text/javascript'>
-                var permissions_form_id = "${form.name}"
-                 var permissions_grid_id = "${grid.name}"
-                 var group_id = "${value.group_id}"
-            </script>
-            ${grid.display(value.permissions)}
-            <div py:if="tg.identity.user and tg.identity.user.is_admin()"
-                 py:content="form.display(action='./save_group_permissions', value=value)" />
-        </div>
-        """
-
 class MyButton(Button):
     template="bkr.server.templates.my_button"
     params = ['type', 'button_label', 'name']
