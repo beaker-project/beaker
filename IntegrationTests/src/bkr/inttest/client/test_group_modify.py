@@ -129,9 +129,9 @@ class GroupModifyTest(ClientTestCase):
                              config = self.client_config)
             self.fail('Must fail or die')
         except ClientError,e:
-            max_length = Group.display_name.property.columns[0].type.length
-            self.assertRegexpMatches(e.stderr_output,
-                                     'Enter a value (less|not more) than %r characters long' % max_length)
+            self.assertIn(
+                    'Group display name must be not more than 255 characters long',
+                    e.stderr_output)
 
     def test_group_modify_group_name(self):
         group_name = 'mynewgroup'
@@ -158,9 +158,9 @@ class GroupModifyTest(ClientTestCase):
                              config = self.client_config)
             self.fail('Must fail or die')
         except ClientError,e:
-            max_length = Group.group_name.property.columns[0].type.length
-            self.assertRegexpMatches(e.stderr_output,
-                                     'Enter a value (less|not more) than %r characters long' % max_length)
+            self.assertIn(
+                    'Group name must be not more than 255 characters long',
+                    e.stderr_output)
 
     def test_group_modify_password(self):
         # Test successful hashed password change

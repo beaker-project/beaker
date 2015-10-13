@@ -231,6 +231,7 @@ var BeakerBackgridAddButton = Backbone.View.extend({
     initialize: function (options) {
         this.label = options.label || 'Add';
         this.view_type = options.view_type;
+        this.view_options = options.view_options || {};
     },
     render: function () {
         var button = $('<button type="button" class="btn btn-primary"/>')
@@ -240,7 +241,7 @@ var BeakerBackgridAddButton = Backbone.View.extend({
         return this;
     },
     add: function (evt) {
-        new this.view_type({collection: this.collection});
+        new this.view_type(_.extend({collection: this.collection}, this.view_options));
     },
 });
 
@@ -269,6 +270,7 @@ window.BeakerGrid = Backbone.View.extend({
                 collection: collection,
                 label: options.add_label,
                 view_type: options.add_view_type,
+                view_options: options.add_view_options,
             });
         }
         this.render();

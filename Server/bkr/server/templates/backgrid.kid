@@ -28,6 +28,7 @@ $(function () {
         el: $('#grid'),
         add_label: ${tg.to_json(value_of('grid_add_label', None))},
         add_view_type: ${value_of('grid_add_view_type', 'null')},
+        add_view_options: ${tg.to_json(value_of('grid_add_view_options', dict()))},
     });
 });
 </script>

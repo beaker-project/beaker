@@ -57,9 +57,9 @@ class GroupCreateTest(ClientTestCase):
                               'areallylonggroupname'*20])
             self.fail('Must fail or die')
         except ClientError,e:
-            max_length = Group.group_name.property.columns[0].type.length
-            self.assertRegexpMatches(e.stderr_output,
-                                     'Enter a value (less|not more) than %r characters long' % max_length)
+            self.assertIn(
+                    'Group display name must be not more than 255 characters long',
+                    e.stderr_output)
         try:
             out = run_client(['bkr', 'group-create',
                               '--display-name',
@@ -67,9 +67,9 @@ class GroupCreateTest(ClientTestCase):
                               'agroup'])
             self.fail('Must fail or die')
         except ClientError,e:
-            max_length = Group.display_name.property.columns[0].type.length
-            self.assertRegexpMatches(e.stderr_output,
-                                     'Enter a value (less|not more) than %r characters long' % max_length)
+            self.assertIn(
+                    'Group display name must be not more than 255 characters long',
+                    e.stderr_output)
 
     def test_ldap_group(self):
 

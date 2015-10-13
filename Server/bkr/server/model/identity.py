@@ -476,8 +476,9 @@ class Group(DeclarativeMappedObject, ActivityMixin):
         """
         data = self.__json__()
         data.update({
+            'created': self.created,
             'members': [user for user in self.users],
-            'owners': [user for user in self.users if self.has_owner(user)],
+            'owners': [user for user in self.owners()],
             'permissions':[permission.permission_name
                            for permission in self.permissions],
         })
@@ -528,8 +529,6 @@ class Group(DeclarativeMappedObject, ActivityMixin):
         """
         if password:
             try:
-                # If you change VeryFascistCheck, please also modify
-                # bkr.server.validators.StrongPassword
                 cracklib.VeryFascistCheck(password)
             except ValueError, msg:
                 msg = re.sub(r'^it', 'the password', str(msg))
@@ -545,14 +544,14 @@ class Group(DeclarativeMappedObject, ActivityMixin):
         return '/groups/%s' % urllib.quote(self.group_name.encode('utf8'), '')
 
     def owners(self):
-        return UserGroup.query.filter_by(group_id=self.group_id,
-                                         is_owner=True).all()
+        return [uga.user
+                for uga in self.user_group_assocs
+                if uga.is_owner]
 
     def has_owner(self, user):
-        if user is None:
-            return False
-        return bool(UserGroup.query.filter_by(group_id=self.group_id,
-                user_id=user.user_id, is_owner=True).count())
+        return any(uga.user == user
+                for uga in self.user_group_assocs
+                if uga.is_owner)
 
     def can_edit(self, user):
         return self.has_owner(user) or user.is_admin()
@@ -568,6 +567,10 @@ class Group(DeclarativeMappedObject, ActivityMixin):
                 return False
 
         return True
+
+    @classmethod
+    def can_create_ldap(self, user):
+        return user.is_admin() and get('identity.ldap.enabled', False)
 
     def can_edit_ldap(self, user):
         return user.is_admin() and get('identity.ldap.enabled', False)

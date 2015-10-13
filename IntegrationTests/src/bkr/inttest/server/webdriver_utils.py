@@ -153,11 +153,11 @@ def check_task_search_results(browser, present=[], absent=[]):
 
 def check_group_search_results(browser, present=[], absent=[]):
     for group in absent:
-        browser.find_element_by_xpath('//table[@id="widget" and '
-                    'not(.//td[1]/a/text()="%s")]' % group.group_name)
+        browser.find_element_by_xpath('//table[contains(@class, "table")]/tbody'
+                    '[not(tr/td[1]/a/text()="%s")]' % group.group_name)
     for group in present:
-        browser.find_element_by_xpath('//table[@id="widget" and '
-                    './/td[1]/a/text()="%s"]' % group.group_name)
+        browser.find_element_by_xpath('//table[contains(@class, "table")]/tbody'
+                    '[tr/td[1]/a/text()="%s"]' % group.group_name)
 
 def click_menu_item(browser, menu_item, submenu_item):
     browser.find_element_by_link_text(menu_item).click()

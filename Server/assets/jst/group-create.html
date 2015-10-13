@@ -1,0 +1,27 @@
+<form>
+  <div class="modal-header">
+    <a href="#" class="close" data-dismiss="modal" aria-hidden="true">&times;</a>
+    <h3>Create group</h3>
+  </div>
+  <div class="modal-body">
+    <label for="group_name">Name</label>
+    <input type="text" id="group_name" name="group_name" class="input-block-level"
+        placeholder="Group name" required maxlength="255"
+        pattern="[^\s/]([^/]*[^\s/])?"
+        title="Group name of up to 255 characters, excluding /"/>
+    <label for="display_name">Display Name</label>
+    <input type="text" id="display_name" name="display_name" class="input-block-level"
+        placeholder="Display name" required maxlength="255"
+        title="Display name of up to 255 characters"/>
+    <% if (can_create_ldap) { %>
+      <div class="checkbox">
+        <label><input type="checkbox" name="ldap"> Populate group membership from LDAP</label>
+      </div>
+    <% } %>
+  </div>
+  <div class="modal-footer">
+    <div class="sync-status"/>
+    <button type="button" class="btn" data-dismiss="modal" data-loading-text="Cancel">Cancel</button>
+    <button type="submit" class="btn btn-primary" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Creating&hellip;">Create</button>
+  </div>
+</form>

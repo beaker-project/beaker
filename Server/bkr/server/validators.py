@@ -4,22 +4,11 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import cracklib
 from turbogears.validators import FormValidator, Invalid, TgFancyValidator, \
         UnicodeString
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server import identity
 from bkr.server.model import System, Recipe, User, LabController, RetentionTag
-
-
-class StrongPassword(TgFancyValidator):
-
-    def _to_python(self, value, state):
-        try:
-            cracklib.VeryFascistCheck(value)
-            return value
-        except ValueError, msg:
-            raise Invalid('Invalid password: %s' % str(msg), value, state)
 
 
 class UniqueUserName(FormValidator):

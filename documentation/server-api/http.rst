@@ -257,6 +257,6 @@ Groups
 ------
 
 .. autoflask:: bkr.server.wsgi:app
-   :endpoints: get_group, update_group, delete_group,
+   :endpoints: get_groups, create_group, get_group, update_group, delete_group,
      add_group_membership, remove_group_membership,
      grant_ownership, revoke_ownership, add_permission, remove_permission

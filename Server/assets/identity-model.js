@@ -97,4 +97,12 @@ window.Group = Backbone.Model.extend({
     },
 });
 
+/** The collection of all Beaker groups. */
+window.Groups = BeakerPageableCollection.extend({
+    model: Group,
+    initialize: function (attributes, options) {
+        this.url = options.url;
+    },
+});
+
 })();

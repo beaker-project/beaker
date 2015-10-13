@@ -3,17 +3,14 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from turbogears import redirect, config, expose, \
-        flash, widgets, validate, error_handler, validators, redirect, \
+from turbogears import config, expose, \
         paginate, url
 from turbogears.database import session
+from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
-from cherrypy import response
 from flask import jsonify, request, redirect as flask_redirect
-from bkr.server.validators import StrongPassword
 from bkr.server.helpers import make_link
-from bkr.server.widgets import myPaginateDataGrid, \
-    HorizontalForm
+from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.admin_page import AdminPage
 from bkr.server.bexceptions import BX
 from bkr.server.app import app
@@ -25,7 +22,8 @@ from bkr.server.util import absolute_url
 from bkr.server.flask_util import auth_required, \
     convert_internal_errors, read_json_request, BadRequest400, \
     Forbidden403, MethodNotAllowed405, NotFound404, Conflict409, \
-    request_wants_json, render_tg_template, admin_auth_required
+    request_wants_json, render_tg_template, admin_auth_required, \
+    json_collection
 
 import logging
 log = logging.getLogger(__name__)
@@ -37,42 +35,9 @@ class GroupOwnerModificationForbidden(BX):
         self._message = message
         self.args = [message]
 
-class GroupFormSchema(validators.Schema):
-    display_name = validators.UnicodeString(not_empty=True,
-                                            max=Group.display_name.property.columns[0].type.length,
-                                            strip=True)
-    group_name = validators.UnicodeString(not_empty=True,
-                                          max=Group.group_name.property.columns[0].type.length,
-                                          strip=True)
-    root_password = StrongPassword()
-    ldap = validators.StringBool(if_empty=False)
-
-class GroupForm(HorizontalForm):
-    fields = [
-        widgets.HiddenField(name='group_id'),
-        widgets.TextField(name='group_name', label=_(u'Group Name')),
-        widgets.TextField(name='display_name', label=_(u'Display Name')),
-        widgets.PasswordField(name='root_password', label=_(u'Root Password'),
-            validator=StrongPassword()),
-        widgets.CheckBox(name='ldap', label=_(u'LDAP'),
-                help_text=_(u'Populate group membership from LDAP?')),
-    ]
-    name = 'Group'
-    action = 'save_data'
-    submit_text = _(u'Save')
-    validator = GroupFormSchema()
-
-    def update_params(self, d):
-        if not identity.current.user.is_admin() or \
-                not config.get('identity.ldap.enabled', False):
-            d['disabled_fields'] = ['ldap']
-        super(GroupForm, self).update_params(d)
-
 class Groups(AdminPage):
     # For XMLRPC methods in this class.
     exposed = True
-    group_id     = widgets.HiddenField(name='group_id')
-    group_form = GroupForm()
 
     def __init__(self,*args,**kw):
         kw['search_url'] =  url("/groups/by_name?anywhere=1")
@@ -93,71 +58,6 @@ class Groups(AdminPage):
 
         groups =  [match.group_name for match in search]
         return dict(matches=groups)
-
-    @identity.require(identity.not_anonymous())
-    @expose(template='bkr.server.templates.form')
-    def new(self, **kw):
-        return dict(
-            form = self.group_form,
-            title = 'New Group',
-            action = './save_new',
-            options = {},
-            value = kw,
-        )
-
-    def _new_group(self, group_id, display_name, group_name, ldap,
-        root_password):
-        user = identity.current.user
-        if ldap and not user.is_admin():
-            flash(_(u'Only admins can create LDAP groups'))
-            redirect('.')
-        try:
-            Group.by_name(group_name)
-        except NoResultFound:
-            pass
-        else:
-            flash( _(u"Group %s already exists." % group_name) )
-            redirect(".")
-
-        group = Group()
-        session.add(group)
-        group.record_activity(user=user, service=u'WEBUI', field=u'Group',
-                action=u'Created')
-        group.display_name = display_name
-        group.group_name = group_name
-        group.ldap = ldap
-        if group.ldap:
-            group.refresh_ldap_members()
-        group.root_password = root_password
-        if not ldap: # LDAP groups don't have owners
-            group.user_group_assocs.append(UserGroup(user=user, is_owner=True))
-            group.activity.append(GroupActivity(user, service=u'WEBUI',
-                action=u'Added', field_name=u'User',
-                old_value=None, new_value=user.user_name))
-            group.activity.append(GroupActivity(user, service=u'WEBUI',
-                action=u'Added', field_name=u'Owner',
-                old_value=None, new_value=user.user_name))
-        return group
-
-    @expose()
-    @validate(form=group_form)
-    @error_handler(new)
-    @identity.require(identity.not_anonymous())
-    def save_new(self, group_id=None, display_name=None, group_name=None,
-        ldap=False, root_password=None, **kwargs):
-        # save_new() is needed because 'edit' is not a viable
-        # error handler for new groups.
-        self._new_group(group_id, display_name, group_name, ldap,
-            root_password)
-        flash( _(u"OK") )
-        redirect("mine")
-
-    @expose(template="bkr.server.templates.grid")
-    @paginate('list', default_order='group_name', limit=20)
-    def index(self, *args, **kw):
-        groups = self.process_search(*args, **kw)
-        template_data = self.groups(groups, *args, **kw)
-        return template_data
 
     @expose(template="bkr.server.templates.grid")
     @identity.require(identity.not_anonymous())
@@ -321,10 +221,6 @@ class Groups(AdminPage):
         try:
             group = Group.by_name(group_name)
         except NoResultFound:
-            #validate
-            GroupFormSchema.fields['group_name'].to_python(group_name)
-            GroupFormSchema.fields['display_name'].to_python(display_name)
-
             group = Group()
             session.add(group)
             group.record_activity(user=identity.current.user, service=u'XMLRPC',
@@ -408,12 +304,10 @@ class Groups(AdminPage):
                     raise BX(_(u'Failed to update group %s: Group name already exists: %s' %
                                (group.group_name, group_name)))
 
-            GroupFormSchema.fields['group_name'].to_python(group_name)
             group.set_name(user, u'XMLRPC', kw.get('group_name', None))
 
         display_name = kw.get('display_name', None)
         if display_name:
-            GroupFormSchema.fields['display_name'].to_python(display_name)
             group.set_display_name(user, u'XMLRPC', display_name)
 
         root_password = kw.get('root_password', None)
@@ -502,6 +396,106 @@ class Groups(AdminPage):
             users.append(user)
 
         return users
+
+@app.route('/groups/', methods=['GET'])
+def get_groups():
+    """
+    Returns a pageable JSON collection of Beaker groups.
+
+    The following fields are supported for filtering and sorting:
+
+    ``group_name``
+        Symbolic name of the group.
+    ``display_name``
+        Human-friendly display name of the group.
+    ``created``
+        Timestamp at which the group was created.
+    """
+    query = Group.query.order_by(Group.group_name)
+    # Eager load all group members as an optimisation to avoid N database roundtrips
+    query = query.options(joinedload('user_group_assocs'),
+            joinedload('user_group_assocs.user'))
+    json_result = json_collection(query, columns={
+        'group_name': Group.group_name,
+        'display_name': Group.display_name,
+        'created': Group.created,
+    })
+    # Need to call .to_json() on the groups because the default __json__ 
+    # representation is the minimal cut-down one, we want the complete 
+    # representation here (including members and owners etc).
+    json_result['entries'] = [g.to_json() for g in json_result['entries']]
+    if request_wants_json():
+        return jsonify(json_result)
+    if identity.current.user:
+        grid_add_view_type = 'GroupCreateModal',
+        grid_add_view_options = {
+            'can_create_ldap': Group.can_create_ldap(identity.current.user),
+        }
+    else:
+        grid_add_view_type = 'null'
+        grid_add_view_options = {}
+    return render_tg_template('bkr.server.templates.backgrid', {
+        'title': u'Groups',
+        'grid_collection_type': 'Groups',
+        'grid_collection_data': json_result,
+        'grid_collection_url': request.base_url,
+        'grid_view_type': 'GroupsView',
+        'grid_add_label': 'Create',
+        'grid_add_view_type': grid_add_view_type,
+        'grid_add_view_options': grid_add_view_options,
+    })
+
+@app.route('/groups/', methods=['POST'])
+@auth_required
+def create_group():
+    """
+    Creates a new user group in Beaker. The request must be 
+    :mimetype:`application/json`.
+
+    :jsonparam string group_name: Symbolic name for the group.
+    :jsonparam string display_name: Human-friendly display name for the group.
+    :jsonparam string root_password: Optional root password for group jobs.
+      If this is not set, group jobs will use the root password preferences of 
+      the job submitter.
+    :jsonparam bool ldap: Populate group membership from LDAP. Only Beaker 
+      administrators can set this to true.
+
+    :status 201: The group was successfully created.
+    """
+    user = identity.current.user
+    data = read_json_request(request)
+    if 'group_name' not in data:
+        raise BadRequest400('Missing group_name key')
+    if 'display_name' not in data:
+        raise BadRequest400('Missing display_name key')
+    if data.get('ldap') and not Group.can_create_ldap(user):
+        raise BadRequest400('Only admins can create LDAP groups')
+    try:
+        Group.by_name(data['group_name'])
+    except NoResultFound:
+        pass
+    else:
+        raise Conflict409("Group '%s' already exists" % data['group_name'])
+    with convert_internal_errors():
+        group = Group.lazy_create(group_name=data['group_name'])
+        group.display_name = data['display_name']
+        group.root_password = data.get('root_password')
+        session.add(group)
+        group.record_activity(user=user, service=u'HTTP',
+                field=u'Group', action=u'Created')
+        if data.get('ldap'):
+            group.ldap = True
+            group.refresh_ldap_members()
+        else: # LDAP groups don't have owners
+            group.user_group_assocs.append(UserGroup(user=user, is_owner=True))
+            group.record_activity(user=user, service=u'HTTP',
+                action=u'Added', field=u'User', new=user.user_name)
+            group.record_activity(user=user, service=u'HTTP',
+                action=u'Added', field=u'Owner', new=user.user_name)
+    response = jsonify(group.__json__())
+    response.status_code = 201
+    response.headers.add('Location', absolute_url(group.href))
+    return response
 
 def _get_group_by_name(group_name, lockmode=False):
     """Get group by name, reporting HTTP 404 if the group is not found"""

@@ -23,9 +23,8 @@ class TestGroupsWD(WebDriverTestCase):
     def setUp(self):
         with session.begin():
             self.user = data_setup.create_user(password='password')
-            self.group = data_setup.create_group()
+            self.group = data_setup.create_group(owner=self.user)
             self.perm1 = data_setup.create_permission()
-            self.group.add_member(self.user, is_owner=True)
         self.browser = self.get_browser()
         self.clear_password = 'gyfrinachol'
         self.hashed_password = '$1$NaCl$O34mAzBXtER6obhoIodu8.'
@@ -214,58 +213,10 @@ class TestGroupsWD(WebDriverTestCase):
             user.groups.append(self.group)
         # login as the new user
         login(b, user=user.user_name, password='password')
-        b.get(get_server_base() + 'groups/mine')
-        b.find_element_by_link_text(self.group.group_name).click()
+        self.go_to_group_page()
         self.assertEquals(b.find_element_by_xpath("//div[@id='root_pw_display']/p").text,
                           "No group root password set. "
                           "Group jobs will use the root password preferences of the submitting user.")
-
-    def test_create_new_group(self):
-        b = self.browser
-        login(b, user=self.user.user_name, password='password')
-        b.get(get_server_base() + 'groups/mine')
-        b.find_element_by_link_text('Add').click()
-        b.find_element_by_xpath('//input[@id="Group_display_name"]'). \
-            send_keys('Group FBZ')
-        b.find_element_by_xpath('//input[@id="Group_group_name"]'). \
-            send_keys('FBZ')
-        b.find_element_by_xpath('//input[@id="Group_root_password"]'). \
-            send_keys('blapppy7')
-        b.find_element_by_id('Group').submit()
-        b.find_element_by_xpath('//title[text()="My Groups"]')
-        b.find_element_by_link_text('FBZ').click()
-        with session.begin():
-            group = Group.by_name(u'FBZ')
-            self.assertEquals(group.display_name, u'Group FBZ')
-            self.assert_(group.has_owner(self.user))
-            self.assertEquals(group.activity[-1].action, u'Added')
-            self.assertEquals(group.activity[-1].field_name, u'Owner')
-            self.assertEquals(group.activity[-1].new_value, self.user.user_name)
-            self.assertEquals(group.activity[-1].service, u'WEBUI')
-            self.assertEquals(group.activity[-2].action, u'Added')
-            self.assertEquals(group.activity[-2].field_name, u'User')
-            self.assertEquals(group.activity[-2].new_value, self.user.user_name)
-            self.assertEquals(group.activity[-2].service, u'WEBUI')
-            self.assertEquals(group.activity[-3].action, u'Created')
-            self.assertEquals(group.activity[-3].service, u'WEBUI')
-            self.assertEquals('blapppy7', group.root_password)
-
-    def test_create_new_group_sans_password(self):
-        b = self.browser
-        group_name = data_setup.unique_name('group%s')
-        login(b, user=self.user.user_name, password='password')
-        b.get(get_server_base() + 'groups/mine')
-        b.find_element_by_link_text('Add').click()
-        b.find_element_by_xpath('//input[@id="Group_display_name"]'). \
-            send_keys(group_name)
-        b.find_element_by_xpath('//input[@id="Group_group_name"]'). \
-            send_keys(group_name)
-        b.find_element_by_id('Group').submit()
-        b.find_element_by_xpath('//title[text()="My Groups"]')
-        b.find_element_by_link_text(group_name).click()
-        self.assertEquals(b.find_element_by_xpath("//div[@id='root_pw_display']/p").text,
-              "No group root password set. "
-              "Group jobs will use the root password preferences of the submitting user.")
 
     def test_can_edit_owned_group(self):
         b = self.browser
@@ -291,15 +242,7 @@ class TestGroupsWD(WebDriverTestCase):
 
         b = self.browser
         login(b, user=self.user.user_name, password='password')
-        b.get(get_server_base() + 'groups/mine')
-        b.find_element_by_link_text('Add').click()
-        b.find_element_by_xpath('//input[@id="Group_display_name"]'). \
-            send_keys('Group FBZ 1')
-        b.find_element_by_xpath('//input[@id="Group_group_name"]'). \
-            send_keys('FBZ-1')
-        b.find_element_by_id('Group').submit()
-        b.find_element_by_xpath('//title[text()="My Groups"]')
-        b.find_element_by_link_text('FBZ-1').click()
+        self.go_to_group_page()
 
         b.find_element_by_xpath('//ul[contains(@class, "group-nav")]'
             '//a[text()="Members"]').click()
@@ -309,26 +252,16 @@ class TestGroupsWD(WebDriverTestCase):
             '//li/a[contains(text(), "%s")]' % user.user_name)
         with session.begin():
             session.expire_all()
-            group = Group.by_name('FBZ-1')
-            self.assertIn(user, group.users)
-        self.check_notification(user, group, action='Added')
+            self.assertIn(user, self.group.users)
+            self.check_notification(user, self.group, action='Added')
 
     def test_remove_user_from_owned_group(self):
         with session.begin():
             user = data_setup.create_user(password='password')
 
-        group_name = data_setup.unique_name('AAAAAA%s')
-        display_name = data_setup.unique_name('Group Display Name %s')
-
         b = self.browser
         login(b, user=self.user.user_name, password='password')
-        b.get(get_server_base() + 'groups/mine')
-        b.find_element_by_link_text('Add').click()
-        b.find_element_by_xpath('//input[@id="Group_display_name"]').send_keys(display_name)
-        b.find_element_by_xpath('//input[@id="Group_group_name"]').send_keys(group_name)
-        b.find_element_by_id('Group').submit()
-        b.find_element_by_xpath('//title[text()="My Groups"]')
-        b.find_element_by_link_text(group_name).click()
+        self.go_to_group_page()
 
         # add an user
         b.find_element_by_xpath('//ul[contains(@class, "group-nav")]'
@@ -343,18 +276,19 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_xpath('//div/ul[@class="list-group group-members-list" and '
             'not(.//li/a[contains(text(), "%s")])]' % user.user_name)
         with session.begin():
-            group = Group.by_name(group_name)
-        self.check_notification(user, group, action='Removed')
+            session.expire_all()
+            self.check_notification(user, self.group, action='Removed')
 
         # remove self when I am the only owner of the group
         b.find_element_by_xpath('//li[contains(a/text(), "%s")]/button' % self.user.user_name).click()
         b.find_element_by_xpath('//div[contains(@class, "alert-error") and '
-            'contains(string(.), "Cannot remove user %s from group %s")]' % (self.user.user_name, group_name))
+            'contains(string(.), "Cannot remove user %s from group %s")]'
+            % (self.user.user_name, self.group.group_name))
         # admin should be able to remove an owner, even if only one
         logout(b)
         #login back as admin
         login(b)
-        self.go_to_group_page(group, tab=u"Members")
+        self.go_to_group_page(tab=u"Members")
         b.find_element_by_xpath('//li[contains(a/text(), "%s")]/button' % self.user.user_name).click()
         b.find_element_by_xpath('//div/ul[@class="list-group group-members-list" and '
             'not(.//li/a[contains(text(), "%s")])]' % self.user.user_name)
@@ -454,30 +388,11 @@ class TestGroupsWD(WebDriverTestCase):
         b = self.browser
         login(b, user=user.user_name, password='password')
 
-        # admin should be in groups/mine
-        b.get(get_server_base() + 'groups/mine')
-        b.find_element_by_link_text('admin')
-
         # check if the user can edit any other group, when the user:
         # is not an owner
         # is not a member
-        b.get(get_server_base() + 'groups/edit?group_id=%d' % group.group_id)
+        self.go_to_group_page(group)
         b.find_element_by_xpath('.//button[contains(text(), "Edit")]')
-
-    def test_create_ldap_group(self):
-        login(self.browser)
-        b = self.browser
-        b.get(get_server_base() + 'groups/new')
-        b.find_element_by_name('group_name').send_keys('my_ldap_group')
-        b.find_element_by_name('display_name').send_keys('My LDAP group')
-        self.assertEquals(b.find_element_by_name('ldap').is_selected(), False)
-        b.find_element_by_name('ldap').click()
-        b.find_element_by_id('Group').submit()
-        self.assertEquals(b.find_element_by_class_name('flash').text, 'OK')
-        with session.begin():
-            group = Group.by_name(u'my_ldap_group')
-            self.assertEquals(group.ldap, True)
-            self.assertEquals(group.users, [User.by_user_name(u'my_ldap_user')])
 
     def test_cannot_modify_membership_of_ldap_group(self):
         with session.begin():
@@ -517,8 +432,7 @@ class TestGroupsWD(WebDriverTestCase):
         new_group_name = 'FBZ-2-new'
 
         # edit
-        b.get(get_server_base() + 'groups/mine')
-        b.find_element_by_link_text(group.group_name).click()
+        self.go_to_group_page(group)
         self._edit_group_details(b, new_group_name, new_display_name)
 
         # check
@@ -544,8 +458,7 @@ class TestGroupsWD(WebDriverTestCase):
         b = self.browser
         login(b, user=user.user_name, password='password')
 
-        b.get(get_server_base() + 'groups/mine')
-        b.find_element_by_link_text(group2.group_name).click()
+        self.go_to_group_page(group2)
         self._edit_group_details(b, group1.group_name, group2.display_name)
         self.assertIn('Group %s already exists' % group1.group_name,
                                b.find_element_by_class_name('alert-error').text)
@@ -577,10 +490,9 @@ class TestGroupsWD(WebDriverTestCase):
 
         b = self.browser
         login(b, user=user.user_name, password='password')
-        b.get(get_server_base() + 'groups/mine')
+        self.go_to_group_page(group)
 
         # remove self (as only owner)
-        b.find_element_by_link_text(group.group_name).click()
         b.find_element_by_xpath('//ul[contains(@class, "group-nav")]'
             '//a[text()="Owners"]').click()
         b.find_element_by_xpath('//div/ul[@class="list-group group-owners-list"]'
@@ -604,14 +516,10 @@ class TestGroupsWD(WebDriverTestCase):
 
         # login as the new user and check for ownership
         login(b, user=user1.user_name, password='password')
-        b.get(get_server_base() + 'groups/mine')
-        b.find_element_by_link_text(group.group_name).click()
+        self.go_to_group_page(group)
         b.find_element_by_xpath('.//button[contains(text(), "Edit")]')
         with session.begin():
-            self.assertEquals(Activity.query.filter_by(service=u'HTTP',
-                                                       field_name=u'Owner', action=u'Added',
-                                                       new_value=user1.user_name).count(), 1)
-            group = Group.by_name(group.group_name)
+            session.expire_all()
             self.assert_(group.has_owner(user1))
             self.assertEquals(group.activity[-1].action, u'Added')
             self.assertEquals(group.activity[-1].field_name, u'Owner')
@@ -645,29 +553,8 @@ class TestGroupsWD(WebDriverTestCase):
 
         b = self.browser
         login(b, user=self.user.user_name, password='password')
+        self.go_to_group_page()
 
-        # for new group
-        b.get(get_server_base() + 'groups/mine')
-        b.find_element_by_link_text('Add').click()
-        b.find_element_by_xpath('//input[@id="Group_display_name"]'). \
-            send_keys('A really long group display name'*20)
-        b.find_element_by_xpath('//input[@id="Group_group_name"]'). \
-            send_keys('areallylonggroupname'*20)
-        b.find_element_by_id('Group').submit()
-        error_text = b.find_element_by_xpath('//span[contains(@class, "error") '
-                'and preceding-sibling::input/@name="group_name"]').text
-        self.assertRegexpMatches(error_text,
-                                 'Enter a value (less|not more) than %r characters long' % max_length_group_name)
-        error_text = b.find_element_by_xpath('//span[contains(@class, "error") '
-                'and preceding-sibling::input/@name="display_name"]').text
-        self.assertRegexpMatches(error_text,
-                                 'Enter a value (less|not more) than %r characters long' % max_length_disp_name)
-
-        # modify existing group
-        with session.begin():
-            group = data_setup.create_group(owner=self.user)
-
-        b.get(get_server_base() + 'groups/edit?group_id=%s' % group.group_id)
         new_name = 'areallylonggroupname'*20
         new_display_name = 'A really long group display name'*20
         self._edit_group_details(b, new_name, new_display_name)
@@ -676,9 +563,9 @@ class TestGroupsWD(WebDriverTestCase):
             new_name[:255])
         # A really long name will be truncated to 255 characters
         with session.begin():
-            session.refresh(group)
-            self.assertEqual(group.group_name, new_name[:255])
-            self.assertEqual(group.display_name, new_display_name[:255])
+            session.refresh(self.group)
+            self.assertEqual(self.group.group_name, new_name[:255])
+            self.assertEqual(self.group.display_name, new_display_name[:255])
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=990860
     def test_show_group_owners(self):
@@ -824,6 +711,45 @@ class GroupHTTPTest(DatabaseTestCase):
         self.assertEquals(json['id'], self.group.id)
         self.assertEquals(json['group_name'], self.group.group_name)
         self.assertEquals(json['display_name'], self.group.display_name)
+
+    def test_create_new_group(self):
+        s = requests.Session()
+        requests_login(s, user=self.user, password=u'password')
+        response = post_json(get_server_base() + 'groups/', session=s, data={
+            'group_name': 'FBZ',
+            'display_name': 'Group FBZ',
+            'root_password': 'blapppy7',
+        })
+        response.raise_for_status()
+        with session.begin():
+            group = Group.by_name(u'FBZ')
+            self.assertEquals(group.display_name, u'Group FBZ')
+            self.assert_(group.has_owner(self.user))
+            self.assertEquals(group.activity[-1].action, u'Added')
+            self.assertEquals(group.activity[-1].field_name, u'Owner')
+            self.assertEquals(group.activity[-1].new_value, self.user.user_name)
+            self.assertEquals(group.activity[-1].service, u'HTTP')
+            self.assertEquals(group.activity[-2].action, u'Added')
+            self.assertEquals(group.activity[-2].field_name, u'User')
+            self.assertEquals(group.activity[-2].new_value, self.user.user_name)
+            self.assertEquals(group.activity[-2].service, u'HTTP')
+            self.assertEquals(group.activity[-3].action, u'Created')
+            self.assertEquals(group.activity[-3].service, u'HTTP')
+            self.assertEquals('blapppy7', group.root_password)
+
+    def test_create_ldap_group(self):
+        s = requests.Session()
+        requests_login(s)
+        response = post_json(get_server_base() + 'groups/', session=s, data={
+            'group_name': 'my_ldap_group',
+            'display_name': 'My LDAP group',
+            'ldap': True,
+        })
+        response.raise_for_status()
+        with session.begin():
+            group = Group.by_name(u'my_ldap_group')
+            self.assertEquals(group.ldap, True)
+            self.assertEquals(group.users, [User.by_user_name(u'my_ldap_user')])
 
     def test_update_group(self):
         s = requests.Session()
