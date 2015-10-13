@@ -1553,8 +1553,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
                 SystemActivity.field_name == u'Status',
                 SystemActivity.action == u'Changed'))\
             .subquery()
-        nonaborted_recipe_subquery = self.dyn_recipes\
-            .filter(Recipe.status != TaskStatus.aborted)\
+        nonsuspicious_aborted_recipe_subquery = self.dyn_recipes\
+            .filter(not_(Recipe.is_suspiciously_aborted))\
             .with_entities(func.max(Recipe.finish_time))\
             .subquery()
         count = self.dyn_recipes.join(Recipe.distro_tree, DistroTree.distro)\
@@ -1562,7 +1562,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
                 Distro.tags.contains(reliable_distro_tag.decode('utf8')),
                 Recipe.start_time >
                     func.ifnull(status_change_subquery.as_scalar(), self.date_added),
-                Recipe.finish_time > nonaborted_recipe_subquery.as_scalar().correlate(None)))\
+                Recipe.finish_time > nonsuspicious_aborted_recipe_subquery.as_scalar().correlate(None)))\
             .value(func.count(DistroTree.id.distinct()))
         if count >= 2:
             # Broken!

@@ -404,7 +404,7 @@ def create_tasks(xmljob):
         create_task(name=name)
 
 def create_recipe(distro_tree=None, task_list=None,
-        task_name=u'/distribution/reservesys', whiteboard=None,
+        task_name=u'/distribution/reservesys', num_tasks=None, whiteboard=None,
         role=None, cls=MachineRecipe, **kwargs):
     if not distro_tree:
         distro_tree = create_distro_tree()
@@ -418,6 +418,8 @@ def create_recipe(distro_tree=None, task_list=None,
         duration=kwargs.get('reservesys_duration', 86400)
         recipe.reservation_request = RecipeReservationRequest(duration)
 
+    if num_tasks:
+        task_list = [create_task() for i in range(0, num_tasks)]
     if task_list: #don't specify a task_list and a task_name...
         for t in task_list:
             rt = RecipeTask.from_task(t)
@@ -509,7 +511,8 @@ def mark_recipe_complete(recipe, result=TaskResult.pass_,
 def mark_recipe_tasks_finished(recipe, result=TaskResult.pass_,
                                task_status=TaskStatus.completed,
                                finish_time=None, only=False,
-                               server_log=False, **kwargs):
+                               server_log=False,
+                               num_tasks=None, **kwargs):
 
     # we accept result=None to mean: don't add any results to recipetasks
     assert result is None or result in TaskResult
@@ -542,7 +545,7 @@ def mark_recipe_tasks_finished(recipe, result=TaskResult.pass_,
         rtr_log = lambda: LogRecipeTaskResult(server=u'http://dummy-archive-server/beaker/',
                 path=u'/', filename=u'result.txt')
 
-    for recipe_task in recipe.tasks:
+    for recipe_task in recipe.tasks[:num_tasks]:
         if result is not None:
             rtr = RecipeTaskResult(recipetask=recipe_task, result=result)
             rtr.logs = [rtr_log()]
@@ -550,6 +553,8 @@ def mark_recipe_tasks_finished(recipe, result=TaskResult.pass_,
         recipe_task.logs = [rt_log()]
         recipe_task.finish_time = finish_time
         recipe_task._change_status(task_status)
+    log.debug('Marked %s tasks in %s as %s with result %s',
+              num_tasks or 'all', recipe.t_id, task_status, result)
 
 def mark_job_complete(job, finish_time=None, only=False, **kwargs):
     if not only:
