@@ -38,7 +38,7 @@ def get_activity():
         Type of the activity record. Possible values are: ``system_activity``, 
         ``lab_controller_activity``, ``distro_activity``, 
         ``distro_tree_activity``, ``job_activity``, ``recipeset_activity``, 
-        ``user_activity``, ``group_activity``.
+        ``recipe_activity``,``user_activity``, ``group_activity``.
     ``service``
         Service through which the action was performed. Usually this is 
         ``XMLRPC``, ``WEBUI``, ``HTTP``, or ``Scheduler``.

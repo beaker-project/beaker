@@ -38,6 +38,10 @@ window.ActivityEntry = Backbone.Model.extend({
                 data['object'] = !_.isEmpty(data['recipeset']) ?
                         new RecipeSet(data['recipeset'], {parse: true}) : null;
                 break;
+            case 'recipe_activity':
+                data['object'] = !_.isEmpty(data['recipe']) ?
+                        new Recipe(data['recipe'], {parse: true}) : null;
+                break;
             case 'distro_activity':
                 data['object'] = !_.isEmpty(data['distro']) ?
                         new Distro(data['distro'], {parse: true}) : null;

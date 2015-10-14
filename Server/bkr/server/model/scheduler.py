@@ -59,6 +59,34 @@ def node(element, value):
     node.appendChild(xmldoc.createTextNode(value))
     return node
 
+class RecipeActivity(Activity):
+
+    __tablename__ = 'recipe_activity'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, ForeignKey('activity.id',
+        name='recipe_activity_id_fk'), primary_key=True)
+    recipe_id = Column(Integer, ForeignKey('recipe.id',
+        name='recipe_activity_recipe_id_fk'))
+    object_id = synonym('recipe_id')
+    object = relationship('Recipe', back_populates='activity')
+    __mapper_args__ = {'polymorphic_identity': u'recipe_activity'}
+
+    def object_name(self):
+        return "Recipe: %s" % self.object.id
+
+    def __json__(self):
+        result = super(RecipeActivity, self).__json__()
+        result['recipe'] = {
+            'id': self.object.id,
+            't_id': self.object.t_id,
+            'recipeset': {
+                'id': self.object.recipeset.id,
+                't_id': self.object.recipeset.t_id,
+            },
+        }
+        return result
+
+
 class RecipeSetActivity(Activity):
 
     __tablename__ = 'recipeset_activity'
@@ -1926,7 +1954,7 @@ class RecipeReservationRequest(DeclarativeMappedObject):
     def __init__(self, duration=86400):
         self.duration = duration
 
-class Recipe(TaskBase, DeclarativeMappedObject):
+class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
     """
     Contains requires for host selection and distro selection.
     Also contains what tasks will be executed.
@@ -1998,6 +2026,10 @@ class Recipe(TaskBase, DeclarativeMappedObject):
     ks_appends = relationship('RecipeKSAppend')
 
     stop_types = ['abort','cancel']
+    activity = relationship(RecipeActivity, back_populates='object',
+            cascade='all, delete-orphan',
+            order_by=[RecipeActivity.created.desc(), RecipeActivity.id.desc()])
+    activity_type = RecipeActivity
 
     def __init__(self, ttasks=0):
         super(Recipe, self).__init__()

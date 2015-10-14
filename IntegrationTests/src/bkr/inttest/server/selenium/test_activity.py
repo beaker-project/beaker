@@ -145,3 +145,17 @@ class ActivityTestWD(WebDriverTestCase):
         b.find_element_by_class_name('grid-filter').submit()
         check_activity_search_results(b, present=[act1], absent=[act2])
 
+    def test_recipe_activity(self):
+        with session.begin():
+            recipe = data_setup.create_recipe(whiteboard=u'oldwhiteboard')
+            data_setup.create_job_for_recipes([recipe])
+            act = recipe.record_activity(service=u'testdata',
+                    user=User.by_user_name(data_setup.ADMIN_USER),
+                    action=u'Changed', field=u'Whiteboard',
+                    old=recipe.whiteboard, new=u'newwhiteboard')
+        b = self.browser
+        b.get(get_server_base() + 'activity/')
+        b.find_element_by_class_name('search-query'). \
+            send_keys('field_name:Whiteboard new_value:newwhiteboard')
+        b.find_element_by_class_name('grid-filter').submit()
+        check_activity_search_results(b, present=[act])
