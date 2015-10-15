@@ -1954,6 +1954,14 @@ class RecipeReservationRequest(DeclarativeMappedObject):
     def __init__(self, duration=86400):
         self.duration = duration
 
+    def __json__(self):
+        return {
+            'id': self.id,
+            'recipe_id': self.recipe_id,
+            'duration': self.duration,
+        }
+
+
 class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
     """
     Contains requires for host selection and distro selection.
@@ -2755,6 +2763,15 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
     def first_task(self):
         return self.dyn_tasks.order_by(RecipeTask.id).first()
 
+    def can_edit(self, user=None):
+        """Returns True iff the given user can edit this recipe"""
+        return self.recipeset.job.can_edit(user)
+
+    def can_update_reservation_request(self, user=None):
+        """Returns True iff the given user can update the reservation request"""
+        return self.can_edit(user) and self.status not in (TaskStatus.completed,
+                TaskStatus.cancelled, TaskStatus.aborted, TaskStatus.reserved)
+
     def __json__(self):
         data = {
             'id': self.id,
@@ -2776,6 +2793,13 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             'recipe_id': self.id,
             'job_id': self.recipeset.job.t_id,
         }
+        if identity.current.user:
+            u = identity.current.user
+            data['can_edit'] = self.can_edit(u)
+            data['can_update_reservation_request'] = self.can_update_reservation_request(u)
+        else:
+            data['can_edit'] = False
+            data['can_update_reservation_request'] = False
         return data
 
 class GuestRecipe(Recipe):

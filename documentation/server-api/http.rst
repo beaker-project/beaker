@@ -237,7 +237,8 @@ Recipes
 -------
 
 .. autoflask:: bkr.server.wsgi:app
-   :endpoints: extend_watchdog, extend_watchdog_by_taskspec, extend_watchdog_by_fqdn
+   :endpoints: get_recipe, update_recipe, update_reservation_request,
+     extend_watchdog, extend_watchdog_by_taskspec, extend_watchdog_by_fqdn
 
 Activity
 --------

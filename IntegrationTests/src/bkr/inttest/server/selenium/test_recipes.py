@@ -7,14 +7,17 @@
 import datetime
 import logging
 import re
+import requests
 from turbogears.database import session
 from unittest2 import SkipTest
 
 from bkr.server.model import TaskStatus, TaskResult, RecipeTaskResult
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_text_present
-from bkr.inttest import data_setup, get_server_base
+from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
 from bkr.inttest.assertions import assert_sorted
+from bkr.inttest.server.requests_utils import post_json, patch_json, \
+        login as requests_login
 
 class TestRecipesDataGrid(WebDriverTestCase):
 
@@ -372,3 +375,121 @@ class TestRecipeView(WebDriverTestCase):
         flash_text = b.find_element_by_class_name('flash').text
         self.assertEquals('Successfully released reserved system for %s' % recipe.t_id, 
                           flash_text)
+
+
+class RecipeHTTPTest(DatabaseTestCase):
+    """
+    Directly tests the HTTP interface for recipes.
+    """
+
+    def setUp(self):
+        with session.begin():
+            self.owner = data_setup.create_user(password='theowner')
+            self.recipe = data_setup.create_recipe()
+            self.recipe_with_reservation_request = data_setup.create_recipe(reservesys=True)
+            self.recipe_without_reservation_request = data_setup.create_recipe()
+            self.job = data_setup.create_job_for_recipes([
+                    self.recipe,
+                    self.recipe_with_reservation_request,
+                    self.recipe_without_reservation_request],
+                    owner=self.owner)
+
+    def test_get_recipe(self):
+        response = requests.get(get_server_base() +
+                'recipes/%s' % self.recipe.id,
+                headers={'Accept': 'application/json'})
+        response.raise_for_status()
+        json = response.json()
+        self.assertEquals(json['t_id'], self.recipe.t_id)
+
+    def test_anonymous_cannot_update_recipe(self):
+        response = patch_json(get_server_base() +
+                'recipes/%s' % self.recipe.id,
+                data={'whiteboard': u'testwhiteboard'})
+        self.assertEquals(response.status_code, 401)
+
+    def test_can_update_recipe_whiteboard(self):
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = patch_json(get_server_base() +
+                'recipes/%s' % self.recipe.id,
+                session=s, data={'whiteboard': u'newwhiteboard'})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.recipe.whiteboard, 'newwhiteboard')
+            self.assertEquals(self.recipe.activity[0].field_name, u'Whiteboard')
+            self.assertEquals(self.recipe.activity[0].action, u'Changed')
+            self.assertEquals(self.recipe.activity[0].new_value, u'newwhiteboard')
+
+    def test_anonymous_cannot_update_reservation_request(self):
+        response = patch_json(get_server_base() +
+                'recipes/%s/reservation-request' % self.recipe_with_reservation_request.id,
+                data={'reserve': True, 'duration': 300})
+        self.assertEquals(response.status_code, 401)
+
+    def test_cannot_update_reservation_request_on_completed_recipe(self):
+        with session.begin():
+            data_setup.mark_job_complete(self.job)
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = patch_json(get_server_base() +
+                'recipes/%s/reservation-request' % self.recipe_with_reservation_request.id,
+                session=s, data={'reserve': True, 'duration': False})
+        self.assertEquals(response.status_code, 403)
+
+    def test_can_update_reservation_request_to_reserve_system(self):
+        with session.begin():
+            data_setup.mark_job_running(self.job)
+        # On a recipe with reservation request
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = patch_json(get_server_base() +
+                'recipes/%s/reservation-request' % self.recipe_with_reservation_request.id,
+                session=s, data={'reserve': True, 'duration': 300})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.recipe_with_reservation_request.reservation_request.duration,
+                    300)
+            self.assertEquals(self.recipe_with_reservation_request.activity[0].field_name,
+                    u'Reservation Request')
+            self.assertEquals(self.recipe_with_reservation_request.activity[0].action,
+                    u'Changed')
+            self.assertEquals(self.recipe_with_reservation_request.activity[0].new_value,
+                    u'300')
+        # On a recipe without reservation request
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = patch_json(get_server_base() +
+                'recipes/%s/reservation-request' % self.recipe_without_reservation_request.id,
+                session=s, data={'reserve': True, 'duration': 300})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertTrue(self.recipe_without_reservation_request.reservation_request)
+            self.assertEquals(self.recipe_without_reservation_request.activity[0].field_name,
+                    u'Reservation Request')
+            self.assertEquals(self.recipe_without_reservation_request.activity[0].action,
+                    u'Changed')
+            self.assertEquals(self.recipe_without_reservation_request.activity[0].new_value,
+                    u'300')
+
+    def test_can_update_reservation_request_to_not_reserve_the_system(self):
+        with session.begin():
+            data_setup.mark_job_running(self.job)
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = patch_json(get_server_base() +
+                'recipes/%s/reservation-request' % self.recipe_with_reservation_request.id,
+                session=s, data={'reserve': False})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertFalse(self.recipe_with_reservation_request.reservation_request)
+            self.assertEquals(self.recipe_with_reservation_request.activity[0].field_name,
+                    u'Reservation Request')
+            self.assertEquals(self.recipe_with_reservation_request.activity[0].action,
+                    u'Changed')
+            self.assertEquals(self.recipe_with_reservation_request.activity[0].new_value,
+                    None)

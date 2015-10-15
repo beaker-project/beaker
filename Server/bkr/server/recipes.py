@@ -27,10 +27,11 @@ import cherrypy
 from bkr.server.model import (Recipe, RecipeSet, TaskStatus, Job, System,
                               MachineRecipe, SystemResource, VirtResource,
                               LogRecipe, LogRecipeTask, LogRecipeTaskResult,
-                              RecipeResource, TaskBase)
+                              RecipeResource, TaskBase, RecipeReservationRequest)
 from bkr.server.app import app
 from bkr.server.flask_util import BadRequest400, NotFound404, \
-    auth_required, read_json_request, convert_internal_errors
+    Forbidden403, auth_required, read_json_request, convert_internal_errors, \
+    request_wants_json, render_tg_template
 from flask import request, jsonify
 from bkr.server.bexceptions import BeakerException
 
@@ -492,6 +493,90 @@ def _get_recipe_by_id(id):
         return Recipe.by_id(id)
     except NoResultFound:
         raise NotFound404('Recipe not found')
+
+@app.route('/recipes/<int:id>', methods=['GET'])
+def get_recipe(id):
+    """
+    Provides detailed information about a recipe in JSON format.
+
+    :param id: Recipe's id.
+    """
+    recipe = _get_recipe_by_id(id)
+    if request_wants_json():
+        return jsonify(recipe.__json__())
+    return NotFound404('Fall back to old recipe page')
+
+def _record_activity(recipe, field, old, new, action=u'Changed'):
+    recipe.record_activity(user=identity.current.user, service=u'HTTP',
+            action=action, field=field, old=old, new=new)
+
+@app.route('/recipes/<int:id>', methods=['PATCH'])
+@auth_required
+def update_recipe(id):
+    """
+    Updates the attributes of a recipe. The request must be 
+    :mimetype:`application/json`.
+
+    :param id: Recipe's id.
+    :jsonparam string whiteboard: Whiteboard of the recipe.
+    :status 200: Recipe was updated.
+    :status 400: Invalid data was given.
+    """
+
+    recipe = _get_recipe_by_id(id)
+    if not recipe.can_edit(identity.current.user):
+        raise Forbidden403('Cannot edit recipe %s' % recipe.id)
+    data = read_json_request(request)
+    with convert_internal_errors():
+        if 'whiteboard' in data:
+            new_whiteboard = data['whiteboard']
+            if new_whiteboard != recipe.whiteboard:
+                _record_activity(recipe, u'Whiteboard', recipe.whiteboard,
+                    new_whiteboard)
+                recipe.whiteboard = new_whiteboard
+    return jsonify(recipe.__json__())
+
+@app.route('/recipes/<int:id>/reservation-request', methods=['PATCH'])
+@auth_required
+def update_reservation_request(id):
+    """
+    Updates the reservation request of a recipe. The request must be 
+    :mimetype:`application/json`.
+
+    :param id: Recipe's id.
+    :jsonparam boolean reserve: Whether the system will be reserved at the end
+      of the recipe. If true, the system will be reserved. If false, the system
+      will not be reserved.
+    :jsonparam int duration: Number of seconds to rerserve the system.
+    """
+
+    recipe = _get_recipe_by_id(id)
+    if not recipe.can_update_reservation_request(identity.current.user):
+        raise Forbidden403('Cannot update the reservation request of recipe %s'
+                % recipe.id)
+    data = read_json_request(request)
+    if 'reserve' not in data:
+        raise BadRequest400('No reserve specified')
+    with convert_internal_errors():
+        if data['reserve']:
+            if 'duration' not in data:
+                raise BadRequest400('No duration specified')
+            if recipe.reservation_request:
+                old_duration = recipe.reservation_request.duration
+                recipe.reservation_request.duration = data['duration']
+                _record_activity(recipe, u'Reservation Request', old_duration,
+                        data['duration'])
+            else:
+                reservation_request = RecipeReservationRequest(data['duration'])
+                recipe.reservation_request = reservation_request
+                _record_activity(recipe, u'Reservation Request', None,
+                        reservation_request.duration, 'Changed')
+        else:
+            if recipe.reservation_request:
+                session.delete(recipe.reservation_request)
+                _record_activity(recipe, u'Reservation Request',
+                        recipe.reservation_request.duration, None)
+    return jsonify(recipe.reservation_request.__json__())
 
 def _extend_watchdog(recipe_id, data):
     recipe = _get_recipe_by_id(recipe_id)
