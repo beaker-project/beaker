@@ -478,7 +478,6 @@ class System(DeclarativeMappedObject, ActivityMixin):
             'has_console': False, # IMPLEMENTME
             'created_date': self.date_added,
             'hardware_scan_date': self.date_lastcheckin,
-            'in_progress_scan': self.find_current_hardware_scan_recipe(),
             'hypervisor': self.hypervisor,
             'possible_hypervisors': Hypervisor.query.all(),
             'model': self.model,
@@ -492,6 +491,17 @@ class System(DeclarativeMappedObject, ActivityMixin):
             'queue_size': None,
             'pools': [pool.name for pool in self.pools],
         }
+        in_progress_scan = self.find_current_hardware_scan_recipe()
+        if in_progress_scan:
+            # Using a cut-down representation of the recipe to avoid a circular 
+            # reference from recipe back to the system.
+            data['in_progress_scan'] = {
+                'recipe_id': in_progress_scan.id,
+                'status': in_progress_scan.status,
+                'job_id': in_progress_scan.recipeset.job.t_id,
+            }
+        else:
+            data['in_progress_scan'] = None
         if self.active_access_policy.system_pool:
             data['active_access_policy'] = {'type':'pool',
                                      'pool_name':self.active_access_policy.system_pool.name

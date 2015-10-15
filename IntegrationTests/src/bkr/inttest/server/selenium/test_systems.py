@@ -21,7 +21,8 @@ from bkr.inttest import data_setup, get_server_base, with_transaction, \
         DummyVirtManager, DatabaseTestCase
 from bkr.inttest.assertions import assert_sorted
 from bkr.server import dynamic_virt
-from bkr.server.model import Cpu, Key, Key_Value_String, System, SystemStatus, SystemPermission
+from bkr.server.model import Cpu, Key, Key_Value_String, System, \
+        SystemStatus, SystemPermission, Job
 from bkr.inttest.server.webdriver_utils import check_system_search_results, login
 from bkr.inttest.server.requests_utils import patch_json
 
@@ -362,9 +363,12 @@ initrd http://example.com/ipxe-test/F20/x86_64/os/pxeboot/initrd
 boot
 """ % recipe.rendered_kickstart.link)
 
-class SystemDetailsUpdateHTTPTest(DatabaseTestCase):
+class SystemHTTPTest(DatabaseTestCase):
     """
-    Directly tests the HTTP interface for updating system details
+    Directly tests the HTTP interface for systems: /systems/<fqdn>.
+
+    Note that other system-related HTTP APIs are tested elsewhere 
+    (e.g. /systems/<fqdn>/commands/ in test_system_commands.py).
     """
     def setUp(self):
         with session.begin():
@@ -375,6 +379,28 @@ class SystemDetailsUpdateHTTPTest(DatabaseTestCase):
             self.privileged_group = data_setup.create_group()
             self.policy.add_rule(group=self.privileged_group,
                                  permission=SystemPermission.edit_system)
+
+    def test_get_system(self):
+        response = requests.get(get_server_base() + '/systems/%s/' % self.system.fqdn,
+                headers={'Accept': 'application/json'})
+        response.raise_for_status()
+        self.assertEquals(response.json()['fqdn'], self.system.fqdn)
+
+    def test_get_system_with_running_hardware_scan_recipe(self):
+        # The bug was a circular reference from system -> recipe -> system
+        # which caused JSON serialization to fail.
+        with session.begin():
+            Job.inventory_system_job(data_setup.create_distro_tree(),
+                    owner=self.owner, system=self.system)
+            recipe = self.system.find_current_hardware_scan_recipe()
+            data_setup.mark_recipe_running(recipe, system=self.system)
+        response = requests.get(get_server_base() + '/systems/%s/' % self.system.fqdn,
+                headers={'Accept': 'application/json'})
+        response.raise_for_status()
+        in_progress_scan = response.json()['in_progress_scan']
+        self.assertEquals(in_progress_scan['recipe_id'], recipe.id)
+        self.assertEquals(in_progress_scan['status'], u'Running')
+        self.assertEquals(in_progress_scan['job_id'], recipe.recipeset.job.t_id)
 
     def test_set_active_policy_from_pool(self):
         with session.begin():
