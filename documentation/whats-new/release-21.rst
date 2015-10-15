@@ -216,3 +216,88 @@ A number of bug fixes are also included in this release:
 
 .. harness repo administrivia:
    * :issue:`1250335`: no released busybox in beaker repos for rhel-7.2 arch64
+
+
+Maintenance updates
+-------------------
+
+The following fixes have been included in Beaker 21 maintenance updates.
+
+Beaker 21.1
+~~~~~~~~~~~
+
+* :issue:`1010355`: The :option:`--hostrequire <bkr --hostrequire>` option for
+  workflow commands now supports the ``like`` operator, for example: 
+  ``--hostrequire 'hostname like %.example.com'``. (Contributed by Dan 
+  Callaghan)
+* :issue:`1184907`: The :program:`beaker-wizard` utility now accepts any
+  identifier as the test type. It will suggest, but not require, the standard 
+  set of Beaker test types. (Contributed by Filip Holec and Roman Joost)
+* :issue:`1254385`: The :program:`bkr remove-account` command (and its
+  corresponding XMLRPC method ``users.remove_account``) now accept an extra 
+  option to specify who the new owner should be when reassigning systems which 
+  were owned by the removed account. (Contributed by Roman Joost)
+* :issue:`1270649`: Restored the previous behaviour of the broken system
+  detection logic, so that it only considers a recipe as suspicious if *all* 
+  tasks in the recipe are Aborted, rather than *any* task. The behaviour 
+  changed inadvertently in Beaker 21.0 due to the change in recipe status 
+  calculation described above. (Contributed by Roman Joost)
+* :issue:`916302`: If an ``interrupt`` power command fails the system will no
+  longer be marked as Broken. This avoids falsely marking a system as Broken if 
+  its power script does not support the ``interrupt`` command. (Contributed by 
+  Roman Joost)
+* :issue:`1262098`: When a recipe uses custom partitioning, Beaker now
+  configures a ``/boot`` partition matching the recommended size for the distro 
+  in use (200MB for RHEL3-4, 250MB for RHEL5-6, 500MB for RHEL7+ and Fedora). 
+  Previously the ``/boot`` partition was always 200MB which in some cases was 
+  too small. (Contributed by Dan Callaghan)
+* :issue:`1172472`: The ``leavebootorder`` kernel option is now set by default
+  during installation for POWER architectures. This is necessary to avoid 
+  Anaconda changing the NVRAM boot order in case the recipe uses a custom 
+  kickstart which does not include the ``bootloader --leavebootorder`` command. 
+  (Contributed by Dan Callaghan)
+* :issue:`1255210`: Kickstart snippets now include an explicit ``.service``
+  suffix on unit names when invoking ``systemctl``. This makes it possible to 
+  provision Fedora releases older than Fedora 20. (Contributed by Dan 
+  Callaghan)
+* :issue:`1254048`: The ``ipmilan`` power script has been updated to use the
+  ``-a`` option for ``fence_ipmilan`` instead of ``-i``, which was removed in 
+  fence-agents 4.0. (Contributed by Dan Callaghan)
+* :issue:`1229937`, :issue:`1229938`: Fixed issues with :program:`bkr job-list`
+  which caused its :option:`--tag <bkr job-list --tag>` option to have no 
+  effect, and its :option:`--whiteboard <bkr job-list --whiteboard>` option to 
+  cancel out other options. (Contributed by Dan Callaghan)
+* :issue:`1251294`: Fixed an issue with the confirmation dialog when deleting
+  a system pool which would cause it to remain open when cancelled. 
+  (Contributed by Matt Jia)
+* :issue:`1254381`: The empty string is no longer accepted as a valid name for
+  a system pool. (Contributed by Roman Joost)
+* :issue:`1253111`: The ``push`` XMLRPC method for updating inventory data will
+  no longer automatically create unrecognized architectures. An administrator 
+  must manually create the new arch in Beaker first if needed. This is to avoid 
+  the situation where a bug in :program:`beaker-system-scan` could populate 
+  Beaker's architecture list with incorrect values. (Contributed by Dan 
+  Callaghan)
+* :issue:`1249496`: Fixed an issue with redirect URLs which would cause Beaker
+  to redirect to ``http://`` URLs instead of ``https://`` when deployed behind 
+  an SSL-terminating reverse proxy. (Contributed by Dan Callaghan)
+
+Version 2.1 of the :program:`beaker-system-scan` hardware scanning utility has 
+also been released:
+
+* :issue:`1249462`: Virtio memory balloon devices are now always treated as
+  generic devices rather than memory (regardless of their PCI class) so that 
+  they appear in Beaker's device list.  (Contributed by Dan Callaghan)
+* :issue:`1249460`: USB devices with no device ID (0000:0000) are now excluded
+  from the ``USBID`` key-value. (Contributed by Dan Callaghan)
+* :issue:`1249463`: Plug 'n Play (PnP) devices are now reported as ``pnp`` bus
+  type instead of ``Unknown``. (Contributed by Dan Callaghan)
+* :issue:`1249466`: Fixed a rounding error with the ``DISKSPACE`` key-value
+  which could cause it to be inaccurate by several MB when multiple disks are 
+  present. (Contributed by Dan Callaghan)
+
+Version 3.4-6 of the ``/distribution/reservesys`` task has also been released:
+
+* :issue:`1270627`: The ``extendtesttime.sh`` now reports a Beaker result every
+  time it is run. The result score is set to the number of hours by which the 
+  watchdog was extended. (Contributed by Dan Callaghan)
