@@ -8,7 +8,7 @@ import unittest2 as unittest
 from turbogears import config
 from bkr.server import identity
 from bkr.server.app import app
-from bkr.server.model import session
+from bkr.server.model import session, User
 from bkr.server.tests import data_setup
 
 class CheckAuthenticationUnitTest(unittest.TestCase):
@@ -39,6 +39,22 @@ class CheckAuthenticationUnitTest(unittest.TestCase):
         with app.test_request_context(environ_overrides=environ):
             identity.check_authentication()
             self.assertIsNone(identity.current.user)
+            self.assertIsNone(identity.current.proxied_by_user)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1112925
+    def test_user_is_created_if_REMOTE_USER_vars_are_populated(self):
+        new_username = 'mwatney'
+        new_user_display_name = 'Mark Watney'
+        new_user_email = 'mwatney@nasa.gov'
+        environ = {
+            'REMOTE_USER': new_username,
+            'REMOTE_USER_FULLNAME': new_user_display_name,
+            'REMOTE_USER_EMAIL': new_user_email,
+        }
+        with app.test_request_context(environ_overrides=environ):
+            identity.check_authentication()
+            new_user = User.query.filter_by(user_name=new_username).one()
+            self.assertEqual(identity.current.user, new_user)
             self.assertIsNone(identity.current.proxied_by_user)
 
     def test_obeys_token_in_cookie(self):

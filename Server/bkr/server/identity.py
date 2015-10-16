@@ -55,6 +55,32 @@ def _check_token(token):
         log.warning('Corrupted or tampered token value %r', token)
         return False
 
+def _try_autocreate(user_name):
+    """
+    If the necessary WSGI environment variables are populated, automatically 
+    creates a new Beaker user account based on their values and returns it. 
+    Otherwise returns None.
+    """
+    from bkr.server.model import session, User
+    if not flask.request.environ.get('REMOTE_USER_FULLNAME'):
+        log.debug('User autocreation attempted for %r but '
+                'REMOTE_USER_FULLNAME env var was not populated',
+                user_name)
+        return
+    if not flask.request.environ.get('REMOTE_USER_EMAIL'):
+        log.debug('User autocreation attempted for %r but '
+                'REMOTE_USER_EMAIL env var was not populated',
+                user_name)
+        return
+    user = User()
+    user.user_name = user_name.decode('utf8')
+    user.display_name = flask.request.environ['REMOTE_USER_FULLNAME'].decode('utf8')
+    user.email_address = flask.request.environ['REMOTE_USER_EMAIL'].decode('utf8')
+    session.add(user)
+    session.flush()
+    log.debug('Autocreated user %s', user)
+    return user
+
 def check_authentication():
     """
     Checks the current request for:
@@ -64,10 +90,18 @@ def check_authentication():
           us successfully on a previous request.
     Sets up the "current identity" state according to what's found.
     """
+    from bkr.server.model import User
     if 'REMOTE_USER' in flask.request.environ:
         # strip realm if present
         user_name, _, realm = flask.request.environ['REMOTE_USER'].partition('@')
-        proxied_by_user_name = None
+        user = User.by_user_name(user_name.decode('utf8'))
+        if user is None and config.get('identity.autocreate', True):
+            # handle automatic user creation if possible
+            user = _try_autocreate(user_name)
+        if user is None:
+            log.debug('REMOTE_USER %r does not exist', user_name)
+            return
+        proxied_by_user = None
     elif _token_cookie_name in flask.request.cookies:
         token = flask.request.cookies[_token_cookie_name]
         if token == 'deleted':
@@ -76,23 +110,30 @@ def check_authentication():
         if not token_value or 'user_name' not in token_value:
             return
         user_name = token_value['user_name']
+        user = User.by_user_name(user_name.decode('utf8'))
+        if user is None:
+            log.warning('Token claimed to be for non-existent user %r',
+                    user_name)
+            return
+        # handle "proxy authentication" support
         proxied_by_user_name = token_value.get('proxied_by_user_name', None)
+        if proxied_by_user_name:
+            proxied_by_user = User.by_user_name(proxied_by_user_name.decode('utf8'))
+            if proxied_by_user is None:
+                log.warning('Token for %r claimed to be proxied by non-existent user %r',
+                        user_name, proxied_by_user_name)
+                return
+            if not proxied_by_user.can_log_in():
+                log.debug('Denying login for %r proxied by disabled user %r',
+                        user_name, proxied_by_user_name)
+                return
+        else:
+            proxied_by_user = None
     else:
-        return
-    from bkr.server.model import User
-    user = User.by_user_name(user_name.decode('utf8'))
-    if user is None:
         return
     if not user.can_log_in():
+        log.debug('Denying login for disabled user %s', user)
         return
-    if proxied_by_user_name is not None:
-        proxied_by_user = User.by_user_name(proxied_by_user_name.decode('utf8'))
-        if proxied_by_user is None:
-            return
-        if not proxied_by_user.can_log_in():
-            return
-    else:
-        proxied_by_user = None
     flask.g._beaker_validated_user = user
     flask.g._beaker_proxied_by_user = proxied_by_user
 
