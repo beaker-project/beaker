@@ -4,8 +4,9 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from sqlalchemy.sql import Insert, and_
+from sqlalchemy.sql import Insert, Select, and_, not_, exists
 from sqlalchemy.ext import compiler
+from sqlalchemy.dialects.mysql.base import MySQLDialect
 
 class ConditionalInsert(Insert):
     def __init__(self, table, unique_values, extra_values=()):
@@ -28,14 +29,20 @@ def visit_conditional_insert(element, compiler, **kwargs):
     compiler.isinsert = True
     colparams = compiler._get_colparams(element)
     text = 'INSERT INTO %s' % compiler.process(element.table, asfrom=True)
-    text += ' (%s)\n' % ', '.join(compiler.process(c[0]) for c in colparams)
+    text += ' (%s)\n' % ', '.join(compiler.preparer.format_column(c[0])
+            for c in colparams)
     text += 'SELECT %s\n' % ', '.join(c[1] for c in colparams)
-    text += 'FROM DUAL\n'
+    text += compiler.default_from()
+    # default_from() returns '' for MySQL but that's wrong, MySQL requires 
+    # FROM DUAL if there is a following WHERE clause.
+    if isinstance(compiler.dialect, MySQLDialect):
+        text += 'FROM DUAL\n'
     # We need FOR UPDATE in the inner SELECT for MySQL, to ensure we acquire an 
     # exclusive lock immediately, instead of acquiring a shared lock and then 
     # subsequently upgrading it to an exclusive lock, which is subject to 
     # deadlocks if another transaction is doing the same thing.
-    text += 'WHERE NOT EXISTS (SELECT 1 FROM %s\nWHERE %s FOR UPDATE)' % (
-            compiler.process(element.table, asfrom=True),
-            compiler.process(element.unique_condition))
+    nonexistence_clause = not_(exists(Select(
+            columns=['1'], from_obj=[element.table],
+            whereclause=element.unique_condition, for_update=True)))
+    text += 'WHERE ' + compiler.process(nonexistence_clause)
     return text

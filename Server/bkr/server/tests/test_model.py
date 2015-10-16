@@ -17,6 +17,8 @@ from lxml import etree
 from tempfile import mkdtemp
 from shutil import copy, rmtree
 from sqlalchemy.schema import MetaData, Table, Column
+from sqlalchemy.dialects.mysql.base import MySQLDialect
+from sqlalchemy.dialects.sqlite.base import SQLiteDialect
 from sqlalchemy.types import Integer, Unicode
 from turbogears.config import get, update
 from bkr.server.model.sql import ConditionalInsert
@@ -25,6 +27,10 @@ from bkr.server.model.tasklibrary import TaskLibrary
 
 class ConditionalInsertTest(unittest.TestCase):
 
+    # We want ConditionalInsert to work with both MySQL (for real code) and 
+    # SQLite (for unit tests) so each test case needs to check both versions of 
+    # the compiled statement.
+
     def test_unique_params_only(self):
         metadata = MetaData()
         table = Table('table', metadata,
@@ -32,15 +38,31 @@ class ConditionalInsertTest(unittest.TestCase):
             Column('name', Unicode(16), nullable=False, unique=True),
         )
         clause = ConditionalInsert(table, {table.c.name: 'asdf'})
+
         # there is a bug in upstream in pylint so we have to disable it for
         # SQLAlchemy 0.9. 
         # https://bitbucket.org/logilab/astroid/issue/39/support-for-sqlalchemy
         #pylint: disable=E1120
-        compiled = clause.compile()
+        compiled = clause.compile(dialect=MySQLDialect())
         self.assertEquals(str(compiled),
-                'INSERT INTO "table" ("table".name)\n'
-                'SELECT :name\nFROM DUAL\nWHERE NOT EXISTS '
-                '(SELECT 1 FROM "table"\nWHERE "table".name = :name_1 FOR UPDATE)')
+                'INSERT INTO `table` (name)\n'
+                'SELECT %s\n'
+                'FROM DUAL\n'
+                'WHERE NOT (EXISTS (SELECT 1 \n'
+                'FROM `table` \n'
+                'WHERE `table`.name = %s FOR UPDATE))')
+        self.assertEquals(compiled.positiontup, ['name', 'name_1'])
+        self.assertEquals(compiled.params, {'name': 'asdf', 'name_1': 'asdf'})
+
+        #pylint: disable=E1120
+        compiled = clause.compile(dialect=SQLiteDialect())
+        self.assertEquals(str(compiled),
+                'INSERT INTO "table" (name)\n'
+                'SELECT ?\n'
+                'WHERE NOT (EXISTS (SELECT 1 \n'
+                'FROM "table" \n'
+                'WHERE "table".name = ?))')
+        self.assertEquals(compiled.positiontup, ['name', 'name_1'])
         self.assertEquals(compiled.params, {'name': 'asdf', 'name_1': 'asdf'})
 
     def test_with_extra_params(self):
@@ -52,12 +74,29 @@ class ConditionalInsertTest(unittest.TestCase):
         )
         clause = ConditionalInsert(table, {table.c.name: 'asdf'},
                 {table.c.extra: 'something'})
+
         #pylint: disable=E1120
-        compiled = clause.compile()
+        compiled = clause.compile(dialect=MySQLDialect())
         self.assertEquals(str(compiled),
-                'INSERT INTO "table" ("table".name, "table".extra)\n'
-                'SELECT :name, :extra\nFROM DUAL\nWHERE NOT EXISTS '
-                '(SELECT 1 FROM "table"\nWHERE "table".name = :name_1 FOR UPDATE)')
+                'INSERT INTO `table` (name, extra)\n'
+                'SELECT %s, %s\n'
+                'FROM DUAL\n'
+                'WHERE NOT (EXISTS (SELECT 1 \n'
+                'FROM `table` \n'
+                'WHERE `table`.name = %s FOR UPDATE))')
+        self.assertEquals(compiled.positiontup, ['name', 'extra', 'name_1'])
+        self.assertEquals(compiled.params, {'name': 'asdf',
+                'extra': 'something', 'name_1': 'asdf'})
+
+        #pylint: disable=E1120
+        compiled = clause.compile(dialect=SQLiteDialect())
+        self.assertEquals(str(compiled),
+                'INSERT INTO "table" (name, extra)\n'
+                'SELECT ?, ?\n'
+                'WHERE NOT (EXISTS (SELECT 1 \n'
+                'FROM "table" \n'
+                'WHERE "table".name = ?))')
+        self.assertEquals(compiled.positiontup, ['name', 'extra', 'name_1'])
         self.assertEquals(compiled.params, {'name': 'asdf',
                 'extra': 'something', 'name_1': 'asdf'})
 
