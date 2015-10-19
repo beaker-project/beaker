@@ -31,4 +31,4 @@ set -x
 env BEAKER_CONFIG_FILE='server-test.cfg' \
     PYTHONPATH=../Common:../Server:../LabController/src:../Client/src:../IntegrationTests/src${PYTHONPATH:+:$PYTHONPATH} \
     python -c '__requires__ = ["CherryPy < 3.0"]; import pkg_resources; from nose.core import main; main()' \
-    ${*:--v rhts bkr}
+    ${*:--v bkr.inttest}
