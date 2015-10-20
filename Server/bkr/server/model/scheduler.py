@@ -469,14 +469,16 @@ class TaskBase(object):
     def is_suspiciously_aborted(self):
         """Return True if the recipe abort was suspicious. Suspicious meaning
         that all tasks in a recipe are aborted."""
-        return all([task.status == TaskStatus.aborted for task in self.tasks])
+        return (all([task.status == TaskStatus.aborted for task in self.tasks]) and
+                self.install_started is None)
 
     @is_suspiciously_aborted.expression
     def is_suspiciously_aborted(cls): # pylint: disable=E0213
         """Returns an SQL expression evaluating to TRUE if the recipe abort was
         suspicious. Note: There is no 'ALL' operator in SQL to get rid of the
         double negation."""
-        return not_(cls.tasks.any(RecipeTask.status != TaskStatus.aborted))
+        return and_(not_(cls.tasks.any(RecipeTask.status != TaskStatus.aborted)),
+                    RecipeResource.install_started == None)
 
     # TODO: it would be good to split the bar definition out to a utility
     # module accepting a mapping of div classes to percentages and then
@@ -1920,6 +1922,10 @@ class Recipe(TaskBase, DeclarativeMappedObject):
         if self.recipeset.job.deleted or self.recipeset.job.to_delete:
             return True
         return False
+
+    @property
+    def install_started(self):
+        return getattr(self.resource, 'install_started', None)
 
     def build_ancestors(self, *args, **kw):
         """
