@@ -444,18 +444,22 @@ class BeakerWorkflow(BeakerCommand):
         self.parser.add_option_group(multihost_options)
 
     def getArches(self, *args, **kwargs):
-        """ Get all arches that apply to either this distro or family/osmajor """
+        """
+        Get all arches that apply to either this distro, or the distro which 
+        will be selected by the given family and tag.
+        """
 
         distro   = kwargs.get("distro", None)
         family   = kwargs.get("family", None)
+        tags     = kwargs.get("tag", None)
 
         if not hasattr(self,'hub'):
             self.set_hub(**kwargs)
 
-        if family:
-            return self.hub.distros.get_arch(dict(osmajor=family))
         if distro:
             return self.hub.distros.get_arch(dict(distro=distro))
+        else:
+            return self.hub.distros.get_arch(dict(osmajor=family, tags=tags))
 
     def getOsMajors(self, *args, **kwargs):
         """ Get all OsMajors, optionally filter by tag """ 

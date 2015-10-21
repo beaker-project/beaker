@@ -5,6 +5,7 @@
 # (at your option) any later version.
 
 import os
+import datetime
 import pkg_resources
 import re
 from tempfile import NamedTemporaryFile
@@ -296,6 +297,18 @@ class WorkflowSimpleTest(ClientTestCase):
             self.assertEquals(job.recipesets[0].recipes[0].tasks[1].role, 'SERVERS')
             self.assertEquals(job.recipesets[0].recipes[1].tasks[1].role, 'SERVERS')
 
+    def submit_job_and_check_arches(self, workflow_options, expected_arches):
+        out = run_client(['bkr', 'workflow-simple', '--task', self.task.name]
+                + workflow_options)
+        self.assertTrue(out.startswith('Submitted:'), out)
+        m = re.search('J:(\d+)', out)
+        job_id = m.group(1)
+        with session.begin():
+            job = Job.by_id(job_id)
+            self.assertEqual(len(job.recipesets), len(expected_arches))
+            actual_arches = [rs.recipes[0].distro_tree.arch.arch for rs in job.recipesets]
+            self.assertItemsEqual(actual_arches, expected_arches)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1078941
     def test_lookup_arches_by_family(self):
         # When a family is given but no arches, the workflow commands are 
@@ -306,19 +319,51 @@ class WorkflowSimpleTest(ClientTestCase):
                     tags=[u'STABLE'])
             data_setup.create_distro_tree(distro=distro, arch=u'x86_64')
             data_setup.create_distro_tree(distro=distro, arch=u's390x')
-        out = run_client(['bkr', 'workflow-simple',
-                '--family', distro.osversion.osmajor.osmajor,
-                '--task', self.task.name])
-        self.assertTrue(out.startswith('Submitted:'), out)
-        m = re.search('J:(\d+)', out)
-        job_id = m.group(1)
+        self.submit_job_and_check_arches(
+                ['--family', distro.osversion.osmajor.osmajor],
+                [u'x86_64', u's390x'])
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1255420
+    def test_looks_up_arches_for_suitable_osminor(self):
+        # RHEL7 is the first time we have had differing arches across a single 
+        # OS major. We want the workflow command to use the set of arches for 
+        # the OS version which will actually match whatever distro filtering 
+        # options we are using, e.g. latest RedHatEnterpriseLinux7 should be 
+        # using RHEL7.2 arches, not RHEL7.0.
         with session.begin():
-            job = Job.by_id(job_id)
-            self.assertEquals(len(job.recipesets), 2)
-            self.assertEquals(job.recipesets[0].recipes[0].distro_tree.arch,
-                    Arch.by_name(u'x86_64'))
-            self.assertEquals(job.recipesets[1].recipes[0].distro_tree.arch,
-                    Arch.by_name(u's390x'))
+            older_arches = [u'x86_64', u's390x']
+            older_distro = data_setup.create_distro(
+                    osmajor=u'DansAwesomeLinux8', osminor=u'0',
+                    arches=older_arches,
+                    date_created=datetime.datetime(2010, 1, 1, 0, 0),
+                    tags=[u'STABLE'])
+            for arch in older_arches:
+                data_setup.create_distro_tree(distro=older_distro, arch=arch)
+            newer_arches = [u'x86_64', u's390x', u'ppc64le']
+            newer_distro = data_setup.create_distro(
+                    osmajor=u'DansAwesomeLinux8', osminor=u'1',
+                    arches=newer_arches,
+                    date_created=datetime.datetime(2012, 1, 1, 0, 0),
+                    tags=[])
+            for arch in newer_arches:
+                data_setup.create_distro_tree(distro=newer_distro, arch=arch)
+        # Naming a specific distro should always use the corresponding OS minor arches.
+        self.submit_job_and_check_arches(['--distro', older_distro.name], older_arches)
+        self.submit_job_and_check_arches(['--distro', newer_distro.name], newer_arches)
+        # Giving a family in addition to a specific distro is redundant, but it 
+        # shouldn't break the arch lookup.
+        self.submit_job_and_check_arches(
+                ['--distro', older_distro.name, '--family', 'DansAwesomeLinux8'],
+                older_arches)
+        self.submit_job_and_check_arches(
+                ['--distro', newer_distro.name, '--family', 'DansAwesomeLinux8'],
+                newer_arches)
+        # Naming just a family will use the latest distro in that family.
+        self.submit_job_and_check_arches(['--family', 'DansAwesomeLinux8'], newer_arches)
+        # Family filtered by tag can restrict it to an older release though.
+        self.submit_job_and_check_arches(
+                ['--family', 'DansAwesomeLinux8', '--tag', 'STABLE'],
+                older_arches)
 
     def test_kickstart_template(self):
         template_contents = 'install\n%packages\n%end\n'

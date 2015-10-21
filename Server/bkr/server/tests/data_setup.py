@@ -171,14 +171,17 @@ def add_pool_to_system(system, pool):
     system.pools.append(pool)
 
 def create_distro(name=None, osmajor=u'DansAwesomeLinux6', osminor=u'9',
-                  arches=None, tags=None, harness_dir=True, osmajor_installopts=None):
+                  arches=None, tags=None, harness_dir=True,
+                  osmajor_installopts=None, date_created=None):
     osmajor = OSMajor.lazy_create(osmajor=osmajor)
     osversion = OSVersion.lazy_create(osmajor=osmajor, osminor=osminor)
     if arches:
-        osversion.arches = arches
+        osversion.arches = [Arch.by_name(arch) for arch in arches]
     if not name:
         name = unique_name(u'%s.%s-%%s' % (osmajor, osminor))
     distro = Distro.lazy_create(name=name, osversion=osversion)
+    if date_created is not None:
+        distro.date_created = date_created
     for tag in (tags or []):
         distro.add_tag(tag)
     # add distro wide install options, if any
