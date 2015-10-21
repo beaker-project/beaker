@@ -83,6 +83,8 @@ dev_wizard_command = os.path.join(os.path.dirname(__file__),
 wizard_command = os.environ.get('BEAKER_WIZARD_COMMAND', dev_wizard_command)
 
 def start_wizard(args, env=None, **kwargs):
+    log.debug('Starting beaker-wizard %r as %r in directory %s',
+            wizard_command, args, kwargs.get('cwd', '.'))
     env = dict(env or os.environ)
     env['PYTHONUNBUFFERED'] = '1'
     return subprocess.Popen(args,

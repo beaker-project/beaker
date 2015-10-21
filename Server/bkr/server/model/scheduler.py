@@ -465,6 +465,19 @@ class TaskBase(object):
                                TaskResult.fail,
                                TaskResult.panic])
 
+    @hybrid_property
+    def is_suspiciously_aborted(self):
+        """Return True if the recipe abort was suspicious. Suspicious meaning
+        that all tasks in a recipe are aborted."""
+        return all([task.status == TaskStatus.aborted for task in self.tasks])
+
+    @is_suspiciously_aborted.expression
+    def is_suspiciously_aborted(cls): # pylint: disable=E0213
+        """Returns an SQL expression evaluating to TRUE if the recipe abort was
+        suspicious. Note: There is no 'ALL' operator in SQL to get rid of the
+        double negation."""
+        return not_(cls.tasks.any(RecipeTask.status != TaskStatus.aborted))
+
     # TODO: it would be good to split the bar definition out to a utility
     # module accepting a mapping of div classes to percentages and then
     # unit test it without needing to create dummy recipes
@@ -2462,7 +2475,7 @@ class Recipe(TaskBase, DeclarativeMappedObject):
 
         if status_changed and self.is_finished():
             metrics.increment('counters.recipes_%s' % self.status.name)
-            if self.status == TaskStatus.aborted and \
+            if self.is_suspiciously_aborted and \
                     getattr(self.resource, 'system', None) and \
                     get('beaker.reliable_distro_tag', None) in self.distro_tree.distro.tags:
                 self.resource.system.suspicious_abort()

@@ -25,14 +25,21 @@ circumstances:
   system cannot be powered then it cannot execute recipes, so in this case it 
   is always marked broken immediately.
 
-* when two consecutive recipes running on the system, using two different
-  "reliable" distros, are aborted by the external watchdog
+* when there is a run of suspicious aborted recipes
 
-  A distro is considered "reliable" if it is tagged with the tag given in the 
-  ``beaker.reliable_distro_tag`` config setting. The suggested tag is 
-  ``RELEASED``. If the ``beaker.reliable_distro_tag`` setting is unset, this 
-  heuristic is not used.
+  A recipe is considered "suspicious" (that is, indicating the system might be
+  broken) if all tasks in the recipe are aborted.
 
-  Note that the two distros must be different in order to trigger this 
-  heuristic. This is to reduce the chance that the abort was caused by a distro 
-  bug rather than a problem with the system.
+  It is considered to be a "run" if there has been two or more consecutive
+  suspicious recipes, with no intervening non-suspicious recipes and no manual
+  changes made to the system's status.
+
+  To reduce the risk of false positives, this heuristic is only applied when the
+  aborted recipes used a "reliable" distro. A distro is considered reliable if
+  it is tagged with the tag given in the ``beaker.reliable_distro_tag`` config
+  setting. The suggested tag is ``RELEASED``. If the
+  ``beaker.reliable_distro_tag`` setting is unset, this heuristic is not used.
+
+  The run of suspicious recipes must also use at least two different distros in
+  order to trigger this heuristic. This is to reduce the chance that the aborted
+  was caused by a distro bug rather than a problem with the system.
