@@ -14,7 +14,8 @@ import tempfile
 import subprocess
 import sys
 from sqlalchemy.orm.exc import NoResultFound
-from bkr.server.model import LogRecipe, TaskBase, Job, Recipe, RenderedKickstart
+from bkr.server.model import LogRecipe, TaskBase, Job, Recipe, \
+    RenderedKickstart, TaskStatus
 from bkr.inttest import data_setup, with_transaction, Process, DatabaseTestCase
 from bkr.server.tools import log_delete
 from turbogears.database import session
@@ -153,6 +154,27 @@ class LogDelete(DatabaseTestCase):
         with session.begin():
             self.assertEqual(Recipe.by_id(recipe.id).rendered_kickstart, None)
             self.assertRaises(NoResultFound, RenderedKickstart.by_id, ks.id)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1273302
+    def test_deletes_old_jobs_which_never_started(self):
+        with session.begin():
+            the_past = datetime.datetime.utcnow() - datetime.timedelta(days=31)
+            cancelled_job = data_setup.create_job(queue_time=the_past)
+            cancelled_job.cancel()
+            cancelled_job.update_status()
+            aborted_job = data_setup.create_job(queue_time=the_past)
+            aborted_job.abort()
+            aborted_job.update_status()
+            self.assertEqual(cancelled_job.status, TaskStatus.cancelled)
+            self.assertEqual(aborted_job.status, TaskStatus.aborted)
+            self.assertIsNone(cancelled_job.recipesets[0].recipes[0].finish_time)
+            self.assertIsNone(aborted_job.recipesets[0].recipes[0].finish_time)
+            self.assertIsNone(cancelled_job.deleted)
+            self.assertIsNone(aborted_job.deleted)
+        log_delete.log_delete()
+        with session.begin():
+            self.assertIsNotNone(Job.by_id(cancelled_job.id).deleted)
+            self.assertIsNotNone(Job.by_id(aborted_job.id).deleted)
 
 class RemoteLogDeletionTest(DatabaseTestCase):
 

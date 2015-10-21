@@ -725,8 +725,9 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         delta = timedelta(**delta)
         if not query:
             query = cls.query
-        query = query.join(cls.recipesets, RecipeSet.recipes).filter(and_(Recipe.finish_time < datetime.utcnow() - delta,
-            cls.status.in_([status for status in TaskStatus if status.finished])))
+        query = query.join(cls.recipesets, RecipeSet.recipes)\
+            .filter(func.coalesce(Recipe.finish_time, RecipeSet.queue_time) < datetime.utcnow() - delta)\
+            .filter(cls.status.in_([status for status in TaskStatus if status.finished]))
         return query
 
     @classmethod
