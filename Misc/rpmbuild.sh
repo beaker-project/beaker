@@ -20,12 +20,16 @@ if [ $# -eq 0 ] ; then
     exit 1
 fi
 
-tag="$(git describe --abbrev=0 HEAD)"
-version="${tag##beaker-}"
-commitcount=$(git rev-list "$tag..HEAD" | wc -l)
-commitsha=$(git rev-parse --short HEAD)
-if [ "$commitcount" -gt 0 ] ; then
+lasttag="$(git describe --abbrev=0 HEAD)"
+lastversion="${lasttag##beaker-}"
+if [ "$(git rev-list --count "$lasttag..HEAD")" -eq 0 ] ; then
+    # building a tag
+    rpmver=""
+    rpmrel=""
+    version="$lastversion"
+else
     # git builds count as a pre-release of the next version
+    version="$lastversion"
     version="${version%%[a-z]*}" # strip non-numeric suffixes like "rc1"
     if [ -z "$next_major" ] ; then
         # normally we just increment the last portion of the version
@@ -33,7 +37,12 @@ if [ "$commitcount" -gt 0 ] ; then
     else
         # ... but if --next-major is given we increment the first portion
         version="$((${version%%.*} + 1)).0"
+        # also count commits from the last *major* version, so that the number 
+        # does not go down when a new maintenance release is tagged
+        lastversion="${lastversion%%.*}.0"
     fi
+    commitcount=$(git rev-list --count "beaker-$lastversion..HEAD")
+    commitsha=$(git rev-parse --short HEAD)
     rpmver="${version}"
     rpmrel="0.git.${commitcount}.${commitsha}"
     version="${version}.git.${commitcount}.${commitsha}"
@@ -52,7 +61,7 @@ git ls-tree -r HEAD | grep ^160000 | while read mode type sha path ; do
 done
 git show HEAD:beaker.spec >"$workdir/beaker.spec"
 
-if [ "$commitcount" -gt 0 ] ; then
+if [ -n "$rpmrel" ] ; then
     # need to hack the version in the spec
     sed --regexp-extended --in-place \
         -e "/%global upstream_version /c\%global upstream_version ${version}" \
