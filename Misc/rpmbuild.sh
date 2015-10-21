@@ -22,7 +22,7 @@ fi
 
 lasttag="$(git describe --abbrev=0 HEAD)"
 lastversion="${lasttag##beaker-}"
-if [ "$(git rev-list --count "$lasttag..HEAD")" -eq 0 ] ; then
+if [ "$(git rev-list "$lasttag..HEAD" | wc -l)" -eq 0 ] ; then
     # building a tag
     rpmver=""
     rpmrel=""
@@ -41,7 +41,7 @@ else
         # does not go down when a new maintenance release is tagged
         lastversion="${lastversion%%.*}.0"
     fi
-    commitcount=$(git rev-list --count "beaker-$lastversion..HEAD")
+    commitcount=$(git rev-list "beaker-$lastversion..HEAD" | wc -l)
     commitsha=$(git rev-parse --short HEAD)
     rpmver="${version}"
     rpmrel="0.git.${commitcount}.${commitsha}"
