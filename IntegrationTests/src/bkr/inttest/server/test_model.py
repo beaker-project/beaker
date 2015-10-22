@@ -752,12 +752,16 @@ class TestBrokenSystemDetection(DatabaseTestCase):
     def tearDown(self):
         session.commit()
 
-    def abort_recipe(self, distro_tree=None, num_tasks=None, num_tasks_completed=None):
+    def abort_recipe(self, distro_tree=None, num_tasks=None, num_tasks_completed=None,
+                     install_started=False):
         if distro_tree is None:
             distro_tree = data_setup.create_distro_tree(distro_tags=[u'RELEASED'])
         recipe = data_setup.create_recipe(num_tasks=num_tasks, distro_tree=distro_tree)
         job = data_setup.create_job_for_recipes([recipe])
-        data_setup.mark_recipe_running(recipe, system=self.system)
+        if install_started or num_tasks_completed is not None:
+            data_setup.mark_recipe_running(recipe, system=self.system)
+        else:
+            data_setup.mark_recipe_waiting(recipe, system=self.system)
         if num_tasks_completed is not None:
             data_setup.mark_recipe_installation_finished(recipe)
             data_setup.mark_recipe_tasks_finished(
@@ -780,17 +784,38 @@ class TestBrokenSystemDetection(DatabaseTestCase):
     def test_multiple_non_suspicious_aborts_doesnt_trigger_broken_system(self):
         """This verifies that an aborted recipe is not counted as suspicious if
         some tasks completed."""
-        self.abort_recipe(num_tasks=2, num_tasks_completed=1)
-        self.abort_recipe(num_tasks=2, num_tasks_completed=1)
+        self.abort_recipe(num_tasks=2, num_tasks_completed=1, install_started=True)
+        self.abort_recipe(num_tasks=2, num_tasks_completed=1, install_started=True)
         self.assertNotEqual(self.system.status, SystemStatus.broken)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1270649
     def test_aborts_not_suspicious_if_recipe_has_completed_tasks(self):
         """This verifies that a recipe is not counted suspicious if a previous
         recipe had completed tasks."""
+        # suspicious
         self.abort_recipe()
+        # non-suspicious (task completed)
         self.abort_recipe(num_tasks=2, num_tasks_completed=1)
+        # suspicious
         self.abort_recipe()
+        self.assertNotEqual(self.system.status, SystemStatus.broken)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1269076
+    def test_install_failure_is_not_suspicious(self):
+        """This verifies that an install failure is not counted as suspicious."""
+        self.abort_recipe(num_tasks=2, num_tasks_completed=0, install_started=True)
+        self.abort_recipe(num_tasks=2, num_tasks_completed=0, install_started=True)
+
+        self.assertNotEqual(self.system.status, SystemStatus.broken)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1269076
+    def test_install_success_is_not_suspicious(self):
+        """This verifies that intermittent successful installation will not
+        mark the system as broken."""
+        self.abort_recipe()
+        self.abort_recipe(install_started=True)
+        self.abort_recipe()
+
         self.assertNotEqual(self.system.status, SystemStatus.broken)
 
     def test_status_change_is_respected(self):
