@@ -51,3 +51,8 @@ class JobResultsTest(ClientTestCase):
         self.assertIn(job.whiteboard, out.decode('utf8'))
         out = run_client(['bkr', 'job-results', '--prettyxml', job.t_id])
         self.assertIn(job.whiteboard, out.decode('utf8'))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1123244
+    def test_junit_xml(self):
+        out = run_client(['bkr', 'job-results', '--format=junit-xml', self.job.t_id])
+        self.assertIn('<testsuites>', out)

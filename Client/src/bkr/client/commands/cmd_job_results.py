@@ -29,10 +29,19 @@ in :manpage:`bkr(1)`.
 Options
 -------
 
+.. option:: --format beaker-results-xml, --format junit-xml
+
+   Shows results in the given format.
+   The ``beaker-results-xml`` format (default) is a superset of the Beaker job 
+   definition XML syntax.
+   The ``junit-xml`` format is compatible with the Ant JUnit runner's XML 
+   output and is understood by Jenkins, Eclipse, and other tools.
+
 .. option:: --prettyxml
 
-   Pretty-print the XML (with indentation and line breaks, suitable for human 
-   consumption).
+   Pretty-print the Beaker results XML (with indentation and line breaks, 
+   suitable for human consumption).
+   JUnit XML is always pretty-printed regardless of this option.
 
 Common :program:`bkr` options are described in the :ref:`Options 
 <common-options>` section of :manpage:`bkr(1)`.
@@ -70,6 +79,13 @@ class Job_Results(BeakerCommand):
     def options(self):
         self.parser.usage = "%%prog %s [options] <taskspec>..." % self.normalized_name
         self.parser.add_option(
+            '--format',
+            type='choice', choices=['beaker-results-xml', 'junit-xml'],
+            default='beaker-results-xml',
+            help='Display results in this format: '
+                 'beaker-results-xml, junit-xml [default: %default]',
+        )
+        self.parser.add_option(
             "--prettyxml",
             default=False,
             action="store_true",
@@ -80,15 +96,27 @@ class Job_Results(BeakerCommand):
     def run(self, *args, **kwargs):
         self.check_taskspec_args(args)
 
+        format      = kwargs.pop("format")
         prettyxml   = kwargs.pop("prettyxml", None)
 
         self.set_hub(**kwargs)
+        requests_session = self.requests_session()
         for task in args:
-            myxml = self.hub.taskactions.to_xml(task)
-            # XML is really bytes, the fact that the server is sending the bytes as an
-            # XML-RPC Unicode string is just a mistake in Beaker's API
-            myxml = myxml.encode('utf8')
-            if prettyxml:
-                print parseString(myxml).toprettyxml(encoding='utf8')
+            if format == 'beaker-results-xml':
+                myxml = self.hub.taskactions.to_xml(task)
+                # XML is really bytes, the fact that the server is sending the bytes as an
+                # XML-RPC Unicode string is just a mistake in Beaker's API
+                myxml = myxml.encode('utf8')
+                if prettyxml:
+                    print parseString(myxml).toprettyxml(encoding='utf8')
+                else:
+                    print myxml
+            elif format == 'junit-xml':
+                type, colon, id = task.partition(':')
+                if type != 'J':
+                    self.parser.error('JUnit XML format is only available for jobs')
+                response = requests_session.get('jobs/%s.junit.xml' % id)
+                response.raise_for_status()
+                print response.content
             else:
-                print myxml
+                raise RuntimeError('Format %s not implemented' % format)
