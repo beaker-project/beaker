@@ -3250,7 +3250,7 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
         if self.start_time:
             self.finish_time = datetime.utcnow()
         self._change_status(status)
-        self.results.append(RecipeTaskResult(recipetask=self,
+        self.results.append(RecipeTaskResult(
                                    path=u'/',
                                    result=TaskResult.warn,
                                    score=0,

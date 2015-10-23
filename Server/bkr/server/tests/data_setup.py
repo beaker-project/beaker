@@ -550,7 +550,7 @@ def mark_recipe_tasks_finished(recipe, result=TaskResult.pass_,
 
     for recipe_task in recipe.tasks[:num_tasks]:
         if result is not None:
-            rtr = RecipeTaskResult(recipetask=recipe_task, result=result)
+            rtr = RecipeTaskResult(result=result)
             rtr.logs = [rtr_log()]
             recipe_task.results.append(rtr)
         recipe_task.logs = [rt_log()]
