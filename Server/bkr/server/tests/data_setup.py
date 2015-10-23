@@ -38,14 +38,15 @@ def setup_model(override=True):
     from bkr.server.tools.init import init_db, populate_db
     engine = turbogears.database.get_engine()
     db_name = engine.url.database
-    connection = engine.connect()
-    if override:
-        log.info('Dropping database %s', db_name)
-        connection.execute('DROP DATABASE IF EXISTS %s' % db_name)
-    log.info('Creating database %s', db_name)
-    connection.execute('CREATE DATABASE %s' % db_name)
-    connection.invalidate() # can't reuse this one
-    del connection
+    if db_name: # it will be None for in-memory sqlite
+        connection = engine.connect()
+        if override:
+            log.info('Dropping database %s', db_name)
+            connection.execute('DROP DATABASE IF EXISTS %s' % db_name)
+        log.info('Creating database %s', db_name)
+        connection.execute('CREATE DATABASE %s' % db_name)
+        connection.invalidate() # can't reuse this one
+        del connection
     log.info('Initialising model')
     init_db(metadata)
     populate_db(user_name=ADMIN_USER, password=ADMIN_PASSWORD,
