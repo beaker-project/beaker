@@ -17,6 +17,7 @@ from bkr.server.widgets import myPaginateDataGrid, \
     HorizontalForm, BeakerDataGrid
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
+from bkr.server.junitxml import to_junit_xml
 from bkr.server import search_utility, identity, metrics
 from bkr.server.needpropertyxml import XmlHost
 from bkr.server.installopts import InstallOptions
@@ -1028,6 +1029,17 @@ def job_xml(id):
     """
     job = _get_job_by_id(id)
     response = make_response(job.to_xml().toprettyxml())
+    response.status_code = 200
+    response.headers.add('Content-Type', 'text/xml')
+    return response
+
+@app.route('/jobs/<int:id>.junit.xml', methods=['GET'])
+def job_junit_xml(id):
+    """
+    Returns the job in JUnit-compatible XML format.
+    """
+    job = _get_job_by_id(id)
+    response = make_response(to_junit_xml(job))
     response.status_code = 200
     response.headers.add('Content-Type', 'text/xml')
     return response

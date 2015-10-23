@@ -8,6 +8,7 @@
 
 import unittest2 as unittest
 import requests
+import lxml.etree
 import logging
 import time
 import re
@@ -1092,6 +1093,15 @@ class JobHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         self.assertEquals(response.status_code, 200)
         self.assertEquals(self.job.to_xml().toprettyxml(), response.content)
+
+    def test_get_junit_xml(self):
+        with session.begin():
+            data_setup.mark_job_complete(self.job)
+        response = requests.get(get_server_base() + 'jobs/%s.junit.xml' % self.job.id)
+        response.raise_for_status()
+        self.assertEquals(response.status_code, 200)
+        junitxml = lxml.etree.fromstring(response.content)
+        self.assertEqual(junitxml.tag, 'testsuites')
 
     def test_set_job_whiteboard(self):
         s = requests.Session()

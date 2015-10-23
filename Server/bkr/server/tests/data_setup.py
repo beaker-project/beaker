@@ -551,7 +551,8 @@ def mark_recipe_tasks_finished(recipe, result=TaskResult.pass_,
 
     for recipe_task in recipe.tasks[:num_tasks]:
         if result is not None:
-            rtr = RecipeTaskResult(result=result)
+            rtr = RecipeTaskResult(path=recipe_task.name, result=result,
+                    log=u'(%s)' % result, score=0)
             rtr.logs = [rtr_log()]
             recipe_task.results.append(rtr)
         recipe_task.logs = [rt_log()]
@@ -571,7 +572,7 @@ def mark_job_complete(job, finish_time=None, only=False, **kwargs):
             recipe.resource.reservation.finish_time = finish_time
             recipe.finish_time = finish_time
 
-def mark_recipe_waiting(recipe, start_time=None, system=None,
+def mark_recipe_waiting(recipe, start_time=None, system=None, fqdn=None,
         lab_controller=None, virt=False, instance_id=None, **kwargs):
     if start_time is None:
         start_time = datetime.datetime.utcnow()
@@ -591,8 +592,8 @@ def mark_recipe_waiting(recipe, start_time=None, system=None,
                 if not system:
                     if not lab_controller:
                         lab_controller = create_labcontroller(fqdn=u'dummylab.example.invalid')
-                    system = create_system(arch=recipe.arch,
-                            lab_controller=lab_controller)
+                    system = create_system(arch=recipe.arch.arch,
+                            fqdn=fqdn, lab_controller=lab_controller)
                 recipe.resource = SystemResource(system=system)
                 recipe.resource.allocate()
                 recipe.resource.reservation.start_time = start_time
@@ -614,7 +615,7 @@ def mark_job_waiting(job, **kwargs):
 
 def mark_recipe_running(recipe, fqdn=None, only=False, **kwargs):
     if not only:
-        mark_recipe_waiting(recipe, **kwargs)
+        mark_recipe_waiting(recipe, fqdn=fqdn, **kwargs)
     recipe.resource.install_started = datetime.datetime.utcnow()
     recipe.tasks[0].start()
     if isinstance(recipe, GuestRecipe):

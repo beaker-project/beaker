@@ -223,8 +223,8 @@ Jobs
 ----
 
 .. autoflask:: bkr.server.wsgi:app
-   :endpoints: get_job, update_job, update_job_status, delete_job,
-     get_job_activity, submit_inventory_job
+   :endpoints: get_job, job_junit_xml, update_job, update_job_status,
+     delete_job, get_job_activity, submit_inventory_job
 
 Recipe sets
 -----------
