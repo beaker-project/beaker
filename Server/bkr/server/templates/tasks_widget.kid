@@ -83,7 +83,7 @@
      &nbsp;
     </td>
     <td class="result">
-     ${task_result.short_path}
+     ${task_result.display_label}
     </td>
     <td class="result" py:if="not hidden.has_key('distro_tree')">
      &nbsp;

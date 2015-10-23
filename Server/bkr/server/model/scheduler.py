@@ -3582,8 +3582,8 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
         """
         Remove the parent from the begining of the path if present
         """
-        if not self.path or self.path == '/':
-            short_path = self.log or './'
+        if not self.path:
+            short_path = self.path
         elif self.path.rstrip('/') == self.recipetask.name:
             short_path = './'
         elif self.path.startswith(self.recipetask.name + '/'):
@@ -3591,6 +3591,16 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
         else:
             short_path = self.path
         return short_path
+
+    @property
+    def display_label(self):
+        """
+        Human-friendly label for the result, when shown alongside its parent 
+        task. The conventions here are basically a historical RHTSism.
+        """
+        if not self.short_path or self.short_path == '/':
+            return self.log or './'
+        return self.short_path
 
 class RecipeResource(DeclarativeMappedObject):
     """

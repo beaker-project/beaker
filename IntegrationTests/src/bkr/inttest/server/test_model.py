@@ -2283,29 +2283,29 @@ class RecipeTaskResultTest(DatabaseTestCase):
     def tearDown(self):
         session.rollback()
 
-    def test_short_path(self):
+    def test_display_label(self):
         task = data_setup.create_task(name=u'/distribution/install')
         rt = RecipeTask.from_task(task)
         rtr = RecipeTaskResult(recipetask=rt, path=u'/distribution/install/Sysinfo')
-        self.assertEquals(rtr.short_path, u'Sysinfo')
+        self.assertEquals(rtr.display_label, u'Sysinfo')
         rtr = RecipeTaskResult(recipetask=rt, path=u'/start')
-        self.assertEquals(rtr.short_path, u'/start')
+        self.assertEquals(rtr.display_label, u'/start')
         rtr = RecipeTaskResult(recipetask=rt, path=u'/distribution/install')
-        self.assertEquals(rtr.short_path, u'./')
+        self.assertEquals(rtr.display_label, u'./')
         rtr = RecipeTaskResult(recipetask=rt, path=u'/distribution/install/')
-        self.assertEquals(rtr.short_path, u'./')
+        self.assertEquals(rtr.display_label, u'./')
         rtr = RecipeTaskResult(recipetask=rt, path=None)
-        self.assertEquals(rtr.short_path, u'./')
+        self.assertEquals(rtr.display_label, u'./')
         rtr = RecipeTaskResult(recipetask=rt, path=u'')
-        self.assertEquals(rtr.short_path, u'./')
+        self.assertEquals(rtr.display_label, u'./')
         rtr = RecipeTaskResult(recipetask=rt, path=u'/')
-        self.assertEquals(rtr.short_path, u'./')
+        self.assertEquals(rtr.display_label, u'./')
         rtr = RecipeTaskResult(recipetask=rt, path=None, log='Cancelled it')
-        self.assertEquals(rtr.short_path, u'Cancelled it')
+        self.assertEquals(rtr.display_label, u'Cancelled it')
         rtr = RecipeTaskResult(recipetask=rt, path=u'', log='Cancelled it')
-        self.assertEquals(rtr.short_path, u'Cancelled it')
+        self.assertEquals(rtr.display_label, u'Cancelled it')
         rtr = RecipeTaskResult(recipetask=rt, path=u'/', log='Cancelled it')
-        self.assertEquals(rtr.short_path, u'Cancelled it')
+        self.assertEquals(rtr.display_label, u'Cancelled it')
 
 
 class TestSystemInventoryDistro(DatabaseTestCase):
