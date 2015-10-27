@@ -80,19 +80,19 @@ class Distros(RPCRoot):
     def get_arch(self, filter):
         """ pass in a dict() with either distro or osmajor to get possible arches
         """
+        distros = Distro.query
         if 'distro' in filter:
-            # look up distro
-            try:
-                arches = [arch.arch for arch in Distro.by_name(filter['distro']).osversion.arches]
-            except DatabaseLookupError:
-                raise BX(_('Invalid Distro: %s' % filter['distro']))
-        elif 'osmajor' in filter:
-            # look up osmajor
-            try:
-                arches = [arch.arch for arch in OSMajor.by_name(filter['osmajor']).osversions[0].arches]
-            except InvalidRequestError:
-                raise BX(_('Invalid OSMajor: %s' % filter['osmajor']))
-        return arches
+            distros = distros.filter(Distro.name == filter['distro'])
+        if 'osmajor' in filter:
+            distros = distros.join(Distro.osversion).join(OSVersion.osmajor)\
+                             .filter(OSMajor.osmajor == filter['osmajor'])
+        for tag in filter.get('tags', []):
+            distros = distros.filter(Distro._tags.any(DistroTag.tag == tag))
+        # approximates the behaviour of <distroRequires/>
+        distro = distros.order_by(Distro.date_created.desc()).first()
+        if distro is None:
+            raise BX(_('No distros match given filter: %r') % filter)
+        return [arch.arch for arch in distro.osversion.arches]
 
     @expose()
     @identity.require(identity.has_permission('tag_distro'))
