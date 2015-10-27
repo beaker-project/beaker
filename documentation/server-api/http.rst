@@ -230,7 +230,8 @@ Recipe sets
 -----------
 
 .. autoflask:: bkr.server.wsgi:app
-   :endpoints: get_recipeset, update_recipeset, update_recipeset_status
+   :endpoints: get_recipeset, update_recipeset, update_recipeset_by_taskspec,
+     update_recipeset_status
 
 Recipes
 -------

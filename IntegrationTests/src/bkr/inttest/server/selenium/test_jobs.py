@@ -1362,6 +1362,7 @@ class JobHTTPTest(DatabaseTestCase):
         self.assertEquals(json['entries'][0]['action'], u'blorp')
         self.assertEquals(json['entries'][0]['new_value'], u'something')
 
+
 class RecipeSetHTTPTest(DatabaseTestCase):
     """
     Directly tests the HTTP interface for recipe sets used by the job page.
@@ -1420,6 +1421,15 @@ class RecipeSetHTTPTest(DatabaseTestCase):
                 session=s, data={'priority': u'Urgent'})
         self.assertEquals(response.status_code, 403)
 
+    def check_changed_recipeset(self):
+        recipeset = self.job.recipesets[0]
+        self.assertEquals(recipeset.priority, TaskPriority.urgent)
+        self.assertEquals(recipeset.activity[0].user.user_name,
+                data_setup.ADMIN_USER)
+        self.assertEquals(recipeset.activity[0].field_name, u'Priority')
+        self.assertEquals(recipeset.activity[0].action, u'Changed')
+        self.assertEquals(recipeset.activity[0].new_value, u'Urgent')
+
     def test_admin_can_increase_priority(self):
         s = requests.Session()
         requests_login(s)
@@ -1429,13 +1439,32 @@ class RecipeSetHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            recipeset = self.job.recipesets[0]
-            self.assertEquals(recipeset.priority, TaskPriority.urgent)
-            self.assertEquals(recipeset.activity[0].user.user_name,
-                    data_setup.ADMIN_USER)
-            self.assertEquals(recipeset.activity[0].field_name, u'Priority')
-            self.assertEquals(recipeset.activity[0].action, u'Changed')
-            self.assertEquals(recipeset.activity[0].new_value, u'Urgent')
+            self.check_changed_recipeset()
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1149977
+    def test_admin_can_increase_priority_by_tid(self):
+        s = requests.Session()
+        requests_login(s)
+        # by recipe set t_id
+        response = patch_json(get_server_base() +
+                'recipesets/by-taskspec/%s' % self.job.recipesets[0].t_id,
+                session=s, data={'priority': u'Urgent'})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.check_changed_recipeset()
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1149977
+    def test_admin_can_increase_priority_by_job_tid(self):
+        s = requests.Session()
+        requests_login(s)
+        response = patch_json(get_server_base() +
+                'recipesets/by-taskspec/%s' % self.job.t_id,
+                session=s, data={'priority': u'Urgent'})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.check_changed_recipeset()
 
     def test_anonymous_cannot_update_status(self):
         response = post_json(get_server_base() +

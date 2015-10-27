@@ -13,8 +13,9 @@ from bkr.server import identity
 from bkr.server.app import app
 from bkr.server.flask_util import auth_required, convert_internal_errors, \
     BadRequest400, NotFound404, Forbidden403, read_json_request
-from bkr.server.model import RecipeSet, TaskStatus, TaskPriority
+from bkr.server.model import RecipeSet, TaskStatus, TaskPriority, TaskBase, Job
 from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.server.bexceptions import BeakerException
 
 import cherrypy
 
@@ -37,6 +38,22 @@ def get_recipeset(id):
     recipeset = _get_rs_by_id(id)
     return jsonify(recipeset.__json__())
 
+def _update_recipeset(recipeset, data=None):
+    if not data:
+        data = {}
+    def record_activity(field, old=None, new=None, action=u'Changed'):
+        recipeset.record_activity(user=identity.current.user, service=u'HTTP',
+                action=action, field=field, old=old, new=new)
+    with convert_internal_errors():
+        if 'priority' in data:
+            priority = TaskPriority.from_string(data['priority'])
+            if (not recipeset.can_change_priority(identity.current.user) or
+                    priority not in recipeset.allowed_priorities(identity.current.user)):
+                raise Forbidden403('Cannot set recipe set %s priority to %s'
+                        % (recipeset.id, priority))
+            record_activity(u'Priority', old=recipeset.priority.value, new=priority.value)
+            recipeset.priority = priority
+
 @app.route('/recipesets/<int:id>', methods=['PATCH'])
 @auth_required
 def update_recipeset(id):
@@ -53,19 +70,38 @@ def update_recipeset(id):
     """
     recipeset = _get_rs_by_id(id)
     data = read_json_request(request)
-    def record_activity(field, old=None, new=None, action=u'Changed'):
-        recipeset.record_activity(user=identity.current.user, service=u'HTTP',
-                action=action, field=field, old=old, new=new)
-    with convert_internal_errors():
-        if 'priority' in data:
-            priority = TaskPriority.from_string(data['priority'])
-            if (not recipeset.can_change_priority(identity.current.user) or
-                    priority not in recipeset.allowed_priorities(identity.current.user)):
-                raise Forbidden403('Cannot set recipe set %s priority to %s'
-                        % (recipeset.id, priority))
-            record_activity(u'Priority', old=recipeset.priority.value, new=priority.value)
-            recipeset.priority = priority
+    _update_recipeset(recipeset, data)
     return jsonify(recipeset.__json__())
+
+@app.route('/recipesets/by-taskspec/<taskspec>', methods=['PATCH'])
+@auth_required
+def update_recipeset_by_taskspec(taskspec):
+    """
+    Updates the attributes of a recipe set identified by a taskspec. The valid type
+    of a taskspec is either J(job) or RS(recipe-set). If a taskspec format is
+    J:<id>, all the recipe sets in this job will be updated. The request must be
+    :mimetype:`application/json`.
+
+    :param taskspec: A taskspec argument that identifies a job or recipe set.
+    :jsonparam string priority: Priority for the recipe set. Must be one of 
+      'Low', 'Medium', 'Normal', 'High', or 'Urgent'. This can only be changed 
+      while a recipe set is still queued. Job owners can generally only 
+      *decrease* the priority of their recipe set, queue admins can increase 
+      it.
+    """
+    if not taskspec.startswith(('J', 'RS')):
+        raise BadRequest400('Taskspec type must be one of [J, RS]')
+    try:
+        obj = TaskBase.get_by_t_id(taskspec)
+    except BeakerException as exc:
+        raise NotFound404(unicode(exc))
+    data = read_json_request(request)
+    if isinstance(obj, Job):
+        for rs in obj.recipesets:
+            _update_recipeset(rs, data)
+    elif isinstance(obj, RecipeSet):
+        _update_recipeset(obj, data)
+    return jsonify(obj.__json__())
 
 @app.route('/recipesets/<int:id>/status', methods=['POST'])
 @auth_required

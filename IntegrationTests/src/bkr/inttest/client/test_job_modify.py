@@ -137,3 +137,15 @@ class JobModifyTest(ClientTestCase):
         self.assertEquals(self.job.recipesets[0].activity[0].action, u'Changed')
         self.assertEquals(self.job.recipesets[0].activity[0].field_name, 'Ack/Nak')
         self.assertEquals(self.job.recipesets[0].activity[0].new_value, 'ack')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1149977
+    def test_increase_priority(self):
+        out = run_client(['bkr', 'job-modify', self.job.t_id,  '--priority', 'High'])
+        self.assertIn('Successfully modified jobs %s' % self.job.t_id, out)
+        with session.begin():
+            session.expire_all()
+            for rs in self.job.recipesets:
+                self.assertEquals(rs.priority.value, 'High')
+            self.assertEquals(self.job.recipesets[0].activity[0].action, u'Changed')
+            self.assertEquals(self.job.recipesets[0].activity[0].field_name, 'Priority')
+            self.assertEquals(self.job.recipesets[0].activity[0].new_value, 'High')
