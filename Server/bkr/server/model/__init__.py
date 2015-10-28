@@ -59,6 +59,11 @@ class ExternalReport(DeclarativeMappedObject):
         super(ExternalReport, self).__init__(*args, **kw)
 
 # Delayed property definitions due to circular dependencies
+class_mapper(Group).add_properties({
+    'dyn_owners': dynamic_loader(User, secondary=UserGroup.__table__, viewonly=True,
+        primaryjoin=and_(UserGroup.group_id == Group.group_id,
+                         UserGroup.is_owner == True)),
+})
 class_mapper(LabController).add_property('dyn_systems', dynamic_loader(System))
 class_mapper(System).add_properties({
     # The relationship to 'recipe' is complicated

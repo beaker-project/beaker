@@ -24,6 +24,14 @@ window.GroupsView = BeakerGrid.extend({
             {name: 'display_name', label: 'Display Name', cell: 'string', editable: false},
             {name: 'created', label: 'Created', cell: BackgridDateTimeCell, editable: false},
         ];
+        options.query_builder_columns = options.columns.concat([
+            {name: 'member.user_name', label: 'Member/Username'},
+            {name: 'member.display_name', label: 'Member/Display Name'},
+            {name: 'member.email_address', label: 'Member/Email Address'},
+            {name: 'owner.user_name', label: 'Owner/Username'},
+            {name: 'owner.display_name', label: 'Owner/Display Name'},
+            {name: 'owner.email_address', label: 'Owner/Email Address'},
+        ]);
         BeakerGrid.prototype.initialize.apply(this, arguments);
     },
 });

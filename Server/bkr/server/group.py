@@ -419,6 +419,12 @@ def get_groups():
         'group_name': Group.group_name,
         'display_name': Group.display_name,
         'created': Group.created,
+        'member.user_name': (Group.users, User.user_name),
+        'member.display_name': (Group.users, User.display_name),
+        'member.email_address': (Group.users, User.email_address),
+        'owner.user_name': (Group.dyn_owners, User.user_name),
+        'owner.display_name': (Group.dyn_owners, User.display_name),
+        'owner.email_address': (Group.dyn_owners, User.email_address),
     })
     # Need to call .to_json() on the groups because the default __json__ 
     # representation is the minimal cut-down one, we want the complete 

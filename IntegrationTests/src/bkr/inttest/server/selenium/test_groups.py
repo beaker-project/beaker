@@ -29,6 +29,38 @@ class GroupsGridTest(WebDriverTestCase):
         b.find_element_by_class_name('grid-filter').submit()
         check_group_search_results(b, present=[group], absent=[other_group])
 
+    def test_can_search_by_member_username(self):
+        with session.begin():
+            group = data_setup.create_group()
+            member = data_setup.create_user()
+            group.add_member(member)
+            other_group = data_setup.create_group(
+                    group_name=data_setup.unique_name(u'aardvark%s'))
+        b = self.browser
+        b.get(get_server_base() + 'groups/')
+        b.find_element_by_class_name('search-query').send_keys(
+                'member.user_name:%s' % member.user_name)
+        b.find_element_by_class_name('grid-filter').submit()
+        check_group_search_results(b, present=[group], absent=[other_group])
+
+    def test_can_search_by_owner_username(self):
+        with session.begin():
+            group = data_setup.create_group()
+            owner = data_setup.create_user()
+            group.add_member(owner, is_owner=True)
+            # User is a member but *not* an owner of the other group. This is 
+            # to prove we really are filtering by ownership, not just 
+            # membership.
+            other_group = data_setup.create_group(
+                    group_name=data_setup.unique_name(u'aardvark%s'))
+            other_group.add_member(owner, is_owner=False)
+        b = self.browser
+        b.get(get_server_base() + 'groups/')
+        b.find_element_by_class_name('search-query').send_keys(
+                'owner.user_name:%s' % owner.user_name)
+        b.find_element_by_class_name('grid-filter').submit()
+        check_group_search_results(b, present=[group], absent=[other_group])
+
     def test_my_groups_grid_excludes_other_groups(self):
         """
         Check that the My Groups grid does not list groups which the user is 
