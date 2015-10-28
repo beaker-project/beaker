@@ -46,62 +46,77 @@ def _lucene_coerce_for_column(column, term):
     else: # treat everything else as a string
         return term
 
-def _lucene_term_clause(column, term):
-    if term == u'*':
-        return column != None
-    try:
-        value = _lucene_coerce_for_column(column, term)
-    except ValueError:
-        return false()
-    if isinstance(column.type, sqlalchemy.types.DateTime):
-        # date searches are implicitly a range across one day
-        return and_(column >= value,
-                column <= value.replace(hour=23, minute=59, second=59))
-    if isinstance(column.type, sqlalchemy.types.String) and '*' in value:
-        return column.like(value.replace('*', '%'))
-    return column == value
+class _LuceneTermQuery(object):
 
-_lucene_range_term_separator_pattern = re.compile(r'\s+TO\s+')
-def _lucene_range_clause(column, range_term):
-    start_inclusive = range_term.startswith('[')
-    end_inclusive = range_term.endswith(']')
-    range_terms = _lucene_range_term_separator_pattern.split(range_term[1:-1])
-    if len(range_terms) != 2:
-        return _lucene_term_clause(column, range_term)
-    start, end = range_terms
-    if start == u'*':
-        start_clause = true()
-    else:
+    def __init__(self, text):
+        self.text = text
+
+    def apply(self, column):
+        if self.text == u'*':
+            return column != None
         try:
-            start_value = _lucene_coerce_for_column(column, start)
+            value = _lucene_coerce_for_column(column, self.text)
         except ValueError:
-            start_clause = false()
+            return false()
+        if isinstance(column.type, sqlalchemy.types.DateTime):
+            # date searches are implicitly a range across one day
+            return and_(column >= value,
+                    column <= value.replace(hour=23, minute=59, second=59))
+        if isinstance(column.type, sqlalchemy.types.String) and '*' in value:
+            return column.like(value.replace('*', '%'))
+        return column == value
+
+class _LuceneRangeQuery(object):
+
+    def __init__(self, start, end, start_inclusive, end_inclusive):
+        self.start = start
+        self.end = end
+        self.start_inclusive = start_inclusive
+        self.end_inclusive = end_inclusive
+
+    def apply(self, column):
+        if self.start == u'*':
+            start_clause = true()
         else:
-            if start_inclusive:
-                start_clause = column >= start_value
+            try:
+                start_value = _lucene_coerce_for_column(column, self.start)
+            except ValueError:
+                start_clause = false()
             else:
-                start_clause = column > start_value
-    if end == u'*':
-        end_clause = true()
+                if self.start_inclusive:
+                    start_clause = column >= start_value
+                else:
+                    start_clause = column > start_value
+        if self.end == u'*':
+            end_clause = true()
+        else:
+            try:
+                end_value = _lucene_coerce_for_column(column, self.end)
+            except ValueError:
+                end_clause = false()
+            else:
+                if isinstance(end_value, datetime.datetime):
+                    end_value = end_value.replace(hour=23, minute=59, second=59)
+                if self.end_inclusive:
+                    end_clause = column <= end_value
+                else:
+                    end_clause = column < end_value
+        return and_(start_clause, end_clause)
+
+def _apply_lucene_query(lucene_query, chain):
+    if not isinstance(chain, tuple):
+        return lucene_query.apply(chain)
+    if len(chain) == 1:
+        return lucene_query.apply(chain[0])
     else:
-        try:
-            end_value = _lucene_coerce_for_column(column, end)
-        except ValueError:
-            end_clause = false()
-        else:
-            if isinstance(end_value, datetime.datetime):
-                end_value = end_value.replace(hour=23, minute=59, second=59)
-            if end_inclusive:
-                end_clause = column <= end_value
-            else:
-                end_clause = column < end_value
-    return and_(start_clause, end_clause)
+        return chain[0].any(_apply_lucene_query(lucene_query, chain[1:]))
 
 _lucene_query_pattern = re.compile(r"""
     (?P<negation>-)?
     (?:(?P<field>[^'"\s]+):)?
     (?:['"](?P<quoted_term>[^'"]*)['"]
-    |  (?P<range_term>[\[{] [^\]]* [\]}])
+    |  (?P<range_term>[\[{] \s* (?P<range_start>[^\]}]*) \s+ TO \s+ (?P<range_end>[^\]}]*) \s* [\]}])
+    |  (?P<malformed_range>[\[{] [^\]}]* [\]}])
     |  (?P<term>\S+)
     )""",
     re.VERBOSE)
@@ -109,10 +124,28 @@ _lucene_query_pattern = re.compile(r"""
 def lucene_to_sqlalchemy(querystring, search_columns, default_columns):
     """
     Parses the given *querystring* using a Lucene-like syntax and converts it 
-    to a SQLAlchemy filter clause. The *search_columns* parameter is 
-    a mapping of field names (in the query string) to SQLAlchemy columns.
+    to a SQLAlchemy filter clause.
 
     http://lucene.apache.org/core/3_6_0/queryparsersyntax.html
+
+    The *search_columns* parameter is a dict of field names from the query 
+    string mapped to column definitions. A column definition can be either:
+
+        * A regular SQLAlchemy column or column property (or any other 
+          compatible construct). For example, User.user_name. This is used for 
+          columns which are selected directly by the query or in a one-to-one 
+          join which is applied to the query, for example
+          System.query.join(System.user).
+
+        * A tuple making a chain of relationships ending in a single column:
+            (relationship_1, ..., relationship_N, column)
+          For example, (Group.users, User.user_name). This is used for 
+          one-to-many relationships which must be filtered using .any() to 
+          produce an EXISTS clause.
+
+    The *default_columns* parameter is a list of column definitions (as above) 
+    which will be used for matching terms in the query string which don't have 
+    an explicit field name.
 
     Maybe one day we will be using Lucene/Solr for real...
     """
@@ -122,19 +155,26 @@ def lucene_to_sqlalchemy(querystring, search_columns, default_columns):
     clauses = []
     for match in _lucene_query_pattern.finditer(querystring):
         if match.group('range_term') is not None:
-            term = match.group('range_term')
-            func = _lucene_range_clause
+            start = match.group('range_start')
+            end = match.group('range_end')
+            start_inclusive = match.group('range_term').startswith('[')
+            end_inclusive = match.group('range_term').endswith(']')
+            lucene_query = _LuceneRangeQuery(start, end,
+                    start_inclusive, end_inclusive)
+        elif match.group('malformed_range') is not None:
+            lucene_query = _LuceneTermQuery(match.group('malformed_range'))
         elif match.group('quoted_term') is not None:
-            term = match.group('quoted_term')
-            func = _lucene_term_clause
+            lucene_query = _LuceneTermQuery(match.group('quoted_term'))
         else:
-            term = match.group('term')
-            func = _lucene_term_clause
+            lucene_query = _LuceneTermQuery(match.group('term'))
         if match.group('field') is None:
-            clause = or_(*[func(column, term) for column in default_columns])
+            alternatives = []
+            for column in default_columns:
+                alternatives.append(_apply_lucene_query(lucene_query, column))
+            clause = or_(*alternatives)
         elif match.group('field') in search_columns:
             column = search_columns[match.group('field')]
-            clause = func(column, term)
+            clause = _apply_lucene_query(lucene_query, column)
         else:
             clause = false()
         if match.group('negation'):

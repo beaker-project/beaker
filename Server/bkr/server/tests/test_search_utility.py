@@ -9,15 +9,24 @@ import datetime
 from decimal import Decimal
 from sqlalchemy.sql import and_, or_
 from sqlalchemy.sql.expression import true, false
-from bkr.server.model import User, System, LabInfo
+from bkr.server.model import User, System, LabInfo, Device
 from bkr.server.search_utility import lucene_to_sqlalchemy
 
 class LuceneQueryTest(unittest.TestCase):
 
     def assert_clause_equals(self, actual, expected):
-        if not expected.compare(actual):
+        # We should be able to use expected.compare(actual) but it seems most 
+        # complex SQLAlchemy ClauseElement types (e.g. FromGrouping) do not 
+        # actually implement comparison properly.
+        # The poor man's version is to just compile it to SQL and do string 
+        # comparison.
+        actual_compiled = actual.compile()
+        expected_compiled = expected.compile()
+        if (str(actual_compiled) != str(expected_compiled)
+                or actual_compiled.params != expected_compiled.params):
             self.fail('SQLAlchemy clauses do not match\nActual: %s %s\nExpected: %s %s'
-                    % (actual, actual.compile().params, expected, expected.compile().params))
+                    % (actual_compiled, actual_compiled.params,
+                       expected_compiled, expected_compiled.params))
 
     def test_single_term(self):
         clause = lucene_to_sqlalchemy(u'user_name:rmancy',
@@ -228,3 +237,11 @@ class LuceneQueryTest(unittest.TestCase):
         clause = lucene_to_sqlalchemy(u'-user:*',
                 {'user': User.user_name}, [User.user_name])
         self.assert_clause_equals(clause, User.user_name == None)
+
+    def test_collection_relationship(self):
+        clause = lucene_to_sqlalchemy(u'device.driver:e1000',
+                {'fqdn': System.fqdn,
+                 'device.driver': (System.devices, Device.driver)},
+                [System.fqdn])
+        self.assert_clause_equals(clause,
+                System.devices.any(Device.driver == u'e1000'))
