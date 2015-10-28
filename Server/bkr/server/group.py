@@ -3,15 +3,12 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from turbogears import config, expose, \
-        paginate, url
+from turbogears import expose
 from turbogears.database import session
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
 from flask import jsonify, request, redirect as flask_redirect
-from bkr.server.helpers import make_link
-from bkr.server.widgets import myPaginateDataGrid
-from bkr.server.admin_page import AdminPage
+from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.bexceptions import BX
 from bkr.server.app import app
 from bkr.server import mail, identity
@@ -35,57 +32,9 @@ class GroupOwnerModificationForbidden(BX):
         self._message = message
         self.args = [message]
 
-class Groups(AdminPage):
+class Groups(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
-
-    def __init__(self,*args,**kw):
-        kw['search_url'] =  url("/groups/by_name?anywhere=1")
-        kw['search_name'] = 'group'
-        kw['widget_action'] = ''
-        super(Groups,self).__init__(*args,**kw)
-
-        self.search_col = Group.group_name
-        self.search_mapper = Group
-
-    @expose(format='json')
-    def by_name(self, input,*args,**kw):
-        input = input.lower()
-        if 'anywhere' in kw:
-            search = Group.list_by_name(input, find_anywhere=True)
-        else:
-            search = Group.list_by_name(input)
-
-        groups =  [match.group_name for match in search]
-        return dict(matches=groups)
-
-    @expose(template="bkr.server.templates.grid")
-    @identity.require(identity.not_anonymous())
-    @paginate('list', default_order='group_name', limit=20)
-    def mine(self,*args,**kw):
-        groups = self.process_search(*args, **kw)
-        groups = groups.filter(Group.users.contains(identity.current.user))
-        template_data = self.groups(groups, *args, **kw)
-        template_data['title'] = 'My Groups'
-        return template_data
-
-    def groups(self, groups=None, *args,**kw):
-        if groups is None:
-            groups = session.query(Group)
-
-        group_name = ('Group Name', lambda group: make_link(
-                'edit?group_id=%s' % group.group_id, group.group_name))
-        display_name = ('Display Name', lambda x: x.display_name)
-
-        grid_fields =  [group_name, display_name]
-        grid = myPaginateDataGrid(fields=grid_fields,
-                add_action='./new' if not identity.current.anonymous else None)
-        return_dict = dict(title=u"Groups",
-                           grid=grid,
-                           search_bar = None,
-                           search_widget = self.search_widget_form,
-                           list = groups)
-        return return_dict
 
     def revoke_owner(self, group_id=None, id=None, **kw):
 
@@ -450,6 +399,15 @@ def get_groups():
         'grid_add_view_type': grid_add_view_type,
         'grid_add_view_options': grid_add_view_options,
     })
+
+@app.route('/groups/mine', methods=['GET'])
+@auth_required
+def groups_mine():
+    """
+    Redirect for compatibility.
+    """
+    return flask_redirect(absolute_url('/groups/',
+            q='member.user_name:%s' % identity.current.user.user_name))
 
 @app.route('/groups/', methods=['POST'])
 @auth_required

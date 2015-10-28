@@ -22,3 +22,8 @@ class Menu(WebDriverTestCase):
         b.find_element_by_xpath('//title[text()="Recipes"]')
         click_menu_item(b, 'Hello, %s' % data_setup.ADMIN_USER, 'My Systems')
         b.find_element_by_xpath('//title[text()="My Systems"]')
+        click_menu_item(b, 'Hello, %s' % data_setup.ADMIN_USER, 'My Groups')
+        b.find_element_by_xpath('//title[text()="Groups"]')
+        self.assertEqual(
+            b.find_element_by_class_name('search-query').get_attribute('value'),
+            'member.user_name:%s' % data_setup.ADMIN_USER)

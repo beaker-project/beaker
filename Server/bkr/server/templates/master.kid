@@ -140,7 +140,7 @@ from bkr.server.reports import Reports
                     <li><a href="${tg.url('/jobs/mine')}">My Jobs</a></li>
                     <li><a href="${tg.url('/jobs/mygroups')}">My Group Jobs</a></li>
                     <li><a href="${tg.url('/recipes/mine')}">My Recipes</a></li>
-                    <li><a href="${tg.url('/groups/mine')}">My Groups</a></li>
+                    <li><a href="${tg.url('/groups/?q=member.user_name:' + tg.identity.user.user_name)}">My Groups</a></li>
                     <li><a href="${tg.url('/logout')}">Log out</a></li>
                 </ul>
             </li>

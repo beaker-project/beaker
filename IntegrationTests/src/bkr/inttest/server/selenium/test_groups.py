@@ -61,22 +61,18 @@ class GroupsGridTest(WebDriverTestCase):
         b.find_element_by_class_name('grid-filter').submit()
         check_group_search_results(b, present=[group], absent=[other_group])
 
-    def test_my_groups_grid_excludes_other_groups(self):
-        """
-        Check that the My Groups grid does not list groups which the user is 
-        not a member of.
-        """
+    def test_groups_mine_redirects_to_search(self):
         with session.begin():
             user = data_setup.create_user(password=u'password')
             my_group = data_setup.create_group()
             my_group.add_member(user)
-            other_group = data_setup.create_group(
-                    group_name=data_setup.unique_name(u'aardvark%s'))
         b = self.browser
         login(b, user=user.user_name, password='password')
         b.get(get_server_base() + 'groups/mine')
-        b.find_element_by_xpath('//h1[text()="My Groups"]')
-        check_group_search_results(b, present=[my_group], absent=[other_group])
+        b.find_element_by_xpath('//h1[text()="Groups"]')
+        self.assertEqual(
+            b.find_element_by_class_name('search-query').get_attribute('value'),
+            'member.user_name:%s' % user.user_name)
 
 
 class GroupCreationTest(WebDriverTestCase):
