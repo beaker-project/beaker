@@ -207,7 +207,7 @@ class Jobs(RPCRoot):
             'mine'
                 Inclusion is equivalent to including own username in 'owner'
             'whiteboard'
-                Job whiteboard
+                Job whiteboard (substring match)
             'limit'
                 Integer limit to number of jobs returned.
             'minid'
@@ -263,7 +263,7 @@ class Jobs(RPCRoot):
         if owner:
             jobs = Job.by_owner(owner, jobs)
         if whiteboard:
-            jobs = jobs.filter(Job.whiteboard == whiteboard)
+            jobs = jobs.filter(Job.whiteboard.like(u'%%%s%%' % whiteboard))
 
         jobs = Job.sanitise_jobs(jobs)
 

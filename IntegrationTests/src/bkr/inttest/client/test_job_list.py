@@ -42,6 +42,23 @@ class JobListTest(ClientTestCase):
         out = run_client(['bkr', 'job-list', '--whiteboard', 'foobar'])
         self.assert_(self.jobs[0].t_id not in out, out)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1277340
+    def test_list_jobs_by_whiteboard_substring(self):
+        with session.begin():
+            included_job = data_setup.create_completed_job(whiteboard=u'Prince of Penzance')
+            excluded_job = data_setup.create_completed_job(whiteboard=u'Princess of Persia')
+        out = run_client(['bkr', 'job-list', '--format=list', '--whiteboard=penzance'])
+        listed_job_ids = out.splitlines()
+        self.assertIn(included_job.t_id, listed_job_ids)
+        self.assertNotIn(excluded_job.t_id, listed_job_ids)
+        # This was accidental undocumented functionality supported by the 
+        # original implementation of jobs.filter. Some people are probably 
+        # relying on it.
+        out = run_client(['bkr', 'job-list', '--format=list', '--whiteboard=p%z_nce'])
+        listed_job_ids = out.splitlines()
+        self.assertIn(included_job.t_id, listed_job_ids)
+        self.assertNotIn(excluded_job.t_id, listed_job_ids)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1229938
     def test_list_jobs_by_retention_tag(self):
         with session.begin():

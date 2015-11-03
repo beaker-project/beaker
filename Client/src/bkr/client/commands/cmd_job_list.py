@@ -49,7 +49,7 @@ Options
 
 .. option:: --whiteboard <string>
 
-   Limit to jobs whose whiteboard contains <string>
+   Limit to jobs whose whiteboard contains <string>.
 
 .. option:: --mine
 
@@ -150,7 +150,8 @@ class Job_List(BeakerCommand):
         self.parser.add_option(
             "-w",
             "--whiteboard",
-            help="Jobs of a particular whiteboard"
+            metavar='STRING',
+            help='Jobs with whiteboard containing STRING',
         )
 
         self.parser.add_option(
