@@ -44,8 +44,7 @@ from bkr.server.flask_util import auth_required, convert_internal_errors, \
     BadRequest400, NotFound404, Forbidden403, Conflict409, request_wants_json, \
     read_json_request
 from flask import request, jsonify, make_response
-from bkr.server.util import xmltramp_parse_untrusted
-from bkr.server.jobxml import XmlJob
+from bkr.server.util import parse_untrusted_xml
 import cgi
 from bkr.server.job_utilities import Utility
 
@@ -336,14 +335,12 @@ class Jobs(RPCRoot):
             unknown tasks to be silently discarded (default is False)
         :type ignore_missing_tasks: bool
         """
-        # xml.sax (and thus, xmltramp) expect raw bytes, not unicode
         if isinstance(jobxml, unicode):
             jobxml = jobxml.encode('utf8')
-        xml = xmltramp_parse_untrusted(jobxml)
-        xmljob = XmlJob(xml)
-        job = self.process_xmljob(xmljob,identity.current.user,
-                ignore_missing_tasks=ignore_missing_tasks)
-        session.flush() # so that we get an id
+        xmljob = parse_untrusted_xml(jobxml)
+        job = self.process_xmljob(xmljob, identity.current.user,
+                                  ignore_missing_tasks=ignore_missing_tasks)
+        session.flush()  # so that we get an id
         return "J:%s" % job.id
 
     @identity.require(identity.not_anonymous())
@@ -363,7 +360,7 @@ class Jobs(RPCRoot):
             except InvalidRequestError:
                 flash(_(u"Invalid job id %s" % job_id))
                 redirect(".")
-            textxml = job.to_xml(clone=True).toprettyxml()
+            textxml = lxml.etree.tostring(job.to_xml(clone=True), pretty_print=True)
         elif recipeset_id:
             title = 'Clone Recipeset %s' % recipeset_id
             try:
@@ -371,7 +368,8 @@ class Jobs(RPCRoot):
             except InvalidRequestError:
                 flash(_(u"Invalid recipeset id %s" % recipeset_id))
                 redirect(".")
-            textxml = recipeset.to_xml(clone=True,from_job=False).toprettyxml()
+            textxml = lxml.etree.tostring(recipeset.to_xml(clone=True,from_job=False),
+                                          pretty_print=True)
         elif isinstance(filexml, cgi.FieldStorage):
             # Clone from file
             try:
@@ -395,8 +393,8 @@ class Jobs(RPCRoot):
                             options = {'xsd_errors': job_schema.error_log},
                             value = dict(textxml=textxml, confirmed=True),
                         )
-                xmljob = XmlJob(xmltramp_parse_untrusted(textxml))
-                job = self.process_xmljob(xmljob,identity.current.user)
+                xmljob = parse_untrusted_xml(textxml)
+                job = self.process_xmljob(xmljob, identity.current.user)
                 session.flush()
             except Exception,err:
                 session.rollback()
@@ -424,7 +422,7 @@ class Jobs(RPCRoot):
         Handles the processing of recipesets into DB entries from their xml
         """
         recipeSet = RecipeSet(ttasks=0)
-        recipeset_priority = xmlrecipeSet.get_xml_attr('priority',unicode,None) 
+        recipeset_priority = xmlrecipeSet.get('priority')
         if recipeset_priority is not None:
             try:
                 my_priority = TaskPriority.from_string(recipeset_priority)
@@ -434,13 +432,13 @@ class Jobs(RPCRoot):
             if my_priority in allowed_priorities:
                 recipeSet.priority = my_priority
             else:
-                recipeSet.priority = TaskPriority.default_priority() 
+                recipeSet.priority = TaskPriority.default_priority()
         else:
-            recipeSet.priority = TaskPriority.default_priority() 
+            recipeSet.priority = TaskPriority.default_priority()
 
-        for xmlrecipe in xmlrecipeSet.iter_recipes():
+        for xmlrecipe in xmlrecipeSet.iter('recipe'):
             recipe = self.handleRecipe(xmlrecipe, user,
-                    ignore_missing_tasks=ignore_missing_tasks)
+                                       ignore_missing_tasks=ignore_missing_tasks)
             recipe.ttasks = len(recipe.tasks)
             recipeSet.ttasks += recipe.ttasks
             recipeSet.recipes.append(recipe)
@@ -486,7 +484,7 @@ class Jobs(RPCRoot):
         submitter = user
         if user.rootpw_expired:
             raise BX(_('Your root password has expired, please change or clear it in order to submit jobs.'))
-        owner_name = xmljob.get_xml_attr('user', unicode, None)
+        owner_name = xmljob.get('user')
         if owner_name:
             owner = User.by_user_name(owner_name)
             if owner is None:
@@ -496,7 +494,7 @@ class Jobs(RPCRoot):
         else:
             owner = user
 
-        group_name =  xmljob.get_xml_attr('group', unicode, None)
+        group_name = xmljob.get('group')
         group = None
         if group_name:
             try:
@@ -505,22 +503,28 @@ class Jobs(RPCRoot):
                 raise ValueError('%s is not a valid group' % group_name)
             if group not in owner.groups:
                 raise BX(_(u'User %s is not a member of group %s' % (owner.user_name, group.group_name)))
-        job_retention = xmljob.get_xml_attr('retention_tag',unicode,None)
-        job_product = xmljob.get_xml_attr('product',unicode,None)
+        job_retention = xmljob.get('retention_tag')
+        job_product = xmljob.get('product')
         tag, product = self._process_job_tag_product(retention_tag=job_retention, product=job_product)
-        job = Job(whiteboard=unicode(xmljob.whiteboard), ttasks=0, owner=owner,
-            group=group, submitter=submitter)
+        job = Job(whiteboard=xmljob.findtext('whiteboard', default=''),
+                  ttasks=0,
+                  owner=owner,
+                  group=group,
+                  submitter=submitter,
+                  )
         job.product = product
         job.retention_tag = tag
         email_validator = validators.Email(not_empty=True)
-        for addr in set(xmljob.iter_cc()):
+        for addr in xmljob.xpath('notify/cc'):
             try:
-                job.cc.append(email_validator.to_python(addr))
+                addr = email_validator.to_python(addr.text.strip())
+                if addr not in job.cc:
+                    job.cc.append(addr)
             except Invalid, e:
                 raise BX(_('Invalid e-mail address %r in <cc/>: %s') % (addr, str(e)))
-        for xmlrecipeSet in xmljob.iter_recipeSets():
+        for xmlrecipeSet in xmljob.iter('recipeSet'):
             recipe_set = self._handle_recipe_set(xmlrecipeSet, owner,
-                    ignore_missing_tasks=ignore_missing_tasks)
+                                                 ignore_missing_tasks=ignore_missing_tasks)
             job.recipesets.append(recipe_set)
             job.ttasks += recipe_set.ttasks
 
@@ -569,79 +573,97 @@ class Jobs(RPCRoot):
     def handleRecipe(self, xmlrecipe, user, guest=False, ignore_missing_tasks=False):
         if not guest:
             recipe = MachineRecipe(ttasks=0)
-            for xmlguest in xmlrecipe.iter_guests():
+            for xmlguest in xmlrecipe.iter('guestrecipe'):
                 guestrecipe = self.handleRecipe(xmlguest, user, guest=True,
-                        ignore_missing_tasks=ignore_missing_tasks)
+                                                ignore_missing_tasks=ignore_missing_tasks)
                 recipe.guests.append(guestrecipe)
         else:
             recipe = GuestRecipe(ttasks=0)
-            recipe.guestname = xmlrecipe.guestname
-            recipe.guestargs = xmlrecipe.guestargs
-        recipe.host_requires = xmlrecipe.hostRequires()
-        recipe.distro_requires = xmlrecipe.distroRequires()
-        recipe.partitions = xmlrecipe.partitions()
+            recipe.guestname = xmlrecipe.get('guestname')
+            recipe.guestargs = xmlrecipe.get('guestargs')
+        recipe.host_requires = lxml.etree.tostring(xmlrecipe.find('hostRequires'))
+        recipe.distro_requires = lxml.etree.tostring(xmlrecipe.find('distroRequires'))
+
+        partitions = xmlrecipe.find('partitions')
+        if partitions is not None:
+            recipe.partitions = lxml.etree.tostring(partitions)
+
         try:
-            recipe.distro_tree = DistroTree.by_filter("%s" %
-                                           recipe.distro_requires)[0]
+            recipe.distro_tree = DistroTree.by_filter("%s" % recipe.distro_requires)[0]
         except IndexError:
             raise BX(_('No distro tree matches Recipe: %s') % recipe.distro_requires)
         try:
             # try evaluating the host_requires, to make sure it's valid
-            systems = XmlHost.from_string(recipe.host_requires).apply_filter(System.query)
+            XmlHost.from_string(recipe.host_requires).apply_filter(System.query)
         except StandardError, e:
             raise BX(_('Error in hostRequires: %s' % e))
-        recipe.whiteboard = xmlrecipe.whiteboard or None #'' -> NULL for DB
-        recipe.kickstart = xmlrecipe.kickstart
-        if xmlrecipe.autopick:
-            recipe.autopick_random = xmlrecipe.autopick.random
-        if xmlrecipe.watchdog:
-            recipe.panic = xmlrecipe.watchdog.panic
-        recipe.ks_meta = xmlrecipe.ks_meta
-        recipe.kernel_options = xmlrecipe.kernel_options
-        recipe.kernel_options_post = xmlrecipe.kernel_options_post
+        recipe.whiteboard = xmlrecipe.get('whiteboard')
+        recipe.kickstart = xmlrecipe.findtext('kickstart')
+
+        autopick = xmlrecipe.find('autopick')
+        if autopick is not None:
+            random = autopick.get('random', '')
+            if random.lower() in ('true', '1'):
+                recipe.autopick_random = True
+            else:
+                recipe.autopick_random = False
+        watchdog = xmlrecipe.find('watchdog')
+        if watchdog is not None:
+            recipe.panic = watchdog.get('panic', u'None')
+        recipe.ks_meta = xmlrecipe.get('ks_meta')
+        recipe.kernel_options = xmlrecipe.get('kernel_options')
+        recipe.kernel_options_post = xmlrecipe.get('kernel_options_post')
         # try parsing install options to make sure there is no syntax error
         try:
             InstallOptions.from_strings(recipe.ks_meta,
-                    recipe.kernel_options, recipe.kernel_options_post)
+                                        recipe.kernel_options, recipe.kernel_options_post)
         except Exception as e:
             raise BX(_('Error parsing ks_meta: %s' % e))
-        recipe.role = xmlrecipe.role
-        if xmlrecipe.reservesys:
-            recipe.reservation_request = RecipeReservationRequest(xmlrecipe.reservesys.duration)
+        recipe.role = xmlrecipe.get('role', u'None')
+
+        reservesys = xmlrecipe.find('reservesys')
+        if reservesys:
+            duration = reservesys.get('duration', 86400)
+            recipe.reservation_request = RecipeReservationRequest(int(duration))
+
         custom_packages = set()
-        for xmlpackage in xmlrecipe.packages():
-            package = TaskPackage.lazy_create(package='%s' % xmlpackage.name)
+        for xmlpackage in xmlrecipe.xpath('packages/package'):
+            package = TaskPackage.lazy_create(package='%s' % xmlpackage.get('name', u'None'))
             custom_packages.add(package)
-        for installPackage in xmlrecipe.installPackages():
-            package = TaskPackage.lazy_create(package='%s' % installPackage)
+        for installPackage in xmlrecipe.iter('installPackage'):
+            package = TaskPackage.lazy_create(package='%s' % installPackage.text)
             custom_packages.add(package)
         recipe.custom_packages = list(custom_packages)
-        for xmlrepo in xmlrecipe.iter_repos():
-            recipe.repos.append(RecipeRepo(name=xmlrepo.name, url=xmlrepo.url))
-        for xmlksappend in xmlrecipe.iter_ksappends():
-            recipe.ks_appends.append(RecipeKSAppend(ks_append=xmlksappend))
+        for xmlrepo in xmlrecipe.xpath('repos/repo'):
+            recipe.repos.append(
+                RecipeRepo(name=xmlrepo.get('name', u'None'), url=xmlrepo.get('url', u'None'))
+            )
+
+        for xmlksappend in xmlrecipe.xpath('ks_appends/ks_append'):
+            recipe.ks_appends.append(RecipeKSAppend(ks_append=xmlksappend.text))
         xmltasks = []
         invalid_tasks = []
-        for xmltask in xmlrecipe.iter_tasks():
-            if hasattr(xmltask, 'fetch'):
+        for xmltask in xmlrecipe.xpath('task'):
+            if xmltask.xpath('fetch'):
                 # If fetch URL is given, the task doesn't need to exist.
                 xmltasks.append(xmltask)
-            elif Task.exists_by_name(xmltask.name, valid=True):
+            elif Task.exists_by_name(xmltask.get('name'), valid=True):
                 xmltasks.append(xmltask)
             else:
-                invalid_tasks.append(xmltask.name)
+                invalid_tasks.append(xmltask.get('name', ''))
         if invalid_tasks and not ignore_missing_tasks:
             raise BX(_('Invalid task(s): %s') % ', '.join(invalid_tasks))
         for xmltask in xmltasks:
-            if hasattr(xmltask, 'fetch'):
-                recipetask = RecipeTask.from_fetch_url(xmltask.fetch.url,
-                        subdir=xmltask.fetch.subdir, name=xmltask.name)
+            fetch = xmltask.find('fetch')
+            if fetch is not None:
+                recipetask = RecipeTask.from_fetch_url(
+                    fetch.get('url'), subdir=fetch.get('subdir', u''), name=xmltask.get('name'))
             else:
-                recipetask = RecipeTask.from_task(Task.by_name(xmltask.name))
-            recipetask.role = xmltask.role
-            for xmlparam in xmltask.iter_params():
-                param = RecipeTaskParam( name=xmlparam.name, 
-                                        value=xmlparam.value)
+                recipetask = RecipeTask.from_task(Task.by_name(xmltask.get('name')))
+            recipetask.role = xmltask.get('role', u'None')
+            for xmlparam in xmltask.xpath('params/param'):
+                param = RecipeTaskParam(name=xmlparam.get('name', u'None'),
+                                        value=xmlparam.get('value', u'None'))
                 recipetask.params.append(param)
             recipe.tasks.append(recipetask)
         if not recipe.tasks:
@@ -1028,7 +1050,8 @@ def job_xml(id):
     :status 200: The job xml file was successfully generated.
     """
     job = _get_job_by_id(id)
-    response = make_response(job.to_xml().toprettyxml())
+    xmlstr = lxml.etree.tostring(job.to_xml(), pretty_print=True)
+    response = make_response(xmlstr)
     response.status_code = 200
     response.headers.add('Content-Type', 'text/xml')
     return response

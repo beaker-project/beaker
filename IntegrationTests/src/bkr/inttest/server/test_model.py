@@ -1650,7 +1650,7 @@ class RecipeTest(DatabaseTestCase):
         ])
         for i in range(3):
             data_setup.mark_recipe_running(job.recipesets[0].recipes[i], system=systems[i])
-        xml = job.recipesets[0].recipes[0].to_xml(clone=False).toxml()
+        xml = lxml.etree.tostring(job.recipesets[0].recipes[0].to_xml(clone=False))
         self.assert_('<roles>'
                 '<role value="CLIENTONE"><system value="clientone.roles-to-xml"/></role>'
                 '<role value="CLIENTTWO"><system value="clienttwo.roles-to-xml"/></role>'
@@ -1661,7 +1661,7 @@ class RecipeTest(DatabaseTestCase):
         recipe = data_setup.create_recipe()
         data_setup.create_job_for_recipes([recipe])
         data_setup.mark_recipe_complete(recipe)
-        root = lxml.etree.fromstring(recipe.to_xml(clone=False).toxml())
+        root = recipe.to_xml(clone=False)
         installation = root.find('recipeSet/recipe/installation')
         self.assertRegexpMatches(installation.get('install_started'),
                 r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$')
@@ -1675,7 +1675,7 @@ class RecipeTest(DatabaseTestCase):
         recipe = data_setup.create_recipe()
         data_setup.create_job_for_recipes([recipe])
         recipe.tasks[0].params = []
-        root = lxml.etree.fromstring(recipe.to_xml(clone=True).toxml())
+        root = recipe.to_xml(clone=True)
         task = root.find('recipeSet/recipe/task')
         self.assertEquals(len(task), 0, '<task/> should have no children')
 
@@ -1687,7 +1687,7 @@ class RecipeTest(DatabaseTestCase):
 
         host_requires = '<hostRequires force="{0}"/>'
         job.recipesets[0].recipes[0]._host_requires = host_requires.format(system.fqdn)
-        xml = job.recipesets[0].recipes[0].to_xml(clone=True).toxml()
+        xml = lxml.etree.tostring(job.recipesets[0].recipes[0].to_xml(clone=True))
         self.assertIn(host_requires.format(system.fqdn), xml)
 
     def test_recipe_reservesys_clone(self):
@@ -1702,12 +1702,12 @@ class RecipeTest(DatabaseTestCase):
             reservesys=True,
             reservesys_duration=3600)
         job = data_setup.create_job_for_recipes([recipe1, recipe2])
-        xml = job.recipesets[0].recipes[0].to_xml(clone=True).toxml()
+        xml = lxml.etree.tostring(job.recipesets[0].recipes[0].to_xml(clone=True))
         reservation_string = '<task name="/distribution/install" role="STANDALONE"/>' +  \
                              '<task name="/distribution/install" role="STANDALONE"/>' + \
                              '<reservesys duration="86400"/>'
         self.assertIn(reservation_string, xml)
-        xml = job.recipesets[0].recipes[1].to_xml(clone=True).toxml()
+        xml = lxml.etree.tostring(job.recipesets[0].recipes[1].to_xml(clone=True))
         reservation_string = '<task name="/distribution/install" role="STANDALONE"/>' +  \
                              '<task name="/distribution/install" role="STANDALONE"/>' + \
                              '<reservesys duration="3600"/>'
@@ -1921,7 +1921,7 @@ class GuestRecipeTest(DatabaseTestCase):
         guest_recipe = job.recipesets[0].recipes[0].guests[0]
         session.flush()
 
-        guestxml = guest_recipe.to_xml().toxml()
+        guestxml = lxml.etree.tostring(guest_recipe.to_xml())
         self.assert_('location="nfs://something:/somewhere"' in guestxml, guestxml)
         self.assert_('nfs_location="nfs://something:/somewhere"' in guestxml, guestxml)
         self.assert_('http_location="http://something/somewhere"' in guestxml, guestxml)
@@ -1934,8 +1934,8 @@ class GuestRecipeTest(DatabaseTestCase):
         guest_recipe_2 = job_2.recipesets[0].recipes[0].guests[0]
         session.flush()
 
-        guestxml_1 = guest_recipe_1.to_xml().toxml()
-        guestxml_2 = guest_recipe_2.to_xml().toxml()
+        guestxml_1 = lxml.etree.tostring(guest_recipe_1.to_xml())
+        guestxml_2 = lxml.etree.tostring(guest_recipe_2.to_xml())
         self.assert_(u'guestname=""' in guestxml_1, guestxml_1)
         self.assert_(u'guestname="blueguest"' in guestxml_2, guestxml_2)
 
@@ -2272,7 +2272,7 @@ class RecipeTaskTest(DatabaseTestCase):
         data_setup.mark_recipe_running(recipe)
         rt = recipe.tasks[0]
         rt.version = u'1.2-3'
-        root = lxml.etree.fromstring(rt.to_xml(clone=False).toxml())
+        root = rt.to_xml(clone=False)
         self.assertEquals(root.get('version'), u'1.2-3')
 
 class RecipeTaskResultTest(DatabaseTestCase):

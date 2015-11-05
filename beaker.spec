@@ -89,7 +89,6 @@ BuildRequires:  python-turbojson13
 BuildRequires:  python-turbojson
 %endif
 BuildRequires:  python-sqlalchemy >= 0.8
-BuildRequires:  python-xmltramp
 BuildRequires:  python-lxml
 BuildRequires:  python-ldap
 BuildRequires:  python-TurboMail >= 3.0
@@ -119,6 +118,7 @@ BuildRequires:  systemd
 %if %{with labcontroller}
 # These LC dependencies are needed in build due to tests
 BuildRequires:  python-gevent >= 1.0
+BuildRequires:  python-xmltramp
 %endif
 
 # As above, these client dependencies are needed in build because of sphinx
@@ -169,7 +169,6 @@ Requires:       python-turbojson
 Requires:       python-sqlalchemy >= 0.8
 Requires:       intltool
 Requires:       python-decorator
-Requires:       python-xmltramp
 Requires:       python-lxml
 Requires:       python-ldap
 Requires:       python-rdflib >= 3.2.0

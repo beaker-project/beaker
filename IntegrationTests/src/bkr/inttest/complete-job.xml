@@ -1,64 +1,60 @@
-<job group="somegroup" product="the_product" retention_tag="audit">
-    <notify>
-        <cc>
-            dan@example.com
-        </cc>
-        <cc>
-            ray@example.com
-        </cc>
-    </notify>
-    <whiteboard>
-        valid job
-    </whiteboard>
-    <recipeSet priority="Normal">
-        <recipe kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="">
-            <guestrecipe guestargs="" guestname="" kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="">
-                <autopick random="true"/>
-                <watchdog panic="None"/>
-                <packages/>
-                <ks_appends>
-                    <ks_append>
-<![CDATA[]]>                    </ks_append>
-                </ks_appends>
-                <repos/>
-                <distroRequires>
-                    <distro_name op="=" value="BlueShoeLinux5-5"/>
-                    <distro_virt op="=" value=""/>
-                </distroRequires>
-                <hostRequires>
-                    <system_type value="Machine"/>
-                    <hypervisor op="=" value=""/>
-                </hostRequires>
-                <partitions>
-                    <partition fs="btrfs" name="/mnt/testarea" size="18" type="part"/>
-                    <partition fs="btrfs" name="/usr/local" size="8" type="part"/>
-                </partitions>
-                <task name="/distribution/install" role="STANDALONE">
-                    <fetch subdir="install" url="git://example.com/externaltasks#master"/>
-                </task>
-            </guestrecipe>
-            <autopick random="true"/>
-            <watchdog panic="None"/>
-            <packages/>
-            <ks_appends>
-                <ks_append>
-<![CDATA[]]>                </ks_append>
-            </ks_appends>
-            <repos/>
-            <distroRequires>
-                <distro_name op="=" value="BlueShoeLinux5-5"/>
-                <distro_virt op="=" value=""/>
-            </distroRequires>
-            <hostRequires>
-                <system_type value="Machine"/>
-            </hostRequires>
-            <partitions/>
-            <task name="/distribution/install" role="STANDALONE"/>
-            <task name="/distribution/reservesys" role="STANDALONE">
-                <params>
-                    <param name="RESERVE_IF_FAIL" value="1"/>
-                </params>
-            </task>
-        </recipe>
-    </recipeSet>
+<job retention_tag="audit" group="somegroup" product="the_product">
+  <notify>
+    <cc>dan@example.com</cc>
+    <cc>ray@example.com</cc>
+  </notify>
+  <whiteboard>
+    valid job
+  </whiteboard>
+  <recipeSet priority="Normal">
+    <recipe whiteboard="" role="None" ks_meta="" kernel_options="" kernel_options_post="">
+      <guestrecipe guestname="" guestargs="" whiteboard="" role="None" ks_meta="" kernel_options="" kernel_options_post="">
+        <autopick random="true"/>
+        <watchdog panic="None"/>
+        <packages/>
+        <ks_appends>
+          <ks_append><![CDATA[
+                              ]]></ks_append>
+        </ks_appends>
+        <repos/>
+        <distroRequires>
+          <distro_name op="=" value="BlueShoeLinux5-5"/>
+          <distro_virt op="=" value=""/>
+        </distroRequires>
+        <hostRequires>
+          <system_type value="Machine"/>
+          <hypervisor op="=" value=""/>
+        </hostRequires>
+        <partitions>
+          <partition fs="btrfs" name="/mnt/testarea" size="18" type="part"/>
+          <partition fs="btrfs" name="/usr/local" size="8" type="part"/>
+        </partitions>
+        <task name="/distribution/install" role="STANDALONE">
+          <fetch url="git://example.com/externaltasks#master" subdir="install"/>
+        </task>
+      </guestrecipe>
+      <autopick random="true"/>
+      <watchdog panic="None"/>
+      <packages/>
+      <ks_appends>
+        <ks_append><![CDATA[
+                        ]]></ks_append>
+      </ks_appends>
+      <repos/>
+      <distroRequires>
+        <distro_name op="=" value="BlueShoeLinux5-5"/>
+        <distro_virt op="=" value=""/>
+      </distroRequires>
+      <hostRequires>
+        <system_type value="Machine"/>
+      </hostRequires>
+      <partitions/>
+      <task name="/distribution/install" role="STANDALONE"/>
+      <task name="/distribution/reservesys" role="STANDALONE">
+        <params>
+          <param name="RESERVE_IF_FAIL" value="1"/>
+        </params>
+      </task>
+    </recipe>
+  </recipeSet>
 </job>

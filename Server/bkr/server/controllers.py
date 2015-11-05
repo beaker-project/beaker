@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import lxml.etree
 from turbogears.database import session
 from turbogears import expose, flash, widgets, validate, error_handler, validators, paginate, url
 from turbogears import redirect, config
@@ -1105,12 +1106,8 @@ class Root(RPCRoot):
         except Exception:
             flash(_('Invalid Task: %s' % taskid))
             redirect(url('/'))
-        xml = task.to_xml()
-        if pretty:
-            xml_text = xml.toprettyxml()
-        else:
-            xml_text = xml.toxml()
-      
+        xml_text = lxml.etree.tostring(task.to_xml(), pretty_print=pretty)
+
         if to_screen: #used for testing contents of XML
             cherrypy.response.headers['Content-Disposition'] = ''
             cherrypy.response.headers['Content-Type'] = 'text/plain'

@@ -780,8 +780,8 @@ class NewJobTest(WebDriverTestCase):
         b.find_element_by_xpath('//button[text()="Submit Data"]').click()
         b.find_element_by_xpath('//button[text()="Queue"]').click()
         self.assertEquals(b.find_element_by_class_name('flash').text,
-                'Failed to import job because of: '
-                'XML entity with id file:///etc/passwd not permitted')
+                          'Failed to import job because of: '
+                          'XML entity with name &xxe; not permitted')
 
 
 class JobAttributeChangeTest(WebDriverTestCase):
@@ -1094,7 +1094,7 @@ class JobHTTPTest(DatabaseTestCase):
         response = requests.get(get_server_base() + 'jobs/%s.xml' % self.job.id)
         response.raise_for_status()
         self.assertEquals(response.status_code, 200)
-        self.assertEquals(self.job.to_xml().toprettyxml(), response.content)
+        self.assertEquals(lxml.etree.tostring(self.job.to_xml(), pretty_print=True), response.content)
 
     def test_get_junit_xml(self):
         with session.begin():

@@ -10,7 +10,6 @@ import subprocess
 import shutil
 import logging
 import rpm
-import xml.dom.minidom
 import lxml.etree
 import rpmUtils.miscutils
 from sqlalchemy import (Table, Column, ForeignKey, Integer, Unicode, Boolean,
@@ -28,8 +27,6 @@ from .identity import User
 from .distrolibrary import Arch, OSMajor
 
 log = logging.getLogger(__name__)
-
-xmldoc = xml.dom.minidom.Document()
 
 class TaskPackage(DeclarativeMappedObject):
     """
@@ -51,8 +48,8 @@ class TaskPackage(DeclarativeMappedObject):
         return self.package
 
     def to_xml(self):
-        package = xmldoc.createElement("package")
-        package.setAttribute("name", "%s" % self.package)
+        package = lxml.etree.Element("package")
+        package.set("name", "%s" % self.package)
         return package
 
 task_packages_runfor_map = Table('task_packages_runfor_map', DeclarativeMappedObject.metadata,

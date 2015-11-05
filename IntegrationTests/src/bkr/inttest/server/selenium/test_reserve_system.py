@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import lxml.etree
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, logout, \
         search_for_system, check_system_search_results
@@ -219,7 +220,7 @@ class ReserveWorkflow(WebDriverTestCase):
         job_id = b.find_element_by_xpath('//td[preceding-sibling::th/text()="Job ID"]/a').text
         with session.begin():
             job = TaskBase.get_by_t_id(job_id)
-            cloned_job_xml = job.to_xml(clone=True).toxml() # cloning re-parses hostRequires
+            cloned_job_xml = lxml.etree.tostring(job.to_xml(clone=True))  # cloning re-parses hostRequires
             self.assertIn(
                     u'<hostRequires><labcontroller op="=" value="%s"/>'
                     u'<system_type op="=" value="Machine"/></hostRequires>'
@@ -251,7 +252,7 @@ class ReserveWorkflow(WebDriverTestCase):
         job_id = b.find_element_by_xpath('//td[preceding-sibling::th/text()="Job ID"]/a').text
         with session.begin():
             job = TaskBase.get_by_t_id(job_id)
-            cloned_job_xml = job.to_xml(clone=True).toxml() # cloning re-parses hostRequires
+            cloned_job_xml = lxml.etree.tostring(job.to_xml(clone=True))  # cloning re-parses hostRequires
             self.assertIn(
                 u'<hostRequires force="%s"/>' % manual_system.fqdn,
                 cloned_job_xml)

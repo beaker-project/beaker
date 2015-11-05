@@ -5,6 +5,7 @@
 # (at your option) any later version.
 
 from datetime import datetime
+from lxml import etree
 from turbogears.database import session
 from turbogears import expose, flash, widgets, redirect, paginate, url
 from sqlalchemy import not_, and_
@@ -334,7 +335,8 @@ class Recipes(RPCRoot):
         if not recipe_id:
             raise BX(_("No recipe id provided!"))
         try:
-            recipexml = Recipe.by_id(recipe_id).to_xml().toprettyxml()
+            recipexml = etree.tostring(Recipe.by_id(recipe_id).to_xml(),
+                                       pretty_print=True)
         except InvalidRequestError:
             raise BX(_("Invalid Recipe ID %s" % recipe_id))
         return recipexml

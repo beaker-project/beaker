@@ -8,7 +8,6 @@ import xmltramp
 import pkg_resources
 from turbogears.database import session
 from bkr.server.model import TaskStatus, RecipeSet, LabController, System
-from bkr.server.jobxml import XmlJob
 from bkr.server.bexceptions import BX
 from bkr.inttest import data_setup, DatabaseTestCase
 

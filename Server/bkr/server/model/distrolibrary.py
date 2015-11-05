@@ -8,6 +8,7 @@ import re
 from datetime import datetime
 import urlparse
 import xml.dom.minidom
+import lxml.etree
 from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Integer,
         String, Unicode, DateTime, UnicodeText, Boolean)
 from sqlalchemy.sql import select, exists, and_, or_, not_
@@ -662,27 +663,27 @@ class DistroTree(DeclarativeMappedObject, ActivityMixin):
     def to_xml(self, clone=False):
         """ Return xml describing this distro """
         fields = dict(
-                      distro_name    = ['distro', 'name'],
-                      distro_arch    = ['arch','arch'],
-                      distro_variant = 'variant',
-                      distro_family  = ['distro', 'osversion','osmajor','osmajor'],
-                     )
+            distro_name=['distro', 'name'],
+            distro_arch=['arch', 'arch'],
+            distro_variant='variant',
+            distro_family=['distro', 'osversion', 'osmajor', 'osmajor'],
+        )
 
-        distro_requires = xmldoc.createElement('distroRequires')
-        xmland = xmldoc.createElement('and')
+        distro_requires = lxml.etree.Element('distroRequires')
+        xmland = lxml.etree.Element('and')
         for key in fields.keys():
-            require = xmldoc.createElement(key)
-            require.setAttribute('op', '=')
+            require = lxml.etree.Element(key)
+            require.set('op', '=')
             if isinstance(fields[key], list):
                 obj = self
                 for field in fields[key]:
                     obj = getattr(obj, field, None)
-                require.setAttribute('value', obj or '')
+                require.set('value', obj or '')
             else:
-                value_text = getattr(self,fields[key],None) or ''
-                require.setAttribute('value', str(value_text))
-            xmland.appendChild(require)
-        distro_requires.appendChild(xmland)
+                value_text = getattr(self, fields[key], None) or ''
+                require.set('value', str(value_text))
+            xmland.append(require)
+        distro_requires.append(xmland)
         return distro_requires
 
     @property

@@ -34,7 +34,7 @@ class JobCloneTest(ClientTestCase):
             '<job retention_tag="scratch">'
             '<whiteboard>foo</whiteboard>'
             '<recipeSet priority="Normal">'
-            '<recipe kernel_options="" kernel_options_post="" ks_meta="" role="STANDALONE" whiteboard="">'
+            '<recipe whiteboard="" role="STANDALONE" ks_meta="" kernel_options="" kernel_options_post="">'
             '<autopick random="false"/>'
             '<watchdog/>'
             '<packages/>'
@@ -66,7 +66,7 @@ class JobCloneTest(ClientTestCase):
 <job retention_tag="scratch">
   <whiteboard>foo</whiteboard>
   <recipeSet priority="Normal">
-    <recipe kernel_options="" kernel_options_post="" ks_meta="" role="STANDALONE" whiteboard="">
+    <recipe whiteboard="" role="STANDALONE" ks_meta="" kernel_options="" kernel_options_post="">
       <autopick random="false"/>
       <watchdog/>
       <packages/>

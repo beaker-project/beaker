@@ -12,17 +12,14 @@ import os
 import sys
 import logging
 import socket
-import datetime
-import time
 import subprocess
+import lxml.etree
 from collections import namedtuple
 from sqlalchemy import create_engine
-from sqlalchemy.orm import create_session
 from sqlalchemy.orm.exc import NoResultFound
 import turbogears
 from turbogears import config, url
 from turbogears.database import get_engine
-import socket
 import re
 import contextlib
 from bkr.server.bexceptions import DatabaseLookupError
@@ -230,23 +227,14 @@ def convert_db_lookup_error(msg):
     except NoResultFound:
         raise DatabaseLookupError(msg)
 
-def xmltramp_parse_untrusted(s):
+def parse_untrusted_xml(s):
+    """Parses untrusted XML as a string and raises a ValueError if system entities
+    are found.
+    See: http://lxml.de/FAQ.html#how-do-i-use-lxml-safely-as-a-web-service-endpoint
     """
-    Like xmltramp.parse but for untrusted (user-supplied) input.
-    """
-    from StringIO import StringIO
-    import xmltramp
-    from xml.sax import make_parser
-    from xml.sax.handler import feature_namespaces
-    class SafeSeeder(xmltramp.Seeder):
-        def resolveEntity(self, publicId, systemId):
-            raise ValueError('XML entity with id %s not permitted' % (publicId or systemId))
-        def skippedEntity(self, name):
-            raise ValueError('Undeclared XML entity &%s;' % name)
-    seeder = SafeSeeder()
-    parser = make_parser()
-    parser.setFeature(feature_namespaces, 1)
-    parser.setContentHandler(seeder)
-    parser.setEntityResolver(seeder)
-    parser.parse(StringIO(s))
-    return seeder.result
+    parser = lxml.etree.XMLParser(resolve_entities=False)
+    root = lxml.etree.fromstring(s, parser)
+    for ent in root.iter(lxml.etree.Entity):
+        # fail once we find any system entity which is not supported
+        raise ValueError('XML entity with name %s not permitted' % ent)
+    return root

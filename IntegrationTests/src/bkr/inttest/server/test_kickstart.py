@@ -4,10 +4,10 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import lxml.etree
 import re
 import unittest2 as unittest
 import pipes
-import xmltramp
 import crypt
 from bkr.server import dynamic_virt
 from bkr.server.model import session, DistroTreeRepo, LabControllerDistroTree, \
@@ -15,7 +15,6 @@ from bkr.server.model import session, DistroTreeRepo, LabControllerDistroTree, \
         Key, Key_Value_String, OSMajorInstallOptions
 from bkr.server.kickstart import template_env, generate_kickstart
 from bkr.server.jobs import Jobs
-from bkr.server.jobxml import XmlJob
 from bkr.inttest import data_setup, get_server_base, with_transaction, \
         DummyVirtManager
 from bkr.inttest.kickstart_helpers import create_rhel62, create_rhel62_server_x86_64, \
@@ -312,7 +311,7 @@ class KickstartTest(unittest.TestCase):
         """
         Pass either system, or virt=True.
         """
-        xmljob = XmlJob(xmltramp.parse(xml))
+        xmljob = lxml.etree.fromstring(xml)
         job = Jobs().process_xmljob(xmljob, self.user)
         recipe = job.recipesets[0].recipes[0]
         session.flush()
@@ -2083,16 +2082,7 @@ sed -i -e '/\[updates\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora-up
     def test_whiteboards(self):
         # This test checks that the job and recipe whiteboards are made
         # available in the test environments via the kickstart templates
-        whiteboard = '''
-            This
-            Is
-            A
-            Multi-line
-            Whiteboard
-            Entry
-            With "embedded double quotes"
-            And 'embedded single quotes'
-        '''
+        whiteboard = '''This "1"\nIs '2' '''
         recipe_xml = '''
             <job>
                 <whiteboard>Job: %s</whiteboard>
@@ -2110,31 +2100,21 @@ sed -i -e '/\[updates\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora-up
                 </recipeSet>
             </job>
             ''' % (whiteboard, whiteboard.replace('"', "&quot;"))
-        # The XML processing normalises whitespace for the job level
-        # whiteboard element, but only replaces the line breaks with
-        # spaces for the recipe level whiteboard attribute
-        # This test just checks for that currently expected behaviour
-        # without passing too much judgment on its sanity...
-        job_lines = (line.strip() for line in whiteboard.splitlines())
-        job_entry = "Job: " + " ".join(line for line in job_lines if line)
         recipe_entry = ("Recipe: " +
                         " ".join(line for line in whiteboard.splitlines()))
         recipe = self.provision_recipe(recipe_xml, self.system)
         recipe_whiteboard = recipe.whiteboard
         self.assertEqual(recipe_whiteboard, recipe_entry)
+
+        job_entry = "Job: " + whiteboard
         job_whiteboard = recipe.recipeset.job.whiteboard
         self.assertEqual(job_whiteboard, job_entry)
-        recipe_quoted = pipes.quote(recipe_entry)
-        job_quoted = pipes.quote(job_entry)
+
         ks = recipe.rendered_kickstart.kickstart
-        self.assert_('export BEAKER_JOB_WHITEBOARD=%s'
-                           % job_quoted in ks, ks)
-        self.assert_('export BEAKER_RECIPE_WHITEBOARD=%s'
-                           % recipe_quoted in ks, ks)
-        self.assert_('setenv BEAKER_JOB_WHITEBOARD %s'
-                           % job_quoted in ks, ks)
-        self.assert_('setenv BEAKER_RECIPE_WHITEBOARD %s'
-                           % recipe_quoted in ks, ks)
+        self.assertIn("""export BEAKER_JOB_WHITEBOARD='Job: This "1"\nIs '"'"'2'"'"' '""", ks)
+        self.assertIn("""export BEAKER_RECIPE_WHITEBOARD='Recipe: This "1" Is '"'"'2'"'"' '""", ks)
+        self.assertIn("""setenv BEAKER_JOB_WHITEBOARD 'Job: This "1"\nIs '"'"'2'"'"' '""", ks)
+        self.assertIn("""setenv BEAKER_RECIPE_WHITEBOARD 'Recipe: This "1" Is '"'"'2'"'"' '""", ks)
 
     def test_no_whiteboards(self):
         # This test checks that everything works as expected with no

@@ -11,6 +11,7 @@ import time
 import datetime
 import uuid
 import itertools
+import lxml.etree
 from sqlalchemy.orm.exc import NoResultFound
 import turbogears.config, turbogears.database
 from turbogears.database import session, metadata
@@ -387,10 +388,8 @@ def create_task(name=None, exclude_arch=None, exclude_osmajor=None, version=u'1.
 def create_tasks(xmljob):
     # Add all tasks that the xml specifies
     names = set()
-    for recipeset in xmljob.iter_recipeSets():
-        for recipe in recipeset.iter_recipes():
-            for task in recipe.iter_tasks():
-                names.add(task.name)
+    for task in xmljob.xpath('recipeSet/recipe/task'):
+        names.add(task.get('name'))
     for name in names:
         create_task(name=name)
 
@@ -403,7 +402,7 @@ def create_recipe(distro_tree=None, task_list=None,
     recipe.whiteboard = whiteboard
     recipe.distro_tree = distro_tree
     recipe.role = role or u'STANDALONE'
-    recipe.distro_requires = recipe.distro_tree.to_xml().toxml()
+    recipe.distro_requires = lxml.etree.tostring(recipe.distro_tree.to_xml())
 
     if kwargs.get('reservesys', False):
         duration=kwargs.get('reservesys_duration', 86400)
@@ -639,23 +638,23 @@ def playback_task_results(task, xmltask):
     # Start task
     task.start()
     # Record Result
-    task._result(TaskResult.from_string(xmltask.result), u'/', 0, u'(%s)' % xmltask.result)
+    task._result(TaskResult.from_string(xmltask.get('result')), u'/', 0, u'(%s)' % xmltask.get('result'))
     # Stop task
-    if xmltask.status == u'Aborted':
+    if xmltask.get('status') == u'Aborted':
         task.abort()
-    elif xmltask.status == u'Cancelled':
+    elif xmltask.get('status') == u'Cancelled':
         task._abort_cancel(TaskStatus.cancelled)
     else:
         task.stop()
 
 def playback_job_results(job, xmljob):
-    for i, xmlrecipeset in enumerate(xmljob.iter_recipeSets()):
-        for j, xmlrecipe in enumerate(xmlrecipeset.iter_recipes()):
-            for l, xmlguest in enumerate(xmlrecipe.iter_guests()):
-                for k, xmltask in enumerate(xmlguest.iter_tasks()):
+    for i, xmlrecipeset in enumerate(xmljob.xpath('recipeSet')):
+        for j, xmlrecipe in enumerate(xmlrecipeset.xpath('recipe')):
+            for l, xmlguest in enumerate(xmlrecipe.xpath('guestrecipe')):
+                for k, xmltask in enumerate(xmlguest.xpath('task')):
                     playback_task_results(job.recipesets[i].recipes[j].guests[l].tasks[k], xmltask)
                     job.update_status()
-            for k, xmltask in enumerate(xmlrecipe.iter_tasks()):
+            for k, xmltask in enumerate(xmlrecipe.xpath('task')):
                 playback_task_results(job.recipesets[i].recipes[j].tasks[k], xmltask)
                 job.update_status()
 

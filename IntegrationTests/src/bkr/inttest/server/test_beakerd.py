@@ -21,8 +21,7 @@ from bkr.server.model import TaskStatus, Job, System, User, \
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import not_
 from turbogears.database import session, get_engine
-import xmltramp
-from bkr.server.jobxml import XmlJob
+import lxml.etree
 from bkr.inttest import data_setup, fix_beakerd_repodata_perms, DatabaseTestCase
 from bkr.inttest.assertions import assert_datetime_within, \
         assert_durations_not_overlapping
@@ -1322,7 +1321,7 @@ class TestBeakerd(DatabaseTestCase):
                         owner=user,
                         lab_controller=lab_controller)
 
-        xmljob = XmlJob(xmltramp.parse("""
+        xmljob = lxml.etree.fromstring("""
 <job retention_tag="scratch">
 	<whiteboard>
 		
@@ -1524,7 +1523,7 @@ class TestBeakerd(DatabaseTestCase):
                             family        = distro_tree.distro.osversion.osmajor,
                             variant       = distro_tree.variant,
                             name          = distro_tree.distro.name,
-                            arch          = distro_tree.arch)))
+                            arch          = distro_tree.arch))
 
         with session.begin():
             job = controller.process_xmljob(xmljob, user)

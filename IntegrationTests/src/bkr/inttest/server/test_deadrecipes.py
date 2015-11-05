@@ -4,19 +4,15 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import xmltramp
-from time import sleep
+import lxml.etree
 import time
-from bkr.server.model import TaskStatus, Job, LabControllerDistroTree, Distro
-import sqlalchemy.orm
+from bkr.server.model import TaskStatus, Job, LabControllerDistroTree
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction, fix_beakerd_repodata_perms, \
-        DatabaseTestCase
+    DatabaseTestCase
 from bkr.server.tools import beakerd
-from bkr.server.jobxml import XmlJob
 from bkr.server.jobs import Jobs
 
-import threading
 
 class TestBeakerd(DatabaseTestCase):
 
@@ -65,10 +61,10 @@ class TestBeakerd(DatabaseTestCase):
                 </recipeSet>
             </job>
                  ''' 
-        xmljob1 = XmlJob(xmltramp.parse(job % (cls.distro_tree1.distro.name,
-                cls.distro_tree1.distro.name)))
-        xmljob2 = XmlJob(xmltramp.parse(job % (cls.distro_tree2.distro.name,
-                cls.distro_tree2.distro.name)))
+        xmljob1 = lxml.etree.fromstring(job % (cls.distro_tree1.distro.name,
+                                               cls.distro_tree1.distro.name))
+        xmljob2 = lxml.etree.fromstring(job % (cls.distro_tree2.distro.name,
+                                               cls.distro_tree2.distro.name))
 
         cls.job1 = Jobs().process_xmljob(xmljob1, user)
         cls.job2 = Jobs().process_xmljob(xmljob2, user)

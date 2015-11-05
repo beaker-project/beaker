@@ -6,26 +6,24 @@
 
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction, DatabaseTestCase
-from bkr.server.model import Job, Response, RecipeSetResponse
-import xmltramp
-from bkr.server.jobxml import XmlJob
+from bkr.server.model import RecipeSetResponse
 
 class TestAckJobXml(DatabaseTestCase):
 
     @with_transaction
     def setUp(self):
         self.job = data_setup.create_completed_job()
-    
+
     def test_ack_jobxml(self):
         _response_type = u'ack'
         with session.begin():
             rs = self.job.recipesets[0]
             rs.nacked = RecipeSetResponse(type=_response_type)
-        jobxml = XmlJob(xmltramp.parse(self.job.to_xml(clone=False).toprettyxml()))
-        for xmlrecipeSet in jobxml.iter_recipeSets():
-            response = xmlrecipeSet.get_xml_attr('response',unicode,None)
-            self.assertEqual(response,_response_type)
-    
+        jobxml = self.job.to_xml(clone=False)
+        for xmlrecipeSet in jobxml.xpath('recipeSet'):
+            response = xmlrecipeSet.get('response', None)
+            self.assertEqual(response, _response_type)
+
     def test_ack_jobxml_clone(self):
         """
         Unline test_ack_jobxml, we do _not_ want to see our response in here
@@ -34,10 +32,7 @@ class TestAckJobXml(DatabaseTestCase):
         with session.begin():
             rs = self.job.recipesets[0]
             rs.nacked = RecipeSetResponse(type=_response_type)
-        jobxml = XmlJob(xmltramp.parse(self.job.to_xml(clone=True).toprettyxml()))
-        for xmlrecipeSet in jobxml.iter_recipeSets():
-            response = xmlrecipeSet.get_xml_attr('response',unicode,None)
-            self.assertEqual(response,None)
-        
-            
-
+        jobxml = self.job.to_xml(clone=True)
+        for xmlrecipeSet in jobxml.xpath('recipeSet'):
+            response = xmlrecipeSet.get('response', None)
+            self.assertEqual(response, None)

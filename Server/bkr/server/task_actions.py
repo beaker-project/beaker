@@ -21,6 +21,7 @@ values for *type*:
 * TR: Result within a task
 """
 
+import lxml.etree
 from sqlalchemy.exc import InvalidRequestError
 from bkr.server import identity
 from bkr.server.model import (Job, RecipeSet, Recipe,
@@ -70,7 +71,7 @@ class TaskActions(RPCRoot):
                 task = self.task_types[task_type.upper()].by_id(task_id)
             except InvalidRequestError:
                 raise BX(_("Invalid %s %s" % (task_type, task_id)))
-        return task.to_xml(clone,from_job).toxml()
+        return lxml.etree.tostring(task.to_xml(clone, from_job), xml_declaration=False, encoding='UTF-8')
 
     @cherrypy.expose
     def files(self, taskid):

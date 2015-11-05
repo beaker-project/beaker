@@ -9,7 +9,7 @@ from bkr.inttest import data_setup, get_server_base
 from turbogears.database import session
 from bkr.server.model import Job
 import requests
-import xml.dom.minidom
+import lxml.etree
 from StringIO import StringIO
 
 class JobExportXML(WebDriverTestCase):
@@ -46,5 +46,5 @@ class JobExportXML(WebDriverTestCase):
             # from the view will have not since our database stores only seconds
             session.expire_all()
             job = Job.by_id(self.job_to_export.id)
-            expected = job.to_xml().toprettyxml()
+            expected = lxml.etree.tostring(job.to_xml(), pretty_print=True)
             self.assertMultiLineEqual(expected, actual)

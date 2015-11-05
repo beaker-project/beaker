@@ -32,6 +32,9 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from turbogears import url
 from turbogears.config import get
 from turbogears.database import session
+from lxml import etree
+from lxml.builder import E
+
 from bkr.common.helpers import makedirs_ignore
 from bkr.server import identity, metrics, mail, dynamic_virt
 from bkr.server.bexceptions import BX, BeakerException, StaleTaskStatusException, DatabaseLookupError
@@ -55,8 +58,8 @@ log = logging.getLogger(__name__)
 xmldoc = xml.dom.minidom.Document()
 
 def node(element, value):
-    node = xmldoc.createElement(element)
-    node.appendChild(xmldoc.createTextNode(value))
+    node = etree.Element(element)
+    node.text = value
     return node
 
 class RecipeActivity(Activity):
@@ -895,7 +898,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
             recipeSet = RecipeSet(ttasks=2)
             recipe = MachineRecipe(ttasks=2)
             # Inlcude the XML definition so that cloning this job will act as expected.
-            recipe.distro_requires = distro_tree.to_xml().toxml()
+            recipe.distro_requires = etree.tostring(distro_tree.to_xml())
             recipe.distro_tree = distro_tree
             # Don't report panic's for reserve workflow.
             recipe.panic = 'ignore'
@@ -984,7 +987,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
             recipe.whiteboard = kw.get('whiteboard')
 
         # Include the XML definition so that cloning this job will act as expected.
-        recipe.distro_requires = distro_tree.to_xml().toxml()
+        recipe.distro_requires = etree.tostring(distro_tree.to_xml())
         recipe.distro_tree = distro_tree
         system = kw.get('system')
         # Some extra sanity checks, to help out the user
@@ -1003,7 +1006,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         recipeSet.recipes.append(recipe)
         job.recipesets.append(recipeSet)
         job.ttasks += recipeSet.ttasks
-        job_xml = job.to_xml(clone=True).toxml()
+        job_xml = etree.tostring(job.to_xml(clone=True))
         # We have the XML now, so if dry run, roll back
         if dryrun:
             session.rollback()
@@ -1222,30 +1225,30 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         span.append(content)
         return span
 
-    def _create_job_elem(self,clone=False, *args, **kw):
-        job = xmldoc.createElement("job")
+    def _create_job_elem(self, clone=False, *args, **kw):
+        job = etree.Element("job")
         if not clone:
-            job.setAttribute("id", "%s" % self.id)
-            job.setAttribute("owner", "%s" % self.owner.email_address)
-            job.setAttribute("result", "%s" % self.result)
-            job.setAttribute("status", "%s" % self.status)
+            job.set("id", "%s" % self.id)
+            job.set("owner", "%s" % self.owner.email_address)
+            job.set("result", "%s" % self.result)
+            job.set("status", "%s" % self.status)
         if self.cc:
-            notify = xmldoc.createElement('notify')
+            notify = etree.Element('notify')
             for email_address in self.cc:
-                notify.appendChild(node('cc', email_address))
-            job.appendChild(notify)
-        job.setAttribute("retention_tag", "%s" % self.retention_tag.tag)
+                notify.append(node('cc', email_address))
+            job.append(notify)
+        job.set("retention_tag", "%s" % self.retention_tag.tag)
         if self.group:
-            job.setAttribute("group", "%s" % self.group.group_name)
+            job.set("group", "%s" % self.group.group_name)
         if self.product:
-            job.setAttribute("product", "%s" % self.product.name)
-        job.appendChild(node("whiteboard", self.whiteboard or ''))
+            job.set("product", "%s" % self.product.name)
+        job.append(node("whiteboard", self.whiteboard or ''))
         return job
 
     def to_xml(self, clone=False, *args, **kw):
         job = self._create_job_elem(clone)
         for rs in self.recipesets:
-            job.appendChild(rs.to_xml(clone))
+            job.append(rs.to_xml(clone))
         return job
 
     def cancel(self, msg=None):
@@ -1766,23 +1769,23 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
     owner = property(owner)
 
     def to_xml(self, clone=False, from_job=True, *args, **kw):
-        recipeSet = xmldoc.createElement("recipeSet")
-        recipeSet.setAttribute('priority', unicode(self.priority))
+        recipeSet = etree.Element("recipeSet")
+        recipeSet.set('priority', unicode(self.priority))
         return_node = recipeSet
 
         if not clone:
             response = self.get_response()
             if response:
-                recipeSet.setAttribute('response','%s' % str(response))
+                recipeSet.set('response','%s' % str(response))
 
         if not clone:
-            recipeSet.setAttribute("id", "%s" % self.id)
+            recipeSet.set("id", "%s" % self.id)
 
         for r in self.machine_recipes:
-            recipeSet.appendChild(r.to_xml(clone, from_recipeset=True))
+            recipeSet.append(r.to_xml(clone, from_recipeset=True))
         if not from_job:
             job = self.job._create_job_elem(clone)
-            job.appendChild(recipeSet)
+            job.append(recipeSet)
             return_node = job
         return return_node
 
@@ -2165,110 +2168,98 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
 
     def to_xml(self, recipe, clone=False, from_recipeset=False, from_machine=False):
         if not clone:
-            recipe.setAttribute("id", "%s" % self.id)
-            recipe.setAttribute("job_id", "%s" % self.recipeset.job_id)
-            recipe.setAttribute("recipe_set_id", "%s" % self.recipe_set_id)
-        autopick = xmldoc.createElement("autopick")
-        autopick.setAttribute("random", "%s" % unicode(self.autopick_random).lower())
-        recipe.appendChild(autopick)
-        recipe.setAttribute("whiteboard", "%s" % self.whiteboard and self.whiteboard or '')
-        recipe.setAttribute("role", "%s" % self.role and self.role or 'RECIPE_MEMBERS')
+            recipe.set("id", "%s" % self.id)
+            recipe.set("job_id", "%s" % self.recipeset.job_id)
+            recipe.set("recipe_set_id", "%s" % self.recipe_set_id)
+        autopick = etree.Element("autopick")
+        autopick.set("random", "%s" % unicode(self.autopick_random).lower())
+        recipe.append(autopick)
+        recipe.set("whiteboard", "%s" % self.whiteboard and self.whiteboard or '')
+        recipe.set("role", "%s" % self.role and self.role or 'RECIPE_MEMBERS')
         if self.kickstart:
-            kickstart = xmldoc.createElement("kickstart")
-            text = xmldoc.createCDATASection('%s' % self.kickstart)
-            kickstart.appendChild(text)
-            recipe.appendChild(kickstart)
+            kickstart = etree.Element("kickstart")
+            kickstart.text = etree.CDATA('%s' % self.kickstart)
+            recipe.append(kickstart)
         if self.rendered_kickstart and not clone:
-            recipe.setAttribute('kickstart_url', self.rendered_kickstart.link)
-        recipe.setAttribute("ks_meta", "%s" % self.ks_meta and self.ks_meta or '')
-        recipe.setAttribute("kernel_options", "%s" % self.kernel_options and self.kernel_options or '')
-        recipe.setAttribute("kernel_options_post", "%s" % self.kernel_options_post and self.kernel_options_post or '')
+            recipe.set('kickstart_url', self.rendered_kickstart.link)
+        recipe.set("ks_meta", "%s" % self.ks_meta and self.ks_meta or '')
+        recipe.set("kernel_options", "%s" % self.kernel_options and self.kernel_options or '')
+        recipe.set("kernel_options_post", "%s" % self.kernel_options_post and self.kernel_options_post or '')
         if self.duration and not clone:
-            recipe.setAttribute("duration", "%s" % self.duration)
+            recipe.set("duration", "%s" % self.duration)
         if self.result and not clone:
-            recipe.setAttribute("result", "%s" % self.result)
+            recipe.set("result", "%s" % self.result)
         if self.status and not clone:
-            recipe.setAttribute("status", "%s" % self.status)
+            recipe.set("status", "%s" % self.status)
         if self.distro_tree and not clone:
-            recipe.setAttribute("distro", "%s" % self.distro_tree.distro.name)
-            recipe.setAttribute("arch", "%s" % self.distro_tree.arch)
-            recipe.setAttribute("family", "%s" % self.distro_tree.distro.osversion.osmajor)
-            recipe.setAttribute("variant", "%s" % self.distro_tree.variant)
-        watchdog = xmldoc.createElement("watchdog")
+            recipe.set("distro", "%s" % self.distro_tree.distro.name)
+            recipe.set("arch", "%s" % self.distro_tree.arch)
+            recipe.set("family", "%s" % self.distro_tree.distro.osversion.osmajor)
+            recipe.set("variant", "%s" % self.distro_tree.variant)
+        watchdog = etree.Element("watchdog")
         if self.panic:
-            watchdog.setAttribute("panic", "%s" % self.panic)
-        recipe.appendChild(watchdog)
+            watchdog.set("panic", "%s" % self.panic)
+        recipe.append(watchdog)
         if self.resource and self.resource.fqdn and not clone:
-            recipe.setAttribute("system", "%s" % self.resource.fqdn)
+            recipe.set("system", "%s" % self.resource.fqdn)
         if not clone:
-            installation = xmldoc.createElement('installation')
+            installation = etree.Element('installation')
             if self.resource:
                 if self.resource.install_started:
-                    installation.setAttribute('install_started',
+                    installation.set('install_started',
                             self.resource.install_started.strftime('%Y-%m-%d %H:%M:%S'))
                 if self.resource.install_finished:
-                    installation.setAttribute('install_finished',
+                    installation.set('install_finished',
                             self.resource.install_finished.strftime('%Y-%m-%d %H:%M:%S'))
                 if self.resource.postinstall_finished:
-                    installation.setAttribute('postinstall_finished',
+                    installation.set('postinstall_finished',
                             self.resource.postinstall_finished.strftime('%Y-%m-%d %H:%M:%S'))
-            recipe.appendChild(installation)
-        packages = xmldoc.createElement("packages")
+            recipe.append(installation)
+        packages = etree.Element("packages")
         if self.custom_packages:
             for package in self.custom_packages:
-                packages.appendChild(package.to_xml())
-        recipe.appendChild(packages)
+                packages.append(package.to_xml())
+        recipe.append(packages)
 
-        ks_appends = xmldoc.createElement("ks_appends")
+        ks_appends = etree.Element("ks_appends")
         if self.ks_appends:
             for ks_append in self.ks_appends:
-                ks_appends.appendChild(ks_append.to_xml())
-        recipe.appendChild(ks_appends)
+                ks_appends.append(ks_append.to_xml())
+        recipe.append(ks_appends)
 
         if not clone and not self.is_queued():
-            roles = xmldoc.createElement("roles")
+            roles = etree.Element("roles")
             for role in self.roles_to_xml():
-                roles.appendChild(role)
-            recipe.appendChild(roles)
-        repos = xmldoc.createElement("repos")
+                roles.append(role)
+            recipe.append(roles)
+        repos = etree.Element("repos")
         for repo in self.repos:
-            repos.appendChild(repo.to_xml())
-        recipe.appendChild(repos)
-        drs = xml.dom.minidom.parseString(self.distro_requires)
-        hrs = xml.dom.minidom.parseString(self.host_requires)
-        for dr in drs.getElementsByTagName("distroRequires"):
-            recipe.appendChild(dr)
-        hostRequires = xmldoc.createElement("hostRequires")
-        for hr in hrs.getElementsByTagName("hostRequires"):
-            if hr.getAttribute('force'):
-                hostRequires.setAttribute("force", "%s" % hr.getAttribute('force'))
-            for child in hr.childNodes[:]:
-                hostRequires.appendChild(child)
-        recipe.appendChild(hostRequires)
-        prs = xml.dom.minidom.parseString(self.partitions)
-        partitions = xmldoc.createElement("partitions")
-        for pr in prs.getElementsByTagName("partitions"):
-            for child in pr.childNodes[:]:
-                partitions.appendChild(child)
-        recipe.appendChild(partitions)
+            repos.append(repo.to_xml())
+        recipe.append(repos)
+        drs = etree.XML(self.distro_requires)
+        hrs = etree.XML(self.host_requires)
+        prs = etree.XML(self.partitions)
+        recipe.append(drs)
+        recipe.append(hrs)
+        recipe.append(prs)
         for t in self.tasks:
-            recipe.appendChild(t.to_xml(clone))
+            recipe.append(t.to_xml(clone))
         if self.reservation_request:
-            reservesys = xmldoc.createElement("reservesys")
-            reservesys.setAttribute('duration', unicode(self.reservation_request.duration))
-            recipe.appendChild(reservesys)
+            reservesys = etree.Element("reservesys")
+            reservesys.set('duration', unicode(self.reservation_request.duration))
+            recipe.append(reservesys)
         if not from_recipeset and not from_machine:
             recipe = self._add_to_job_element(recipe, clone)
         return recipe
 
     def _add_to_job_element(self, recipe, clone):
-        recipeSet = xmldoc.createElement("recipeSet")
-        recipeSet.appendChild(recipe)
-        job = xmldoc.createElement("job")
+        recipeSet = etree.Element("recipeSet")
+        recipeSet.append(recipe)
+        job = etree.Element("job")
         if not clone:
-            job.setAttribute("owner", "%s" % self.recipeset.job.owner.email_address)
-        job.appendChild(node("whiteboard", self.recipeset.job.whiteboard or ''))
-        job.appendChild(recipeSet)
+            job.set("owner", "%s" % self.recipeset.job.owner.email_address)
+        job.append(node("whiteboard", self.recipeset.job.whiteboard or ''))
+        job.append(recipeSet)
         return job
 
     def _get_duration(self):
@@ -2297,40 +2288,38 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
 
     arch = property(_get_arch)
 
-    def _get_host_requires(self):
+    @property
+    def host_requires(self):
         try:
-            hrs = xml.dom.minidom.parseString(self._host_requires).documentElement
-        except (TypeError, xml.parsers.expat.ExpatError):
-            hrs = xmldoc.createElement('hostRequires')
+            hrs = etree.fromstring(self._host_requires)
+        except ValueError:
+            hrs = etree.Element('hostRequires')
 
         # If no system_type is specified then add defaults
-        if not hrs.getElementsByTagName('system_type') and not hrs.getAttribute('force'):
-            system_type = xmldoc.createElement('system_type')
-            system_type.setAttribute('value', unicode(self.systemtype))
-            hrs.appendChild(system_type)
+        if not hrs.findall('system_type') and not hrs.get('force'):
+            system_type = etree.Element('system_type')
+            system_type.set('value', unicode(self.systemtype))
+            hrs.append(system_type)
 
-        return hrs.toxml()
+        return etree.tostring(hrs)
 
-    def _set_host_requires(self, value):
+    @host_requires.setter
+    def host_requires(self, value):
         self._host_requires = value
 
-    host_requires = property(_get_host_requires, _set_host_requires)
-
-    def _get_partitions(self):
+    @property
+    def partitions(self):
         """ get _partitions """
         try:
-            prs = xml.dom.minidom.parseString(self._partitions)
-        except TypeError:
-            prs = xmldoc.createElement("partitions")
-        except xml.parsers.expat.ExpatError:
-            prs = xmldoc.createElement("partitions")
-        return prs.toxml()
+            prs = etree.fromstring(self._partitions)
+        except ValueError:
+            prs = etree.Element("partitions")
+        return etree.tostring(prs)
 
-    def _set_partitions(self, value):
+    @partitions.setter
+    def partitions(self, value):
         """ set _partitions """
         self._partitions = value
-
-    partitions = property(_get_partitions, _set_partitions)
 
     def _partitionsKSMeta(self):
         """ Parse partitions xml into ks_meta variable which cobbler will understand """
@@ -2749,15 +2738,7 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         return result
 
     def roles_to_xml(self):
-        for key, recipes in sorted(self.peer_roles().iteritems()):
-            role = xmldoc.createElement("role")
-            role.setAttribute("value", "%s" % key)
-            for recipe in recipes:
-                if recipe.resource:
-                    system = xmldoc.createElement("system")
-                    system.setAttribute("value", "%s" % recipe.resource.fqdn)
-                    role.appendChild(system)
-            yield(role)
+        return _roles_to_xml(self)
 
     @property
     def first_task(self):
@@ -2802,6 +2783,19 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             data['can_update_reservation_request'] = False
         return data
 
+
+def _roles_to_xml(recipe):
+    for key, recipes in sorted(recipe.peer_roles().iteritems()):
+        role = etree.Element("role")
+        role.set("value", "%s" % key)
+        for r in recipes:
+            if r.resource:
+                system = etree.Element("system")
+                system.set("value", "%s" % r.resource.fqdn)
+                role.append(system)
+        yield(role)
+
+
 class GuestRecipe(Recipe):
 
     __tablename__ = 'guest_recipe'
@@ -2816,39 +2810,37 @@ class GuestRecipe(Recipe):
     systemtype = 'Virtual'
 
     def to_xml(self, clone=False, from_recipeset=False, from_machine=False):
-        recipe = xmldoc.createElement("guestrecipe")
-        recipe.setAttribute("guestname", "%s" % (self.guestname or ""))
-        recipe.setAttribute("guestargs", "%s" % self.guestargs)
+        recipe = etree.Element("guestrecipe")
+        recipe.set("guestname", "%s" % (self.guestname or ""))
+        recipe.set("guestargs", "%s" % self.guestargs)
         if self.resource and self.resource.mac_address and not clone:
-            recipe.setAttribute("mac_address", "%s" % self.resource.mac_address)
+            recipe.set("mac_address", "%s" % self.resource.mac_address)
         if self.distro_tree and self.recipeset.lab_controller and not clone:
             location = self.distro_tree.url_in_lab(self.recipeset.lab_controller)
             if location:
-                recipe.setAttribute("location", location)
+                recipe.set("location", location)
             for lca in self.distro_tree.lab_controller_assocs:
                 if lca.lab_controller == self.recipeset.lab_controller:
                     scheme = urlparse.urlparse(lca.url).scheme
                     attr = '%s_location' % re.sub(r'[^a-z0-9]+', '_', scheme.lower())
-                    recipe.setAttribute(attr, lca.url)
+                    recipe.set(attr, lca.url)
 
         return Recipe.to_xml(self, recipe, clone, from_recipeset, from_machine)
 
     def _add_to_job_element(self, guestrecipe, clone):
-        recipe = xmldoc.createElement('recipe')
+        recipe = etree.Element('recipe')
         if self.resource and not clone:
-            recipe.setAttribute('system', '%s' % self.hostrecipe.resource.fqdn)
-        recipe.appendChild(guestrecipe)
+            recipe.set('system', '%s' % self.hostrecipe.resource.fqdn)
+        recipe.append(guestrecipe)
         job = super(GuestRecipe, self)._add_to_job_element(recipe, clone)
         return job
 
     def _get_distro_requires(self):
         try:
-            drs = xml.dom.minidom.parseString(self._distro_requires)
+            drs = etree.fromstring(self._distro_requires)
         except TypeError:
-            drs = xmldoc.createElement("distroRequires")
-        except xml.parsers.expat.ExpatError:
-            drs = xmldoc.createElement("distroRequires")
-        return drs.toxml()
+            drs = etree.Element("distroRequires")
+        return etree.tostring(drs)
 
     def _set_distro_requires(self, value):
         self._distro_requires = value
@@ -2880,9 +2872,9 @@ class MachineRecipe(Recipe):
         return data
 
     def to_xml(self, clone=False, from_recipeset=False):
-        recipe = xmldoc.createElement("recipe")
+        recipe = etree.Element("recipe")
         for guest in self.guests:
-            recipe.appendChild(guest.to_xml(clone, from_machine=True))
+            recipe.append(guest.to_xml(clone, from_machine=True))
         return Recipe.to_xml(self, recipe, clone, from_recipeset)
 
     def check_virtualisability(self):
@@ -3134,45 +3126,45 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
         return recipe_task_logs
 
     def to_xml(self, clone=False, *args, **kw):
-        task = xmldoc.createElement("task")
-        task.setAttribute("name", "%s" % self.name)
-        task.setAttribute("role", "%s" % self.role and self.role or 'STANDALONE')
+        task = etree.Element("task")
+        task.set("name", "%s" % self.name)
+        task.set("role", "%s" % self.role and self.role or 'STANDALONE')
         if not clone:
             if self.version is not None:
-                task.setAttribute('version', self.version)
-            task.setAttribute("id", "%s" % self.id)
-            task.setAttribute("result", "%s" % self.result)
-            task.setAttribute("status", "%s" % self.status)
+                task.set('version', self.version)
+            task.set("id", "%s" % self.id)
+            task.set("result", "%s" % self.result)
+            task.set("status", "%s" % self.status)
             if self.task:
-                task.setAttribute("avg_time", "%s" % self.task.avg_time)
-                rpm = xmldoc.createElement("rpm")
+                task.set("avg_time", "%s" % self.task.avg_time)
+                rpm = etree.Element("rpm")
                 name = self.task.rpm[:self.task.rpm.find('-%s' % self.task.version)]
-                rpm.setAttribute("name", name)
-                rpm.setAttribute("path", "%s" % self.task.path)
-                task.appendChild(rpm)
+                rpm.set("name", name)
+                rpm.set("path", "%s" % self.task.path)
+                task.append(rpm)
             if self.duration:
-                task.setAttribute("duration", "%s" % self.duration)
+                task.set("duration", "%s" % self.duration)
         if self.fetch_url:
-            fetch = xmldoc.createElement('fetch')
-            fetch.setAttribute('url', self.fetch_url)
+            fetch = etree.Element('fetch')
+            fetch.set('url', self.fetch_url)
             if self.fetch_subdir:
-                fetch.setAttribute('subdir', self.fetch_subdir)
-            task.appendChild(fetch)
+                fetch.set('subdir', self.fetch_subdir)
+            task.append(fetch)
         if not clone and not self.is_queued():
-            roles = xmldoc.createElement("roles")
+            roles = etree.Element("roles")
             for role in self.roles_to_xml():
-                roles.appendChild(role)
-            task.appendChild(roles)
+                roles.append(role)
+            task.append(roles)
         if self.params:
-            params = xmldoc.createElement("params")
+            params = etree.Element("params")
             for p in self.params:
-                params.appendChild(p.to_xml())
-            task.appendChild(params)
+                params.append(p.to_xml())
+            task.append(params)
         if self.results and not clone:
-            results = xmldoc.createElement("results")
+            results = etree.Element("results")
             for result in self.results:
-                results.appendChild(result.to_xml())
-            task.appendChild(results)
+                results.append(result.to_xml())
+            task.append(results)
         return task
 
     def _get_duration(self):
@@ -3356,12 +3348,16 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
         session.flush()
         return recipeTaskResult.id
 
+    @property
+    def resource(self):
+        return self.recipe.resource
+
     def task_info(self):
         """
         Method for exporting Task status for TaskWatcher
         """
-        if self.recipe.resource:
-            worker = {'name': self.recipe.resource.fqdn}
+        if self.resource:
+            worker = {'name': self.resource.fqdn}
         else:
             worker = None
         return dict(
@@ -3377,7 +3373,7 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
 
     def no_value(self):
         return None
-   
+
     score = property(no_value)
 
     def peer_roles(self):
@@ -3398,15 +3394,7 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
         return result
 
     def roles_to_xml(self):
-        for key, recipetasks in sorted(self.peer_roles().iteritems()):
-            role = xmldoc.createElement("role")
-            role.setAttribute("value", "%s" % key)
-            for recipetask in recipetasks:
-                if recipetask.recipe.resource:
-                    system = xmldoc.createElement("system")
-                    system.setAttribute("value", "%s" % recipetask.recipe.resource.fqdn)
-                    role.appendChild(system)
-            yield(role)
+        return _roles_to_xml(self)
 
     def can_stop(self, user=None):
         """Returns True iff the given user can stop this recipe task"""
@@ -3433,9 +3421,9 @@ class RecipeTaskParam(DeclarativeMappedObject):
         self.value = value
 
     def to_xml(self):
-        param = xmldoc.createElement("param")
-        param.setAttribute("name", "%s" % self.name)
-        param.setAttribute("value", "%s" % self.value)
+        param = etree.Element("param")
+        param.set("name", "%s" % self.name)
+        param.set("value", "%s" % self.value)
         return param
 
 
@@ -3457,9 +3445,9 @@ class RecipeRepo(DeclarativeMappedObject):
         self.url = url
 
     def to_xml(self):
-        repo = xmldoc.createElement("repo")
-        repo.setAttribute("name", "%s" % self.name)
-        repo.setAttribute("url", "%s" % self.url)
+        repo = etree.Element("repo")
+        repo.set("name", "%s" % self.name)
+        repo.set("url", "%s" % self.url)
         return repo
 
 
@@ -3479,9 +3467,8 @@ class RecipeKSAppend(DeclarativeMappedObject):
         self.ks_append = ks_append
 
     def to_xml(self):
-        ks_append = xmldoc.createElement("ks_append")
-        text = xmldoc.createCDATASection('%s' % self.ks_append)
-        ks_append.appendChild(text)
+        ks_append = etree.Element("ks_append")
+        ks_append.text = etree.CDATA('%s' % self.ks_append)
         return ks_append
 
     def __repr__(self):
@@ -3598,14 +3585,13 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
         """
         Return result in xml
         """
-        result = xmldoc.createElement("result")
-        result.setAttribute("id", "%s" % self.id)
-        result.setAttribute("path", "%s" % self.path)
-        result.setAttribute("result", "%s" % self.result)
-        result.setAttribute("score", "%s" % self.score)
-        result.appendChild(xmldoc.createTextNode("%s" % self.log))
         #FIXME Append any binary logs as URI's
-        return result
+        return E.result(
+            unicode(self.log),
+            id=unicode(self.id),
+            path=unicode(self.path),
+            score=unicode(self.score)
+        )
 
     @property
     def all_logs(self):

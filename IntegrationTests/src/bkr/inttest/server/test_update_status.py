@@ -5,14 +5,13 @@
 # (at your option) any later version.
 
 from threading import Thread, Event
-import xmltramp
 import pkg_resources
+import lxml.etree
 from turbogears.database import session
-from bkr.server.jobxml import XmlJob
-from bkr.server.bexceptions import BX, StaleTaskStatusException
+from bkr.server.bexceptions import StaleTaskStatusException
 from bkr.inttest import data_setup, fix_beakerd_repodata_perms, DatabaseTestCase
-from bkr.server.model import TaskStatus, TaskResult, Watchdog, RecipeSet, Distro, \
-        Job, Recipe, System, SystemResource, RecipeTaskResult, Task
+from bkr.server.model import TaskStatus, TaskResult, Watchdog, RecipeSet, \
+    Job, Recipe, System, SystemResource, Task
 from bkr.server.tools import beakerd
 
 def watchdogs_for_job(job):
@@ -35,7 +34,7 @@ class TestUpdateStatus(DatabaseTestCase):
         session.commit()
 
     def test_abort_recipe_bubbles_status_to_job(self):
-        xmljob = XmlJob(xmltramp.parse('''
+        xmljob = lxml.etree.fromstring('''
             <job>
                 <whiteboard>job </whiteboard>
                 <recipeSet>
@@ -61,7 +60,7 @@ class TestUpdateStatus(DatabaseTestCase):
                     </recipe>
                 </recipeSet>
             </job>
-            '''))
+            ''')
         job = self.controller.process_xmljob(xmljob, self.user)
         session.flush()
         for recipeset in job.recipesets:
@@ -120,11 +119,11 @@ class TestUpdateStatus(DatabaseTestCase):
 
     def test_update_status_can_be_roundtripped_35508(self):
         complete_job_xml = pkg_resources.resource_string('bkr.inttest', 'job_35508.xml')
-        xmljob = XmlJob(xmltramp.parse(complete_job_xml))
+        xmljob = lxml.etree.fromstring(complete_job_xml)
 
         data_setup.create_tasks(xmljob)
         session.flush()
-        
+
         # Import the job xml
         job = self.controller.process_xmljob(xmljob, self.user)
         session.flush()
@@ -139,32 +138,32 @@ class TestUpdateStatus(DatabaseTestCase):
         # Play back the original jobs results and status
         data_setup.playback_job_results(job, xmljob)
         session.flush()
-        
+
         # Verify that the original status and results match
-        self.assertEquals(TaskStatus.from_string(xmljob.wrappedEl('status')), job.status)
-        self.assertEquals(TaskResult.from_string(xmljob.wrappedEl('result')), job.result)
-        for i, recipeset in enumerate(xmljob.iter_recipeSets()):
-            for j, recipe in enumerate(recipeset.iter_recipes()):
-                self.assertEquals(TaskStatus.from_string(recipe.wrappedEl('status')),
-                        job.recipesets[i].recipes[j].status)
-                self.assertEquals(TaskResult.from_string(recipe.wrappedEl('result')),
-                        job.recipesets[i].recipes[j].result)
-                for k, task in enumerate(recipe.iter_tasks()):
-                    self.assertEquals(TaskStatus.from_string(task.status),
-                            job.recipesets[i].recipes[j].tasks[k].status)
-                    self.assertEquals(TaskResult.from_string(task.result),
-                            job.recipesets[i].recipes[j].tasks[k].result)
+        self.assertEquals(TaskStatus.from_string(xmljob.get('status')), job.status)
+        self.assertEquals(TaskResult.from_string(xmljob.get('result')), job.result)
+        for i, recipeset in enumerate(xmljob.xpath('recipeSet')):
+            for j, recipe in enumerate(recipeset.xpath('recipe')):
+                self.assertEquals(TaskStatus.from_string(recipe.get('status')),
+                                  job.recipesets[i].recipes[j].status)
+                self.assertEquals(TaskResult.from_string(recipe.get('result')),
+                                  job.recipesets[i].recipes[j].result)
+                for k, task in enumerate(recipe.xpath('task')):
+                    self.assertEquals(TaskStatus.from_string(task.get('status')),
+                                      job.recipesets[i].recipes[j].tasks[k].status)
+                    self.assertEquals(TaskResult.from_string(task.get('result')),
+                                      job.recipesets[i].recipes[j].tasks[k].result)
 
         # No watchdog's should exist when the job is complete
         self.assertEquals(len(watchdogs_for_job(job)), 0)
 
     def test_update_status_can_be_roundtripped_40214(self):
         complete_job_xml = pkg_resources.resource_string('bkr.inttest', 'job_40214.xml')
-        xmljob = XmlJob(xmltramp.parse(complete_job_xml))
+        xmljob = lxml.etree.fromstring(complete_job_xml)
 
         data_setup.create_tasks(xmljob)
         session.flush()
-        
+
         # Import the job xml
         job = self.controller.process_xmljob(xmljob, self.user)
         session.flush()
@@ -173,27 +172,27 @@ class TestUpdateStatus(DatabaseTestCase):
         data_setup.mark_job_waiting(job)
         session.flush()
 
-        # watchdog's should exist 
+        # watchdog's should exist
         self.assertNotEqual(len(watchdogs_for_job(job)), 0)
 
         # Play back the original jobs results and status
         data_setup.playback_job_results(job, xmljob)
         session.flush()
-        
+
         # Verify that the original status and results match
-        self.assertEquals(TaskStatus.from_string(xmljob.wrappedEl('status')), job.status)
-        self.assertEquals(TaskResult.from_string(xmljob.wrappedEl('result')), job.result)
-        for i, recipeset in enumerate(xmljob.iter_recipeSets()):
-            for j, recipe in enumerate(recipeset.iter_recipes()):
-                self.assertEquals(TaskStatus.from_string(recipe.wrappedEl('status')),
-                        job.recipesets[i].recipes[j].status)
-                self.assertEquals(TaskResult.from_string(recipe.wrappedEl('result')),
-                        job.recipesets[i].recipes[j].result)
-                for k, task in enumerate(recipe.iter_tasks()):
-                    self.assertEquals(TaskStatus.from_string(task.status),
-                            job.recipesets[i].recipes[j].tasks[k].status)
-                    self.assertEquals(TaskResult.from_string(task.result),
-                            job.recipesets[i].recipes[j].tasks[k].result)
+        self.assertEquals(TaskStatus.from_string(xmljob.get('status')), job.status)
+        self.assertEquals(TaskResult.from_string(xmljob.get('result')), job.result)
+        for i, recipeset in enumerate(xmljob.xpath('recipeSet')):
+            for j, recipe in enumerate(recipeset.xpath('recipes')):
+                self.assertEquals(TaskStatus.from_string(recipe.get('status')),
+                                  job.recipesets[i].recipes[j].status)
+                self.assertEquals(TaskResult.from_string(recipe.get('result')),
+                                  job.recipesets[i].recipes[j].result)
+                for k, task in enumerate(recipe.xpath('task')):
+                    self.assertEquals(TaskStatus.from_string(task.get('status')),
+                                      job.recipesets[i].recipes[j].tasks[k].status)
+                    self.assertEquals(TaskResult.from_string(task.get('result')),
+                                      job.recipesets[i].recipes[j].tasks[k].result)
 
         # No watchdog's should exist when the job is complete
         self.assertEquals(len(watchdogs_for_job(job)), 0)

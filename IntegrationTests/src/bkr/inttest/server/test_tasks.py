@@ -4,11 +4,8 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import xmltramp
-import pkg_resources
+import lxml.etree
 from turbogears.database import session
-from bkr.server.model import RecipeSet
-from bkr.server.jobxml import XmlJob
 from bkr.server.bexceptions import BX
 from bkr.inttest import data_setup, DatabaseTestCase
 
@@ -21,7 +18,7 @@ class TestTasks(DatabaseTestCase):
         self.task = data_setup.create_task(name=u'/fake/task/here')
         distro_tree = data_setup.create_distro_tree()
         self.user = data_setup.create_user()
-        self.xmljob = XmlJob(xmltramp.parse('''
+        self.xmljob = lxml.etree.fromstring('''
             <job>
                 <whiteboard>job with fake task</whiteboard>
                 <recipeSet>
@@ -36,18 +33,18 @@ class TestTasks(DatabaseTestCase):
                     </recipe>
                 </recipeSet>
             </job>
-            ''' % (distro_tree.distro.name, self.task.name)))
+            ''' % (distro_tree.distro.name, self.task.name))
         session.flush()
 
     def tearDown(self):
         session.rollback()
 
     def test_enable_task(self):
-        self.task.valid=True
+        self.task.valid = True
         session.flush()
         self.controller.process_xmljob(self.xmljob, self.user)
-        
+
     def test_disable_task(self):
-        self.task.valid=False
+        self.task.valid = False
         session.flush()
         self.assertRaises(BX, lambda: self.controller.process_xmljob(self.xmljob, self.user))
