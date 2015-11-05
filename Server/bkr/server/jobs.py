@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import datetime
 from turbogears.database import session
 from turbogears import expose, flash, widgets, validate, validators, redirect, paginate, url
 from cherrypy import response
@@ -37,7 +38,7 @@ from bkr.server.model import (Job, RecipeSet, RetentionTag, TaskBase,
                               RecipeTask, RecipeTaskParam, RecipeSetResponse,
                               Response, StaleTaskStatusException,
                               RecipeSetActivity, System, RecipeReservationRequest,
-                              TaskStatus)
+                              TaskStatus, RecipeSetComment)
 
 from bkr.common.bexceptions import BeakerException, BX
 from bkr.server.flask_util import auth_required, convert_internal_errors, \
@@ -760,8 +761,12 @@ class Jobs(RPCRoot):
     @expose(format='json')
     def save_response_comment(self,rs_id,comment):
         try:
-            rs = RecipeSetResponse.by_id(rs_id)
-            rs.comment = comment
+            rs = RecipeSet.by_id(rs_id)
+            if not rs.comments:
+                rs.comments.append(RecipeSetComment())
+            rs.comments[0].comment = comment
+            rs.comments[0].user = identity.current.user
+            rs.comments[0].created = datetime.datetime.utcnow()
             session.flush() 
             return {'success' : True, 'rs_id' : rs_id }
         except Exception, e:
@@ -770,11 +775,9 @@ class Jobs(RPCRoot):
 
     @expose(format='json')
     def get_response_comment(self,rs_id):      
-        rs_nacked = RecipeSetResponse.by_id(rs_id)
-        comm = rs_nacked.comment
-
-        if comm:
-            return {'comment' : comm, 'rs_id' : rs_id }
+        rs = RecipeSet.by_id(rs_id)
+        if rs.comments:
+            return {'comment' : rs.comments[0].comment, 'rs_id' : rs_id }
         else:
             return {'comment' : 'No comment', 'rs_id' : rs_id }
 

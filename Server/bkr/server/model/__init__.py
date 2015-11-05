@@ -43,6 +43,7 @@ from .scheduler import (Watchdog, TaskBase, Job, RecipeSet, Recipe,
         SystemResource, GuestResource, VirtResource, Response, RetentionTag,
         Product, RenderedKickstart, RecipeSetActivity, RecipeRepo,
         RecipeKSAppend, RecipeTaskParam, RecipeSetResponse, JobActivity, RecipeReservationRequest)
+from .reviewing import RecipeSetComment
 from .openstack import OpenStackRegion
 
 class ExternalReport(DeclarativeMappedObject):

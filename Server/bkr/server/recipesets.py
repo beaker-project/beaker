@@ -13,7 +13,8 @@ from bkr.server import identity
 from bkr.server.app import app
 from bkr.server.flask_util import auth_required, convert_internal_errors, \
     BadRequest400, NotFound404, Forbidden403, read_json_request
-from bkr.server.model import RecipeSet, TaskStatus, TaskPriority, TaskBase, Job
+from bkr.server.model import RecipeSet, TaskStatus, TaskPriority, TaskBase, \
+    Job, RecipeSetComment, session
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.bexceptions import BeakerException
 
@@ -131,6 +132,39 @@ def update_recipeset_status(id):
                 field=u'Status', action=u'Cancelled')
         recipeset.cancel(msg=msg)
     return '', 204
+
+@app.route('/recipesets/<int:id>/comments/', methods=['GET'])
+def get_recipeset_comments(id):
+    """
+    Returns a JSON collection of comments made on a recipe set.
+
+    :param id: ID of the recipe set.
+    """
+    recipeset = _get_rs_by_id(id)
+    with convert_internal_errors():
+        return jsonify({'entries': recipeset.comments})
+
+@app.route('/recipesets/<int:id>/comments/', methods=['POST'])
+@auth_required
+def post_recipeset_comment(id):
+    """
+    Adds a new comment to a recipe set. The request must be :mimetype:`application/json`.
+
+    :param id: ID of the recipe set.
+    :jsonparam string comment: Comment text.
+    """
+    recipeset = _get_rs_by_id(id)
+    if not recipeset.can_comment(identity.current.user):
+        raise Forbidden403('Cannot post recipe set comment')
+    data = read_json_request(request)
+    if 'comment' not in data:
+        raise BadRequest400('Missing "comment" key')
+    with convert_internal_errors():
+        comment = RecipeSetComment(user=identity.current.user,
+                comment=data['comment'])
+        recipeset.comments.append(comment)
+    session.flush() # to populate the id
+    return jsonify(comment.__json__())
 
 class RecipeSets(RPCRoot):
     # For XMLRPC methods in this class.

@@ -6,6 +6,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import datetime
 import unittest2 as unittest
 import requests
 import lxml.etree
@@ -22,7 +23,7 @@ from bkr.inttest.server.webdriver_utils import login, is_text_present, logout, \
 from bkr.inttest import data_setup, with_transaction, get_server_base, \
         DatabaseTestCase
 from bkr.server.model import RetentionTag, Product, Distro, Job, GuestRecipe, \
-        User, TaskStatus, TaskPriority
+        User, TaskStatus, TaskPriority, RecipeSetComment
 from bkr.inttest.server.requests_utils import post_json, patch_json, \
         login as requests_login
 
@@ -1542,3 +1543,50 @@ class RecipeSetHTTPTest(DatabaseTestCase):
             self.assertEquals(recipeset.status, TaskStatus.cancelled)
             self.assertEquals(recipeset.activity[0].field_name, u'Status')
             self.assertEquals(recipeset.activity[0].action, u'Cancelled')
+
+    def test_get_recipeset_comments(self):
+        with session.begin():
+            commenter = data_setup.create_user(user_name=u'jim')
+            self.job.recipesets[0].comments.append(RecipeSetComment(
+                    user=commenter,
+                    created=datetime.datetime(2015, 11, 5, 17, 0, 55),
+                    comment=u'Microsoft and Red Hat to deliver new standard for '
+                        u'enterprise cloud experiences'))
+        response = requests.get(get_server_base() +
+                'recipesets/%s/comments/' % self.job.recipesets[0].id,
+                headers={'Accept': 'application/json'})
+        response.raise_for_status()
+        json = response.json()
+        self.assertEqual(len(json['entries']), 1)
+        self.assertEqual(json['entries'][0]['user']['user_name'], u'jim')
+        self.assertEqual(json['entries'][0]['created'], u'2015-11-05 17:00:55')
+        self.assertIn(u'Microsoft', json['entries'][0]['comment'])
+
+    def test_post_recipeset_comment(self):
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = post_json(get_server_base() +
+                'recipesets/%s/comments/' % self.job.recipesets[0].id,
+                session=s, data={'comment': 'we unite on common solutions'})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(len(self.job.recipesets[0].comments), 1)
+            self.assertEqual(self.job.recipesets[0].comments[0].user, self.owner)
+            self.assertEqual(self.job.recipesets[0].comments[0].comment,
+                    u'we unite on common solutions')
+            self.assertEqual(response.json()['id'],
+                    self.job.recipesets[0].comments[0].id)
+
+    def test_empty_comment_is_rejected(self):
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = post_json(get_server_base() +
+                'recipesets/%s/comments/' % self.job.recipesets[0].id,
+                session=s, data={'comment': None})
+        self.assertEqual(response.status_code, 400)
+        # whitespace-only comment also counts as empty
+        response = post_json(get_server_base() +
+                'recipesets/%s/comments/' % self.job.recipesets[0].id,
+                session=s, data={'comment': ' '})
+        self.assertEqual(response.status_code, 400)

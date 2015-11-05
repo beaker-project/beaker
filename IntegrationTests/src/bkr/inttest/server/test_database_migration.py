@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import datetime
 import unittest2 as unittest
 import pkg_resources
 import sqlalchemy
@@ -14,7 +15,7 @@ from sqlalchemy.orm import create_session
 from sqlalchemy.sql import func
 from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, User, \
         OSMajor, OSMajorInstallOptions, GroupMembershipType, SystemActivity, \
-        Activity
+        Activity, RecipeSetComment
 
 def has_initial_sublist(larger, prefix):
     """ Return true iff list *prefix* is an initial sublist of list 
@@ -202,7 +203,11 @@ class MigrationTest(unittest.TestCase):
         for table_name in metadata.tables:
             expected_columns = metadata.tables[table_name].columns.keys()
             actual_columns = self.migration_metadata.tables[table_name].columns.keys()
-            if table_name == 'virt_resource':
+            if table_name == 'recipe_set_nacked':
+                # may be left over from 22
+                if 'comment' in actual_columns:
+                    actual_columns.remove('comment')
+            elif table_name == 'virt_resource':
                 # may be left over from 0.16
                 if 'system_name' in actual_columns:
                     actual_columns.remove('system_name')
@@ -627,3 +632,28 @@ class MigrationTest(unittest.TestCase):
         self.assertEquals(
                 self.migration_session.query(SystemActivity).filter_by(id=1).count(),
                 0)
+
+    def test_migrate_recipe_set_comments_from_nacked(self):
+        connection = self.migration_metadata.bind.connect()
+        # populate empty database
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/21.sql'))
+        # job owned by admin, with a recipe set which has been nacked and commented
+        connection.execute(
+                "INSERT INTO job (owner_id, retention_tag_id, dirty_version, clean_version) "
+                "VALUES (1, 1, '', '')")
+        connection.execute(
+                "INSERT INTO recipe_set (job_id, queue_time) "
+                "VALUES (1, '2015-11-05 16:31:01')")
+        connection.execute(
+                "INSERT INTO recipe_set_nacked (recipe_set_id, response_id, comment, created) "
+                "VALUES (1, 2, 'it broke', '2015-11-05 16:32:40')")
+        # run migration
+        upgrade_db(self.migration_metadata)
+        # check that the comment row was created
+        comments = self.migration_session.query(RecipeSetComment).all()
+        self.assertEqual(len(comments), 1)
+        self.assertEqual(comments[0].recipe_set_id, 1)
+        self.assertEqual(comments[0].comment, u'it broke')
+        self.assertEqual(comments[0].user.user_name, u'admin')
+        self.assertEqual(comments[0].created, datetime.datetime(2015, 11, 5, 16, 32, 40))

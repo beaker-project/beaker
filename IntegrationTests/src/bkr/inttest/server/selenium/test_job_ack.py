@@ -48,7 +48,7 @@ class JobAckTest(WebDriverTestCase):
             session.refresh(recipeset)
             self.assertEquals(unicode(recipeset.nacked.response).lower(),
                     response.lower())
-            self.assertEquals(recipeset.nacked.comment, comment)
+            self.assertEquals(recipeset.comments[0].comment, comment)
 
     def test_cannot_review_unfinished_recipesets(self):
         with session.begin():

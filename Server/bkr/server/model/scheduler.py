@@ -749,30 +749,6 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         return current_nacks
 
     @classmethod
-    def update_nacks(cls,job_ids,rs_nacks):
-        """
-        update_nacks() takes a list of job_ids and updates the job's recipesets with the correct nacks
-        """
-        queri = select([RecipeSet.id], from_obj=Job.__table__.join(RecipeSet.__table__), whereclause=Job.id.in_(job_ids),distinct=True)
-        results = queri.execute()
-        current_nacks = []
-        if len(rs_nacks) > 0:
-            rs_nacks = map(lambda x: int(x), rs_nacks) # they come in as unicode objs
-        for res in results:
-            rs_id = res[0]
-            rs = RecipeSet.by_id(rs_id)
-            if rs_id not in rs_nacks and rs.nacked: #looks like we're deleting it then
-                rs.nacked = []
-            else:
-                if not rs.nacked and rs_id in rs_nacks: #looks like we're adding it then
-                    rs.nacked = [RecipeSetResponse()]
-                    current_nacks.append(rs_id)
-                elif rs.nacked:
-                    current_nacks.append(rs_id)
-
-        return current_nacks
-
-    @classmethod
     def complete_delta(cls, delta, query):
         delta = timedelta(**delta)
         if not query:
@@ -1416,6 +1392,12 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         """Returns True iff the given user can cancel the job"""
         return self._can_administer(user)
 
+    def can_comment(self, user):
+        """Returns True iff the given user can comment on this job."""
+        if user is None:
+            return False
+        return True # anyone can comment on any job
+
     def can_set_response(self, user=None):
         """Returns True iff the given user can set the response to this job"""
         return self._can_administer(user) or self._can_administer_old(user)
@@ -1654,35 +1636,19 @@ class RecipeSetResponse(DeclarativeMappedObject):
     response_id = Column(Integer, ForeignKey('response.id',
             onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
     response = relationship(Response)
-    comment = Column(Unicode(255), nullable=True)
     created = Column(DateTime, nullable=False, default=datetime.utcnow)
 
-    def __init__(self,type=None,response_id=None,comment=None):
+    def __init__(self,type=None,response_id=None):
         super(RecipeSetResponse, self).__init__()
         if response_id is not None:
             res = Response.by_id(response_id)
         elif type is not None:
             res = Response.by_response(type)
         self.response = res
-        self.comment = comment
 
     @classmethod
     def by_id(cls,id):
         return cls.query.filter_by(recipe_set_id=id).one()
-
-    @classmethod
-    def by_jobs(cls,job_ids):
-        if isinstance(job_ids, list):
-            clause = Job.id.in_(job_ids)
-        elif isinstance(job_ids, int):
-            clause = Job.id == job_ids
-        else:
-            raise BeakerException('job_ids needs to be either type \'int\' or \'list\'. Found %s' % type(job_ids))
-        queri = cls.query.outerjoin('recipesets','job').filter(clause)
-        results = {}
-        for elem in queri:
-            results[elem.recipe_set_id] = elem.comment
-        return results
 
 class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
     """
@@ -1720,6 +1686,7 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
             order_by=[RecipeSetActivity.created.desc(), RecipeSetActivity.id.desc()])
     nacked = relationship(RecipeSetResponse, cascade='all, delete-orphan',
             uselist=False)
+    comments = relationship('RecipeSetComment', cascade='all, delete-orphan')
 
     activity_type = RecipeSetActivity
 
@@ -1743,6 +1710,7 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
             'ktasks': self.ktasks,
             'ttasks': self.ttasks,
             'priority': self.priority,
+            'comments': self.comments,
             'machine_recipes': list(self.machine_recipes),
         }
 
@@ -1776,6 +1744,10 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
         if self.owner == user:
             return True
         return False
+
+    def can_comment(self, user):
+        """Returns True iff the given user can comment on this recipe set."""
+        return self.job.can_comment(user)
 
     def can_set_response(self, user=None):
         """Return True iff the given user can change the response to this recipeset"""
