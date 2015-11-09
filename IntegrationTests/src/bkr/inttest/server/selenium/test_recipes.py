@@ -517,3 +517,24 @@ class RecipeHTTPTest(DatabaseTestCase):
                     u'Changed')
             self.assertEquals(self.recipe_with_reservation_request.activity[0].new_value,
                     None)
+
+    def test_anonymous_has_no_reviewed_state(self):
+        # Reviewed state is per-user so anonymous should get "reviewed": null 
+        # (neither true nor false, since we don't know).
+        response = requests.get(get_server_base() +
+                'recipes/%s' % self.recipe.id,
+                headers={'Accept': 'application/json'})
+        response.raise_for_status()
+        self.assertEqual(response.json()['reviewed'], None)
+
+    def test_can_clear_reviewed_state(self):
+        with session.begin():
+            self.recipe.set_reviewed_state(self.owner, True)
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = patch_json(get_server_base() + 'recipes/%s' % self.recipe.id,
+                session=s, data={'reviewed': False})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(self.recipe.get_reviewed_state(self.owner), False)

@@ -540,6 +540,8 @@ def update_recipe(id):
                 _record_activity(recipe, u'Whiteboard', recipe.whiteboard,
                     new_whiteboard)
                 recipe.whiteboard = new_whiteboard
+        if 'reviewed' in data:
+            recipe.set_reviewed_state(identity.current.user, bool(data['reviewed']))
     return jsonify(recipe.__json__())
 
 @app.route('/recipes/<int:id>/logs/<path:path>', methods=['GET'])

@@ -6,11 +6,11 @@
 
 import logging
 from datetime import datetime
-from sqlalchemy import Column, ForeignKey, Integer, Unicode, DateTime
+from sqlalchemy import Column, ForeignKey, Integer, Unicode, DateTime, Boolean
 from sqlalchemy.orm import relationship, validates
 from .base import DeclarativeMappedObject
 from .identity import User
-from .scheduler import RecipeSet
+from .scheduler import RecipeSet, Recipe
 
 log = logging.getLogger(__name__)
 
@@ -43,3 +43,27 @@ class RecipeSetComment(DeclarativeMappedObject):
         if value.isspace():
             raise ValueError('Comment text cannot consist of only whitespace')
         return value
+
+class RecipeReviewedState(DeclarativeMappedObject):
+
+    """
+    This is a per-user, per-recipe boolean flag meaning "have I reviewed this 
+    recipe yet?" It's intended to be a totally optional way for users to keep 
+    track of which parts of their job results they have reviewed.
+    """
+
+    __tablename__ = 'recipe_reviewed_state'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    recipe_id = Column(Integer, ForeignKey('recipe.id',
+            onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)
+    recipe = relationship(Recipe)
+    user_id = Column(Integer, ForeignKey('tg_user.user_id',
+            onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)
+    user = relationship(User)
+    reviewed = Column(Boolean, nullable=False, default=True)
+
+    @classmethod
+    def lazy_create(cls, recipe, user, reviewed):
+        return super(RecipeReviewedState, cls).lazy_create(
+                recipe_id=recipe.id, user_id=user.user_id,
+                _extra_attrs=dict(reviewed=reviewed))

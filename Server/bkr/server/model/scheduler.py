@@ -2780,6 +2780,24 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         return self.can_edit(user) and self.status not in (TaskStatus.completed,
                 TaskStatus.cancelled, TaskStatus.aborted, TaskStatus.reserved)
 
+    def get_reviewed_state(self, user):
+        if user is None:
+            raise RuntimeError('Cannot get reviewed state for anonymous')
+        # Delayed import to avoid circular dependency
+        from bkr.server.model import RecipeReviewedState
+        rrs = session.object_session(self).query(RecipeReviewedState).filter_by(
+                recipe_id=self.id, user_id=user.user_id).first()
+        if rrs is not None:
+            return rrs.reviewed
+        return False
+
+    def set_reviewed_state(self, user, reviewed):
+        if user is None:
+            raise RuntimeError('Cannot set reviewed state for anonymous')
+        # Delayed import to avoid circular dependency
+        from bkr.server.model import RecipeReviewedState
+        RecipeReviewedState.lazy_create(recipe=self, user=user, reviewed=reviewed)
+
     def __json__(self):
         data = {
             'id': self.id,
@@ -2805,9 +2823,11 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             u = identity.current.user
             data['can_edit'] = self.can_edit(u)
             data['can_update_reservation_request'] = self.can_update_reservation_request(u)
+            data['reviewed'] = self.get_reviewed_state(u)
         else:
             data['can_edit'] = False
             data['can_update_reservation_request'] = False
+            data['reviewed'] = None
         return data
 
 

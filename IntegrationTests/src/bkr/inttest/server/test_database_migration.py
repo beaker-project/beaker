@@ -15,7 +15,7 @@ from sqlalchemy.orm import create_session
 from sqlalchemy.sql import func
 from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, User, \
         OSMajor, OSMajorInstallOptions, GroupMembershipType, SystemActivity, \
-        Activity, RecipeSetComment
+        Activity, RecipeSetComment, Recipe
 
 def has_initial_sublist(larger, prefix):
     """ Return true iff list *prefix* is an initial sublist of list 
@@ -657,3 +657,27 @@ class MigrationTest(unittest.TestCase):
         self.assertEqual(comments[0].comment, u'it broke')
         self.assertEqual(comments[0].user.user_name, u'admin')
         self.assertEqual(comments[0].created, datetime.datetime(2015, 11, 5, 16, 32, 40))
+
+    def test_migrate_recipe_reviewed_status_from_nacked(self):
+        connection = self.migration_metadata.bind.connect()
+        # populate empty database
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/21.sql'))
+        # job owned by admin, with a recipe set which has been acked
+        connection.execute(
+                "INSERT INTO job (owner_id, retention_tag_id, dirty_version, clean_version) "
+                "VALUES (1, 1, '', '')")
+        connection.execute(
+                "INSERT INTO recipe_set (job_id, queue_time) "
+                "VALUES (1, '2015-11-09 17:03:04')")
+        connection.execute(
+                "INSERT INTO recipe (type, recipe_set_id, autopick_random) "
+                "VALUES ('machine_recipe', 1, FALSE)")
+        connection.execute(
+                "INSERT INTO recipe_set_nacked (recipe_set_id, response_id, comment, created) "
+                "VALUES (1, 1, NULL, '2015-11-09 17:32:03')")
+        # run migration
+        upgrade_db(self.migration_metadata)
+        # check that the recipe is marked as reviewed by admin
+        recipe = self.migration_session.query(Recipe).get(1)
+        self.assertEqual(recipe.get_reviewed_state(User.by_user_name(u'admin')), True)
