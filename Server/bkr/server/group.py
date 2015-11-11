@@ -639,6 +639,62 @@ def remove_group_membership(group_name):
         raise Conflict409('User %s is not a member of group %s' % (user.user_name, group_name))
     return '', 204
 
+@app.route('/groups/<group_name>/excluded-users/', methods=['POST'])
+@auth_required
+def exclude_user(group_name):
+    """
+    Exclude a user from an inverted group. Then the user will not have the group
+    membership.
+
+    :param group_name: Group's name.
+    :jsonparam string user_name: User's username.
+
+    """
+    u = identity.current.user
+    data = read_json_request(request)
+    group = _get_group_by_name(group_name, lockmode='update')
+    if not group.can_modify_membership(identity.current.user):
+        raise Forbidden403('Cannot edit membership of group %s' % group_name)
+    if group.membership_type == GroupMembershipType.normal:
+        raise NotFound404('Normal group %s do not have excluded users' % group_name)
+    if 'user_name' not in data:
+        raise BadRequest400('User not specified')
+    user = _get_user_by_username(data['user_name'])
+    if user in group.users:
+        if not group.can_exclude_member(u, user.id):
+            raise Forbidden403('Cannot exclude user %s from group %s' % (user, group_name))
+        with convert_internal_errors():
+            group.exclude_user(user, agent=identity.current.user)
+    else:
+        raise Conflict409('User %s is already excluded from group %s' %
+                (user.user_name, group_name))
+    return '', 204
+
+@app.route('/groups/<group_name>/excluded-users/', methods=['DELETE'])
+@auth_required
+def readd_user(group_name):
+    """
+    Re-add a user who has been excluded from the group.
+
+    :param group_name: Group's name.
+    :queryparam string user_name: User's username.
+
+    """
+    u = identity.current.user
+    group = _get_group_by_name(group_name, lockmode='update')
+    if not group.can_modify_membership(identity.current.user):
+        raise Forbidden403('Cannot edit membership of group %s' % group_name)
+    if 'user_name' not in request.args:
+        raise MethodNotAllowed405
+    user = _get_user_by_username(request.args['user_name'])
+    if user not in group.users:
+        with convert_internal_errors():
+            group.readd_user(user, agent=identity.current.user)
+    else:
+        raise Conflict409('User %s is not excluded from group %s' %
+                (user.user_name, group_name))
+    return '', 204
+
 @app.route('/groups/<group_name>/owners/', methods=['POST'])
 @auth_required
 def grant_ownership(group_name):

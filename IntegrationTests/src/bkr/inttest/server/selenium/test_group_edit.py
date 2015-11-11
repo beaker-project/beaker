@@ -720,6 +720,9 @@ class GroupHTTPTest(DatabaseTestCase):
         with session.begin():
             self.user = data_setup.create_user(password=u'password')
             self.group = data_setup.create_group(owner=self.user)
+            self.inverted_group = data_setup.create_group(
+                    owner=self.user,
+                    membership_type=GroupMembershipType.inverted)
 
     def test_get_group(self):
         response = requests.get(get_server_base() +
@@ -789,6 +792,21 @@ class GroupHTTPTest(DatabaseTestCase):
             # The LDAP group should have no owner.
             self.assertEquals(len(group.owners()), 0)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
+    def test_create_inverted_group(self):
+        s = requests.Session()
+        requests_login(s)
+        response = post_json(get_server_base() + 'groups/', session=s, data={
+            'group_name': 'my_inverse_group',
+            'display_name': 'My INVERSE group',
+            'membership_type': u'inverted',
+        })
+        response.raise_for_status()
+        with session.begin():
+            group = Group.by_name(u'my_inverse_group')
+            self.assertEquals(group.membership_type,
+                              GroupMembershipType.inverted)
+
     def test_update_group(self):
         s = requests.Session()
         s.post(get_server_base() + 'login', data={'user_name': self.user.user_name,
@@ -828,6 +846,19 @@ class GroupHTTPTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             self.assertEquals(self.group.membership_type, GroupMembershipType.ldap)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
+    def test_can_update_a_group_to_inverted_group(self):
+        s = requests.Session()
+        requests_login(s)
+        response = patch_json(get_server_base() +
+                'groups/%s' % self.group.group_name, session=s,
+                data={'membership_type': u'inverted'})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.group.membership_type,
+                              GroupMembershipType.inverted)
 
     def test_cannot_update_group_with_empty_name_or_display_name(self):
         s = requests.Session()
@@ -1221,3 +1252,67 @@ class GroupHTTPTest(DatabaseTestCase):
             self.assertEquals(pool.activity[-1].field_name, u'Owner')
             self.assertEquals(pool.activity[-1].old_value, 'Group %s' % group.group_name)
             self.assertEquals(pool.activity[-1].new_value, data_setup.ADMIN_USER)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
+    def test_cannnot_exclude_user_from_a_normal_group(self):
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': self.user.user_name,
+                'password': u'password'}).raise_for_status()
+        response = post_json(get_server_base() + 'groups/%s/excluded-users/' %
+                self.group.group_name, session=s,
+                data={'user_name': self.user.user_name})
+        self.assertEqual(response.status_code, 404)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
+    def test_cannnot_exclude_user_who_is_the_only_owner(self):
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': self.user.user_name,
+                'password': u'password'}).raise_for_status()
+        response = post_json(get_server_base() + 'groups/%s/excluded-users/' %
+                self.inverted_group.group_name, session=s,
+                data={'user_name': self.user.user_name})
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('Cannot exclude user %s' % self.user, response.text)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
+    def test_can_exclude_user(self):
+        with session.begin():
+            user = data_setup.create_user(password=u'password')
+            self.assertIn(user, self.inverted_group.users)
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': self.user.user_name,
+                'password': u'password'}).raise_for_status()
+        response = post_json(get_server_base() + 'groups/%s/excluded-users/' %
+                self.inverted_group.group_name, session=s,
+                data={'user_name': user.user_name})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertNotIn(user, self.inverted_group.users)
+            self.assertEquals(self.inverted_group.activity[-1].user, self.user)
+            self.assertEquals(self.inverted_group.activity[-1].field_name, u'User')
+            self.assertEquals(self.inverted_group.activity[-1].action, u'Excluded')
+            self.assertEquals(self.inverted_group.activity[-1].new_value, unicode(user))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
+    def test_can_readd_user(self):
+        with session.begin():
+            user = data_setup.create_user(password=u'password')
+            self.inverted_group.exclude_user(user)
+        with session.begin():
+            session.expire_all()
+            self.assertNotIn(user, self.inverted_group.users)
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': self.user.user_name,
+                                                  'password': u'password'}).raise_for_status()
+        response = s.delete(get_server_base() +
+            'groups/%s/excluded-users/?user_name=%s' %
+                    (self.inverted_group.group_name, user.user_name))
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertIn(user, self.inverted_group.users)
+            self.assertEquals(self.inverted_group.activity[-1].user, self.user)
+            self.assertEquals(self.inverted_group.activity[-1].field_name, 'User')
+            self.assertEquals(self.inverted_group.activity[-1].action, 'Re-added')
+            self.assertEquals(self.inverted_group.activity[-1].old_value, unicode(user))

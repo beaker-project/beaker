@@ -1669,6 +1669,13 @@ class GroupTest(DatabaseTestCase):
         self.assertIn(user, group.users)
         self.assertNotIn(user2, group.users)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
+    def test_cannot_exclude_user_from_a_normal_group(self):
+        group = data_setup.create_group()
+        user = data_setup.create_user()
+        self.assertRaises(RuntimeError, group.exclude_user,
+                'Cannot exclude users from normal groups')
+
 
 class TaskTypeTest(DatabaseTestCase):
 
