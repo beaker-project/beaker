@@ -61,9 +61,7 @@ class JobDeleteWD(WebDriverTestCase):
         # of a 'Delete' link
         b.get(get_server_base() + 'jobs/%d' % \
             job.id)
-        action_text = b. \
-            find_element_by_xpath("//div[contains(@class, 'job-action-container')]").text
-        self.assertTrue('Delete' not in action_text)
+        b.find_element_by_xpath('//body[not(.//button[normalize-space(string(.))="Delete"])]')
 
         # Ok add our delegates as the submitters
         with session.begin():
@@ -98,9 +96,13 @@ class JobDeleteWD(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'jobs/%d' % \
             job.id)
-        delete_and_confirm(b, "//form[@action='delete_job_page']")
-        self.assertTrue(is_text_present(b, "Succesfully deleted J:%s" %
-            job.id))
+        b.find_element_by_xpath('//button[normalize-space(string(.))="Delete"]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_xpath('.//p[text()="Are you sure you want to '
+                'delete this job?"]')
+        modal.find_element_by_xpath('.//button[text()="OK"]').click()
+        # once it's deleted we are returned to My Jobs grid
+        b.find_element_by_xpath('.//title[text()="My Jobs"]')
 
     def job_delete(self, job):
         b = self.browser

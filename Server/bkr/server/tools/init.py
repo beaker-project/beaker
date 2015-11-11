@@ -19,7 +19,7 @@ from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.log import log_to_stream
 from bkr.server.model import (User, Group, Permission, Hypervisor, KernelType,
-        Arch, PowerType, Key, Response, RetentionTag, ConfigItem, UserGroup)
+        Arch, PowerType, Key, RetentionTag, ConfigItem, UserGroup)
 from bkr.server.util import load_config_or_exit
 from turbogears.database import session
 from os.path import dirname, exists, join
@@ -170,11 +170,6 @@ def populate_db(user_name=None, password=None, user_display_name=None,
         session.add(Key(u'VENDOR'))
         session.add(Key(u'XENCERT'))
         session.add(Key(u'NETBOOT_METHOD'))
-
-    #Setup ack/nak reposnses
-    if Response.query.count() == 0:
-        session.add(Response(response=u'ack'))
-        session.add(Response(response=u'nak'))
 
     if RetentionTag.query.count() == 0:
         session.add(RetentionTag(tag=u'scratch', is_default=1, expire_in_days=30))

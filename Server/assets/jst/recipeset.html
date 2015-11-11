@@ -1,0 +1,31 @@
+<tr class="recipeset">
+  <td colspan="2">
+    <span class="recipeset-id"><abbr title="Recipe Set">RS</abbr>:<%- id %></span>
+    <% if (waived) { %>
+      <span class="label label-warning">Waived</span>
+    <% } %>
+  </td>
+  <td class="recipeset-comments">
+    <% /* recipe set comments go here */ %>
+  </td>
+  <td class="recipeset-actions">
+    <div class="btn-group">
+      <a class="btn" href="<%- clone_href %>"><i class="fa fa-copy"></i> Clone</a>
+      <% if (can_change_priority && _.contains(['New', 'Processed', 'Queued'], status)) { %>
+        <button class="btn priority"><i class="fa fa-sliders"></i> Priority</button>
+      <% } %>
+      <% if (can_cancel && !is_finished) { %>
+        <button class="btn cancel" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Cancelling&hellip;"><i class="fa fa-times"></i> Cancel</button>
+      <% } %>
+      <% if (can_waive) { %>
+        <% if (!waived && !_.contains(['New', 'Processed', 'Queued'], status)) { %>
+          <button class="btn waive"><i class="fa fa-ban"></i> Waive</button>
+        <% } %>
+        <% if (waived) { %>
+          <button class="btn unwaive" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Unwaiving&hellip;"><i class="fa fa-ban"></i> Unwaive</button>
+        <% } %>
+      <% } %>
+    </div>
+  </td>
+</tr>
+<% /* recipes are appended here */ %>

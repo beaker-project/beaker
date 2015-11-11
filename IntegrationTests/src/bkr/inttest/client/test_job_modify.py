@@ -59,52 +59,56 @@ class JobModifyTest(ClientTestCase):
     def test_ack_job(self):
         out = run_client(['bkr', 'job-modify', self.job.t_id,  '--response', 'ack'])
         self.assert_(out == 'Successfully modified jobs %s\n' % self.job.t_id)
-        j = TaskBase.get_by_t_id(self.job.t_id)
-        for rs in j.recipesets:
-            self.assert_('%s' % rs.nacked.response == 'ack')
+        with session.begin():
+            session.expire_all()
+            for rs in self.job.recipesets:
+                self.assertEqual(rs.waived, False)
 
     def test_nak_job(self):
         out = run_client(['bkr', 'job-modify', self.job.t_id,  '--response', 'nak'])
         self.assert_(out == 'Successfully modified jobs %s\n' % self.job.t_id)
-        j = TaskBase.get_by_t_id(self.job.t_id)
-        for rs in j.recipesets:
-            self.assert_('%s' % rs.nacked.response == 'nak')
+        with session.begin():
+            session.expire_all()
+            for rs in self.job.recipesets:
+                self.assertEqual(rs.waived, True)
 
     def test_multiple_response_job(self):
-        out = run_client(['bkr', 'job-modify', self.job.t_id, self.job_for_rs.t_id,  '--response', 'ack'])
+        out = run_client(['bkr', 'job-modify', self.job.t_id, self.job_for_rs.t_id,  '--response', 'nak'])
 
         self.assert_('Successfully modified jobs' in out and
                      self.job.t_id in out and
                      self.job_for_rs.t_id in out)
-        j = TaskBase.get_by_t_id(self.job.t_id)
-        for rs in j.recipesets:
-            self.assert_('%s' % rs.nacked.response == 'ack')
-        j2 = TaskBase.get_by_t_id(self.job_for_rs.t_id)
-        for rs in j2.recipesets:
-            self.assert_('%s' % rs.nacked.response == 'ack')
+        with session.begin():
+            session.expire_all()
+            for rs in self.job.recipesets:
+                self.assertEqual(rs.waived, True)
+            for rs in self.job_for_rs.recipesets:
+                self.assertEqual(rs.waived, True)
 
     def test_ack_rs(self):
         out = run_client(['bkr', 'job-modify', self.job.recipesets[0].t_id,  '--response', 'ack'])
         self.assert_(out == 'Successfully modified jobs %s\n' % self.job.recipesets[0].t_id)
-        rs = TaskBase.get_by_t_id(self.job.recipesets[0].t_id)
-        self.assert_('%s' % rs.nacked.response == 'ack')
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(self.job.recipesets[0].waived, False)
 
     def test_nak_rs(self):
         out = run_client(['bkr', 'job-modify', self.job.recipesets[0].t_id,  '--response', 'nak'])
         self.assert_(out == 'Successfully modified jobs %s\n' % self.job.recipesets[0].t_id)
-        rs = TaskBase.get_by_t_id(self.job.recipesets[0].t_id)
-        self.assert_('%s' % rs.nacked.response == 'nak')
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(self.job.recipesets[0].waived, True)
 
     def test_multiple_response_recipeset(self):
         out = run_client(['bkr', 'job-modify', self.job.recipesets[0].t_id,
-                          self.job_for_rs.recipesets[0].t_id,  '--response', 'ack'])
+                          self.job_for_rs.recipesets[0].t_id,  '--response', 'nak'])
         self.assert_('Successfully modified jobs' in out and \
                      self.job_for_rs.recipesets[0].t_id in out and \
                      self.job.recipesets[0].t_id in out,)
-        rs = TaskBase.get_by_t_id(self.job.recipesets[0].t_id)
-        self.assert_('%s' % rs.nacked.response == 'ack')
-        rs = TaskBase.get_by_t_id(self.job_for_rs.recipesets[0].t_id)
-        self.assert_('%s' % rs.nacked.response == 'ack')
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(self.job.recipesets[0].waived, True)
+            self.assertEqual(self.job_for_rs.recipesets[0].waived, True)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=595512
     def test_invalid_taskspec(self):
@@ -125,18 +129,18 @@ class JobModifyTest(ClientTestCase):
         self.assertEquals(self.job.activity[0].new_value, rt.tag)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=995012
-    def test_record_ack_job(self):
-        out = run_client(['bkr', 'job-modify', self.job.t_id,  '--response', 'ack'])
+    def test_record_nak_job(self):
+        out = run_client(['bkr', 'job-modify', self.job.t_id,  '--response', 'nak'])
         self.assertEquals(self.job.recipesets[0].activity[0].action, u'Changed')
-        self.assertEquals(self.job.recipesets[0].activity[0].field_name, 'Ack/Nak')
-        self.assertEquals(self.job.recipesets[0].activity[0].new_value, 'ack')
+        self.assertEquals(self.job.recipesets[0].activity[0].field_name, 'Waived')
+        self.assertEquals(self.job.recipesets[0].activity[0].new_value, 'True')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=995012
-    def test_record_ack_rs(self):
-        out = run_client(['bkr', 'job-modify', self.job.recipesets[0].t_id,  '--response', 'ack'])
+    def test_record_nak_rs(self):
+        out = run_client(['bkr', 'job-modify', self.job.recipesets[0].t_id,  '--response', 'nak'])
         self.assertEquals(self.job.recipesets[0].activity[0].action, u'Changed')
-        self.assertEquals(self.job.recipesets[0].activity[0].field_name, 'Ack/Nak')
-        self.assertEquals(self.job.recipesets[0].activity[0].new_value, 'ack')
+        self.assertEquals(self.job.recipesets[0].activity[0].field_name, 'Waived')
+        self.assertEquals(self.job.recipesets[0].activity[0].new_value, 'True')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1149977
     def test_increase_priority(self):

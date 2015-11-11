@@ -54,6 +54,14 @@ def _update_recipeset(recipeset, data=None):
                         % (recipeset.id, priority))
             record_activity(u'Priority', old=recipeset.priority.value, new=priority.value)
             recipeset.priority = priority
+        if 'waived' in data:
+            if not recipeset.can_waive(identity.current.user):
+                raise Forbidden403('Cannot waive recipe set %s' % recipeset.id)
+            if not isinstance(data['waived'], bool):
+                raise ValueError('waived key must be true or false')
+            waived = data['waived']
+            record_activity(u'Waived', old=unicode(recipeset.waived), new=unicode(waived))
+            recipeset.waived = waived
 
 @app.route('/recipesets/<int:id>', methods=['PATCH'])
 @auth_required

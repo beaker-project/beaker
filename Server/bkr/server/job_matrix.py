@@ -192,11 +192,7 @@ class JobMatrix:
                 .add_column(model.Arch.arch)
         # if we're here we are potentially trying to hide naked RS'
         if toggle_nacks:
-            exclude_recipe_sets = model.Job.get_nacks(job_ids)
-            recipes = recipes.filter(not_(model.RecipeSet.id.in_(exclude_recipe_sets)))
-        else: #Likely this is the initial page load for these Jobs. No modifying the nack db.
-            exclude_recipe_sets = [] 
-            #recipes = recipes.filter(not_(model.RecipeSet.id.in_(exclude_recipe_sets))) 
+            recipes = recipes.filter(model.RecipeSet.waived == False)
         # Let's get all the tasks that will be run, and the arch/whiteboard
         the_tasks = {}
         for recipe,arch in recipes:
@@ -249,11 +245,8 @@ class JobMatrix:
                                    arch_alias.c.arch == bindparam('arch'), 
                                    recipe_table_alias.c.whiteboard==None]
 
-                # FIXME: Should this be "if exclude_recipe_sets" instead?
-                try:
-                    locals()['exclude_recipe_sets']
-                    my_and.append(not_(model.RecipeSet.id.in_(exclude_recipe_sets)))
-                except KeyError: pass
+                if toggle_nacks:
+                    my_and.append(model.RecipeSet.waived == False)
 
                 s2 = select(my_select,from_obj=my_from,whereclause=and_(*my_and)).alias('foo')
                 s2 = s2.params(arch=arch_val)

@@ -247,24 +247,29 @@ var BeakerBackgridAddButton = Backbone.View.extend({
 
 window.BeakerGrid = Backbone.View.extend({
     initialize: function (options) {
+        _.defaults(options, {filterable: true, pageable: true});
         var collection = this.collection = options.collection;
         this.grid = new Backgrid.Grid({
             className: 'backgrid table table-striped table-hover table-condensed',
             collection: collection,
             columns: options.columns,
         });
-        this.filter_control = new BeakerBackgridFilter({
-            collection: collection,
-            columns: options.columns,
-            grid_name: options.name,
-            query_builder_columns: options.query_builder_columns,
-        });
-        this.top_paginator = new BeakerBackgridPaginator({
-            collection: collection,
-        });
-        this.bottom_paginator = new BeakerBackgridPaginator({
-            collection: collection,
-        });
+        if (options.filterable) {
+            this.filter_control = new BeakerBackgridFilter({
+                collection: collection,
+                columns: options.columns,
+                grid_name: options.name,
+                query_builder_columns: options.query_builder_columns,
+            });
+        }
+        if (options.pageable) {
+            this.top_paginator = new BeakerBackgridPaginator({
+                collection: collection,
+            });
+            this.bottom_paginator = new BeakerBackgridPaginator({
+                collection: collection,
+            });
+        }
         if (!_.isEmpty(options.add_view_type)) {
             this.add_button = new BeakerBackgridAddButton({
                 collection: collection,
@@ -280,12 +285,15 @@ window.BeakerGrid = Backbone.View.extend({
     },
     render: function () {
         this.$el.empty();
-        this.$el.append(this.filter_control.render().el);
-        this.$el.append(this.top_paginator.render().el);
+        if (this.filter_control)
+            this.$el.append(this.filter_control.render().el);
+        if (this.top_paginator)
+            this.$el.append(this.top_paginator.render().el);
         this.$el.append(this.grid.render().el);
         if (this.add_button)
             this.$el.append(this.add_button.render().el);
-        this.$el.append(this.bottom_paginator.render().el);
+        if (this.bottom_paginator)
+            this.$el.append(this.bottom_paginator.render().el);
     },
     fetch_started: function (collection, xhr) {
         if (collection != this.collection)

@@ -6,7 +6,6 @@
 
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction, DatabaseTestCase
-from bkr.server.model import RecipeSetResponse
 
 class TestAckJobXml(DatabaseTestCase):
 
@@ -15,23 +14,18 @@ class TestAckJobXml(DatabaseTestCase):
         self.job = data_setup.create_completed_job()
 
     def test_ack_jobxml(self):
-        _response_type = u'ack'
         with session.begin():
             rs = self.job.recipesets[0]
-            rs.nacked = RecipeSetResponse(type=_response_type)
+            self.assertEqual(rs.waived, False)
         jobxml = self.job.to_xml(clone=False)
         for xmlrecipeSet in jobxml.xpath('recipeSet'):
             response = xmlrecipeSet.get('response', None)
-            self.assertEqual(response, _response_type)
+            self.assertEqual(response, 'ack')
 
     def test_ack_jobxml_clone(self):
         """
         Unline test_ack_jobxml, we do _not_ want to see our response in here
         """
-        _response_type = u'ack'
-        with session.begin():
-            rs = self.job.recipesets[0]
-            rs.nacked = RecipeSetResponse(type=_response_type)
         jobxml = self.job.to_xml(clone=True)
         for xmlrecipeSet in jobxml.xpath('recipeSet'):
             response = xmlrecipeSet.get('response', None)

@@ -115,21 +115,13 @@ class SystemAction(WebDriverTestCase):
         self.assertEqual(msg['Cc'], '%s, %s' % (self.problem_reporter.email_address,
                 interested_party_email))
 
-    def test_report_problem_via_job_and_recipe(self):
+    def test_report_problem_via_recipe(self):
         with session.begin():
             owner = data_setup.create_user()
             job = data_setup.create_completed_job(owner=owner)
         # Completing a job creates an email which we don't need
         self.mail_capture.captured_mails[:] = []
         b = self.browser
-        b.get(get_server_base() + 'jobs/%s' % job.id)
-        b.find_element_by_link_text('Report Problem with System').click()
-        b.find_element_by_id('problem_description').send_keys('I broke it')
-        b.find_element_by_xpath('//input[@value=\'Report\']').click()
-        b.find_element_by_xpath('//div/span[text()=\'Success\']')
-        self.assertEqual(len(self.mail_capture.captured_mails), 1)
-
-        self.mail_capture.captured_mails[:] = []
         b.get(get_server_base() + 'recipes/%s' % job.recipesets[0].recipes[0].id)
         b.find_element_by_link_text('Report Problem with System').click()
         b.find_element_by_id('problem_description').send_keys('I broke it')

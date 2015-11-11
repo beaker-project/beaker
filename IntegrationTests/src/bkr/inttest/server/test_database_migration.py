@@ -15,7 +15,7 @@ from sqlalchemy.orm import create_session
 from sqlalchemy.sql import func
 from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, User, \
         OSMajor, OSMajorInstallOptions, GroupMembershipType, SystemActivity, \
-        Activity, RecipeSetComment, Recipe
+        Activity, RecipeSetComment, Recipe, RecipeSet
 
 def has_initial_sublist(larger, prefix):
     """ Return true iff list *prefix* is an initial sublist of list 
@@ -188,26 +188,26 @@ class MigrationTest(unittest.TestCase):
         # one. There are some exceptions because the migrations intentionally 
         # leave behind some structures to avoid destroying data in case the 
         # admin wants to downgrade later. So we have to account for those here.
+        ignored_tables = [
+            # may be left over from 22
+            'response',
+            'recipe_set_nacked',
+            # may be left over from 19
+            'system_group',
+            # may be left over from 0.16
+            'lab_controller_data_center',
+        ]
         expected_tables = metadata.tables.keys()
         expected_tables.append('alembic_version') # it exists, just not in metadata
         actual_tables = self.migration_metadata.tables.keys()
-        if 'lab_controller_data_center' in actual_tables:
-            # may be left over from 0.16
-            actual_tables.remove('lab_controller_data_center')
-        # As part of the migration to system pools, we do not delete
-        # the system_group table, but simply stop using it. But, if
-        # we are upgrading from a version which has it, just remove it
-        if 'system_group' in actual_tables:
-            actual_tables.remove('system_group')
+        for ignored_table in ignored_tables:
+            if ignored_table in actual_tables:
+                actual_tables.remove(ignored_table)
         self.assertItemsEqual(expected_tables, actual_tables)
         for table_name in metadata.tables:
             expected_columns = metadata.tables[table_name].columns.keys()
             actual_columns = self.migration_metadata.tables[table_name].columns.keys()
-            if table_name == 'recipe_set_nacked':
-                # may be left over from 22
-                if 'comment' in actual_columns:
-                    actual_columns.remove('comment')
-            elif table_name == 'virt_resource':
+            if table_name == 'virt_resource':
                 # may be left over from 0.16
                 if 'system_name' in actual_columns:
                     actual_columns.remove('system_name')
@@ -633,7 +633,7 @@ class MigrationTest(unittest.TestCase):
                 self.migration_session.query(SystemActivity).filter_by(id=1).count(),
                 0)
 
-    def test_migrate_recipe_set_comments_from_nacked(self):
+    def test_migrate_recipe_set_comments_and_waived_from_nacked(self):
         connection = self.migration_metadata.bind.connect()
         # populate empty database
         connection.execute(pkg_resources.resource_string('bkr.inttest.server',
@@ -657,6 +657,9 @@ class MigrationTest(unittest.TestCase):
         self.assertEqual(comments[0].comment, u'it broke')
         self.assertEqual(comments[0].user.user_name, u'admin')
         self.assertEqual(comments[0].created, datetime.datetime(2015, 11, 5, 16, 32, 40))
+        # check that the recipe set is waived
+        recipeset = self.migration_session.query(RecipeSet).first()
+        self.assertEqual(recipeset.waived, True)
 
     def test_migrate_recipe_reviewed_status_from_nacked(self):
         connection = self.migration_metadata.bind.connect()

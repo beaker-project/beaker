@@ -56,7 +56,7 @@ class ReserveWorkflow(WebDriverTestCase):
         s.select_by_visible_text('%s Server x86_64' % self.distro.name)
         b.find_element_by_xpath('//button[normalize-space(text())="Submit job"]').click()
         # should end up on the job page
-        b.find_element_by_xpath('//th[text()="Job ID"]')
+        b.find_element_by_xpath('//h1[contains(string(.), "J:")]')
         # two recipe sets, one for each distro tree
         self.assertEquals(len(b.find_elements_by_class_name('recipeset')), 2)
         b.find_element_by_xpath('//td[normalize-space(string(.))="%s Server i386"]'
@@ -154,7 +154,7 @@ class ReserveWorkflow(WebDriverTestCase):
             .select_by_visible_text('%s Server i386' % self.distro.name)
         b.find_element_by_xpath('//button[normalize-space(text())="Submit job"]').click()
         # should end up on the job page
-        b.find_element_by_xpath('//th[text()="Job ID"]')
+        b.find_element_by_xpath('//h1[contains(string(.), "J:")]')
         # one recipe set for the chosen distro tree
         self.assertEquals(len(b.find_elements_by_class_name('recipeset')), 1)
         b.find_element_by_xpath('//td[normalize-space(string(.))="%s Server i386"]'
@@ -173,7 +173,7 @@ class ReserveWorkflow(WebDriverTestCase):
         b.find_element_by_name('reserve_days').send_keys('4')
         b.find_element_by_xpath('//button[normalize-space(text())="Submit job"]').click()
         # should end up on the job page
-        jid = b.find_element_by_xpath('//td[preceding-sibling::th/text()="Job ID"]/a').text
+        jid = b.find_element_by_xpath('//h1//span[@class="job-id"]').text
         with session.begin():
             job = TaskBase.get_by_t_id(jid)
             reserve_task = job.recipesets[0].recipes[0].tasks[1]
@@ -194,7 +194,7 @@ class ReserveWorkflow(WebDriverTestCase):
             .select_by_visible_text('%s Server i386' % self.distro.name)
         b.find_element_by_xpath('//button[normalize-space(text())="Submit job"]').click()
         # should end up on the job page
-        job_id = b.find_element_by_xpath('//td[preceding-sibling::th/text()="Job ID"]/a').text
+        job_id = b.find_element_by_xpath('//h1//span[@class="job-id"]').text
         with session.begin():
             job = TaskBase.get_by_t_id(job_id)
             recipe = job.recipesets[0].recipes[0]
@@ -217,7 +217,7 @@ class ReserveWorkflow(WebDriverTestCase):
         Select(b.find_element_by_name('lab')).select_by_visible_text(self.lc.fqdn)
         b.find_element_by_xpath('//button[normalize-space(text())="Submit job"]').click()
         # should end up on the job page
-        job_id = b.find_element_by_xpath('//td[preceding-sibling::th/text()="Job ID"]/a').text
+        job_id = b.find_element_by_xpath('//h1//span[@class="job-id"]').text
         with session.begin():
             job = TaskBase.get_by_t_id(job_id)
             cloned_job_xml = lxml.etree.tostring(job.to_xml(clone=True))  # cloning re-parses hostRequires
@@ -249,7 +249,7 @@ class ReserveWorkflow(WebDriverTestCase):
         row.find_element_by_link_text('Reserve Now').click()
         b.find_element_by_xpath('//button[normalize-space(text())="Submit job"]').click()
         # should end up on the job page
-        job_id = b.find_element_by_xpath('//td[preceding-sibling::th/text()="Job ID"]/a').text
+        job_id = b.find_element_by_xpath('//h1//span[@class="job-id"]').text
         with session.begin():
             job = TaskBase.get_by_t_id(job_id)
             cloned_job_xml = lxml.etree.tostring(job.to_xml(clone=True))  # cloning re-parses hostRequires
@@ -357,7 +357,7 @@ class ReserveSystem(WebDriverTestCase):
         b.find_element_by_name('whiteboard').send_keys(unicode(self.distro_tree))
         b.find_element_by_xpath('//button[text()="Submit job"]').click()
         # we should end up on the job page
-        b.find_element_by_xpath('//th[text()="Job ID"]')
+        b.find_element_by_xpath('//h1[contains(string(.), "J:")]')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=722321
     def test_admin_cannot_reserve_any_system(self):

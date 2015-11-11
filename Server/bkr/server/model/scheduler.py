@@ -695,6 +695,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
             'ftasks': self.ftasks,
             'ktasks': self.ktasks,
             'ttasks': self.ttasks,
+            'clone_href': self.clone_link(),
             'recipesets': self.recipesets,
         }
         if identity.current.user:
@@ -734,19 +735,6 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
                     .filter(Group.group_id.in_([g.group_id for g in owner.groups]))
         else:
             return cls.query.filter(literal(False))
-
-    @classmethod
-    def get_nacks(self,jobs):
-        queri = select([RecipeSet.id], from_obj=Job.__table__.join(RecipeSet.__table__), whereclause=Job.id.in_(jobs),distinct=True)
-        results = queri.execute()
-        current_nacks = []
-        for r in results:
-            rs_id = r[0]
-            rs = RecipeSet.by_id(rs_id)
-            response = getattr(rs.nacked,'response',None)
-            if response == Response.by_response('nak'):
-                current_nacks.append(rs_id)
-        return current_nacks
 
     @classmethod
     def complete_delta(cls, delta, query):
@@ -1134,9 +1122,9 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         """
         return ()
 
-    def set_response(self, response):
+    def set_waived(self, waived):
         for rs in self.recipesets:
-            rs.set_response(response)
+            rs.set_waived(waived)
 
     def requires_product(self):
         return self.retention_tag.requires_product()
@@ -1398,8 +1386,8 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
             return False
         return True # anyone can comment on any job
 
-    def can_set_response(self, user=None):
-        """Returns True iff the given user can set the response to this job"""
+    def can_waive(self, user=None):
+        """Returns True iff the given user can waive recipe sets in this job."""
         return self._can_administer(user) or self._can_administer_old(user)
 
     def _can_administer(self, user=None):
@@ -1602,54 +1590,6 @@ class RetentionTag(BeakerTag):
             'needs_product': self.needs_product,
         }
 
-class Response(DeclarativeMappedObject):
-
-    __tablename__ = 'response'
-    __table_args__ = {'mysql_engine': 'InnoDB'}
-    id = Column(Integer, autoincrement=True, primary_key=True)
-    response = Column(Unicode(50), nullable=False)
-
-    @classmethod
-    def get_all(cls,*args,**kw):
-        return cls.query
-
-    @classmethod
-    def by_response(cls,response,*args,**kw):
-        return cls.query.filter_by(response = response).one()
-
-    def __repr__(self):
-        return self.response
-
-    def __str__(self):
-        return self.response
-
-class RecipeSetResponse(DeclarativeMappedObject):
-    """
-    An acknowledgment of a RecipeSet's results. Can be used for filtering reports
-    """
-
-    __tablename__ = 'recipe_set_nacked'
-    __table_args__ = {'mysql_engine': 'InnoDB'}
-    recipe_set_id = Column(Integer, ForeignKey('recipe_set.id',
-            onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)
-    recipesets = relationship('RecipeSet') #: not a list in spite of its name
-    response_id = Column(Integer, ForeignKey('response.id',
-            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
-    response = relationship(Response)
-    created = Column(DateTime, nullable=False, default=datetime.utcnow)
-
-    def __init__(self,type=None,response_id=None):
-        super(RecipeSetResponse, self).__init__()
-        if response_id is not None:
-            res = Response.by_id(response_id)
-        elif type is not None:
-            res = Response.by_response(type)
-        self.response = res
-
-    @classmethod
-    def by_id(cls,id):
-        return cls.query.filter_by(recipe_set_id=id).one()
-
 class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
     """
     A Collection of Recipes that must be executed at the same time.
@@ -1684,8 +1624,7 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
     recipes = relationship('Recipe', back_populates='recipeset')
     activity = relationship(RecipeSetActivity, back_populates='object',
             order_by=[RecipeSetActivity.created.desc(), RecipeSetActivity.id.desc()])
-    nacked = relationship(RecipeSetResponse, cascade='all, delete-orphan',
-            uselist=False)
+    waived = Column(Boolean, nullable=False, default=False)
     comments = relationship('RecipeSetComment', cascade='all, delete-orphan')
 
     activity_type = RecipeSetActivity
@@ -1698,7 +1637,7 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
         self.priority = priority
 
     def __json__(self):
-        return {
+        data = {
             'id': self.id,
             't_id': self.t_id,
             'status': self.status,
@@ -1710,9 +1649,24 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
             'ktasks': self.ktasks,
             'ttasks': self.ttasks,
             'priority': self.priority,
+            'possible_priorities': list(TaskPriority),
+            'waived': self.waived,
             'comments': self.comments,
+            'clone_href': self.clone_link(),
             'machine_recipes': list(self.machine_recipes),
         }
+        if identity.current.user:
+            u = identity.current.user
+            data['can_change_priority'] = self.can_change_priority(u)
+            data['allowed_priorities'] = self.allowed_priorities(u)
+            data['can_cancel'] = self.can_cancel(u)
+            data['can_waive'] = self.can_waive(u)
+        else:
+            data['can_change_priority'] = False
+            data['allowed_priorities'] = []
+            data['can_cancel'] = False
+            data['can_waive'] = False
+        return data
 
     def get_log_dirs(self):
         logs = []
@@ -1729,16 +1683,11 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
         """
         return (log for recipe in self.recipes for log in recipe.all_logs)
 
-    def set_response(self, response):
-        old_response = None
-        if self.nacked is None:
-            self.nacked = RecipeSetResponse(type=response)
-        else:
-            old_response = self.nacked.response
-            self.nacked.response = Response.by_response(response)
+    def set_waived(self, waived):
         self.record_activity(user=identity.current.user, service=u'XMLRPC',
-                             field=u'Ack/Nak', action='Changed',
-                             old=old_response, new=self.nacked.response)
+                             field=u'Waived', action=u'Changed',
+                             old=unicode(self.waived), new=unicode(waived))
+        self.waived = waived
 
     def is_owner(self, user):
         if self.owner == user:
@@ -1749,9 +1698,9 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
         """Returns True iff the given user can comment on this recipe set."""
         return self.job.can_comment(user)
 
-    def can_set_response(self, user=None):
-        """Return True iff the given user can change the response to this recipeset"""
-        return self.job.can_set_response(user)
+    def can_waive(self, user):
+        """Return True iff the given user can waive this recipe set."""
+        return self.job.can_waive(user)
 
     def can_stop(self, user=None):
         """Returns True iff the given user can stop this recipeset"""
@@ -1785,9 +1734,12 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
         return_node = recipeSet
 
         if not clone:
-            response = self.get_response()
-            if response:
-                recipeSet.set('response','%s' % str(response))
+            # For backwards compatibility, we still use
+            # response="ack" and response="nak" in the <recipeSet/> element
+            if self.waived:
+                recipeSet.set('response', 'nak')
+            else:
+                recipeSet.set('response', 'ack')
 
         if not clone:
             recipeSet.set("id", "%s" % self.id)
@@ -1914,10 +1866,6 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
                         group_by=[Recipe.id],
                         order_by='count')
         return map(lambda x: MachineRecipe.query.filter_by(id=x[0]).first(), session.connection(RecipeSet).execute(query).fetchall())
-
-    def get_response(self):
-        response = getattr(self.nacked,'response',None)
-        return response
 
     def task_info(self):
         """

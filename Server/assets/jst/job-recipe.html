@@ -1,0 +1,21 @@
+<td>
+  <a class="recipe-id" href="<%- beaker_url_prefix %>recipes/<%- id %>"><abbr title="<% if (guest) { %>Guest <% } %>Recipe">R</abbr>:<%- id %></a>
+</td>
+<td class="recipe-metadata">
+  <span class="recipe-whiteboard"><%- whiteboard %></span>
+  <% if (!_.isEmpty(role) && role != "None" && role != "RECIPE_MEMBERS" && role != "STANDALONE") { %>
+    <span class="recipe-role">
+      Role: <%- role %>
+    </span>
+  <% } %>
+  <span class="recipe-distro">
+    <%- distro_tree.distro.name %> <%- distro_tree.variant %> <%- distro_tree.arch %>
+  </span>
+  <span class="recipe-resource">
+    <%- resource && resource.fqdn %>
+  </span>
+</td>
+<td class="recipe-comments">
+  <!-- recipe comments would go here -->
+</td>
+<td class="recipe-status"><% /* populated by the render() method */ %></td>

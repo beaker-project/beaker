@@ -11,13 +11,15 @@ from bkr.inttest.server.webdriver_utils import is_text_present, login, \
 from bkr.inttest import data_setup, get_server_base
 from turbogears.database import session
 
-#XXX Merge this into test_jobs.py 
+# OLD, DEPRECATED JOB PAGE ONLY
+
 class Cancel(WebDriverTestCase):
 
     def setUp(self):
         with session.begin():
             self.password = 'password'
             self.user = data_setup.create_user(password=self.password)
+            self.user.use_old_job_page = True
             self.job = data_setup.create_job(owner=self.user)
         self.browser = self.get_browser()
 
@@ -26,6 +28,7 @@ class Cancel(WebDriverTestCase):
         with session.begin():
             group = data_setup.create_group()
             user = data_setup.create_user(password='password')
+            user.use_old_job_page = True
             group.add_member(user)
             self.job.group = group
         login(b, user.user_name, 'password')
@@ -40,6 +43,7 @@ class Cancel(WebDriverTestCase):
         with session.begin():
             group = data_setup.create_group()
             user = data_setup.create_user(password='password')
+            user.use_old_job_page = True
             group.add_member(user)
             self.job.group = group
         login(b, user.user_name, 'password')
@@ -58,6 +62,7 @@ class Cancel(WebDriverTestCase):
     def test_submission_delegate_cancel_job(self):
         with session.begin():
             submission_delegate = data_setup.create_user(password='password')
+            submission_delegate.use_old_job_page = True
             self.user.submission_delegates[:] = [submission_delegate]
         b = self.browser
         login(b, submission_delegate.user_name, password='password')

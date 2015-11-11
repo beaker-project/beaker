@@ -15,7 +15,7 @@ from bkr.inttest.server.webdriver_utils import login, is_text_present, \
         delete_and_confirm, click_menu_item
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction
-from bkr.server.model import Job, Response, RecipeSetResponse
+from bkr.server.model import Job
 
 class TestJobMatrixWebDriver(WebDriverTestCase):
 
@@ -76,8 +76,8 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         self.assert_(self.passed_job.whiteboard in whiteboard_options)
 
         #Now delete the only job with that whiteboard
-        b.get(get_server_base() + 'jobs/%s' % self.passed_job.id)
-        delete_and_confirm(b, "//form[@action='delete_job_page']")
+        with session.begin():
+            self.passed_job.soft_delete()
 
         # Confirm it is no longer there
         b.get(get_server_base() + 'matrix')
@@ -103,8 +103,8 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         self.assert_('Pass: 1' in report_text)
 
         # Delete Job
-        b.get(get_server_base() + 'jobs/%s' % self.passed_job.id)
-        delete_and_confirm(b, "//form[@action='delete_job_page']")
+        with session.begin():
+            self.passed_job.soft_delete()
 
         # Assert it is no longer there
         b.get(get_server_base() + 'matrix')
@@ -134,8 +134,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
 
         # Nack Recipe
         with session.begin():
-            response = Response.by_response('nak')
-            self.passed_job.recipesets[0].nacked = RecipeSetResponse(response_id=response.id)
+            self.passed_job.recipesets[0].waived = True
 
         # Assert it is no longer there
         b.get(get_server_base() + 'matrix')

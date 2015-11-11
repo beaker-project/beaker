@@ -1,0 +1,32 @@
+<form>
+<div class="modal-header">
+  <a href="#" class="close" data-dismiss="modal" aria-hidden="true">&times;</a>
+  <h3>Edit job metadata</h3>
+</div>
+<div class="modal-body">
+  <label for="whiteboard">Whiteboard</label>
+  <textarea id="whiteboard" name="whiteboard" class="input-block-level" rows="5" />
+  <span class="help-block">The whiteboard is rendered as Markdown.</span>
+  <label for="cc">Notify CC</label>
+  <input type="text" name="cc" class="input-block-level"/>
+  <span class="help-block">Email addresses in the notify CC list are copied on job notifications. Separate multiple addresses with semicolons.</span>
+  <label for="retention_tag">Retention Tag</label>
+  <select id="retention_tag" name="retention_tag">
+    <% _.each(_.sortBy(possible_retention_tags, 'tag'), function (tag) { %>
+      <option value="<%- tag.tag %>"><%- tag.tag %></option>
+    <% }) %>
+  </select>
+  <label for="product">Product</label>
+  <select id="product" name="product" class="input-block-level" data-live-search="true">
+    <option value="">(none)</option>
+    <% _.each(_.sortBy(possible_products, 'name'), function (product) { %>
+      <option value="<%- product.name %>"><%- product.name %></option>
+    <% }) %>
+  </select>
+</div>
+<div class="modal-footer">
+  <div class="sync-status"/>
+  <button type="button" class="btn" data-dismiss="modal" data-loading-text="Cancel">Cancel</button>
+  <button type="submit" class="btn btn-primary" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Saving&hellip;">Save changes</button>
+</div>
+</form>

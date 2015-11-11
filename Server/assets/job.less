@@ -4,32 +4,159 @@
 // the Free Software Foundation; either version 2 of the License, or
 // (at your option) any later version.
 
-// jobs, recipe sets, and recipes on job page and recipe page
-table.job, table.recipe {
-    & > tbody > tr {
-        & > th {
-            text-align: right;
+// job page
+.job-alternative-formats {
+    margin-top: 1em;
+    float: right;
+    p {
+        display: inline;
+    }
+    ul {
+        display: inline;
+        margin: 0;
+        list-style: none;
+        > li {
+            display: inline;
         }
-        & > th, & > td {
-            border: none;
+        > li + li {
+            padding-left: 0.5em;
+        }
+        > li + li:before {
+            content: "\00b7"; /* middot */
+            padding-right: 0.5em;
+            .muted;
         }
     }
 }
-div.recipeset {
-    border: 2px solid @tableBorder;
-    padding: 1em;
-    margin: 1em 0;
+.job-btn-group {
+    font-weight: normal;
+    margin-left: 15px;
 }
-div.recipe {
-    margin-top: 1em;
-    border-top: 2px solid @tableBorder;
-    padding-top: 1em;
+.job-info {
+    // Matches the style of .page-header immediately above it.
+    padding-bottom: (@baseLineHeight / 2) - 1;
+    margin-bottom: @baseLineHeight;
+    border-bottom: 1px solid @grayLighter;
+    display: flex;
+    flex-flow: row nowrap;
+    > div {
+        margin-bottom: @baseLineHeight;
+        // vertical border between columns
+        margin-right: 2em;
+        border-right: 1px solid @grayLighter;
+        padding-right: 2em;
+        &:last-child {
+            margin-right: 0;
+            border-right: none;
+            padding-right: 0;
+        }
+    }
 }
-div.recipe .tab-content {
-    // if the results table overflows we want the viewport to scroll, not the tab pane
-    // https://bugzilla.redhat.com/show_bug.cgi?id=1014962
-    overflow: visible !important;
+.modal.job-activity {
+    width: 80%;
+    margin-left: -40%;
+    .modal-body {
+        max-height: 600px;
+        overflow: auto;
+    }
 }
-table.recipe {
-    margin-bottom: 0;
+.job-whiteboard {
+    h4 {
+        font-size: 1em;
+        color: @grayLight;
+        text-transform: uppercase;
+        margin: 0 0 (@baseLineHeight/2) 0;
+    }
+}
+.job-recipes {
+    width: 100%;
+    tbody + tbody {
+        border-top: none;
+    }
+    .recipeset td {
+        padding-top: @baseLineHeight*1.5;
+        border-top: none;
+        vertical-align: bottom;
+    }
+    .recipeset-id {
+        font-size: 1.2em;
+    }
+    .recipeset .label {
+        margin-left: 0.5em;
+    }
+    .recipe-metadata {
+        // This trick lets the cell expand to fill the width but keeps it to a
+        // single line with ellipsis truncation, in the style of Gmail.
+        max-width: 1px;
+        width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        // Some generous horizontal spacing between the different elements of
+        // the summary line, to help distinguish them visually.
+        padding-left: 1.5em;
+        .recipe-role, .recipe-distro, .recipe-resource {
+            margin-left: 1.5em;
+            .muted;
+        }
+    }
+    .recipeset-comments, .recipe-comments {
+        text-align: right;
+        .comments-link {
+            white-space: nowrap;
+        }
+        .popover {
+            min-width: 27em;
+            max-width: 40em;
+            .popover-content {
+                padding: 9px 0;
+            }
+            div.comment {
+                padding: 0 14px;
+            }
+            div.comment + div.comment {
+                padding-top: 1em;
+                border-top: 1px solid @grayLighter;
+                margin-top: 1em;
+            }
+            p:last-child {
+                margin-bottom: 0;
+            }
+            .comment-metadata {
+                .muted;
+            }
+        }
+    }
+    .recipeset-actions {
+        text-align: right;
+        // Buttons in grids have small padding set globally, but we reset to
+        // the default padding here because we can be more generous with space
+        // in the recipe set heading and this way the buttons match up with the
+        // job-level buttons.
+        .btn { padding: 4px 12px; }
+    }
+    .recipe-status {
+        text-align: right;
+        white-space: nowrap;
+        .label {
+            font-size: 1em;
+        }
+        .progress-text {
+            margin-right: 0.5em;
+        }
+        .progress {
+            display: inline-block;
+            min-width: 200px;
+            margin-bottom: 0;
+        }
+    }
+    .guestrecipe .recipe-id {
+        // Guest recipe ids are indented from their host recipe, to reflect the
+        // hierarchy.
+        margin-left: 1em;
+    }
+}
+.job-header abbr, .recipeset-id abbr, .recipe-id abbr {
+    text-decoration: none;
+    border-bottom: none;
 }

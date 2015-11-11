@@ -1,0 +1,12 @@
+<% comments.each(function (comment) { %>
+  <div class="comment">
+    <p class="comment-metadata">
+      <%= comment.get('user').toHTML() %> commented
+      <time datetime="<%- moment.utc(comment.get('created')).toISOString() %>"
+            title="<%- comment.get('created') %>">
+        <%- moment.utc(comment.get('created')).local().fromNow() %>
+      </time>
+    </p>
+    <%= marked(comment.get('comment'), {sanitize: true, smartypants: false}) %>
+  </div>
+<% }) %>

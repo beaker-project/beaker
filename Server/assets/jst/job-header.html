@@ -1,0 +1,25 @@
+<div class="job-alternative-formats">
+  <p>View as:</p>
+  <ul><li><a href="<%- id %>.xml">Beaker results XML</a></li><li><a href="<%- id %>.junit.xml">JUnit XML</a></li></ul>
+</div>
+<div class="page-header">
+  <h1>
+    <span class="job-id"><abbr title="Job">J</abbr>:<%- id %></span>
+    <small>
+      owned by <%= owner.toHTML() %>
+      <% if (!_.isEmpty(group)) { %> for <%= group.toHTML() %><% } %>
+    </small>
+    <div class="btn-group job-btn-group">
+      <% if (can_edit) { %>
+        <button class="btn edit"><i class="fa fa-pencil-square-o"></i> Edit</button>
+      <% } %>
+      <a href="<%- clone_href %>" class="btn"><i class="fa fa-copy"></i> Clone</a>
+      <% if (can_cancel && !is_finished) { %>
+        <button class="btn cancel" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Cancelling&hellip;"><i class="fa fa-times"></i> Cancel</button>
+      <% } %>
+      <% if (can_delete && is_finished) { %>
+        <button class="btn btn-danger delete" data-loading-text="<i class='fa fa-trash-o fa-spin'></i> Deleting&hellip;"><i class="fa fa-trash-o"></i> Delete</button>
+      <% } %>
+    </div>
+  </h1>
+</div>

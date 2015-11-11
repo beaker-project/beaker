@@ -40,9 +40,9 @@ from .inventory import (System, SystemStatusDuration, SystemCc, Hypervisor,
 from .scheduler import (Watchdog, TaskBase, Job, RecipeSet, Recipe,
         RecipeTaskResult, MachineRecipe, GuestRecipe, RecipeTask, Log,
         LogRecipe, LogRecipeTask, LogRecipeTaskResult, JobCc, RecipeResource,
-        SystemResource, GuestResource, VirtResource, Response, RetentionTag,
+        SystemResource, GuestResource, VirtResource, RetentionTag,
         Product, RenderedKickstart, RecipeSetActivity, RecipeRepo,
-        RecipeKSAppend, RecipeTaskParam, RecipeSetResponse, JobActivity, RecipeReservationRequest)
+        RecipeKSAppend, RecipeTaskParam, JobActivity, RecipeReservationRequest)
 from .reviewing import RecipeSetComment, RecipeReviewedState
 from .openstack import OpenStackRegion
 

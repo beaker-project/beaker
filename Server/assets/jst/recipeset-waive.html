@@ -1,0 +1,17 @@
+<form>
+<div class="modal-header">
+  <a href="#" class="close" data-dismiss="modal" aria-hidden="true">&times;</a>
+  <h3>Waive <%- t_id %></h3>
+</div>
+<div class="modal-body">
+  <label for="comment">Comment</label>
+  <textarea id="comment" name="comment" class="input-block-level" rows="5" />
+  <span class="help-block">Optionally add a comment to record why you are 
+  waiving this recipe set.</span>
+</div>
+<div class="modal-footer">
+  <div class="sync-status"/>
+  <button type="button" class="btn" data-dismiss="modal" data-loading-text="Cancel">Cancel</button>
+  <button type="submit" class="btn btn-primary" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Waiving&hellip;">Waive</button>
+</div>
+</form>

@@ -16,10 +16,9 @@ import re
 import tempfile
 import pkg_resources
 from turbogears.database import session
-from selenium.webdriver.support.ui import Select
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_text_present, logout, \
-        click_menu_item
+        click_menu_item, BootstrapSelect
 from bkr.inttest import data_setup, with_transaction, get_server_base, \
         DatabaseTestCase
 from bkr.server.model import RetentionTag, Product, Distro, Job, GuestRecipe, \
@@ -32,33 +31,73 @@ class TestViewJob(WebDriverTestCase):
     def setUp(self):
         self.browser = self.get_browser()
 
+    def go_to_job_page(self, job):
+        self.browser.get(get_server_base() + 'jobs/%s' % job.id)
+
     def test_group_job(self):
         with session.begin():
             user = data_setup.create_user()
             group = data_setup.create_group()
             job = data_setup.create_job(group=group)
         b = self.browser
-        b.get(get_server_base() + 'jobs/%s' % job.id)
-        b.find_element_by_link_text("%s" % job.group).click()
+        self.go_to_job_page(job)
+        b.find_element_by_link_text(job.group.group_name).click()
         b.find_element_by_xpath('.//h1[normalize-space(text())="%s"]' % \
                                        group.group_name)
 
-    def test_cc_list(self):
+    def test_job_owner_sees_edit_button(self):
+        with session.begin():
+            job_owner = data_setup.create_user(password=u'owner')
+            job = data_setup.create_job(owner=job_owner)
+        b = self.browser
+        login(b, user=job_owner.user_name, password=u'owner')
+        self.go_to_job_page(job)
+        b.find_element_by_xpath('//button[normalize-space(string(.))="Edit"]')
+
+    def test_group_member_sees_edit_button_for_group_job(self):
+        with session.begin():
+            group = data_setup.create_group()
+            job_owner = data_setup.create_user()
+            group_member = data_setup.create_user(password=u'group_member')
+            group.add_member(job_owner)
+            group.add_member(group_member)
+            job = data_setup.create_job(owner=job_owner, group=group)
+        b = self.browser
+        login(b, user=group_member.user_name, password=u'group_member')
+        self.go_to_job_page(job)
+        b.find_element_by_xpath('//button[normalize-space(string(.))="Edit"]')
+
+    def test_other_user_does_not_see_edit_button(self):
+        with session.begin():
+            other_user = data_setup.create_user(password=u'other_user')
+            job = data_setup.create_job()
+        b = self.browser
+        login(b, user=other_user.user_name, password=u'other_user')
+        self.go_to_job_page(job)
+        b.find_element_by_xpath('//body[not(.//button[normalize-space(string(.))="Edit"])]')
+
+    def test_edit_cc_list(self):
         with session.begin():
             user = data_setup.create_user(password=u'password')
             job = data_setup.create_job(owner=user,
                     cc=[u'laika@mir.su', u'tereshkova@kosmonavt.su'])
         b = self.browser
         login(b, user=user.user_name, password='password')
-        b.get(get_server_base())
-        b.find_element_by_link_text('My Jobs').click()
-        b.find_element_by_link_text(job.t_id).click()
-        b.find_element_by_xpath('//td[.//text()="%s"]' % job.t_id)
+        self.go_to_job_page(job)
+        b.find_element_by_xpath('//button[normalize-space(string(.))="Edit"]').click()
+        modal = b.find_element_by_class_name('modal')
+        input = modal.find_element_by_name('cc')
         self.assertEqual(
-            # value of cell beside "CC" cell
-            b.find_element_by_xpath('//table//td'
-                '[preceding-sibling::th[1]/text() = "CC"]').text,
+            input.get_attribute('value'),
             'laika@mir.su; tereshkova@kosmonavt.su')
+        input.clear()
+        input.send_keys('tereshkova@kosmonavt.su; gagarin@kosmonavt.su')
+        modal.find_element_by_tag_name('form').submit()
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(job.cc,
+                    ['gagarin@kosmonavt.su', u'tereshkova@kosmonavt.su'])
 
     def test_edit_job_whiteboard(self):
         with session.begin():
@@ -66,69 +105,162 @@ class TestViewJob(WebDriverTestCase):
             job = data_setup.create_job(owner=user)
         b = self.browser
         login(b, user=user.user_name, password='asdf')
-        b.get(get_server_base() + 'jobs/%s' % job.id)
+        self.go_to_job_page(job)
         new_whiteboard = 'new whiteboard value %s' % int(time.time())
-        b.find_element_by_xpath(
-                '//td[preceding-sibling::th[1]/text()="Whiteboard"]'
-                '//a[text()="(Edit)"]').click()
-        b.find_element_by_name('whiteboard').clear()
-        b.find_element_by_name('whiteboard').send_keys(new_whiteboard)
-        b.find_element_by_xpath('//form[@id="job_whiteboard_form"]'
-                '//button[@type="submit"]').click()
-        b.find_element_by_xpath(
-                '//form[@id="job_whiteboard_form"]//div[@class="msg success"]')
-        b.get(get_server_base() + 'jobs/%s' % job.id)
-        b.find_element_by_xpath('//input[@name="whiteboard" and @value="%s"]'
+        b.find_element_by_xpath('//button[normalize-space(string(.))="Edit"]').click()
+        modal = b.find_element_by_class_name('modal')
+        textarea = modal.find_element_by_name('whiteboard')
+        self.assertEquals(textarea.get_attribute('value'), job.whiteboard)
+        textarea.clear()
+        textarea.send_keys(new_whiteboard)
+        modal.find_element_by_tag_name('form').submit()
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
+        b.find_element_by_xpath('//div[@class="job-whiteboard"]/p[text()="%s"]'
                 % new_whiteboard)
-
-    def test_datetimes_are_localised(self):
         with session.begin():
-            job = data_setup.create_completed_job()
-        b = self.browser
-        b.get(get_server_base() + 'jobs/%s' % job.id)
-        self.check_datetime_localised(b.find_element_by_xpath(
-                '//table//td'
-                '[preceding-sibling::th[1]/text() = "Queued"]').text)
-        self.check_datetime_localised(b.find_element_by_xpath(
-                '//table//td'
-                '[preceding-sibling::th[1]/text() = "Started"]').text)
-        self.check_datetime_localised(b.find_element_by_xpath(
-                '//table//td'
-                '[preceding-sibling::th[1]/text() = "Finished"]').text)
+            session.refresh(job)
+            self.assertEquals(job.whiteboard, new_whiteboard)
 
-    def test_invalid_datetimes_arent_localised(self):
+    def test_change_product(self):
         with session.begin():
-            job = data_setup.create_job()
+            job_owner = data_setup.create_user(password=u'owner')
+            job = data_setup.create_job(owner=job_owner,
+                    retention_tag=u'active',
+                    product=data_setup.create_product())
+            new_product = data_setup.create_product()
         b = self.browser
-        b.get(get_server_base() + 'jobs/%s' % job.id)
-        self.assertEquals(
-                b.find_element_by_xpath('//table//td'
-                '[preceding-sibling::th[1]/text() = "Finished"]').text,
-                '')
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=706435
-    def test_task_result_datetimes_are_localised(self):
+        login(b, user=job_owner.user_name, password=u'owner')
+        self.go_to_job_page(job)
+        b.find_element_by_xpath('//button[normalize-space(string(.))="Edit"]').click()
+        modal = b.find_element_by_class_name('modal')
+        BootstrapSelect(modal.find_element_by_name('product'))\
+            .select_by_visible_text(new_product.name)
+        modal.find_element_by_tag_name('form').submit()
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
         with session.begin():
-            job = data_setup.create_completed_job()
-        b = self.browser
-        b.get(get_server_base() + 'jobs/%s' % job.id)
-        recipe_id = job.recipesets[0].recipes[0].id
-        b.find_element_by_xpath('//div[@id="recipe%s"]//a[text()="Show Results"]' % recipe_id).click()
-        b.find_element_by_xpath(
-                '//div[@id="recipe-%d-results"]//table' % recipe_id)
-        recipe_task_start, recipe_task_finish, recipe_task_duration = \
-                b.find_elements_by_xpath(
-                    '//div[@id="recipe-%d-results"]//table'
-                    '/tbody/tr[1]/td[3]/div' % recipe_id)
-        self.check_datetime_localised(recipe_task_start.text.strip())
-        self.check_datetime_localised(recipe_task_finish.text.strip())
-        self.check_datetime_localised(b.find_element_by_xpath(
-                '//div[@id="recipe-%d-results"]//table'
-                '/tbody/tr[2]/td[3]' % recipe_id).text)
+            session.expire_all()
+            self.assertEquals(job.product, new_product)
 
-    def check_datetime_localised(self, dt):
-        self.assert_(re.match(r'\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d [-+]\d\d:\d\d$', dt),
-                '%r does not look like a localised datetime' % dt)
+    def test_change_retention_tag(self):
+        with session.begin():
+            job_owner = data_setup.create_user(password=u'owner')
+            job = data_setup.create_job(owner=job_owner,
+                    retention_tag=u'scratch')
+        b = self.browser
+        login(b, user=job_owner.user_name, password=u'owner')
+        self.go_to_job_page(job)
+        b.find_element_by_xpath('//button[normalize-space(string(.))="Edit"]').click()
+        modal = b.find_element_by_class_name('modal')
+        BootstrapSelect(modal.find_element_by_name('retention_tag'))\
+            .select_by_visible_text('60days')
+        modal.find_element_by_tag_name('form').submit()
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(job.retention_tag.tag, u'60days')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1022333
+    def test_change_retention_tag_clearing_product(self):
+        with session.begin():
+            job_owner = data_setup.create_user(password=u'owner')
+            job = data_setup.create_job(owner=job_owner,
+                    retention_tag=u'active',
+                    product=data_setup.create_product())
+        b = self.browser
+        login(b, user=job_owner.user_name, password=u'owner')
+        self.go_to_job_page(job)
+        b.find_element_by_xpath('//button[normalize-space(string(.))="Edit"]').click()
+        modal = b.find_element_by_class_name('modal')
+        BootstrapSelect(modal.find_element_by_name('retention_tag'))\
+            .select_by_visible_text('scratch')
+        modal.find_element_by_tag_name('form').submit()
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(job.retention_tag.tag, u'scratch')
+            self.assertEquals(job.product, None)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=662703
+    def test_product_dropdown_is_sorted(self):
+        with session.begin():
+            job_owner = data_setup.create_user(password=u'owner')
+            job = data_setup.create_job(owner=job_owner,
+                    retention_tag=u'audit',
+                    product=data_setup.create_product())
+            product_before = data_setup.create_product(u'aardvark')
+            product_after = data_setup.create_product(u'zebra')
+        b = self.browser
+        login(b, user=job_owner.user_name, password=u'owner')
+        self.go_to_job_page(job)
+        b.find_element_by_xpath('//button[normalize-space(string(.))="Edit"]').click()
+        modal = b.find_element_by_class_name('modal')
+        options = BootstrapSelect(modal.find_element_by_name('product')).options
+        before_pos = options.index(product_before.name)
+        after_pos = options.index(product_after.name)
+        self.assertLess(before_pos, after_pos)
+
+    def test_cancel_job(self):
+        with session.begin():
+            job_owner = data_setup.create_user(password=u'owner')
+            job = data_setup.create_job(owner=job_owner)
+        b = self.browser
+        login(b, user=job_owner.user_name, password=u'owner')
+        self.go_to_job_page(job)
+        b.find_element_by_xpath('//div[@class="page-header"]'
+                '//button[normalize-space(string(.))="Cancel"]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('message').send_keys('lecnac')
+        modal.find_element_by_tag_name('form').submit()
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
+        b.find_element_by_xpath(u'//div[@class="page-header"]'
+                u'//button[normalize-space(string(.))="Cancelling\u2026"]')
+        with session.begin():
+            session.expire_all()
+            job.update_status()
+            self.assertEquals(job.status, TaskStatus.cancelled)
+
+    def test_cancel_recipeset(self):
+        with session.begin():
+            job_owner = data_setup.create_user(password=u'owner')
+            job = data_setup.create_job(owner=job_owner)
+            recipeset = job.recipesets[0]
+        b = self.browser
+        login(b, user=job_owner.user_name, password=u'owner')
+        self.go_to_job_page(job)
+        rs_row = b.find_element_by_xpath(
+                '//tr[td/span[@class="recipeset-id" and normalize-space(string(.))="%s"]]'
+                % recipeset.t_id)
+        rs_row.find_element_by_xpath('.//button[normalize-space(string(.))="Cancel"]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('message').send_keys('lecnac')
+        modal.find_element_by_tag_name('form').submit()
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
+        rs_row.find_element_by_xpath(
+                u'.//button[normalize-space(string(.))="Cancelling\u2026"]')
+        with session.begin():
+            session.expire_all()
+            job.update_status()
+            self.assertEquals(recipeset.status, TaskStatus.cancelled)
+
+    def test_change_recipeset_priority(self):
+        with session.begin():
+            job_owner = data_setup.create_user(password=u'owner')
+            job = data_setup.create_job(owner=job_owner)
+            recipeset = job.recipesets[0]
+        b = self.browser
+        login(b, user=job_owner.user_name, password=u'owner')
+        self.go_to_job_page(job)
+        rs_row = b.find_element_by_xpath(
+                '//tr[td/span[@class="recipeset-id" and normalize-space(string(.))="%s"]]'
+                % recipeset.t_id)
+        rs_row.find_element_by_xpath('.//button[normalize-space(string(.))="Priority"]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_xpath('.//button[normalize-space(string(.))="Low"]').click()
+        modal.find_element_by_tag_name('form').submit()
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(recipeset.priority, TaskPriority.low)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=881387
     def test_guestrecipes_appear_after_host(self):
@@ -143,7 +275,7 @@ class TestViewJob(WebDriverTestCase):
             session.flush()
             self.assert_(guest.id < host.id)
         b = self.browser
-        b.get(get_server_base() + 'jobs/%s' % job.id)
+        self.go_to_job_page(job)
         recipe_order = [elem.text for elem in b.find_elements_by_xpath(
                 '//a[@class="recipe-id"]')]
         self.assertEquals(recipe_order, [host.t_id, guest.t_id])
@@ -154,17 +286,102 @@ class TestViewJob(WebDriverTestCase):
             job_owner = data_setup.create_user(password=u'owner')
             job = data_setup.create_job(owner=job_owner)
             job.record_activity(user=job_owner, service=u'test',
-                                field=u'test', action='change',
-                                old='old', new='new')
+                                field=u'test', action=u'change',
+                                old=u'old', new=u'new')
         login(self.browser, user=job_owner.user_name, password=u'owner')
         b = self.browser
-        b.get(get_server_base() + 'jobs/%s' % job.id)
-        b.find_element_by_link_text("Toggle Job history").click()
-        activity_row = b.find_element_by_xpath('//table[@id="job_history_datagrid"]/tbody/tr[1]')
+        self.go_to_job_page(job)
+        b.find_element_by_link_text('(Job activity)').click()
+        modal = b.find_element_by_class_name('modal')
+        activity_row = modal.find_element_by_xpath('.//table/tbody/tr[1]')
         activity_row.find_element_by_xpath('./td[2][text()="%s"]' % u'test')
-        activity_row.find_element_by_xpath('./td[4][text()="%s"]' % 'Job: %s' % job.id)
+        activity_row.find_element_by_xpath('./td[4][text()="%s"]' % job.t_id)
         activity_row.find_element_by_xpath('./td[6][text()="%s"]' % u'change')
 
+    def test_export_xml(self):
+        # Make sure the export link is present on the jobs page. We can't click 
+        # it because WebDriver can't handle XML documents in the browser. 
+        # Covered by HTTP API tests below instead.
+        with session.begin():
+            job = data_setup.create_completed_job()
+        b = self.browser
+        self.go_to_job_page(job)
+        b.find_element_by_link_text('Beaker results XML')
+
+    def test_waive_recipeset(self):
+        with session.begin():
+            owner = data_setup.create_user(password=u'asdf')
+            job = data_setup.create_completed_job(owner=owner)
+            recipeset = job.recipesets[0]
+        b = self.browser
+        login(b, user=owner.user_name, password='asdf')
+        self.go_to_job_page(job)
+        rs_row = b.find_element_by_xpath(
+                '//tr[td/span[@class="recipeset-id" and normalize-space(string(.))="%s"]]'
+                % recipeset.t_id)
+        rs_row.find_element_by_xpath('.//button[normalize-space(string(.))="Waive"]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('comment').send_keys('fnord')
+        modal.find_element_by_tag_name('form').submit()
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
+        rs_row = b.find_element_by_xpath(
+                '//tr[td/span[@class="recipeset-id" and normalize-space(string(.))="%s"]]'
+                % recipeset.t_id)
+        rs_row.find_element_by_xpath('.//span[@class="label label-warning" and text()="Waived"]')
+        with session.begin():
+            session.refresh(recipeset)
+            self.assertEqual(recipeset.waived, True)
+            self.assertEqual(recipeset.comments[-1].comment, u'fnord')
+            self.assertEqual(recipeset.comments[-1].user, owner)
+
+    def test_unwaive_waived_recipeset(self):
+        with session.begin():
+            owner = data_setup.create_user(password=u'asdf')
+            job = data_setup.create_completed_job(owner=owner)
+            recipeset = job.recipesets[0]
+            recipeset.waived = True
+        b = self.browser
+        login(b, user=owner.user_name, password='asdf')
+        self.go_to_job_page(job)
+        rs_row = b.find_element_by_xpath(
+                '//tr[td/span[@class="recipeset-id" and normalize-space(string(.))="%s"]]'
+                % recipeset.t_id)
+        rs_row.find_element_by_xpath('.//span[@class="label label-warning" and text()="Waived"]')
+        rs_row.find_element_by_xpath('.//button[normalize-space(string(.))="Unwaive"]').click()
+        # wait for Waive button to re-appear, indicating that unwaiving is complete
+        b.find_element_by_xpath(
+                '//tr[td/span[@class="recipeset-id" and normalize-space(string(.))="%s"]]'
+                '//button[normalize-space(string(.))="Waive"]'
+                % recipeset.t_id)
+        with session.begin():
+            session.refresh(recipeset)
+            self.assertEqual(recipeset.waived, False)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1215030
+    def test_html_in_comments_is_escaped(self):
+        with session.begin():
+            owner = data_setup.create_user(password=u'owner')
+            job = data_setup.create_completed_job(owner=owner)
+        bad_comment = '<script>alert("xss")</script>'
+        b = self.browser
+        login(b, user=owner.user_name, password='owner')
+        self.go_to_job_page(job)
+        b.find_element_by_xpath('.//button[normalize-space(string(.))="Waive"]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('comment').send_keys(bad_comment)
+        modal.find_element_by_tag_name('form').submit()
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
+        # showing the comment should not execute a script
+        b.find_element_by_class_name('comments-link').click()
+        comment_paragraph = b.find_element_by_xpath(
+                '//td[@class="recipeset-comments"]//div[@class="comment"]/p[2]')
+        self.assertEqual(comment_paragraph.text, bad_comment)
+        # reload the page, showing the comment should not execute a script
+        self.go_to_job_page(job)
+        b.find_element_by_class_name('comments-link').click()
+        comment_paragraph = b.find_element_by_xpath(
+                '//td[@class="recipeset-comments"]//div[@class="comment"]/p[2]')
+        self.assertEqual(comment_paragraph.text, bad_comment)
 
 class NewJobTestWD(WebDriverTestCase):
 
@@ -829,145 +1046,6 @@ class NewJobTest(WebDriverTestCase):
                           'XML entity with name &xxe; not permitted')
 
 
-class JobAttributeChangeTest(WebDriverTestCase):
-
-    def setUp(self):
-        self.browser = self.get_browser()
-
-    def check_can_change_product(self, job, new_product):
-        b = self.browser
-        b.get(get_server_base() + 'jobs/%s' % job.id)
-        Select(b.find_element_by_id('job_product'))\
-            .select_by_visible_text(new_product.name)
-        b.find_element_by_xpath('//div[text()="Product has been updated"]')
-
-    def check_cannot_change_product(self, job):
-        b = self.browser
-        b.get(get_server_base() + 'jobs/%s' % job.id)
-        self.assertFalse(b.find_element_by_id('job_product').is_enabled())
-
-    def check_can_change_retention_tag(self, job, new_tag):
-        b = self.browser
-        b.get(get_server_base() + 'jobs/%s' % job.id)
-        Select(b.find_element_by_id('job_retentiontag'))\
-            .select_by_visible_text(new_tag)
-        b.find_element_by_xpath('//div[text()="Tag has been updated"]')
-
-    def check_cannot_change_retention_tag(self, job):
-        b = self.browser
-        b.get(get_server_base() + 'jobs/%s' % job.id)
-        self.assertFalse(b.find_element_by_id('job_retentiontag').is_enabled())
-
-    def test_job_owner_can_change_product(self):
-        with session.begin():
-            job_owner = data_setup.create_user(password=u'owner')
-            job = data_setup.create_job(owner=job_owner,
-                    retention_tag=u'active',
-                    product=data_setup.create_product())
-            new_product = data_setup.create_product()
-        login(self.browser, user=job_owner.user_name, password=u'owner')
-        self.check_can_change_product(job, new_product)
-
-    def test_group_member_can_change_product_for_group_job(self):
-        with session.begin():
-            group = data_setup.create_group()
-            job_owner = data_setup.create_user()
-            group_member = data_setup.create_user(password=u'group_member')
-            group.add_member(job_owner)
-            group.add_member(group_member)
-            job = data_setup.create_job(owner=job_owner,
-                    retention_tag=u'active',
-                    product=data_setup.create_product(),
-                    group=group)
-            new_product = data_setup.create_product()
-        login(self.browser, user=group_member.user_name, password=u'group_member')
-        self.check_can_change_product(job, new_product)
-
-    def test_other_user_cannot_change_product(self):
-        with session.begin():
-            other_user = data_setup.create_user(password=u'other_user')
-            job = data_setup.create_job(retention_tag=u'active',
-                    product=data_setup.create_product())
-        login(self.browser, user=other_user.user_name, password=u'other_user')
-        self.check_cannot_change_product(job)
-
-    def test_job_owner_can_change_retention_tag(self):
-        with session.begin():
-            job_owner = data_setup.create_user(password=u'owner')
-            job = data_setup.create_job(owner=job_owner,
-                    retention_tag=u'scratch')
-        login(self.browser, user=job_owner.user_name, password=u'owner')
-        self.check_can_change_retention_tag(job, '60days')
-
-    def test_group_member_can_change_retention_tag_for_group_job(self):
-        with session.begin():
-            group = data_setup.create_group()
-            job_owner = data_setup.create_user()
-            group_member = data_setup.create_user(password=u'group_member')
-            group.add_member(job_owner)
-            group.add_member(group_member)
-            job = data_setup.create_job(owner=job_owner,
-                    retention_tag=u'scratch',
-                    group=group)
-        login(self.browser, user=group_member.user_name, password=u'group_member')
-        self.check_can_change_retention_tag(job, '60days')
-
-    def test_other_user_cannot_change_retention_tag(self):
-        with session.begin():
-            other_user = data_setup.create_user(password=u'other_user')
-            job = data_setup.create_job(retention_tag=u'scratch')
-        login(self.browser, user=other_user.user_name, password=u'other_user')
-        self.check_cannot_change_retention_tag(job)
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=1022333
-    def test_change_retention_tag_clearing_product(self):
-        with session.begin():
-            job_owner = data_setup.create_user(password=u'owner')
-            job = data_setup.create_job(owner=job_owner,
-                    retention_tag=u'active',
-                    product=data_setup.create_product())
-        login(self.browser, user=job_owner.user_name, password=u'owner')
-        b = self.browser
-        b.get(get_server_base() + 'jobs/%s' % job.id)
-        Select(b.find_element_by_id('job_retentiontag'))\
-            .select_by_visible_text('scratch')
-        b.find_element_by_xpath('//button[text()="Clear product"]').click()
-        b.find_element_by_xpath('//div[text()="Tag has been updated"]')
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=995012
-    def test_record_retention_tag_change(self):
-        with session.begin():
-            job_owner = data_setup.create_user(password=u'owner')
-            job = data_setup.create_job(owner=job_owner,
-                                        retention_tag=u'scratch')
-        login(self.browser, user=job_owner.user_name, password=u'owner')
-        self.check_can_change_retention_tag(job, '60days')
-        with session.begin():
-            self.assertEquals(job.activity[0].service, u'WEBUI')
-            self.assertEquals(job.activity[0].field_name, 'Retention Tag')
-            self.assertEquals(job.activity[0].object_name(), 'Job: %s' % job.id)
-            self.assertEquals(job.activity[0].old_value, u'scratch')
-            self.assertEquals(job.activity[0].new_value, u'60days')
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=995012
-    def test_record_priority_change(self):
-        with session.begin():
-            job_owner = data_setup.create_user(password=u'owner')
-            job = data_setup.create_job(owner=job_owner)
-        login(self.browser, user=job_owner.user_name, password=u'owner')
-        b = self.browser
-        b.get(get_server_base() + 'jobs/%s' % job.id)
-        Select(b.find_element_by_id('priority_recipeset_%s' % job.recipesets[0].id))\
-            .select_by_visible_text('Low')
-        b.find_element_by_xpath('//msg[text()="Priority has been updated"]')
-        with session.begin():
-            self.assertEquals(job.recipesets[0].activity[0].service, u'WEBUI')
-            self.assertEquals(job.recipesets[0].activity[0].field_name, 'Priority')
-            self.assertEquals(job.recipesets[0].activity[0].object_name(), 'RecipeSet: %s' % job.recipesets[0].id)
-            self.assertEquals(job.recipesets[0].activity[0].old_value, u'Normal')
-            self.assertEquals(job.recipesets[0].activity[0].new_value, u'Low')
-
-
 class CloneJobTest(WebDriverTestCase):
 
     def setUp(self):
@@ -1377,8 +1455,19 @@ class JobHTTPTest(DatabaseTestCase):
         s = requests.Session()
         requests_login(s, user=user, password=u'other')
         response = post_json(get_server_base() + 'jobs/%s/status' % self.job.id,
-                data={'status': u'Cancelled'})
-        self.assertEquals(response.status_code, 401)
+                session=s, data={'status': u'Cancelled'})
+        self.assertEquals(response.status_code, 403)
+
+    def test_submission_delegate_cannot_update_status(self):
+        # N.B. submission delegate but *not* submitter
+        with session.begin():
+            submission_delegate = data_setup.create_user(password='password')
+            self.owner.submission_delegates[:] = [submission_delegate]
+        s = requests.Session()
+        requests_login(s, user=submission_delegate, password=u'password')
+        response = post_json(get_server_base() + 'jobs/%s/status' % self.job.id,
+                session=s, data={'status': u'Cancelled'})
+        self.assertEquals(response.status_code, 403)
 
     def test_cancel_job(self):
         s = requests.Session()
@@ -1390,8 +1479,49 @@ class JobHTTPTest(DatabaseTestCase):
             session.expire_all()
             self.job.update_status()
             self.assertEquals(self.job.status, TaskStatus.cancelled)
+            # https://bugzilla.redhat.com/show_bug.cgi?id=995012
             self.assertEquals(self.job.activity[0].field_name, u'Status')
             self.assertEquals(self.job.activity[0].action, u'Cancelled')
+
+    def test_submitter_can_cancel(self):
+        with session.begin():
+            submission_delegate = data_setup.create_user(password='password')
+            self.owner.submission_delegates[:] = [submission_delegate]
+            self.job.submitter = submission_delegate
+        s = requests.Session()
+        requests_login(s, user=submission_delegate, password=u'password')
+        response = post_json(get_server_base() + 'jobs/%s/status' % self.job.id,
+                session=s, data={'status': u'Cancelled'})
+        response.raise_for_status()
+
+    def test_group_member_can_cancel_group_job(self):
+        with session.begin():
+            other_member = data_setup.create_user(password='other')
+            group = data_setup.create_group()
+            group.add_member(self.job.owner)
+            group.add_member(other_member)
+            self.job.group = group
+        s = requests.Session()
+        requests_login(s, user=other_member, password=u'other')
+        response = post_json(get_server_base() + 'jobs/%s/status' % self.job.id,
+                session=s, data={'status': u'Cancelled'})
+        response.raise_for_status()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1173376
+    def test_clear_rows_in_system_recipe_map(self):
+        with session.begin():
+            system = data_setup.create_system()
+            self.job.recipesets[0].recipes[0].systems[:] = [system]
+        # check if rows in system_recipe_map
+        self.assertNotEqual(len(self.job.recipesets[0].recipes[0].systems), 0)
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = post_json(get_server_base() + 'jobs/%s/status' % self.job.id,
+                session=s, data={'status': u'Cancelled'})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(len(self.job.recipesets[0].recipes[0].systems), 0)
 
     def test_get_job_activity(self):
         with session.begin():
@@ -1488,6 +1618,23 @@ class RecipeSetHTTPTest(DatabaseTestCase):
             session.expire_all()
             self.check_changed_recipeset()
 
+    def test_job_owner_can_waive(self):
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = patch_json(get_server_base() +
+                'recipesets/%s' % self.job.recipesets[0].id,
+                session=s, data={'waived': True})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            recipeset = self.job.recipesets[0]
+            self.assertEqual(recipeset.waived, True)
+            # https://bugzilla.redhat.com/show_bug.cgi?id=995012
+            self.assertEqual(recipeset.activity[0].field_name, u'Waived')
+            self.assertEqual(recipeset.activity[0].action, u'Changed')
+            self.assertEqual(recipeset.activity[0].old_value, u'False')
+            self.assertEqual(recipeset.activity[0].new_value, u'True')
+
     #https://bugzilla.redhat.com/show_bug.cgi?id=1149977
     def test_admin_can_increase_priority_by_tid(self):
         s = requests.Session()
@@ -1529,6 +1676,18 @@ class RecipeSetHTTPTest(DatabaseTestCase):
                 session=s, data={'status': u'Cancelled'})
         self.assertEquals(response.status_code, 403)
 
+    def test_submission_delegate_cannot_update_status(self):
+        # N.B. submission delegate but *not* submitter
+        with session.begin():
+            submission_delegate = data_setup.create_user(password='password')
+            self.owner.submission_delegates[:] = [submission_delegate]
+        s = requests.Session()
+        requests_login(s, user=submission_delegate, password=u'password')
+        response = post_json(get_server_base() +
+                'recipesets/%s/status' % self.job.recipesets[0].id,
+                session=s, data={'status': u'Cancelled'})
+        self.assertEquals(response.status_code, 403)
+
     def test_cancel_recipeset(self):
         s = requests.Session()
         requests_login(s, user=self.owner, password=u'theowner')
@@ -1541,8 +1700,35 @@ class RecipeSetHTTPTest(DatabaseTestCase):
             self.job.update_status()
             recipeset = self.job.recipesets[0]
             self.assertEquals(recipeset.status, TaskStatus.cancelled)
+            # https://bugzilla.redhat.com/show_bug.cgi?id=995012
             self.assertEquals(recipeset.activity[0].field_name, u'Status')
             self.assertEquals(recipeset.activity[0].action, u'Cancelled')
+
+    def test_submitter_can_cancel(self):
+        with session.begin():
+            submission_delegate = data_setup.create_user(password='password')
+            self.owner.submission_delegates[:] = [submission_delegate]
+            self.job.submitter = submission_delegate
+        s = requests.Session()
+        requests_login(s, user=submission_delegate, password=u'password')
+        response = post_json(get_server_base() +
+                'recipesets/%s/status' % self.job.recipesets[0].id,
+                session=s, data={'status': u'Cancelled'})
+        response.raise_for_status()
+
+    def test_group_member_can_cancel_in_group_job(self):
+        with session.begin():
+            other_member = data_setup.create_user(password='other')
+            group = data_setup.create_group()
+            group.add_member(self.job.owner)
+            group.add_member(other_member)
+            self.job.group = group
+        s = requests.Session()
+        requests_login(s, user=other_member, password=u'other')
+        response = post_json(get_server_base() +
+                'recipesets/%s/status' % self.job.recipesets[0].id,
+                session=s, data={'status': u'Cancelled'})
+        response.raise_for_status()
 
     def test_get_recipeset_comments(self):
         with session.begin():
