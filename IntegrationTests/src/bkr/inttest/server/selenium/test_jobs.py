@@ -16,6 +16,7 @@ import re
 import tempfile
 import pkg_resources
 from turbogears.database import session
+from bkr.inttest.assertions import wait_for_condition
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_text_present, logout, \
         click_menu_item, BootstrapSelect
@@ -382,6 +383,32 @@ class TestViewJob(WebDriverTestCase):
         comment_paragraph = b.find_element_by_xpath(
                 '//td[@class="recipeset-comments"]//div[@class="comment"]/p[2]')
         self.assertEqual(comment_paragraph.text, bad_comment)
+
+    def test_can_control_recipe_reviewed_state(self):
+        with session.begin():
+            owner = data_setup.create_user(password=u'asdf')
+            job = data_setup.create_completed_job(owner=owner)
+            recipe = job.recipesets[0].recipes[0]
+            # Recipe is already reviewed
+            recipe.set_reviewed_state(owner, True)
+        b = self.browser
+        login(b, user=owner.user_name, password='asdf')
+        self.go_to_job_page(job)
+        recipe_row = b.find_element_by_xpath(
+                '//tr[td/a[@class="recipe-id" and normalize-space(string(.))="%s"]]'
+                % recipe.t_id)
+        reviewed_checkbox = recipe_row.find_element_by_xpath(
+                './/input[@type="checkbox" and @title="Reviewed?"]')
+        # Checkbox should be checked because the recipe is already reviewed
+        self.assertTrue(reviewed_checkbox.is_selected())
+        # Un-check it
+        reviewed_checkbox.click()
+        # The reviewed checkbox violates our UI guidelines about always 
+        # indicating when a server request is in progress. But there is really 
+        # nowhere good we can display a progress indicator because the reviewed 
+        # checkbox is intentionally very unobtrusive.
+        # So we have to resort to poll-waiting on the database instead.
+        wait_for_condition(lambda: recipe.get_reviewed_state(owner) == False)
 
 class NewJobTestWD(WebDriverTestCase):
 

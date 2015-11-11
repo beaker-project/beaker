@@ -403,6 +403,16 @@ class TestRecipeView(WebDriverTestCase):
         self.assertEquals('Successfully released reserved system for %s' % recipe.t_id, 
                           flash_text)
 
+    def test_opening_recipe_page_marks_it_as_reviewed(self):
+        with session.begin():
+            recipe = self.job.recipesets[0].recipes[0]
+            self.assertEqual(recipe.get_reviewed_state(self.user), False)
+        b = self.browser
+        self.go_to_recipe_view(recipe)
+        b.find_element_by_xpath('//h1[normalize-space(string(.))="Job: %s"]' % self.job.t_id)
+        with session.begin():
+            self.assertEqual(recipe.get_reviewed_state(self.user), True)
+
 
 class RecipeHTTPTest(DatabaseTestCase):
     """

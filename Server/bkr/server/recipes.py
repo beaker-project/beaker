@@ -489,6 +489,7 @@ class Recipes(RPCRoot):
         if recipe.is_deleted():
             flash(_(u"Invalid %s, has been deleted" % recipe.t_id))
             redirect(".")
+        recipe.set_reviewed_state(identity.current.user, True)
         return dict(title   = 'Recipe',
                     recipe_widget        = self.recipe_widget,
                     recipe               = recipe)

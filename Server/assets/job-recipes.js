@@ -97,6 +97,9 @@ var RecipeSetCommentsLink = Backbone.View.extend({
 var JobRecipeRow = Backbone.View.extend({
     tagName: 'tr',
     template: JST['job-recipe'],
+    events: {
+        'click .recipe-reviewed': 'toggle_recipe_reviewed',
+    },
     initialize: function (options) {
         this.guest = !!options.guest;
         this.listenTo(this.model, 'change', this.render);
@@ -118,6 +121,10 @@ var JobRecipeRow = Backbone.View.extend({
         if (this.guest)
             this.$el.addClass('guestrecipe');
         return this;
+    },
+    toggle_recipe_reviewed: function (evt) {
+        var reviewed = evt.target.checked;
+        this.model.save({reviewed: reviewed}, {patch: true, silent: true});
     },
 });
 
