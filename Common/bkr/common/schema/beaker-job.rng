@@ -15,6 +15,21 @@ the Free Software Foundation; either version 2 of the License, or
   <define name="job">
     <element name="job">
       <interleave>
+        <zeroOrMore>
+          <element>
+            <a:documentation xml:lang="en">
+              Extra XML provided by the user. Must have a namespace. Beaker will
+              preserve the XML when cloning the job.
+            </a:documentation>
+            <anyName>
+              <except>
+                <nsName ns="" />
+              </except>
+            </anyName>
+            <ref name="anyAttributes" />
+            <ref name="anyContent" />
+          </element>
+        </zeroOrMore>
         <optional>
           <attribute name="user">
           <a:documentation xml:lang="en">
@@ -918,5 +933,27 @@ the Free Software Foundation; either version 2 of the License, or
         </choice>
       </attribute>
     </optional>
+  </define>
+  <define name="anyContent">
+    <zeroOrMore>
+      <choice>
+        <ref name="anyElement" />
+        <text />
+      </choice>
+    </zeroOrMore>
+  </define>
+  <define name="anyElement">
+    <element>
+      <anyName />
+      <ref name="anyAttributes" />
+      <ref name="anyContent" />
+    </element>
+  </define>
+  <define name="anyAttributes">
+    <zeroOrMore>
+      <attribute>
+        <anyName />
+      </attribute>
+    </zeroOrMore>
   </define>
 </grammar>

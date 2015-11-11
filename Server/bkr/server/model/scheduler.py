@@ -602,6 +602,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
             ForeignKey('tg_group.group_id', name='job_group_id_fk'))
     group = relationship(Group, back_populates='jobs')
     whiteboard = Column(Unicode(2000))
+    extra_xml = Column(UnicodeText, nullable=True)
     retention_tag_id = Column(Integer, ForeignKey('retention_tag.id'),
             nullable=False)
     retention_tag = relationship('RetentionTag', back_populates='jobs')
@@ -1243,6 +1244,8 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         if self.product:
             job.set("product", "%s" % self.product.name)
         job.append(node("whiteboard", self.whiteboard or ''))
+        if self.extra_xml:
+            job.extend(etree.fromstring(u'<dummy>%s</dummy>' % self.extra_xml).getchildren())
         return job
 
     def to_xml(self, clone=False, *args, **kw):

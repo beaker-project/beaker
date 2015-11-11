@@ -512,6 +512,9 @@ class Jobs(RPCRoot):
                   group=group,
                   submitter=submitter,
                   )
+        extra_xml = xmljob.xpath('*[namespace-uri()]')
+        if extra_xml is not None:
+            job.extra_xml = u''.join([lxml.etree.tostring(x).strip() for x in extra_xml])
         job.product = product
         job.retention_tag = tag
         email_validator = validators.Email(not_empty=True)

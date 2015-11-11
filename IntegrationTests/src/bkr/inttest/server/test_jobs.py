@@ -1,16 +1,18 @@
-
+# coding=utf8
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
 import lxml.etree
+import os.path
 import pkg_resources
 from turbogears import testutil
 from turbogears.database import session
 from bkr.server.bexceptions import BX
 from bkr.inttest import data_setup, with_transaction, DatabaseTestCase
 from bkr.server.model import TaskPackage
+
 
 class TestJobsController(DatabaseTestCase):
 
@@ -71,7 +73,7 @@ class TestJobsController(DatabaseTestCase):
         xmljob = lxml.etree.fromstring(complete_job_xml)
         with session.begin():
             job = testutil.call(self.controller.process_xmljob, xmljob, self.user)
-        roundtripped_xml = lxml.etree.tostring(job.to_xml(clone=True), pretty_print=True)
+        roundtripped_xml = lxml.etree.tostring(job.to_xml(clone=True), pretty_print=True, encoding='utf8')
         self.assertMultiLineEqual(roundtripped_xml, complete_job_xml)
 
     def test_does_not_fail_when_whiteboard_empty(self):
@@ -111,3 +113,40 @@ class TestJobsController(DatabaseTestCase):
         xmljob = lxml.etree.fromstring(xml)
         job = self.controller.process_xmljob(xmljob, self.user)
         self.assertListEqual(['libbeer'], [x.package for x in job.recipesets[0].recipes[0].custom_packages])
+
+    def test_upload_xml_catches_invalid_xml(self):
+        """We want that invalid Job XML is caught in the validation step."""
+        session.begin()
+        xmljob = lxml.etree.fromstring('''
+            <job>
+                <whriteboard>job with arbitrary XML in namespaces</whriteboard>
+                <recipeSet>
+                    <rawcipe>
+                        <distroRequires>
+                            <distro_name />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                    </rawcipe>
+                </recipeSet>
+            </job>
+        ''')
+        try:
+            self.assertRaises(BX, lambda: self.controller.process_xmljob(xmljob, self.user))
+        finally:
+            session.rollback()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1112131
+    def test_preserves_arbitrary_XML_elements_in_namespace(self):
+        complete_job_xml = pkg_resources.resource_filename('bkr.inttest', 'complete-job.xml')
+        with open(complete_job_xml, 'r') as f:
+            contents = f.read()
+            xmljob = lxml.etree.fromstring(contents)
+        with session.begin():
+            job = testutil.call(self.controller.process_xmljob, xmljob, self.user)
+        tree = job.to_xml(clone=True)
+        self.assertEqual(2, len(tree.xpath('*[namespace-uri()]')))
+        self.assertEqual('<b:option xmlns:b="http://example.com/bar">--foobar arbitrary</b:option>',
+                         lxml.etree.tostring(tree.xpath('*[namespace-uri()]')[0]))
+        self.assertEqual(u'<f:test xmlns:f="http://example.com/foo">unicode text: heißer Шис</f:test>'.encode('utf8'),
+                         lxml.etree.tostring(tree.xpath('*[namespace-uri()]')[1], encoding='utf8'))

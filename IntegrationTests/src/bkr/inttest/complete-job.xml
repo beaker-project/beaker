@@ -6,6 +6,8 @@
   <whiteboard>
     valid job
   </whiteboard>
+  <b:option xmlns:b="http://example.com/bar">--foobar arbitrary</b:option>
+  <f:test xmlns:f="http://example.com/foo">unicode text: heißer Шис</f:test>
   <recipeSet priority="Normal">
     <recipe whiteboard="" role="None" ks_meta="" kernel_options="" kernel_options_post="">
       <guestrecipe guestname="" guestargs="" whiteboard="" role="None" ks_meta="" kernel_options="" kernel_options_post="">

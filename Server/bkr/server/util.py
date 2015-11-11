@@ -232,7 +232,7 @@ def parse_untrusted_xml(s):
     are found.
     See: http://lxml.de/FAQ.html#how-do-i-use-lxml-safely-as-a-web-service-endpoint
     """
-    parser = lxml.etree.XMLParser(resolve_entities=False)
+    parser = lxml.etree.XMLParser(resolve_entities=False, strip_cdata=False)
     root = lxml.etree.fromstring(s, parser)
     for ent in root.iter(lxml.etree.Entity):
         # fail once we find any system entity which is not supported

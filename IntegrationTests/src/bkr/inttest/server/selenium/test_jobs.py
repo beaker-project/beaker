@@ -394,6 +394,8 @@ class NewJobTestWD(WebDriverTestCase):
 
 class NewJobTest(WebDriverTestCase):
 
+    maxDiff = None
+
     @with_transaction
     def setUp(self):
         data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
@@ -635,6 +637,48 @@ class NewJobTest(WebDriverTestCase):
         b.find_element_by_xpath('//button[text()="Queue"]').click()
         flash_message = b.find_element_by_class_name('flash').text
         self.assert_(flash_message.startswith('Success!'), flash_message)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1112131
+    def test_preserves_arbitrary_xml_just_fine(self):
+        arbitrary_xml = """
+        <p:option xmlns:p="http://example.com/preserve">
+          <closed/>
+          <cdata attribute="bogus"><![CDATA[<sender>John Smith</sender>]]></cdata>
+          <text>just text</text>
+          <!-- comment -->
+        </p:option>
+        """
+
+        b = self.browser
+        login(b)
+        b.get(get_server_base())
+        click_menu_item(b, 'Scheduler', 'New Job')
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write('''
+            <job>
+                %s
+                <whiteboard>job with arbitrary XML in namespaces</whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''' % arbitrary_xml)
+        xml_file.flush()
+        b.find_element_by_id('jobs_filexml').send_keys(xml_file.name)
+        b.find_element_by_xpath('//button[text()="Submit Data"]').click()
+        b.find_element_by_xpath('//button[text()="Queue"]').click()
+        flash_message = b.find_element_by_class_name('flash').text
+        self.assert_(flash_message.startswith('Success!'), flash_message)
+
+        with session.begin():
+            job = Job.query.all()[-1]
+            self.assertMultiLineEqual(arbitrary_xml.strip(), job.extra_xml.strip())
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=768167
     def test_doesnt_barf_on_xml_encoding_declaration(self):
