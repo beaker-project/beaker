@@ -10,3 +10,12 @@
     <%= marked(comment.get('comment'), {sanitize: true, smartypants: false}) %>
   </div>
 <% }) %>
+<% if (can_comment) { %>
+  <div class="comment">
+    <form class="new-comment">
+      <textarea name="comment" class="input-block-level" rows="5" />
+      <div class="sync-status"/>
+      <button type="submit" class="btn btn-primary" data-loading-text="<i class='fa fa-spin fa-spinner'></i> Commenting&hellip;">Comment</button>
+    </form>
+  </div>
+<% } %>

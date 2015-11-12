@@ -1660,11 +1660,13 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
             data['can_change_priority'] = self.can_change_priority(u)
             data['allowed_priorities'] = self.allowed_priorities(u)
             data['can_cancel'] = self.can_cancel(u)
+            data['can_comment'] = self.can_comment(u)
             data['can_waive'] = self.can_waive(u)
         else:
             data['can_change_priority'] = False
             data['allowed_priorities'] = []
             data['can_cancel'] = False
+            data['can_comment'] = False
             data['can_waive'] = False
         return data
 

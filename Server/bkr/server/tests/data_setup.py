@@ -438,9 +438,12 @@ def create_retention_tag(name=None, default=False, needs_product=False):
     session.add(new_tag)
     return new_tag
 
-def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product=None,
-        retention_tag=None, group=None, submitter=None, priority=None,
-        queue_time=None, **kwargs):
+def create_job_for_recipes(recipes, **kwargs):
+    recipeset = create_recipeset_for_recipes(recipes, **kwargs)
+    return create_job_for_recipesets([recipeset], **kwargs)
+
+def create_job_for_recipesets(recipesets, owner=None, whiteboard=None, cc=None,
+        product=None, retention_tag=None, group=None, submitter=None, **kwargs):
     if retention_tag is None:
         retention_tag = RetentionTag.by_tag(u'scratch') # Don't use default, unpredictable
     else:
@@ -450,11 +453,18 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product
         owner = create_user()
     if whiteboard is None:
         whiteboard = unique_name(u'job %s')
-    job = Job(whiteboard=whiteboard, ttasks=sum(r.ttasks for r in recipes),
+    job = Job(whiteboard=whiteboard, ttasks=sum(rs.ttasks for rs in recipesets),
         owner=owner, retention_tag=retention_tag, group=group, product=product,
         submitter=submitter)
     if cc is not None:
         job.cc = cc
+    job.recipesets.extend(recipesets)
+    session.add(job)
+    session.flush()
+    log.debug('Created %s', job.t_id)
+    return job
+
+def create_recipeset_for_recipes(recipes, priority=None, queue_time=None, **kwargs):
     if priority is None:
         priority = TaskPriority.default_priority()
     recipe_set = RecipeSet(ttasks=sum(r.ttasks for r in recipes),
@@ -462,23 +472,22 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product
     if queue_time is not None:
         recipe_set.queue_time = queue_time
     recipe_set.recipes.extend(recipes)
-    job.recipesets.append(recipe_set)
-    session.add(job)
-    session.flush()
-    log.debug('Created %s', job.t_id)
-    return job
+    return recipe_set
 
-def create_job(num_recipes=1, num_guestrecipes=0, whiteboard=None,
+def create_job(num_recipesets=1, num_recipes=1, num_guestrecipes=0, whiteboard=None,
         recipe_whiteboard=None, **kwargs):
     if kwargs.get('distro_tree', None) is None:
         kwargs['distro_tree'] = create_distro_tree()
-    recipes = [create_recipe(whiteboard=recipe_whiteboard, **kwargs)
-            for _ in range(num_recipes)]
-    guestrecipes = [create_guestrecipe(host=recipes[0],
-            whiteboard=recipe_whiteboard, **kwargs)
-            for _ in range(num_guestrecipes)]
-    return create_job_for_recipes(recipes + guestrecipes,
-            whiteboard=whiteboard, **kwargs)
+    recipesets = []
+    for _ in range(num_recipesets):
+        recipes = [create_recipe(whiteboard=recipe_whiteboard, **kwargs)
+                for _ in range(num_recipes)]
+        guestrecipes = [create_guestrecipe(host=recipes[0],
+                whiteboard=recipe_whiteboard, **kwargs)
+                for _ in range(num_guestrecipes)]
+        recipesets.append(create_recipeset_for_recipes(
+                recipes + guestrecipes, **kwargs))
+    return create_job_for_recipesets(recipesets, whiteboard=whiteboard, **kwargs)
 
 def create_running_job(**kwargs):
     job = create_job(**kwargs)

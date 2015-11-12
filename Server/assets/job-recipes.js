@@ -72,16 +72,19 @@ var RecipeSetView = Backbone.View.extend({
 });
 
 var RecipeSetCommentsLink = Backbone.View.extend({
+    events: {
+        'submit form.new-comment': 'add_comment',
+    },
     initialize: function () {
         this.listenTo(this.model.get('comments'), 'reset add remove', this.render);
     },
     render: function () {
         this.$el.empty();
-        if (this.model.get('comments').isEmpty())
+        if (!this.model.get('can_comment') && this.model.get('comments').isEmpty())
             return;
         var model = this.model;
         $('<a href="#" class="comments-link"></a>')
-            .append(this.model.get('comments').size())
+            .append(this.model.get('comments').size() || '')
             .append(' ')
             .append('<i class="fa fa-comment-o" aria-label="comments"></i>')
             .on('click', function (evt) { evt.preventDefault(); })
@@ -91,6 +94,22 @@ var RecipeSetCommentsLink = Backbone.View.extend({
                 content: function () { return JST['recipeset-comments'](model.attributes); },
             })
             .appendTo(this.$el);
+    },
+    add_comment: function (evt) {
+        evt.preventDefault();
+        this.$('.sync-status').empty();
+        this.$('button').button('loading');
+        var comment = this.$('textarea[name=comment]').val();
+        this.model.get('comments').create({comment: comment}, {
+            wait: true,
+            error: _.bind(this.save_error, this),
+        });
+    },
+    save_error: function (model, xhr, options) {
+        $('<div class="alert alert-error"/>')
+            .text(xhr.statusText + ': ' + xhr.responseText)
+            .appendTo(this.$('.sync-status'));
+        this.$('button').button('reset');
     },
 });
 
