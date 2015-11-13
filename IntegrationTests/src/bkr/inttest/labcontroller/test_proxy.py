@@ -80,6 +80,31 @@ class GetRecipeTest(LabControllerTestCase):
         recipe_xml = s.get_my_recipe({'recipe_id': self.recipe.id})
         self.check_recipe_xml(recipe_xml)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1279871
+    def test_xmlrpc_with_charset_param_is_not_rejected(self):
+        # Need to send the XMLRPC request manually with requests, so that we 
+        # can customise the Content-Type request header.
+        xmlrpc_url = self.get_proxy_url() + 'RPC2'
+        xmlrpc_request_body = """
+            <?xml version="1.0"?>
+            <methodCall>
+                <methodName>get_my_recipe</methodName>
+                <params>
+                    <param>
+                        <value><struct>
+                            <member>
+                                <name>recipe_id</name>
+                                <value><int>%s</int></value>
+                            </member>
+                        </struct></value>
+                    </param>
+                </params>
+            </methodCall>
+            """ % self.recipe.id
+        response = requests.post(xmlrpc_url, data=xmlrpc_request_body,
+                headers={'Content-Type': 'text/xml; charset=utf-8'})
+        response.raise_for_status()
+
     def test_GET_recipe(self):
         url = '%srecipes/%s/' % (self.get_proxy_url(), self.recipe.id)
         response = requests.get(url, headers={'Accept': 'application/xml'})
