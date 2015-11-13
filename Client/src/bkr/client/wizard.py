@@ -343,6 +343,7 @@ WizardVersion = "2.3.0"
 
 # Regular expressions
 RegExpPackage    = re.compile("^(?![._+-])[.a-zA-Z0-9_+-]+(?<![._-])$")
+RegExpRhtsRequires = re.compile("^(?![._+-])[.a-zA-Z0-9_+-/()]+(?<![._-])$")
 RegExpPath       = re.compile("^(?![/-])[a-zA-Z0-9/_-]+(?<![/-])$")
 RegExpTestName   = re.compile("^(?!-)[a-zA-Z0-9-_]+(?<!-)$")
 RegExpBug        = re.compile("^\d+$")
@@ -424,7 +425,7 @@ PreferencesTemplate = """<?xml version="1.0" ?>
         </license>
     </licenses>
     <skeletons>
-        <skeleton name="skel1">
+        <skeleton name="skel1" requires="gdb" rhtsrequires="library(perl/lib1) library(scl/lib2)">
             This is skeleton 1 example.
         </skeleton>
         <skeleton name="skel2">
@@ -622,12 +623,13 @@ class Preferences:
 
     def load(self):
         """ Load user preferences (or set to defaults) """
+        preferences_file = os.environ.get("BEAKER_WIZARD_CONF", PreferencesFile)
         try:
-            self.xml = parse(PreferencesFile)
+            self.xml = parse(preferences_file)
         except:
-            if os.path.exists(PreferencesFile):
+            if os.path.exists(preferences_file):
                 print "I'm sorry, the preferences file seems broken.\n" \
-                        "Did you do something ugly to %s?" % PreferencesFile
+                        "Did you do something ugly to %s?" % preferences_file
                 sleep(3)
             else:
                 self.firstRun = True
@@ -637,7 +639,7 @@ class Preferences:
             try:
                 self.parse()
             except:
-                print "Failed to parse %s, falling to defaults." % PreferencesFile
+                print "Failed to parse %s, falling to defaults." % preferences_file
                 sleep(3)
                 self.xml = self.template
                 self.parse()
@@ -972,6 +974,11 @@ class Options:
             action="append",
             metavar="PACKAGES",
             help="required packages [%s]" % self.pref.getPackage())
+        groupMeta.add_option("-Q",
+            dest="rhtsrequires",
+            action="append",
+            metavar="TEST",
+            help="required RHTS tests or libraries")
         groupMeta.add_option("-t",
             dest="time",
             help="test time [%s]" % self.pref.getTime())
@@ -1083,6 +1090,7 @@ class Options:
     def releases(self):     return [ self.opt.releases,     ['-RHEL4', '-RHELClient5', '-RHELServer5'] ]
     def runfor(self):       return [ self.opt.runfor,       [self.pref.getPackage()] ]
     def requires(self):     return [ self.opt.requires,     [self.pref.getPackage()] ]
+    def rhtsrequires(self): return [ self.opt.rhtsrequires, [] ]
     def time(self):         return [ self.opt.time,         self.pref.getTime() ]
     def priority(self):     return [ self.opt.priority,     self.pref.getPriority() ]
     def confidential(self): return [ self.opt.confidential, self.pref.getConfidential() ]
@@ -2089,6 +2097,26 @@ class Requires(MultipleChoice):
         return RegExpPackage.match(item)
 
 
+class RhtsRequires(MultipleChoice):
+    """ List of other RHTS tests or libraries which this test requires """
+
+    def init(self):
+        self.name = "Required RHTS tests/libraries"
+        self.question = "RhtsRequires: other tests or libraries required by " \
+                "this one, e.g. test(/mytests/common) or library(mytestlib)"
+        self.description = """Write a list of RPM dependencies which should be
+                installed by the package manager. Other tasks provide test(/task/name)
+                and libraries provide library(name)."""
+        self.list = []
+        self.sort = True
+        self.emptyListMeaning = "None"
+        self.common = False
+        self.default(self.options.rhtsrequires())
+
+    def validItem(self, item):
+        return RegExpRhtsRequires.match(item)
+
+
 class Skeleton(SingleChoice):
     """ Skeleton to be used for creating the runtest.sh """
 
@@ -2466,6 +2494,8 @@ class Skeleton(SingleChoice):
         self.list.extend(findNodeNames(self.options.pref.skeletons, "skeleton"))
         self.common = False
         self.default(self.options.skeleton())
+        self.requires = None
+        self.rhtsrequires = None
 
     def replaceVariables(self, xml, test = None):
         """ Replace all <variable> tags with their respective values """
@@ -2512,6 +2542,19 @@ class Skeleton(SingleChoice):
         # return dedented skeleton without trailing whitespace
         skeleton = re.sub("\n\s+$", "\n", skeleton)
         return dedentText(skeleton)
+
+    def getRhtsRequires(self):
+        """ Return packages/libraries listed in the arguments of a skeleton, if any """
+        # get the template from predefined or user skeletons
+        skeleton = findNode(self.skeletons, "skeleton", self.data) \
+                or findNode(self.options.pref.skeletons, "skeleton", self.data)
+        if not skeleton:
+            return None
+        try:
+            rhtsrequires = skeleton.getAttribute("rhtsrequires")
+            return rhtsrequires
+        except:
+            print "getRhtsRequires exception"
 
     def getMakefile(self, type, testname, version, author, reproducers, meta):
         """ Return Makefile skeleton """
@@ -2650,6 +2693,8 @@ class Test(SingleChoice):
         self.author = Author(self.options)
         self.email = Email(self.options)
 
+        self.rhtsrequires = RhtsRequires(self.options, suggest = self.skeleton.getRhtsRequires())
+
         # we escape review only in force mode
         if not self.options.force(): self.confirm = True
         if not self.confirm: self.format()
@@ -2678,6 +2723,7 @@ class Test(SingleChoice):
         print
         self.runfor.format()
         self.requires.format()
+        self.rhtsrequires.format()
         self.archs.format()
         self.releases.format()
         self.version.format()
@@ -2716,7 +2762,7 @@ class Test(SingleChoice):
 
         # check all fields for matching string (and edit if not checking only)
         for field in self.testname, self.package, self.namespace, self.runfor, \
-                self.requires, self.package, self.releases, self.version, \
+                self.requires, self.rhtsrequires, self.package, self.releases, self.version, \
                 self.time, self.desc, self.destructive, self.archs, \
                 self.path, self.priority, self.confidential, self.license, \
                 self.skeleton, self.author, self.email, self.testname.prefix, \
@@ -2797,6 +2843,7 @@ class Test(SingleChoice):
                 self.time.formatMakefileLine(name = "TestTime") +
                 self.runfor.formatMakefileLine(name = "RunFor") +
                 self.requires.formatMakefileLine(name = "Requires") +
+                self.rhtsrequires.formatMakefileLine(name = "RhtsRequires") +
                 provides +
                 self.priority.formatMakefileLine() +
                 self.license.formatMakefileLine() +

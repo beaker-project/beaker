@@ -9,6 +9,7 @@ import subprocess
 import tempfile
 import logging
 from bkr.inttest import get_server_base, data_setup, DatabaseTestCase
+from bkr.client import wizard
 
 log = logging.getLogger(__name__)
 
@@ -32,6 +33,12 @@ def create_client_config(username=data_setup.ADMIN_USER,
                 'QPID_KRB = %s' % qpid_krb,
         ]))
 
+    config.flush()
+    return config
+
+def create_wizard_config():
+    config = tempfile.NamedTemporaryFile(prefix='bkr-inttest-wizard-conf-')
+    config.write(wizard.PreferencesTemplate)
     config.flush()
     return config
 
@@ -82,11 +89,15 @@ dev_wizard_command = os.path.join(os.path.dirname(__file__),
                                   '..', '..', '..', '..', 'run-wizard.sh')
 wizard_command = os.environ.get('BEAKER_WIZARD_COMMAND', dev_wizard_command)
 
-def start_wizard(args, env=None, **kwargs):
+def start_wizard(args, config=None, env=None, **kwargs):
+    if config is None:
+        global default_wizard_config
+        config = default_wizard_config
     log.debug('Starting beaker-wizard %r as %r in directory %s',
             wizard_command, args, kwargs.get('cwd', '.'))
     env = dict(env or os.environ)
     env['PYTHONUNBUFFERED'] = '1'
+    env['BEAKER_WIZARD_CONF'] = config.name
     return subprocess.Popen(args,
                             executable=wizard_command,
                             stdout=subprocess.PIPE,
@@ -107,8 +118,14 @@ def setup_package():
     global default_client_config
     default_client_config = create_client_config()
     log.debug('Default client config written to %s', default_client_config.name)
+    global default_wizard_config
+    default_wizard_config = create_wizard_config()
+    log.debug('Default wizard config written to %s', default_wizard_config.name)
 
 def teardown_package():
     global default_client_config
     if default_client_config is not None:
         default_client_config.close()
+    global default_wizard_config
+    if default_wizard_config is not None:
+        default_wizard_config.close()

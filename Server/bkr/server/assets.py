@@ -50,6 +50,7 @@ def _create_env(source_dir, output_dir, **kwargs):
             'bootstrap/js/bootstrap-alert.js',
             'bootstrap/js/bootstrap-button.js',
             'bootstrap/js/bootstrap-collapse.js',
+            'bootstrap/js/bootstrap-affix.js',
             'typeahead.js/dist/typeahead.js',
             'bootstrap-datepicker/js/bootstrap-datepicker.js',
             'bootstrap-select/js/bootstrap-select.js',

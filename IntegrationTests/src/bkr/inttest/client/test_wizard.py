@@ -99,3 +99,28 @@ class TestWizard(BaseWizardTestCase):
         self.assertIn('Test type : http', out)
         self.assertIn('Relative path : None', out)
         self.assertIn('Test name : test1', out)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=857090
+    def test_rhtsrequired_option(self):
+        out = run_wizard(['beaker-wizard', '-Q', 'library(perl/lib1)',
+            'http/test-rhtsrequired'],
+            cwd=self.tempdir)
+        self.assertIn('Required RHTS tests/libraries : library(perl/lib1)', out)
+        # assert if it's set properly in the Makefile
+        makefile_contents = open(os.path.join(self.tempdir,
+                'http', 'test-rhtsrequired', 'Makefile'), 'r').readlines()
+        self.assertIn('\t@echo "RhtsRequires:    library(perl/lib1)" >> $(METADATA)\n',
+                 makefile_contents)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=857090
+    def test_rhtsrequires_in_skeleton_xml_tag(self):
+        out = run_wizard(['beaker-wizard', '-s', 'skel1',
+            'http/test-rhtsrequired'], cwd=self.tempdir)
+        self.assertIn('Required RHTS tests/libraries : '
+            'library(perl/lib1), library(scl/lib2)', out)
+        # assert if it's set properly in the Makefile
+        makefile_contents = open(os.path.join(self.tempdir,
+                'http', 'test-rhtsrequired', 'Makefile'), 'r').readlines()
+        self.assertIn('\t@echo "RhtsRequires:    '
+                 'library(perl/lib1) library(scl/lib2)" >> $(METADATA)\n',
+                 makefile_contents)
