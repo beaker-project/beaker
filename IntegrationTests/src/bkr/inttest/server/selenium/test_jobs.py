@@ -1730,6 +1730,25 @@ class RecipeSetHTTPTest(DatabaseTestCase):
             session.expire_all()
             self.check_changed_recipeset()
 
+    def test_update_containing_no_changes_should_silently_do_nothing(self):
+        # PATCH request containing attributes with their existing values
+        # should succeed and do nothing, including adding no activity records.
+        with session.begin():
+            recipeset = self.job.recipesets[0]
+            recipeset.priority = TaskPriority.normal
+            recipeset.waived = False
+            self.assertEqual(recipeset.activity, [])
+        s = requests.Session()
+        requests_login(s)
+        response = patch_json(get_server_base() + 'recipesets/%s' % recipeset.id,
+                session=s, data={'priority': u'Normal', 'waived': False})
+        self.assertEqual(response.status_code, 200)
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(recipeset.priority, TaskPriority.normal)
+            self.assertEqual(recipeset.waived, False)
+            self.assertEqual(recipeset.activity, [])
+
     def test_anonymous_cannot_update_status(self):
         response = post_json(get_server_base() +
                 'recipesets/%s/status' % self.job.recipesets[0].id,
