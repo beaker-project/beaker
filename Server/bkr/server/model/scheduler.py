@@ -1748,6 +1748,15 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
 
         for r in self.machine_recipes:
             recipeSet.append(r.to_xml(clone, from_recipeset=True))
+
+        if not clone:
+            if self.comments:
+                comments = etree.Element('comments')
+                for c in self.comments:
+                    comments.append(E.comment(c.comment, user=c.user.user_name,
+                            created=c.created.strftime('%Y-%m-%d %H:%M:%S')))
+                recipeSet.append(comments)
+
         if not from_job:
             job = self.job._create_job_elem(clone)
             job.append(recipeSet)

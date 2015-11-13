@@ -30,7 +30,7 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         Group, User, ActivityMixin, SystemAccessPolicy, SystemPermission, \
         RecipeTask, RecipeTaskResult, DeclarativeMappedObject, OSVersion, \
         RecipeReservationRequest, ReleaseAction, SystemPool, CommandStatus, \
-        GroupMembershipType
+        GroupMembershipType, RecipeSetComment
 
 from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
@@ -1692,6 +1692,29 @@ class TaskTypeTest(DatabaseTestCase):
         self.assert_(first is second)
         self.assertEquals(TaskType.query.filter_by(type=u'CookieMonster').count(), 1)
 
+
+class RecipeSetTest(DatabaseTestCase):
+
+    def setUp(self):
+        session.begin()
+        self.addCleanup(session.rollback)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=853351
+    def test_comments_in_xml(self):
+        job = data_setup.create_completed_job()
+        recipeset = job.recipesets[0]
+        commenter = data_setup.create_user(user_name=u'cpscott')
+        recipeset.comments.append(RecipeSetComment(user=commenter,
+                created=datetime.datetime(2015, 11, 13, 11, 54, 26),
+                comment=u'is free'))
+        xml = lxml.etree.tostring(recipeset.to_xml(clone=False))
+        self.assertIn('<comments>'
+                '<comment user="cpscott" created="2015-11-13 11:54:26">'
+                'is free'
+                '</comment>'
+                '</comments>'
+                '</recipeSet>',
+                xml)
 
 class RecipeTest(DatabaseTestCase):
 
