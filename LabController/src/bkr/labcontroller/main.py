@@ -104,7 +104,7 @@ class WSGIApplication(object):
             if req.path in ('/', '/RPC2', '/server'):
                 if req.method == 'POST':
                     # XML-RPC
-                    if req.content_type != 'text/xml':
+                    if req.mimetype != 'text/xml':
                         return BadRequest('XML-RPC requests must be text/xml')
                     result = self.xmlrpc_dispatcher._marshaled_dispatch(req.data)
                     return Response(response=result, content_type='text/xml')
