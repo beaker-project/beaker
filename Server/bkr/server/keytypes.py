@@ -5,7 +5,7 @@
 # (at your option) any later version.
 
 from turbogears.database import session
-from turbogears import expose, flash, widgets, error_handler, redirect, paginate, url
+from turbogears import expose, flash, widgets, error_handler, redirect, paginate, url, validators, validate
 from bkr.server.helpers import make_edit_link, make_remove_link
 from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar, HorizontalForm
 from bkr.server.admin_page import AdminPage
@@ -18,7 +18,10 @@ class KeyTypes(AdminPage):
 
     id         = widgets.HiddenField(name='id')
     key_name   = widgets.TextField(name='key_name', label=_(u'Name'))
-    numeric    = widgets.CheckBox(name='numeric', label=_(u'Numeric'))
+    numeric    = widgets.CheckBox(name='numeric',
+                                  label=_(u'Numeric'),
+                                  default=False,
+                                  validator=validators.StringBool(if_empty=False))
 
     form = HorizontalForm(
         'keytypes',
@@ -68,6 +71,7 @@ class KeyTypes(AdminPage):
 
     @identity.require(identity.in_group("admin"))
     @expose()
+    @validate(form=form)
     @error_handler(edit)
     def save(self, **kw):
         if kw['id']:
@@ -76,8 +80,7 @@ class KeyTypes(AdminPage):
         else:
             key = Key(key_name=kw['key_name'])
             session.add(key)
-        if 'numeric' in kw:
-            key.numeric = kw['numeric']
+        key.numeric = kw['numeric']
         flash( _(u"OK") )
         redirect(".")
 
