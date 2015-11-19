@@ -491,6 +491,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             'disk_space': None,
             'queue_size': None,
             'pools': [pool.name for pool in self.pools],
+            'disks': self.disks,
         }
         if self.active_access_policy.system_pool:
             data['active_access_policy'] = {'type':'pool',
@@ -2323,6 +2324,15 @@ class Disk(DeclarativeMappedObject):
                 self.sector_size == other['sector_size'] and
                 self.phys_sector_size == other['phys_sector_size'] and
                 self.model == other['model'])
+
+    def __json__(self):
+        return dict(
+            model=self.model,
+            size=self.size,
+            sector_size=self.sector_size,
+            phys_sector_size=self.phys_sector_size,
+        )
+
 
 class PowerType(DeclarativeMappedObject):
 

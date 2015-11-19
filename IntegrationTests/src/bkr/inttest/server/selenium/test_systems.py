@@ -13,7 +13,6 @@ from urllib import urlencode, urlopen
 import uuid
 import lxml.etree
 from turbogears.database import session
-import requests
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support.ui import Select
 from bkr.inttest.server.selenium import WebDriverTestCase
@@ -21,7 +20,8 @@ from bkr.inttest import data_setup, get_server_base, with_transaction, \
         DummyVirtManager, DatabaseTestCase
 from bkr.inttest.assertions import assert_sorted
 from bkr.server import dynamic_virt
-from bkr.server.model import Cpu, Key, Key_Value_String, System, SystemStatus, SystemPermission
+from bkr.server.model import Cpu, Key, Key_Value_String, System, \
+    SystemStatus, SystemPermission, Disk
 from bkr.inttest.server.webdriver_utils import check_system_search_results, login
 from bkr.inttest.server.requests_utils import patch_json
 
@@ -377,6 +377,26 @@ class SystemDetailsUpdateHTTPTest(DatabaseTestCase):
             self.privileged_group = data_setup.create_group()
             self.policy.add_rule(group=self.privileged_group,
                                  permission=SystemPermission.edit_system)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1206033
+    def test_system_details_includes_disks(self):
+        with session.begin():
+            disk = Disk(model='Seagate Old', size=1024, sector_size=512, phys_sector_size=512)
+            session.add(disk)
+            self.system.disks.append(disk)
+
+        expected = [{
+            u'phys_sector_size': disk.phys_sector_size,
+            u'sector_size': disk.sector_size,
+            u'size': disk.size,
+            u'model': disk.model,
+        }]
+
+        response = requests.get(
+            get_server_base() + 'systems/%s' % self.system.fqdn)
+
+        self.assertIn('disks', response.json())
+        self.assertEqual(expected, response.json()['disks'])
 
     def test_set_active_policy_from_pool(self):
         with session.begin():
