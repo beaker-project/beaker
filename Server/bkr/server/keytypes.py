@@ -78,6 +78,9 @@ class KeyTypes(AdminPage):
             key = Key.by_id(kw['id'])
             key.key_name = kw['key_name']
         else:
+            if Key.query.filter_by(key_name=kw['key_name']).first():
+                flash(u"Key Type exists: %s" % kw['key_name'])
+                redirect(".")
             key = Key(key_name=kw['key_name'])
             session.add(key)
         key.numeric = kw['numeric']

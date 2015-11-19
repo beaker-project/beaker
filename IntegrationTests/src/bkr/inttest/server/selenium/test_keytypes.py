@@ -69,6 +69,20 @@ class KeyTypesTest(WebDriverTestCase):
             session.refresh(key)
             self.assertEqual(key.numeric, False)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=979270
+    def test_no_error_with_duplicate_key_type(self):
+        with session.begin():
+            key = Key.query.first()
+
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'keytypes/')
+        b.find_element_by_link_text('Add').click()
+        b.find_element_by_name('key_name').send_keys(key.key_name)
+        b.find_element_by_id('keytypes').submit()
+        self.assertEqual('Key Type exists: %s' % key.key_name,
+                         b.find_element_by_xpath('//div[contains(@class, "alert flash")]').text)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1215034
     def test_anonymous(self):
         b = self.browser
