@@ -512,6 +512,17 @@ class System(DeclarativeMappedObject, ActivityMixin):
         if self.cpu:
             data.update({
                 'cpu_model_name': self.cpu.model_name,
+                'cpu_vendor': self.cpu.vendor,
+                'cpu_model': self.cpu.model,
+                'cpu_model_name': self.cpu.model_name,
+                'cpu_family': self.cpu.family,
+                'cpu_flags': [f.flag for f in self.cpu.flags],
+                'cpu_stepping': self.cpu.stepping,
+                'cpu_speed': self.cpu.speed,
+                'cpu_processors': self.cpu.processors,
+                'cpu_cores': self.cpu.cores,
+                'cpu_sockets': self.cpu.sockets,
+                'cpu_hyper': self.cpu.hyper,
             })
         if self.disks:
             data['disk_space'] = sum(disk.size for disk in self.disks)
@@ -2186,6 +2197,7 @@ class Cpu(DeclarativeMappedObject):
             for cpuflag in flags:
                 new_flag = CpuFlag(flag=cpuflag)
                 self.flags.append(new_flag)
+
 
 class CpuFlag(DeclarativeMappedObject):
 

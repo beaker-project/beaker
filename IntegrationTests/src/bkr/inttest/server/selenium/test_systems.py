@@ -366,6 +366,8 @@ class SystemDetailsUpdateHTTPTest(DatabaseTestCase):
     """
     Directly tests the HTTP interface for updating system details
     """
+    maxDiff = None
+
     def setUp(self):
         with session.begin():
             self.owner = data_setup.create_user(password='theowner')
@@ -413,6 +415,37 @@ class SystemDetailsUpdateHTTPTest(DatabaseTestCase):
         self.assertEquals(response.status_code, 400)
         self.assertEquals(response.text,
                           'To use a pool policy, the system must be in the pool first')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1206034
+    def test_system_details_includes_cpus(self):
+        with session.begin():
+            cpu = Cpu(cores=5,
+                      family=6,
+                      model=7,
+                      model_name='Intel',
+                      flags=['beer', 'frob'],
+                      processors=6,
+                      sockets=2,
+                      speed=24,
+                      stepping=2,
+                      vendor='Transmeta')
+            session.add(cpu)
+            self.system.cpu = cpu
+
+        response = requests.get(
+            get_server_base() + 'systems/%s' % self.system.fqdn)
+        json = response.json()
+        self.assertEqual([u'beer', u'frob'], json['cpu_flags'])
+        self.assertEqual(5, json['cpu_cores'])
+        self.assertEqual(6, json['cpu_family'])
+        self.assertEqual(7, json['cpu_model'])
+        self.assertEqual(u'Intel', json['cpu_model_name'])
+        self.assertEqual(True, json['cpu_hyper'])
+        self.assertEqual(6, json['cpu_processors'])
+        self.assertEqual(2, json['cpu_sockets'])
+        self.assertEqual(24, json['cpu_speed'])
+        self.assertEqual(2, json['cpu_stepping'])
+        self.assertEqual('Transmeta', json['cpu_vendor'])
 
     def test_set_active_policy_to_custom_policy(self):
         with session.begin():
