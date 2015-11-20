@@ -6,6 +6,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import datetime
 import logging
 import requests
 from urlparse import urljoin
@@ -54,7 +55,7 @@ class TestSystemsGrid(WebDriverTestCase):
         b.find_element_by_xpath('//title[text()="Systems"]')
         # check number of columns in the table
         ths = b.find_elements_by_xpath('//table[@id="widget"]//th')
-        self.assertEquals(len(ths), 30)
+        self.assertEquals(len(ths), 31)
 
 class TestSystemsGridSorting(WebDriverTestCase):
 
@@ -63,16 +64,23 @@ class TestSystemsGridSorting(WebDriverTestCase):
         with session.begin():
             # ensure we have lots of systems
             for cores in [1, 2, 3]:
-                for vendor, model, status, type, user in zip(
+                for vendor, model, status, type, reserved_since, user in zip(
                         [u'Acer', u'Dell', u'HP'],
                         [u'slow model', u'fast model', u'big model'],
                         [u'Automated', u'Manual', u'Removed'],
                         [u'Machine', u'Prototype'],
+                        [datetime.datetime(2012, 10, 31, 23, 0, 0),
+                         datetime.datetime(2015, 1, 1, 6, 0, 0),
+                         datetime.datetime(2020, 1, 6, 10, 0, 0),
+                        ],
                         [data_setup.create_user() for _ in range(3)]):
                     system = data_setup.create_system(vendor=vendor,
                             model=model, status=status, type=type)
-                    system.user = data_setup.create_user()
                     system.cpu = Cpu(cores=cores)
+                    system.user = user
+                    data_setup.create_manual_reservation(system,
+                                                         reserved_since,
+                                                         user=user)
 
     def setUp(self):
         self.browser = self.get_browser()
@@ -169,6 +177,14 @@ class TestSystemsGridSorting(WebDriverTestCase):
     def test_can_sort_search_results_by_model(self):
         self.go_to_search_results()
         self.check_column_sort('Model')
+
+    def test_can_sort_search_results_by_reserved(self):
+        self.go_to_search_results()
+        b = self.browser
+        b.find_element_by_link_text('Toggle Result Columns').click()
+        b.find_element_by_name('systemsearch_column_System/Reserved').click()
+        b.find_element_by_id('searchform').submit()
+        self.check_column_sort('Reserved')
 
     # XXX also test with custom column selections
 

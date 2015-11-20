@@ -1099,6 +1099,7 @@ class System(SystemObject):
                                             relations=[model.System.arch],
                                             eagerload=False,),
                           'Type'      : MyColumn(column=model.System.type, col_type='string'),
+                          'Reserved'  : MyColumn(column=model.Reservation.start_time, col_type='date', relations='open_reservation'),
                           'PowerType' : MyColumn(column=model.PowerType.name, col_type='string',
                                             relations=[model.System.power, model.Power.power_type]),
                           'LoanedTo'  : AliasedColumn(column_name='user_name',
@@ -1127,52 +1128,38 @@ class System(SystemObject):
                           'Hypervisor': lambda: [''] + model.Hypervisor.get_all_names(),
                          }
     @classmethod
-    def added_is_filter(cls,col,val):
-        if not val:
+    def filter_by_exact_date_for_datetime(cls, col, date_string):
+        """Filters using a given date on datetime columns"""
+        if not date_string:
             return col == None
         else:
-            date = datetime.datetime.strptime(val, '%Y-%m-%d')
+            date = datetime.datetime.strptime(date_string, '%Y-%m-%d')
             return and_(col >= date, col < date + datetime.timedelta(days=1))
+    added_is_filter = filter_by_exact_date_for_datetime
+    reserved_is_filter = filter_by_exact_date_for_datetime
+    lastinventoried_is_filter = filter_by_exact_date_for_datetime
 
     @classmethod
-    def added_after_filter(cls, col, val):
-        if not val:
+    def filter_by_future_date_for_datetime(cls, col, date_string):
+        if not date_string:
             return col == None
         else:
-            date = datetime.datetime.strptime(val, '%Y-%m-%d')
+            date = datetime.datetime.strptime(date_string, '%Y-%m-%d')
             return col >= date + datetime.timedelta(days=1)
+    added_after_filter = filter_by_future_date_for_datetime
+    reserved_after_filter = filter_by_future_date_for_datetime
+    lastinventoried_after_filter = filter_by_future_date_for_datetime
 
     @classmethod
-    def added_before_filter(cls, col, val):
-        if not val:
+    def filter_by_past_date_for_datetime(cls, col, date_string):
+        if not date_string:
             return col == None
         else:
-            date = datetime.datetime.strptime(val, '%Y-%m-%d')
+            date = datetime.datetime.strptime(date_string, '%Y-%m-%d')
             return col < date
-
-    @classmethod
-    def lastinventoried_is_filter(cls,col,val):
-        if not val:
-            return col == None
-        else:
-            date = datetime.datetime.strptime(val, '%Y-%m-%d')
-            return and_(col >= date, col < date + datetime.timedelta(days=1))
-
-    @classmethod
-    def lastinventoried_after_filter(cls,col,val):
-        if not val:
-            return col == None
-        else:
-            date = datetime.datetime.strptime(val, '%Y-%m-%d')
-            return col >= date + datetime.timedelta(days=1)
-
-    @classmethod
-    def lastinventoried_before_filter(cls,col,val):
-        if not val:
-            return col == None
-        else:
-            date = datetime.datetime.strptime(val, '%Y-%m-%d')
-            return col < date
+    added_before_filter = filter_by_past_date_for_datetime
+    reserved_before_filter = filter_by_past_date_for_datetime
+    lastinventoried_before_filter = filter_by_past_date_for_datetime
 
     @classmethod
     def arch_is_not_filter(cls,col,val):

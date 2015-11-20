@@ -154,6 +154,14 @@ class Utility:
         return lambda x:getattr(x,c.lower())
 
     @classmethod
+    def system_reserved_name(cls):
+        return 'open_reservation.start_time'
+
+    @classmethod
+    def system_reserved_getter(cls):
+        return lambda x: x.open_reservation.start_time if x.open_reservation is not None else ''
+
+    @classmethod
     def system_pools_getter(cls):
         return lambda x: ' '.join([pool.name for pool in x.pools])
 
@@ -262,8 +270,8 @@ class Utility:
             for column_desc in systems:
                 table,column = column_desc.split('/')
                 if column.lower() in ('name', 'vendor', 'lender', 'location',
-                        'memory', 'model', 'location', 'status', 'user',
-                        'type', 'powertype'):
+                                      'memory', 'model', 'location', 'status', 'user', 'reserved',
+                                      'type', 'powertype'):
                     sort_me = True
                 else:
                     sort_me = False

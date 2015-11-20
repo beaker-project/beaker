@@ -289,6 +289,27 @@ class Search(WebDriverTestCase):
         check_system_search_results(b, present=[self.system_two],
                 absent=[self.system_one, self.system_three])
 
+    def test_by_reserved_since(self):
+        with session.begin():
+            s1 = data_setup.create_system()
+            data_setup.create_manual_reservation(s1, start=datetime.datetime(2003, 1, 21, 11, 30, 0))
+            s2 = data_setup.create_system(fqdn='aaadvark.testdata')
+            data_setup.create_manual_reservation(s2, start=datetime.datetime(2005, 1, 21, 11, 30, 0))
+
+        b = self.browser
+
+        self.perform_search([('System/Reserved', 'is', '2003-01-21')])
+        check_system_search_results(b, present=[s1], absent=[s2])
+
+        self.perform_search([('System/Reserved', 'before', '2005-1-21')])
+        check_system_search_results(b, present=[s1], absent=[s2])
+
+        self.perform_search([('System/Reserved', 'after', '2005-1-21')])
+        check_system_search_results(b, absent=[s1, s2])
+
+        self.perform_search([('System/Reserved', 'after', '2005-1-1')])
+        check_system_search_results(b, present=[s2], absent=[s1])
+
     def test_by_date_added(self):
         with session.begin():
             new_system = data_setup.create_system()

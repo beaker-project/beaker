@@ -236,6 +236,10 @@ class ReportingQueryTest(DatabaseTestCase):
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=1117681
     def test_machine_utilization(self):
+        #
+        # Note: If test relies on an SQL script with hard coded time stamps in
+        # 2002 or no finish reservation times.
+        #
         system1 = data_setup.create_system()
         system2 = data_setup.create_system()
         system3 = data_setup.create_system()
