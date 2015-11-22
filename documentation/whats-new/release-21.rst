@@ -301,3 +301,31 @@ Version 3.4-6 of the ``/distribution/reservesys`` task has also been released:
 * :issue:`1270627`: The ``extendtesttime.sh`` now reports a Beaker result every
   time it is run. The result score is set to the number of hours by which the 
   watchdog was extended. (Contributed by Dan Callaghan)
+
+
+Beaker 21.2
+~~~~~~~~~~~
+
+* :issue:`1277340`: Restore the previous behavior of the :program:`bkr job-list`
+  which filters on substrings when given --whiteboard option.
+  (Contributed by Dan Callaghan)
+* :issue:`857090`: The :program:`beaker-wizard` utility now supports RhtsRequired
+  libraries by using -Q option. You can also use rhtsrequires in the <skeleton> xml
+  tag in your preferences file to specify RhtsRequired libraries.
+  (Contributed by Martin Žember and Matt Jia)
+* :issue:`1255420`: Fixed the :program:`bkr` workflow commands to return the right
+  arch list when given both --family and --distro options.
+  (Contributed by Dan Callaghan)
+* :issue:`1279871`: Fixed XML-RPC calls return HTTP 400 when provisioning the
+  latest Fedora Rawhide. (Contributed by Dan Callaghan)
+* :issue:`1269076`: Beaker now doesn't mark systems as broken which started
+  installation. (Contributed by Roman Joost)
+* :issue:`1062319`: The "Queue" button now is always visible on clone job page.
+  (Contributed by Matt Jia)
+
+Version 4.67 of the ``rhts`` test development and execution library has also 
+been released:
+
+* :issue:`1275142`: The rhts-db-submit-result now ignores "mapping multiple BARs"
+  warning on IBM x3250m4 models when doing the dmesg checks.
+  (Contributed by Dan Callaghan)
