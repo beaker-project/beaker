@@ -323,7 +323,7 @@ Beaker 21.2
 * :issue:`1062319`: The "Queue" button now is always visible on clone job page.
   (Contributed by Matt Jia)
 
-Version 4.67 of the ``rhts`` test development and execution library has also 
+Version 4.68 of the ``rhts`` test development and execution library has also 
 been released:
 
 * :issue:`1275142`: The rhts-db-submit-result now ignores "mapping multiple BARs"
