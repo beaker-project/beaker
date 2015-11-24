@@ -69,11 +69,11 @@ class SystemAvailabilityTest(WebDriverTestCase):
             group = data_setup.create_group()
             system = data_setup.create_system(status=SystemStatus.automated,
                     shared=False, lab_controller=self.lc)
-            data_setup.add_user_to_group(user, group)
+            group.add_member(user)
             system.custom_access_policy.add_rule(
                     permission=SystemPermission.reserve, group=group)
             user2 = data_setup.create_user()
-            data_setup.add_user_to_group(user2, group)
+            group.add_member(user2)
             job = data_setup.create_job(owner=user2)
             data_setup.mark_job_running(job, system=system)
         b = self.browser
@@ -139,7 +139,7 @@ class SystemAvailabilityTest(WebDriverTestCase):
             wrong_group = data_setup.create_group()
             user = data_setup.create_user(password=u'testing')
             # user is not in the same group as system
-            data_setup.add_user_to_group(user, wrong_group)
+            wrong_group.add_member(user)
             group = data_setup.create_group()
             system.custom_access_policy.add_rule(
                     permission=SystemPermission.reserve, group=group)
@@ -154,7 +154,7 @@ class SystemAvailabilityTest(WebDriverTestCase):
                     shared=False, lab_controller=self.lc)
             user = data_setup.create_user(password=u'testing')
             group = data_setup.create_group()
-            data_setup.add_user_to_group(user, group)
+            group.add_member(user)
             system.custom_access_policy.add_rule(
                     permission=SystemPermission.reserve, group=group)
         b = self.browser
@@ -168,7 +168,7 @@ class SystemAvailabilityTest(WebDriverTestCase):
                     shared=False, lab_controller=self.lc)
             user = data_setup.create_user(password=u'testing')
             group = data_setup.create_group()
-            data_setup.add_user_to_group(user, group)
+            group.add_member(user)
             system.custom_access_policy.add_rule(
                     permission=SystemPermission.reserve, group=group)
         b = self.browser

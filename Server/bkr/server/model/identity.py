@@ -19,7 +19,6 @@ from sqlalchemy import (Table, Column, ForeignKey, Integer, Unicode,
         UnicodeText, String, DateTime, Boolean, UniqueConstraint)
 from sqlalchemy.orm import mapper, relationship, validates, synonym
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.ext.associationproxy import association_proxy
 from turbogears.config import get
 from turbogears.database import session
 from bkr.server.bexceptions import BX, NoChangeException
@@ -408,8 +407,10 @@ class User(DeclarativeMappedObject, ActivityMixin):
             return True
         return False
 
-    groups = association_proxy('group_user_assocs','group',
-            creator=lambda group: UserGroup(group=group))
+    @property
+    def groups(self):
+        return [assoc.group for assoc in self.group_user_assocs]
+
 
 class Group(DeclarativeMappedObject, ActivityMixin):
     """
@@ -703,8 +704,10 @@ class Group(DeclarativeMappedObject, ActivityMixin):
             raise ValueError('Group %s must be not more than 255 characters long' % text)
         return name
 
-    users = association_proxy('user_group_assocs','user',
-            creator=lambda user: UserGroup(user=user))
+    @property
+    def users(self):
+        return [assoc.user for assoc in self.user_group_assocs]
+
 
 class UserGroup(DeclarativeMappedObject):
 

@@ -33,7 +33,7 @@ class PolicyRevokeTest(ClientTestCase):
         with session.begin():
             user = data_setup.create_user()
             group = data_setup.create_group()
-            group.users.append(user)
+            group.add_member(user)
             self.system.custom_access_policy.add_rule(
                     permission=SystemPermission.edit_system, group=group)
             self.assertTrue(self.system.custom_access_policy.grants(
@@ -91,7 +91,7 @@ class PolicyRevokeTest(ClientTestCase):
             user = data_setup.create_user()
             user1 = data_setup.create_user()
             group = data_setup.create_group()
-            group.users.append(user1)
+            group.add_member(user1)
 
             pol = pool.access_policy
             pol.add_rule(SystemPermission.reserve, user=user)

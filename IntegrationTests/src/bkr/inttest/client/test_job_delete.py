@@ -26,8 +26,8 @@ class JobDeleteTest(ClientTestCase):
             group = data_setup.create_group()
             user = data_setup.create_user(password='password')
             user2 = data_setup.create_user()
-            user.groups.append(group)
-            user2.groups.append(group)
+            group.add_member(user)
+            group.add_member(user2)
             self.job.group = group
             self.job.owner = user2
         client_config = create_client_config(username=user.user_name,
@@ -62,8 +62,8 @@ class JobDeleteTest(ClientTestCase):
             group = data_setup.create_group()
             mate = data_setup.create_user(password=u'asdf')
             test_job = data_setup.create_completed_job(owner=mate)
-            data_setup.add_user_to_group(self.user, group)
-            data_setup.add_user_to_group(mate, group)
+            group.add_member(self.user)
+            group.add_member(mate)
         try:
             run_client(['bkr', 'job-delete', test_job.t_id],
                 config=self.client_config)

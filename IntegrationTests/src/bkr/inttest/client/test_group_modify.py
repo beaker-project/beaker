@@ -22,7 +22,7 @@ class GroupModifyTest(ClientTestCase):
                                                       password='asdf')
 
             rand_user = data_setup.create_user(password = 'asdf')
-            rand_user.groups.append(self.group)
+            self.group.add_member(rand_user)
             self.rand_client_config = create_client_config(username=rand_user.user_name,
                                                            password='asdf')
 
@@ -330,7 +330,7 @@ class GroupModifyTest(ClientTestCase):
     def test_group_modify_remove_member(self):
         with session.begin():
             user = data_setup.create_user()
-            self.group.users.append(user)
+            self.group.add_member(user)
             session.flush()
             self.assert_(user in self.group.users)
 
@@ -354,7 +354,7 @@ class GroupModifyTest(ClientTestCase):
             self.assertEquals(group.activity[-1].user.user_id,
                               self.user.user_id)
             self.assertEquals(group.activity[-1].old_value, user.user_name)
-            self.assertEquals(group.activity[-1].new_value, '')
+            self.assertEquals(group.activity[-1].new_value, None)
             self.assertEquals(group.activity[-1].service, u'XMLRPC')
 
         try:
@@ -424,9 +424,9 @@ class GroupModifyTest(ClientTestCase):
     def test_group_modify_grant_owner(self):
         with session.begin():
             user1 = data_setup.create_user()
-            user1.groups.append(self.group)
+            self.group.add_member(user1)
             user2 = data_setup.create_user()
-            user2.groups.append(self.group)
+            self.group.add_member(user2)
             user3 = data_setup.create_user()
 
         out = run_client(['bkr', 'group-modify',
@@ -471,9 +471,9 @@ class GroupModifyTest(ClientTestCase):
     def test_group_modify_revoke_owner(self):
         with session.begin():
             user1 = data_setup.create_user()
-            user1.groups.append(self.group)
+            self.group.add_member(user1)
             user2 = data_setup.create_user()
-            user2.groups.append(self.group)
+            self.group.add_member(user2)
             user3 = data_setup.create_user()
 
         out = run_client(['bkr', 'group-modify',

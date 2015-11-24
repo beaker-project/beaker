@@ -24,7 +24,7 @@ class JobSubmitTest(ClientTestCase):
         with session.begin():
             user = data_setup.create_user(password='password')
             group = data_setup.create_group(group_name='somegroup')
-            user.groups.append(group)
+            group.add_member(user)
 
         # Test submitting on behalf of user's group
         config = create_client_config(username=user.user_name,

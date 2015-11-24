@@ -15,7 +15,7 @@ class RefreshLdapTest(DatabaseTestCase):
             group = Group(group_name=u'alp',
                     display_name=u'Australian Labor Party', ldap=True)
             old_member = data_setup.create_user(user_name=u'krudd')
-            group.users.append(old_member)
+            group.add_member(old_member)
         from bkr.server.tools.refresh_ldap import refresh_ldap
         refresh_ldap()
         with session.begin():

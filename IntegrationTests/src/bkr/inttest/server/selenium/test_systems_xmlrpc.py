@@ -103,7 +103,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
         with session.begin():
             service_group = data_setup.create_group(permissions=[u'proxy_auth'])
             service_user = data_setup.create_user(password=u'password')
-            data_setup.add_user_to_group(service_user, service_group)
+            service_group.add_member(service_user)
             user = data_setup.create_user(password=u'notused')
             system = data_setup.create_system(
                     owner=User.by_user_name(data_setup.ADMIN_USER),

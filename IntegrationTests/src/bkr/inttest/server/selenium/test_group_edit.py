@@ -210,7 +210,7 @@ class TestGroupsWD(WebDriverTestCase):
         # add a new user as a group member
         with session.begin():
             user = data_setup.create_user(password='password')
-            user.groups.append(self.group)
+            self.group.add_member(user)
         # login as the new user
         login(b, user=user.user_name, password='password')
         self.go_to_group_page()
@@ -321,6 +321,7 @@ class TestGroupsWD(WebDriverTestCase):
         # login as admin
         login(b)
         with session.begin():
+            session.expire_all()
             group = Group.by_name('admin')
             group_users = group.users
         # remove  all other users from 'admin'
@@ -382,7 +383,7 @@ class TestGroupsWD(WebDriverTestCase):
     def test_add_user_to_admin_group(self):
         with session.begin():
             user = data_setup.create_user(password='password')
-            user.groups.append(Group.by_name('admin'))
+            Group.by_name('admin').add_member(user)
             group = data_setup.create_group(group_name='aaaaaaaaaaaabcc')
 
         b = self.browser
@@ -425,8 +426,8 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_xpath('//div[@id="owners"]'
             '//p[text()="LDAP group does not have any owners."]')
 
-    def _edit_group_details(self, browser, new_group_name, new_display_name):
-        b = browser
+    def _edit_group_details(self, new_group_name, new_display_name):
+        b = self.browser
         b.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
         modal = b.find_element_by_class_name('modal')
         modal.find_element_by_id('group_name').clear()
@@ -448,7 +449,7 @@ class TestGroupsWD(WebDriverTestCase):
 
         # edit
         self.go_to_group_page(group)
-        self._edit_group_details(b, new_group_name, new_display_name)
+        self._edit_group_details(new_group_name, new_display_name)
 
         # check
         b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
@@ -474,7 +475,7 @@ class TestGroupsWD(WebDriverTestCase):
         login(b, user=user.user_name, password='password')
 
         self.go_to_group_page(group2)
-        self._edit_group_details(b, group1.group_name, group2.display_name)
+        self._edit_group_details(group1.group_name, group2.display_name)
         self.assertIn('Group %s already exists' % group1.group_name,
                                b.find_element_by_class_name('alert-error').text)
 
@@ -490,7 +491,7 @@ class TestGroupsWD(WebDriverTestCase):
 
         # edit
         b.get(get_server_base() + 'groups/edit?group_id=%d' % admin_group.group_id)
-        self._edit_group_details(b, new_group_name, new_display_name)
+        self._edit_group_details(new_group_name, new_display_name)
 
         # check
         self.assertIn('Cannot rename protected group',
@@ -572,7 +573,7 @@ class TestGroupsWD(WebDriverTestCase):
 
         new_name = 'areallylonggroupname'*20
         new_display_name = 'A really long group display name'*20
-        self._edit_group_details(b, new_name, new_display_name)
+        self._edit_group_details(new_name, new_display_name)
         b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
         b.find_element_by_xpath('//title[normalize-space(text())="%s"]' % \
             new_name[:255])

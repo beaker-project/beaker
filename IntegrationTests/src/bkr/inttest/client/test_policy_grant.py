@@ -38,7 +38,7 @@ class PolicyGrantTest(ClientTestCase):
         with session.begin():
             user = data_setup.create_user()
             group = data_setup.create_group()
-            group.users.append(user)
+            group.add_member(user)
             self.assertFalse(self.system.custom_access_policy.grants(
                     user, SystemPermission.edit_system))
         run_client(['bkr', 'policy-grant', '--system', self.system.fqdn,
@@ -95,7 +95,7 @@ class PolicyGrantTest(ClientTestCase):
             pool = data_setup.create_system_pool()
             user = data_setup.create_user()
             group = data_setup.create_group()
-            group.users.append(user)
+            group.add_member(user)
             user1 = data_setup.create_user()
 
         # group
@@ -126,7 +126,7 @@ class PolicyGrantTest(ClientTestCase):
             user = data_setup.create_user()
             group = data_setup.create_group()
             user1 = data_setup.create_user()
-            group.users.append(user1)
+            group.add_member(user1)
         run_client(['bkr', 'policy-grant', '--pool', pool.name,
                     '--permission=reserve', '--permission=view_power', \
                     '--user', user.user_name, '--group', group.group_name])

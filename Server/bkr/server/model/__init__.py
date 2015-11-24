@@ -60,6 +60,8 @@ class ExternalReport(DeclarativeMappedObject):
 
 # Delayed property definitions due to circular dependencies
 class_mapper(Group).add_properties({
+    'dyn_users': dynamic_loader(User, secondary=UserGroup.__table__, viewonly=True,
+        primaryjoin=and_(UserGroup.group_id == Group.group_id)),
     'dyn_owners': dynamic_loader(User, secondary=UserGroup.__table__, viewonly=True,
         primaryjoin=and_(UserGroup.group_id == Group.group_id,
                          UserGroup.is_owner == True)),

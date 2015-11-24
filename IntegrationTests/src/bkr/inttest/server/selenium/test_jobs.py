@@ -457,7 +457,7 @@ class NewJobTest(WebDriverTestCase):
         with session.begin():
             group = data_setup.create_group(group_name='somegroup')
             user = data_setup.create_user(password=u'hornet')
-            user.groups.append(group)
+            group.add_member(user)
 
         b = self.browser
         login(b, user=user.user_name, password='hornet')
@@ -828,11 +828,12 @@ class JobAttributeChangeTest(WebDriverTestCase):
             group = data_setup.create_group()
             job_owner = data_setup.create_user()
             group_member = data_setup.create_user(password=u'group_member')
-            data_setup.add_user_to_group(job_owner, group)
-            data_setup.add_user_to_group(group_member, group)
-            job = data_setup.create_job(owner=job_owner, group=group,
+            group.add_member(job_owner)
+            group.add_member(group_member)
+            job = data_setup.create_job(owner=job_owner,
                     retention_tag=u'active',
-                    product=data_setup.create_product())
+                    product=data_setup.create_product(),
+                    group=group)
             new_product = data_setup.create_product()
         login(self.browser, user=group_member.user_name, password=u'group_member')
         self.check_can_change_product(job, new_product)
@@ -858,10 +859,11 @@ class JobAttributeChangeTest(WebDriverTestCase):
             group = data_setup.create_group()
             job_owner = data_setup.create_user()
             group_member = data_setup.create_user(password=u'group_member')
-            data_setup.add_user_to_group(job_owner, group)
-            data_setup.add_user_to_group(group_member, group)
-            job = data_setup.create_job(owner=job_owner, group=group,
-                    retention_tag=u'scratch')
+            group.add_member(job_owner)
+            group.add_member(group_member)
+            job = data_setup.create_job(owner=job_owner,
+                    retention_tag=u'scratch',
+                    group=group)
         login(self.browser, user=group_member.user_name, password=u'group_member')
         self.check_can_change_retention_tag(job, '60days')
 
@@ -970,8 +972,8 @@ class TestJobsGrid(WebDriverTestCase):
             user = data_setup.create_user(password='password')
             user2 = data_setup.create_user(password='password')
             group = data_setup.create_group()
-            user.groups.append(group)
-            user2.groups.append(group)
+            group.add_member(user)
+            group.add_member(user2)
             job = data_setup.create_job(owner=user, group=group)
         b = self.browser
         login(b, user=user2.user_name, password='password')
@@ -1011,7 +1013,7 @@ class TestJobsGrid(WebDriverTestCase):
             user = data_setup.create_user(password='password')
             group1 = data_setup.create_group(owner=user)
             group2 = data_setup.create_group()
-            user.groups.append(group2)
+            group2.add_member(user)
             job1 = data_setup.create_job(owner=user, group=None)
             job2 = data_setup.create_job(owner=user, group=group1)
             job3 = data_setup.create_job(owner=user, group=group2)

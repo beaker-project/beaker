@@ -284,14 +284,14 @@ class GroupMembershipNotificationTest(DatabaseTestCase):
             owner = data_setup.create_user()
             member = data_setup.create_user()
             group = data_setup.create_group(owner=owner)
-            member.groups.append(group)
+            group.add_member(member)
 
         bkr.server.mail.group_membership_notify(member, group, owner, 'Added')
         self.assertEqual(len(self.mail_capture.captured_mails), 1)
 
         self.mail_capture.captured_mails[:] = []
         with session.begin():
-            group.users.remove(member)
+            group.remove_member(member)
 
         bkr.server.mail.group_membership_notify(member, group, owner, 'Removed')
         self.assertEqual(len(self.mail_capture.captured_mails), 1)

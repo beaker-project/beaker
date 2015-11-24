@@ -114,8 +114,8 @@ class JobAckTest(WebDriverTestCase):
             owner = data_setup.create_user()
             member = data_setup.create_user(password=u'group_member')
             group = data_setup.create_group()
-            data_setup.add_user_to_group(owner, group)
-            data_setup.add_user_to_group(member, group)
+            group.add_member(owner)
+            group.add_member(member)
             job = data_setup.create_job(owner=owner, group=None)
             data_setup.mark_job_complete(job, result=TaskResult.fail)
         b = self.browser
@@ -128,8 +128,8 @@ class JobAckTest(WebDriverTestCase):
             owner = data_setup.create_user()
             member = data_setup.create_user(password=u'group_member')
             group = data_setup.create_group()
-            data_setup.add_user_to_group(owner, group)
-            data_setup.add_user_to_group(member, group)
+            group.add_member(owner)
+            group.add_member(member)
             job = data_setup.create_job(owner=owner, group=group)
             data_setup.mark_job_complete(job, result=TaskResult.fail)
         b = self.browser

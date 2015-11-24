@@ -77,7 +77,7 @@ class JobDeleteWD(WebDriverTestCase):
         with session.begin():
             new_user = data_setup.create_user(password='password')
             group = data_setup.create_group()
-            new_user.groups.append(group)
+            group.add_member(new_user)
             self.job_to_delete.group = group
             self.job_to_delete_2.group = group
         login(self.browser, new_user.user_name, 'password')

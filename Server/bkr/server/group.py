@@ -181,13 +181,8 @@ class Groups(RPCRoot):
             user = identity.current.user
 
             if not ldap:
-                group.user_group_assocs.append(UserGroup(user=user, is_owner=True))
-                group.activity.append(GroupActivity(user, service=u'XMLRPC',
-                    action=u'Added', field_name=u'User',
-                    old_value=None, new_value=user.user_name))
-                group.activity.append(GroupActivity(user, service=u'XMLRPC',
-                    action=u'Added', field_name=u'Owner',
-                    old_value=None, new_value=user.user_name))
+                group.add_member(user, is_owner=True, service=u'XMLRPC',
+                        agent=identity.current.user)
 
             if group.ldap:
                 group.refresh_ldap_members()
@@ -270,12 +265,8 @@ class Groups(RPCRoot):
                 raise BX(_(u'User does not exist %s' % username))
 
             if user not in group.users:
-                group.users.append(user)
-                activity = GroupActivity(identity.current.user, u'XMLRPC',
-                                            action=u'Added',
-                                            field_name=u'User',
-                                            old_value=u"", new_value=username)
-                group.activity.append(activity)
+                group.add_member(user, service=u'XMLRPC',
+                        agent=identity.current.user)
                 mail.group_membership_notify(user, group,
                                                 agent = identity.current.user,
                                                 action='Added')
@@ -298,14 +289,9 @@ class Groups(RPCRoot):
                 groupUsers = group.users
                 for usr in groupUsers:
                     if usr.user_id == user.user_id:
-                        group.users.remove(usr)
+                        group.remove_member(user, service=u'XMLRPC',
+                                agent=identity.current.user)
                         removed = user
-                        activity = GroupActivity(identity.current.user, u'XMLRPC',
-                                                    action=u'Removed',
-                                                    field_name=u'User',
-                                                    old_value=removed.user_name,
-                                                    new_value=u"")
-                        group.activity.append(activity)
                         mail.group_membership_notify(user, group,
                                                         agent=identity.current.user,
                                                         action='Removed')
@@ -368,9 +354,9 @@ def get_groups():
         'group_name': Group.group_name,
         'display_name': Group.display_name,
         'created': Group.created,
-        'member.user_name': (Group.users, User.user_name),
-        'member.display_name': (Group.users, User.display_name),
-        'member.email_address': (Group.users, User.email_address),
+        'member.user_name': (Group.dyn_users, User.user_name),
+        'member.display_name': (Group.dyn_users, User.display_name),
+        'member.email_address': (Group.dyn_users, User.email_address),
         'owner.user_name': (Group.dyn_owners, User.user_name),
         'owner.display_name': (Group.dyn_owners, User.display_name),
         'owner.email_address': (Group.dyn_owners, User.email_address),
@@ -451,11 +437,7 @@ def create_group():
             group.ldap = True
             group.refresh_ldap_members()
         else: # LDAP groups don't have owners
-            group.user_group_assocs.append(UserGroup(user=user, is_owner=True))
-            group.record_activity(user=user, service=u'HTTP',
-                action=u'Added', field=u'User', new=user.user_name)
-            group.record_activity(user=user, service=u'HTTP',
-                action=u'Added', field=u'Owner', new=user.user_name)
+            group.add_member(user, is_owner=True, agent=identity.current.user)
     response = jsonify(group.__json__())
     response.status_code = 201
     response.headers.add('Location', absolute_url(group.href))

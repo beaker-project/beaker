@@ -902,14 +902,12 @@ class CSV_GroupUser(CSV):
                 deleted = smart_bool(data['deleted'])
             if deleted:
                 if group in user.groups:
-                    group.record_activity(user=identity.current.user, service=u'CSV',
-                            field=u'User', action=u'Removed', old=user)
-                    user.groups.remove(group)
+                    group.remove_member(user, service=u'CSV',
+                            agent=identity.current.user)
             else:
                 if group not in user.groups:
-                    group.record_activity(user=identity.current.user, service=u'CSV',
-                            field=u'User', action=u'Added', new=user)
-                    user.groups.append(group)
+                    group.add_member(user, service=u'CSV',
+                            agent=identity.current.user)
         else:
             log.append("%s: group can't be empty!" % user)
             return False

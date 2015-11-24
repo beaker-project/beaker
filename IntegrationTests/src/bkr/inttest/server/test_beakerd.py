@@ -808,7 +808,7 @@ class TestBeakerd(DatabaseTestCase):
         with session.begin():
             group = data_setup.create_group()
             user = data_setup.create_user()
-            user.groups.append(group)
+            group.add_member(user)
             system = data_setup.create_system(lab_controller=self.lab_controller,
                     shared=False)
             system.custom_access_policy.add_rule(
@@ -829,7 +829,7 @@ class TestBeakerd(DatabaseTestCase):
         with session.begin():
             group = data_setup.create_group()
             admin = data_setup.create_admin()
-            admin.groups.append(group)
+            group.add_member(admin)
             system = data_setup.create_system(lab_controller=self.lab_controller,
                     shared=False)
             system.custom_access_policy.add_rule(

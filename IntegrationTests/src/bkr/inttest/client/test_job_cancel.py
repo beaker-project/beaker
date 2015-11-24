@@ -20,8 +20,8 @@ class JobCancelTest(ClientTestCase):
             group = data_setup.create_group()
             user = data_setup.create_user(password='password')
             user2 = data_setup.create_user()
-            user.groups.append(group)
-            user2.groups.append(group)
+            group.add_member(user)
+            group.add_member(user2)
             self.job.group = group
             self.job.owner = user2
         client_config = create_client_config(username=user.user_name,

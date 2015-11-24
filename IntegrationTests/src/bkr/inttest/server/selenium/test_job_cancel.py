@@ -26,7 +26,7 @@ class Cancel(WebDriverTestCase):
         with session.begin():
             group = data_setup.create_group()
             user = data_setup.create_user(password='password')
-            user.groups.append(group)
+            group.add_member(user)
             self.job.group = group
         login(b, user.user_name, 'password')
         b.get(get_server_base() + 'jobs/%s' % self.job.id)
@@ -40,7 +40,7 @@ class Cancel(WebDriverTestCase):
         with session.begin():
             group = data_setup.create_group()
             user = data_setup.create_user(password='password')
-            user.groups.append(group)
+            group.add_member(user)
             self.job.group = group
         login(b, user.user_name, 'password')
         b.get(get_server_base() + 'jobs/%s' % self.job.id)

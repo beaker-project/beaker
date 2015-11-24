@@ -29,7 +29,7 @@ class WorkflowSimpleTest(ClientTestCase):
         with session.begin():
             user_in_group = data_setup.create_user(password='password')
             group = data_setup.create_group()
-            user_in_group.groups.append(group)
+            group.add_member(user_in_group)
             user_not_in_group = data_setup.create_user(password='password')
 
         # Test submitting on behalf of user's group

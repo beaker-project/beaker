@@ -174,7 +174,7 @@ class XmlRpcLoginTest(XmlRpcTestCase):
             group = data_setup.create_group(permissions=[u'proxy_auth'])
             user = data_setup.create_user(password=u'lulz')
             proxied_user = data_setup.create_user(password=u'not_used')
-            data_setup.add_user_to_group(user, group)
+            group.add_member(user)
         server = self.get_server()
         server.auth.login_password(user.user_name, u'lulz', proxied_user.user_name)
         who_am_i = server.auth.who_am_i()

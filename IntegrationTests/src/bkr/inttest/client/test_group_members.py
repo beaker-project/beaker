@@ -17,7 +17,7 @@ class GroupMembersTest(ClientTestCase):
             user2 = data_setup.create_user()
             group = data_setup.create_group(owner=user2)
             user1 = data_setup.create_user()
-            user1.groups.append(group)
+            group.add_member(user1)
 
 
         # list output

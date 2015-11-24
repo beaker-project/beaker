@@ -1024,7 +1024,7 @@ class KickstartTest(unittest.TestCase):
         root_password = 'blappy7'
         group = data_setup.create_group(group_name='group1',
                                         root_password=root_password)
-        self.user.groups.append(group)
+        group.add_member(self.user)
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
                 lab_controller=self.lab_controller)
         session.commit()
@@ -1060,7 +1060,7 @@ class KickstartTest(unittest.TestCase):
         crypted_root_password = crypt.crypt('blappy7', "$1$%s$")
         group = data_setup.create_group(group_name='group1',
                                         root_password=crypted_root_password)
-        self.user.groups.append(group)
+        group.add_member(self.user)
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
                 lab_controller=self.lab_controller)
         session.commit()
@@ -1375,8 +1375,8 @@ logvol /butter --name=butter --vgname=TestVolume001 --size=25600 --fstype btrfs
         user2 = data_setup.create_user()
         user2.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'murderforajarofredrum', u'description'))
         group = data_setup.create_group(group_name=data_setup.unique_name('group%s'))
-        self.user.groups.append(group)
-        user2.groups.append(group)
+        group.add_member(self.user)
+        group.add_member(user2)
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
                 lab_controller=self.lab_controller)
         recipe = self.provision_recipe('''

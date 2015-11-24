@@ -85,7 +85,8 @@ def create_labcontroller(fqdn=None, user=None):
         lc = LabController(fqdn=fqdn)
         lc.user = user
         session.add(lc)
-        user.groups.append(Group.by_name(u'lab_controller'))
+        group = Group.by_name(u'lab_controller')
+        group.add_member(user, service=u'testdata')
         # Need to ensure it is inserted now, since we aren't using lazy_create 
         # here so a subsequent call to create_labcontroller could try and 
         # create the same LC again.
@@ -117,15 +118,15 @@ def create_admin(user_name=None, **kwargs):
     if user_name is None:
         user_name = unique_name(u'admin%s')
     user = create_user(user_name=user_name, **kwargs)
-    user.groups.append(Group.by_name(u'admin'))
+    group = Group.by_name(u'admin')
+    group.add_member(user, service=u'testdata')
     return user
 
 def add_system_lab_controller(system,lc): 
     system.lab_controller = lc
 
 def create_group(permissions=None, group_name=None, display_name=None,
-        owner=None, ldap=False,
-    root_password=None):
+        owner=None, ldap=False, root_password=None):
     # tg_group.group_name column is VARCHAR(16)
     if group_name is None:
         group_name = unique_name(u'group%s')
@@ -139,11 +140,9 @@ def create_group(permissions=None, group_name=None, display_name=None,
     group.ldap = ldap
     if ldap:
         assert owner is None, 'LDAP groups cannot have owners'
-    if owner:
-        add_owner_to_group(owner, group)
-    else:
-        group_owner = create_user(user_name=unique_name(u'group_owner_%s'))
-        add_owner_to_group(group_owner, group)
+    if not owner:
+        owner = create_user(user_name=unique_name(u'group_owner_%s'))
+    group.add_member(owner, is_owner=True, service=u'testdata')
 
     if permissions:
         group.permissions.extend(Permission.by_name(name) for name in permissions)
@@ -155,18 +154,6 @@ def create_permission(name=None):
     permission = Permission(name)
     session.add(permission)
     return permission
-
-def add_user_to_group(user,group):
-    user.groups.append(group)
-
-def add_owner_to_group(user, group):
-
-    if user not in group.users:
-        group.user_group_assocs.append(UserGroup(user=user, is_owner=True))
-    else:
-        for assoc in group.user_group_assocs:
-            if assoc.user == user:
-                assoc.is_owner = True
 
 def add_pool_to_system(system, pool):
     system.pools.append(pool)

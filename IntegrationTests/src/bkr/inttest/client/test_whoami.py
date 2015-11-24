@@ -22,7 +22,7 @@ class WhoAmITest(ClientTestCase):
             group.permissions.append(proxy_perm)
             proxied_user = data_setup.create_user()
             proxying_user = data_setup.create_user(password='password')
-            proxying_user.groups.append(group)
+            group.add_member(proxying_user)
         out = run_client(['bkr', 'whoami',
                           '--proxy-user', proxied_user.user_name],
                          config=\
