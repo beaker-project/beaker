@@ -489,6 +489,7 @@ class Group(DeclarativeMappedObject, ActivityMixin):
                 data['root_password'] = self.root_password
             data['can_edit_ldap'] = self.can_edit_ldap(user)
             data['can_modify_membership'] = self.can_modify_membership(user)
+            data['can_modify_ownership'] = self.can_modify_ownership(user)
             data['can_add_permission'] = self.can_add_permission(user)
             data['can_view_rootpassword'] = user in self.users or self.can_edit(user)
             data['can_delete'] = self.can_edit(user) and not self.is_protected_group()
@@ -496,6 +497,7 @@ class Group(DeclarativeMappedObject, ActivityMixin):
             data['can_edit'] = False
             data['can_edit_ldap'] = False
             data['can_modify_membership'] = False
+            data['can_modify_ownership'] = False
             data['can_add_permission'] = False
             data['can_view_rootpassword'] = False
             data['can_delete'] = False
@@ -615,6 +617,8 @@ class Group(DeclarativeMappedObject, ActivityMixin):
 
     def can_modify_membership(self, user):
         return not self.ldap and self.can_edit(user)
+
+    can_modify_ownership = can_modify_membership
 
     def add_member(self, user, is_owner=False, service=u'HTTP', agent=None):
         self.user_group_assocs.append(UserGroup(user=user, is_owner=is_owner))

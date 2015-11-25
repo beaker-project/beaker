@@ -1,3 +1,6 @@
+<% if (ldap) { %>
+<p>LDAP group does not have any owners.</p>
+<% } else { %>
 <p>
 The following users are owners of this group:
 </p>
@@ -7,3 +10,4 @@ The following users are owners of this group:
 <% } %>
 <ul class="list-group group-owners-list"></ul>
 </div>
+<% } %>

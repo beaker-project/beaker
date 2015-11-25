@@ -604,10 +604,8 @@ def add_group_membership(group_name):
     u = identity.current.user
     data = read_json_request(request)
     group = _get_group_by_name(group_name, lockmode='update')
-    if not group.can_edit(identity.current.user):
-        raise Forbidden403('Cannot edit group %s' % group_name)
-    if group.ldap:
-        raise Forbidden403('Cannot edit membership of LDAP group %s' % group_name)
+    if not group.can_modify_membership(identity.current.user):
+        raise Forbidden403('Cannot edit membership of group %s' % group_name)
     if 'user_name' not in data:
         raise BadRequest400('User not specified')
     user = _get_user_by_username(data['user_name'])
@@ -632,10 +630,8 @@ def remove_group_membership(group_name):
     """
     u = identity.current.user
     group = _get_group_by_name(group_name, lockmode='update')
-    if not group.can_edit(identity.current.user):
-        raise Forbidden403('Cannot edit group %s' % group_name)
-    if group.ldap:
-        raise Forbidden403('Cannot edit membership of LDAP group %s' % group_name)
+    if not group.can_modify_membership(identity.current.user):
+        raise Forbidden403('Cannot edit membership of group %s' % group_name)
     if 'user_name' not in request.args:
         raise MethodNotAllowed405
     user = _get_user_by_username(request.args['user_name'])
@@ -663,8 +659,8 @@ def grant_ownership(group_name):
     u = identity.current.user
     data = read_json_request(request)
     group = _get_group_by_name(group_name, lockmode='update')
-    if not group.can_edit(identity.current.user):
-        raise Forbidden403('Cannot edit group %s' % group_name)
+    if not group.can_modify_ownership(identity.current.user):
+        raise Forbidden403('Cannot edit ownership of group %s' % group_name)
     if 'user_name' not in data:
         raise BadRequest400('User not specified')
     user_name = data['user_name']
@@ -673,9 +669,6 @@ def grant_ownership(group_name):
         if user in group.users:
             group.grant_ownership(user, agent=identity.current.user)
         else:
-            if group.ldap:
-                raise BadRequest400('User %s is not a member of LDAP group %s'
-                    % (user_name, group_name))
             group.add_member(user, is_owner=True, agent=identity.current.user)
     else:
         raise Conflict409('User %s is already an owner of group %s' % (user.user_name, group_name))
@@ -694,8 +687,8 @@ def revoke_ownership(group_name):
     """
     u = identity.current.user
     group = _get_group_by_name(group_name, lockmode='update')
-    if not group.can_edit(identity.current.user):
-        raise Forbidden403('Cannot edit group %s' % group_name)
+    if not group.can_modify_ownership(identity.current.user):
+        raise Forbidden403('Cannot edit ownership of group %s' % group_name)
     if 'user_name' not in request.args:
         raise MethodNotAllowed405
     user = _get_user_by_username(request.args['user_name'])

@@ -42,7 +42,7 @@ window.GroupOwnersListView = Backbone.View.extend({
     },
     render: function () {
         this.$el.html(this.template(this.model.attributes));
-        if (this.model.get('can_edit')) {
+        if (this.model.get('can_modify_ownership')) {
             new GroupAddOwnerForm({model: this.model}).$el
                 .appendTo(this.$el);
         }

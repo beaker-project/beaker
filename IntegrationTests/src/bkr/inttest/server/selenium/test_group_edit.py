@@ -394,7 +394,7 @@ class TestGroupsWD(WebDriverTestCase):
         self.go_to_group_page(group)
         b.find_element_by_xpath('.//button[contains(text(), "Edit")]')
 
-    def test_cannot_modify_membership_of_ldap_group(self):
+    def test_cannot_modify_membership_of_a_ldap_group(self):
         with session.begin():
             group = data_setup.create_group(ldap=True)
             group.add_member(data_setup.create_user())
@@ -409,6 +409,21 @@ class TestGroupsWD(WebDriverTestCase):
         # "Remove" link should be absent from "User Members" list
         b.find_element_by_xpath('//ul[@class="list-group group-members-list" and '
             'not(.//button[contains(text(), "Remove")])]')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
+    def test_cannot_modify_ownership_of_a_ldap_group(self):
+        with session.begin():
+            group = data_setup.create_group(ldap=True)
+        login(self.browser)
+        b = self.browser
+        self.go_to_group_page(group)
+        # form to add new owners should be absent
+        b.find_element_by_xpath('//ul[contains(@class, "group-nav")]'
+            '//a[text()="Owners"]').click()
+        b.find_element_by_xpath('//div[@id="owners" and '
+            'not(.//input[@name="group_owner"])]')
+        b.find_element_by_xpath('//div[@id="owners"]'
+            '//p[text()="LDAP group does not have any owners."]')
 
     def _edit_group_details(self, browser, new_group_name, new_display_name):
         b = browser
@@ -750,6 +765,8 @@ class GroupHTTPTest(DatabaseTestCase):
             group = Group.by_name(u'my_ldap_group')
             self.assertEquals(group.ldap, True)
             self.assertEquals(group.users, [User.by_user_name(u'my_ldap_user')])
+            # The LDAP group should have no owner.
+            self.assertEquals(len(group.owners()), 0)
 
     def test_update_group(self):
         s = requests.Session()
@@ -900,7 +917,7 @@ class GroupHTTPTest(DatabaseTestCase):
         response = post_json(get_server_base() + 'groups/%s/members/' % self.group.group_name,
                 session=s, data={'user': user.user_name})
         self.assertEquals(response.status_code, 403)
-        self.assertIn('Cannot edit group', response.text)
+        self.assertIn('Cannot edit membership', response.text)
 
     def test_cannot_add_member_to_ldap_group(self):
         with session.begin():
@@ -912,7 +929,7 @@ class GroupHTTPTest(DatabaseTestCase):
         response = post_json(get_server_base() + 'groups/%s/members/' % ldap_group.group_name,
                 session=s, data={'user_name': user.user_name})
         self.assertEquals(response.status_code, 403)
-        self.assertIn("Cannot edit membership of LDAP group %s" %
+        self.assertIn("Cannot edit membership of group %s" %
                                 ldap_group.group_name, response.text)
 
     def test_can_add_member(self):
@@ -964,12 +981,10 @@ class GroupHTTPTest(DatabaseTestCase):
         response = post_json(get_server_base() + 'groups/%s/owners/' % self.group.group_name,
                 session=s, data={'user_name': user.user_name})
         self.assertEquals(response.status_code, 403)
-        self.assertIn('Cannot edit group', response.text)
+        self.assertIn('Cannot edit ownership', response.text)
 
-    def test_cannot_grant_LDAP_group_ownership_to_non_group_member(self):
-        """
-        Cannot give the ownership of LDAP group to a user who is not a member.
-        """
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
+    def test_cannot_modify_ownership_of_a_LDAP_group(self):
         with session.begin():
             user = data_setup.create_user(password=u'password')
             ldap_group = data_setup.create_group(ldap=True)
@@ -979,9 +994,8 @@ class GroupHTTPTest(DatabaseTestCase):
                                                    raise_for_status()
         response = post_json(get_server_base() + 'groups/%s/owners/' % ldap_group.group_name,
                 session=s, data={'user_name': user.user_name})
-        self.assertEquals(response.status_code, 400)
-        self.assertIn("User %s is not a member of LDAP group %s" %
-            (user.user_name, ldap_group.group_name), response.text)
+        self.assertEquals(response.status_code, 403)
+        self.assertIn('Cannot edit ownership', response.text)
 
     def test_can_grant_ownership_to_group_member(self):
         with session.begin():
