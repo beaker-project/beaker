@@ -9,10 +9,12 @@ from bkr.inttest import data_setup, get_server_base
 from turbogears.database import session
 from bkr.server.model import Job
 import requests
-import lxml.etree
+import xml.dom.minidom
 from StringIO import StringIO
 
 class JobExportXML(WebDriverTestCase):
+
+    maxDiff = None
 
     def setUp(self):
         with session.begin():
@@ -37,10 +39,12 @@ class JobExportXML(WebDriverTestCase):
         # Fetch the exported XML directly.
         response = requests.get(get_server_base() +
                 'to_xml?taskid=%s&pretty=False' % self.job_to_export.t_id)
-        xml_export = response.content
+        actual = response.content
         with session.begin():
+            # Expire the job, otherwise the exported job XML (read from the
+            # Python instance) will have a duration attribute while the export
+            # from the view will have not since our database stores only seconds
+            session.expire_all()
             job = Job.by_id(self.job_to_export.id)
-            xml_export = job.to_xml().toxml()
-            xml_export_tree = lxml.etree.parse(StringIO(xml_export))
-            pretty_xml = lxml.etree.tostring(xml_export_tree, pretty_print=False)
-            self.assert_(pretty_xml == xml_export)
+            expected = job.to_xml().toprettyxml()
+            self.assertMultiLineEqual(expected, actual)
