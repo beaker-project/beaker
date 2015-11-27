@@ -116,6 +116,11 @@ class Job_Submit(BeakerCommand):
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <jobxml>..." % self.normalized_name
+        self.parser.description = """\
+Specify one or more filenames containing job XML to be submitted. If multiple
+filenames are given, each one is submitted as a separate job. If no filenames
+are given, job XML is read from stdin. The special filename '-' also reads from
+stdin."""
         # This is now just legacy, --xml is the more accurate term
         self.parser.add_option(
             "--debug",
