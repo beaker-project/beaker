@@ -16,19 +16,12 @@ Access control for jobs
 When submitting a job, you can optionally submit it on behalf of a group, or on
 behalf of another user.
 
-By default, members of any group the submitter belongs to can modify job
-attributes (retention tag, product, whiteboard, priority, ack/nak)
-and delete the job. This is configurable and in sites where this behaviour is
-disabled, only the submitter will have these permissions. The latter will
-likely be the default in future releases.
+By default, only the submitter can modify job attributes (retention tag, 
+product, whiteboard, priority, ack/nak), cancel the job, or delete the job.
+
 However, when you submit a job on behalf of a group, members of that group have
-full control over the job.
-
-Specifying a group will give members of that group the following access:-
-
-- SSH based access to the system the job is running on.
-- Full control over the job, equivalent to that of the owner.
-
+full control over the job. All members of the group will also have SSH based 
+access to the systems used by the job.
 To learn how to set the group value, see :ref:`job-workflow-details`.
 
 Submitting a job on behalf of another user means that, aside from allowing

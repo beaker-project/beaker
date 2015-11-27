@@ -1403,7 +1403,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         XXX Using a config option to enable this deprecated function.
         This code will be removed. Eventually. See BZ#1000861
         """
-        if not get('beaker.deprecated_job_group_permissions.on', True):
+        if not get('beaker.deprecated_job_group_permissions.on', False):
             return False
         if not user:
             return False

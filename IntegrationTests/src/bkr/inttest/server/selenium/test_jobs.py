@@ -823,14 +823,14 @@ class JobAttributeChangeTest(WebDriverTestCase):
         login(self.browser, user=job_owner.user_name, password=u'owner')
         self.check_can_change_product(job, new_product)
 
-    def test_group_member_can_change_product(self):
+    def test_group_member_can_change_product_for_group_job(self):
         with session.begin():
             group = data_setup.create_group()
             job_owner = data_setup.create_user()
             group_member = data_setup.create_user(password=u'group_member')
             data_setup.add_user_to_group(job_owner, group)
             data_setup.add_user_to_group(group_member, group)
-            job = data_setup.create_job(owner=job_owner,
+            job = data_setup.create_job(owner=job_owner, group=group,
                     retention_tag=u'active',
                     product=data_setup.create_product())
             new_product = data_setup.create_product()
@@ -853,14 +853,14 @@ class JobAttributeChangeTest(WebDriverTestCase):
         login(self.browser, user=job_owner.user_name, password=u'owner')
         self.check_can_change_retention_tag(job, '60days')
 
-    def test_group_member_can_change_retention_tag(self):
+    def test_group_member_can_change_retention_tag_for_group_job(self):
         with session.begin():
             group = data_setup.create_group()
             job_owner = data_setup.create_user()
             group_member = data_setup.create_user(password=u'group_member')
             data_setup.add_user_to_group(job_owner, group)
             data_setup.add_user_to_group(group_member, group)
-            job = data_setup.create_job(owner=job_owner,
+            job = data_setup.create_job(owner=job_owner, group=group,
                     retention_tag=u'scratch')
         login(self.browser, user=group_member.user_name, password=u'group_member')
         self.check_can_change_retention_tag(job, '60days')

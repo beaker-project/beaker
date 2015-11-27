@@ -109,8 +109,7 @@ class JobAckTest(WebDriverTestCase):
         b.get(get_server_base() + 'jobs/%s' % job.id)
         self.check_cannot_review()
 
-    def test_group_member_can_review_non_group_job(self):
-        # This is a legacy permission which will go away eventually (see below)
+    def test_group_member_cannot_review_non_group_job(self):
         with session.begin():
             owner = data_setup.create_user()
             member = data_setup.create_user(password=u'group_member')
@@ -122,7 +121,7 @@ class JobAckTest(WebDriverTestCase):
         b = self.browser
         login(b, user=member.user_name, password='group_member')
         b.get(get_server_base() + 'jobs/%s' % job.id)
-        self.review(job.recipesets[0])
+        self.check_cannot_review()
 
     def test_group_member_can_review_group_job(self):
         with session.begin():
@@ -137,37 +136,6 @@ class JobAckTest(WebDriverTestCase):
         login(b, user=member.user_name, password='group_member')
         b.get(get_server_base() + 'jobs/%s' % job.id)
         self.review(job.recipesets[0])
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=1000861
-    # This will be deleted when legacy permissions are dropped
-    # in a future release (0.17?)
-    def test_disable_legacy_perms(self):
-        try:
-            stop_process('gunicorn')
-        except ValueError:
-            # It seems gunicorn is not a running process
-            raise SkipTest('Can only run this test against gunicorn')
-        try:
-            tmp_config = edit_file(CONFIG_FILE,
-                'beaker.deprecated_job_group_permissions.on = True',
-                'beaker.deprecated_job_group_permissions.on = False')
-            start_process('gunicorn', env={'BEAKER_CONFIG_FILE': tmp_config.name})
-
-            with session.begin():
-                owner = data_setup.create_user()
-                member = data_setup.create_user(password=u'group_member')
-                group = data_setup.create_group()
-                data_setup.add_user_to_group(owner, group)
-                data_setup.add_user_to_group(member, group)
-                job = data_setup.create_job(owner=owner, group=None)
-                data_setup.mark_job_complete(job, result=TaskResult.fail)
-            b = self.browser
-            login(b, user=member.user_name, password='group_member')
-            b.get(get_server_base() + 'jobs/%s' % job.id)
-            self.check_cannot_review()
-        finally:
-            stop_process('gunicorn')
-            start_process('gunicorn')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=995012
     def test_record_ack_change(self):

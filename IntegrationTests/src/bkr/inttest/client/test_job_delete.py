@@ -55,45 +55,23 @@ class JobDeleteTest(ClientTestCase):
             self.assert_("don't have permission" in e.stderr_output)
 
     def test_cant_delete_group_mates_job(self):
-        # XXX This whole test can go away with BZ#1000861
-        try:
-            stop_process('gunicorn')
-        except ValueError:
-            # It seems gunicorn is not a running process
-            raise SkipTest('Can only run this test against gunicorn')
-        try:
-            tmp_config = edit_file(CONFIG_FILE, 'beaker.deprecated_job_group_permissions.on = True',
-                'beaker.deprecated_job_group_permissions.on = False')
-            start_process('gunicorn', env={'BEAKER_CONFIG_FILE': tmp_config.name})
-            with session.begin():
-                group = data_setup.create_group()
-                mate = data_setup.create_user(password=u'asdf')
-                test_job = data_setup.create_completed_job(owner=mate)
-                data_setup.add_user_to_group(self.user, group)
-                data_setup.add_user_to_group(mate, group)
-            try:
-                run_client(['bkr', 'job-delete', test_job.t_id],
-                    config=self.client_config)
-                self.fail('We should not have permission to delete %s' % \
-                    test_job.t_id)
-            except ClientError, e:
-                self.assertIn("You don't have permission to delete job %s" %
-                test_job.t_id, e.stderr_output)
-        finally:
-            stop_process('gunicorn')
-            start_process('gunicorn')
-
-    def test_delete_group_mates_job(self):
+        # The test_delete_group_job case above is similar, but here the job is 
+        # *not* declared as a group job, therefore we don't have permission to 
+        # delete it.
         with session.begin():
             group = data_setup.create_group()
             mate = data_setup.create_user(password=u'asdf')
             test_job = data_setup.create_completed_job(owner=mate)
             data_setup.add_user_to_group(self.user, group)
             data_setup.add_user_to_group(mate, group)
-        out = run_client(['bkr', 'job-delete', test_job.t_id],
-                         config=self.client_config)
-        self.assert_(out.startswith('Jobs deleted:'), out)
-        self.assert_(test_job.t_id in out, out)
+        try:
+            run_client(['bkr', 'job-delete', test_job.t_id],
+                config=self.client_config)
+            self.fail('We should not have permission to delete %s' % \
+                test_job.t_id)
+        except ClientError, e:
+            self.assertIn("You don't have permission to delete job %s" %
+            test_job.t_id, e.stderr_output)
 
     def test_delete_job_with_admin(self):
         with session.begin():
