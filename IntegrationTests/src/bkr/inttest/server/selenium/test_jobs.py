@@ -32,8 +32,11 @@ class TestViewJob(WebDriverTestCase):
     def setUp(self):
         self.browser = self.get_browser()
 
-    def go_to_job_page(self, job):
-        self.browser.get(get_server_base() + 'jobs/%s' % job.id)
+    def go_to_job_page(self, job, recipeset=None):
+        url = get_server_base() + 'jobs/%s' % job.id
+        if recipeset:
+            url += '#set%s' % recipeset.id
+        self.browser.get(url)
 
     def test_group_job(self):
         with session.begin():
@@ -452,6 +455,27 @@ class TestViewJob(WebDriverTestCase):
         # checkbox is intentionally very unobtrusive.
         # So we have to resort to poll-waiting on the database instead.
         wait_for_condition(lambda: recipe.get_reviewed_state(owner) == False)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=894137
+    def test_recipeset_in_url_anchor_is_highlighted(self):
+        # When the URL is /jobs/123#set456, RS:456 should be focused and highlighted.
+        with session.begin():
+            job = data_setup.create_completed_job()
+            recipeset = job.recipesets[0]
+        b = self.browser
+        self.go_to_job_page(job, recipeset=recipeset)
+        b.find_element_by_xpath('//tbody[@id="set%s" and @class="highlight"]' % recipeset.id)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=894137
+    def test_old_recipeset_anchors_are_replaced(self):
+        with session.begin():
+            job = data_setup.create_completed_job()
+            recipeset = job.recipesets[0]
+        b = self.browser
+        b.get(get_server_base() + 'jobs/%s#RS_%s' % (job.id, recipeset.id))
+        b.find_element_by_xpath('//tbody[@id="set%s" and @class="highlight"]' % recipeset.id)
+        self.assertEquals(b.current_url,
+                get_server_base() + 'jobs/%s#set%s' % (job.id, recipeset.id))
 
 class NewJobTestWD(WebDriverTestCase):
 

@@ -132,7 +132,7 @@ window.RecipeSet = Backbone.Model.extend({
         }
         return data;
     },
-    _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>jobs/<%- job.get("id") %>"><%- t_id %></a>'),
+    _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>jobs/<%- job.get("id") %>#set<%- id %>"><%- t_id %></a>'),
     toHTML: function () {
         return this._toHTML_template(this.attributes);
     },

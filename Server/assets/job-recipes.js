@@ -11,6 +11,16 @@ window.JobRecipesView = Backbone.View.extend({
     className: 'job-recipes table',
     initialize: function () {
         this.render();
+        // If the page URL has an anchor pointing at a specific recipe set, 
+        // highlight it.
+        var highlight_recipeset = _.bind(function () {
+            this.$('tbody')
+                .removeClass('highlight')
+                .filter(location.hash)
+                .addClass('highlight');
+        }, this);
+        highlight_recipeset();
+        $(window).on('hashchange', highlight_recipeset);
     },
     render: function () {
         var tbodies = _.map(this.model.get('recipesets'), function (recipeset) {
@@ -34,7 +44,8 @@ var RecipeSetView = Backbone.View.extend({
         this.listenTo(this.model, 'cancelling', this.cancelling);
     },
     render: function () {
-        this.$el.html(this.template(this.model.attributes));
+        this.$el.html(this.template(this.model.attributes))
+                .attr('id', 'set' + this.model.get('id'));
         new RecipeSetCommentsLink({model: this.model, el: this.$('td.recipeset-comments')}).render();
         var $el = this.$el;
         _.each(this.model.get('machine_recipes'), function (recipe) {

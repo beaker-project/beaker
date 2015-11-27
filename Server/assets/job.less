@@ -72,14 +72,41 @@
     width: 100%;
     tbody + tbody {
         border-top: none;
+        // tbodies can't have margin/padding for... reasons, so we use this
+        // trick to space them apart
+        &:before {
+            content: "";
+            display: block;
+            height: 1em;
+        }
+    }
+    tbody.highlight tr {
+        @keyframes yellow-fade {
+            0% { background: @warningBackground; }
+            100% { background: none; }
+        }
+        animation: yellow-fade 3s ease-in-out 1;
     }
     .recipeset td {
-        padding-top: @baseLineHeight*1.5;
         border-top: none;
         vertical-align: bottom;
     }
     .recipeset-id {
         font-size: 1.2em;
+        // Floating link icon left of the recipe set id
+        margin-left: -@baseFontSize*1.2;
+        .anchor {
+            width: @baseFontSize;
+            padding-right: @baseFontSize*0.2;
+            font-size: @baseFontSize;
+            // Undo link styling because it's just a link to itself
+            color: inherit !important;
+            // Invisible until they hover over the recipe set id
+            visibility: hidden;
+        }
+        &:hover .anchor {
+            visibility: visible;
+        }
     }
     .recipeset .label {
         margin-left: 0.5em;

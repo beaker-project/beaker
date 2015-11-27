@@ -10,6 +10,12 @@
     var job = new Job(${tg.to_json(job)}, {parse: true, url: ${tg.to_json(tg.url(job.href))}});
     job.activity.reset({entries: ${tg.to_json(job.all_activity)}}, {parse: true});
     $(function () {
+        // For backwards compatibility, replace an anchor like #RS_123 (from 
+        // the old job page) with #set123.
+        var old_anchor_match = /^#RS_(\d+)$/.exec(location.hash);
+        if (old_anchor_match != null) {
+            location.hash = '#set' + old_anchor_match[1];
+        }
         $('.container-fluid')
             .append(new JobHeaderView({model: job}).el)
             .append(new JobInfoView({model: job}).el)

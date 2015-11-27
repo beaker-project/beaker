@@ -1,7 +1,7 @@
 <tr class="recipeset">
   <td><!-- empty cell for reviewed check box --></td>
   <td colspan="2">
-    <span class="recipeset-id"><abbr title="Recipe Set">RS</abbr>:<%- id %></span>
+    <span class="recipeset-id"><a href="#set<%- id %>" class="anchor"><i class="fa fa-link" title="Link to this recipe set"></i></a><abbr title="Recipe Set">RS</abbr>:<%- id %></span>
     <% if (waived) { %>
       <span class="label label-warning">Waived</span>
     <% } %>
