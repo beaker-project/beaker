@@ -216,7 +216,9 @@ class SystemViewTestWD(WebDriverTestCase):
         tab = b.find_element_by_id('scheduler-settings')
         BootstrapSelect(tab.find_element_by_name('status'))\
             .select_by_visible_text('Broken')
-        tab.find_element_by_name('status_reason').send_keys(u'reallylong' * 500)
+        long_text = u'reallylong' * 500
+        b.execute_script('document.getElementById("status_reason").value = "%s"'
+                % long_text)
         tab.find_element_by_xpath('.//button[text()="Save Changes"]').click()
         self.assertIn(
                 'System condition report is longer than 4000 characters',
