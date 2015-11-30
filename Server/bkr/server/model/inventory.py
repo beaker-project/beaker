@@ -490,6 +490,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             'disk_space': None,
             'queue_size': None,
             'pools': [pool.name for pool in self.pools],
+            'disks': self.disks,
         }
         in_progress_scan = self.find_current_hardware_scan_recipe()
         if in_progress_scan:
@@ -522,6 +523,17 @@ class System(DeclarativeMappedObject, ActivityMixin):
         if self.cpu:
             data.update({
                 'cpu_model_name': self.cpu.model_name,
+                'cpu_vendor': self.cpu.vendor,
+                'cpu_model': self.cpu.model,
+                'cpu_model_name': self.cpu.model_name,
+                'cpu_family': self.cpu.family,
+                'cpu_flags': [f.flag for f in self.cpu.flags],
+                'cpu_stepping': self.cpu.stepping,
+                'cpu_speed': self.cpu.speed,
+                'cpu_processors': self.cpu.processors,
+                'cpu_cores': self.cpu.cores,
+                'cpu_sockets': self.cpu.sockets,
+                'cpu_hyper': self.cpu.hyper,
             })
         if self.disks:
             data['disk_space'] = sum(disk.size for disk in self.disks)
@@ -2197,6 +2209,7 @@ class Cpu(DeclarativeMappedObject):
                 new_flag = CpuFlag(flag=cpuflag)
                 self.flags.append(new_flag)
 
+
 class CpuFlag(DeclarativeMappedObject):
 
     __tablename__ = 'cpu_flag'
@@ -2321,6 +2334,15 @@ class Disk(DeclarativeMappedObject):
                 self.sector_size == other['sector_size'] and
                 self.phys_sector_size == other['phys_sector_size'] and
                 self.model == other['model'])
+
+    def __json__(self):
+        return dict(
+            model=self.model,
+            size=self.size,
+            sector_size=self.sector_size,
+            phys_sector_size=self.phys_sector_size,
+        )
+
 
 class PowerType(DeclarativeMappedObject):
 

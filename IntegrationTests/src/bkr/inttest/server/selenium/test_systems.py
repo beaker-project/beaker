@@ -13,7 +13,6 @@ from urllib import urlencode, urlopen
 import uuid
 import lxml.etree
 from turbogears.database import session
-import requests
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support.ui import Select
 from bkr.inttest.server.selenium import WebDriverTestCase
@@ -22,7 +21,7 @@ from bkr.inttest import data_setup, get_server_base, with_transaction, \
 from bkr.inttest.assertions import assert_sorted
 from bkr.server import dynamic_virt
 from bkr.server.model import Cpu, Key, Key_Value_String, System, \
-        SystemStatus, SystemPermission, Job
+        SystemStatus, SystemPermission, Job, Disk
 from bkr.inttest.server.webdriver_utils import check_system_search_results, login
 from bkr.inttest.server.requests_utils import patch_json
 
@@ -370,6 +369,8 @@ class SystemHTTPTest(DatabaseTestCase):
     Note that other system-related HTTP APIs are tested elsewhere 
     (e.g. /systems/<fqdn>/commands/ in test_system_commands.py).
     """
+    maxDiff = None
+
     def setUp(self):
         with session.begin():
             self.owner = data_setup.create_user(password='theowner')
@@ -401,6 +402,26 @@ class SystemHTTPTest(DatabaseTestCase):
         self.assertEquals(in_progress_scan['recipe_id'], recipe.id)
         self.assertEquals(in_progress_scan['status'], u'Running')
         self.assertEquals(in_progress_scan['job_id'], recipe.recipeset.job.t_id)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1206033
+    def test_system_details_includes_disks(self):
+        with session.begin():
+            disk = Disk(model='Seagate Old', size=1024, sector_size=512, phys_sector_size=512)
+            session.add(disk)
+            self.system.disks.append(disk)
+
+        expected = [{
+            u'phys_sector_size': disk.phys_sector_size,
+            u'sector_size': disk.sector_size,
+            u'size': disk.size,
+            u'model': disk.model,
+        }]
+
+        response = requests.get(
+            get_server_base() + 'systems/%s' % self.system.fqdn)
+
+        self.assertIn('disks', response.json())
+        self.assertEqual(expected, response.json()['disks'])
 
     def test_set_active_policy_from_pool(self):
         with session.begin():
@@ -439,6 +460,37 @@ class SystemHTTPTest(DatabaseTestCase):
         self.assertEquals(response.status_code, 400)
         self.assertEquals(response.text,
                           'To use a pool policy, the system must be in the pool first')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1206034
+    def test_system_details_includes_cpus(self):
+        with session.begin():
+            cpu = Cpu(cores=5,
+                      family=6,
+                      model=7,
+                      model_name='Intel',
+                      flags=['beer', 'frob'],
+                      processors=6,
+                      sockets=2,
+                      speed=24,
+                      stepping=2,
+                      vendor='Transmeta')
+            session.add(cpu)
+            self.system.cpu = cpu
+
+        response = requests.get(
+            get_server_base() + 'systems/%s' % self.system.fqdn)
+        json = response.json()
+        self.assertEqual([u'beer', u'frob'], json['cpu_flags'])
+        self.assertEqual(5, json['cpu_cores'])
+        self.assertEqual(6, json['cpu_family'])
+        self.assertEqual(7, json['cpu_model'])
+        self.assertEqual(u'Intel', json['cpu_model_name'])
+        self.assertEqual(True, json['cpu_hyper'])
+        self.assertEqual(6, json['cpu_processors'])
+        self.assertEqual(2, json['cpu_sockets'])
+        self.assertEqual(24, json['cpu_speed'])
+        self.assertEqual(2, json['cpu_stepping'])
+        self.assertEqual('Transmeta', json['cpu_vendor'])
 
     def test_set_active_policy_to_custom_policy(self):
         with session.begin():
