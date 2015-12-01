@@ -7,7 +7,7 @@ from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client, create_client_config, ClientError, \
         ClientTestCase
-from bkr.server.model import TaskStatus, Job, User
+from bkr.server.model import TaskStatus, Job, User, SystemPermission
 from bkr.server.tools import beakerd
 
 class RemoveAccountTest(ClientTestCase):
@@ -19,7 +19,7 @@ class RemoveAccountTest(ClientTestCase):
         except ClientError, e:
             self.assertIn('You cannot remove yourself', e.stderr_output)
 
-    def test_delete_user(self):
+    def test_remove_multiple_users(self):
         with session.begin():
             user1 = data_setup.create_user(password=u'asdf')
             user2 = data_setup.create_user(password=u'qwerty')
@@ -30,8 +30,13 @@ class RemoveAccountTest(ClientTestCase):
             session.refresh(user2)
             self.assertTrue(user1.removed)
             self.assertTrue(user2.removed)
+
+    def test_remove_an_already_removed_user(self):
+        with session.begin():
+            user = data_setup.create_user()
+        run_client(['bkr', 'remove-account', user.user_name])
         try:
-            run_client(['bkr', 'remove-account', user1.user_name])
+            run_client(['bkr', 'remove-account', user.user_name])
             self.fail('Must fail or die')
         except ClientError, e:
             self.assertIn('User already removed', e.stderr_output)
@@ -49,24 +54,53 @@ class RemoveAccountTest(ClientTestCase):
         except ClientError, e:
             self.assertIn('Not member of group: admin', e.stderr_output)
 
-    def test_account_close_job_cancel(self):
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1257020
+    def test_remove_account(self):
         with session.begin():
-            user1 = data_setup.create_user()
-            job = data_setup.create_job(owner=user1)
+            user = data_setup.create_user()
+            job = data_setup.create_job(owner=user)
             data_setup.mark_job_running(job)
-
-        run_client(['bkr', 'remove-account', user1.user_name])
-
-        # reflect the change in recipe task status when
-        # update_dirty_jobs() is called
-        session.expunge_all()
-        beakerd.update_dirty_jobs()
-
+            owned_system = data_setup.create_system(owner=user)
+            loaned_system = data_setup.create_system()
+            loaned_system.loaned = user
+            reserved_system = data_setup.create_system(status=u'Manual')
+            reserved_system.reserve_manually(service=u'testdata', user=user)
+            reserved_system.custom_access_policy.add_rule(
+                    SystemPermission.reserve, user=user)
+            group = data_setup.create_group(owner=user)
+        run_client(['bkr', 'remove-account', user.user_name])
         with session.begin():
-            job = Job.by_id(job.id)
+            session.expire_all()
+            self.assertIsNotNone(user.removed)
+            # running jobs should be cancelled
+            job.update_status()
             self.assertEquals(job.status, TaskStatus.cancelled)
-            self.assertIn('User %s removed' % user1.user_name,
+            self.assertIn('User %s removed' % user.user_name,
                           job.recipesets[0].recipes[0].tasks[0].results[0].log)
+            # reservations should be released
+            self.assertIsNone(reserved_system.user)
+            # loans should be returned
+            self.assertIsNone(loaned_system.loaned)
+            # access policy rules should be removed
+            self.assertEqual([],
+                    [rule for rule in reserved_system.custom_access_policy.rules
+                     if rule.user == user])
+            self.assertEqual(reserved_system.activity[0].field_name, u'Access Policy Rule')
+            self.assertEqual(reserved_system.activity[0].action, u'Removed')
+            self.assertEqual(reserved_system.activity[0].old_value,
+                    u'<grant reserve to %s>' % user.user_name)
+            # systems owned by the user should be transferred to the caller
+            self.assertEqual(owned_system.owner.user_name, data_setup.ADMIN_USER)
+            self.assertEqual(owned_system.activity[0].field_name, u'Owner')
+            self.assertEqual(owned_system.activity[0].action, u'Changed')
+            self.assertEqual(owned_system.activity[0].old_value, user.user_name)
+            self.assertEqual(owned_system.activity[0].new_value, data_setup.ADMIN_USER)
+            # group membership/ownership should be removed
+            self.assertEqual([], user.groups)
+            self.assertNotIn(user, group.users)
+            self.assertEqual(group.activity[0].field_name, u'User')
+            self.assertEqual(group.activity[0].action, u'Removed')
+            self.assertEqual(group.activity[0].old_value, user.user_name)
 
     def test_close_account_transfer_ownership(self):
         with session.begin():

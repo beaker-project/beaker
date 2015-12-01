@@ -18,12 +18,16 @@ Synopsis
 Description
 -----------
 
-Remove a Beaker user account.
+Removes a Beaker user account.
 
-Removing a user account cancels any running job(s), returns all the systems in
-use by the user, modifies by default the ownership of the systems owned to the
-admin closing the account, and disables the account for further login.
+When the account is removed:
 
+* it is removed from all groups and access policies
+* any running jobs owned by the account are cancelled
+* any systems reserved by or loaned to the account are returned
+* any systems owned by the account are transferred to the admin running this 
+  command, or some other user if specified using :option:`--new-owner`
+* the account is disabled for further login
 
 Common :program:`bkr` options are described in the :ref:`Options
 <common-options>` section of :manpage:`bkr(1)`.

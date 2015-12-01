@@ -24,7 +24,8 @@ from sqlalchemy import and_
 import cherrypy
 from datetime import datetime
 
-from bkr.server.model import User, Job, System, SystemActivity, TaskStatus
+from bkr.server.model import User, Job, System, SystemActivity, TaskStatus, \
+    SystemAccessPolicyRule
 
 
 class UserFormSchema(validators.Schema):
@@ -187,12 +188,14 @@ class Users(AdminPage):
     @identity.require(identity.in_group('admin'))
     def remove_account(self, username, newowner=None):
         """
-        Remove a user account.
+        Removes a Beaker user account. When the account is removed:
 
-        Removing a user account cancels any running job(s), returns all
-        the systems in use by the user, modifies the ownership of the
-        systems owned to the admin closing the account, and disables the
-        account for further login.
+        * it is removed from all groups and access policies
+        * any running jobs owned by the account are cancelled
+        * any systems reserved by or loaned to the account are returned
+        * any systems owned by the account are transferred to the admin running this 
+          command, or some other user if specified using the *newowner* parameter
+        * the account is disabled for further login
 
         :param username: An existing username
         :param newowner: An optional username to assign all systems to.
@@ -239,6 +242,10 @@ class Users(AdminPage):
                     action=u'Changed', field=u'Loaned To',
                     old=u'%s' % system.loaned, new=u'None')
             system.loaned = None
+        # Remove the user from all system access policies
+        for rule in SystemAccessPolicyRule.query.filter_by(user=user):
+            rule.record_deletion(service=method)
+            session.delete(rule)
         # Change the owner to the caller
         newowner = kw.get('newowner', identity.current.user)
         for system in System.query.filter(System.owner==user):
@@ -246,6 +253,10 @@ class Users(AdminPage):
             system.record_activity(user=identity.current.user, service=method,
                     action=u'Changed', field=u'Owner',
                                    old=u'%s' % user, new=u'%s' % newowner)
+        # Remove the user from all groups
+        for group in user.groups:
+            group.remove_member(user=user,
+                    agent=identity.current.user, service=method)
         # Finally remove the user
         user.removed=datetime.utcnow()
 

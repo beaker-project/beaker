@@ -507,3 +507,76 @@ class MigrationTest(unittest.TestCase):
                         OSMajorInstallOptions.arch == None)\
                 .one()
         self.assertEquals(installopts.ks_meta, u'testtwo')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1257020
+    def test_clear_removed_users_from_groups(self):
+        connection = self.migration_metadata.bind.connect()
+        # populate empty database
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/21.sql'))
+        # bob is in the colonel group
+        connection.execute(
+                "INSERT INTO tg_user (user_id, user_name, display_name, email_address, disabled, removed) "
+                "VALUES (2, 'bob', 'Bob', 'bob@example.com', 1, '2015-12-01 15:43:28')")
+        connection.execute(
+                "INSERT INTO tg_group (group_id, group_name, display_name, ldap) "
+                "VALUES (3, 'colonel', 'Colonel', 0)")
+        connection.execute(
+                "INSERT INTO user_group (user_id, group_id, is_owner) "
+                "VALUES (2, 3, 1)")
+        # run migration
+        upgrade_db(self.migration_metadata)
+        # check that bob is removed from the group
+        bob = self.migration_session.query(User).get(2)
+        self.assertEquals([], bob.groups)
+        colonel = self.migration_session.query(Group).get(3)
+        self.assertNotIn(bob, colonel.users)
+        self.assertEqual(colonel.activity[0].field_name, u'User')
+        self.assertEqual(colonel.activity[0].action, u'Removed')
+        self.assertEqual(colonel.activity[0].old_value, u'bob')
+        self.assertEqual(colonel.activity[0].service, u'Migration')
+        self.assertEqual(colonel.activity[0].user.user_name, u'admin')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1257020
+    def test_clear_removed_users_from_access_policies(self):
+        connection = self.migration_metadata.bind.connect()
+        # populate empty database
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/21.sql'))
+        # fred is in a custom access policy (1) and a pool access policy (2)
+        connection.execute(
+                "INSERT INTO tg_user (user_id, user_name, display_name, email_address, disabled, removed) "
+                "VALUES (2, 'fred', 'Fred', 'fred@example.com', 1, '2015-12-01 17:18:56')")
+        connection.execute("INSERT INTO system_access_policy (id) VALUES (1)")
+        connection.execute(
+                "INSERT INTO system_access_policy_rule (policy_id, user_id, group_id, permission) "
+                "VALUES (1, 2, NULL, 'reserve')")
+        connection.execute("INSERT INTO system "
+                "(id, fqdn, date_added, owner_id, type, status, kernel_type_id, "
+                " custom_access_policy_id, active_access_policy_id) "
+                "VALUES (1, 'test.example.invalid', '2015-01-01', 1, 'Machine', 'Automated', 1, 1, 1)")
+        connection.execute("INSERT INTO system_access_policy (id) VALUES (2)")
+        connection.execute(
+                "INSERT INTO system_access_policy_rule (policy_id, user_id, group_id, permission) "
+                "VALUES (2, 2, NULL, 'loan_self')")
+        connection.execute(
+                "INSERT INTO system_pool (id, name, owning_user_id, access_policy_id) "
+                "VALUES (1, 'colonel-hard-wear', 1, 2)")
+        # run migration
+        upgrade_db(self.migration_metadata)
+        # check that fred is removed from the system access policy
+        system = self.migration_session.query(System).get(1)
+        self.assertEqual([], system.custom_access_policy.rules)
+        self.assertEqual(system.activity[0].field_name, u'Access Policy Rule')
+        self.assertEqual(system.activity[0].action, u'Removed')
+        self.assertEqual(system.activity[0].old_value, u'<grant reserve to fred>')
+        self.assertEqual(system.activity[0].service, u'Migration')
+        self.assertEqual(system.activity[0].user.user_name, u'admin')
+        # check that fred is removed from the pool access policy
+        pool = self.migration_session.query(SystemPool).get(1)
+        self.assertEqual([], pool.access_policy.rules)
+        self.assertEqual(pool.activity[0].field_name, u'Access Policy Rule')
+        self.assertEqual(pool.activity[0].action, u'Removed')
+        self.assertEqual(pool.activity[0].old_value, u'<grant loan_self to fred>')
+        self.assertEqual(pool.activity[0].service, u'Migration')
+        self.assertEqual(pool.activity[0].user.user_name, u'admin')
