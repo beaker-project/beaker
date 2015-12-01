@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import difflib
 import time
 import datetime
 
@@ -78,3 +79,9 @@ def wait_for_condition(condition_func, timeout=30):
                     % (condition_func, timeout))
         else:
             time.sleep(0.25)
+
+def character_diff_message(expected, actual):
+    """Creates a character diff comparing the two strings. Can be used as a
+    message for a test assertion."""
+    diffed = ''.join(difflib.unified_diff(list(expected), list(actual), n=10))
+    return 'Diff:\n %s\nExpected:\n %s\nActual:\n %s' % (diffed, expected, actual)

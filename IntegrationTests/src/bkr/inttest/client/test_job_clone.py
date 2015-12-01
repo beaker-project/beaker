@@ -7,14 +7,18 @@
 # (at your option) any later version.
 
 from turbogears.database import session
-from bkr.inttest import data_setup, with_transaction
+from bkr.inttest.assertions import character_diff_message
+from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError, ClientTestCase
 
 class JobCloneTest(ClientTestCase):
 
+    maxDiff = None
+
     def setUp(self):
         with session.begin():
-            self.job = data_setup.create_completed_job()
+            distro_tree = data_setup.create_distro_tree(distro_name='DansAwesomeLinux6.5')
+            self.job = data_setup.create_completed_job(whiteboard="foo", distro_tree=distro_tree)
 
     def test_can_clone_job(self):
         out = run_client(['bkr', 'job-clone', self.job.t_id])
@@ -25,14 +29,69 @@ class JobCloneTest(ClientTestCase):
         self.assert_(out.startswith('Submitted:'))
 
     def test_can_print_xml(self):
+        expected_xml = (
+            '<?xml version=\'1.0\' encoding=\'utf8\'?>\n'
+            '<job retention_tag="scratch">'
+            '<whiteboard>foo</whiteboard>'
+            '<recipeSet priority="Normal">'
+            '<recipe kernel_options="" kernel_options_post="" ks_meta="" role="STANDALONE" whiteboard="">'
+            '<autopick random="false"/>'
+            '<watchdog/>'
+            '<packages/>'
+            '<ks_appends/>'
+            '<repos/>'
+            '<distroRequires>'
+            '<and>'
+            '<distro_family op="=" value="DansAwesomeLinux6"/>'
+            '<distro_variant op="=" value="Server"/>'
+            '<distro_name op="=" value="DansAwesomeLinux6.5"/>'
+            '<distro_arch op="=" value="i386"/>'
+            '</and>'
+            '</distroRequires>'
+            '<hostRequires>'
+            '<system_type value="Machine"/>'
+            '</hostRequires>'
+            '<partitions/>'
+            '<task name="/distribution/reservesys" role="STANDALONE"/>'
+            '</recipe></recipeSet></job>')
         out = run_client(['bkr', 'job-clone','--xml', self.job.t_id])
         self.assert_('Submitted:' in out)
-        self.assert_(self.job.to_xml(True,True).toxml() in out)
+        actual_xml = out[:out.find('Submitted')]
+        self.assertEqual(expected_xml.strip(), actual_xml.strip(),
+                         character_diff_message(expected_xml.strip(), actual_xml.strip()))
 
     def test_can_print_prettyxml(self):
+        expected_xml = """
+<?xml version='1.0' encoding='utf8'?>
+<job retention_tag="scratch">
+  <whiteboard>foo</whiteboard>
+  <recipeSet priority="Normal">
+    <recipe kernel_options="" kernel_options_post="" ks_meta="" role="STANDALONE" whiteboard="">
+      <autopick random="false"/>
+      <watchdog/>
+      <packages/>
+      <ks_appends/>
+      <repos/>
+      <distroRequires>
+        <and>
+          <distro_family op="=" value="DansAwesomeLinux6"/>
+          <distro_variant op="=" value="Server"/>
+          <distro_name op="=" value="DansAwesomeLinux6.5"/>
+          <distro_arch op="=" value="i386"/>
+        </and>
+      </distroRequires>
+      <hostRequires>
+        <system_type value="Machine"/>
+      </hostRequires>
+      <partitions/>
+      <task name="/distribution/reservesys" role="STANDALONE"/>
+    </recipe>
+  </recipeSet>
+</job>"""
         out = run_client(['bkr', 'job-clone','--prettyxml', self.job.t_id])
         self.assert_('Submitted:' in out)
-        self.assert_(self.job.to_xml(True,True).toprettyxml() in out)
+        actual_xml = out[:out.find('Submitted')]
+        self.assertMultiLineEqual(expected_xml.strip(), actual_xml.strip())
 
     def test_can_dryrun(self):
         out = run_client(['bkr', 'job-clone','--dryrun', self.job.t_id])

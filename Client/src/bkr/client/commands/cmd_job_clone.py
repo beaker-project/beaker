@@ -75,10 +75,10 @@ See also
 """
 
 import sys
+import lxml.etree
 from bkr.client import BeakerCommand
 from optparse import OptionValueError
 from bkr.client.task_watcher import *
-from xml.dom.minidom import parseString
 
 class Job_Clone(BeakerCommand):
     """Clone Jobs/RecipeSets"""
@@ -116,7 +116,7 @@ class Job_Clone(BeakerCommand):
 
         wait = kwargs.pop("wait", None)
         xml = kwargs.pop("xml", None)
-        pretty = kwargs.pop("prettyxml", None)
+        pretty = kwargs.pop("prettyxml", False)
         dryrun = kwargs.pop("dryrun", None)
 
         submitted_jobs = []
@@ -134,10 +134,11 @@ class Job_Clone(BeakerCommand):
                 # XML is really bytes, the fact that the server is sending the bytes as an
                 # XML-RPC Unicode string is just a mistake in Beaker's API
                 jobxml = jobxml.encode('utf8')
-                if pretty:
-                    print parseString(jobxml).toprettyxml(encoding='utf8')
-                elif xml:
-                    print parseString(jobxml).toxml(encoding='utf8')
+                if xml or pretty:
+                    print lxml.etree.tostring(lxml.etree.fromstring(jobxml),
+                                            pretty_print=pretty,
+                                            xml_declaration=True,
+                                            encoding='utf8')
                 if not dryrun:
                     submitted_jobs.append(self.hub.jobs.upload(jobxml))
             except Exception, ex:
