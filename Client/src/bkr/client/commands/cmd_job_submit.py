@@ -68,6 +68,17 @@ Options
    The command will not exit until all submitted jobs have finished. See 
    :manpage:`bkr-job-watch(1)`.
 
+.. option:: --job-owner <username>
+
+   Submit the job on behalf of <username>. The submitted job will be owned by
+   <username> rather than the submitting user.
+
+   The existing user attribute in the job XML will be overridden if set.
+
+   The submitting user must be a submission delegate of <username>. Users can
+   add other users as submission delegates on their :guilabel:`Preferences`
+   page in Beaker's web UI.
+
 Common :program:`bkr` options are described in the :ref:`Options 
 <common-options>` section of :manpage:`bkr(1)`.
 
@@ -162,6 +173,12 @@ stdin."""
             '--ignore-missing-tasks', default=False, action='store_true',
             help='silently discard tasks which do not exist on the scheduler',
         )
+        self.parser.add_option(
+             '--job-owner', metavar='USERNAME',
+             help='Submit job on behalf of USERNAME. '
+                  'The existing user attribute in the job XML will be overridden if set. '
+                  '(submitting user must be a submission delegate for job owner)',
+        )
 
     def run(self, *args, **kwargs):
         convert  = kwargs.pop("convert", False)
@@ -171,6 +188,7 @@ stdin."""
         dryrun  = kwargs.pop("dryrun", False)
         wait  = kwargs.pop("wait", False)
         ignore_missing_tasks = kwargs.pop('ignore_missing_tasks', False)
+        job_owner = kwargs.pop("job_owner", None)
 
         jobs = args
         if not jobs:
@@ -195,6 +213,8 @@ stdin."""
                 doc = xml.dom.minidom.parseString("<dummy>%s</dummy>" % mystring)
             # Split on jobs.
             for jobxml in doc.getElementsByTagName("job"):
+                if job_owner is not None:
+                    jobxml.setAttribute('user', job_owner)
                 jobxmls.append(jobxml.toxml())
 
         # Combine into one job if requested.
@@ -206,6 +226,7 @@ stdin."""
                 combineTag(doc,combined,"notify")
                 combineAttr(doc.getElementsByTagName("job")[0], combined, "retention_tag")
                 combineAttr(doc.getElementsByTagName("job")[0], combined, "product")
+                combineAttr(doc.getElementsByTagName("job")[0], combined, "user")
                 # Add all recipeSet(s) to combined job.
                 for recipeSet in doc.getElementsByTagName("recipeSet"):
                     combined.appendChild(recipeSet)

@@ -8,8 +8,8 @@
 
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
-from bkr.inttest.client import run_client, create_client_config, ClientTestCase
-from bkr.server.model import Distro
+from bkr.inttest.client import run_client, create_client_config, ClientTestCase, ClientError
+from bkr.server.model import Distro, Job
 import pkg_resources
 
 class JobSubmitTest(ClientTestCase):
@@ -19,6 +19,11 @@ class JobSubmitTest(ClientTestCase):
         data_setup.create_product(product_name=u'the_product')
         data_setup.create_group(group_name='somegroup')
         data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
+        self.user_foo = data_setup.create_user(password='foo')
+        self.user_bar = data_setup.create_user(password='bar')
+        self.bot = data_setup.create_user(password='bot')
+        # Add bot as delegate submission of foo
+        self.user_foo.add_submission_delegate(self.bot, service=u'testdata')
 
     def test_submit_job(self):
         with session.begin():
@@ -82,3 +87,30 @@ class JobSubmitTest(ClientTestCase):
             '''
         out = run_client(['bkr', 'job-submit'], input=jobxml)
         self.assertIn("Submitted: ['J:", out)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1215138
+    def test_delegate_submission_fails(self):
+        user_bar_name = self.user_bar.user_name
+        bot_name = self.bot.user_name
+        with self.assertRaises(ClientError) as cm:
+            run_client(['bkr', 'job-submit',
+                '--username', bot_name,
+                '--password', 'bot',
+                '--job-owner', user_bar_name],
+                input=self.job_xml_with_encoding('UTF-8', u'яяя'))
+        error = cm.exception
+        msg = '%s is not a valid submission delegate for %s' \
+            % (bot_name, user_bar_name)
+        self.assert_(msg in str(error))
+
+    def test_can_delegate_submission(self):
+        user_foo_name = self.user_foo.user_name
+        bot_name = self.bot.user_name
+        out = run_client(['bkr', 'job-submit',
+            '--username', bot_name,
+            '--password', 'bot',
+            '--job-owner', user_foo_name],
+            input=self.job_xml_with_encoding('UTF-8', u'яяя'))
+        self.assert_('Submitted:' in out)
+        last_job = Job.query.order_by(Job.id.desc()).first()
+        self.assertEqual(user_foo_name, last_job.owner.user_name)

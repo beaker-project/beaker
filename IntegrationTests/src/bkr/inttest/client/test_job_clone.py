@@ -10,6 +10,7 @@ from turbogears.database import session
 from bkr.inttest.assertions import character_diff_message
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError, ClientTestCase
+from bkr.server.model import Job
 
 class JobCloneTest(ClientTestCase):
 
@@ -19,6 +20,11 @@ class JobCloneTest(ClientTestCase):
         with session.begin():
             distro_tree = data_setup.create_distro_tree(distro_name='DansAwesomeLinux6.5')
             self.job = data_setup.create_completed_job(whiteboard="foo", distro_tree=distro_tree)
+            self.user_foo = data_setup.create_user(password='foo')
+            self.user_bar = data_setup.create_user(password='bar')
+            self.bot = data_setup.create_user(password='bot')
+            # Add bot as delegate submission of foo
+            self.user_foo.add_submission_delegate(self.bot, service=u'testdata')
 
     def test_can_clone_job(self):
         out = run_client(['bkr', 'job-clone', self.job.t_id])
@@ -116,3 +122,30 @@ class JobCloneTest(ClientTestCase):
         self.assertIn('Submitted:', out)
         out = run_client(['bkr', 'job-clone', '--prettyxml', job.t_id])
         self.assertIn('Submitted:', out)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1215138
+    def test_delegate_submission_fails(self):
+        user_bar_name = self.user_bar.user_name
+        bot_name = self.bot.user_name
+        with self.assertRaises(ClientError) as cm:
+            run_client(['bkr', 'job-clone',
+                '--username', bot_name,
+                '--password', 'bot',
+                '--job-owner', user_bar_name,
+                self.job.t_id])
+        error = cm.exception
+        msg = '%s is not a valid submission delegate for %s' \
+            % (bot_name, user_bar_name)
+        self.assert_(msg in str(error))
+
+    def test_can_delegate_submission(self):
+        user_foo_name = self.user_foo.user_name
+        bot_name = self.bot.user_name
+        out = run_client(['bkr', 'job-clone',
+            '--username', bot_name,
+            '--password', 'bot',
+            '--job-owner', user_foo_name,
+            self.job.t_id])
+        self.assert_('Submitted:' in out)
+        last_job = Job.query.order_by(Job.id.desc()).first()
+        self.assertEqual(user_foo_name, last_job.owner.user_name)

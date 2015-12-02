@@ -49,6 +49,15 @@ Options
 
    Run through the job-clone process without actually submitting the cloned job
 
+.. option:: --job-owner <username>
+
+   Clone the job on behalf of <username>. The cloned job will be owned by
+   <username> rather than the cloning user.
+
+   The cloning user must be a submission delegate of <username>. Users can
+   add other users as submission delegates on their :guilabel:`Preferences`
+   page in Beaker's web UI.
+
 
 
 Common :program:`bkr` options are described in the :ref:`Options 
@@ -110,6 +119,11 @@ class Job_Clone(BeakerCommand):
             default=False,
             help="print the jobxml that it would submit, in pretty format",
         )
+        self.parser.add_option(
+             '--job-owner', metavar='USERNAME',
+             help='Clone job on behalf of USERNAME '
+                  '(cloning user must be a submission delegate for job owner)',
+        )
 
     def run(self, *args, **kwargs):
         self.check_taskspec_args(args, permitted_types=['J', 'RS'])
@@ -118,6 +132,7 @@ class Job_Clone(BeakerCommand):
         xml = kwargs.pop("xml", None)
         pretty = kwargs.pop("prettyxml", False)
         dryrun = kwargs.pop("dryrun", None)
+        job_owner = kwargs.pop("job_owner", None)
 
         submitted_jobs = []
         failed = False
@@ -134,6 +149,11 @@ class Job_Clone(BeakerCommand):
                 # XML is really bytes, the fact that the server is sending the bytes as an
                 # XML-RPC Unicode string is just a mistake in Beaker's API
                 jobxml = jobxml.encode('utf8')
+                if job_owner is not None:
+                    # root is job tag
+                    root = lxml.etree.fromstring(jobxml)
+                    root.set('user', job_owner)
+                    jobxml = lxml.etree.tostring(root).encode('utf8')
                 if xml or pretty:
                     print lxml.etree.tostring(lxml.etree.fromstring(jobxml),
                                             pretty_print=pretty,
