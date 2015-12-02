@@ -80,22 +80,17 @@ var GroupEditModal = Backbone.View.extend({
     render: function () {
         this.$el.html(this.template(this.model.attributes));
         var model = this.model;
-        this.$('input').each(function (i, elem) {
+        this.$('input, select').each(function (i, elem) {
             $(elem).val(model.get(elem.name));
         });
-        if (model.get('can_edit_ldap') && model.get('ldap')) {
-            this.$('input[name=ldap]').prop('checked', true);
-        }
+        this.$('select').selectpicker();
     },
     submit: function (evt) {
         evt.preventDefault();
         this.$('.sync-status').empty();
         this.$('.modal-footer button').button('loading');
-        var attributes = _.object(_.map(this.$('input'),
+        var attributes = _.object(_.map(this.$('input, select'),
                 function (elem) { return [elem.name, $(elem).val()]; }));
-        if (this.model.get('can_edit_ldap')) {
-          attributes['ldap'] = this.$('input[name=ldap]').prop('checked');
-        }
         this.model.save(attributes,
             {patch: true, wait: true})
             .done(_.bind(this.save_success, this))

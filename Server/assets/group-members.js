@@ -34,25 +34,70 @@ window.GroupMembersListItemView = Backbone.View.extend({
      },
 });
 
+window.GroupExcludedUsersListItemView = Backbone.View.extend({
+    tagName: 'li',
+    template: JST['group-excluded-users-list-item'],
+    events: {
+        'click .excluded-user-remove': 'remove_excluded_user',
+    },
+    initialize: function(options) {
+        this.user = options.user;
+        this.render();
+    },
+    render: function() {
+        this.$el.html(this.template({'user': this.user,
+            'can_modify_membership': this.model.get('can_modify_membership')}));
+    },
+    remove_excluded_user: function (evt) {
+       var model = this.model;
+       $(evt.currentTarget).button('loading');
+       model.remove_excluded_user(this.user.get('user_name'))
+        .fail(function (jqxhr, status, error) {
+             $(evt.currentTarget).button('reset');
+             $.bootstrapGrowl('<h4>Failed to remove user</h4> ' +
+                   jqxhr.statusText + ': ' + jqxhr.responseText,
+                     {type: 'error'});
+         });
+       evt.preventDefault();
+     },
+});
+
 window.GroupMembersListView = Backbone.View.extend({
     template: JST['group-members-list'],
     initialize: function() {
         this.render();
-        this.listenTo(this.model, 'change:members change:can_modify_membership', this.render);
+        this.listenTo(this.model,
+          'change:members change:can_modify_membership change:excluded_users change:membership_type',
+          this.render);
     },
     render: function () {
         this.$el.html(this.template(this.model.attributes));
-        if (this.model.get('can_modify_membership')) {
-            new GroupAddMemberForm({model: this.model}).$el
-                .appendTo(this.$el);
-        }
-        var members = _.sortBy(this.model.get('members'), function (m) { return m.get('user_name'); });
         var model = this.model;
-        _.each(members, function(member) {
-            var view = new GroupMembersListItemView({model: model,
-                                                     member: member});
-            this.$('.group-members-list').append(view.el);
-        });
+        var membership_type = model.get('membership_type');
+        if (membership_type == 'inverted') {
+            if (this.model.get('can_modify_membership')) {
+                new GroupExcludeUserForm({model: this.model}).$el
+                    .appendTo(this.$el);
+            }
+            var excluded_users = _.sortBy(this.model.get('excluded_users'),
+                function (m) { return m.get('user_name'); });
+            _.each(excluded_users, function(user) {
+                var view = new GroupExcludedUsersListItemView({model: model,
+                                                         user: user});
+                this.$('.group-excluded-users-list').append(view.el);
+            });
+        } else {
+            if (this.model.get('can_modify_membership')) {
+                new GroupAddMemberForm({model: this.model}).$el
+                    .appendTo(this.$el);
+            }
+            var members = _.sortBy(this.model.get('members'), function (m) { return m.get('user_name'); });
+            _.each(members, function(member) {
+                var view = new GroupMembersListItemView({model: model,
+                                                         member: member});
+                this.$('.group-members-list').append(view.el);
+            });
+        }
     },
 });
 
@@ -80,6 +125,46 @@ var GroupAddMemberForm = Backbone.View.extend({
             }
             this.$('button').button('loading');
             this.model.add_member(new_member)
+              .done(_.bind(this.success, this))
+              .fail(_.bind(this.error, this));
+        }
+        evt.preventDefault();
+    },
+    success: function () {
+        this.$('button').button('reset');
+    },
+    error: function (jqxhr, status, error) {
+        this.$('button').button('reset');
+        this.$el.append(
+            $('<div class="alert alert-error"/>')
+            .text(jqxhr.statusText + ': ' + jqxhr.responseText));
+    },
+});
+
+var GroupExcludeUserForm = Backbone.View.extend({
+    template: JST['group-exclude-user'],
+    events: {
+        'submit form': 'submit',
+    },
+    initialize: function () {
+        this.render();
+    },
+    render: function () {
+        this.$el.html(this.template(this.model.attributes));
+        this.$('input[name="group_user"]').beaker_typeahead('user-name');
+    },
+    submit: function (evt) {
+        if (evt.currentTarget.checkValidity()) {
+            this.$('.alert').remove();
+            var user = this.$('input[name=group_user]').val();
+            if (this.model.get('excluded_users')
+                .find(function(m) { return m.get('user_name') == user })) {
+                // nothing to do
+                this.$('input[name="group_user"]').typeahead('setQuery', '');
+                return false;
+            }
+            this.$('button').button('loading');
+            this.model.exclude_user(user)
               .done(_.bind(this.success, this))
               .fail(_.bind(this.error, this));
         }

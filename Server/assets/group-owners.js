@@ -38,7 +38,7 @@ window.GroupOwnersListView = Backbone.View.extend({
     template: JST['group-owners-list'],
     initialize: function() {
         this.render();
-        this.listenTo(this.model, 'change:owners change:can_edit', this.render);
+        this.listenTo(this.model, 'change:owners change:can_modify_ownership', this.render);
     },
     render: function () {
         this.$el.html(this.template(this.model.attributes));

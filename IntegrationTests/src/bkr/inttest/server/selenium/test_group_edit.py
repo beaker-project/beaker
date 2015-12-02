@@ -13,7 +13,7 @@ from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction, \
     mail_capture, DatabaseTestCase
 from bkr.inttest.server.webdriver_utils import login, logout, \
-        wait_for_animation, check_group_search_results
+        wait_for_animation, check_group_search_results, BootstrapSelect
 from bkr.inttest.assertions import wait_for_condition
 from bkr.inttest.server.requests_utils import put_json, post_json, \
         patch_json, login as requests_login
@@ -25,6 +25,8 @@ class TestGroupsWD(WebDriverTestCase):
         with session.begin():
             self.user = data_setup.create_user(password='password')
             self.group = data_setup.create_group(owner=self.user)
+            self.inverted_group = data_setup.create_group(owner=self.user,
+                    membership_type=GroupMembershipType.inverted)
             self.perm1 = data_setup.create_permission()
 
         self.browser = self.get_browser()
@@ -585,6 +587,23 @@ class TestGroupsWD(WebDriverTestCase):
             self.assertEqual(self.group.group_name, new_name[:255])
             self.assertEqual(self.group.display_name, new_display_name[:255])
 
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1220610
+    def test_edit_group_membership_type(self):
+        b = self.browser
+        login(b, user=self.user.user_name, password='password')
+        self.go_to_group_page()
+        b = self.browser
+        b.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
+        modal = b.find_element_by_class_name('modal')
+        BootstrapSelect(modal.find_element_by_name('membership_type'))\
+            .select_by_visible_text('Inverted')
+        modal.find_element_by_tag_name('form').submit()
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
+        with session.begin():
+            session.refresh(self.group)
+            self.assertEqual(self.group.membership_type,
+                             GroupMembershipType.inverted)
+
     #https://bugzilla.redhat.com/show_bug.cgi?id=990860
     def test_show_group_owners(self):
         with session.begin():
@@ -710,6 +729,40 @@ class TestGroupsWD(WebDriverTestCase):
             send_keys('')
         modal.find_element_by_tag_name('form').submit()
         self.assertTrue(b.find_element_by_css_selector('input[name="display_name"]:required:invalid'))
+
+    def test_can_exclude_user_from_an_inverted_group(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+        b = self.browser
+        login(b, user=self.user.user_name, password='password')
+        self.go_to_group_page(group=self.inverted_group)
+
+        b.find_element_by_xpath('//ul[contains(@class, "group-nav")]'
+            '//a[text()="Members"]').click()
+        b.find_element_by_name('group_user').send_keys(user.user_name)
+        b.find_element_by_class_name('exclude-user').submit()
+        b.find_element_by_xpath('//div/ul[@class="list-group group-excluded-users-list"]'
+            '//li/a[contains(text(), "%s")]' % user.user_name)
+        with session.begin():
+            session.expire_all()
+            self.assertNotIn(user, self.inverted_group.users)
+
+    def test_can_remove_user_from_the_list_of_excluded_users(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            self.inverted_group.exclude_user(user)
+        b = self.browser
+        login(b, user=self.user.user_name, password='password')
+        self.go_to_group_page(group=self.inverted_group)
+
+        b.find_element_by_xpath('//ul[contains(@class, "group-nav")]'
+            '//a[text()="Members"]').click()
+        b.find_element_by_xpath('//li[contains(a/text(), "%s")]/button' % user.user_name).click()
+        b.find_element_by_xpath('//div/ul[@class="list-group group-excluded-users-list" and '
+            'not(.//li/a[contains(text(), "%s")])]' % user.user_name)
+        with session.begin():
+            session.expire_all()
+            self.assertIn(user, self.inverted_group.users)
 
 
 class GroupHTTPTest(DatabaseTestCase):

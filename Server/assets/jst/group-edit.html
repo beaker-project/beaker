@@ -12,11 +12,26 @@
         pattern="[^\s](.*[^\s])?"/>
   <label for="display_name">Root Password</label>
   <input type="text" id="root_password" name="root_password" placeholder="Root Password"/>
-  <% if (can_edit_ldap) { %>
-  <div class="checkbox">
-      <label><input type="checkbox" name="ldap"> Populate group membership from LDAP</label>
-  </div>
-  <% } %>
+  <label for="membership_type">Membership Type</label>
+  <select id="membership_type" name="membership_type">
+    <option value="normal">Normal</option>
+    <% if (can_edit_ldap) { %>
+    <option value="ldap">LDAP</option>
+    <% } %>
+    <option value="inverted">Inverted</option>
+  </select>
+  <p class="help-block">
+     Specifies how group membership is populated:
+  </p>
+  <ul class="help-block">
+     <li>Normal: Group is initially empty, members are explicitly added and removed by
+         the group owner.
+     <% if (can_edit_ldap) { %>
+     <li>LDAP: Membership is populated from the LDAP group with the same group name.
+     <% } %>
+     <li>Inverted: Group contains all Beaker users <em>except</em> users who have been explicitly
+         excluded by the group owner.
+  </ul>
 </div>
 <div class="modal-footer">
   <div class="sync-status"/>

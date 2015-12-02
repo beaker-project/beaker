@@ -1,13 +1,26 @@
-<% if (ldap) { %>
-<p>Members populated from LDAP:</p>
+<% if (membership_type == 'inverted') { %>
+        <p>
+            This is an <em>inverted group</em>. It consists of all Beaker users,
+            <em>except</em> the following users who have been excluded:
+        </p>
+        <div>
+            <% if (_.isEmpty(excluded_users)) { %>
+                (none)
+            <% } %>
+            <ul class="list-group group-excluded-users-list"></ul>
+        </div>
 <% } else { %>
-<p>
-The following users are members of this group:
-</p>
+    <% if (membership_type == 'ldap') { %>
+        <p>Members populated from LDAP:</p>
+    <% } else { %>
+        <p>
+        The following users are members of this group:
+        </p>
+    <% } %>
+    <div>
+        <% if (_.isEmpty(members)) { %>
+        (none)
+        <% } %>
+        <ul class="list-group group-members-list"></ul>
+    </div>
 <% } %>
-<div>
-<% if (_.isEmpty(members)) { %>
-(none)
-<% } %>
-<ul class="list-group group-members-list"></ul>
-</div>

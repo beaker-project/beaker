@@ -24,6 +24,7 @@ window.Group = Backbone.Model.extend({
     },
     parse: function (data) {
         data['members'] = _.map(data['members'], function(user){ return new User(user); });
+        data['excluded_users'] = _.map(data['excluded_users'], function(user){ return new User(user); });
         data['owners'] = _.map(data['owners'], function(user){ return new User(user); });
         data['access_policy'] = new SystemPoolAccessPolicy(data['access_policy'],
                 {parse: true, system_pool: this});
@@ -45,6 +46,28 @@ window.Group = Backbone.Model.extend({
         var model = this;
         return $.ajax({
             url: this.url + '/members/' + '?user_name=' + encodeURIComponent(user_name),
+            type: 'DELETE',
+            contentType: 'application/json',
+        }).then(function () {
+            return model.fetch(); // refresh group membership
+        });
+    },
+    exclude_user: function (user_name) {
+        var model = this;
+        return $.ajax({
+            url: this.url + '/excluded-users/',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({'user_name': user_name}),
+        }).then(function () {
+            return model.fetch(); // refresh group membership
+        });
+    },
+    //Remove a user from the list of excluded users in an inverted group.
+    remove_excluded_user: function (user_name) {
+        var model = this;
+        return $.ajax({
+            url: this.url + '/excluded-users/' + '?user_name=' + encodeURIComponent(user_name),
             type: 'DELETE',
             contentType: 'application/json',
         }).then(function () {

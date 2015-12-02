@@ -22,6 +22,7 @@ window.GroupCreateModal = Backbone.View.extend({
     },
     render: function () {
         this.$el.html(this.template({can_create_ldap: this.can_create_ldap}));
+        this.$('select').selectpicker();
     },
     submit: function (evt) {
         evt.preventDefault();
@@ -30,7 +31,7 @@ window.GroupCreateModal = Backbone.View.extend({
         var attributes = {
             group_name: this.$('[name=group_name]').val(),
             display_name: this.$('[name=display_name]').val(),
-            ldap: this.$('[name=ldap]').prop('checked'),
+            membership_type: this.$('[name=membership_type]').val(),
         };
         var new_group = new this.collection.model(attributes,
                 {collection: this.collection});
