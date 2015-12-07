@@ -142,6 +142,10 @@ class Utility:
         return 'user.user_name'
 
     @classmethod
+    def system_labcontroller_name(cls):
+        return 'lab_controller.fqdn'
+
+    @classmethod
     def system_powertype_name(cls):
         return 'power.power_type.name'
 
@@ -211,6 +215,10 @@ class Utility:
     @classmethod
     def system_added_options(cls):
         return dict(datetime=True)
+
+    @classmethod
+    def system_labcontroller_getter(cls):
+        return lambda x: x.lab_controller
 
     @classmethod
     def _get_nested_attr(cls, attrs):
@@ -309,6 +317,7 @@ def field_is_sortable(column):
         'reserved',
         'type',
         'powertype',
+        'labcontroller'
     )
     return column.lower() in sortable_fields
 

@@ -7,7 +7,7 @@
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.keys import Keys
 from bkr.server.model import Numa, User, Key, Key_Value_String, Key_Value_Int, \
-    Device, DeviceClass, Disk, Cpu, SystemPermission
+    Device, DeviceClass, Disk, Cpu, SystemPermission, System
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import get_server_base, login, \
         search_for_system, wait_for_animation, check_system_search_results
@@ -550,6 +550,41 @@ class Search(WebDriverTestCase):
         # containing </script> so we can only expect empty results. The 
         # important thing is that there should not be a JS alert present.
         b.find_element_by_xpath('//span[@class="item-count" and text()="Items found: 0"]')
+
+class LabControllerSearchTest(WebDriverTestCase):
+
+    def setUp(self):
+        with session.begin():
+            self.owner = data_setup.create_user(password=u'password')
+            self.lc1 = data_setup.create_labcontroller(fqdn=u'bz704399.example.invalid')
+            self.lc2 = data_setup.create_labcontroller()
+
+            self.s1 = data_setup.create_system(lab_controller=self.lc1, loaned=self.owner)
+            self.s2 = data_setup.create_system(lab_controller=self.lc2, loaned=self.owner)
+
+        self.browser = self.get_browser()
+        login(self.browser, user=self.owner.user_name, password=u'password')
+
+    def test_by_lab_controller(self):
+        b = self.browser
+        perform_search(b, [('System/LabController', 'is', self.lc1.fqdn)], search_url='mine')
+        check_system_search_results(b, present=[self.s1], absent=[self.s2])
+
+    def test_by_lab_controller_is_not(self):
+        b = self.browser
+        perform_search(b, [('System/LabController', 'is not', self.lc1.fqdn)], search_url='mine')
+        check_system_search_results(b,
+                                    present=[self.s2],
+                                    absent=[self.s1])
+
+    def test_by_lab_controller_contains(self):
+        b = self.browser
+        b.get(get_server_base() + 'mine/')
+        perform_search(b, [('System/LabController', 'contains', self.lc1.fqdn)], search_url='mine')
+        check_system_search_results(b,
+            present=[self.s1],
+            absent=[self.s2])
+
 
 class SystemVisibilityTest(WebDriverTestCase):
 

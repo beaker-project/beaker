@@ -1124,7 +1124,9 @@ class System(SystemObject):
                                                         eagerload=False,
                                                         onclause=model.System.pools,
                                                         relations=[model.SystemPool]),
-
+                          'LabController' : AliasedColumn(column_name='fqdn',
+                                            col_type='string', relations=[model.LabController],
+                                            onclause=model.System.lab_controller),
                          }
     search_values_dict = {'Status'    : lambda: [status for status in 
                                                  model.SystemStatus.values() if status != 'Removed'],

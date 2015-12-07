@@ -22,8 +22,9 @@ from bkr.inttest import data_setup, get_server_base, with_transaction, \
 from bkr.inttest.assertions import assert_sorted
 from bkr.server import dynamic_virt
 from bkr.server.model import Cpu, Key, Key_Value_String, System, \
-        SystemStatus, SystemPermission, Job, Disk
-from bkr.inttest.server.webdriver_utils import check_system_search_results, login
+    SystemStatus, SystemPermission, Job, Disk
+from bkr.inttest.server.webdriver_utils import check_system_search_results, login, \
+    wait_for_animation
 from bkr.inttest.server.requests_utils import patch_json
 
 def atom_xpath(expr):
@@ -60,7 +61,7 @@ class TestSystemsGrid(WebDriverTestCase):
         b.find_element_by_xpath('//title[text()="Systems"]')
         # check number of columns in the table
         ths = b.find_elements_by_xpath('//table[@id="widget"]//th')
-        self.assertEquals(len(ths), 31)
+        self.assertEquals(len(ths), 32)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1321740
     def test_grid_columns_order_is_preserved(self):
@@ -117,6 +118,7 @@ class TestSystemsGridSorting(WebDriverTestCase):
                             model=model, status=status, type=type)
                     system.cpu = Cpu(cores=cores)
                     system.user = user
+                    system.lab_controller = data_setup.create_labcontroller()
                     data_setup.create_manual_reservation(system,
                                                          reserved_since,
                                                          user=user)
@@ -159,7 +161,7 @@ class TestSystemsGridSorting(WebDriverTestCase):
     def go_to_listing(self):
         self.browser.get(get_server_base())
 
-    def go_to_search_results(self):
+    def go_to_search_results(self, display_columns=None):
         b = self.browser
         b.get(get_server_base())
         b.find_element_by_link_text('Show Search Options').click()
@@ -174,6 +176,16 @@ class TestSystemsGridSorting(WebDriverTestCase):
         Select(b.find_element_by_name('systemsearch-1.operation'))\
             .select_by_visible_text('is not')
         b.find_element_by_name('systemsearch-1.value').send_keys('bob')
+
+        if display_columns is None:
+            display_columns = []
+        for column in display_columns:
+            b.find_element_by_link_text('Toggle Result Columns').click()
+            wait_for_animation(b, '#selectablecolumns')
+            checkbox = b.find_element_by_id('systemsearch_column_%s' % column)
+            if not checkbox.is_selected():
+                checkbox.click()
+
         b.find_element_by_id('searchform').submit()
         b.find_element_by_xpath('//title[text()="Systems"]')
 
@@ -225,7 +237,10 @@ class TestSystemsGridSorting(WebDriverTestCase):
         b.find_element_by_id('searchform').submit()
         self.check_column_sort('Reserved')
 
-    # XXX also test with custom column selections
+    def test_can_sort_search_results_by_lab_controller(self):
+        self.go_to_search_results(['System/LabController'])
+        self.check_column_sort('LabController')
+
 
 class TestSystemsAtomFeed(DatabaseTestCase):
 
