@@ -196,23 +196,31 @@ class Search(WebDriverTestCase):
         self.browser = self.get_browser()
         login(self.browser)
 
-    def test_multiple_cpu_flags(self):
+    def perform_search(self, searchcriteria):
         b = self.browser
         b.get(get_server_base())
         b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
-        Select(b.find_element_by_name('systemsearch-0.table'))\
-            .select_by_visible_text('CPU/Flags')
-        Select(b.find_element_by_name('systemsearch-0.operation'))\
-            .select_by_visible_text('is')
-        b.find_element_by_name('systemsearch-0.value').send_keys('flag1')
-        b.find_element_by_id('doclink').click()
-        Select(b.find_element_by_name('systemsearch-1.table'))\
-            .select_by_visible_text('CPU/Flags')
-        Select(b.find_element_by_name('systemsearch-1.operation'))\
-            .select_by_visible_text('is')
-        b.find_element_by_name('systemsearch-1.value').send_keys('flag2')
+
+        for fieldid, criteria in enumerate(searchcriteria):
+            fieldname, operation, value = criteria
+            if fieldid > 0:
+                # press the add button to add a new row
+                b.find_element_by_id('doclink').click()
+            Select(b.find_element_by_name('systemsearch-%i.table' % fieldid))\
+                .select_by_visible_text(fieldname)
+            Select(b.find_element_by_name('systemsearch-%i.operation' % fieldid))\
+                .select_by_visible_text(operation)
+            b.find_element_by_name('systemsearch-%i.value' % fieldid).clear()
+            b.find_element_by_name('systemsearch-%i.value' % fieldid).send_keys(value)
+
         b.find_element_by_id('searchform').submit()
+
+    def test_multiple_cpu_flags(self):
+        b = self.browser
+
+        self.perform_search([('CPU/Flags', 'is', 'flag1'),
+                             ('CPU/Flags', 'is', 'flag2')])
         check_system_search_results(b, present=[self.system_one],
                 absent=[self.system_two, self.system_three])
 
@@ -234,44 +242,20 @@ class Search(WebDriverTestCase):
 
     def test_by_device(self):
         b = self.browser
-        b.get(get_server_base())
-        b.find_element_by_link_text('Show Search Options').click()
-        wait_for_animation(b, '#searchform')
-        Select(b.find_element_by_name('systemsearch-0.table'))\
-            .select_by_visible_text('Devices/Subsys_device_id')
-        Select(b.find_element_by_name('systemsearch-0.operation'))\
-            .select_by_visible_text('is')
-        b.find_element_by_name('systemsearch-0.value').send_keys('1112')
-        b.find_element_by_id('searchform').submit()
+
+        self.perform_search([('Devices/Subsys_device_id', 'is', '1112')])
         check_system_search_results(b, present=[self.system_three],
                 absent=[self.system_one, self.system_two])
 
-        Select(b.find_element_by_name('systemsearch-0.table'))\
-            .select_by_visible_text('Devices/Subsys_vendor_id')
-        Select(b.find_element_by_name('systemsearch-0.operation'))\
-            .select_by_visible_text('is not')
-        b.find_element_by_name('systemsearch-0.value').send_keys('1111')
-        b.find_element_by_id('doclink').click()
-        Select(b.find_element_by_name('systemsearch-1.table'))\
-            .select_by_visible_text('Devices/Subsys_device_id')
-        Select(b.find_element_by_name('systemsearch-1.operation'))\
-            .select_by_visible_text('is')
-        b.find_element_by_name('systemsearch-1.value').send_keys('2224')
-        b.find_element_by_id('searchform').submit()
+        self.perform_search([('Devices/Subsys_vendor_id', 'is not', '1111'),
+                             ('Devices/Subsys_device_id', 'is', '2224')])
         check_system_search_results(b, present=[self.system_two],
                 absent=[self.system_one, self.system_three])
 
     def test_by_name(self):
         b = self.browser
-        b.get(get_server_base())
-        b.find_element_by_link_text('Show Search Options').click()
-        wait_for_animation(b, '#searchform')
-        Select(b.find_element_by_name('systemsearch-0.table'))\
-            .select_by_visible_text('System/Name')
-        Select(b.find_element_by_name('systemsearch-0.operation'))\
-            .select_by_visible_text('is')
-        b.find_element_by_name('systemsearch-0.value').send_keys(self.system_one.fqdn)
-        b.find_element_by_id('searchform').submit()
+
+        self.perform_search([('System/Name', 'is', self.system_one.fqdn)])
         check_system_search_results(b, present=[self.system_one],
                 absent=[self.system_two, self.system_three])
 
@@ -313,58 +297,21 @@ class Search(WebDriverTestCase):
             old_system.date_added = datetime.datetime(2001, 1, 15, 14, 12, 0)
 
         b = self.browser
-        b.get(get_server_base())
-        b.find_element_by_link_text('Show Search Options').click()
-        wait_for_animation(b, '#searchform')
-        Select(b.find_element_by_name('systemsearch-0.table'))\
-            .select_by_visible_text('System/Added')
-        Select(b.find_element_by_name('systemsearch-0.operation'))\
-            .select_by_visible_text('is')
-        b.find_element_by_name('systemsearch-0.value').send_keys('2001-01-15')
-        b.find_element_by_id('searchform').submit()
+        self.perform_search([('System/Added', 'is', '2001-01-15')])
         check_system_search_results(b, present=[old_system], absent=[new_system])
 
-        Select(b.find_element_by_name('systemsearch-0.table'))\
-            .select_by_visible_text('System/Added')
-        Select(b.find_element_by_name('systemsearch-0.operation'))\
-            .select_by_visible_text('before')
-        b.find_element_by_name('systemsearch-0.value').clear()
-        b.find_element_by_name('systemsearch-0.value').send_keys('2001-01-16')
-        b.find_element_by_id('searchform').submit()
+        self.perform_search([('System/Added', 'before', '2001-01-16')])
         check_system_search_results(b, present=[old_system], absent=[new_system])
 
-        Select(b.find_element_by_name('systemsearch-0.table'))\
-            .select_by_visible_text('System/Added')
-        Select(b.find_element_by_name('systemsearch-0.operation'))\
-            .select_by_visible_text('after')
-        b.find_element_by_name('systemsearch-0.value').clear()
-        b.find_element_by_name('systemsearch-0.value').send_keys('2020-12-31')
-        b.find_element_by_id('searchform').submit()
+        self.perform_search([('System/Added', 'after', '2020-12-31')])
         # no results
         b.find_element_by_xpath('//table[@id="widget" and not(.//td)]')
 
-        Select(b.find_element_by_name('systemsearch-0.table'))\
-            .select_by_visible_text('System/Added')
-        Select(b.find_element_by_name('systemsearch-0.operation'))\
-            .select_by_visible_text('after')
-        b.find_element_by_name('systemsearch-0.value').clear()
-        b.find_element_by_name('systemsearch-0.value').send_keys('2020-06-20')
-        b.find_element_by_id('searchform').submit()
+        self.perform_search([('System/Added', 'after', '2020-06-20')])
         check_system_search_results(b, present=[new_system], absent=[old_system])
 
-        Select(b.find_element_by_name('systemsearch-0.table'))\
-            .select_by_visible_text('System/Added')
-        Select(b.find_element_by_name('systemsearch-0.operation'))\
-            .select_by_visible_text('after')
-        b.find_element_by_name('systemsearch-0.value').clear()
-        b.find_element_by_name('systemsearch-0.value').send_keys('2020-06-20')
-        b.find_element_by_id('doclink').click()
-        Select(b.find_element_by_name('systemsearch-1.table'))\
-            .select_by_visible_text('System/Added')
-        Select(b.find_element_by_name('systemsearch-1.operation'))\
-            .select_by_visible_text('before')
-        b.find_element_by_name('systemsearch-1.value').send_keys('2020-06-22')
-        b.find_element_by_id('searchform').submit()
+        self.perform_search([('System/Added', 'after', '2020-06-20'),
+                             ('System/Added', 'before', '2020-06-22')])
         check_system_search_results(b, present=[new_system], absent=[old_system])
 
     def test_by_key_value_is(self):
@@ -468,23 +415,12 @@ class Search(WebDriverTestCase):
 
     def test_can_search_by_numa_node_count(self):
         b = self.browser
-        b.get(get_server_base())
-        b.find_element_by_link_text('Show Search Options').click()
-        wait_for_animation(b, '#searchform')
-        Select(b.find_element_by_name('systemsearch-0.table'))\
-            .select_by_visible_text('System/NumaNodes')
-        Select(b.find_element_by_name('systemsearch-0.operation'))\
-            .select_by_visible_text('greater than')
-        b.find_element_by_name('systemsearch-0.value').send_keys('1')
-        b.find_element_by_id('searchform').submit()
+
+        self.perform_search([('System/NumaNodes', 'greater than', '1')])
         check_system_search_results(b, present=[self.system_one],
                 absent=[self.system_two, self.system_three])
 
-        Select(b.find_element_by_name('systemsearch-0.operation'))\
-            .select_by_visible_text('less than')
-        b.find_element_by_name('systemsearch-0.value').clear()
-        b.find_element_by_name('systemsearch-0.value').send_keys('2')
-        b.find_element_by_id('searchform').submit()
+        self.perform_search([('System/NumaNodes', 'less than', '2')])
         check_system_search_results(b, present=[self.system_three],
                 absent=[self.system_one, self.system_two])
 
