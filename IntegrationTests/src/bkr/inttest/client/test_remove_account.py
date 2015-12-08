@@ -98,9 +98,9 @@ class RemoveAccountTest(ClientTestCase):
             # group membership/ownership should be removed
             self.assertEqual([], user.groups)
             self.assertNotIn(user, group.users)
-            self.assertEqual(group.activity[0].field_name, u'User')
-            self.assertEqual(group.activity[0].action, u'Removed')
-            self.assertEqual(group.activity[0].old_value, user.user_name)
+            self.assertEqual(group.activity[-1].field_name, u'User')
+            self.assertEqual(group.activity[-1].action, u'Removed')
+            self.assertEqual(group.activity[-1].old_value, user.user_name)
 
     def test_close_account_transfer_ownership(self):
         with session.begin():
