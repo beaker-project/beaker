@@ -740,10 +740,6 @@ class KeySearch(Search):
         return_dict['search_by'] = search
         return return_dict
 
-class SystemReserveSearch(Search):
-    search_table = []
-
-
 class LabControllerActivitySearch(Search):
     search_table = []
 
@@ -1395,16 +1391,6 @@ class DistroTree(SystemObject):
     }
 
     tag_is_not_filter = Distro.tag_is_not_filter
-
-class SystemReserve(System):
-    search = SystemReserveSearch
-    searchable_columns =  {
-                            'Name'      : MyColumn(column=model.System.fqdn,col_type='string'),
-                            'Type'      : MyColumn(column=model.System.type, col_type='string'),
-                            'Owner'     : MyColumn(column=model.User.user_name, col_type='string', has_alias=True, relations='owner'),
-                            'User'      : MyColumn(column=model.User.user_name, col_type='string', has_alias=True, relations='user'),
-                            'LoanedTo'  : MyColumn(column=model.User.user_name,col_type='string', has_alias=True, relations='loaned'),
-                          }
 
 
 class Activity(SystemObject):
