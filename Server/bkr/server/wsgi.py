@@ -44,6 +44,24 @@ from bkr.server.util import load_config
 load_config()
 log_to_stream(sys.stderr, level=logging.DEBUG)
 
+# Keep the code before the imports, otherwise we'll end up with function names
+# not marked as executed (see: Coverage.py FAQ)
+if config.get('coverage', False):
+    import coverage
+    import atexit
+
+    log.debug('Starting coverage analysis')
+    cov = coverage.coverage(data_suffix=True, cover_pylib=False, timid=True, omit=['*.kid'])
+    cov.start()
+
+    def save_coverage():
+        log.debug('Saving coverage')
+        cov.stop()
+        cov.save()
+
+    atexit.register(save_coverage)
+
+
 application = app
 
 # Register all routes.
