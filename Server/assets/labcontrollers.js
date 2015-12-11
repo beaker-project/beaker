@@ -6,8 +6,13 @@
 ;(function () {
 window.LabController = Backbone.Model.extend({
     initialize: function (attributes, options) {
-        this.listenTo(this, 'change:fqdn', function (model, value) {
-            this.url = this.collection.url + value;
+        // Upon creation the API expects a POST against /labcontrollers. If we
+        // just set idAttribute to fqdn, it would issue a PATCH against
+        // /labcontrollers/<fqdn> since it's set upon creation. When we edit
+        // existing lab controllers however, we want the URL to send the updates
+        // against /labcontrollers/<fqdn> instead of /labcontrollers/<id>
+        this.listenTo(this, 'change:fqdn sync', function (model) {
+            this.url = this.collection.url + this.get('fqdn');
         });
         if (! this.isNew()) {
             this.url = this.collection.url + this.get('fqdn');
@@ -121,6 +126,7 @@ var CreateLabControllerModal = Backbone.View.extend({
     template: JST['labcontroller-edit'],
     events: {
         'submit form': 'submit',
+        'hidden': 'remove',
     },
     initialize: function(options) {
         this.options = options
@@ -168,6 +174,7 @@ var EditLabControllerModal = Backbone.View.extend({
     template: JST['labcontroller-edit'],
     events: {
         'submit form': 'submit',
+        'hidden': 'remove',
     },
     initialize: function(options) {
         this.options = options;

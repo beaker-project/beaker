@@ -261,6 +261,9 @@ def _create_labcontroller_helper(data):
             action=u'Changed', field=u'Disabled', old=u'', new=unicode(labcontroller.disabled))
 
         session.add(labcontroller)
+        # flush it so we return an id, otherwise we'll end up back in here from
+        # the edit form
+        session.flush()
 
     response = jsonify(labcontroller.__json__())
     response.status_code = 201

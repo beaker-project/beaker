@@ -86,6 +86,23 @@ class LabControllerCreateTest(WebDriverTestCase):
         self.assertRegexpMatches(
             b.find_element_by_class_name('alert-error').text, expected)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1290266
+    def test_can_edit_labcontroller_after_adding(self):
+        b = self.browser
+        lc_name = data_setup.unique_name('lc%s.com')
+        lc_email = data_setup.unique_name('me@my%s.com')
+        lc_username = data_setup.unique_name('operator%s')
+        self._add_lc(lc_name, lc_email, lc_username)
+
+        b.find_element_by_xpath(
+            '//li[contains(., "%s")]//button[contains(., "Edit")]' % lc_name).click()
+        b.find_element_by_name('fqdn').send_keys('test')
+        b.find_element_by_class_name('edit-labcontroller').submit()
+
+        # should be successful, therefore no modal being present
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal-backdrop")])]')
+
+
 class LabControllerViewTest(WebDriverTestCase):
 
     def setUp(self):
@@ -837,6 +854,7 @@ class LabControllerHTTPTest(DatabaseTestCase):
             get_server_base() + '/labcontrollers/', session=s, data=data)
 
         self.assertEqual(response.status_code, 201)
+        self.assertIsNotNone(response.json()['id'])
         with session.begin():
             lc = LabController.query.filter_by(fqdn=data['fqdn']).one()
             self.assertEqual(lc.user.user_name, data['user_name'])
