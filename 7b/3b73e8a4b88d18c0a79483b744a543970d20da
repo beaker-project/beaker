@@ -1,0 +1,9 @@
+Ready-for-Checks+1: Hao Chang Yu <hyu@redhat.com>
+Code-Review+1: Roman Joost <rjoost@redhat.com>
+Code-Review+2: Dan Callaghan <dcallagh@redhat.com>
+Verified+1: Hao Chang Yu <hyu@redhat.com>
+Submitted-by: Hao Chang Yu <hyu@redhat.com>
+Submitted-at: Mon, 14 Dec 2015 06:46:25 +0000
+Reviewed-on: http://gerrit.beaker-project.org/4521
+Project: beaker
+Branch: refs/heads/develop
