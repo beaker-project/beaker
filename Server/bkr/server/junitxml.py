@@ -18,6 +18,7 @@ have their own *different* XML formats.
 import urlparse
 import lxml.etree
 from lxml.builder import E
+from bkr.common.helpers import total_seconds
 from bkr.server.util import absolute_url
 from bkr.server.model import TaskStatus, TaskResult
 
@@ -34,9 +35,13 @@ def _testcases_for_task(task):
         return
     yield E.testcase(
         E(u'system-out', _systemout_for_task(task)),
-        classname=task.name)
+        classname=task.name,
+        time='%.0f' % total_seconds(task.duration))
     for result in task.results:
-        testcase = E.testcase(classname=task.name, name=result.short_path)
+        testcase = E.testcase(
+            classname=task.name,
+            name=result.short_path,
+            time='%.0f' % total_seconds(result.duration))
         # For Cancelled and Aborted, the final Warn is the reason message
         if (task.status == TaskStatus.cancelled and
                 result == task.results[-1] and

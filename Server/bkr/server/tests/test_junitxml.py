@@ -6,9 +6,10 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import datetime
 import unittest2 as unittest
 from bkr.server.junitxml import to_junit_xml
-from bkr.server.model import session, TaskResult, TaskStatus, Task
+from bkr.server.model import session, TaskResult, TaskStatus, Task, RecipeTaskResult
 from bkr.server.tests import data_setup
 
 class JUnitXMLUnitTest(unittest.TestCase):
@@ -22,41 +23,49 @@ class JUnitXMLUnitTest(unittest.TestCase):
         job = data_setup.create_completed_job(recipe_whiteboard=u'happy',
                 fqdn=u'happysystem.testdata', server_log=True,
                 result=TaskResult.pass_, task_status=TaskStatus.completed)
+        recipe = job.recipesets[0].recipes[0]
+        recipe.tasks[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 0)
+        recipe.tasks[0].results[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 10)
+        recipe.tasks[0].finish_time = datetime.datetime(2015, 12, 14, 0, 0, 17)
         out = to_junit_xml(job)
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
   <testsuite name="happy" id="R:%s" hostname="happysystem.testdata" tests="2" failures="0" errors="0">
-    <testcase classname="/distribution/reservesys">
+    <testcase classname="/distribution/reservesys" time="17">
       <system-out>http://dummy-archive-server/beaker/tasks/dummy.txt</system-out>
     </testcase>
-    <testcase classname="/distribution/reservesys" name="./">
+    <testcase classname="/distribution/reservesys" name="./" time="10">
       <system-out>http://dummy-archive-server/beaker/result.txt</system-out>
     </testcase>
   </testsuite>
 </testsuites>
-""" % job.recipesets[0].recipes[0].id
+""" % recipe.id
         self.assertMultiLineEqual(expected, out)
 
     def test_failing_result(self):
         job = data_setup.create_completed_job(recipe_whiteboard=u'failing result',
                 fqdn=u'happysystem.testdata', server_log=True,
                 result=TaskResult.fail, task_status=TaskStatus.completed)
+        recipe = job.recipesets[0].recipes[0]
+        recipe.tasks[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 0)
+        recipe.tasks[0].results[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 10)
+        recipe.tasks[0].finish_time = datetime.datetime(2015, 12, 14, 0, 0, 17)
         out = to_junit_xml(job)
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
   <testsuite name="failing result" id="R:%s" hostname="happysystem.testdata" tests="2" failures="1" errors="0">
-    <testcase classname="/distribution/reservesys">
+    <testcase classname="/distribution/reservesys" time="17">
       <system-out>http://dummy-archive-server/beaker/tasks/dummy.txt</system-out>
     </testcase>
-    <testcase classname="/distribution/reservesys" name="./">
+    <testcase classname="/distribution/reservesys" name="./" time="10">
       <failure message="(Fail)" type="failure"/>
       <system-out>http://dummy-archive-server/beaker/result.txt</system-out>
     </testcase>
   </testsuite>
 </testsuites>
-""" % job.recipesets[0].recipes[0].id
+""" % recipe.id
         self.assertMultiLineEqual(expected, out)
 
     def test_aborted(self):
@@ -64,21 +73,25 @@ class JUnitXMLUnitTest(unittest.TestCase):
                 fqdn=u'sadsystem.testdata')
         job.abort(msg=u'External Watchdog Expired')
         job.update_status()
+        recipe = job.recipesets[0].recipes[0]
+        recipe.tasks[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 0)
+        recipe.tasks[0].results[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 10)
+        recipe.tasks[0].finish_time = datetime.datetime(2015, 12, 14, 0, 0, 17)
         out = to_junit_xml(job)
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
   <testsuite name="ewd" id="R:%s" hostname="sadsystem.testdata" tests="2" failures="0" errors="1">
-    <testcase classname="/distribution/reservesys">
+    <testcase classname="/distribution/reservesys" time="17">
       <system-out></system-out>
     </testcase>
-    <testcase classname="/distribution/reservesys" name="/">
+    <testcase classname="/distribution/reservesys" name="/" time="10">
       <error message="External Watchdog Expired" type="error"/>
       <system-out></system-out>
     </testcase>
   </testsuite>
 </testsuites>
-""" % job.recipesets[0].recipes[0].id
+""" % recipe.id
         self.assertMultiLineEqual(expected, out)
 
     def test_cancelled(self):
@@ -86,21 +99,25 @@ class JUnitXMLUnitTest(unittest.TestCase):
                 fqdn=u'sadsystem.testdata')
         job.cancel(msg=u'I cancelled it')
         job.update_status()
+        recipe = job.recipesets[0].recipes[0]
+        recipe.tasks[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 0)
+        recipe.tasks[0].results[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 10)
+        recipe.tasks[0].finish_time = datetime.datetime(2015, 12, 14, 0, 0, 17)
         out = to_junit_xml(job)
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
   <testsuite name="cancelled" id="R:%s" hostname="sadsystem.testdata" tests="1" failures="0" errors="0">
-    <testcase classname="/distribution/reservesys">
+    <testcase classname="/distribution/reservesys" time="17">
       <system-out></system-out>
     </testcase>
-    <testcase classname="/distribution/reservesys" name="/">
+    <testcase classname="/distribution/reservesys" name="/" time="10">
       <skipped message="I cancelled it" type="skipped"/>
       <system-out></system-out>
     </testcase>
   </testsuite>
 </testsuites>
-""" % job.recipesets[0].recipes[0].id
+""" % recipe.id
         self.assertMultiLineEqual(expected, out)
 
     def test_new_job(self):
@@ -124,22 +141,57 @@ class JUnitXMLUnitTest(unittest.TestCase):
                 fqdn=u'busysystem.testdata',
                 task_list=[data_setup.create_task(u'/test_junitxml/completed'),
                            data_setup.create_task(u'/test_junitxml/running')])
-        data_setup.mark_recipe_tasks_finished(job.recipesets[0].recipes[0],
+        recipe = job.recipesets[0].recipes[0]
+        data_setup.mark_recipe_tasks_finished(recipe,
                 only=True, num_tasks=1, result=TaskResult.pass_,
                 server_log=True)
+        recipe.tasks[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 0)
+        recipe.tasks[0].results[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 10)
+        recipe.tasks[0].finish_time = datetime.datetime(2015, 12, 14, 0, 0, 17)
         self.assertEqual(job.status, TaskStatus.running)
         out = to_junit_xml(job)
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
   <testsuite name="running job" id="R:%s" hostname="busysystem.testdata" tests="2" failures="0" errors="0">
-    <testcase classname="/test_junitxml/completed">
+    <testcase classname="/test_junitxml/completed" time="17">
       <system-out>http://dummy-archive-server/beaker/tasks/dummy.txt</system-out>
     </testcase>
-    <testcase classname="/test_junitxml/completed" name="./">
+    <testcase classname="/test_junitxml/completed" name="./" time="10">
       <system-out>http://dummy-archive-server/beaker/result.txt</system-out>
     </testcase>
   </testsuite>
 </testsuites>
-""" % job.recipesets[0].recipes[0].id
+""" % recipe.id
+        self.assertMultiLineEqual(expected, out)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1291107
+    def test_duration(self):
+        job = data_setup.create_running_job(recipe_whiteboard=u'duration',
+                fqdn=u'happysystem.testdata')
+        recipe = job.recipesets[0].recipes[0]
+        recipe.tasks[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 0)
+        recipe.tasks[0].pass_(path=u'first', score=0, summary=u'(Pass)')
+        recipe.tasks[0].results[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 10)
+        recipe.tasks[0].pass_(path=u'second', score=0, summary=u'(Pass)')
+        recipe.tasks[0].results[1].start_time = datetime.datetime(2015, 12, 14, 0, 0, 13)
+        recipe.tasks[0].finish_time = datetime.datetime(2015, 12, 14, 0, 0, 17)
+        recipe.tasks[0]._change_status(TaskStatus.completed)
+        out = to_junit_xml(job)
+        expected = """\
+<?xml version='1.0' encoding='utf8'?>
+<testsuites>
+  <testsuite name="duration" id="R:%s" hostname="happysystem.testdata" tests="3" failures="0" errors="0">
+    <testcase classname="/distribution/reservesys" time="17">
+      <system-out></system-out>
+    </testcase>
+    <testcase classname="/distribution/reservesys" name="first" time="10">
+      <system-out></system-out>
+    </testcase>
+    <testcase classname="/distribution/reservesys" name="second" time="3">
+      <system-out></system-out>
+    </testcase>
+  </testsuite>
+</testsuites>
+""" % recipe.id
         self.assertMultiLineEqual(expected, out)

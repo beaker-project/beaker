@@ -3340,7 +3340,7 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
         """
         if self.is_finished():
             raise ValueError('Cannot record result for finished task %s' % self.t_id)
-        recipeTaskResult = RecipeTaskResult(recipetask=self,
+        recipeTaskResult = RecipeTaskResult(
                                    path=path,
                                    result=result,
                                    score=score,
@@ -3621,6 +3621,23 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
     def t_id(self):
         return "TR:%s" % self.id
     t_id = property(t_id)
+
+    @property
+    def duration(self):
+        """
+        Task results happen at a fixed point in time so they don't really have 
+        a duration. This property is really the time since the previous result, 
+        or else the time since the start of the task if this is the first 
+        result.
+        In a sense this is the duration of the stuff that happened in order to 
+        produce this result.
+        """
+        index = self.recipetask.results.index(self)
+        if index == 0:
+            return self.start_time - self.recipetask.start_time
+        else:
+            previous_result = self.recipetask.results[index - 1]
+            return self.start_time - previous_result.start_time
 
     @property
     def short_path(self):
