@@ -35,7 +35,7 @@ class JUnitXMLUnitTest(unittest.TestCase):
     <testcase classname="/distribution/reservesys" time="17">
       <system-out>http://dummy-archive-server/beaker/tasks/dummy.txt</system-out>
     </testcase>
-    <testcase classname="/distribution/reservesys" name="./" time="10">
+    <testcase classname="/distribution/reservesys" name="(none)" time="10">
       <system-out>http://dummy-archive-server/beaker/result.txt</system-out>
     </testcase>
   </testsuite>
@@ -59,7 +59,7 @@ class JUnitXMLUnitTest(unittest.TestCase):
     <testcase classname="/distribution/reservesys" time="17">
       <system-out>http://dummy-archive-server/beaker/tasks/dummy.txt</system-out>
     </testcase>
-    <testcase classname="/distribution/reservesys" name="./" time="10">
+    <testcase classname="/distribution/reservesys" name="(none)" time="10">
       <failure message="(Fail)" type="failure"/>
       <system-out>http://dummy-archive-server/beaker/result.txt</system-out>
     </testcase>
@@ -85,7 +85,7 @@ class JUnitXMLUnitTest(unittest.TestCase):
     <testcase classname="/distribution/reservesys" time="17">
       <system-out></system-out>
     </testcase>
-    <testcase classname="/distribution/reservesys" name="/" time="10">
+    <testcase classname="/distribution/reservesys" name="(none)" time="10">
       <error message="External Watchdog Expired" type="error"/>
       <system-out></system-out>
     </testcase>
@@ -111,7 +111,7 @@ class JUnitXMLUnitTest(unittest.TestCase):
     <testcase classname="/distribution/reservesys" time="17">
       <system-out></system-out>
     </testcase>
-    <testcase classname="/distribution/reservesys" name="/" time="10">
+    <testcase classname="/distribution/reservesys" name="(none)" time="10">
       <skipped message="I cancelled it" type="skipped"/>
       <system-out></system-out>
     </testcase>
@@ -157,7 +157,7 @@ class JUnitXMLUnitTest(unittest.TestCase):
     <testcase classname="/test_junitxml/completed" time="17">
       <system-out>http://dummy-archive-server/beaker/tasks/dummy.txt</system-out>
     </testcase>
-    <testcase classname="/test_junitxml/completed" name="./" time="10">
+    <testcase classname="/test_junitxml/completed" name="(none)" time="10">
       <system-out>http://dummy-archive-server/beaker/result.txt</system-out>
     </testcase>
   </testsuite>
@@ -189,6 +189,47 @@ class JUnitXMLUnitTest(unittest.TestCase):
       <system-out></system-out>
     </testcase>
     <testcase classname="/distribution/reservesys" name="second" time="3">
+      <system-out></system-out>
+    </testcase>
+  </testsuite>
+</testsuites>
+""" % recipe.id
+        self.assertMultiLineEqual(expected, out)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1291112
+    def test_result_names(self):
+        job = data_setup.create_running_job(recipe_whiteboard=u'duration',
+                fqdn=u'happysystem.testdata', task_name=u'/junitxml/names')
+        recipe = job.recipesets[0].recipes[0]
+        recipe.tasks[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 0)
+        recipe.tasks[0].pass_(path=u'/start', score=0, summary=u'(Pass)')
+        recipe.tasks[0].results[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 1)
+        recipe.tasks[0].pass_(path=u'/junitxml/names/with-suffix', score=0, summary=u'(Pass)')
+        recipe.tasks[0].results[1].start_time = datetime.datetime(2015, 12, 14, 0, 0, 2)
+        recipe.tasks[0].pass_(path=u'/junitxml/names', score=0, summary=u'(Pass)')
+        recipe.tasks[0].results[2].start_time = datetime.datetime(2015, 12, 14, 0, 0, 3)
+        recipe.tasks[0].pass_(path=u'beakerlib-style', score=0, summary=u'(Pass)')
+        recipe.tasks[0].results[3].start_time = datetime.datetime(2015, 12, 14, 0, 0, 4)
+        recipe.tasks[0].finish_time = datetime.datetime(2015, 12, 14, 0, 0, 5)
+        recipe.tasks[0]._change_status(TaskStatus.completed)
+        out = to_junit_xml(job)
+        expected = """\
+<?xml version='1.0' encoding='utf8'?>
+<testsuites>
+  <testsuite name="duration" id="R:%s" hostname="happysystem.testdata" tests="5" failures="0" errors="0">
+    <testcase classname="/junitxml/names" time="5">
+      <system-out></system-out>
+    </testcase>
+    <testcase classname="/junitxml/names" name="start" time="1">
+      <system-out></system-out>
+    </testcase>
+    <testcase classname="/junitxml/names" name="with-suffix" time="1">
+      <system-out></system-out>
+    </testcase>
+    <testcase classname="/junitxml/names" name="(none)" time="1">
+      <system-out></system-out>
+    </testcase>
+    <testcase classname="/junitxml/names" name="beakerlib-style" time="1">
       <system-out></system-out>
     </testcase>
   </testsuite>

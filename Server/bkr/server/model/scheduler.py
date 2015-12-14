@@ -3647,7 +3647,7 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
         if not self.path:
             short_path = self.path
         elif self.path.rstrip('/') == self.recipetask.name:
-            short_path = './'
+            short_path = ''
         elif self.path.startswith(self.recipetask.name + '/'):
             short_path = self.path.replace(self.recipetask.name + '/', '', 1)
         else:
@@ -3660,9 +3660,9 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
         Human-friendly label for the result, when shown alongside its parent 
         task. The conventions here are basically a historical RHTSism.
         """
-        if not self.short_path or self.short_path == '/':
+        if not self.path or self.path == '/':
             return self.log or './'
-        return self.short_path
+        return self.short_path or './'
 
 class RecipeResource(DeclarativeMappedObject):
     """
