@@ -357,26 +357,6 @@ class TestSystemsAtomFeed(DatabaseTestCase):
         self.assert_(self.feed_contains_system(feed, with_module.fqdn))
         self.assert_(not self.feed_contains_system(feed, without_module.fqdn))
 
-class SystemsBrowseTest(WebDriverTestCase):
-
-    def setUp(self):
-        self.browser = self.get_browser()
-
-    def test_mine_systems(self):
-
-        b = self.browser
-        with session.begin():
-            user = data_setup.create_user(password='password')
-            system1 = data_setup.create_system()
-            system2 = data_setup.create_system(status=SystemStatus.removed)
-            system1.loaned = user
-            system2.loaned = user
-
-        login(b, user=user.user_name, password='password')
-        b.get(urljoin(get_server_base(),'mine'))
-        check_system_search_results(b, present=[system1], absent=[system2])
-        self.assertEqual(
-            b.find_element_by_class_name('item-count').text, 'Items found: 1')
 
 class IpxeScriptHTTPTest(DatabaseTestCase):
 

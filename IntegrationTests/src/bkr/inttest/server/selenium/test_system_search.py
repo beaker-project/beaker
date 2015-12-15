@@ -7,7 +7,8 @@
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.keys import Keys
 from bkr.server.model import Numa, User, Key, Key_Value_String, Key_Value_Int, \
-    Device, DeviceClass, Disk, Cpu, SystemPermission, System
+    Device, DeviceClass, Disk, Cpu, SystemPermission, System, \
+    SystemType, SystemStatus
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import get_server_base, login, \
         search_for_system, wait_for_animation, check_system_search_results
@@ -132,12 +133,20 @@ def perform_search(browser, searchcriteria, search_url=''):
     wait_for_animation(b, '#searchform')
 
     for fieldid, criteria in enumerate(searchcriteria):
-        fieldname, operation, value = criteria
+        if criteria[0] == 'Key/Value':
+            assert len(criteria) == 4, "Key/Value criteria must be specified as" \
+                    " ('Key/Value', keyname, operation, value)"
+            fieldname, keyvalue, operation, value = criteria
+        else:
+            fieldname, operation, value = criteria
         if fieldid > 0:
             # press the add button to add a new row
             b.find_element_by_id('doclink').click()
         Select(b.find_element_by_name('systemsearch-%i.table' % fieldid))\
             .select_by_visible_text(fieldname)
+        if criteria[0] == 'Key/Value':
+            Select(browser.find_element_by_name('systemsearch-%i.keyvalue' % fieldid))\
+                .select_by_visible_text(keyvalue)
         Select(b.find_element_by_name('systemsearch-%i.operation' % fieldid))\
             .select_by_visible_text(operation)
         b.find_element_by_name('systemsearch-%i.value' % fieldid).clear()
@@ -148,136 +157,80 @@ def perform_search(browser, searchcriteria, search_url=''):
 
 class Search(WebDriverTestCase):
 
-    @classmethod
-    @with_transaction
-    def setUpClass(cls):
-        cls.system_one_details = { 'fqdn' : u'a1',
-                                    'type' : u'Machine',
-                                    'arch' : u'i386',
-                                    'status' : u'Automated',
-                                    'owner' : data_setup.create_user(),}
-        cls.system_one = data_setup.create_system(**cls.system_one_details)
-        cls.system_one.loaned = data_setup.create_user()
-        cls.system_one.numa = Numa(nodes=2)
-        cls.system_one.key_values_string.append(Key_Value_String(
-            Key.by_name(u'CPUMODEL'), 'foocodename'))
-        cls.system_one.key_values_string.append(Key_Value_String(
-            Key.by_name(u'HVM'), '1'))
-        cls.system_one.cpu = Cpu(flags=['flag1', 'flag2'])
-
-        cls.system_one.key_values_int.append(Key_Value_Int(
-            Key.by_name(u'DISKSPACE'), '1024'))
-        cls.system_one.key_values_int.append(Key_Value_Int(
-            Key.by_name(u'MEMORY'), '4096'))
-
-        cls.system_two_details = { 'fqdn' : u'a2',
-                                    'type' : u'Prototype',
-                                    'arch' : u'x86_64',
-                                    'status' : u'Manual',
-                                    'owner' : data_setup.create_user(),}
-        cls.system_two = data_setup.create_system(**cls.system_two_details)
-        cls.system_two.key_values_int.append(Key_Value_Int(
-            Key.by_name(u'DISKSPACE'), '900'))
-        cls.system_two.key_values_string.append(Key_Value_String(
-            Key.by_name(u'HVM'), '1'))
-
-        device_class = DeviceClass.lazy_create(device_class='class_type')
-        device1 = Device.lazy_create(vendor_id = '0000',
-                                      device_id = '0000',
-                                      subsys_vendor_id = '2223',
-                                      subsys_device_id = '2224',
-                                      bus = '0000',
-                                      driver = '0000',
-                                      device_class_id = device_class.id,
-                                      description = 'blah')
-        cls.system_two.devices.append(device1)
-        cls.system_three_details = { 'fqdn' : u'a3',
-                                    'type' : u'Laptop',
-                                    'arch' : u'ia64',
-                                    'status' : u'Automated',
-                                    'owner' : data_setup.create_user(),}
-        cls.system_three = data_setup.create_system(**cls.system_three_details)
-        cls.system_three.numa = Numa(nodes=1)
-        device2 = Device.lazy_create(vendor_id = '0000',
-                                      device_id = '0000',
-                                      subsys_vendor_id = '1111',
-                                      subsys_device_id = '1112',
-                                      bus = '0000',
-                                      driver = '0000',
-                                      device_class_id = device_class.id,
-                                      description = 'blah')
-        cls.system_three.devices.append(device2)
-
-        cls.system_four_details = {'status' : u'Removed',}
-        cls.system_four = data_setup.create_system(**cls.system_four_details)
-        cls.system_four.key_values_string.append(Key_Value_String(
-            Key.by_name(u'CPUMODEL'), 'foocodename'))
-
     def setUp(self):
+        with session.begin():
+            self.user = data_setup.create_user(password=u'password')
+            self.system = data_setup.create_system()
+            self.system.loaned = self.user
+            self.another_system = data_setup.create_system()
+            self.another_system.loaned = self.user
         self.browser = self.get_browser()
-        login(self.browser)
+        login(self.browser, user=self.user.user_name, password=u'password')
 
     def test_multiple_cpu_flags(self):
+        with session.begin():
+            system = data_setup.create_system()
+            system.cpu = Cpu(flags=['flag1', 'flag2'])
+            another_system = data_setup.create_system()
+            another_system.cpu = Cpu(flags=['flag3'])
         b = self.browser
-
         perform_search(b, [('CPU/Flags', 'is', 'flag1'),
-                           ('CPU/Flags', 'is', 'flag2')])
-        check_system_search_results(b, present=[self.system_one],
-                absent=[self.system_two, self.system_three])
-
-    def test_loaned_not_free(self):
-        with session.begin():
-            lc1 = data_setup.create_labcontroller()
-            self.system_one.lab_controller=lc1
-
-        b = self.browser
-        b.get(get_server_base() + 'free')
-        self.assertEquals(b.title, 'Free Systems')
-        check_system_search_results(b, present=[], absent=[self.system_one])
-
-        with session.begin():
-            self.system_one.loaned = User.by_user_name(data_setup.ADMIN_USER)
-        b.get(get_server_base() + 'free')
-        self.assertEquals(b.title, 'Free Systems')
-        check_system_search_results(b, present=[self.system_one])
+                ('CPU/Flags', 'is', 'flag2')])
+        check_system_search_results(b, present=[system],
+                absent=[another_system])
 
     def test_by_device(self):
+        with session.begin():
+            system = data_setup.create_system()
+            device = data_setup.create_device(
+                    device_class='testclass',
+                    subsys_vendor_id='1111',
+                    subsys_device_id='1112')
+            system.devices.append(device)
+            another_system = data_setup.create_system()
+            another_device = data_setup.create_device(
+                    device_class='testclass',
+                    subsys_vendor_id='2223',
+                    subsys_device_id='2224')
+            another_system.devices.append(another_device)
         b = self.browser
-
         perform_search(b, [('Devices/Subsys_device_id', 'is', '1112')])
-        check_system_search_results(b, present=[self.system_three],
-                absent=[self.system_one, self.system_two])
+        check_system_search_results(b, present=[system],
+                absent=[another_system])
 
         perform_search(b, [('Devices/Subsys_vendor_id', 'is not', '1111'),
-                           ('Devices/Subsys_device_id', 'is', '2224')])
-        check_system_search_results(b, present=[self.system_two],
-                absent=[self.system_one, self.system_three])
+                             ('Devices/Subsys_device_id', 'is', '2224')])
+        check_system_search_results(b, present=[another_system],
+                absent=[system])
 
     def test_by_name(self):
         b = self.browser
-
-        perform_search(b, [('System/Name', 'is', self.system_one.fqdn)])
-        check_system_search_results(b, present=[self.system_one],
-                absent=[self.system_two, self.system_three])
+        perform_search(b, [('System/Name', 'is', self.system.fqdn)])
+        check_system_search_results(b, present=[self.system],
+                absent=[self.another_system])
 
     def test_by_type(self):
+        with session.begin():
+            self.system.type = SystemType.laptop
         b = self.browser
-        b.get(get_server_base())
+        b.get(urljoin(get_server_base(),'mine'))
         b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('System/Type')
         Select(b.find_element_by_name('systemsearch-0.operation'))\
-            .select_by_visible_text('is not')
+            .select_by_visible_text('is')
         Select(b.find_element_by_name('systemsearch-0.value'))\
-            .select_by_visible_text(self.system_three_details['type'])
+            .select_by_visible_text('Laptop')
         b.find_element_by_id('searchform').submit()
-        check_system_search_results(b, present=[self.system_one, self.system_two],
-                absent=[self.system_three])
+        check_system_search_results(b, present=[self.system],
+                absent=[self.another_system])
 
     def test_by_status(self):
+        with session.begin():
+            self.system.status = SystemStatus.manual
         b = self.browser
-        b.get(get_server_base())
+        b.get(urljoin(get_server_base(),'mine'))
         b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_name('systemsearch-0.table'))\
@@ -285,10 +238,10 @@ class Search(WebDriverTestCase):
         Select(b.find_element_by_name('systemsearch-0.operation'))\
             .select_by_visible_text('is')
         Select(b.find_element_by_name('systemsearch-0.value'))\
-            .select_by_visible_text(self.system_two_details['status'])
+            .select_by_visible_text('Manual')
         b.find_element_by_id('searchform').submit()
-        check_system_search_results(b, present=[self.system_two],
-                absent=[self.system_one, self.system_three])
+        check_system_search_results(b, present=[self.system],
+                absent=[self.another_system])
 
     def test_by_reserved_since(self):
         with session.begin():
@@ -296,7 +249,6 @@ class Search(WebDriverTestCase):
             data_setup.create_manual_reservation(s1, start=datetime.datetime(2003, 1, 21, 11, 30, 0))
             s2 = data_setup.create_system(fqdn='aaadvark.testdata')
             data_setup.create_manual_reservation(s2, start=datetime.datetime(2005, 1, 21, 11, 30, 0))
-
         b = self.browser
 
         perform_search(b, [('System/Reserved', 'is', '2003-01-21')])
@@ -333,10 +285,13 @@ class Search(WebDriverTestCase):
         check_system_search_results(b, present=[new_system], absent=[old_system])
 
         perform_search(b, [('System/Added', 'after', '2020-06-20'),
-                           ('System/Added', 'before', '2020-06-22')])
+                             ('System/Added', 'before', '2020-06-22')])
         check_system_search_results(b, present=[new_system], absent=[old_system])
 
     def test_by_key_value_is(self):
+        with session.begin():
+            self.system.key_values_string.append(Key_Value_String(
+                    Key.by_name(u'CPUMODEL'), 'foocodename'))
         b = self.browser
         b.get(get_server_base())
         b.find_element_by_link_text('Show Search Options').click()
@@ -349,102 +304,61 @@ class Search(WebDriverTestCase):
             .select_by_visible_text('is')
         b.find_element_by_name('systemsearch-0.value').send_keys('foocodename')
         b.find_element_by_id('searchform').submit()
-        check_system_search_results(b, present=[self.system_one],
-                                    absent=[self.system_two, 
-                                            self.system_three, 
-                                            self.system_four])
+        check_system_search_results(b, present=[self.system],
+                absent=[self.another_system])
 
+    def test_by_key_value_is_on_removed_systems_page(self):
+        with session.begin():
+            system = data_setup.create_system()
+            removed_system = data_setup.create_system(status=SystemStatus.removed)
+            removed_system.key_values_string.append(Key_Value_String(
+                    Key.by_name(u'CPUMODEL'), 'foocodename'))
         # Key Value search from "Removed Systems"
-        b.get(urljoin(get_server_base(), 'removed'))
-        b.find_element_by_link_text('Show Search Options').click()
-        wait_for_animation(b, '#searchform')
-        Select(b.find_element_by_name('systemsearch-0.table'))\
-            .select_by_visible_text('Key/Value')
-        Select(b.find_element_by_name('systemsearch-0.keyvalue'))\
-            .select_by_visible_text('CPUMODEL')
-        Select(b.find_element_by_name('systemsearch-0.operation'))\
-            .select_by_visible_text('is')
-        b.find_element_by_name('systemsearch-0.value').send_keys('foocodename')
-        b.find_element_by_id('searchform').submit()
-        check_system_search_results(b, present=[self.system_four],
-                                    absent=[self.system_one, 
-                                            self.system_two, 
-                                            self.system_three])
+        b = self.browser
+        perform_search(b, [('Key/Value', 'CPUMODEL', 'is', 'foocodename')],
+                search_url='removed')
+        check_system_search_results(b, present=[removed_system],
+                absent=[system])
 
     def test_by_key_value_is_not(self):
+        with session.begin():
+            self.another_system.key_values_string.append(Key_Value_String(
+                    Key.by_name(u'CPUMODEL'), 'foocodename'))
         b = self.browser
-        b.get(get_server_base())
-        b.find_element_by_link_text('Show Search Options').click()
-        wait_for_animation(b, '#searchform')
-        Select(b.find_element_by_name('systemsearch-0.table'))\
-            .select_by_visible_text('Key/Value')
-        Select(b.find_element_by_name('systemsearch-0.keyvalue'))\
-            .select_by_visible_text('CPUMODEL')
-        Select(b.find_element_by_name('systemsearch-0.operation'))\
-            .select_by_visible_text('is not')
-        b.find_element_by_name('systemsearch-0.value').send_keys('foocodename')
-        b.find_element_by_id('searchform').submit()
-        check_system_search_results(b, present=[self.system_two, self.system_three],
-                absent=[self.system_one])
+        perform_search(b, [('Key/Value', 'CPUMODEL', 'is not', 'foocodename')],
+                search_url=u'mine')
+        check_system_search_results(b, present=[self.system],
+                absent=[self.another_system])
 
     def test_by_multiple_key_values(self):
+        with session.begin():
+            self.system = data_setup.create_system()
+            self.system.key_values_string.append(Key_Value_String(
+                Key.by_name(u'CPUMODEL'), 'foocodename'))
+            self.system.key_values_string.append(Key_Value_String(
+                Key.by_name(u'HVM'), '1'))
+            self.system.key_values_int.append(Key_Value_Int(
+                Key.by_name(u'DISKSPACE'), '1024'))
         b = self.browser
-        b.get(get_server_base())
-        b.find_element_by_link_text('Show Search Options').click()
-        wait_for_animation(b, '#searchform')
-        Select(b.find_element_by_name('systemsearch-0.table'))\
-            .select_by_visible_text('Key/Value')
-        Select(b.find_element_by_name('systemsearch-0.keyvalue'))\
-            .select_by_visible_text('HVM')
-        Select(b.find_element_by_name('systemsearch-0.operation'))\
-            .select_by_visible_text('is')
-        b.find_element_by_name('systemsearch-0.value').send_keys('1')
-        b.find_element_by_id('doclink').click()
-        Select(b.find_element_by_name('systemsearch-1.table'))\
-            .select_by_visible_text('Key/Value')
-        Select(b.find_element_by_name('systemsearch-1.keyvalue'))\
-            .select_by_visible_text('CPUMODEL')
-        Select(b.find_element_by_name('systemsearch-1.operation'))\
-            .select_by_visible_text('is')
-        b.find_element_by_name('systemsearch-1.value').send_keys('foocodename')
-        b.find_element_by_id('searchform').submit()
-        check_system_search_results(b, present=[self.system_one],
-                absent=[self.system_two, self.system_three])
+        perform_search(b, [('Key/Value', 'HVM', 'is', '1'),
+            ('Key/Value', 'CPUMODEL', 'is', 'foocodename'),
+            ('Key/Value', 'DISKSPACE', 'greater than', '1000')])
+        check_system_search_results(b, present=[self.system],
+                absent=[self.another_system])
 
-    def test_by_multiple_key_values_again(self):
-        b = self.browser
-        b.get(get_server_base())
-        b.find_element_by_link_text('Show Search Options').click()
-        wait_for_animation(b, '#searchform')
-        Select(b.find_element_by_name('systemsearch-0.table'))\
-            .select_by_visible_text('Key/Value')
-        Select(b.find_element_by_name('systemsearch-0.keyvalue'))\
-            .select_by_visible_text('HVM')
-        Select(b.find_element_by_name('systemsearch-0.operation'))\
-            .select_by_visible_text('is')
-        b.find_element_by_name('systemsearch-0.value').send_keys('1')
-        b.find_element_by_id('doclink').click()
-        Select(b.find_element_by_name('systemsearch-1.table'))\
-            .select_by_visible_text('Key/Value')
-        Select(b.find_element_by_name('systemsearch-1.keyvalue'))\
-            .select_by_visible_text('DISKSPACE')
-        Select(b.find_element_by_name('systemsearch-1.operation'))\
-            .select_by_visible_text('greater than')
-        b.find_element_by_name('systemsearch-1.value').send_keys('1000')
-        b.find_element_by_id('searchform').submit()
-        check_system_search_results(b, present=[self.system_one],
-                absent=[self.system_two, self.system_three])
 
     def test_can_search_by_numa_node_count(self):
+        with session.begin():
+            self.system.numa = Numa(nodes=1)
+            self.another_system.numa = Numa(nodes=2)
         b = self.browser
-
         perform_search(b, [('System/NumaNodes', 'greater than', '1')])
-        check_system_search_results(b, present=[self.system_one],
-                absent=[self.system_two, self.system_three])
-
+        check_system_search_results(b, present=[self.another_system],
+                absent=[self.system])
+        b.get(get_server_base())
         perform_search(b, [('System/NumaNodes', 'less than', '2')])
-        check_system_search_results(b, present=[self.system_three],
-                absent=[self.system_one, self.system_two])
+        check_system_search_results(b, present=[self.system],
+                absent=[self.another_system])
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1304927
     def test_search_works_on_reserve_report(self):
@@ -534,10 +448,11 @@ class Search(WebDriverTestCase):
         bad_string = u"</script><script>alert('hi')</script>"
         with session.begin():
             system = data_setup.create_system(location=bad_string)
+            another_system = data_setup.create_system()
         b = self.browser
         perform_search(b, [('System/Location', 'is', bad_string)])
         check_system_search_results(b, present=[system],
-                absent=[self.system_one, self.system_two, self.system_three])
+                absent=[another_system])
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1295998
     def test_closing_script_tag_from_simplesearch_is_escaped(self):
@@ -579,7 +494,6 @@ class LabControllerSearchTest(WebDriverTestCase):
 
     def test_by_lab_controller_contains(self):
         b = self.browser
-        b.get(get_server_base() + 'mine/')
         perform_search(b, [('System/LabController', 'contains', self.lc1.fqdn)], search_url='mine')
         check_system_search_results(b,
             present=[self.s1],
@@ -680,6 +594,7 @@ class HypervisorSearchTest(WebDriverTestCase):
         b.find_element_by_id('searchform').submit()
         check_system_search_results(b, present=[self.phys], absent=[self.kvm, self.xen])
 
+
 class DiskSearchTest(WebDriverTestCase):
 
     def setUp(self):
@@ -703,16 +618,8 @@ class DiskSearchTest(WebDriverTestCase):
 
     def test_search_size_greater_than(self):
         b = self.browser
-        b.get(get_server_base() + 'mine')
-        b.find_element_by_link_text('Show Search Options').click()
-        wait_for_animation(b, '#searchform')
-        Select(b.find_element_by_id('systemsearch_0_table'))\
-            .select_by_visible_text('Disk/Size')
-        Select(b.find_element_by_id('systemsearch_0_operation'))\
-            .select_by_visible_text('greater than')
-        b.find_element_by_id('systemsearch_0_value').clear()
-        b.find_element_by_id('systemsearch_0_value').send_keys('10000000000')
-        b.find_element_by_id('searchform').submit()
+        perform_search(b, [('Disk/Size', 'greater than', '10000000000')],
+                search_url='mine')
         check_system_search_results(b, present=[self.big_disk, self.two_disks],
                 absent=[self.small_disk, self.no_disks])
 
@@ -722,16 +629,8 @@ class DiskSearchTest(WebDriverTestCase):
         # a disk whose size is not 1000" but rather "systems with no disks of 
         # size 1000".
         b = self.browser
-        b.get(get_server_base() + 'mine')
-        b.find_element_by_link_text('Show Search Options').click()
-        wait_for_animation(b, '#searchform')
-        Select(b.find_element_by_id('systemsearch_0_table'))\
-            .select_by_visible_text('Disk/SectorSize')
-        Select(b.find_element_by_id('systemsearch_0_operation'))\
-            .select_by_visible_text('is not')
-        b.find_element_by_id('systemsearch_0_value').clear()
-        b.find_element_by_id('systemsearch_0_value').send_keys('512')
-        b.find_element_by_id('searchform').submit()
+        perform_search(b, [('Disk/SectorSize', 'is not', '512')],
+                search_url='mine')
         check_system_search_results(b, present=[self.big_disk, self.no_disks],
                 absent=[self.small_disk, self.two_disks])
 
@@ -741,129 +640,61 @@ class DiskSearchTest(WebDriverTestCase):
 # less systems to deal with
 class InventoriedSearchTest(WebDriverTestCase):
 
-    @classmethod
-    def setUpClass(cls):
-
-        # date times
-        cls.today = datetime.date.today()
-        cls.time_now = datetime.datetime.combine(cls.today, datetime.time(0, 0))
-        cls.time_delta1 = datetime.datetime.combine(cls.today, datetime.time(0, 30))
-        cls.time_tomorrow = cls.time_now + datetime.timedelta(days=1)
-        cls.time_yesterday = cls.time_now - datetime.timedelta(days=1)
-        # today date
-        cls.date_yesterday = cls.time_yesterday.date().isoformat()
-        cls.date_today = cls.time_now.date().isoformat()
-        cls.date_tomorrow = cls.time_tomorrow.date().isoformat()
-
-        with session.begin():
-            cls.user = data_setup.create_user(password=u'pass')
-            cls.not_inv = data_setup.create_system(loaned=cls.user)
-
-            cls.inv1 = data_setup.create_system(loaned=cls.user)
-            cls.inv1.date_lastcheckin = cls.time_now
-
-            cls.inv2 = data_setup.create_system(loaned=cls.user)
-            cls.inv2.date_lastcheckin = cls.time_delta1
-
-            cls.inv3 = data_setup.create_system(loaned=cls.user)
-            cls.inv3.date_lastcheckin = cls.time_tomorrow
-
-            cls.inv4 = data_setup.create_system(loaned=cls.user)
-            cls.inv4.date_lastcheckin = cls.time_yesterday
-
     def setUp(self):
+        with session.begin():
+            self.user = data_setup.create_user(password=u'password')
         self.browser = self.get_browser()
-        login(self.browser, user=self.user.user_name, password='pass')
+        login(self.browser, user=self.user.user_name, password=u'password')
 
     def test_uninventoried_search(self):
-
+        with session.begin():
+            system = data_setup.create_system(loaned=self.user)
         b = self.browser
-        b.get(get_server_base() + 'mine')
-        b.find_element_by_link_text('Show Search Options').click()
-        wait_for_animation(b, '#searchform')
-        Select(b.find_element_by_id('systemsearch_0_table'))\
-            .select_by_visible_text('System/LastInventoried')
-        Select(b.find_element_by_id('systemsearch_0_operation'))\
-            .select_by_visible_text('is')
-        b.find_element_by_id('systemsearch_0_value').clear()
-        b.find_element_by_id('systemsearch_0_value').send_keys(' ')
-        b.find_element_by_id('searchform').submit()
-        check_system_search_results(b, present=[self.not_inv],
-                absent=[self.inv1, self.inv2, self.inv3, self.inv4])
+        perform_search(b, [('System/LastInventoried', 'is', ' ')],
+                search_url='mine')
+        check_system_search_results(b, present=[system])
 
     def test_inventoried_search_after(self):
-
+        with session.begin():
+            system_one = data_setup.create_system(loaned=self.user)
+            system_one.date_lastcheckin = datetime.datetime(2001, 1, 15, 14, 12, 0)
+            system_two = data_setup.create_system(loaned=self.user)
+            system_two.date_lastcheckin = datetime.datetime(2001, 1, 16, 14, 12, 0)
         b = self.browser
-        b.get(get_server_base() + 'mine')
-        b.find_element_by_link_text('Show Search Options').click()
-        wait_for_animation(b, '#searchform')
-        Select(b.find_element_by_id('systemsearch_0_table'))\
-            .select_by_visible_text('System/LastInventoried')
-        Select(b.find_element_by_id('systemsearch_0_operation'))\
-            .select_by_visible_text('after')
-        b.find_element_by_id('systemsearch_0_value').clear()
-        b.find_element_by_id('systemsearch_0_value').send_keys(self.date_today)
-        b.find_element_by_id('searchform').submit()
-        check_system_search_results(b, present=[self.inv3],
-                absent=[self.not_inv, self.inv1, self.inv2, self.inv4])
+        perform_search(b, [('System/LastInventoried', 'after', '2001-01-15')],
+                search_url='mine')
+        check_system_search_results(b, present=[system_two], absent=[system_one])
 
     def test_inventoried_search_is(self):
-
+        with session.begin():
+            system = data_setup.create_system(loaned=self.user)
+            system.date_lastcheckin = datetime.datetime(2001, 1, 15, 14, 12, 0)
         b = self.browser
-        b.get(get_server_base() + 'mine')
-        b.find_element_by_link_text('Show Search Options').click()
-        wait_for_animation(b, '#searchform')
-        Select(b.find_element_by_id('systemsearch_0_table'))\
-            .select_by_visible_text('System/LastInventoried')
-        Select(b.find_element_by_id('systemsearch_0_operation'))\
-            .select_by_visible_text('is')
-        b.find_element_by_id('systemsearch_0_value').clear()
-        b.find_element_by_id('systemsearch_0_value').send_keys(self.date_today)
-        b.find_element_by_id('searchform').submit()
-        check_system_search_results(b, present=[self.inv1, self.inv2],
-                absent=[self.not_inv, self.inv3, self.inv4])
+        perform_search(b, [('System/LastInventoried', 'is', '2001-01-15')],
+                search_url='mine')
+        check_system_search_results(b, present=[system])
 
     def test_inventoried_search_before(self):
-
+        with session.begin():
+            system_one = data_setup.create_system(loaned=self.user)
+            system_one.date_lastcheckin = datetime.datetime(2001, 1, 15, 14, 12, 0)
+            system_two = data_setup.create_system(loaned=self.user)
+            system_two.date_lastcheckin = datetime.datetime(2001, 1, 14, 14, 12, 0)
         b = self.browser
-        b.get(get_server_base() + 'mine')
-        b.find_element_by_link_text('Show Search Options').click()
-        wait_for_animation(b, '#searchform')
-        Select(b.find_element_by_id('systemsearch_0_table'))\
-            .select_by_visible_text('System/LastInventoried')
-        Select(b.find_element_by_id('systemsearch_0_operation'))\
-            .select_by_visible_text('before')
-        b.find_element_by_id('systemsearch_0_value').clear()
-        b.find_element_by_id('systemsearch_0_value').send_keys(self.date_today)
-        b.find_element_by_id('searchform').submit()
-        check_system_search_results(b, present=[self.inv4],
-                absent=[self.not_inv, self.inv1, self.inv2, self.inv3])
+        perform_search(b, [('System/LastInventoried', 'before', '2001-01-15')],
+                search_url='mine')
+        check_system_search_results(b, present=[system_two], absent=[system_one])
 
     def test_inventoried_search_range(self):
-
+        with session.begin():
+            system_one = data_setup.create_system(loaned=self.user)
+            system_one.date_lastcheckin = datetime.datetime(2001, 1, 15, 14, 12, 0)
+            system_two = data_setup.create_system(loaned=self.user)
+            system_two.date_lastcheckin = datetime.datetime(2001, 1, 14, 14, 12, 0)
+            system_three = data_setup.create_system(loaned=self.user)
+            system_three.date_lastcheckin = datetime.datetime(2001, 1, 16, 14, 12, 0)
         b = self.browser
-        b.get(get_server_base() + 'mine')
-        b.find_element_by_link_text('Show Search Options').click()
-        wait_for_animation(b, '#searchform')
-
-        #after
-        Select(b.find_element_by_id('systemsearch_0_table'))\
-            .select_by_visible_text('System/LastInventoried')
-        Select(b.find_element_by_id('systemsearch_0_operation'))\
-            .select_by_visible_text('after')
-        b.find_element_by_id('systemsearch_0_value').clear()
-        b.find_element_by_id('systemsearch_0_value').send_keys(self.date_yesterday)
-
-        b.find_element_by_id('doclink').click()
-
-        #before
-        Select(b.find_element_by_id('systemsearch_1_table'))\
-            .select_by_visible_text('System/LastInventoried')
-        Select(b.find_element_by_id('systemsearch_1_operation'))\
-            .select_by_visible_text('before')
-        b.find_element_by_id('systemsearch_1_value').clear()
-        b.find_element_by_id('systemsearch_1_value').send_keys(self.date_tomorrow)
-
-        b.find_element_by_id('searchform').submit()
-        check_system_search_results(b, present=[self.inv1, self.inv2],
-                absent=[self.not_inv, self.inv3, self.inv4])
+        perform_search(b, [('System/LastInventoried', 'after', '2001-01-14'),
+            ('System/LastInventoried', 'before', '2001-01-16')], search_url='mine')
+        check_system_search_results(b, present=[system_one],
+                absent=[system_two, system_three])
