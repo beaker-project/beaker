@@ -135,10 +135,13 @@ class TestRecipeView(WebDriverTestCase):
         self.go_to_recipe_view(r)
         b.find_element_by_xpath('//div[@id="recipe%s"]//a[text()="Show Results"]' % r.id).click()
         rt_log_server_link = b.find_element_by_xpath("//tr[@class='pass_recipe_%s recipe_%s']//td[position()=4]//a" % (r.id, r.id)).get_attribute('href')
-        self.assertEquals(rt_log_server_link, 'http://dummy-archive-server/beaker/tasks/dummy.txt')
+        self.assertEquals(rt_log_server_link,
+                get_server_base() + 'recipes/%s/tasks/%s/logs/tasks/dummy.txt'
+                % (r.id, r.tasks[0].id))
         b.find_element_by_xpath('//div[@id="recipe%s"]//button[text()="Logs"]' % r.id).click()
         r_server_link = b.find_element_by_xpath("//table/tbody//tr[position()=6]/td//a").get_attribute('href')
-        self.assertEquals(r_server_link, 'http://dummy-archive-server/beaker/recipe_path/dummy.txt')
+        self.assertEquals(r_server_link,
+                get_server_base() + 'recipes/%s/logs/recipe_path/dummy.txt' % r.id)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1072133
     def test_watchdog_time_remaining_display(self):
@@ -401,6 +404,27 @@ class RecipeHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         json = response.json()
         self.assertEquals(json['t_id'], self.recipe.t_id)
+
+    def test_get_recipe_log(self):
+        with session.begin():
+            job = data_setup.create_completed_job(server_log=True)
+            recipe = job.recipesets[0].recipes[0]
+        response = requests.get(get_server_base() +
+                'recipes/%s/logs/recipe_path/dummy.txt' % recipe.id,
+                allow_redirects=False)
+        self.assertEqual(response.status_code, 307)
+        self.assertEqual(response.headers['Location'],
+                'http://dummy-archive-server/beaker/recipe_path/dummy.txt')
+
+    def test_404_for_nonexistent_log(self):
+        with session.begin():
+            job = data_setup.create_completed_job(server_log=True)
+            recipe = job.recipesets[0].recipes[0]
+        response = requests.get(get_server_base() +
+                'recipes/%s/logs/doesnotexist.log' % recipe.id,
+                allow_redirects=False)
+        self.assertEqual(response.status_code, 404)
+        self.assertRegexpMatches(response.text, 'Recipe log .* not found')
 
     def test_anonymous_cannot_update_recipe(self):
         response = patch_json(get_server_base() +

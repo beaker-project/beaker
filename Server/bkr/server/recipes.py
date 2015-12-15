@@ -33,7 +33,7 @@ from bkr.server.app import app
 from bkr.server.flask_util import BadRequest400, NotFound404, \
     Forbidden403, auth_required, read_json_request, convert_internal_errors, \
     request_wants_json, render_tg_template
-from flask import request, jsonify
+from flask import request, jsonify, redirect as flask_redirect
 from bkr.server.bexceptions import BeakerException
 
 import logging
@@ -477,6 +477,8 @@ class Recipes(RPCRoot):
         # raise a cherrypy 404.
         if cherrypy.request.method == 'POST':
             raise cherrypy.HTTPError(404)
+        if args:
+            raise cherrypy.HTTPError(404)
         try:
             recipe = Recipe.by_id(id)
         except InvalidRequestError:
@@ -537,6 +539,20 @@ def update_recipe(id):
                     new_whiteboard)
                 recipe.whiteboard = new_whiteboard
     return jsonify(recipe.__json__())
+
+@app.route('/recipes/<int:id>/logs/<path:path>', methods=['GET'])
+def get_recipe_log(id, path):
+    """
+    Redirects to the actual storage location for the requested recipe log.
+
+    :param id: Recipe's id.
+    :param path: Log path.
+    """
+    recipe = _get_recipe_by_id(id)
+    for log in recipe.logs:
+        if log.combined_path == path:
+            return flask_redirect(log.absolute_url, code=307)
+    return NotFound404('Recipe log %s for recipe %s not found' % (path, id))
 
 @app.route('/recipes/<int:id>/reservation-request', methods=['PATCH'])
 @auth_required

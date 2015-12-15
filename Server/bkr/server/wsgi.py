@@ -56,6 +56,7 @@ import bkr.server.pools
 import bkr.server.jobs
 import bkr.server.recipesets
 import bkr.server.recipes
+import bkr.server.recipetasks
 import bkr.server.power
 import bkr.server.labcontroller
 

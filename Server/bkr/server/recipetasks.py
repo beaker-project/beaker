@@ -19,7 +19,9 @@ import cherrypy
 from bkr.server.model import (RecipeTask, LogRecipeTask,
                               RecipeTaskResult, LogRecipeTaskResult,
                               LabController, Watchdog, ResourceType)
-from flask import jsonify
+from flask import redirect
+from bkr.server.app import app
+from bkr.server.flask_util import NotFound404
 
 class RecipeTasks(RPCRoot):
     # For XMLRPC methods in this class.
@@ -216,3 +218,53 @@ class RecipeTasks(RPCRoot):
                 if fqdn not in fqdns:
                     fqdns.append(fqdn)
         return roles
+
+def _get_recipe_task_by_id(recipeid, taskid):
+    try:
+        task = RecipeTask.by_id(taskid)
+    except NoResultFound:
+        raise NotFound404('Recipe task not found')
+    if task.recipe.id != recipeid:
+        raise NotFound404('Recipe task not found')
+    return task
+
+@app.route('/recipes/<int:recipeid>/tasks/<int:taskid>/logs/<path:path>', methods=['GET'])
+def get_recipe_task_log(recipeid, taskid, path):
+    """
+    Redirects to the actual storage location for the requested task log.
+
+    :param recipeid: Recipe id.
+    :param taskid: Recipe task id.
+    :param path: Log path.
+    """
+    task = _get_recipe_task_by_id(recipeid, taskid)
+    for log in task.logs:
+        if log.combined_path == path:
+            return redirect(log.absolute_url, code=307)
+    return NotFound404('Task log %s for recipe %s task %s not found' % (path, recipeid, taskid))
+
+def _get_recipe_task_result_by_id(recipeid, taskid, resultid):
+    try:
+        result = RecipeTaskResult.by_id(resultid)
+    except NoResultFound:
+        raise NotFound404('Recipe task result not found')
+    if result.recipetask.id != taskid or result.recipetask.recipe.id != recipeid:
+        raise NotFound404('Recipe task result not found')
+    return result
+
+@app.route('/recipes/<int:recipeid>/tasks/<int:taskid>/results/<int:resultid>/logs/<path:path>', methods=['GET'])
+def get_recipe_task_result_log(recipeid, taskid, resultid, path):
+    """
+    Redirects to the actual storage location for the requested result log.
+
+    :param recipeid: Recipe id.
+    :param taskid: Recipe task id.
+    :param resultid: Recipe task result id.
+    :param path: Log path.
+    """
+    result = _get_recipe_task_result_by_id(recipeid, taskid, resultid)
+    for log in result.logs:
+        if log.combined_path == path:
+            return redirect(log.absolute_url, code=307)
+    return NotFound404('Result log %s for recipe %s task %s result %s not found'
+            % (path, recipeid, taskid, resultid))

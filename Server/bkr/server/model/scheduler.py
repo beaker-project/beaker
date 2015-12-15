@@ -311,7 +311,8 @@ class Log(object):
 
     result = property(result)
 
-    def _combined_path(self):
+    @property
+    def combined_path(self):
         """Combines path (which is really the "subdir" of sorts) with filename:
                       , log.txt => log.txt
                 /     , log.txt => log.txt
@@ -322,30 +323,34 @@ class Log(object):
 
     @property
     def full_path(self):
-        """ Like .href, but returns an absolute filesystem path if the log is local. """
+        """
+        Returns an absolute URL to the log if it's stored remotely, or an 
+        absolute filesystem path if it's stored locally.
+        """
         if self.server:
-            return self.href
+            return self.absolute_url
         else:
             return os.path.join(self.parent.logspath, self.parent.filepath,
-                self._combined_path())
+                self.combined_path)
 
     @property
-    def href(self):
+    def absolute_url(self):
         if self.server:
             # self.server points at a directory so it should end in 
             # a trailing slash, but older versions of the code didn't do that
             url = self.server
             if not url.endswith('/'):
                 url += '/'
-            return '%s%s' % (url, self._combined_path())
+            return '%s%s' % (url, self.combined_path)
         else:
-            return os.path.join('/logs', self.parent.filepath, self._combined_path())
+            return urlparse.urljoin(absolute_url('/'),
+                    os.path.join('/logs', self.parent.filepath, self.combined_path))
 
     @property
     def link(self):
         """ Return a link to this Log
         """
-        return make_link(url=self.href, text=self._combined_path())
+        return make_link(url=self.href, text=self.combined_path)
 
     @property
     def dict(self):
@@ -357,7 +362,7 @@ class Log(object):
                     tid      = '%s:%s' % (self.type, self.id),
                     filepath = self.parent.filepath,
                     basepath = self.basepath,
-                    url      = urlparse.urljoin(absolute_url('/'), self.href),
+                    url      = self.absolute_url,
                    )
 
     @classmethod
@@ -385,6 +390,10 @@ class LogRecipe(Log, DeclarativeMappedObject):
     recipe_id = Column(Integer, ForeignKey('recipe.id'), nullable=False)
     parent = relationship('Recipe', back_populates='logs')
 
+    @property
+    def href(self):
+        return '/recipes/%s/logs/%s' % (self.parent.id, self.combined_path)
+
 class LogRecipeTask(Log, DeclarativeMappedObject):
     type = 'T'
 
@@ -395,6 +404,11 @@ class LogRecipeTask(Log, DeclarativeMappedObject):
             nullable=False)
     parent = relationship('RecipeTask', back_populates='logs')
 
+    @property
+    def href(self):
+        return '/recipes/%s/tasks/%s/logs/%s' % (self.parent.recipe.id,
+                self.parent.id, self.combined_path)
+
 class LogRecipeTaskResult(Log, DeclarativeMappedObject):
     type = 'E'
 
@@ -404,6 +418,12 @@ class LogRecipeTaskResult(Log, DeclarativeMappedObject):
     recipe_task_result_id = Column(Integer,
                 ForeignKey('recipe_task_result.id'), nullable=False)
     parent = relationship('RecipeTaskResult', back_populates='logs')
+
+    @property
+    def href(self):
+        return '/recipes/%s/tasks/%s/results/%s/logs/%s' % (
+                self.parent.recipetask.recipe.id, self.parent.recipetask.id,
+                self.parent.id, self.combined_path)
 
 class TaskBase(object):
 
