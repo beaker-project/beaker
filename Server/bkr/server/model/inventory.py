@@ -1943,6 +1943,15 @@ class SystemAccessPolicy(DeclarativeMappedObject):
                 for permission in SystemPermission],
         }
 
+    def __str__(self):
+        return unicode(self).encode('utf8')
+
+    def __unicode__(self):
+        if self.system:
+            return 'Custom access policy'
+        if self.system_pool:
+            return 'Pool policy: %s' % self.system_pool.name
+
     @classmethod
     def empty_json(cls):
         """

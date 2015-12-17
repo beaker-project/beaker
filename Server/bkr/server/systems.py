@@ -429,15 +429,6 @@ def update_system(fqdn):
     """
     system = _get_system_by_FQDN(fqdn)
     data = read_json_request(request)
-    new_policy = None
-    # A user can have edit_policy permission, but may not have
-    # edit_system permission, hence we check this here separately
-    if 'active_access_policy' in data:
-        if not system.can_edit_policy(identity.current.user):
-            raise Forbidden403('Cannot edit system access policy')
-        new_policy = data.pop('active_access_policy')
-    if data and not system.can_edit(identity.current.user):
-        raise Forbidden403('Cannot edit system')
     # helper for recording activity below
     def record_activity(field, old, new, action=u'Changed'):
         system.record_activity(user=identity.current.user, service=u'HTTP',
@@ -446,6 +437,32 @@ def update_system(fqdn):
         # XXX what a nightmare... need to use a validation/conversion library, 
         # and maybe simplify/relocate the activity recording stuff somehow
         changed = False
+        if 'active_access_policy' in data:
+            if not system.can_edit_policy(identity.current.user):
+                raise Forbidden403('Cannot edit system access policy')
+            active_access_policy = data.pop('active_access_policy')
+            new_policy = None
+            if 'pool_name' in active_access_policy:
+                pool = SystemPool.by_name(active_access_policy['pool_name'])
+                if pool not in system.pools:
+                    raise BadRequest400('To use a pool policy, '
+                            'the system must be in the pool first')
+                new_policy = pool.access_policy
+            if 'custom' in active_access_policy:
+                if active_access_policy['custom']:
+                    new_policy = system.custom_access_policy
+                else:
+                    raise BadRequest400('To use custom access policy, '
+                            'the custom key must be set to True')
+            if not new_policy:
+                raise BadRequest400('System access policy not specified')
+            old_policy = system.active_access_policy
+            if old_policy != new_policy:
+                system.active_access_policy = new_policy
+                record_activity(u'Active Access Policy', old_policy, new_policy)
+                changed = True
+        if data and not system.can_edit(identity.current.user):
+            raise Forbidden403('Cannot edit system')
         renamed = False
         if 'fqdn' in data:
             new_fqdn = data['fqdn'].lower()
@@ -650,26 +667,6 @@ def update_system(fqdn):
         if changed:
             # XXX clear checksum!?
             system.date_modified = datetime.datetime.utcnow()
-        if new_policy:
-            if system.active_access_policy.system_pool:
-                old_policy = 'Pool policy: %s' % system.active_access_policy.system_pool.name
-            else:
-                old_policy = 'Custom Access Policy'
-            if 'pool_name' in new_policy:
-                pool_name = new_policy['pool_name']
-                pool = SystemPool.by_name(pool_name)
-                if pool not in system.pools:
-                    raise BadRequest400('To use a pool policy, the system must be in the pool first')
-                pool_policy = pool.access_policy
-                system.active_access_policy = pool_policy
-                record_activity(u'Active Access Policy',
-                                old_policy,
-                                'Pool policy: %s' % pool_name)
-            if 'custom' in new_policy:
-                system.active_access_policy = system.custom_access_policy
-                record_activity(u'Active Access Policy',
-                                old_policy,
-                                'Custom access policy')
 
     response = jsonify(system.__json__())
     if renamed:

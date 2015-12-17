@@ -122,7 +122,7 @@ class ModifySystemTest(ClientTestCase):
                 self.assertTrue(s.active_access_policy.grants(user2, perm))
                 self.assertEquals(s.activity[-1].field_name, u'Active Access Policy')
                 self.assertEquals(s.activity[-1].action, u'Changed')
-                self.assertEquals(s.activity[-1].old_value, 'Custom Access Policy')
+                self.assertEquals(s.activity[-1].old_value, 'Custom access policy' )
                 self.assertEquals(s.activity[-1].new_value,'Pool policy: %s' % pool.name)
 
         # system not in a pool
@@ -145,15 +145,19 @@ class ModifySystemTest(ClientTestCase):
                 self.assertTrue(s.active_access_policy.grants(user1, perm))
                 self.assertFalse(s.active_access_policy.grants(user2, perm))
 
-        # insufficient permission to change active policy
+    def test_cannot_change_active_policy_without_permission(self):
         with session.begin():
-            user1 = data_setup.create_user(password='abc')
+            user = data_setup.create_user(password=u'password')
+            system = data_setup.create_system()
+            system.custom_access_policy.add_rule(
+                permission=SystemPermission.edit_system, user=user)
+            pool = data_setup.create_system_pool(systems=[system])
         try:
             run_client(['bkr', 'system-modify',
-                        '--use-custom-policy',
-                        '--user', user1.user_name,
-                        '--password', 'abc',
-                        system1.fqdn])
+                        '--pool-policy', pool.name,
+                        '--user', user.user_name,
+                        '--password', 'password',
+                        system.fqdn])
             self.fail('Must raise')
         except ClientError as e:
             self.assertIn('Cannot edit system access policy',
