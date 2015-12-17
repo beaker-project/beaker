@@ -101,14 +101,25 @@ def start_wizard(args, config=None, env=None, **kwargs):
     return subprocess.Popen(args,
                             executable=wizard_command,
                             stdout=subprocess.PIPE,
-                            stdin=subprocess.PIPE,
+                            stdin=open('/dev/null'),
                             stderr=subprocess.PIPE,
                             env=env,
                             **kwargs)
 
-def run_wizard(args, input=None, **kwargs):
+def run_wizard(args, **kwargs):
     p = start_wizard(args, **kwargs)
-    out, err = p.communicate(input)
+    # Poor man's output rate limiting. Strictly we should be reading from 
+    # stdout and stderr concurrently in order to avoid deadlocks.
+    max_output = 10240
+    out = p.stdout.read(max_output)
+    if len(out) == max_output:
+        raise RuntimeError('Output size limit exceeded when invoking %r:\n%s'
+                % (args, out))
+    err = p.stderr.read(max_output)
+    if len(err) == max_output:
+        raise RuntimeError('Stderr size limit exceeded when invoking %r:\n%s'
+                % (args, err))
+    p.wait()
     if p.returncode:
         raise ClientError(args, p.returncode, err)
     assert err == '', err
