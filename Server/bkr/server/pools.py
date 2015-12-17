@@ -294,8 +294,8 @@ def remove_system_from_pool(pool_name):
                 system.record_activity(user=u, service=u'HTTP',
                                        field=u'Active Access Policy',
                                        action=u'Changed',
-                                       old = 'Pool policy: %s' % pool_name,
-                                       new = 'Custom access policy')
+                                       old = pool.access_policy,
+                                       new = system.custom_access_policy)
             system.pools.remove(pool)
             system.record_activity(user=u, service=u'HTTP',
                                    action=u'Removed', field=u'Pool', old=unicode(pool), new=None)

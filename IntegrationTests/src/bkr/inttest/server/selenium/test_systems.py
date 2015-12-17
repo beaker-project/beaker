@@ -547,3 +547,114 @@ class SystemHTTPTest(DatabaseTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.text,
                 'System condition report is longer than 4000 characters')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1290273
+    def test_can_update_active_access_policy_with_edit_policy_permission(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            system = data_setup.create_system()
+            system.custom_access_policy.add_rule(
+                permission=SystemPermission.edit_policy, user=user)
+            pool = data_setup.create_system_pool(systems=[system])
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': user.user_name,
+                'password': 'password'}).raise_for_status()
+        response = patch_json(get_server_base() +
+                              'systems/%s/' % system.fqdn, session=s,
+                              data={'active_access_policy': {'pool_name': pool.name}},
+        )
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(system.active_access_policy, pool.access_policy)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1290273
+    def test_cannot_update_active_access_policy_with_edit_system_permission(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            system = data_setup.create_system()
+            system.custom_access_policy.add_rule(
+                permission=SystemPermission.edit_system, user=user)
+            pool = data_setup.create_system_pool(systems=[system])
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': user.user_name,
+                'password': 'password'}).raise_for_status()
+        response = patch_json(get_server_base() +
+                              'systems/%s/' % system.fqdn, session=s,
+                              data={'active_access_policy': {'pool_name': pool.name}},
+        )
+        self.assertEquals(response.status_code, 403)
+        self.assertIn('Cannot edit system access policy', response.text)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1290273
+    def test_cannot_update_system_details_with_edit_policy_permission(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            system = data_setup.create_system()
+            system.custom_access_policy.add_rule(
+                permission=SystemPermission.edit_policy, user=user)
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': user.user_name,
+                'password': 'password'}).raise_for_status()
+        response = patch_json(get_server_base() +
+                              'systems/%s/' % system.fqdn, session=s,
+                              data={'fqdn': u'newfqdn'},
+        )
+        self.assertEquals(response.status_code, 403)
+        self.assertIn('Cannot edit system', response.text)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1290273
+    def test_records_activity_on_changing_access_policy(self):
+        with session.begin():
+            system = data_setup.create_system()
+            pool = data_setup.create_system_pool()
+            pool.systems.append(system)
+        # change the system active access policy to pool access policy
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': data_setup.ADMIN_USER,
+                'password': data_setup.ADMIN_PASSWORD}).raise_for_status()
+        response = patch_json(get_server_base() +
+                              'systems/%s/' % system.fqdn, session=s,
+                              data={'active_access_policy': {'pool_name': pool.name}},
+        )
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertTrue(system.active_access_policy, pool.access_policy)
+            self.assertEquals(system.activity[-1].field_name, 'Active Access Policy')
+            self.assertEquals(system.activity[-1].action, 'Changed')
+            self.assertEquals(system.activity[-1].old_value, 'Custom access policy')
+            self.assertEquals(system.activity[-1].new_value, 'Pool policy: %s' % unicode(pool))
+        # change the system active access policy back to custom access policy
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': data_setup.ADMIN_USER,
+                'password': data_setup.ADMIN_PASSWORD}).raise_for_status()
+        response = patch_json(get_server_base() +
+                              'systems/%s/' % system.fqdn, session=s,
+                              data={'active_access_policy': {'custom': True}},
+        )
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertTrue(system.active_access_policy, system.custom_access_policy)
+            self.assertEquals(system.activity[-2].field_name, 'Active Access Policy')
+            self.assertEquals(system.activity[-2].action, 'Changed')
+            self.assertEquals(system.activity[-2].old_value, 'Pool policy: %s' % unicode(pool))
+            self.assertEquals(system.activity[-2].new_value, 'Custom access policy')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1290273
+    def test_updating_access_policy_with_no_change_should_not_record_activity(self):
+        with session.begin():
+            system = data_setup.create_system()
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': data_setup.ADMIN_USER,
+                'password': data_setup.ADMIN_PASSWORD}).raise_for_status()
+        response = patch_json(get_server_base() +
+                              'systems/%s/' % system.fqdn, session=s,
+                              data={'active_access_policy': {'custom': True}},
+        )
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertTrue(system.active_access_policy, system.custom_access_policy)
+            self.assertEquals(system.activity, [])
