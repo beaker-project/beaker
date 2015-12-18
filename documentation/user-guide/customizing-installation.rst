@@ -227,10 +227,13 @@ correspond to the similarly-named kickstart option.
     If defined, the hardware clock is assumed to be set in UTC rather than
     local time. It's defined by default for guest recipes and dynamic VMs.
 
-``ignoredisk=<options``
-    Passed directly to the ``ignoredisk`` kickstart command. Use this to select 
-    or omit certain disks for the installation, for example 
-    ``ignoredisk=--only-use=sda``.
+``ignoredisk=<options>``
+    Options to be passed directly to the ``ignoredisk`` kickstart command. The 
+    complete option string must be given, including ``--`` and ``=``.
+    
+    Use this to skip certain disks during the installation, for example 
+    ``ignoredisk=--drives=sdb,sdc``, or to use only certain disks for the 
+    installation, for example ``ignoredisk=--only-use=sda,sdb``.
 
 ``keyboard=<layout>``
     Keyboard layout to use. Default is ``us``.
