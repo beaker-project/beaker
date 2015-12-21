@@ -48,6 +48,16 @@ class RecipesXmlRpcTest(XmlRpcTestCase):
         result = self.server.recipes.by_log_server(self.lc.fqdn)
         self.assertEqual(result, [completed_yesterday.recipesets[0].recipes[0].id])
 
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1293010
+    def test_by_log_server_skips_deleted_recipes(self):
+        with session.begin():
+            job = data_setup.create_completed_job(lab_controller=self.lc,
+                    finish_time=datetime.datetime.utcnow() - datetime.timedelta(minutes=2))
+            job.soft_delete()
+        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
+        result = self.server.recipes.by_log_server(self.lc.fqdn)
+        self.assertEqual(result, [])
+
     def test_install_done_updates_resource_fqdn(self):
         with session.begin():
             distro_tree = data_setup.create_distro_tree()

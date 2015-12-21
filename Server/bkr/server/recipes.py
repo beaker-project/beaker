@@ -72,6 +72,8 @@ class Recipes(RPCRoot):
         """
         finish_threshold = datetime.utcnow() - timedelta(minutes=2)
         recipes = Recipe.query.join(Recipe.recipeset)\
+                .join(RecipeSet.job)\
+                .filter(not_(Job.is_deleted))\
                 .filter(RecipeSet.status.in_([s for s in TaskStatus if s.finished]))\
                 .filter(not_(RecipeSet.recipes.any(Recipe.finish_time >= finish_threshold)))\
                 .filter(Recipe.log_server == server)\
