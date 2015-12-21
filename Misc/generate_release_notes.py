@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# encoding: utf8
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -33,7 +34,8 @@ _email_to_name = {
     'dcallagh@redhat.com': 'Dan Callaghan',
     'rmancy@redhat.com': 'Raymond Mancy',
     'mjia@redhat.com': 'Matt Jia',
-    'rjoost@redhat.com': 'Roman Joost',
+    'rjoost@redhat.com': u'Róman Joost',
+    'hyu@redhat.com': 'Hao Chang Yu',
 }
 
 def main():
