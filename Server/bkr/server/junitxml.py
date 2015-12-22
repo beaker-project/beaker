@@ -33,8 +33,7 @@ def _testcases_for_task(task):
         return
     yield E.testcase(
         E(u'system-out', _systemout_for_task(task)),
-        classname=task.name,
-        time='%.0f' % total_seconds(task.duration))
+        classname=task.name)
     for result in task.results:
         testcase = E.testcase(
             classname=task.name,

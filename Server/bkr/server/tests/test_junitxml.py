@@ -26,13 +26,12 @@ class JUnitXMLUnitTest(unittest.TestCase):
         recipe = job.recipesets[0].recipes[0]
         recipe.tasks[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 0)
         recipe.tasks[0].results[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 10)
-        recipe.tasks[0].finish_time = datetime.datetime(2015, 12, 14, 0, 0, 17)
         out = to_junit_xml(job)
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
   <testsuite name="happy" id="R:%s" hostname="happysystem.testdata" tests="2" failures="0" errors="0">
-    <testcase classname="/distribution/reservesys" time="17">
+    <testcase classname="/distribution/reservesys">
       <system-out>http://dummy-archive-server/beaker/tasks/dummy.txt</system-out>
     </testcase>
     <testcase classname="/distribution/reservesys" name="(none)" time="10">
@@ -50,13 +49,12 @@ class JUnitXMLUnitTest(unittest.TestCase):
         recipe = job.recipesets[0].recipes[0]
         recipe.tasks[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 0)
         recipe.tasks[0].results[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 10)
-        recipe.tasks[0].finish_time = datetime.datetime(2015, 12, 14, 0, 0, 17)
         out = to_junit_xml(job)
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
   <testsuite name="failing result" id="R:%s" hostname="happysystem.testdata" tests="2" failures="1" errors="0">
-    <testcase classname="/distribution/reservesys" time="17">
+    <testcase classname="/distribution/reservesys">
       <system-out>http://dummy-archive-server/beaker/tasks/dummy.txt</system-out>
     </testcase>
     <testcase classname="/distribution/reservesys" name="(none)" time="10">
@@ -76,13 +74,12 @@ class JUnitXMLUnitTest(unittest.TestCase):
         recipe = job.recipesets[0].recipes[0]
         recipe.tasks[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 0)
         recipe.tasks[0].results[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 10)
-        recipe.tasks[0].finish_time = datetime.datetime(2015, 12, 14, 0, 0, 17)
         out = to_junit_xml(job)
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
   <testsuite name="ewd" id="R:%s" hostname="sadsystem.testdata" tests="2" failures="0" errors="1">
-    <testcase classname="/distribution/reservesys" time="17">
+    <testcase classname="/distribution/reservesys">
       <system-out></system-out>
     </testcase>
     <testcase classname="/distribution/reservesys" name="(none)" time="10">
@@ -102,13 +99,12 @@ class JUnitXMLUnitTest(unittest.TestCase):
         recipe = job.recipesets[0].recipes[0]
         recipe.tasks[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 0)
         recipe.tasks[0].results[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 10)
-        recipe.tasks[0].finish_time = datetime.datetime(2015, 12, 14, 0, 0, 17)
         out = to_junit_xml(job)
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
   <testsuite name="cancelled" id="R:%s" hostname="sadsystem.testdata" tests="1" failures="0" errors="0">
-    <testcase classname="/distribution/reservesys" time="17">
+    <testcase classname="/distribution/reservesys">
       <system-out></system-out>
     </testcase>
     <testcase classname="/distribution/reservesys" name="(none)" time="10">
@@ -147,14 +143,13 @@ class JUnitXMLUnitTest(unittest.TestCase):
                 server_log=True)
         recipe.tasks[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 0)
         recipe.tasks[0].results[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 10)
-        recipe.tasks[0].finish_time = datetime.datetime(2015, 12, 14, 0, 0, 17)
         self.assertEqual(job.status, TaskStatus.running)
         out = to_junit_xml(job)
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
   <testsuite name="running job" id="R:%s" hostname="busysystem.testdata" tests="2" failures="0" errors="0">
-    <testcase classname="/test_junitxml/completed" time="17">
+    <testcase classname="/test_junitxml/completed">
       <system-out>http://dummy-archive-server/beaker/tasks/dummy.txt</system-out>
     </testcase>
     <testcase classname="/test_junitxml/completed" name="(none)" time="10">
@@ -175,14 +170,13 @@ class JUnitXMLUnitTest(unittest.TestCase):
         recipe.tasks[0].results[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 10)
         recipe.tasks[0].pass_(path=u'second', score=0, summary=u'(Pass)')
         recipe.tasks[0].results[1].start_time = datetime.datetime(2015, 12, 14, 0, 0, 13)
-        recipe.tasks[0].finish_time = datetime.datetime(2015, 12, 14, 0, 0, 17)
         recipe.tasks[0]._change_status(TaskStatus.completed)
         out = to_junit_xml(job)
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
   <testsuite name="duration" id="R:%s" hostname="happysystem.testdata" tests="3" failures="0" errors="0">
-    <testcase classname="/distribution/reservesys" time="17">
+    <testcase classname="/distribution/reservesys">
       <system-out></system-out>
     </testcase>
     <testcase classname="/distribution/reservesys" name="first" time="10">
@@ -217,7 +211,7 @@ class JUnitXMLUnitTest(unittest.TestCase):
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
   <testsuite name="duration" id="R:%s" hostname="happysystem.testdata" tests="5" failures="0" errors="0">
-    <testcase classname="/junitxml/names" time="5">
+    <testcase classname="/junitxml/names">
       <system-out></system-out>
     </testcase>
     <testcase classname="/junitxml/names" name="start" time="1">
