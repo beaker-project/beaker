@@ -19,16 +19,30 @@ version, see :doc:`../admin-guide/upgrading`.
    sensible order.
 
 
-Unreleased changes
-------------------
+.. Commented out for release
 
-The following changes will appear in the next Beaker release.
+    Unreleased changes
+    ------------------
+
+    The following changes will appear in the next Beaker release.
+
+    .. toctree::
+       :maxdepth: 2
+       :glob:
+
+       next/*
+
+
+Beaker 22
+---------
+
+Beaker 22 adds support for extra job XML elements, JUnit XML results output, 
+inverted groups, and many other improvements.
 
 .. toctree::
    :maxdepth: 2
-   :glob:
 
-   next/*
+   release-22
 
 
 Beaker 21
