@@ -17,8 +17,14 @@ from bkr.inttest.client import run_wizard
 class BaseWizardTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.tempdir = tempfile.mkdtemp()
-        self.addCleanup(shutil.rmtree, self.tempdir)
+        base_tempdir = tempfile.mkdtemp()
+        # Create a sub directory to avoid sending the wizard in an infinite
+        # loop. The subdirectory will be treated as a package directory by the
+        # wizard. Any invalid characters in the name will cause the wizard to
+        # ask for a new name until provided by the user.
+        self.tempdir = os.path.join(base_tempdir, 'dummy')
+        os.mkdir(self.tempdir)
+        self.addCleanup(shutil.rmtree, base_tempdir)
 
 class TestWizard(BaseWizardTestCase):
 
