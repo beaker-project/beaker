@@ -195,7 +195,7 @@ else:
 setup(
     name="bkr.server",
     namespace_packages = ['bkr'],
-    version='21.2',
+    version='22.0rc1',
     # uncomment the following lines if you fill them out in release.py
     description=description,
     author=author,
