@@ -18,8 +18,8 @@ class TestJobsController(DatabaseTestCase):
 
     maxDiff = None
 
-    @with_transaction
     def setUp(self):
+        session.begin()
         from bkr.server.jobs import Jobs
         self.controller = Jobs()
         self.user = data_setup.create_user()
@@ -28,9 +28,11 @@ class TestJobsController(DatabaseTestCase):
         testutil.set_identity_user(self.user)
         data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
         data_setup.create_product(product_name=u'the_product')
+        session.flush()
 
     def tearDown(self):
         testutil.set_identity_user(None)
+        session.rollback()
 
     def test_uploading_job_without_recipeset_raises_exception(self):
         xmljob = lxml.etree.fromstring('''
@@ -38,41 +40,35 @@ class TestJobsController(DatabaseTestCase):
                 <whiteboard>job with norecipesets</whiteboard>
             </job>
             ''')
-        with session.begin():
-            self.assertRaises(BX, lambda: self.controller.process_xmljob(xmljob, self.user))
+        self.assertRaises(BX, lambda: self.controller.process_xmljob(xmljob, self.user))
 
     def test_uploading_job_with_invalid_hostRequires_raises_exception(self):
-        session.begin()
-        try:
-            xmljob = lxml.etree.fromstring('''
-                <job>
-                    <whiteboard>job with invalid hostRequires</whiteboard>
-                    <recipeSet>
-                        <recipe>
-                            <distroRequires>
-                                <distro_name op="=" value="BlueShoeLinux5-5" />
-                            </distroRequires>
-                            <hostRequires>
-                                <memory op=">=" value="500MB" />
-                            </hostRequires>
-                            <task name="/distribution/install" role="STANDALONE">
-                                <params/>
-                            </task>
-                        </recipe>
-                    </recipeSet>
-                </job>
-                ''')
-            self.assertRaises(BX, lambda: self.controller.process_xmljob(xmljob, self.user))
-        finally:
-            session.rollback()
+        xmljob = lxml.etree.fromstring('''
+            <job>
+                <whiteboard>job with invalid hostRequires</whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires>
+                            <memory op=">=" value="500MB" />
+                        </hostRequires>
+                        <task name="/distribution/install" role="STANDALONE">
+                            <params/>
+                        </task>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        self.assertRaises(BX, lambda: self.controller.process_xmljob(xmljob, self.user))
 
     def test_job_xml_can_be_roundtripped(self):
         # Ideally the logic for parsing job XML into a Job instance would live in model code,
         # so that this test doesn't have to go through the web layer...
         complete_job_xml = pkg_resources.resource_string('bkr.inttest', 'complete-job.xml')
         xmljob = lxml.etree.fromstring(complete_job_xml)
-        with session.begin():
-            job = testutil.call(self.controller.process_xmljob, xmljob, self.user)
+        job = testutil.call(self.controller.process_xmljob, xmljob, self.user)
         roundtripped_xml = lxml.etree.tostring(job.to_xml(clone=True), pretty_print=True, encoding='utf8')
         self.assertMultiLineEqual(roundtripped_xml, complete_job_xml)
 
@@ -116,7 +112,6 @@ class TestJobsController(DatabaseTestCase):
 
     def test_upload_xml_catches_invalid_xml(self):
         """We want that invalid Job XML is caught in the validation step."""
-        session.begin()
         xmljob = lxml.etree.fromstring('''
             <job>
                 <whriteboard>job with arbitrary XML in namespaces</whriteboard>
@@ -131,10 +126,7 @@ class TestJobsController(DatabaseTestCase):
                 </recipeSet>
             </job>
         ''')
-        try:
-            self.assertRaises(BX, lambda: self.controller.process_xmljob(xmljob, self.user))
-        finally:
-            session.rollback()
+        self.assertRaises(BX, lambda: self.controller.process_xmljob(xmljob, self.user))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1112131
     def test_preserves_arbitrary_XML_elements_in_namespace(self):
@@ -142,8 +134,7 @@ class TestJobsController(DatabaseTestCase):
         with open(complete_job_xml, 'r') as f:
             contents = f.read()
             xmljob = lxml.etree.fromstring(contents)
-        with session.begin():
-            job = testutil.call(self.controller.process_xmljob, xmljob, self.user)
+        job = testutil.call(self.controller.process_xmljob, xmljob, self.user)
         tree = job.to_xml(clone=True)
         self.assertEqual(2, len(tree.xpath('*[namespace-uri()]')))
         self.assertEqual('<b:option xmlns:b="http://example.com/bar">--foobar arbitrary</b:option>',
