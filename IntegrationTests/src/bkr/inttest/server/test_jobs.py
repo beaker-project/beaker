@@ -141,3 +141,37 @@ class TestJobsController(DatabaseTestCase):
                          lxml.etree.tostring(tree.xpath('*[namespace-uri()]')[0]))
         self.assertEqual(u'<f:test xmlns:f="http://example.com/foo">unicode text: heißer Шис</f:test>'.encode('utf8'),
                          lxml.etree.tostring(tree.xpath('*[namespace-uri()]')[1], encoding='utf8'))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1295642
+    def test_parses_reservesys(self):
+        xmljob = lxml.etree.fromstring('''
+            <job>
+                <whriteboard>job with reservesys</whriteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires/> <hostRequires/>
+                        <task name="/distribution/install"/>
+                        <reservesys/>
+                    </recipe>
+                </recipeSet>
+            </job>
+        ''')
+        job = self.controller.process_xmljob(xmljob, self.user)
+        self.assertEqual(job.recipesets[0].recipes[0].reservation_request.duration, 86400)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1295642
+    def test_parses_reservesys_with_duration(self):
+        xmljob = lxml.etree.fromstring('''
+            <job>
+                <whriteboard>job with reservesys with duration</whriteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires/> <hostRequires/>
+                        <task name="/distribution/install"/>
+                        <reservesys duration="600"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+        ''')
+        job = self.controller.process_xmljob(xmljob, self.user)
+        self.assertEqual(job.recipesets[0].recipes[0].reservation_request.duration, 600)

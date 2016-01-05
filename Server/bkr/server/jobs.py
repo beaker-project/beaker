@@ -625,7 +625,7 @@ class Jobs(RPCRoot):
         recipe.role = xmlrecipe.get('role', u'None')
 
         reservesys = xmlrecipe.find('reservesys')
-        if reservesys:
+        if reservesys is not None:
             duration = reservesys.get('duration', 86400)
             recipe.reservation_request = RecipeReservationRequest(int(duration))
 
