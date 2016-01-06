@@ -125,6 +125,27 @@ class SearchColumns(WebDriverTestCase):
         self.assertGreater(len(columns), 7)
 
 
+def perform_search(browser, searchcriteria, search_url=''):
+    b = browser
+    b.get(get_server_base() + search_url)
+    b.find_element_by_link_text('Show Search Options').click()
+    wait_for_animation(b, '#searchform')
+
+    for fieldid, criteria in enumerate(searchcriteria):
+        fieldname, operation, value = criteria
+        if fieldid > 0:
+            # press the add button to add a new row
+            b.find_element_by_id('doclink').click()
+        Select(b.find_element_by_name('systemsearch-%i.table' % fieldid))\
+            .select_by_visible_text(fieldname)
+        Select(b.find_element_by_name('systemsearch-%i.operation' % fieldid))\
+            .select_by_visible_text(operation)
+        b.find_element_by_name('systemsearch-%i.value' % fieldid).clear()
+        b.find_element_by_name('systemsearch-%i.value' % fieldid).send_keys(value)
+
+    b.find_element_by_id('searchform').submit()
+
+
 class Search(WebDriverTestCase):
 
     @classmethod
@@ -196,31 +217,11 @@ class Search(WebDriverTestCase):
         self.browser = self.get_browser()
         login(self.browser)
 
-    def perform_search(self, searchcriteria, search_url=''):
-        b = self.browser
-        b.get(get_server_base() + search_url)
-        b.find_element_by_link_text('Show Search Options').click()
-        wait_for_animation(b, '#searchform')
-
-        for fieldid, criteria in enumerate(searchcriteria):
-            fieldname, operation, value = criteria
-            if fieldid > 0:
-                # press the add button to add a new row
-                b.find_element_by_id('doclink').click()
-            Select(b.find_element_by_name('systemsearch-%i.table' % fieldid))\
-                .select_by_visible_text(fieldname)
-            Select(b.find_element_by_name('systemsearch-%i.operation' % fieldid))\
-                .select_by_visible_text(operation)
-            b.find_element_by_name('systemsearch-%i.value' % fieldid).clear()
-            b.find_element_by_name('systemsearch-%i.value' % fieldid).send_keys(value)
-
-        b.find_element_by_id('searchform').submit()
-
     def test_multiple_cpu_flags(self):
         b = self.browser
 
-        self.perform_search([('CPU/Flags', 'is', 'flag1'),
-                             ('CPU/Flags', 'is', 'flag2')])
+        perform_search(b, [('CPU/Flags', 'is', 'flag1'),
+                           ('CPU/Flags', 'is', 'flag2')])
         check_system_search_results(b, present=[self.system_one],
                 absent=[self.system_two, self.system_three])
 
@@ -243,19 +244,19 @@ class Search(WebDriverTestCase):
     def test_by_device(self):
         b = self.browser
 
-        self.perform_search([('Devices/Subsys_device_id', 'is', '1112')])
+        perform_search(b, [('Devices/Subsys_device_id', 'is', '1112')])
         check_system_search_results(b, present=[self.system_three],
                 absent=[self.system_one, self.system_two])
 
-        self.perform_search([('Devices/Subsys_vendor_id', 'is not', '1111'),
-                             ('Devices/Subsys_device_id', 'is', '2224')])
+        perform_search(b, [('Devices/Subsys_vendor_id', 'is not', '1111'),
+                           ('Devices/Subsys_device_id', 'is', '2224')])
         check_system_search_results(b, present=[self.system_two],
                 absent=[self.system_one, self.system_three])
 
     def test_by_name(self):
         b = self.browser
 
-        self.perform_search([('System/Name', 'is', self.system_one.fqdn)])
+        perform_search(b, [('System/Name', 'is', self.system_one.fqdn)])
         check_system_search_results(b, present=[self.system_one],
                 absent=[self.system_two, self.system_three])
 
@@ -298,16 +299,16 @@ class Search(WebDriverTestCase):
 
         b = self.browser
 
-        self.perform_search([('System/Reserved', 'is', '2003-01-21')])
+        perform_search(b, [('System/Reserved', 'is', '2003-01-21')])
         check_system_search_results(b, present=[s1], absent=[s2])
 
-        self.perform_search([('System/Reserved', 'before', '2005-1-21')])
+        perform_search(b, [('System/Reserved', 'before', '2005-1-21')])
         check_system_search_results(b, present=[s1], absent=[s2])
 
-        self.perform_search([('System/Reserved', 'after', '2005-1-21')])
+        perform_search(b, [('System/Reserved', 'after', '2005-1-21')])
         check_system_search_results(b, absent=[s1, s2])
 
-        self.perform_search([('System/Reserved', 'after', '2005-1-1')])
+        perform_search(b, [('System/Reserved', 'after', '2005-1-1')])
         check_system_search_results(b, present=[s2], absent=[s1])
 
     def test_by_date_added(self):
@@ -318,21 +319,21 @@ class Search(WebDriverTestCase):
             old_system.date_added = datetime.datetime(2001, 1, 15, 14, 12, 0)
 
         b = self.browser
-        self.perform_search([('System/Added', 'is', '2001-01-15')])
+        perform_search(b, [('System/Added', 'is', '2001-01-15')])
         check_system_search_results(b, present=[old_system], absent=[new_system])
 
-        self.perform_search([('System/Added', 'before', '2001-01-16')])
+        perform_search(b, [('System/Added', 'before', '2001-01-16')])
         check_system_search_results(b, present=[old_system], absent=[new_system])
 
-        self.perform_search([('System/Added', 'after', '2020-12-31')])
+        perform_search(b, [('System/Added', 'after', '2020-12-31')])
         # no results
         b.find_element_by_xpath('//table[@id="widget" and not(.//td)]')
 
-        self.perform_search([('System/Added', 'after', '2020-06-20')])
+        perform_search(b, [('System/Added', 'after', '2020-06-20')])
         check_system_search_results(b, present=[new_system], absent=[old_system])
 
-        self.perform_search([('System/Added', 'after', '2020-06-20'),
-                             ('System/Added', 'before', '2020-06-22')])
+        perform_search(b, [('System/Added', 'after', '2020-06-20'),
+                           ('System/Added', 'before', '2020-06-22')])
         check_system_search_results(b, present=[new_system], absent=[old_system])
 
     def test_by_key_value_is(self):
@@ -437,11 +438,11 @@ class Search(WebDriverTestCase):
     def test_can_search_by_numa_node_count(self):
         b = self.browser
 
-        self.perform_search([('System/NumaNodes', 'greater than', '1')])
+        perform_search(b, [('System/NumaNodes', 'greater than', '1')])
         check_system_search_results(b, present=[self.system_one],
                 absent=[self.system_two, self.system_three])
 
-        self.perform_search([('System/NumaNodes', 'less than', '2')])
+        perform_search(b, [('System/NumaNodes', 'less than', '2')])
         check_system_search_results(b, present=[self.system_three],
                 absent=[self.system_one, self.system_two])
 
@@ -456,7 +457,7 @@ class Search(WebDriverTestCase):
             excluded = data_setup.create_system(fqdn=data_setup.unique_name(u'aardvark%s'))
             data_setup.create_manual_reservation(excluded)
         b = self.browser
-        self.perform_search([('System/Name', 'is', included.fqdn)],
+        perform_search(b, [('System/Name', 'is', included.fqdn)],
                 search_url='reports/')
         check_system_search_results(b, present=[included], absent=[excluded])
 
@@ -534,7 +535,7 @@ class Search(WebDriverTestCase):
         with session.begin():
             system = data_setup.create_system(location=bad_string)
         b = self.browser
-        self.perform_search([('System/Location', 'is', bad_string)])
+        perform_search(b, [('System/Location', 'is', bad_string)])
         check_system_search_results(b, present=[system],
                 absent=[self.system_one, self.system_two, self.system_three])
 
