@@ -20,7 +20,7 @@
     <label class="control-label" for="status_reason">Condition Report</label>
     <div class="controls">
       <textarea id="status_reason" name="status_reason"
-          class="input-block-level" rows="4"
+          class="input-block-level" rows="4" maxlength="4000"
           <% if (!can_change_status) { %>disabled<% } %>></textarea>
       <span class="help-block">The condition report is displayed to all users. 
       You can use it to record the reason why the system has been removed from 
