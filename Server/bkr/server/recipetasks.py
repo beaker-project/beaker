@@ -4,7 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from turbogears import expose
+from turbogears import expose, config
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server import identity
@@ -64,6 +64,15 @@ class RecipeTasks(RPCRoot):
         if result.recipetask.is_finished():
             raise BX('Cannot register file for finished task %s'
                     % result.recipetask.t_id)
+        # Enforce result-logs-per-recipe limit if configured
+        max_logs = config.get('beaker.max_result_logs_per_recipe', 7500)
+        if max_logs and max_logs > 0:
+            recipe_id = result.recipetask.recipe_id
+            result_log_count = LogRecipeTaskResult.query\
+                    .join(LogRecipeTaskResult.parent, RecipeTaskResult.recipetask)\
+                    .filter(RecipeTask.recipe_id == recipe_id).count()
+            if result_log_count >= max_logs:
+                raise ValueError('Too many result logs in recipe %s' % recipe_id)
 
         log_recipe = LogRecipeTaskResult.lazy_create(recipe_task_result_id=result.id,
                                                      path=path, 

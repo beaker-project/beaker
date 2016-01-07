@@ -3360,6 +3360,13 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
         """
         if self.is_finished():
             raise ValueError('Cannot record result for finished task %s' % self.t_id)
+        # Enforce results-per-recipe limit if configured
+        max_results_per_recipe = get('beaker.max_results_per_recipe', 7500)
+        if max_results_per_recipe and max_results_per_recipe > 0:
+            result_count = RecipeTaskResult.query.join(RecipeTaskResult.recipetask)\
+                    .filter(RecipeTask.recipe_id == self.recipe_id).count()
+            if result_count >= max_results_per_recipe:
+                raise ValueError('Too many results in recipe %s' % self.recipe_id)
         recipeTaskResult = RecipeTaskResult(
                                    path=path,
                                    result=result,

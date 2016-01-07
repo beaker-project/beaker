@@ -19,7 +19,7 @@ import time
 from nose.plugins.skip import SkipTest
 from bkr.common.helpers import total_seconds
 from bkr.server.model import session, TaskResult, TaskStatus, LogRecipe, \
-        LogRecipeTask, LogRecipeTaskResult, RecipeTask
+        LogRecipeTask, LogRecipeTaskResult, RecipeTask, RecipeTaskResult
 from bkr.labcontroller.proxy import ProxyHelper
 from bkr.labcontroller.config import get_conf
 from bkr.inttest import data_setup
@@ -234,6 +234,27 @@ class TaskResultTest(LabControllerTestCase):
         response = requests.post(results_url, data=dict(result='Pass'),
                 allow_redirects=False)
         self.assertEquals(response.status_code, 409)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1293007
+    def test_max_results_per_recipe_limit_is_enforced(self):
+        with session.begin():
+            RecipeTaskResult.__table__.insert().values([
+                {'recipe_task_id': self.recipe.tasks[0].id,
+                 'result': TaskResult.pass_, 'path': 'test-bz1293007',
+                 'score': i, 'start_time': datetime.datetime.utcnow()}
+                for i in range(7500)]).execute()
+            session.expire(self.recipe.tasks[0])
+            self.assertEqual(len(self.recipe.tasks[0].results), 7500)
+        # Test XMLRPC endpoint
+        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        with self.assertRaisesRegexp(xmlrpclib.Fault, 'Too many results'):
+            s.task_result(self.recipe.tasks[0].id, 'pass_', '/', 0, 'Should fail')
+        # Test POST endpoint
+        results_url = '%srecipes/%s/tasks/%s/results/' % (self.get_proxy_url(),
+                self.recipe.id, self.recipe.tasks[0].id)
+        response = requests.post(results_url, data=dict(result='Pass'))
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('Too many results in recipe', response.text)
 
 class TaskStatusTest(LabControllerTestCase):
 
@@ -958,6 +979,31 @@ class LogUploadTest(LabControllerTestCase):
                 self.recipe.id)
         response = requests.put(upload_url, data='a' * (1024 * 1024 * 10 + 1))
         self.assertEquals(response.status_code, 413)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1293007
+    def test_max_result_logs_per_recipe_limit_is_enforced(self):
+        with session.begin():
+            self.recipe.tasks[0].pass_(path=u'test-bz1293007',
+                    score=0, summary=u'Result with many logs')
+            result = self.recipe.tasks[0].results[0]
+            session.execute(LogRecipeTaskResult.__table__.insert().values([
+                {'recipe_task_result_id': result.id,
+                 'path': '/', 'filename': 'bz1293007.log',
+                 'start_time': datetime.datetime.utcnow()}
+                for i in range(7500)]))
+            session.expire(result)
+            self.assertEqual(len(result.logs), 7500)
+        # Test XMLRPC endpoint
+        s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
+        with self.assertRaisesRegexp(xmlrpclib.Fault, 'Too many result logs'):
+            s.result_upload_file(result.id, '/', 'result-log', 10, None, 0,
+                    b64encode('a' * 10))
+        # Test POST endpoint
+        upload_url = '%srecipes/%s/tasks/%s/results/%s/logs/too-many' % (
+                self.get_proxy_url(), self.recipe.id, self.recipe.tasks[0].id, result.id)
+        response = requests.put(upload_url, data='a' * 10)
+        self.assertEquals(response.status_code, 403)
+        self.assertIn('Too many result logs in recipe', response.text)
 
 class LogIndexTest(LabControllerTestCase):
 

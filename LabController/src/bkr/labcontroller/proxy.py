@@ -868,6 +868,9 @@ class ProxyHTTP(object):
             if 'Cannot record result for finished task' in fault.faultString:
                 return Response(status=409, response=fault.faultString,
                         content_type='text/plain')
+            elif 'Too many results in recipe' in fault.faultString:
+                return Response(status=403, response=fault.faultString,
+                        content_type='text/plain')
             else:
                 raise
         return redirect('/recipes/%s/tasks/%s/results/%s' % (
@@ -968,6 +971,9 @@ class ProxyHTTP(object):
         except xmlrpclib.Fault, fault:
             if 'Cannot register file for finished ' in fault.faultString:
                 return Response(status=409, response=fault.faultString,
+                        content_type='text/plain')
+            elif 'Too many ' in fault.faultString:
+                return Response(status=403, response=fault.faultString,
                         content_type='text/plain')
             else:
                 raise
