@@ -19,18 +19,16 @@ version, see :doc:`../admin-guide/upgrading`.
    sensible order.
 
 
-.. Commented out for release
+Unreleased changes
+------------------
 
-    Unreleased changes
-    ------------------
+The following changes will appear in the next Beaker release.
 
-    The following changes will appear in the next Beaker release.
+.. toctree::
+   :maxdepth: 2
+   :glob:
 
-    .. toctree::
-       :maxdepth: 2
-       :glob:
-
-       next/*
+   next/*
 
 
 Beaker 22
