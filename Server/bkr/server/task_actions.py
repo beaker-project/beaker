@@ -79,7 +79,7 @@ class TaskActions(RPCRoot):
         Returns an array of XML-RPC structures (dicts) describing each of the 
         result files for the given job component and its descendants.
         """
-        return TaskBase.get_by_t_id(taskid).all_logs
+        return list(TaskBase.get_by_t_id(taskid).all_logs)
 
     @identity.require(identity.not_anonymous())
     @cherrypy.expose

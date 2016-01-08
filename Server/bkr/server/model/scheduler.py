@@ -26,7 +26,7 @@ from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
 from sqlalchemy.sql import select, union, and_, or_, not_, func, literal, exists
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import (mapper, relationship, object_mapper,
-        dynamic_loader, validates, synonym)
+        dynamic_loader, validates, synonym, contains_eager)
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.associationproxy import association_proxy
 from turbogears import url
@@ -1182,7 +1182,10 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
 
     @property
     def all_logs(self):
-        return sum([rs.all_logs for rs in self.recipesets], [])
+        """
+        Returns an iterator of dicts describing all logs in this job.
+        """
+        return (log for rs in self.recipesets for log in rs.all_logs)
 
     @property
     def all_activity(self):
@@ -1753,7 +1756,10 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
 
     @property
     def all_logs(self):
-        return sum([recipe.all_logs for recipe in self.recipes], [])
+        """
+        Returns an iterator of dicts describing all logs in this recipeset.
+        """
+        return (log for recipe in self.recipes for log in recipe.all_logs)
 
     def set_response(self, response):
         old_response = None
@@ -2737,10 +2743,26 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
     @property
     def all_logs(self):
         """
-        Return all logs for this recipe
+        Returns an iterator of dicts describing all logs in this recipe.
         """
-        return [mylog.dict for mylog in self.logs] + \
-               sum([task.all_logs for task in self.tasks], [])
+        # Get all the logs from log_* tables directly to avoid doing N database
+        # queries for N results on large recipes.
+        recipe_logs = LogRecipe.query\
+                .filter(LogRecipe.recipe_id == self.id).all()
+        recipe_task_logs = LogRecipeTask.query\
+                .join(LogRecipeTask.parent)\
+                .join(RecipeTask.recipe)\
+                .options(contains_eager(LogRecipeTask.parent))\
+                .filter(Recipe.id == self.id).all()
+        recipe_task_result_logs =  LogRecipeTaskResult.query\
+                .join(LogRecipeTaskResult.parent)\
+                .join(RecipeTaskResult.recipetask)\
+                .join(RecipeTask.recipe)\
+                .options(contains_eager(LogRecipeTaskResult.parent))\
+                .filter(Recipe.id == self.id).all()
+        return chain((log.dict for log in recipe_logs),
+               (log.dict for log in recipe_task_logs),
+               (log.dict for log in recipe_task_result_logs))
 
     def is_task_applicable(self, task):
         """ Does the given task apply to this recipe?
@@ -3234,8 +3256,19 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
 
     @property
     def all_logs(self):
-        return [mylog.dict for mylog in self.logs] + \
-               sum([result.all_logs for result in self.results], [])
+        """
+        Returns an iterator of dicts describing all logs in this task.
+        """
+        recipe_task_logs = LogRecipeTask.query\
+                .filter(LogRecipeTask.recipe_task_id == self.id).all()
+        recipe_task_result_logs =  LogRecipeTaskResult.query\
+                .join(LogRecipeTaskResult.parent)\
+                .join(RecipeTaskResult.recipetask)\
+                .filter(RecipeTask.id == self.id)\
+                .options(contains_eager(LogRecipeTaskResult.parent))\
+                .all()
+        return chain([log.dict for log in recipe_task_logs],
+               [log.dict for log in recipe_task_result_logs])
 
     @property
     def is_dirty(self):
@@ -3635,7 +3668,10 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
 
     @property
     def all_logs(self):
-        return [mylog.dict for mylog in self.logs]
+        """
+        Returns an iterator of dicts describing all logs in this result.
+        """
+        return (mylog.dict for mylog in self.logs)
 
     def get_log_dirs(self):
         return self._get_log_dirs()
