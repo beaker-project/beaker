@@ -5,6 +5,7 @@
 # (at your option) any later version.
 
 from sqlalchemy.sql import Insert, Select, and_, not_, exists
+from sqlalchemy.sql import text as sqltext
 from sqlalchemy.ext import compiler
 from sqlalchemy.dialects.mysql.base import MySQLDialect
 
@@ -27,7 +28,12 @@ class ConditionalInsert(Insert):
 def visit_conditional_insert(element, compiler, **kwargs):
     # magic copied from sqlalchemy.sql.compiler.SQLCompiler.visit_insert
     compiler.isinsert = True
-    colparams = compiler._get_colparams(element)
+    try:
+        # pylint: disable=E0611
+        from sqlalchemy.sql import crud
+        colparams = crud._get_crud_params(compiler, element)
+    except ImportError:  # SQLAlchemy <= 1.0
+        colparams = compiler._get_colparams(element)
     text = 'INSERT INTO %s' % compiler.process(element.table, asfrom=True)
     text += ' (%s)\n' % ', '.join(compiler.preparer.format_column(c[0])
             for c in colparams)
@@ -42,7 +48,7 @@ def visit_conditional_insert(element, compiler, **kwargs):
     # subsequently upgrading it to an exclusive lock, which is subject to 
     # deadlocks if another transaction is doing the same thing.
     nonexistence_clause = not_(exists(Select(
-            columns=['1'], from_obj=[element.table],
+            columns=[sqltext('1')], from_obj=[element.table],
             whereclause=element.unique_condition, for_update=True)))
     text += 'WHERE ' + compiler.process(nonexistence_clause)
     return text
