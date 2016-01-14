@@ -11,8 +11,7 @@ from turbogears import config
 from turbogears.database import metadata
 from bkr.server.tools.init import upgrade_db, downgrade_db
 from sqlalchemy.orm import create_session
-from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, \
-        User, SystemActivity, Activity
+from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, User
 
 def has_initial_sublist(larger, prefix):
     """ Return true iff list *prefix* is an initial sublist of list 
@@ -459,24 +458,4 @@ class MigrationTest(unittest.TestCase):
         # check that access policy 2 has been deleted
         self.assertEquals(
                 self.migration_session.query(SystemAccessPolicy).filter_by(id=2).count(),
-                0)
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=1290273
-    def test_clear_meaningless_system_activities(self):
-        connection = self.migration_metadata.bind.connect()
-        # populate empty database
-        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                'database-dumps/20.sql'))
-        connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (1, "test.fqdn.name", "2015-12-15", 1, 1, 1, 1)')
-        connection.execute("INSERT INTO activity "
-                "(id, user_id, created, type, field_name, service, action, old_value, new_value) "
-                "VALUES (1, NULL, '2015-12-15 01:11:56', 'system_activity', 'System Acess Policy', "
-                "'HTTP', 'changed', 'Custom Access Policy', 'Custom access policy')")
-        connection.execute("INSERT INTO system_activity (id, system_id) "
-                "VALUES (1, 1)")
-        # run migration
-        upgrade_db(self.migration_metadata)
-        # check that systtem activity and activity have been deleted
-        self.assertEquals(
-                self.migration_session.query(SystemActivity).filter_by(id=1).count(),
                 0)
