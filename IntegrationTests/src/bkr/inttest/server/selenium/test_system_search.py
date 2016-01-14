@@ -513,6 +513,27 @@ class Search(WebDriverTestCase):
         Select(b.find_element_by_name('systemsearch-0.keyvalue'))\
             .select_by_visible_text('</script>')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1295998
+    def test_closing_script_tag_from_search_value_is_escaped(self):
+        bad_string = u"</script><script>alert('hi')</script>"
+        with session.begin():
+            system = data_setup.create_system(location=bad_string)
+        b = self.browser
+        self.perform_search([('System/Location', 'is', bad_string)])
+        check_system_search_results(b, present=[system],
+                absent=[self.system_one, self.system_two, self.system_three])
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1295998
+    def test_closing_script_tag_from_simplesearch_is_escaped(self):
+        bad_string = u"</script><script>alert('hi')</script>"
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_name('simplesearch').send_keys(bad_string)
+        b.find_element_by_name('systemsearch_simple').submit()
+        # System simplesearch matches on FQDN but we can never have an FQDN 
+        # containing </script> so we can only expect empty results. The 
+        # important thing is that there should not be a JS alert present.
+        b.find_element_by_xpath('//span[@class="item-count" and text()="Items found: 0"]')
 
 class SystemVisibilityTest(WebDriverTestCase):
 
