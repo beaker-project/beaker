@@ -1131,7 +1131,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
             return valid_jobs
         elif query:
             query = query.filter(cls.status.in_([status for status in TaskStatus if status.finished]))
-            query = query.filter(and_(Job.to_delete == None, Job.deleted == None))
+            query = query.filter(not_(Job.is_deleted))
             query = query.filter(Job.owner==identity.current.user)
             return query
 
@@ -1213,6 +1213,16 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         if self.owner == user:
             return True
         return False
+
+    @hybrid_property
+    def is_deleted(self):
+        if self.deleted or self.to_delete:
+            return True
+        return False
+
+    @is_deleted.expression
+    def is_deleted(cls): #pylint: disable=E0213
+        return or_(cls.deleted != None, cls.to_delete != None)
 
     def priority_settings(self, prefix, colspan='1'):
         span = Element('span')
@@ -2094,7 +2104,7 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         return self.recipeset.job.owner == user
 
     def is_deleted(self):
-        if self.recipeset.job.deleted or self.recipeset.job.to_delete:
+        if self.recipeset.job.is_deleted:
             return True
         return False
 
