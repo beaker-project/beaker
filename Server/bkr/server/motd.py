@@ -26,7 +26,15 @@ def _load_motd(filename):
         else:
             raise
     parser = etree.XMLParser(recover=True)
-    tree = etree.parse(f,parser)
+    try:
+        tree = etree.parse(f,parser)
+    except etree.XMLSyntaxError as e:
+        # Workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1298018
+        # When recover=True is used, the parser is not supposed to raise 
+        # a syntax error. But due to changes in libxml2 the empty document has 
+        # started raising.
+        log.info('Motd has syntax error, ignoring: %s', e)
+        return None
     if tree.getroot() is None:
         return None
     return etree.tostring(tree.getroot())
