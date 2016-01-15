@@ -164,6 +164,7 @@ def anamon_loop():
         WatchedFile("/tmp/program.log", "program.log"),
         WatchedFile("/tmp/vncserver.log", "vncserver.log"),
         WatchedFile("/tmp/ks.cfg", "ks.cfg"),
+        WatchedFile("/run/install/ks.cfg", "ks.cfg"),
         WatchedFile("/tmp/ks-script.log", "ks-script.log"),
         WatchedFile("/tmp/anacdump.txt", "anacdump.txt"),
         WatchedFile("/tmp/modprobe.conf", "modprobe.conf"),
