@@ -579,6 +579,15 @@ Template variables
         Name of the distro variant, for example "Server". This may also be 
         empty.
 
+.. py:data:: harnessrepo=<repo_name>,<repo_url>
+
+   Repository used to download harness RPMs from. For example::
+
+        {% if harnessrepo %}
+            {% set repo_name, repo_url = harnessrepo.split(',', 1) %}
+            repo --name={{ repo_name }} --baseurl={{ repo_url }}
+        {% endif %}
+
 .. py:data:: job_whiteboard
 
    The value of the job whiteboard.
@@ -625,6 +634,16 @@ Template variables
    This is also available as a Jinja statement, for example::
 
         {% snippet 'network' %}
+
+.. py:data:: taskrepo=<repo_name>,<repo_url>
+
+   Repository used to download tasks RPMs from. This is independent for each
+   job. For example::
+
+        {% if taskrepo %}
+            {% set repo_name, repo_url = taskrepo.split(',', 1) %}
+            repo --name={{ repo_name }} --baseurl={{ repo_url }}
+        {% endif %}
 
 .. py:function:: var(name)
 
