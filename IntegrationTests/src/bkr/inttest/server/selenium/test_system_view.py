@@ -216,13 +216,15 @@ class SystemViewTestWD(WebDriverTestCase):
         tab = b.find_element_by_id('scheduler-settings')
         BootstrapSelect(tab.find_element_by_name('status'))\
             .select_by_visible_text('Broken')
-        long_text = u'reallylong' * 500
+        # The browser should prevent us from typing in more than 4000 
+        # characters. We populate the first 3999 characters using 
+        # execute_script because sending each key individually is too slow.
+        # https://code.google.com/p/selenium/issues/detail?id=3732#c8
         b.execute_script('document.getElementById("status_reason").value = "%s"'
-                % long_text)
-        tab.find_element_by_xpath('.//button[text()="Save Changes"]').click()
-        self.assertIn(
-                'System condition report is longer than 4000 characters',
-                tab.find_element_by_class_name('alert-error').text)
+                % ('a' * 3999))
+        b.find_element_by_name('status_reason').send_keys('bbbbb')
+        value = b.find_element_by_name('status_reason').get_attribute('value')
+        self.assertEqual(len(value), 4000)
 
     def test_rejects_fqdn_with_whitespace(self):
         b = self.browser

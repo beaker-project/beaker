@@ -537,3 +537,13 @@ class SystemHTTPTest(DatabaseTestCase):
             self.assertTrue(self.system.active_access_policy.grants \
                             (user1, SystemPermission.edit_system))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=980352
+    def test_condition_report_length_is_enforced(self):
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': self.owner.user_name,
+                'password': 'theowner'}).raise_for_status()
+        response = patch_json(get_server_base() + 'systems/%s/' % self.system.fqdn,
+                session=s, data={'status': 'Broken', 'status_reason': 'reallylong' * 500})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text,
+                'System condition report is longer than 4000 characters')
