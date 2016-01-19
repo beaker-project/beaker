@@ -23,27 +23,6 @@ class CalledProcessError(Exception):
     def __str__(self):
         return "Command '%s' returned non-zero exit status %d" % (self.cmd, self.returncode)
 
-def subprocess_sp(cmd, shell=True):
-    logger.debug("running: %s", cmd)
-    try:
-        sp = subprocess.Popen(cmd, shell=shell, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    except OSError:
-        logger.exception("OS Error, command not found?  While running: %s", cmd)
-        raise
-
-    data = sp.communicate()[0]
-    rc = sp.returncode
-    logger.debug("received: %s" % data)
-    return data, rc
-
-def subprocess_call(cmd, shell=True):
-    data, rc = subprocess_sp(cmd, shell=shell)
-    return rc
-
-def subprocess_get(cmd, shell=True):
-    data, rc = subprocess_sp(cmd, shell=shell)
-    return data
-
 def check_output(*popenargs, **kwargs):
     r"""Run command with arguments and return its output as a byte string.
 
