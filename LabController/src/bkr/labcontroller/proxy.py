@@ -22,6 +22,7 @@ import xmlrpclib
 import socket
 import subprocess
 import pkg_resources
+import shlex
 from cStringIO import StringIO
 from socket import gethostname
 from threading import Thread, Event
@@ -504,9 +505,9 @@ class Watchdog(ProxyHelper):
     def rsync(self, src, dst):
         """ Run system rsync command to move files
         """
-        my_cmd = 'rsync %s %s %s' % (self.conf.get('RSYNC_FLAGS',''), src, dst)
-        logger.debug('Invoking rsync as %r', my_cmd)
-        p = subprocess.Popen(my_cmd, shell=True, stderr=subprocess.PIPE)
+        args = ['rsync'] + shlex.split(self.conf.get('RSYNC_FLAGS', '')) + [src, dst]
+        logger.debug('Invoking rsync as %r', args)
+        p = subprocess.Popen(args, stderr=subprocess.PIPE)
         out, err = p.communicate()
         if p.returncode != 0:
             logger.error('Failed to rsync recipe logs from %s to %s\nExit status: %s\n%s',
