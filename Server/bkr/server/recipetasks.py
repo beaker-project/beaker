@@ -27,6 +27,27 @@ class RecipeTasks(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
 
+    def _check_log_limit(self, recipetask):
+        max_logs = config.get('beaker.max_logs_per_recipe', 7500)
+        if not max_logs or max_logs <= 0:
+            return
+        task_log_count = LogRecipeTask.query.join(LogRecipeTask.parent)\
+                .filter(RecipeTask.recipe_id == recipetask.recipe_id).count()
+        result_log_count = LogRecipeTaskResult.query\
+                .join(LogRecipeTaskResult.parent, RecipeTaskResult.recipetask)\
+                .filter(RecipeTask.recipe_id == recipetask.recipe_id).count()
+        if (task_log_count + result_log_count) >= max_logs:
+            raise ValueError('Too many logs in recipe %s' % recipetask.recipe_id)
+
+    def _check_result_limit(self, recipetask):
+        max_results_per_recipe = config.get('beaker.max_results_per_recipe', 7500)
+        if not max_results_per_recipe or max_results_per_recipe <= 0:
+            return
+        result_count = RecipeTaskResult.query.join(RecipeTaskResult.recipetask)\
+                .filter(RecipeTask.recipe_id == recipetask.recipe_id).count()
+        if result_count >= max_results_per_recipe:
+            raise ValueError(u'Too many results in recipe %s' % recipetask.recipe_id)
+
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def register_file(self, server, task_id, path, filename, basepath):
@@ -40,6 +61,7 @@ class RecipeTasks(RPCRoot):
         if recipetask.is_finished():
             raise BX('Cannot register file for finished task %s'
                     % recipetask.t_id)
+        self._check_log_limit(recipetask)
 
         # Add the log to the DB if it hasn't been recorded yet.
         log_recipe = LogRecipeTask.lazy_create(recipe_task_id=recipetask.id,
@@ -64,15 +86,7 @@ class RecipeTasks(RPCRoot):
         if result.recipetask.is_finished():
             raise BX('Cannot register file for finished task %s'
                     % result.recipetask.t_id)
-        # Enforce result-logs-per-recipe limit if configured
-        max_logs = config.get('beaker.max_result_logs_per_recipe', 7500)
-        if max_logs and max_logs > 0:
-            recipe_id = result.recipetask.recipe_id
-            result_log_count = LogRecipeTaskResult.query\
-                    .join(LogRecipeTaskResult.parent, RecipeTaskResult.recipetask)\
-                    .filter(RecipeTask.recipe_id == recipe_id).count()
-            if result_log_count >= max_logs:
-                raise ValueError('Too many result logs in recipe %s' % recipe_id)
+        self._check_log_limit(result.recipetask)
 
         log_recipe = LogRecipeTaskResult.lazy_create(recipe_task_result_id=result.id,
                                                      path=path, 
@@ -193,6 +207,7 @@ class RecipeTasks(RPCRoot):
         if result_type not in task.result_types:
             raise BX(_('Invalid result_type: %s, must be one of %s' %
                              (result_type, task.result_types)))
+        self._check_result_limit(task)
         kwargs = dict(path=path, score=score, summary=summary)
         return getattr(task,result_type)(**kwargs)
 

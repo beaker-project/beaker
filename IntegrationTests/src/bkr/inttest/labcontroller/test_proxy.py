@@ -981,29 +981,49 @@ class LogUploadTest(LabControllerTestCase):
         self.assertEquals(response.status_code, 413)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1293007
-    def test_max_result_logs_per_recipe_limit_is_enforced(self):
+    def test_max_logs_per_recipe_limit_is_enforced(self):
         with session.begin():
             self.recipe.tasks[0].pass_(path=u'test-bz1293007',
                     score=0, summary=u'Result with many logs')
-            result = self.recipe.tasks[0].results[0]
+            task = self.recipe.tasks[0]
+            result = task.results[0]
+            # 4000 task logs, 3500 result logs
+            session.execute(LogRecipeTask.__table__.insert().values([
+                {'recipe_task_id': task.id,
+                 'path': '/', 'filename': 'bz1293007.log',
+                 'start_time': datetime.datetime.utcnow()}
+                for i in range(4000)]))
+            session.expire(task)
+            self.assertEqual(len(task.logs), 4000)
             session.execute(LogRecipeTaskResult.__table__.insert().values([
                 {'recipe_task_result_id': result.id,
                  'path': '/', 'filename': 'bz1293007.log',
                  'start_time': datetime.datetime.utcnow()}
-                for i in range(7500)]))
+                for i in range(3500)]))
             session.expire(result)
-            self.assertEqual(len(result.logs), 7500)
-        # Test XMLRPC endpoint
+            self.assertEqual(len(result.logs), 3500)
+        # Test XMLRPC endpoint for result logs
         s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
-        with self.assertRaisesRegexp(xmlrpclib.Fault, 'Too many result logs'):
+        with self.assertRaisesRegexp(xmlrpclib.Fault, 'Too many logs'):
             s.result_upload_file(result.id, '/', 'result-log', 10, None, 0,
                     b64encode('a' * 10))
-        # Test POST endpoint
+        # Test POST endpoint for result logs
         upload_url = '%srecipes/%s/tasks/%s/results/%s/logs/too-many' % (
-                self.get_proxy_url(), self.recipe.id, self.recipe.tasks[0].id, result.id)
+                self.get_proxy_url(), self.recipe.id, task.id, result.id)
         response = requests.put(upload_url, data='a' * 10)
         self.assertEquals(response.status_code, 403)
-        self.assertIn('Too many result logs in recipe', response.text)
+        self.assertIn('Too many logs in recipe', response.text)
+        # Test XMLRPC endpoint for task logs
+        s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
+        with self.assertRaisesRegexp(xmlrpclib.Fault, 'Too many logs'):
+            s.task_upload_file(task.id, '/', 'task-log', 10, None, 0,
+                    b64encode('a' * 10))
+        # Test POST endpoint for task logs
+        upload_url = '%srecipes/%s/tasks/%s/logs/too-many' % (
+                self.get_proxy_url(), self.recipe.id, task.id)
+        response = requests.put(upload_url, data='a' * 10)
+        self.assertEquals(response.status_code, 403)
+        self.assertIn('Too many logs in recipe', response.text)
 
 class LogIndexTest(LabControllerTestCase):
 
