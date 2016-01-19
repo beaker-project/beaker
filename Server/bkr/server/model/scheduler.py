@@ -3410,12 +3410,11 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
                     .filter(RecipeTask.recipe_id == self.recipe_id).count()
             if result_count >= max_results_per_recipe:
                 raise ValueError('Too many results in recipe %s' % self.recipe_id)
-        recipeTaskResult = RecipeTaskResult(
+        recipeTaskResult = RecipeTaskResult(recipetask=self,
                                    path=path,
                                    result=result,
                                    score=score,
                                    log=summary)
-        self.results.append(recipeTaskResult)
         # Flush the result to the DB so we can return the id.
         session.add(recipeTaskResult)
         session.flush()
