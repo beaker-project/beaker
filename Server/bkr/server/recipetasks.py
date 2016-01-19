@@ -5,6 +5,7 @@
 # (at your option) any later version.
 
 from turbogears import expose, config
+from sqlalchemy.sql import func
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server import identity
@@ -16,7 +17,7 @@ import urlparse
 
 import cherrypy
 
-from bkr.server.model import (RecipeTask, LogRecipeTask,
+from bkr.server.model import (session, RecipeTask, LogRecipeTask,
                               RecipeTaskResult, LogRecipeTaskResult,
                               LabController, Watchdog, ResourceType)
 from flask import redirect
@@ -26,6 +27,25 @@ from bkr.server.flask_util import NotFound404
 class RecipeTasks(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
+
+    def _warn_once(self, recipetask, msg):
+        """
+        Records a Warn result with the given message against the given recipe 
+        task, but only if the same message does not already appear anywhere 
+        else in the recipe already.
+        """
+        # We use a query with count() here, rather than loading all task 
+        # results, for efficiency. Bear in mind that this code may be 
+        # firing once we already have a very large number of results against 
+        # the task, which could be expensive to fully load.
+        if RecipeTaskResult.query.join(RecipeTaskResult.recipetask)\
+                .filter(RecipeTask.recipe_id == recipetask.recipe_id)\
+                .filter(RecipeTaskResult.log == msg)\
+                .with_entities(func.count(RecipeTaskResult.id)).scalar() == 0:
+            recipetask.warn(u'/', 0, msg)
+            # Need to explicitly commit here because the caller will be raising 
+            # an exception, which would otherwise roll everything back.
+            session.commit()
 
     def _check_log_limit(self, recipetask):
         max_logs = config.get('beaker.max_logs_per_recipe', 7500)
@@ -37,6 +57,7 @@ class RecipeTasks(RPCRoot):
                 .join(LogRecipeTaskResult.parent, RecipeTaskResult.recipetask)\
                 .filter(RecipeTask.recipe_id == recipetask.recipe_id).count()
         if (task_log_count + result_log_count) >= max_logs:
+            self._warn_once(recipetask, u'Too many logs in recipe')
             raise ValueError('Too many logs in recipe %s' % recipetask.recipe_id)
 
     def _check_result_limit(self, recipetask):
@@ -46,6 +67,7 @@ class RecipeTasks(RPCRoot):
         result_count = RecipeTaskResult.query.join(RecipeTaskResult.recipetask)\
                 .filter(RecipeTask.recipe_id == recipetask.recipe_id).count()
         if result_count >= max_results_per_recipe:
+            self._warn_once(recipetask, u'Too many results in recipe')
             raise ValueError(u'Too many results in recipe %s' % recipetask.recipe_id)
 
     @cherrypy.expose

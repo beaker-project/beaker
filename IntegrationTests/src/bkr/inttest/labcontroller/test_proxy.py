@@ -255,6 +255,13 @@ class TaskResultTest(LabControllerTestCase):
         response = requests.post(results_url, data=dict(result='Pass'))
         self.assertEqual(response.status_code, 403)
         self.assertIn('Too many results in recipe', response.text)
+        # Warning result should have been recorded, but only once
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(len(self.recipe.tasks[0].results), 7501)
+            self.assertEqual(self.recipe.tasks[0].results[-1].path, u'/')
+            self.assertEqual(self.recipe.tasks[0].results[-1].log,
+                    u'Too many results in recipe')
 
 class TaskStatusTest(LabControllerTestCase):
 
@@ -1024,6 +1031,12 @@ class LogUploadTest(LabControllerTestCase):
         response = requests.put(upload_url, data='a' * 10)
         self.assertEquals(response.status_code, 403)
         self.assertIn('Too many logs in recipe', response.text)
+        # Warning result should have been recorded, but only once
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(len(task.results), 2)
+            self.assertEqual(task.results[-1].path, u'/')
+            self.assertEqual(task.results[-1].log, u'Too many logs in recipe')
 
 class LogIndexTest(LabControllerTestCase):
 
