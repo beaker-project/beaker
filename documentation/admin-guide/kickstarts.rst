@@ -221,6 +221,7 @@ loaded from disk rather than submitted by users):
    values in Beaker's application-wide configuration.
 
 .. py:data:: recipe
+   :noindex:
 
    The recipe which is being provisioned. If the kickstart is for a system 
    which is being manually provisioned (using the :guilabel:`Provision` tab on 

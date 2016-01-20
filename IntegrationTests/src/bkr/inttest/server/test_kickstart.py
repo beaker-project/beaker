@@ -1804,6 +1804,7 @@ install
 # variant test is true
 {% endif %}
 # tree url is {{ distro_tree.url_in_lab(lab_controller, required=True) }}
+# recipe id is {{ recipe.id }}
                         ]]></kickstart>
                         <task name="/distribution/install" />
                     </recipe>
@@ -1820,6 +1821,7 @@ install
 # variant test is true
 # tree url is http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/
 ''', ks)
+        self.assertIn('\n# recipe id is %s\n' % recipe.id, ks)
 
     def test_custom_kickstart_rhel5_with_conflicts_groups(self):
         recipe = self.provision_recipe('''
