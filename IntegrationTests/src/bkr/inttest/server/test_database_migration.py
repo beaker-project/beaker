@@ -141,6 +141,14 @@ class MigrationTest(unittest.TestCase):
     # them a more realistic test case than the synthetically generated 
     # schemas used in the cases above.
 
+    def test_redhat_production_20160120(self):
+        connection = self.migration_metadata.bind.connect()
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/redhat-production-20160120.sql'))
+        upgrade_db(self.migration_metadata)
+        self.check_migrated_schema()
+        downgrade_db(self.migration_metadata, 'base')
+
     def test_redhat_production_20140820(self):
         connection = self.migration_metadata.bind.connect()
         connection.execute(pkg_resources.resource_string('bkr.inttest.server',
