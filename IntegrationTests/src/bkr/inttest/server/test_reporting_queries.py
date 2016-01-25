@@ -8,6 +8,7 @@ import pkg_resources
 import datetime
 from decimal import Decimal
 from turbogears.database import session
+from sqlalchemy.sql import text
 from bkr.server import dynamic_virt
 from bkr.server.model import System, RecipeTask, Cpu, SystemStatus, \
     SystemActivity, TaskPriority, RecipeSetActivity, VirtResource, \
@@ -34,7 +35,7 @@ class ReportingQueryTest(DatabaseTestCase):
 
     def execute_reporting_query(self, name):
         sql = pkg_resources.resource_string('bkr.server', 'reporting-queries/%s.sql' % name)
-        return session.connection(System).execute(sql)
+        return session.connection(System).execute(text(sql))
 
     def test_wait_duration_by_resource(self):
         system_recipe = data_setup.create_recipe()
@@ -426,3 +427,90 @@ class ReportingQueryTest(DatabaseTestCase):
                 if row.fqdn == system.fqdn]
         self.assertEquals(row.breakage_count, 2)
         self.assertEquals(row.problem_report_count, 3)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1281587
+    def test_cee_ops_provided_queries(self):
+        # CEE Ops is a team within Red Hat who relies heavily on Beaker. These 
+        # queries are used by their tooling to integrate with Beaker's 
+        # inventory. The queries are covered here in our test suite so that 
+        # they will know if any Beaker schema changes will affect these 
+        # queries.
+
+        cee_users = data_setup.create_group(group_name=u'cee-users')
+        cee_user = data_setup.create_user(user_name=u'billybob')
+        cee_users.add_member(cee_user)
+        # Create a system which has been manually reserved
+        reserved_system = data_setup.create_system(fqdn=u'gsslab.reserved', status='Manual')
+        data_setup.create_manual_reservation(reserved_system, user=cee_user,
+                start=datetime.datetime(2016, 1, 1, 0, 0))
+        # Create a system which is loaned out
+        loaned_system = data_setup.create_system(fqdn=u'gsslab.loaned', status='Manual')
+        data_setup.create_system_loan(loaned_system, user=cee_user,
+                start=datetime.datetime(2016, 1, 2, 0, 0))
+        # Create a system which has been provisioned with RHEL7.1
+        provisioned_system = data_setup.create_system(fqdn=u'gsslab.provisioned',
+                status='Automated', lab_controller=data_setup.create_labcontroller())
+        recipe = data_setup.create_recipe(distro_name=u'RHEL-7.1', variant=u'Server')
+        data_setup.create_job_for_recipes([recipe], owner=cee_user)
+        data_setup.mark_recipe_waiting(recipe, system=provisioned_system)
+        recipe.provision()
+        data_setup.mark_recipe_complete(recipe, only=True)
+        # Create a non-CEE system which has been provisioned 20 times
+        noncee_provisioned_system = data_setup.create_system(fqdn=u'noncee.provisioned',
+                status='Automated', lab_controller=data_setup.create_labcontroller())
+        for _ in range(20):
+            recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([recipe], owner=cee_user)
+            data_setup.mark_recipe_waiting(recipe, system=noncee_provisioned_system)
+            recipe.provision()
+            data_setup.mark_recipe_complete(recipe, only=True)
+        session.flush()
+
+        rows = self.execute_reporting_query('cee/all-systems').fetchall()
+        self.assertEqual(len(rows), 3)
+
+        rows = self.execute_reporting_query('cee/reserved-systems').fetchall()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].fqdn, u'gsslab.reserved')
+        self.assertEqual(rows[0].start_time, datetime.datetime(2016, 1, 1, 0, 0))
+
+        rows = self.execute_reporting_query('cee/loaned-systems').fetchall()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].fqdn, u'gsslab.loaned')
+
+        rows = self.execute_reporting_query('cee/loaned-systems-by-date').fetchall()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].fqdn, u'gsslab.loaned')
+        self.assertEqual(rows[0].loan_date, datetime.datetime(2016, 1, 2, 0, 0))
+
+        rows = self.execute_reporting_query('cee/system-provisions').fetchall()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].fqdn, u'gsslab.provisioned')
+        self.assertEqual(rows[0].count, 1)
+
+        rows = self.execute_reporting_query('cee/system-reservations').fetchall()
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0].fqdn, u'gsslab.provisioned')
+        self.assertEqual(rows[0].count, 1)
+        self.assertEqual(rows[1].fqdn, u'gsslab.reserved')
+        self.assertEqual(rows[1].count, 1)
+
+        rows = self.execute_reporting_query('cee/system-distrotrees').fetchall()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].fqdn, u'gsslab.provisioned')
+        self.assertEqual(rows[0].operatingsystem, u'RHEL-7.1 Server i386')
+
+        rows = self.execute_reporting_query('cee/provisions-by-distrotree').fetchall()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].operatingsystem, u'RHEL-7.1 Server i386')
+        self.assertEqual(rows[0].count, 1)
+
+        rows = self.execute_reporting_query('cee/provisions-by-user').fetchall()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].user_name, u'billybob')
+        self.assertEqual(rows[0].count, 21)
+
+        rows = self.execute_reporting_query('cee/non-cee-provisions-by-user').fetchall()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].fqdn, u'noncee.provisioned')
+        self.assertEqual(rows[0].count, 20)

@@ -194,7 +194,8 @@ def create_distro(name=None, osmajor=u'DansAwesomeLinux6', osminor=u'9',
 
 def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux6',
         osminor=u'9', distro_tags=None, arch=u'i386', variant=u'Server',
-        lab_controllers=None, urls=None,  harness_dir=True, osmajor_installopts_arch=None):
+        lab_controllers=None, urls=None,  harness_dir=True,
+        osmajor_installopts_arch=None, **kwargs):
     if distro is None:
         distro = create_distro(name=distro_name, osmajor=osmajor, osminor=osminor,
                 tags=distro_tags, harness_dir=harness_dir)
@@ -400,7 +401,7 @@ def create_recipe(distro_tree=None, task_list=None,
         task_name=u'/distribution/reservesys', num_tasks=None, whiteboard=None,
         role=None, cls=MachineRecipe, **kwargs):
     if not distro_tree:
-        distro_tree = create_distro_tree()
+        distro_tree = create_distro_tree(**kwargs)
     recipe = cls(ttasks=1)
     recipe.whiteboard = whiteboard
     recipe.distro_tree = distro_tree
@@ -688,6 +689,30 @@ def unreserve_manual(system, finish=None):
     activity.created = finish
     system.activity.append(activity)
     system.open_reservation.finish_time = finish
+
+def create_system_loan(system, start=None, finish=None, user=None,
+        comment=u'Test loan'):
+    if user is None:
+        user = create_user()
+    loan_activity = system.record_activity(user=user, service=u'testdata',
+            action=u'Changed', field=u'Loaned To',
+            old=system.loaned or u'', new=user)
+    loan_comment_activity = system.record_activity(user=user, service=u'testdata',
+            action=u'Changed', field=u'Loan Comment',
+            old=system.loan_comment, new=comment)
+    if start is not None:
+        loan_activity.created = start
+        loan_comment_activity = start
+    if finish is None:
+        system.loaned = user
+        system.loan_comment = comment
+    else:
+        return_activity = system.record_activity(user=user, service=u'testdata',
+                action=u'Changed', field=u'Loaned To', old=user, new=u'')
+        return_activity.created = finish
+        return_comment_activity = system.record_activity(user=user, service=u'testdata',
+                action=u'Changed', field=u'Loan Comment', old=comment, new=u'')
+        return_comment_activity.created = finish
 
 def create_test_env(type):#FIXME not yet using different types
     """

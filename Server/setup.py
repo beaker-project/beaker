@@ -222,7 +222,13 @@ setup(
         'bkr.server.tests': ['unit-test.cfg', '*.rpm'],
         'bkr.server.config': ['*.cfg'],
         'bkr.server.templates': ['*.kid'],
-        'bkr.server': ['kickstarts/*', 'snippets/*', 'reporting-queries/*', 'mail-templates/*'],
+        'bkr.server': [
+            'kickstarts/*',
+            'snippets/*',
+            'reporting-queries/*/*.sql',
+            'reporting-queries/*.sql',
+            'mail-templates/*',
+        ],
         'bkr.server.alembic': ['versions/*.py', 'env.py'],
     },
     keywords=[
