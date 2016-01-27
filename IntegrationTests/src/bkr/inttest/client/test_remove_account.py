@@ -79,18 +79,31 @@ class RemoveAccountTest(ClientTestCase):
                           job.recipesets[0].recipes[0].tasks[0].results[0].log)
             # reservations should be released
             self.assertIsNone(reserved_system.user)
+            self.assertEqual(reserved_system.activity[1].user.user_name, data_setup.ADMIN_USER)
+            self.assertEqual(reserved_system.activity[1].field_name, u'User')
+            self.assertEqual(reserved_system.activity[1].action, u'Returned')
+            self.assertEqual(reserved_system.activity[1].old_value, user.user_name)
+            self.assertEqual(reserved_system.activity[1].new_value, u'')
             # loans should be returned
             self.assertIsNone(loaned_system.loaned)
+            self.assertEqual(loaned_system.activity[0].user.user_name, data_setup.ADMIN_USER)
+            self.assertEqual(loaned_system.activity[0].field_name, u'Loaned To')
+            self.assertEqual(loaned_system.activity[0].action, u'Changed')
+            self.assertEqual(loaned_system.activity[0].old_value, user.user_name)
+            self.assertEqual(loaned_system.activity[0].new_value, None)
             # access policy rules should be removed
             self.assertEqual([],
                     [rule for rule in reserved_system.custom_access_policy.rules
                      if rule.user == user])
+            self.assertEqual(reserved_system.activity[0].user.user_name, data_setup.ADMIN_USER)
             self.assertEqual(reserved_system.activity[0].field_name, u'Access Policy Rule')
             self.assertEqual(reserved_system.activity[0].action, u'Removed')
             self.assertEqual(reserved_system.activity[0].old_value,
                     u'<grant reserve to %s>' % user.user_name)
+            self.assertEqual(reserved_system.activity[0].new_value, None)
             # systems owned by the user should be transferred to the caller
             self.assertEqual(owned_system.owner.user_name, data_setup.ADMIN_USER)
+            self.assertEqual(owned_system.activity[0].user.user_name, data_setup.ADMIN_USER)
             self.assertEqual(owned_system.activity[0].field_name, u'Owner')
             self.assertEqual(owned_system.activity[0].action, u'Changed')
             self.assertEqual(owned_system.activity[0].old_value, user.user_name)
@@ -99,9 +112,11 @@ class RemoveAccountTest(ClientTestCase):
             self.assertNotIn(group, user.groups)
             self.assertNotIn(user, group.users)
             self.assertFalse(group.has_owner(user))
+            self.assertEqual(group.activity[-1].user.user_name, data_setup.ADMIN_USER)
             self.assertEqual(group.activity[-1].field_name, u'User')
             self.assertEqual(group.activity[-1].action, u'Removed')
             self.assertEqual(group.activity[-1].old_value, user.user_name)
+            self.assertEqual(group.activity[-1].new_value, None)
 
     def test_close_account_transfer_ownership(self):
         with session.begin():

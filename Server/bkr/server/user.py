@@ -235,12 +235,12 @@ class Users(AdminPage):
         # Return all systems in use by this user
         for system in System.query.filter(System.user==user):
             reservation = system.open_reservation
-            system.unreserve(reservation=reservation, service=method, user=user)
+            system.unreserve(reservation=reservation, service=method)
         # Return all loaned systems in use by this user
         for system in System.query.filter(System.loaned==user):
             system.record_activity(user=identity.current.user, service=method,
                     action=u'Changed', field=u'Loaned To',
-                    old=u'%s' % system.loaned, new=u'None')
+                    old=u'%s' % system.loaned, new=None)
             system.loaned = None
         # Remove the user from all system access policies
         for rule in SystemAccessPolicyRule.query.filter_by(user=user):
