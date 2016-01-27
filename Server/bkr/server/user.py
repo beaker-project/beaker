@@ -5,11 +5,9 @@
 # (at your option) any later version.
 
 from turbogears.database import session
-from turbogears import (expose, widgets, flash, error_handler,
-                        validate, validators, redirect, paginate, url)
+from turbogears import validators
 from sqlalchemy import and_, or_, not_
 from sqlalchemy.exc import InvalidRequestError
-from kid import XML
 from formencode.api import Invalid
 from bkr.common.bexceptions import BX
 from flask import request, jsonify, redirect as flask_redirect
@@ -19,10 +17,7 @@ from bkr.server.flask_util import request_wants_json, auth_required, \
         json_collection, Forbidden403, NotFound404, Conflict409, \
         render_tg_template
 from bkr.server.util import absolute_url
-from bkr.server.helpers import make_edit_link
-from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar, \
-    BeakerDataGrid
-from bkr.server.admin_page import AdminPage
+from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.app import app
 
 import cherrypy
@@ -32,81 +27,9 @@ from bkr.server.model import User, Job, System, SystemActivity, TaskStatus, \
     SystemAccessPolicyRule, GroupMembershipType, SystemStatus
 
 
-class Users(AdminPage):
+class Users(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
-
-    def __init__(self,*args,**kw):
-        kw['search_url'] =  url("/users/by_name?anywhere=1&ldap=0")
-        kw['search_name'] = 'user'
-        super(Users,self).__init__(*args,**kw)
-
-        self.search_col = User.user_name
-        self.search_mapper = User
-
-    def make_remove_link(self, user):
-        if user.removed is not None:
-            return XML('<a class="btn" href="unremove?id=%s">'
-                    '<i class="fa fa-plus"/> Re-Add</a>' % user.user_id)
-        else:
-            return XML('<a class="btn" href="remove?id=%s">'
-                    '<i class="fa fa-times"/> Remove</a>' % user.user_id)
-
-    @expose(template="bkr.server.templates.admin_grid")
-    @paginate('list', default_order='user_name',limit=20)
-    def index(self,*args,**kw): 
-        users = session.query(User) 
-        list_by_letters = set([elem.user_name[0].capitalize() for elem in users]) 
-        result = self.process_search(**kw)
-        if result:
-            users = result
-        
-       
-        users_grid = myPaginateDataGrid(fields=[
-                                  ('Login', lambda x: make_edit_link(x.user_name,
-                                                                     x.user_id)),
-                                  ('Display Name', lambda x: x.display_name),
-                                  ('Disabled', lambda x: x.disabled),
-                                  ('', lambda x: self.make_remove_link(x)),
-                              ],
-                              add_action='./new')
-        return dict(title="Users",
-                    grid = users_grid,
-                    alpha_nav_bar = AlphaNavBar(list_by_letters,'user'),
-                    search_widget = self.search_widget_form,
-                    list = users)
-
-    @identity.require(identity.in_group("admin"))
-    @expose()
-    def remove(self, id, **kw):
-        try:
-            user = User.by_id(id)
-        except InvalidRequestError:
-            flash(_(u'Invalid user id %s' % id))
-            raise redirect('.')
-        try:
-            _remove(user=user, method='WEBUI')
-        except BX, e:
-            flash( _(u'Failed to remove User %s, due to %s' % (user.user_name, e)))
-            raise redirect('.')
-        else:
-            flash( _(u'User %s removed') % user.user_name )
-            redirect('.')
-
-    @identity.require(identity.in_group("admin"))
-    @expose()
-    def unremove(self, id, **kw):
-        try:
-            user = User.by_id(id)
-        except InvalidRequestError:
-            flash(_(u'Invalid user id %s' % id))
-            raise redirect('.')
-        flash( _(u'%s Re-Added') % user.display_name )
-        try:
-            _unremove(user=user)
-        except BX, e:
-            flash( _(u'Failed to Re-Add User %s, due to %s' % e))
-        raise redirect('.')
 
     @cherrypy.expose
     @identity.require(identity.in_group('admin'))
@@ -142,13 +65,6 @@ class Users(AdminPage):
             raise BX(_('User already removed %s' % username))
 
         _remove(user=user, method='XMLRPC', **kwargs)
-
-    @expose(format='json')
-    def by_name(self, input,anywhere=False,ldap=True):
-        input = input.lower()
-        matches = [user_name for user_name, display_name
-                in User.list_by_name(input, anywhere, ldap)]
-        return dict(matches=matches)
 
 def _disable(user, method,
              msg='Your account has been temporarily disabled'):
@@ -229,7 +145,15 @@ def get_users():
     })
     if request_wants_json():
         return jsonify(json_result)
-    raise NotFound404('Fall back to TurboGears')
+    return render_tg_template('bkr.server.templates.backgrid', {
+        'title': u'Users',
+        'grid_collection_type': 'Users',
+        'grid_collection_data': json_result,
+        'grid_collection_url': request.base_url,
+        'grid_view_type': 'UsersView',
+        'grid_add_label': 'Create',
+        'grid_add_view_type': 'UserCreateModal' if identity.current.user.is_admin() else 'null',
+    })
 
 @app.route('/users/+typeahead')
 def users_typeahead():

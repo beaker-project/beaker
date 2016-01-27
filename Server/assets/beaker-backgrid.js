@@ -53,6 +53,18 @@ window.BackgridUserCell = Backgrid.Cell.extend({
     },
 });
 
+window.BackgridBooleanYesCell = Backgrid.StringCell.extend({
+    className: 'boolean-yes-cell',
+    formatter: {
+        fromRaw: function (value) {
+            return (!!value ? 'Yes' : '');
+        },
+        toRaw: function (value) {
+            return value;
+        },
+    },
+});
+
 // Based on https://github.com/wyuenho/backgrid-moment-cell/blob/master/backgrid-moment-cell.js
 // but simplified for Beaker's specific needs
 window.BackgridDateTimeCell = Backgrid.Cell.extend({

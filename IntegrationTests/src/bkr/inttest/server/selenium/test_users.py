@@ -1,4 +1,6 @@
 
+# vim: set fileencoding=utf-8 :
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -11,7 +13,53 @@ from bkr.inttest import data_setup, DatabaseTestCase, get_server_base
 from bkr.inttest.server.requests_utils import login as requests_login, \
         patch_json, post_json
 from bkr.inttest.server.selenium import WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest.server.webdriver_utils import login, check_user_search_results
+
+class UsersGridTest(WebDriverTestCase):
+
+    def setUp(self):
+        self.browser = self.get_browser()
+
+    def test_search_by_username(self):
+        with session.begin():
+            user = data_setup.create_user()
+            other_user = data_setup.create_user(user_name=u'aaardvark123')
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'users/')
+        b.find_element_by_class_name('search-query').send_keys(user.user_name)
+        b.find_element_by_class_name('grid-filter').submit()
+        check_user_search_results(b, present=[user], absent=[other_user])
+
+    def test_add_duplicate_user(self):
+        with session.begin():
+            existing_user = data_setup.create_user(user_name=u'existing')
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'users/')
+        b.find_element_by_xpath('//button[normalize-space(string(.))="Create"]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('user_name').send_keys(existing_user.user_name)
+        modal.find_element_by_name('display_name').send_keys('anything')
+        modal.find_element_by_name('email_address').send_keys(
+                'anything@example.invalid')
+        modal.find_element_by_tag_name('form').submit()
+        self.assertIn('User %s already exists' % existing_user.user_name,
+                modal.find_element_by_class_name('alert-error').text)
+
+    def test_adduser(self):
+        user_1_name = data_setup.unique_name('anonymous%s')
+        user_1_email = data_setup.unique_name('anonymous%s@my.com')
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'users/')
+        b.find_element_by_xpath('//button[normalize-space(string(.))="Create"]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('user_name').send_keys(user_1_name)
+        modal.find_element_by_name('display_name').send_keys(user_1_name)
+        modal.find_element_by_name('email_address').send_keys(user_1_email)
+        modal.find_element_by_tag_name('form').submit()
+        b.find_element_by_xpath('//title[text()="%s"]' % user_1_name)
 
 class UserTest(WebDriverTestCase):
 
@@ -156,6 +204,58 @@ class UserHTTPTest(DatabaseTestCase):
             user = User.by_user_name(u'fbaggins')
             self.assertEqual(response.json()['id'], user.user_id)
             self.assertEqual(response.json()['user_name'], 'fbaggins')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=997830
+    def test_whitespace_only_values_are_not_accepted(self):
+        # Whitespace-only values also count as empty, because we strip
+        s = requests.Session()
+        requests_login(s)
+        response = post_json(get_server_base() + 'users/', session=s, data={
+                'user_name': ' \t\v',
+                'display_name': 'Bilbo Baggins',
+                'email_address': 'bilbo@theshire.co.nz'})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text, 'Username must not be empty')
+        response = post_json(get_server_base() + 'users/', session=s, data={
+                'user_name': 'bbaggins',
+                'display_name': ' \t\v',
+                'email_address': 'bilbo@theshire.co.nz'})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text, 'Display name must not be empty')
+        response = post_json(get_server_base() + 'users/', session=s, data={
+                'user_name': 'bbaggins',
+                'display_name': 'Bilbo Baggins',
+                'email_address': ' \t\v'})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text,
+                'Invalid email address: Please enter an email address')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1086505
+    def test_non_ascii_username_and_display_name(self):
+        user_name = u'ломоносов'
+        display_name = u'Михаил Ломоносов'
+        email = 'lomonosov@example.ru'
+        s = requests.Session()
+        requests_login(s)
+        response = post_json(get_server_base() + 'users/', session=s, data={
+                'user_name': user_name,
+                'display_name': display_name,
+                'email_address': email})
+        response.raise_for_status()
+
+        # Test that search works as well
+        response = s.get(get_server_base() + 'users/',
+                params={'q': u'user_name:%s' % user_name},
+                headers={'Accept': 'application/json'})
+        response.raise_for_status()
+        self.assertEqual(response.json()['count'], 1)
+        self.assertEqual(response.json()['entries'][0]['user_name'], user_name)
+
+        # Test that typeahead works as well
+        response = s.get(get_server_base() + 'users/+typeahead',
+                params={'q': user_name[:4]},
+                headers={'Accept': 'application/json'})
+        self.assertEqual(response.json()['data'][0]['user_name'], user_name)
 
     def test_rename_user(self):
         with session.begin():

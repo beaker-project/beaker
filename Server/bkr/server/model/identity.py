@@ -313,7 +313,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
         Is the given user permitted to reset this user's password?
         """
         if get('identity.ldap.enabled', False):
-            filter = ldap.filter.filter_format('(uid=%s)', [self.user_name])
+            filter = ldap.filter.filter_format('(uid=%s)', [self.user_name.encode('utf8')])
             ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
             objects = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
                     ldap.SCOPE_SUBTREE, filter,
@@ -349,7 +349,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
         ldapenabled = get('identity.ldap.enabled', False)
         # Presence of '/' indicates a Kerberos service principal.
         if ldapenabled and '/' not in self.user_name:
-            filter = ldap.filter.filter_format('(uid=%s)', [self.user_name])
+            filter = ldap.filter.filter_format('(uid=%s)', [self.user_name.encode('utf8')])
             ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
             objects = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
                     ldap.SCOPE_SUBTREE, filter,

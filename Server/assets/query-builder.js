@@ -34,9 +34,12 @@ var QueryBuilderRow = Backbone.View.extend({
                 function (column) { return column.name == selected_field; });
         // Disable operators that don't make sense for this field.
         var disabled_operators = [];
-        if (column.cell == Backgrid.NumberCell ||
-                column.cell == BackgridDateTimeCell)
+        if (_.contains([Backgrid.NumberCell, BackgridDateTimeCell], column.cell)) {
             disabled_operators.push('contains', '!contains');
+        }
+        if (_.contains([Backgrid.BooleanCell, BackgridBooleanYesCell], column.cell)) {
+            disabled_operators.push('>', '>=', '<', '<=', 'contains', '!contains');
+        }
         this.$('[name=operator] option').prop('disabled',
                 function () { return _.contains(disabled_operators, this.value); });
         // Use datepicker if it's a date field.
@@ -44,6 +47,16 @@ var QueryBuilderRow = Backbone.View.extend({
             this.$('[name=value]').datepicker({autoclose: true, format: 'yyyy-mm-dd'});
         else
             this.$('[name=value]').datepicker('remove');
+        // Constrain value to "true"/"false" if it's a boolean field.
+        // (Better would be to show a <select/> but that means restructuring 
+        // this entire widget...)
+        if (_.contains([Backgrid.BooleanCell, BackgridBooleanYesCell], column.cell)) {
+            this.$('[name=value]').attr('pattern', 'true|false')
+                                  .attr('required', true)
+                                  .attr('title', 'Boolean value true or false');
+        } else {
+            this.$('[name=value]').removeAttr('pattern required title');
+        }
     },
     operator_changed: function (evt) {
         var selected_operator = this.$('[name=operator]').val();

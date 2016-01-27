@@ -154,4 +154,71 @@ var UserDetailsModal = Backbone.View.extend({
     },
 });
 
+var UsernameCell = Backgrid.StringCell.extend({
+    template: _.template('<a href="<%- user_name %>"><%- user_name %></a>'),
+    className: 'username-cell',
+    render: function () {
+        this.$el.empty();
+        this.$el.html(this.template(this.model.attributes));
+        return this;
+    },
+});
+
+window.UsersView = BeakerGrid.extend({
+    initialize: function (options) {
+        options.collection = this.model;
+        options.name = 'users';
+        options.columns = [
+            {name: 'user_name', label: 'Username', cell: UsernameCell, editable: false},
+            {name: 'display_name', label: 'Display Name', cell: 'string', editable: false},
+            {name: 'email_address', label: 'Email Address', cell: Backgrid.EmailCell, editable: false},
+            {name: 'disabled', label: 'Disabled', cell: BackgridBooleanYesCell, editable: false},
+            {name: 'removed', label: 'Removed', cell: BackgridDateTimeCell, editable: false},
+        ];
+        BeakerGrid.prototype.initialize.apply(this, arguments);
+    },
+});
+
+window.UserCreateModal = Backbone.View.extend({
+    tagName: 'div',
+    className: 'modal',
+    template: JST['user-details'],
+    events: {
+        'submit form': 'submit',
+        'hidden': 'remove',
+    },
+    initialize: function () {
+        this.render();
+        this.$el.modal();
+        this.$('input:first').focus();
+    },
+    render: function () {
+        this.$el.html(this.template({}));
+    },
+    submit: function (evt) {
+        evt.preventDefault();
+        this.$('.sync-status').empty();
+        this.$('button').button('loading');
+        var attributes = {
+            'user_name': this.$('input[name=user_name]').val(),
+            'display_name': this.$('input[name=display_name]').val(),
+            'email_address': this.$('input[name=email_address]').val(),
+        };
+        var new_user = new this.collection.model(attributes,
+                {collection: this.collection});
+        new_user.save()
+            .done(_.bind(this.save_success, this))
+            .fail(_.bind(this.save_error, this));
+    },
+    save_success: function (response, status, xhr) {
+        window.location = xhr.getResponseHeader('Location');
+    },
+    save_error: function (xhr) {
+        $('<div class="alert alert-error"/>')
+            .text(xhr.statusText + ': ' + xhr.responseText)
+            .appendTo(this.$('.sync-status'));
+        this.$('button').button('reset');
+    },
+});
+
 })();
