@@ -113,7 +113,7 @@ from bkr.server.reports import Reports
                     <b class="caret"></b>
                 </a>
                 <ul class="dropdown-menu">
-                    <li><a href="${tg.url('/users')}">Accounts</a></li>
+                    <li><a href="${tg.url('/users/')}">Users</a></li>
                     <li><a href="${tg.url('/groups/')}">Groups</a></li>
                     <li><a href="${tg.url('/configuration')}">Configuration</a></li>
                     <li><a href="${tg.url('/retentiontag/admin')}">Retention Tags</a></li>
