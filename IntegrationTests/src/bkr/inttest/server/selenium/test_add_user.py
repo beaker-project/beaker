@@ -7,6 +7,7 @@
 # (at your option) any later version.
 
 from turbogears.database import session
+from bkr.server.model import User
 from bkr.inttest import get_server_base
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_text_present, \
@@ -230,8 +231,7 @@ class AddUser(WebDriverTestCase):
         b.find_element_by_id('User').submit()
         self.assertEquals(b.find_element_by_class_name('flash').text,
                 '%s saved' % user_name)
-        logout(b)
 
-        # Try and login as Disabled User
-        login(b, user=user_name, password=user_pass)
-        self.failUnless(is_text_present(b, "The credentials you supplied were not correct or did not grant access to this resource" ))
+        with session.begin():
+            user = User.by_user_name(user_name)
+            self.assertTrue(user.disabled)

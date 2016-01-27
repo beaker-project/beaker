@@ -132,6 +132,15 @@ class LoginTest(WebDriverTestCase):
             self.assert_(newly_created_user is not None,
                     'bz1095010_user should have been created from LDAP')
 
+    def test_disabled_accounts_cannot_log_in(self):
+        with session.begin():
+            self.user.disabled = True
+        b = self.browser
+        login(b, self.user.user_name, self.password)
+        self.assertEquals(b.find_element_by_css_selector('#message').text,
+                'The credentials you supplied were not correct or '
+                'did not grant access to this resource.')
+
 class XmlRpcLoginTest(XmlRpcTestCase):
 
     def test_krb_login(self):
@@ -189,3 +198,11 @@ class XmlRpcLoginTest(XmlRpcTestCase):
             self.fail('should raise')
         except xmlrpclib.Fault, e:
             self.assert_('Anonymous access denied' in e.faultString, e.faultString)
+
+    def test_disabled_accounts_cannot_log_in(self):
+        with session.begin():
+            user = data_setup.create_user(password=u'lulz')
+            user.disabled = True
+        server = self.get_server()
+        with self.assertRaisesRegexp(xmlrpclib.Fault, 'Invalid username or password'):
+            server.auth.login_password(user.user_name, u'lulz')
