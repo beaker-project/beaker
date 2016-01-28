@@ -31,40 +31,6 @@ class AddUser(WebDriverTestCase):
         b.find_element_by_xpath('//span[@id="autoCompleteResultsSearch_user"]'
                 '//td[string(.)="barackobama"]')
 
-    def test_add_invalid_details_existing_user(self):
-        with session.begin():
-            existing_name = data_setup.unique_name('user%s')
-            existing_email = data_setup.unique_name('me%s@my.com')
-            data_setup.create_user(user_name=existing_name,
-                email_address=existing_email)
-
-            existing_name2 = data_setup.unique_name('user%s')
-            existing_email2 = data_setup.unique_name('me%s@my.com')
-            data_setup.create_user(user_name=existing_name2,
-                email_address=existing_email2)
-
-        b = self.browser
-        b.get(get_server_base() + 'users')
-        # Test with duplicate name
-        b.find_element_by_name('user.text').send_keys(existing_name)
-        b.find_element_by_xpath('//form[@id=\'Search\']').submit()
-        b.find_element_by_link_text(existing_name).click()
-        b.find_element_by_name('user_name').clear()
-        b.find_element_by_name('user_name').send_keys(existing_name2)
-        b.find_element_by_xpath('//form[@id=\'User\']').submit()
-        self.assert_(b.find_element_by_xpath('//form[@id=\'User\'] \
-            //input[@name=\'user_name\']/following-sibling::span').text == \
-                'Login name is not unique')
-        # Reset back to current name
-        b.find_element_by_name('user_name').clear()
-        b.find_element_by_name('user_name').send_keys(existing_name)
-
-        # Verify our exiting details submit ok
-        b.find_element_by_name('email_address').clear()
-        b.find_element_by_name('email_address').send_keys(existing_email)
-        b.find_element_by_xpath('//form[@id=\'User\']').submit()
-        is_text_present(b, '%s saved' % existing_name)
-
     def test_add_invalid_details_new_user(self):
         with session.begin():
             existing_name = data_setup.unique_name('user%s')
@@ -198,40 +164,3 @@ class AddUser(WebDriverTestCase):
         b.find_element_by_xpath('//button[text()="Search"]').click()
         b.find_element_by_xpath(u'//table/tbody/tr[1]'
                 u'/td[normalize-space(string(.))="ломоносов"]')
-
-    def test_disable(self):
-        user_pass = 'password'
-        user_name = 'disabled'
-        email = 'disabled@my.com'
-
-        b = self.browser
-        b.get(get_server_base())
-        click_menu_item(b, 'Admin', 'Accounts')
-        b.find_element_by_link_text('Add').click()
-        b.find_element_by_name('user_name').send_keys(user_name)
-        b.find_element_by_name('display_name').send_keys(user_name)
-        b.find_element_by_name('email_address').send_keys(email)
-        b.find_element_by_name('password').send_keys(user_pass)
-        b.find_element_by_id('User').submit()
-        #Test Saved message came up
-        self.assertEquals(b.find_element_by_class_name('flash').text,
-                '%s saved' % user_name)
-        logout(b)
-
-        # First verify you can login as user.
-        login(b, user=user_name, password=user_pass)
-        logout(b)
-
-        # Login as admin and disable user TEST 1
-        login(b)
-        b.get(get_server_base())
-        click_menu_item(b, 'Admin', 'Accounts')
-        b.find_element_by_link_text(user_name).click()
-        b.find_element_by_name('disabled').click()
-        b.find_element_by_id('User').submit()
-        self.assertEquals(b.find_element_by_class_name('flash').text,
-                '%s saved' % user_name)
-
-        with session.begin():
-            user = User.by_user_name(user_name)
-            self.assertTrue(user.disabled)

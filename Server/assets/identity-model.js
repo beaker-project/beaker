@@ -11,6 +11,11 @@ window.User = Backbone.Model.extend({
     toHTML: function () {
         return this._toHTML_template(this.attributes);
     },
+    initialize: function (attributes, options) {
+        options = options || {};
+        if (options.url)
+            this.url = options.url;
+    },
 });
 
 window.Group = Backbone.Model.extend({

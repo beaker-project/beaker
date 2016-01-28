@@ -117,6 +117,7 @@ def _create_env(source_dir, output_dir, **kwargs):
             'group-create.js',
             'groups.js',
             'labcontrollers.js',
+            'users.js',
             filters=['uglifyjs'],
             output='beaker-%(version)s.js')
     return env

@@ -12,18 +12,18 @@ from sqlalchemy.exc import InvalidRequestError
 from kid import XML
 from formencode.api import Invalid
 from bkr.common.bexceptions import BX
-from flask import request, jsonify
+from flask import request, jsonify, redirect as flask_redirect
 from bkr.server import identity
 from bkr.server.flask_util import request_wants_json, auth_required, \
         admin_auth_required, read_json_request, convert_internal_errors, \
-        json_collection, Forbidden403, NotFound404, Conflict409
+        json_collection, Forbidden403, NotFound404, Conflict409, \
+        render_tg_template
 from bkr.server.util import absolute_url
 from bkr.server.helpers import make_edit_link
 from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar, \
-    BeakerDataGrid, HorizontalForm
+    BeakerDataGrid
 from bkr.server.admin_page import AdminPage
 from bkr.server.app import app
-from bkr.server import validators as beaker_validators
 
 import cherrypy
 from datetime import datetime
@@ -32,34 +32,9 @@ from bkr.server.model import User, Job, System, SystemActivity, TaskStatus, \
     SystemAccessPolicyRule, GroupMembershipType, SystemStatus
 
 
-class UserFormSchema(validators.Schema):
-    user_id = validators.Int()
-    user_name = validators.UnicodeString(not_empty=True, strip=True)
-    display_name = validators.UnicodeString(not_empty=True, strip=True)
-    disabled = validators.StringBool(if_empty=False)
-    email_address = validators.Email(not_empty=True, strip=True)
-    chained_validators = [beaker_validators.UniqueUserName('user_id',
-                            'user_name')]
-
-
 class Users(AdminPage):
     # For XMLRPC methods in this class.
     exposed = True
-
-    user_id     = widgets.HiddenField(name='user_id')
-    user_name   = widgets.TextField(name='user_name', label=_(u'Login'))
-    display_name = widgets.TextField(name='display_name', label=_(u'Display Name'))
-    email_address = widgets.TextField(name='email_address', label=_(u'Email Address'))
-    password     = widgets.PasswordField(name='password', label=_(u'Password'))
-    disabled = widgets.CheckBox(name='disabled', label=_(u'Disabled'))
-    user_form = HorizontalForm(
-        'User',
-        fields = [user_id, user_name, display_name,
-                  email_address, password, disabled
-                 ],
-        action = 'save_data',
-        submit_text = _(u'Save'),
-    )
 
     def __init__(self,*args,**kw):
         kw['search_url'] =  url("/users/by_name?anywhere=1&ldap=0")
@@ -68,61 +43,6 @@ class Users(AdminPage):
 
         self.search_col = User.user_name
         self.search_mapper = User
-
-    @identity.require(identity.in_group("admin"))
-    @expose(template='bkr.server.templates.form')
-    def new(self, **kw):
-        return dict(
-            form = self.user_form,
-            action = './save',
-            options = {},
-            value = kw,
-        )
-
-    @identity.require(identity.in_group("admin"))
-    @expose(template='bkr.server.templates.user_edit_form')
-    def edit(self, id=None, **kw):
-        if id:
-            user = User.by_id(id)
-            title = _(u'User %s') % user.user_name
-            value = user
-        else:
-            user = None
-            title = _(u'New user')
-            value = kw
-        return_vals = dict(form=self.user_form,
-                           action='./save',
-                           title=title,
-                           options={},
-                           value=value)
-        if id:
-            return_vals['groupsgrid'] = self.show_groups()
-        else:
-            return_vals['groupsgrid'] = None
-        return return_vals
-
-    @identity.require(identity.in_group("admin"))
-    @expose()
-    @validate(user_form, validators=UserFormSchema())
-    @error_handler(edit)
-    def save(self, **kw):
-        if kw.get('user_id'):
-            user = User.by_id(kw['user_id'])
-        else:
-            user =  User()
-            session.add(user)
-        user.display_name = kw['display_name']
-        user.user_name = kw['user_name']
-        user.email_address = kw['email_address']
-        if kw.get('disabled') != user.disabled:
-            user.disabled = kw.get('disabled')
-            if user.disabled:
-                _disable(user, method="WEBUI")
-        if kw['password'] != user.password:
-            user.password = kw['password']
-
-        flash( _(u"%s saved" % user.display_name) )
-        redirect(".")
 
     def make_remove_link(self, user):
         if user.removed is not None:
@@ -229,10 +149,6 @@ class Users(AdminPage):
         matches = [user_name for user_name, display_name
                 in User.list_by_name(input, anywhere, ldap)]
         return dict(matches=matches)
-
-    def show_groups(self):
-        group = ('Group', lambda x: x.display_name)
-        return BeakerDataGrid(fields=[group])
 
 def _disable(user, method,
              msg='Your account has been temporarily disabled'):
@@ -390,6 +306,15 @@ def create_user():
     response.headers.add('Location', absolute_url(user.href))
     return response
 
+# For backwards compatibility with old TurboGears URLs.
+@app.route('/users/edit', methods=['GET'])
+def old_get_group():
+    if 'id' in request.args:
+        user = User.by_id(request.args['id'])
+        if user is not None:
+            return flask_redirect(absolute_url(user.href))
+    raise NotFound404()
+
 # Note that usernames can contain /, for example Kerberos service principals,
 # so we have to use a path match in our route patterns
 @app.route('/users/<path:username>', methods=['GET'])
@@ -406,7 +331,10 @@ def get_user(username):
     attributes = user_full_json(user)
     if request_wants_json():
         return jsonify(attributes)
-    raise NotFound404('Fall back to TurboGears')
+    return render_tg_template('bkr.server.templates.user_edit_form', {
+        'attributes': attributes,
+        'url': user.href,
+    })
 
 @app.route('/users/<path:username>', methods=['PATCH'])
 @auth_required

@@ -1,0 +1,98 @@
+<div class="page-header">
+  <h1>
+    <%- user_name %>
+    <small><%- display_name %> &lt;<a href="mailto:<%- email_address %>"><%- email_address %></a>&gt;</small>
+    <% if (can_edit) { %>
+      <button class="btn edit"><i class="fa fa-pencil-square-o"></i> Edit</button>
+    <% } %>
+  </h1>
+</div>
+
+<div class="user-status">
+  <% if (!_.isEmpty(removed)) { %>
+    <div class="alert">Account was removed
+      <time datetime="<%- moment.utc(removed).toISOString() %>" title="<%- removed %>">
+        <%- moment.utc(removed).local().fromNow() %></time>.
+    </div>
+  <% } else if (disabled) { %>
+    <div class="alert">Account is currently disabled.</div>
+  <% } %>
+  <ul>
+    <li><%- job_count %> incomplete job<% if (job_count != 1) { %>s<% } %></li>
+    <li>
+      <% if (reservation_count == 0) { %>
+        0 systems reserved
+      <% } else { %>
+        <a href="<%- beaker_url_prefix %>reports/?systemsearch-0.table=System%2FUser&systemsearch-0.operation=is&systemsearch-0.value=<%- user_name %>"><%- reservation_count %> system<% if (reservation_count != 1) { %>s<% } %> reserved</a>
+      <% } %>
+    </li>
+    <li>
+      <% if (loan_count == 0) { %>
+        0 outstanding system loans
+      <% } else { %>
+        <a href="<%- beaker_url_prefix %>?systemsearch-0.table=System%2FLoanedTo&systemsearch-0.operation=is&systemsearch-0.value=<%- user_name %>"><%- loan_count %> outstanding system loan<% if (loan_count != 1) { %>s<% } %></a>
+      <% } %>
+    </li>
+    <li>
+      <% if (owned_system_count == 0) { %>
+        Owner of 0 systems
+      <% } else { %>
+        <a href="<%- beaker_url_prefix %>?systemsearch-0.table=System%2FOwner&systemsearch-0.operation=is&systemsearch-0.value=<%- user_name %>">Owner of <%- owned_system_count %> system<% if (owned_system_count != 1) { %>s<% } %></a>
+      <% } %>
+    </li>
+    <li>
+      <% if (group_membership_count == 0) { %>
+        Member of 0 groups
+      <% } else { %>
+        <a href="<%- beaker_url_prefix %>groups/?q=member.user_name:<%- user_name %>">Member of <%- group_membership_count %> group<% if (group_membership_count != 1) { %>s<% } %></a>
+      <% } %>
+    </li>
+  </ul>
+</div>
+
+<% if (can_change_password && _.isEmpty(removed)) { %>
+  <div class="password-reset">
+    <h4>Reset password</h4>
+    <form>
+      <div class="input-append">
+        <input type="password" name="password" placeholder="New password" />
+        <button type="submit" class="btn" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Saving&hellip;">Save</button>
+      </div>
+    </form>
+  </div>
+<% } %>
+
+<% if (can_edit) { %>
+  <% if (_.isEmpty(removed)) { %>
+    <div class="user-disable">
+      <h4>Disable account</h4>
+      <% if (!disabled) { %>
+        <p>The user will be blocked from logging in while their account is disabled.</p>
+        <p>
+          <button class="btn disable" data-loading-text="<i class='fa fa-lock fa-spin'></i> Disabling&hellip;"><i class="fa fa-lock"></i> Disable</button>
+        </p>
+      <% } else { %>
+        <p>
+          <button class="btn enable" data-loading-text="<i class='fa fa-unlock fa-spin'></i> Enabling&hellip;"><i class="fa fa-unlock"></i> Enable</button>
+        </p>
+      <% } %>
+    </div>
+  <% } %>
+  <div class="user-delete">
+    <h4>Delete account</h4>
+    <% if (_.isEmpty(removed)) { %>
+      <p>The user’s running jobs will be cancelled and their outstanding 
+      system reservations and loans will be returned. They will be removed 
+      from all groups and system access policies. Ownership of the user’s 
+      systems will be transferred to you.</p>
+      <p><strong class="text-error">This operation is destructive and cannot be undone.</strong></p>
+      <p>
+        <button class="btn btn-danger delete" data-loading-text="<i class='fa fa-trash-o fa-spin'></i> Deleting&hellip;"><i class="fa fa-trash-o"></i> Delete</button>
+      </p>
+    <% } else { %>
+      <p>
+        <button class="btn btn-danger undelete" data-loading-text="<i class='fa fa-trash-o fa-spin'></i> Undeleting&hellip;"><i class="fa fa-trash-o"></i> Undelete</button>
+      </p>
+    <% } %>
+  </div>
+<% } %>
