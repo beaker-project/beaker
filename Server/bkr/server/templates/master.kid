@@ -134,6 +134,7 @@ from bkr.server.reports import Reports
                 </a>
                 <ul class="dropdown-menu">
                     <li><a href="${tg.url('/prefs')}">Preferences</a></li>
+                    <li><a href="${tg.url('/users/' + tg.identity.user.user_name)}">My Account</a></li>
                     <li py:if="'admin' not in tg.identity.groups"><a href="${tg.url('/groups')}">Groups</a></li>
                     <li><a href="${tg.url('/mine')}">My Systems</a></li>
                     <li><a href="${tg.url('/pools/?q=owner.user_name:')}${tg.identity.user}">My System Pools</a></li>
