@@ -34,6 +34,14 @@ def get_alias_target(aliased_class):
     return inspect(aliased_class).mapper.entity #pylint: disable=E1102
 
 def _lucene_coerce_for_column(column, term):
+    if isinstance(column.type, sqlalchemy.types.Boolean):
+        # Solr stores boolean fields as "true"/"false" so let's follow that
+        if term.lower() == 'true':
+            return True
+        elif term.lower() == 'false':
+            return False
+        else:
+            raise ValueError()
     if isinstance(column.type, sqlalchemy.types.Integer):
         return int(term)
     elif isinstance(column.type, sqlalchemy.types.Numeric):

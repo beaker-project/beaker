@@ -159,6 +159,8 @@ class User(DeclarativeMappedObject, ActivityMixin):
             'user_name': self.user_name,
             'display_name': self.display_name,
             'email_address': self.email_address,
+            'disabled': self.disabled,
+            'removed': self.removed,
         }
 
     def permissions(self):
@@ -196,6 +198,11 @@ class User(DeclarativeMappedObject, ActivityMixin):
         a.text = self.user_name
         return a
     email_link = property(email_link)
+
+    @property
+    def href(self):
+        """Returns a relative URL for this user's page."""
+        return (u'/users/%s' % urllib.quote(self.user_name.encode('utf8')))
 
     @classmethod
     def by_id(cls, user_id):
@@ -265,6 +272,26 @@ class User(DeclarativeMappedObject, ActivityMixin):
                 for user in cls.query.filter(f).filter(User.removed==None)]
         return list(set(db_users + ldap_users))
 
+    def can_edit(self, user):
+        """
+        Is the given user permitted to change this user's details (except for 
+        their username)?
+        """
+        if user.is_admin():
+            return True
+        if user == self:
+            return True
+        return False
+
+    def can_rename(self, user):
+        """
+        Is the given user permitted to change this user's username?
+        """
+        if user.is_admin():
+            return True
+        # Users are not allowed to change their own usernames.
+        return False
+
     _password_context = passlib.context.CryptContext(
         schemes=['pbkdf2_sha512', 'hex_sha1'],
         # unsalted SHA1 was the scheme inherited from TurboGears 1.0,
@@ -281,7 +308,10 @@ class User(DeclarativeMappedObject, ActivityMixin):
 
     password = property(_get_password, _set_password)
 
-    def can_change_password(self):
+    def can_change_password(self, user):
+        """
+        Is the given user permitted to reset this user's password?
+        """
         if get('identity.ldap.enabled', False):
             filter = ldap.filter.filter_format('(uid=%s)', [self.user_name])
             ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
@@ -291,11 +321,11 @@ class User(DeclarativeMappedObject, ActivityMixin):
             if len(objects) != 0:
                 # LDAP user. No chance of changing password.
                 return False
-            else:
-                # Assume non LDAP user
-                return True
-        else:
+        if user.is_admin():
             return True
+        if user == self:
+            return True
+        return False
 
     def check_password(self, raw_password):
         # Empty passwords are not accepted.

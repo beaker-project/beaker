@@ -182,7 +182,7 @@ class Preferences(RPCRoot):
         changes = []
 
         if beaker_password != identity.current.user.password:
-            if not identity.current.user.can_change_password():
+            if not identity.current.user.can_change_password(identity.current.user):
                 changes.append(u'Cannot change password')
             else:
                 identity.current.user.password = beaker_password

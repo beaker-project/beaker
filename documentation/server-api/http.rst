@@ -270,6 +270,12 @@ Groups
      grant_ownership, revoke_ownership, add_permission, remove_permission,
      exclude_user, readd_user
 
+Users
+-----
+
+.. autoflask:: bkr.server.wsgi:app
+   :endpoints: get_users, create_user, get_user, update_user
+
 Lab Controllers
 ---------------
 
