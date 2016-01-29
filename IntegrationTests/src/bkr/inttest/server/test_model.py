@@ -1806,6 +1806,24 @@ class RecipeTest(DatabaseTestCase):
                     u'<hostname value="blorp"/>'
                     u'<system_type value="Prototype"/>'
                 u'</hostRequires>')
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1302950
+        # recipe with <hostRequires/> that already contains <system_type/>
+        # nested inside another element
+        recipe_systemtype_hr = data_setup.create_recipe()
+        recipe_systemtype_hr.host_requires = (
+                u'<hostRequires>'
+                    u'<and>'
+                        u'<hostname value="blorp"/>'
+                        u'<system_type value="Prototype"/>'
+                    u'</and>'
+                u'</hostRequires>')
+        self.assertEquals(recipe_systemtype_hr.host_requires,
+                u'<hostRequires>'
+                    u'<and>'
+                        u'<hostname value="blorp"/>'
+                        u'<system_type value="Prototype"/>'
+                    u'</and>'
+                u'</hostRequires>')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1240809
     def test_get_all_logs(self):
