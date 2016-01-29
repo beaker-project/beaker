@@ -133,7 +133,7 @@ from bkr.server.reports import Reports
                     <b class="caret"></b>
                 </a>
                 <ul class="dropdown-menu">
-                    <li><a href="${tg.url('/prefs')}">Preferences</a></li>
+                    <li><a href="${tg.url('/prefs/')}">Preferences</a></li>
                     <li><a href="${tg.url('/users/' + tg.identity.user.user_name)}">My Account</a></li>
                     <li py:if="'admin' not in tg.identity.groups"><a href="${tg.url('/groups')}">Groups</a></li>
                     <li><a href="${tg.url('/mine')}">My Systems</a></li>

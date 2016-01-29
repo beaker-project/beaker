@@ -274,7 +274,9 @@ Users
 -----
 
 .. autoflask:: bkr.server.wsgi:app
-   :endpoints: get_users, create_user, get_user, update_user
+   :endpoints: get_users, create_user, get_user, update_user,
+     add_ssh_public_key, delete_ssh_public_key, add_submission_delegate, 
+     delete_submission_delegate
 
 Lab Controllers
 ---------------

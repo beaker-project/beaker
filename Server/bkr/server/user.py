@@ -15,16 +15,18 @@ from bkr.server import identity
 from bkr.server.flask_util import request_wants_json, auth_required, \
         admin_auth_required, read_json_request, convert_internal_errors, \
         json_collection, Forbidden403, NotFound404, Conflict409, \
-        render_tg_template
+        render_tg_template, UnsupportedMediaType415, MethodNotAllowed405, \
+        BadRequest400
 from bkr.server.util import absolute_url
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.app import app
-
+from bkr.server.bexceptions import NoChangeException
 import cherrypy
 from datetime import datetime
 
 from bkr.server.model import User, Job, System, SystemActivity, TaskStatus, \
-    SystemAccessPolicyRule, GroupMembershipType, SystemStatus
+    SystemAccessPolicyRule, GroupMembershipType, SystemStatus, ConfigItem, \
+    SSHPubKey
 
 
 class Users(RPCRoot):
@@ -192,6 +194,12 @@ def user_full_json(user):
         attributes['can_edit'] = user.can_edit(identity.current.user)
         attributes['can_change_password'] = \
             user.can_change_password(identity.current.user)
+        if user.can_edit(identity.current.user):
+            attributes['root_password'] = user._root_password
+            attributes['root_password_changed'] = user.rootpw_changed
+            attributes['root_password_expiry'] = user.rootpw_expiry
+            attributes['ssh_public_keys'] = user.sshpubkeys
+            attributes['submission_delegates'] = user.submission_delegates
     else:
         attributes['can_edit'] = False
         attributes['can_change_password'] = False
@@ -274,6 +282,8 @@ def update_user(username):
     :jsonparam string email_address: New email address.
     :jsonparam string password: New password. Only valid when Beaker is not 
       using external authentication for this account.
+    :jsonparam string root_password: Root password to be set on systems 
+      provisioned by Beaker.
     :jsonparam boolean disabled: Whether the user should be temporarily 
       disabled. Disabled users cannot log in or submit jobs, and any running jobs 
       are cancelled when their account is disabled.
@@ -318,6 +328,10 @@ def update_user(username):
                 except Invalid as e:
                     raise ValueError('Invalid email address: %s' % e)
                 user.email_address = new_email_address
+            if 'root_password' in data:
+                new_root_password = data['root_password']
+                if user.root_password != new_root_password:
+                    user.root_password = new_root_password
             if 'disabled' in data:
                 user.disabled = data['disabled']
                 if user.disabled:
@@ -333,6 +347,127 @@ def update_user(username):
     if renamed:
         response.headers.add('Location', absolute_url(user.href))
     return response
+
+@app.route('/prefs/', methods=['GET'])
+@auth_required
+def prefs():
+    user = identity.current.user
+    attributes = user_full_json(user)
+    # Show all future root passwords, and the previous five
+    rootpw = ConfigItem.by_name('root_password')
+    rootpw_values = rootpw.values().filter(rootpw.value_class.valid_from > datetime.utcnow())\
+                   .order_by(rootpw.value_class.valid_from.desc()).all()\
+                  + rootpw.values().filter(rootpw.value_class.valid_from <= datetime.utcnow())\
+                   .order_by(rootpw.value_class.valid_from.desc())[:5]
+    return render_tg_template('bkr.server.templates.prefs', {
+        'user': user,
+        'attributes': attributes,
+        'default_root_password': rootpw.current_value(),
+        'default_root_passwords': rootpw_values,
+    })
+
+@app.route('/users/<path:username>/ssh-public-keys/', methods=['POST'])
+@auth_required
+def add_ssh_public_key(username):
+    """
+    Adds a new SSH public key for the given user account.
+
+    Accepts mimetype:`text/plain` request bodies containing the SSH public key 
+    in the conventional OpenSSH format: <keytype> <key> <ident>.
+
+    :param username: The user's username.
+    """
+    user = User.by_user_name(username)
+    if user is None:
+        raise NotFound404('User %s does not exist' % username)
+    if not user.can_edit(identity.current.user):
+        raise Forbidden403('Cannot edit user %s' % user)
+    if request.mimetype != 'text/plain':
+        raise UnsupportedMediaType415('Request content type must be text/plain')
+    with convert_internal_errors():
+        keytext = request.data.strip()
+        if '\n' in keytext:
+            raise ValueError('SSH public keys may not contain newlines')
+        elements = keytext.split(None, 2)
+        if len(elements) != 3:
+            raise ValueError('Invalid SSH public key')
+        key = SSHPubKey(*elements)
+        user.sshpubkeys.append(key)
+        session.flush() # to populate id
+    return jsonify(key.__json__())
+
+@app.route('/users/<path:username>/ssh-public-keys/<int:id>', methods=['DELETE'])
+@auth_required
+def delete_ssh_public_key(username, id):
+    """
+    Deletes a public SSH public key belonging to the given user account.
+
+    :param username: The user's username.
+    :param id: Database id of the SSH public key to be deleted.
+    """
+    user = User.by_user_name(username)
+    if user is None:
+        raise NotFound404('User %s does not exist' % username)
+    if not user.can_edit(identity.current.user):
+        raise Forbidden403('Cannot edit user %s' % user)
+    matching_keys = [k for k in user.sshpubkeys if k.id == id]
+    if not matching_keys:
+        raise NotFound404('SSH public key id %s does not belong to user %s' % (id, user))
+    key = matching_keys[0]
+    session.delete(key)
+    return '', 204
+
+@app.route('/users/<path:username>/submission-delegates/', methods=['POST'])
+@auth_required
+def add_submission_delegate(username):
+    """
+    Adds a submission delegate for a user account. Submission delegates are 
+    other users who are allowed to submit jobs on behalf of this user.
+
+    :param username: The user's username.
+    :jsonparam string user_name: The submission delegate's username.
+    """
+    user = User.by_user_name(username)
+    if user is None:
+        raise NotFound404('User %s does not exist' % username)
+    if not user.can_edit(identity.current.user):
+        raise Forbidden403('Cannot edit user %s' % user)
+    data = read_json_request(request)
+    if 'user_name' not in data:
+        raise BadRequest400('Missing "user_name" key to specify submission delegate')
+    submission_delegate = User.by_user_name(data['user_name'])
+    if submission_delegate is None:
+        raise BadRequest400('Submission delegate %s does not exist' % data['user_name'])
+    try:
+        user.add_submission_delegate(submission_delegate, service=u'HTTP')
+    except NoChangeException as e:
+        raise Conflict409(unicode(e))
+    return 'Added', 201
+
+@app.route('/users/<path:username>/submission-delegates/', methods=['DELETE'])
+@auth_required
+def delete_submission_delegate(username):
+    """
+    Deletes a public SSH public key belonging to the given user account.
+
+    :param username: The user's username.
+    :param id: Database id of the SSH public key to be deleted.
+    """
+    user = User.by_user_name(username) #XXX lockmode='update'
+    if user is None:
+        raise NotFound404('User %s does not exist' % username)
+    if not user.can_edit(identity.current.user):
+        raise Forbidden403('Cannot edit user %s' % user)
+    if 'user_name' not in request.args:
+        raise MethodNotAllowed405
+    submission_delegate = User.by_user_name(request.args['user_name'])
+    if submission_delegate is None:
+        raise NotFound404('Submission delegate %s does not exist' % request.args['user_name'])
+    if not submission_delegate.is_delegate_for(user):
+        raise Conflict409('User %s is not a submission delegate for %s'
+                % (submission_delegate, user))
+    user.remove_submission_delegate(submission_delegate)
+    return '', 204
 
 # for sphinx
 users = Users

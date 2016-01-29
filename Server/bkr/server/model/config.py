@@ -97,6 +97,14 @@ class ConfigValueString(DeclarativeMappedObject):
         if valid_from:
             self.valid_from = valid_from
 
+    def __json__(self):
+        return {
+            'id': self.id,
+            'value': self.value,
+            'modified': self.modified,
+            'valid_from': self.valid_from,
+        }
+
 class ConfigValueInt(DeclarativeMappedObject):
 
     __tablename__ = 'config_value_int'
@@ -118,3 +126,11 @@ class ConfigValueInt(DeclarativeMappedObject):
         self.user = user
         if valid_from:
             self.valid_from = valid_from
+
+    def __json__(self):
+        return {
+            'id': self.id,
+            'value': self.value,
+            'modified': self.modified,
+            'valid_from': self.valid_from,
+        }

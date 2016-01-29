@@ -1,0 +1,10 @@
+<p>You have uploaded the following SSH public keys:</p>
+<% if (ssh_public_keys.isEmpty()) { %>
+<p>(none)</p>
+<% } else { %>
+<ul class="list-group ssh-public-keys-list"/>
+<% } %>
+<form class="add">
+  <textarea class="ssh-public-key" name="key" rows="6"/>
+  <button type="submit" class="btn btn-primary" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Adding&hellip;"><i class="fa fa-plus"></i> Add</button>
+</form>

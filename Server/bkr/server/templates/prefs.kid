@@ -13,45 +13,32 @@
   <h1>User Preferences</h1>
 </div>
 
-  <p py:content="prefs_form(method='POST', action=tg.url(prefs_form.action), value=value, options=options)">Form goes here</p>
+<ul class="nav nav-tabs">
+  <li><a data-toggle="tab" href="#root-password">Root Password</a></li>
+  <li><a data-toggle="tab" href="#ssh-public-keys">SSH Public Keys</a></li>
+  <li><a data-toggle="tab" href="#submission-delegates">Submission Delegates</a></li>
+</ul>
 
-<h2>Root Password</h2>
-  <p py:if="rootpw">The current default root password for provisioned systems is '<b>${rootpw}</b>'.</p>
-  <p py:if="not rootpw">There is currently no default password configured.</p>
-
-${rootpw_grid.display(rootpw_values)}
-
-<h2>SSH Keys</h2>
-<table class="table table-striped">
-  <thead>
-    <tr><th>Key type</th><th>Key ID</th><th></th></tr>
-  </thead>
-  <tbody>
-    <tr py:for="key in ssh_keys">
-      <td>${key.keytype}</td>
-      <td>${key.ident}</td>
-      <td>
-        ${delete_link.display(dict(id=key.id), action=tg.url('ssh_key_remove'))}
-      </td>
-    </tr>
-  </tbody>
-  <tfoot py:if="not ssh_keys">
-    <tr>
-      <td colspan="3">No SSH public keys stored.</td>
-    </tr>
-  </tfoot>
-</table>
-
-<div>
-  <p py:content="ssh_key_form(method='POST', action=tg.url(ssh_key_form.action), value=value, options=options)">Form goes here</p>
+<div class="tab-content prefs-tabs">
+  <div class="tab-pane" id="root-password"></div>
+  <div class="tab-pane" id="ssh-public-keys"></div>
+  <div class="tab-pane" id="submission-delegates"></div>
 </div>
 
-<h2>Submission delegates</h2>
-<div>
- ${submission_delegates_grid.display(value.submission_delegates)}
- <div py:content="submission_delegate_form(method='POST',
-       action=tg.url('add_submission_delegate'), value=value)">
- </div>
-</div>
+<script type="text/javascript">
+  var user = new User(${tg.to_json(attributes)}, {parse: true, url: ${tg.to_json(tg.url(user.href))}});
+  $(function () {
+      new UserRootPasswordView({
+          model: user,
+          el: $('#root-password'),
+          default_root_password: ${tg.to_json(default_root_password)},
+          default_root_passwords: ${tg.to_json(default_root_passwords)},
+      });
+      new UserSSHPublicKeysView({model:user, el: $('#ssh-public-keys')});
+      new UserSubmissionDelegatesView({model:user, el: $('#submission-delegates')});
+      link_tabs_to_anchor('beaker_prefs_tabs', '.nav-tabs');
+  });
+</script>
+
 </body>
 </html>

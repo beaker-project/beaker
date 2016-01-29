@@ -8,7 +8,8 @@
 
 import datetime
 import requests
-from bkr.server.model import session, SystemPermission, TaskStatus, User
+from bkr.server.model import session, SystemPermission, TaskStatus, User, \
+        SSHPubKey
 from bkr.inttest import data_setup, DatabaseTestCase, get_server_base
 from bkr.inttest.server.requests_utils import login as requests_login, \
         patch_json, post_json
@@ -345,6 +346,88 @@ class UserHTTPTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             self.assertTrue(user.check_password(u'bilbo'))
+
+    def test_set_root_password(self):
+        with session.begin():
+            user = data_setup.create_user()
+        s = requests.Session()
+        requests_login(s)
+        response = patch_json(get_server_base() + 'users/%s' % user.user_name,
+                data={'root_password': u'D6BeK7Cq9a4M'}, session=s)
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertIsNotNone(user._root_password)
+
+    def test_clear_root_password(self):
+        with session.begin():
+            user = data_setup.create_user()
+            user.root_password = u'D6BeK7Cq9a4M'
+        s = requests.Session()
+        requests_login(s)
+        response = patch_json(get_server_base() + 'users/%s' % user.user_name,
+                data={'root_password': u''}, session=s)
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertIsNone(user._root_password)
+
+    def test_add_ssh_public_key(self):
+        with session.begin():
+            user = data_setup.create_user()
+        s = requests.Session()
+        requests_login(s)
+        response = s.post(get_server_base() + 'users/%s/ssh-public-keys/' % user.user_name,
+                headers={'Content-Type': 'text/plain'},
+                data='ssh-rsa abc dummypassword@example.invalid')
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(len(user.sshpubkeys), 1)
+            self.assertEqual(user.sshpubkeys[0].keytype, u'ssh-rsa')
+            self.assertEqual(user.sshpubkeys[0].pubkey, u'abc')
+            self.assertEqual(user.sshpubkeys[0].ident, u'dummypassword@example.invalid')
+
+    def test_delete_ssh_public_key(self):
+        with session.begin():
+            user = data_setup.create_user()
+            user.sshpubkeys.append(SSHPubKey(keytype=u'ssh-rsa',
+                    pubkey=u'abc', ident=u'asdf@example.invalid'))
+        s = requests.Session()
+        requests_login(s)
+        response = s.delete(get_server_base() + 'users/%s/ssh-public-keys/%s'
+                % (user.user_name, user.sshpubkeys[0].id))
+        self.assertEqual(response.status_code, 204)
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(len(user.sshpubkeys), 0)
+
+    def test_add_submission_delegate(self):
+        with session.begin():
+            user = data_setup.create_user()
+            other_user = data_setup.create_user()
+        s = requests.Session()
+        requests_login(s)
+        response = post_json(get_server_base() + 'users/%s/submission-delegates/' % user.user_name,
+                session=s, data={'user_name': other_user.user_name})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertItemsEqual(user.submission_delegates, [other_user])
+
+    def test_remove_submission_delegate(self):
+        with session.begin():
+            user = data_setup.create_user()
+            other_user = data_setup.create_user()
+            user.add_submission_delegate(other_user, service=u'testdata')
+        s = requests.Session()
+        requests_login(s)
+        response = s.delete(get_server_base() + 'users/%s/submission-delegates/' % user.user_name,
+                params={'user_name': other_user.user_name})
+        self.assertEqual(response.status_code, 204)
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(len(user.submission_delegates), 0)
 
     def test_disable_user(self):
         with session.begin():

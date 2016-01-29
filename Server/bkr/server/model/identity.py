@@ -381,9 +381,14 @@ class User(DeclarativeMappedObject, ActivityMixin):
         "Set the password to be used for root on provisioned systems, hashing if necessary"
         if password:
             if len(password.split('$')) != 4:
+                try:
+                    cracklib.VeryFascistCheck(password)
+                except ValueError as e:
+                    msg = re.sub(r'^it', 'Root password', str(e))
+                    raise ValueError(msg)
                 salt = ''.join(random.choice(string.digits + string.ascii_letters)
                                 for i in range(8))
-                self._root_password = crypt.crypt(cracklib.VeryFascistCheck(password), "$1$%s$" % salt)
+                self._root_password = crypt.crypt(password, "$1$%s$" % salt)
             else:
                 self._root_password = password
             self.rootpw_changed = datetime.utcnow()
@@ -917,6 +922,14 @@ class SSHPubKey(DeclarativeMappedObject):
 
     def __repr__(self):
         return "%s %s %s" % (self.keytype, self.pubkey, self.ident)
+
+    def __json__(self):
+        return {
+            'id': self.id,
+            'keytype': self.keytype,
+            'pubkey': self.pubkey,
+            'ident': self.ident,
+        }
 
     @classmethod
     def by_id(cls, id):
