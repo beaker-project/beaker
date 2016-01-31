@@ -3656,6 +3656,7 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
             unicode(self.log),
             id=unicode(self.id),
             path=unicode(self.path),
+            result=unicode(self.result),
             score=unicode(self.score)
         )
 
