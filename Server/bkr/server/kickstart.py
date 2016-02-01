@@ -129,6 +129,11 @@ class RestrictedDistroTree(object):
 class RestrictedLabController(object):
     def __init__(self, lab_controller):
         self.fqdn = unicode(lab_controller.fqdn)
+class RestrictedRecipe(object):
+    def __init__(self, recipe):
+        self.id = recipe.id
+        self.whiteboard = recipe.whiteboard
+        self.role = recipe.role
 
 # Some custom Jinja template filters and tests,
 # for added convenience when writing kickstart/snippet templates
@@ -214,6 +219,7 @@ def generate_kickstart(install_options, distro_tree, system, user,
         'distro_tree': RestrictedDistroTree(distro_tree),
         'distro': RestrictedDistro(distro_tree.distro),
         'lab_controller': RestrictedLabController(lab_controller),
+        'recipe': RestrictedRecipe(recipe) if recipe else None,
         'ks_appends': ks_appends or [],
     }
 

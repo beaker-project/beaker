@@ -22,6 +22,7 @@ import xmlrpclib
 import socket
 import subprocess
 import pkg_resources
+import shlex
 from cStringIO import StringIO
 from socket import gethostname
 from threading import Thread, Event
@@ -433,13 +434,12 @@ class Watchdog(ProxyHelper):
     watchdogs = dict()
 
     def transfer_logs(self):
-        logger.info("Entering transfer_logs")
         transfered = False
         server = self.conf.get_url_domain()
+        logger.debug('Polling for recipes to be transferred')
         for recipe_id in self.hub.recipes.by_log_server(server):
             transfered = True
             self.transfer_recipe_logs(recipe_id)
-        logger.info("Exiting transfer_logs")
         return transfered
 
     def transfer_recipe_logs(self, recipe_id):
@@ -448,8 +448,10 @@ class Watchdog(ProxyHelper):
         tmpdir = tempfile.mkdtemp(dir=self.conf.get("CACHEPATH"))
         try:
             # Move logs to tmp directory layout
+            logger.debug('Fetching files list for recipe %s', recipe_id)
             mylogs = self.hub.recipes.files(recipe_id)
             trlogs = []
+            logger.debug('Building temporary log tree for transfer under %s', tmpdir)
             for mylog in mylogs:
                 mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
                 mydst = '%s/%s/%s/%s' % (tmpdir, mylog['filepath'], 
@@ -461,17 +463,17 @@ class Watchdog(ProxyHelper):
                         os.link(mysrc,mydst)
                         trlogs.append(mylog)
                     except OSError, e:
-                        logger.error('unable to hardlink %s to %s, %s', mysrc, mydst, e)
+                        logger.exception('Error hard-linking %s to %s', mysrc, mydst)
                         return
                 else:
-                        logger.warn('file missing: %s', mysrc)
+                    logger.warn('Recipe %s file %s missing on disk, ignoring',
+                            recipe_id, mysrc)
             # rsync the logs to their new home
-            rc = self.rsync('%s/' % tmpdir, '%s' % self.conf.get("ARCHIVE_RSYNC"))
-            if rc:
-                logger.error('Failed to transfer recipe %s logs '
-                        'to archive server, rsync exit status %s', recipe_id, rc)
+            rsync_succeeded  = self.rsync('%s/' % tmpdir, '%s' % self.conf.get("ARCHIVE_RSYNC"))
+            if not rsync_succeeded:
                 return
             # if the logs have been transferred then tell the server the new location
+            logger.debug('Updating recipe %s file locations on the server', recipe_id)
             self.hub.recipes.change_files(recipe_id, self.conf.get("ARCHIVE_SERVER"),
                                                      self.conf.get("ARCHIVE_BASEPATH"))
             for mylog in trlogs:
@@ -503,8 +505,15 @@ class Watchdog(ProxyHelper):
     def rsync(self, src, dst):
         """ Run system rsync command to move files
         """
-        my_cmd = 'rsync %s %s %s' % (self.conf.get('RSYNC_FLAGS',''), src, dst)
-        return utils.subprocess_call(my_cmd,shell=True)
+        args = ['rsync'] + shlex.split(self.conf.get('RSYNC_FLAGS', '')) + [src, dst]
+        logger.debug('Invoking rsync as %r', args)
+        p = subprocess.Popen(args, stderr=subprocess.PIPE)
+        out, err = p.communicate()
+        if p.returncode != 0:
+            logger.error('Failed to rsync recipe logs from %s to %s\nExit status: %s\n%s',
+                    src, dst, p.returncode, err)
+            return False
+        return True
 
     def purge_old_watchdog(self, watchdog_systems):
         try:

@@ -37,7 +37,6 @@ def main_loop(transfer, conf=None):
             transfer.hub._login()
             # Look for logs to transfer if none transfered then sleep
             if not transfer.transfer_logs():
-                logger.debug(80 * '-')
                 transfer.sleep()
 
             # write to stdout / stderr

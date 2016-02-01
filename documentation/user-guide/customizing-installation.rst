@@ -622,6 +622,21 @@ Template variables
 
    The Python :py:mod:`re` module, for evaluating regular expressions.
 
+.. py:data:: recipe
+
+   The recipe to be run on the provisioned system. This object has the 
+   following attributes:
+
+   ``id``
+        The recipe id. This is used when configuring the harness, and in many 
+        harness-related APIs.
+
+   ``whiteboard``
+        The recipe whiteboard, a user-supplied description of this recipe.
+
+   ``role``
+        This recipe's role in a multi-host recipe set, for example ``SERVERS``.
+
 .. py:data:: recipe_whiteboard
 
    The value of the recipe whiteboard.

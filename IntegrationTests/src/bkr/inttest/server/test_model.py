@@ -1806,6 +1806,24 @@ class RecipeTest(DatabaseTestCase):
                     u'<hostname value="blorp"/>'
                     u'<system_type value="Prototype"/>'
                 u'</hostRequires>')
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1302950
+        # recipe with <hostRequires/> that already contains <system_type/>
+        # nested inside another element
+        recipe_systemtype_hr = data_setup.create_recipe()
+        recipe_systemtype_hr.host_requires = (
+                u'<hostRequires>'
+                    u'<and>'
+                        u'<hostname value="blorp"/>'
+                        u'<system_type value="Prototype"/>'
+                    u'</and>'
+                u'</hostRequires>')
+        self.assertEquals(recipe_systemtype_hr.host_requires,
+                u'<hostRequires>'
+                    u'<and>'
+                        u'<hostname value="blorp"/>'
+                        u'<system_type value="Prototype"/>'
+                    u'</and>'
+                u'</hostRequires>')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1240809
     def test_get_all_logs(self):
@@ -2339,19 +2357,34 @@ class RecipeTaskTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
+        task = data_setup.create_task(name=u'/distribution/install')
+        recipe = data_setup.create_recipe(task_list=[task])
+        data_setup.create_job_for_recipes([recipe])
+        data_setup.mark_recipe_running(recipe)
+        self.recipetask = recipe.tasks[0]
 
     def tearDown(self):
         session.rollback()
 
     def test_version_in_xml(self):
-        task = data_setup.create_task(name=u'/distribution/install')
-        recipe = data_setup.create_recipe(task_list=[task])
-        data_setup.create_job_for_recipes([recipe])
-        data_setup.mark_recipe_running(recipe)
-        rt = recipe.tasks[0]
-        rt.version = u'1.2-3'
-        root = rt.to_xml(clone=False)
+        self.recipetask.version = u'1.2-3'
+        root = self.recipetask.to_xml(clone=False)
         self.assertEquals(root.get('version'), u'1.2-3')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1303023
+    def test_results_in_xml(self):
+        self.recipetask.pass_(u'/start', 0, u'Install Started')
+        self.recipetask.fail(u'/', 0, u'(Fail)')
+        root = self.recipetask.to_xml(clone=False)
+        results = root.find('results').findall('result')
+        self.assertEqual(results[0].get('path'), u'/start')
+        self.assertEqual(results[0].get('score'), u'0')
+        self.assertEqual(results[0].get('result'), u'Pass')
+        self.assertEqual(results[0].text, u'Install Started')
+        self.assertEqual(results[1].get('path'), u'/')
+        self.assertEqual(results[1].get('score'), u'0')
+        self.assertEqual(results[1].get('result'), u'Fail')
+        self.assertEqual(results[1].text, u'(Fail)')
 
 class RecipeTaskResultTest(DatabaseTestCase):
 
