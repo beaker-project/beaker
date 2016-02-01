@@ -205,6 +205,43 @@ A number of bug fixes are also included in this release:
 
 .. bugs only affecting unreleased versions/features
    * :issue:`1290266`: Cannot edit a lab controller after creating it (Contributed by Róman Joost)
+   * :issue:`1295642`: <reservesys/> is silently discarded from job XML (Contributed by Dan Callaghan)
 
 .. internal only
    * :issue:`1283086`
+
+
+Maintenance updates
+-------------------
+
+The following fixes have been included in Beaker 22 maintenance updates.
+
+Beaker 22.1
+~~~~~~~~~~~
+
+* :issue:`1295998`: Closing ``</script>`` tags from the search value are now
+  properly escaped in the search bar JSON. This fixes a "reflected XSS" 
+  (cross-site scripting) vulnerability. (Contributed by Dan Callaghan)
+* :issue:`1303023`: Restored the ``result=""`` attribute on ``<result/>``
+  elements in the job results XML output. This attribute was dropped due to 
+  a regression in 22.0. (Contributed by Dan Callaghan)
+* :issue:`1302950`: Fixed the logic for injecting ``<system_type/>`` into
+  recipe host requirements. Due to a regression in 22.0, Beaker would 
+  incorrectly inject a contradictory ``<system_type/>`` filter when the host 
+  requirements already contained ``<system_type/>`` nested inside some other 
+  element. Beaker now correctly injects ``<system_type/>`` only when it is not 
+  already present *anywhere* in the host requirements. (Contributed by Dan 
+  Callaghan)
+* :issue:`1293010`: The :program:`beaker-transfer` daemon now skips logs for
+  deleted jobs, instead of trying to move them unnecessarily. (Contributed by 
+  Matt Jia)
+* :issue:`1240809`: The ``recipes.files`` XML-RPC method, which is used by
+  :program:`beaker-transfer` for finding logs to move, has been made more 
+  efficient and can now respond much faster for recipes with a large number of 
+  results. This allows :program:`beaker-transfer` to cope better with large 
+  recipes. (Contributed by Matt Jia) 
+
+Version 3.4-8 of the ``/distribution/reservesys`` task has also been released:
+
+* :issue:`1205989`: The task can now be used with the restraint harness.
+  (Contributed by Dan Callaghan)
