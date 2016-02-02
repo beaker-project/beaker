@@ -2208,8 +2208,8 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
     def to_xml(self, recipe, clone=False, from_recipeset=False, from_machine=False):
         if not clone:
             recipe.set("id", "%s" % self.id)
-            recipe.set("job_id", "%s" % self.recipeset.job_id)
-            recipe.set("recipe_set_id", "%s" % self.recipe_set_id)
+            recipe.set("job_id", "%s" % self.recipeset.job.id)
+            recipe.set("recipe_set_id", "%s" % self.recipeset.id)
         autopick = etree.Element("autopick")
         autopick.set("random", "%s" % unicode(self.autopick_random).lower())
         recipe.append(autopick)
@@ -2874,11 +2874,14 @@ class GuestRecipe(Recipe):
             location = self.distro_tree.url_in_lab(self.recipeset.lab_controller)
             if location:
                 recipe.set("location", location)
+            scheme_locations = {}
             for lca in self.distro_tree.lab_controller_assocs:
                 if lca.lab_controller == self.recipeset.lab_controller:
                     scheme = urlparse.urlparse(lca.url).scheme
-                    attr = '%s_location' % re.sub(r'[^a-z0-9]+', '_', scheme.lower())
-                    recipe.set(attr, lca.url)
+                    scheme_locations[scheme] = lca.url
+            for scheme, location in sorted(scheme_locations.iteritems()):
+                attr = '%s_location' % re.sub(r'[^a-z0-9]+', '_', scheme.lower())
+                recipe.set(attr, location)
 
         return Recipe.to_xml(self, recipe, clone, from_recipeset, from_machine)
 

@@ -11,6 +11,7 @@ import time
 import datetime
 import uuid
 import itertools
+import netaddr
 import lxml.etree
 from sqlalchemy.orm.exc import NoResultFound
 import turbogears.config, turbogears.database
@@ -30,6 +31,7 @@ from bkr.server.model import LabController, User, Group, UserGroup, \
         SystemPermission, DistroTreeImage, ImageType, KernelType, \
         RecipeReservationRequest, OSMajorInstallOptions, SystemPool, \
         GroupMembershipType
+from bkr.server.model.types import mac_unix_padded_dialect
 
 log = logging.getLogger(__name__)
 
@@ -495,30 +497,37 @@ def create_completed_job(**kwargs):
 
 def mark_recipe_complete(recipe, result=TaskResult.pass_,
                          task_status=TaskStatus.completed,
-                         finish_time=None, only=False,
+                         start_time=None, finish_time=None, only=False,
                          server_log=False, **kwargs):
 
     mark_recipe_tasks_finished(recipe, result=result,
                                task_status=task_status,
+                               start_time=start_time,
                                finish_time=finish_time,
                                only=only,
                                server_log=server_log,
                                **kwargs)
     recipe.recipeset.job.update_status()
+    if finish_time:
+        recipe.finish_time = finish_time
+    if recipe.reservation_request:
+        recipe.extend(0)
+        recipe.recipeset.job.update_status()
     log.debug('Marked %s as complete with result %s', recipe.t_id, result)
 
 def mark_recipe_tasks_finished(recipe, result=TaskResult.pass_,
                                task_status=TaskStatus.completed,
-                               finish_time=None, only=False,
+                               start_time=None, finish_time=None, only=False,
                                server_log=False,
                                num_tasks=None, **kwargs):
 
     # we accept result=None to mean: don't add any results to recipetasks
     assert result is None or result in TaskResult
+    start_time = start_time or datetime.datetime.utcnow()
     finish_time = finish_time or datetime.datetime.utcnow()
     if not only:
-        mark_recipe_running(recipe, **kwargs)
-        mark_recipe_installation_finished(recipe)
+        mark_recipe_running(recipe, start_time=start_time, **kwargs)
+        mark_recipe_installation_finished(recipe, **kwargs)
 
     # Need to make sure recipe.watchdog has been persisted, since we delete it 
     # below when the recipe completes and sqlalchemy will barf on deleting an 
@@ -545,6 +554,8 @@ def mark_recipe_tasks_finished(recipe, result=TaskResult.pass_,
                 path=u'/', filename=u'result.txt')
 
     for recipe_task in recipe.tasks[:num_tasks]:
+        if recipe_task.start_time is None:
+            recipe_task.start_time = start_time
         if result is not None:
             rtr = RecipeTaskResult(path=recipe_task.name, result=result,
                     log=u'(%s)' % result, score=0)
@@ -568,7 +579,8 @@ def mark_job_complete(job, finish_time=None, only=False, **kwargs):
             recipe.finish_time = finish_time
 
 def mark_recipe_waiting(recipe, start_time=None, system=None, fqdn=None,
-        lab_controller=None, virt=False, instance_id=None, **kwargs):
+        mac_address=None, lab_controller=None, virt=False, instance_id=None,
+        **kwargs):
     if start_time is None:
         start_time = datetime.datetime.utcnow()
     recipe.process()
@@ -596,6 +608,9 @@ def mark_recipe_waiting(recipe, start_time=None, system=None, fqdn=None,
         elif isinstance(recipe, GuestRecipe):
             recipe.resource = GuestResource()
             recipe.resource.allocate()
+            if mac_address is not None:
+                recipe.resource.mac_address = netaddr.EUI(mac_address,
+                        dialect=mac_unix_padded_dialect)
     if not recipe.distro_tree.url_in_lab(recipe.recipeset.lab_controller):
         add_distro_tree_to_lab(recipe.distro_tree, recipe.recipeset.lab_controller)
     recipe.start_time = start_time
@@ -610,11 +625,14 @@ def mark_job_waiting(job, **kwargs):
         for recipe in recipeset.recipes:
             mark_recipe_waiting(recipe, **kwargs)
 
-def mark_recipe_running(recipe, fqdn=None, only=False, **kwargs):
+def mark_recipe_running(recipe, fqdn=None, only=False, install_started=None, **kwargs):
+    if install_started is None:
+        install_started = datetime.datetime.utcnow()
     if not only:
         mark_recipe_waiting(recipe, fqdn=fqdn, **kwargs)
-    recipe.resource.install_started = datetime.datetime.utcnow()
+    recipe.resource.install_started = install_started
     recipe.tasks[0].start()
+    recipe.tasks[0].start_time = install_started
     if isinstance(recipe, GuestRecipe):
         if not fqdn:
             fqdn = unique_name(u'guest_fqdn_%s')
@@ -622,14 +640,15 @@ def mark_recipe_running(recipe, fqdn=None, only=False, **kwargs):
     recipe.recipeset.job.update_status()
     log.debug('Started %s', recipe.tasks[0].t_id)
 
-def mark_recipe_installation_finished(recipe, fqdn=None, **kwargs):
+def mark_recipe_installation_finished(recipe, fqdn=None, install_finished=None,
+        postinstall_finished=None, **kwargs):
     if not recipe.resource.fqdn:
         # system reports its FQDN to Beaker in kickstart %post
         if fqdn is None:
             fqdn = '%s-for-recipe-%s' % (recipe.resource.__class__.__name__, recipe.id)
         recipe.resource.fqdn = fqdn
-    recipe.resource.install_finished = datetime.datetime.utcnow()
-    recipe.resource.postinstall_finished = datetime.datetime.utcnow()
+    recipe.resource.install_finished = install_finished or datetime.datetime.utcnow()
+    recipe.resource.postinstall_finished = postinstall_finished or datetime.datetime.utcnow()
     recipe.recipeset.job.update_status()
 
 def mark_job_running(job, **kw):
