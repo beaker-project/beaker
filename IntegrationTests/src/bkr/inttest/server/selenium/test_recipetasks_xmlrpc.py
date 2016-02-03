@@ -91,7 +91,8 @@ class RecipeTasksXmlRpcTest(XmlRpcTestCase):
             guestrecipe = data_setup.create_guestrecipe(host=hostrecipe,
                     role=u'CLIENTS')
             data_setup.create_job_for_recipes([hostrecipe, guestrecipe])
-            system = data_setup.create_system(fqdn=u'host.bz952948')
+            system = data_setup.create_system(fqdn=u'host.bz952948',
+                    lab_controller=self.lc)
             data_setup.mark_recipe_running(hostrecipe, system=system)
             data_setup.mark_recipe_waiting(guestrecipe)
             self.assertEquals(guestrecipe.resource.fqdn, None)
@@ -120,7 +121,8 @@ class RecipeTasksXmlRpcTest(XmlRpcTestCase):
             hostrecipe.tasks[0].role = u'SERVERS'
             guestrecipe_server.tasks[0].role = u'SERVERS'
             guestrecipe_client.tasks[0].role = u'CLIENTS'
-            system = data_setup.create_system(fqdn=u'host.bz960434')
+            system = data_setup.create_system(fqdn=u'host.bz960434',
+                    lab_controller=self.lc)
             data_setup.mark_recipe_running(hostrecipe, system=system)
             data_setup.mark_recipe_running(guestrecipe_server, fqdn=u'guestserver.bz960434')
             data_setup.mark_recipe_running(guestrecipe_client, fqdn=u'guestclient.bz960434')

@@ -212,21 +212,11 @@ def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux
             image_type=ImageType.initrd,
             kernel_type=KernelType.by_name(u'default'),
             path=u'pxeboot/initrd')
-    existing_urls = [lc_distro_tree.url for lc_distro_tree in distro_tree.lab_controller_assocs]
     # make it available in all lab controllers by default
     if lab_controllers is None:
         lab_controllers = LabController.query
     for lc in lab_controllers:
-        default_urls = [u'%s://%s%s/distros/%s/%s/%s/os/' % (scheme, lc.fqdn,
-                scheme == 'nfs' and ':' or '',
-                distro_tree.distro.name, distro_tree.variant,
-                distro_tree.arch.arch) for scheme in ['nfs', 'http', 'ftp']]
-        for url in (urls or default_urls):
-            if url in existing_urls:
-                break
-            lab_controller_distro_tree = LabControllerDistroTree(
-                lab_controller=lc, url=url)
-            distro_tree.lab_controller_assocs.append(lab_controller_distro_tree)
+        add_distro_tree_to_lab(distro_tree, lc, urls=urls)
 
     if osmajor_installopts_arch:
         io = OSMajorInstallOptions.lazy_create(osmajor_id=distro_tree.distro.osversion.osmajor.id,
@@ -237,6 +227,19 @@ def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux
 
     log.debug('Created distro tree %r', distro_tree)
     return distro_tree
+
+def add_distro_tree_to_lab(distro_tree, lab_controller, urls=None):
+    default_urls = [u'%s://%s%s/distros/%s/%s/%s/os/' % (scheme,
+            lab_controller.fqdn, scheme == 'nfs' and ':' or '',
+            distro_tree.distro.name, distro_tree.variant,
+            distro_tree.arch.arch) for scheme in ['nfs', 'http', 'ftp']]
+    existing_urls = [lc_distro_tree.url for lc_distro_tree in distro_tree.lab_controller_assocs]
+    for url in (urls or default_urls):
+        if url in existing_urls:
+            continue
+        lab_controller_distro_tree = LabControllerDistroTree(
+            lab_controller=lab_controller, url=url)
+        distro_tree.lab_controller_assocs.append(lab_controller_distro_tree)
 
 def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.automated,
         owner=None, fqdn=None, shared=True, exclude_osmajor=[],
@@ -593,6 +596,8 @@ def mark_recipe_waiting(recipe, start_time=None, system=None, fqdn=None,
         elif isinstance(recipe, GuestRecipe):
             recipe.resource = GuestResource()
             recipe.resource.allocate()
+    if not recipe.distro_tree.url_in_lab(recipe.recipeset.lab_controller):
+        add_distro_tree_to_lab(recipe.distro_tree, recipe.recipeset.lab_controller)
     recipe.start_time = start_time
     recipe.watchdog = Watchdog()
     recipe.waiting()
