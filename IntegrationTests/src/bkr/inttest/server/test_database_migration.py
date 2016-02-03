@@ -12,6 +12,7 @@ from turbogears.database import metadata
 from bkr.server.tools.init import upgrade_db, downgrade_db
 from sqlalchemy.orm import create_session
 from sqlalchemy.sql import func
+from alembic.environment import MigrationContext
 from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, User, \
         OSMajor, OSMajorInstallOptions, GroupMembershipType
 
@@ -45,6 +46,27 @@ class MigrationTest(unittest.TestCase):
         connection.execute('DROP DATABASE IF EXISTS %s' % db_name)
         connection.execute('CREATE DATABASE %s' % db_name)
         connection.invalidate() # can't reuse this one
+
+    def check_current_revision(self, rev):
+        ctx = MigrationContext.configure(connection=self.migration_engine.connect())
+        self.assertEqual(ctx.get_current_revision(), rev)
+
+    def test_can_pass_beaker_version_to_downgrade(self):
+        # We should be able to give it arbitrary Beaker versions and have it 
+        # figure out the matching schema version we want.
+        # The downgrade process itself will do nothing in this case because we 
+        # are already on the right version.
+        connection = self.migration_metadata.bind.connect()
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/21.sql'))
+        downgrade_db(self.migration_metadata, '21')
+        self.check_current_revision('171c07fb4970')
+        # Should also accept minor versions
+        downgrade_db(self.migration_metadata, '21.1')
+        self.check_current_revision('171c07fb4970')
+        # Should also accept RPM version-releases, this makes our playbooks simpler
+        downgrade_db(self.migration_metadata, '21.1-1.el6eng')
+        self.check_current_revision('171c07fb4970')
 
     def test_full_upgrade(self):
         connection = self.migration_metadata.bind.connect()
