@@ -304,7 +304,7 @@ def main():
         else:
             # upgrade to the latest DB version
             upgrade_db(metadata)
-    populate_db(opts.user_name, opts.password, opts.display_name, opts.email_address)
+        populate_db(opts.user_name, opts.password, opts.display_name, opts.email_address)
 
 if __name__ == "__main__":
     main()
