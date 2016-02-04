@@ -38,6 +38,20 @@ PIDFILE = '/var/run/beaker-init.pid'
 
 logger = logging.getLogger(__name__)
 
+def check_db(metadata, target_version):
+    """
+    Returns True if the current database schema version matches the target 
+    version (does not need any upgrades/downgrades).
+    """
+    env_context = create_alembic_env_context(metadata)
+    current = env_context.get_context().get_current_revision()
+    target_version = beaker_version_to_schema_version(target_version)
+    target = env_context.script.get_revision(target_version).revision
+    if current != target:
+        logger.info('Current schema %s does not match target revision %s', current, target)
+        return False
+    return True
+
 def init_db(metadata):
     logger.info('Creating tables in empty database')
     metadata.create_all()
@@ -287,19 +301,22 @@ def downgrade_db(metadata, version):
     run_alembic_operation(metadata, downgrade)
     logger.info('Downgrade completed')
 
+def create_alembic_env_context(metadata, func=None):
+    config = alembic.config.Config()
+    config.set_main_option('script_location', 'bkr.server:alembic')
+    script = alembic.script.ScriptDirectory.from_config(config)
+    env_context = alembic.environment.EnvironmentContext(config=config,
+            script=script, fn=func)
+    connection = metadata.bind.connect()
+    env_context.configure(connection=connection, target_metadata=metadata)
+    return env_context
+
 def run_alembic_operation(metadata, func):
     # We intentionally *don't* run inside the normal Alembic env.py so that we 
     # can force the use of the SA metadata we are given, rather than using the 
     # normal global TurboGears metadata instance. Ultimately this is to make 
     # the migration testable.
-    config = alembic.config.Config()
-    config.set_main_option('script_location', 'bkr.server:alembic')
-    script = alembic.script.ScriptDirectory.from_config(config)
-
-    env_context = alembic.environment.EnvironmentContext(config=config,
-            script=script, fn=func)
-    connection = metadata.bind.connect()
-    env_context.configure(connection=connection, target_metadata=metadata)
+    env_context = create_alembic_env_context(metadata, func)
     env_context.run_migrations()
 
 def get_parser():
@@ -322,6 +339,9 @@ def get_parser():
     parser.add_option("--downgrade", type="string", metavar='VERSION',
                      help="Downgrade database to a previous version "
                      "(accepts a schema version identifier or Beaker version)")
+    parser.add_option('--check', action='store_true',
+            help='Instead of performing upgrades, only check if upgrades are necessary '
+            '(exit status is 1 if the schema is empty or not up to date)')
     parser.add_option('--debug', action='store_true',
             help='Show detailed progress information')
     parser.add_option('--background', action='store_true',
@@ -344,9 +364,11 @@ def main():
     parser = get_parser()
     opts, args = parser.parse_args()
     load_config_or_exit(opts.configfile)
+    if opts.check and opts.background:
+        parser.error('--check --background makes no sense, how will you know the result?')
     if not opts.background:
         log_to_stream(sys.stderr, level=logging.DEBUG if opts.debug else logging.WARNING)
-        doit(opts)
+        return doit(opts)
     else:
         pidlockfile = PIDLockFile(PIDFILE)
         existing_pid = pidlockfile.read_pid()
@@ -354,20 +376,23 @@ def main():
             if process_is_alive(existing_pid):
                 sys.stderr.write('Another beaker-init process is running (pid %s)\n'
                         % existing_pid)
-                sys.exit(1)
+                return 1
             else:
                 sys.stderr.write('Pid file %s exists but pid %s is dead, '
                         'removing the pid file\n' % (PIDFILE, existing_pid))
                 pidlockfile.break_lock()
         with daemon.DaemonContext(pidfile=pidlockfile, detach_process=True):
             log_to_syslog('beaker-init')
-            doit(opts)
+            return doit(opts)
 
 @log_traceback(logger)
 def doit(opts):
     from turbogears.database import metadata, bind_metadata
     bind_metadata()
-    if opts.downgrade:
+    if opts.check:
+        version = opts.downgrade or 'head'
+        return 0 if check_db(metadata, version) else 1
+    elif opts.downgrade:
         downgrade_db(metadata, opts.downgrade)
     else:
         # if database is empty then initialize it
@@ -381,6 +406,7 @@ def doit(opts):
             upgrade_db(metadata)
         populate_db(opts.user_name, opts.password, opts.display_name, opts.email_address)
     logger.info('Exiting')
+    return 0
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

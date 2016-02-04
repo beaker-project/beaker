@@ -9,7 +9,7 @@ import pkg_resources
 import sqlalchemy
 from turbogears import config
 from turbogears.database import metadata
-from bkr.server.tools.init import upgrade_db, downgrade_db
+from bkr.server.tools.init import upgrade_db, downgrade_db, check_db
 from sqlalchemy.orm import create_session
 from sqlalchemy.sql import func
 from alembic.environment import MigrationContext
@@ -48,9 +48,14 @@ class MigrationTest(unittest.TestCase):
         connection.execute('CREATE DATABASE %s' % db_name)
         connection.invalidate() # can't reuse this one
 
-    def check_current_revision(self, rev):
-        ctx = MigrationContext.configure(connection=self.migration_engine.connect())
-        self.assertEqual(ctx.get_current_revision(), rev)
+    def test_check_db(self):
+        connection = self.migration_metadata.bind.connect()
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/21.sql'))
+        self.assertTrue(check_db(self.migration_metadata, '171c07fb4970'))
+        self.assertFalse(check_db(self.migration_metadata, 'head'))
+        upgrade_db(self.migration_metadata)
+        self.assertTrue(check_db(self.migration_metadata, 'head'))
 
     def test_can_pass_beaker_version_to_downgrade(self):
         # We should be able to give it arbitrary Beaker versions and have it 
@@ -61,13 +66,13 @@ class MigrationTest(unittest.TestCase):
         connection.execute(pkg_resources.resource_string('bkr.inttest.server',
                 'database-dumps/21.sql'))
         downgrade_db(self.migration_metadata, '21')
-        self.check_current_revision('171c07fb4970')
+        self.assertTrue(check_db(self.migration_metadata, '171c07fb4970'))
         # Should also accept minor versions
         downgrade_db(self.migration_metadata, '21.1')
-        self.check_current_revision('171c07fb4970')
+        self.assertTrue(check_db(self.migration_metadata, '171c07fb4970'))
         # Should also accept RPM version-releases, this makes our playbooks simpler
         downgrade_db(self.migration_metadata, '21.1-1.el6eng')
-        self.check_current_revision('171c07fb4970')
+        self.assertTrue(check_db(self.migration_metadata, '171c07fb4970'))
 
     def test_full_upgrade(self):
         connection = self.migration_metadata.bind.connect()
