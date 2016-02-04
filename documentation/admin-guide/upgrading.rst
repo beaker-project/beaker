@@ -81,9 +81,12 @@ upgrade procedures described above, with the following differences:
   *before* downgrading any packages. The table below lists the database version 
   corresponding to each Beaker release series.
 
+.. This table is also encoded in beaker-init, don't forget to update it there!
+
 ==============  ================
 Beaker release  Database version
 ==============  ================
+22              ``54395adc8646``
 21              ``171c07fb4970``
 20              ``19d89d5fbde6``
 19              ``53942581687f``
