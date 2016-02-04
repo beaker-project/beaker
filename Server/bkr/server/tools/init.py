@@ -18,22 +18,28 @@ import logging
 from sqlalchemy.inspection import inspect
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
-from bkr.log import log_to_stream
+from bkr.log import log_to_stream, log_to_syslog
 from bkr.server.model import (User, Group, Permission, Hypervisor, KernelType,
         Arch, PowerType, Key, Response, RetentionTag, ConfigItem, UserGroup)
-from bkr.server.util import load_config_or_exit
+from bkr.server.util import load_config_or_exit, log_traceback
 from turbogears.database import session
 from os.path import dirname, exists, join
 from os import getcwd
 from optparse import OptionParser
 import alembic.config, alembic.script, alembic.environment
+import errno
+import daemon
+from daemon.pidfile import PIDLockFile
 
 __version__ = '0.1'
 __description__ = 'Command line tool for initializing Beaker DB'
 
+PIDFILE = '/var/run/beaker-init.pid'
+
 logger = logging.getLogger(__name__)
 
 def init_db(metadata):
+    logger.info('Creating tables in empty database')
     metadata.create_all()
 
     def stamp(rev, context):
@@ -45,9 +51,11 @@ def init_db(metadata):
             context._update_current_rev(current, head.revision)
             return []
     run_alembic_operation(metadata, stamp)
+    logger.info('Created tables')
 
 def populate_db(user_name=None, password=None, user_display_name=None,
         user_email_address=None):
+    logger.info('Populating tables with pre-defined values if necessary')
     session.begin()
 
     try:
@@ -197,8 +205,10 @@ def populate_db(user_name=None, password=None, user_display_name=None,
 
     session.commit()
     session.close()
+    logger.info('Pre-defined values populated')
 
 def upgrade_db(metadata):
+    logger.info('Upgrading schema to head revision')
     def upgrade(rev, context):
         # In alembic 0.7, rev could be an empty set.
         if not rev:
@@ -242,6 +252,7 @@ def upgrade_db(metadata):
                 pass
         return context.script._upgrade_revs('head', rev)
     run_alembic_operation(metadata, upgrade)
+    logger.info('Upgrade completed')
 
 def beaker_version_to_schema_version(version):
     # This table is also part of the docs, ensure they stay in sync!
@@ -270,9 +281,11 @@ def beaker_version_to_schema_version(version):
 
 def downgrade_db(metadata, version):
     version = beaker_version_to_schema_version(version)
+    logger.info('Downgrading schema to version %s', version)
     def downgrade(rev, context):
         return context.script._downgrade_revs(version, rev)
     run_alembic_operation(metadata, downgrade)
+    logger.info('Downgrade completed')
 
 def run_alembic_operation(metadata, func):
     # We intentionally *don't* run inside the normal Alembic env.py so that we 
@@ -311,14 +324,47 @@ def get_parser():
                      "(accepts a schema version identifier or Beaker version)")
     parser.add_option('--debug', action='store_true',
             help='Show detailed progress information')
+    parser.add_option('--background', action='store_true',
+            help='Detach from the terminal, send messages to syslog')
     return parser
+
+def process_is_alive(pid):
+    try:
+        process_name = open('/proc/%s/comm' % pid).read().strip()
+    except (IOError, OSError) as e:
+        if e.errno == errno.ENOENT:
+            return False
+        else:
+            raise
+    if process_name != 'beaker-init':
+        return False
+    return True
 
 def main():
     parser = get_parser()
     opts, args = parser.parse_args()
     load_config_or_exit(opts.configfile)
-    log_to_stream(sys.stderr, level=logging.DEBUG if opts.debug else logging.WARNING)
+    if not opts.background:
+        log_to_stream(sys.stderr, level=logging.DEBUG if opts.debug else logging.WARNING)
+        doit(opts)
+    else:
+        pidlockfile = PIDLockFile(PIDFILE)
+        existing_pid = pidlockfile.read_pid()
+        if existing_pid:
+            if process_is_alive(existing_pid):
+                sys.stderr.write('Another beaker-init process is running (pid %s)\n'
+                        % existing_pid)
+                sys.exit(1)
+            else:
+                sys.stderr.write('Pid file %s exists but pid %s is dead, '
+                        'removing the pid file\n' % (PIDFILE, existing_pid))
+                pidlockfile.break_lock()
+        with daemon.DaemonContext(pidfile=pidlockfile, detach_process=True):
+            log_to_syslog('beaker-init')
+            doit(opts)
 
+@log_traceback(logger)
+def doit(opts):
     from turbogears.database import metadata, bind_metadata
     bind_metadata()
     if opts.downgrade:
@@ -327,12 +373,14 @@ def main():
         # if database is empty then initialize it
         if not metadata.bind.table_names():
             if not opts.user_name:
-                parser.error('Pass --user to create an admin user')
+                logger.error('Database is empty, you must pass --user to create an admin user')
+                return 1
             init_db(metadata)
         else:
             # upgrade to the latest DB version
             upgrade_db(metadata)
         populate_db(opts.user_name, opts.password, opts.display_name, opts.email_address)
+    logger.info('Exiting')
 
 if __name__ == "__main__":
     main()
