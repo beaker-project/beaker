@@ -43,13 +43,9 @@ class Reports(RPCRoot):
                            'System/User',
                            'System/Pools',
                            'System/LoanedTo',)
-        default_fields = ['systemsearch_column_' + x for x in default_columns]
-        kw.update(dict(zip(default_fields, default_columns)))
-        kw.update({'systemsearch': [{'keyvalue': u'',
-                                     'operation': u'before',
-                                     'table': u'System/Reserved',
-                                     'value': datetime.datetime.utcnow().strftime('%Y-%m-%d')}], })
         return Root()._systems(systems=System.all(identity.current.user)
                                .join('open_reservation')
                                .options(contains_eager(System.open_reservation)),
-                               title=u'Reserve Report', *args, **kw)
+                               title=u'Reserve Report',
+                               default_result_columns=default_columns,
+                               *args, **kw)

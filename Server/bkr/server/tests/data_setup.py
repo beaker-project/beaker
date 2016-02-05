@@ -685,7 +685,9 @@ def playback_job_results(job, xmljob):
                 playback_task_results(job.recipesets[i].recipes[j].tasks[k], xmltask)
                 job.update_status()
 
-def create_manual_reservation(system, start, finish=None, user=None):
+def create_manual_reservation(system, start=None, finish=None, user=None):
+    if start is None:
+        start = datetime.datetime.utcnow()
     if user is None:
         user = create_user()
     system.reservations.append(Reservation(start_time=start,
