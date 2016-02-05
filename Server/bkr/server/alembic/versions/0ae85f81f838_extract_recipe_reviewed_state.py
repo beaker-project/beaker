@@ -21,8 +21,10 @@ from sqlalchemy import Column, Integer, Boolean, ForeignKey
 def upgrade():
     op.create_table('recipe_reviewed_state',
         Column('recipe_id', Integer, ForeignKey('recipe.id',
+                name='recipe_reviewed_state_recipe_id_fk',
                 onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
         Column('user_id', Integer, ForeignKey('tg_user.user_id',
+                name='recipe_reviewed_state_user_id_fk',
                 onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
         Column('reviewed', Boolean, nullable=False),
         mysql_engine='InnoDB',

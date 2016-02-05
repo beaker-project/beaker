@@ -20,9 +20,11 @@ class RecipeSetComment(DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, autoincrement=True, primary_key=True)
     recipe_set_id = Column(Integer, ForeignKey('recipe_set.id',
+            name='recipe_set_comment_recipe_set_id_fk',
             onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
     recipeset = relationship(RecipeSet, back_populates='comments')
     user_id = Column(Integer, ForeignKey('tg_user.user_id',
+            name='recipe_set_comment_user_id_fk',
             onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
     user = relationship(User)
     comment = Column(Unicode(4000), nullable=False)
@@ -55,9 +57,11 @@ class RecipeReviewedState(DeclarativeMappedObject):
     __tablename__ = 'recipe_reviewed_state'
     __table_args__ = {'mysql_engine': 'InnoDB'}
     recipe_id = Column(Integer, ForeignKey('recipe.id',
+            name='recipe_reviewed_state_recipe_id_fk',
             onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)
     recipe = relationship(Recipe)
     user_id = Column(Integer, ForeignKey('tg_user.user_id',
+            name='recipe_reviewed_state_user_id_fk',
             onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)
     user = relationship(User)
     reviewed = Column(Boolean, nullable=False, default=True)
