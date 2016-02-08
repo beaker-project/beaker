@@ -6,14 +6,14 @@
 """Extract recipe set comments from recipe_set_nacked
 
 Revision ID: 1c79b9a2722d
-Revises: b1a6732734e
+Revises: 59b98f6e0120
 Create Date: 2015-11-05 14:38:37.925593
 
 """
 
 # revision identifiers, used by Alembic.
 revision = '1c79b9a2722d'
-down_revision = 'b1a6732734e'
+down_revision = '59b98f6e0120'
 
 from alembic import op
 from sqlalchemy import Column, ForeignKey, Integer, Unicode, DateTime
