@@ -200,6 +200,7 @@ def user_full_json(user):
             attributes['root_password_expiry'] = user.rootpw_expiry
             attributes['ssh_public_keys'] = user.sshpubkeys
             attributes['submission_delegates'] = user.submission_delegates
+            attributes['use_old_job_page'] = user.use_old_job_page
     else:
         attributes['can_edit'] = False
         attributes['can_change_password'] = False
@@ -284,6 +285,8 @@ def update_user(username):
       using external authentication for this account.
     :jsonparam string root_password: Root password to be set on systems 
       provisioned by Beaker.
+    :jsonparam boolean use_old_job_page: True if the user has opted to use the 
+      old, deprecated pre-Beaker-23 job page.
     :jsonparam boolean disabled: Whether the user should be temporarily 
       disabled. Disabled users cannot log in or submit jobs, and any running jobs 
       are cancelled when their account is disabled.
@@ -332,6 +335,8 @@ def update_user(username):
                 new_root_password = data['root_password']
                 if user.root_password != new_root_password:
                     user.root_password = new_root_password
+            if 'use_old_job_page' in data:
+                user.use_old_job_page = data['use_old_job_page']
             if 'disabled' in data:
                 user.disabled = data['disabled']
                 if user.disabled:
