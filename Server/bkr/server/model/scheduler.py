@@ -3542,21 +3542,6 @@ class RecipeKSAppend(DeclarativeMappedObject):
     def __repr__(self):
         return self.ks_append
 
-class RecipeTaskComment(DeclarativeMappedObject):
-    """
-    User comments about the task execution.
-    """
-
-    __tablename__ = 'recipe_task_comment'
-    __table_args__ = {'mysql_engine': 'InnoDB'}
-    id = Column(Integer, primary_key=True)
-    recipe_task_id = Column(Integer, ForeignKey('recipe_task.id'))
-    recipetask = relationship(RecipeTask, back_populates='comments')
-    comment = Column(UnicodeText)
-    created = Column(DateTime)
-    user_id = Column(Integer, ForeignKey('tg_user.user_id'), index=True)
-    user = relationship(User)
-
 
 class RecipeTaskBugzilla(DeclarativeMappedObject):
     """
@@ -3623,6 +3608,7 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
     start_time = Column(DateTime, default=datetime.utcnow)
     logs = relationship(LogRecipeTaskResult, back_populates='parent',
             cascade='all, delete-orphan')
+    comments = relationship('RecipeTaskResultComment', back_populates='recipetaskresult')
 
     def __init__(self, recipetask=None, path=None, result=None,
             score=None, log=None):

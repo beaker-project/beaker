@@ -10,26 +10,11 @@ from sqlalchemy import Column, ForeignKey, Integer, Unicode, DateTime, Boolean
 from sqlalchemy.orm import relationship, validates
 from .base import DeclarativeMappedObject
 from .identity import User
-from .scheduler import RecipeSet, Recipe
+from .scheduler import RecipeSet, Recipe, RecipeTask, RecipeTaskResult
 
 log = logging.getLogger(__name__)
 
-class RecipeSetComment(DeclarativeMappedObject):
-
-    __tablename__ = 'recipe_set_comment'
-    __table_args__ = {'mysql_engine': 'InnoDB'}
-    id = Column(Integer, autoincrement=True, primary_key=True)
-    recipe_set_id = Column(Integer, ForeignKey('recipe_set.id',
-            name='recipe_set_comment_recipe_set_id_fk',
-            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
-    recipeset = relationship(RecipeSet, back_populates='comments')
-    user_id = Column(Integer, ForeignKey('tg_user.user_id',
-            name='recipe_set_comment_user_id_fk',
-            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
-    user = relationship(User)
-    comment = Column(Unicode(4000), nullable=False)
-    created = Column(DateTime, nullable=False, default=datetime.utcnow)
-
+class CommentBase(object):
     def __json__(self):
         return {
             'id': self.id,
@@ -45,6 +30,53 @@ class RecipeSetComment(DeclarativeMappedObject):
         if value.isspace():
             raise ValueError('Comment text cannot consist of only whitespace')
         return value
+
+
+class RecipeSetComment(CommentBase, DeclarativeMappedObject):
+
+    __tablename__ = 'recipe_set_comment'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    recipe_set_id = Column(Integer, ForeignKey('recipe_set.id',
+            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    recipeset = relationship(RecipeSet, back_populates='comments')
+    user_id = Column(Integer, ForeignKey('tg_user.user_id',
+            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    user = relationship(User)
+    comment = Column(Unicode(4000), nullable=False)
+    created = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+class RecipeTaskComment(CommentBase, DeclarativeMappedObject):
+
+    __tablename__ = 'recipe_task_comment'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    recipe_task_id = Column(Integer, ForeignKey('recipe_task.id',
+            name='recipe_task_comment_recipe_task_id_fk',
+            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    recipetask = relationship(RecipeTask, back_populates='comments')
+    user_id = Column(Integer, ForeignKey('tg_user.user_id',
+            name='recipe_task_comment_user_id_fk',
+            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    user = relationship(User)
+    comment = Column(Unicode(4000), nullable=False)
+    created = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+class RecipeTaskResultComment(CommentBase, DeclarativeMappedObject):
+
+    __tablename__ = 'recipe_task_result_comment'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    recipe_task_result_id = Column(Integer, ForeignKey('recipe_task_result.id',
+            name='recipe_task_result_comment_recipe_task_result_id_fk',
+            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    recipetaskresult = relationship(RecipeTaskResult, back_populates='comments')
+    user_id = Column(Integer, ForeignKey('tg_user.user_id',
+            name='recipe_task_result_comment_user_id_fk',
+            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    user = relationship(User)
+    comment = Column(Unicode(4000), nullable=False)
+    created = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 class RecipeReviewedState(DeclarativeMappedObject):
 
