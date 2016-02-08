@@ -1,0 +1,19 @@
+<p>The following users are allowed to submit jobs on your behalf:</p>
+<% if (submission_delegates.isEmpty()) { %>
+<p>(none)</p>
+<% } else { %>
+<ul class="list-group submission-delegates-list">
+  <% submission_delegates.each(function (submission_delegate) { %>
+    <li>
+      <%= submission_delegate.toHTML() %>
+      <button class="btn remove" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Removing&hellip;" data-username="<%- submission_delegate.get('user_name') %>"><i class="fa fa-times"></i> Remove</button>
+    </li>
+  <% }) %>
+</ul>
+<% } %>
+<form class="add">
+  <div class="input-append">
+    <input type="text" name="user_name" placeholder="Username" required/>
+    <button class="btn" type="submit" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Adding&hellip;"><i class="fa fa-plus"></i> Add</button>
+  </div>
+</form>

@@ -258,7 +258,7 @@ class LabControllerViewTest(WebDriverTestCase):
         b.find_element_by_xpath('//li[contains(., "%s")]//button[contains(., "Edit")]' % self.lc.fqdn).click()
         b.find_element_by_name('disabled').click()
         b.find_element_by_class_name('edit-labcontroller').submit()
-        b.find_element_by_xpath('//li[contains(., "Disabled")]')
+        b.find_element_by_xpath('//li[contains(., "%s")]//small[text()="Disabled"]' % self.lc.fqdn)
 
         with session.begin():
             session.refresh(self.lc)

@@ -151,6 +151,14 @@ def check_task_search_results(browser, present=[], absent=[]):
         browser.find_element_by_xpath('//table[@id="widget" and '
                     './/td[1]/a/text()="%s"]' % task.name)
 
+def check_user_search_results(browser, present=[], absent=[]):
+    for user in absent:
+        browser.find_element_by_xpath('//table[contains(@class, "table")]/tbody'
+                    '[not(tr/td[1]/a/text()="%s")]' % user.user_name)
+    for user in present:
+        browser.find_element_by_xpath('//table[contains(@class, "table")]/tbody'
+                    '[tr/td[1]/a/text()="%s"]' % user.user_name)
+
 def check_group_search_results(browser, present=[], absent=[]):
     for group in absent:
         browser.find_element_by_xpath('//table[contains(@class, "table")]/tbody'

@@ -13,6 +13,7 @@
 __requires__ = ['CherryPy < 3.0']
 
 import sys
+import re
 import logging
 from sqlalchemy.inspection import inspect
 from sqlalchemy.exc import InvalidRequestError
@@ -237,7 +238,33 @@ def upgrade_db(metadata):
         return context.script._upgrade_revs('head', rev)
     run_alembic_operation(metadata, upgrade)
 
+def beaker_version_to_schema_version(version):
+    # This table is also part of the docs, ensure they stay in sync!
+    beaker_versions = {
+        '22': '54395adc8646',
+        '21': '171c07fb4970',
+        '20': '19d89d5fbde6',
+        '19': '53942581687f',
+        '0.18': '431e4e2ccbba',
+        '0.17': '431e4e2ccbba',
+        '0.16': '2f38ab976d17',
+        '0.15': '49a4a1e3779a',
+        '0.14': '057b088bfb32',
+        '0.13': '41aa3372239e',
+        '0.12': '442672570b8f',
+    }
+    if version in beaker_versions:
+        return beaker_versions[version]
+    # Try to map arbitrary versions or RPM version-releases to the matching 
+    # major version number.
+    m = re.match(r'((0\.)?\d+)\.\d.*', version)
+    if m and m.group(1) in beaker_versions:
+        return beaker_versions[m.group(1)]
+    # Assume it's already a schema version, Alembic will tell us if it's not.
+    return version
+
 def downgrade_db(metadata, version):
+    version = beaker_version_to_schema_version(version)
     def downgrade(rev, context):
         return context.script._downgrade_revs(version, rev)
     run_alembic_operation(metadata, downgrade)
@@ -274,8 +301,9 @@ def get_parser():
                       help="email address of Admin account")
     parser.add_option("-n", "--fullname", action="store", type="string",
                       dest="display_name", help="Full name of Admin account")
-    parser.add_option("--downgrade", type="string", metavar='REVISION_IDENTIFIER',
-                     help="Downgrade database to a previous version")
+    parser.add_option("--downgrade", type="string", metavar='VERSION',
+                     help="Downgrade database to a previous version "
+                     "(accepts a schema version identifier or Beaker version)")
     parser.add_option('--debug', action='store_true',
             help='Show detailed progress information')
     return parser
@@ -299,7 +327,7 @@ def main():
         else:
             # upgrade to the latest DB version
             upgrade_db(metadata)
-    populate_db(opts.user_name, opts.password, opts.display_name, opts.email_address)
+        populate_db(opts.user_name, opts.password, opts.display_name, opts.email_address)
 
 if __name__ == "__main__":
     main()

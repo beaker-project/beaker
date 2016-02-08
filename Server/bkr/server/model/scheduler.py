@@ -487,11 +487,16 @@ class TaskBase(object):
         else:
             return False
 
+    @hybrid_method
     def is_finished(self):
         """
         Simply state if the task is finished or not
         """
         return self.status.finished
+
+    @is_finished.expression
+    def is_finished(cls): #pylint: disable=E0213
+        return cls.status.in_([status for status in TaskStatus if status.finished])
 
     def is_queued(self):
         """

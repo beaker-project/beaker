@@ -11,34 +11,6 @@ from bkr.server import identity
 from bkr.server.model import System, Recipe, User, LabController, RetentionTag
 
 
-class UniqueUserName(FormValidator):
-
-    __unpackargs__ = ('*', 'field_names')
-    messages = {'not_unique' : 'Login name is not unique' }
-
-    def __init__(self, *args, **kw):
-        super(UniqueUserName, self).__init__(*args, **kw)
-        if len(self.field_names) < 2:
-            raise TypeError("UniqueUserName() requires at least two field names")
-
-    def validate_python(self, form_fields, state):
-        user_id = form_fields['user_id']
-        user_name = form_fields['user_name']
-        existing_user = User.by_user_name(user_name)
-        try:
-            if not user_id: # New user
-                if existing_user: # with a duplicate name
-                    raise ValueError
-            else:
-                if existing_user:
-                    current_user = User.by_id(user_id)
-                    if current_user != existing_user:
-                        raise ValueError
-        except ValueError:
-            error = {'user_name' : self.message('not_unique', state)}
-            raise Invalid('Login name is not unique', form_fields,
-                state, error_dict=error)
-
 class CheckRecipeValid(TgFancyValidator):
 
     def _to_python(self, value, state):
@@ -57,30 +29,6 @@ class CheckSystemValid(TgFancyValidator):
         except NoResultFound:
             raise Invalid('Invalid system', value, state)
         return system
-
-
-class SSHPubKey(TgFancyValidator):
-
-    strip = True
-    messages = {
-        'invalid': 'The supplied value is not a valid SSH public key',
-        'newline': 'SSH public keys may not contain newlines',
-    }
-
-    def _to_python(self, value, state):
-        if not value:
-            return None
-        if '\n' in value:
-            raise Invalid(self.message('newline', state), value, state)
-        elements = value.split(None, 2)
-        if len(elements) != 3:
-            raise Invalid(self.message('invalid', state), value, state)
-        return elements
-
-    def _from_python(self, value, state):
-        if isinstance(value, tuple):
-            return ' '.join(value)
-        return value
 
 
 class UniqueRetentionTag(FormValidator):

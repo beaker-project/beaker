@@ -11,6 +11,79 @@ window.User = Backbone.Model.extend({
     toHTML: function () {
         return this._toHTML_template(this.attributes);
     },
+    initialize: function (attributes, options) {
+        options = options || {};
+        if (options.url)
+            this.url = options.url;
+    },
+    parse: function (data) {
+        if (data['ssh_public_keys']) {
+            var ssh_public_keys = this.get('ssh_public_keys') || new UserSSHPublicKeys([], {user: this});
+            ssh_public_keys.reset(data['ssh_public_keys'], {parse: true});
+            data['ssh_public_keys'] = ssh_public_keys;
+        }
+        if (data['submission_delegates']) {
+            var submission_delegates = this.get('submission_delegates') || new UserSubmissionDelegates([], {user: this});
+            submission_delegates.reset(data['submission_delegates'], {parse: true});
+            data['submission_delegates'] = submission_delegates;
+        }
+        return data;
+    },
+    add_ssh_public_key: function (keytext) {
+        var model = this;
+        return $.ajax({
+            url: this.url + '/ssh-public-keys/',
+            type: 'POST',
+            contentType: 'text/plain',
+            data: keytext,
+        }).then(function () {
+            return model.fetch(); // refresh ssh_public_keys attribute
+        });
+    },
+    add_submission_delegate: function (user_name) {
+        var model = this;
+        return $.ajax({
+            url: this.url + '/submission-delegates/',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({user_name: user_name}),
+        }).then(function () {
+            return model.fetch(); // refresh submission_delegates attribute
+        });
+    },
+    remove_submission_delegate: function (user_name) {
+        var model = this;
+        return $.ajax({
+            url: this.url + '/submission-delegates/?user_name=' + encodeURIComponent(user_name),
+            type: 'DELETE',
+        }).then(function () {
+            return model.fetch(); // refresh submission_delegates attribute
+        });
+    },
+});
+
+var SSHPublicKey = Backbone.Model.extend({
+});
+
+var UserSSHPublicKeys = Backbone.Collection.extend({
+    model: SSHPublicKey,
+    initialize: function (attributes, options) {
+        this.user = options.user;
+    },
+    url: function () {
+        return _.result(this.user, 'url') + '/ssh-public-keys/';
+    },
+});
+
+var UserSubmissionDelegates = Backbone.Collection.extend({
+    model: User,
+});
+
+window.Users = BeakerPageableCollection.extend({
+    model: User,
+    initialize: function (attributes, options) {
+        this.url = options.url;
+    },
 });
 
 window.Group = Backbone.Model.extend({

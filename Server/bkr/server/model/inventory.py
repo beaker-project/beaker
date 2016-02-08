@@ -287,7 +287,6 @@ class System(DeclarativeMappedObject, ActivityMixin):
     type = Column(SystemType.db_type(), nullable=False)
     status = column_property(Column(SystemStatus.db_type(), nullable=False))
     status_reason = Column(Unicode(4000))
-    deleted = Column(Boolean, default=False)
     memory = Column(Integer)
     checksum = Column(String(32))
     lab_controller_id = Column(Integer, ForeignKey('lab_controller.id'))

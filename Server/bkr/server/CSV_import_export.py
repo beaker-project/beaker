@@ -297,7 +297,7 @@ class CSV(RPCRoot):
 
 class CSV_System(CSV):
     csv_type = 'system'
-    reg_keys = ['fqdn', 'deleted', 'lender', 'location', 
+    reg_keys = ['fqdn', 'lender', 'location',
                 'mac_address', 'memory', 'model',
                 'serial', 'vendor']
 
@@ -446,7 +446,6 @@ class CSV_System(CSV):
         self.system = system
         self.fqdn = system.fqdn
         self.arch = ','.join([arch.arch for arch in system.arch])
-        self.deleted = system.deleted
         self.lab_controller = system.lab_controller
         self.lender = system.lender
         self.location = system.location
