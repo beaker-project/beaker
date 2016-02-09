@@ -181,8 +181,15 @@ class JobMatrix:
         whiteboard_data = {}
         # If somehow both are passed, use the whiteboard
         if whiteboard:
+            if isinstance(whiteboard, basestring):
+                whiteboards = [whiteboard]
+            else:
+                whiteboards = whiteboard
+            # If the whiteboard contains an embedded newline the browser will 
+            # have converted it to CRLF, convert it back here.
+            whiteboards = [w.replace('\r\n', '\n') for w in whiteboards]
             job_ids = []
-            job_query = model.Job.by_whiteboard(whiteboard, only_valid=True)
+            job_query = model.Job.by_whiteboard(whiteboards, only_valid=True)
             for job in job_query:
                 job_ids.append(job.id)
 
