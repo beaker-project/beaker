@@ -482,9 +482,10 @@ class Root(RPCRoot):
                 vals_to_set = text.split(',')
                 for elem in vals_to_set:
                     kw['systemsearch_column_%s' % elem] = elem 
-       
-        default_result_columns = ('System/Name', 'System/Status', 'System/Vendor',
-                                  'System/Model','System/Arch', 'System/User', 'System/Type') 
+
+        default_result_columns = kw.get('default_result_columns',
+                ('System/Name', 'System/Status', 'System/Vendor',
+                 'System/Model','System/Arch', 'System/User', 'System/Type'))
 
         if kw.get('xmlsearch'):
             try:

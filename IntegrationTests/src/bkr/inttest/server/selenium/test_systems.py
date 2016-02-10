@@ -390,7 +390,9 @@ class SystemHTTPTest(DatabaseTestCase):
     def setUp(self):
         with session.begin():
             self.owner = data_setup.create_user(password='theowner')
-            self.system = data_setup.create_system(owner=self.owner, shared=False)
+            self.lab_controller = data_setup.create_labcontroller()
+            self.system = data_setup.create_system(owner=self.owner, shared=False,
+                    lab_controller=self.lab_controller)
             self.policy = self.system.custom_access_policy
             self.policy.add_rule(everybody=True, permission=SystemPermission.reserve)
             self.privileged_group = data_setup.create_group()

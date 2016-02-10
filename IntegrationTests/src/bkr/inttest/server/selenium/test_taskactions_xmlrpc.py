@@ -35,9 +35,9 @@ class TaskactionsTest(XmlRpcTestCase):
     def test_worker_info(self):
         with session.begin():
             job = data_setup.create_job(owner=self.user)
-            system = data_setup.create_system()
-            data_setup.mark_job_running(job, system=system)
+            data_setup.mark_job_running(job)
             recipe = job.recipesets[0].recipes[0]
+            system = recipe.resource.system
         self.assertEquals(self.server.taskactions.task_info(
                 recipe.t_id)['worker'],
                 {'name': system.fqdn})

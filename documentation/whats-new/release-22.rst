@@ -244,4 +244,4 @@ Beaker 22.1
 Version 3.4-8 of the ``/distribution/reservesys`` task has also been released:
 
 * :issue:`1205989`: The task can now be used with the restraint harness.
-  (Contributed by Dan Callaghan)
+  (Contributed by Bill Peck)
