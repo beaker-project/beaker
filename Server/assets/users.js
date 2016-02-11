@@ -42,9 +42,7 @@ window.UserView = Backbone.View.extend({
                 $form.find('button').button('reset');
             })
             .fail(function (xhr) {
-                $form.append(
-                    $('<div class="alert alert-error"/>')
-                        .text(xhr.statusText + ': ' + xhr.responseText));
+                $form.append(alert_for_xhr(xhr));
             })
             .success(function () {
                 $.bootstrapGrowl('<h4>Password has been reset</h4>' +
@@ -59,9 +57,7 @@ window.UserView = Backbone.View.extend({
         this.model.save({disabled: true}, {patch: true, wait: true})
             .fail(function (xhr) {
                 $btn.button('reset');
-                $btn.closest('div').append(
-                    $('<div class="alert alert-error"/>')
-                        .text(xhr.statusText + ': ' + xhr.responseText));
+                $btn.closest('div').append(alert_for_xhr(xhr));
             });
     },
     enable: function (evt) {
@@ -71,9 +67,7 @@ window.UserView = Backbone.View.extend({
         this.model.save({disabled: false}, {patch: true, wait: true})
             .fail(function (xhr) {
                 $btn.button('reset');
-                $btn.closest('div').append(
-                    $('<div class="alert alert-error"/>')
-                        .text(xhr.statusText + ': ' + xhr.responseText));
+                $btn.closest('div').append(alert_for_xhr(xhr));
             });
     },
     'delete': function (evt) {
@@ -87,9 +81,7 @@ window.UserView = Backbone.View.extend({
             .fail(function (xhr) { 
                 $btn.button('reset');
                 if (!_.isEmpty(xhr)) {
-                    $btn.closest('div').append(
-                        $('<div class="alert alert-error"/>')
-                            .text(xhr.statusText + ': ' + xhr.responseText));
+                    $btn.closest('div').append(alert_for_xhr(xhr));
                 }
             });
     },
@@ -100,9 +92,7 @@ window.UserView = Backbone.View.extend({
         this.model.save({removed: null}, {patch: true, wait: true})
             .fail(function (xhr) {
                 $btn.button('reset');
-                $btn.closest('div').append(
-                    $('<div class="alert alert-error"/>')
-                        .text(xhr.statusText + ': ' + xhr.responseText));
+                $btn.closest('div').append(alert_for_xhr(xhr));
             });
     },
 });
@@ -147,9 +137,7 @@ var UserDetailsModal = Backbone.View.extend({
             this.$el.modal('hide');
     },
     save_error: function (xhr) {
-        $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText)
-            .appendTo(this.$('.sync-status'));
+        this.$('.sync-status').append(alert_for_xhr(xhr));
         this.$('.modal-footer button').button('reset');
     },
 });
@@ -214,9 +202,7 @@ window.UserCreateModal = Backbone.View.extend({
         window.location = xhr.getResponseHeader('Location');
     },
     save_error: function (xhr) {
-        $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText)
-            .appendTo(this.$('.sync-status'));
+        this.$('.sync-status').append(alert_for_xhr(xhr));
         this.$('button').button('reset');
     },
 });

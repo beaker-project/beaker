@@ -31,9 +31,7 @@ window.SystemPoolSystemsView = Backbone.View.extend({
     },
     remove_system_error: function (model, xhr) {
         this.$('button').button('reset');
-        this.$el.append(
-            $('<div class="alert alert-error"/>')
-                .text(xhr.statusText + ': ' + xhr.responseText));
+        this.$el.append(alert_for_xhr(xhr));
     },
 });
 
@@ -75,9 +73,7 @@ var SystemPoolAddSystemForm = Backbone.View.extend({
     },
     error: function (model, xhr) {
         this.$('button').button('reset');
-        this.$el.append(
-            $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText));
+        this.$el.append(alert_for_xhr(xhr));
     },
 });
 

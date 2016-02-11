@@ -46,10 +46,7 @@ var SystemCommandsToolbar = Backbone.View.extend({
     },
     error: function (model, xhr) {
         this.$('.sync-status').empty();
-        this.$el.append(
-                $('<div class="alert alert-error"/>')
-                .text('Server request failed: ' + xhr.statusText + ': ' +
-                    xhr.responseText));
+        this.$el.append(alert_for_xhr(xhr));
     },
 });
 

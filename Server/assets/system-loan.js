@@ -36,9 +36,7 @@ window.SystemLoanView = Backbone.View.extend({
         new SystemLoanRequestModal({model: this.model});
     },
     error: function (model, xhr) {
-        this.$el.append(
-            $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText));
+        this.$el.append(alert_for_xhr(xhr));
         this.$('button').button('reset');
     },
 });
@@ -73,9 +71,7 @@ var SystemLendModal = Backbone.View.extend({
         this.$el.modal('hide');
     },
     save_error: function (model, xhr) {
-        $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText)
-            .appendTo(this.$('.sync-status'));
+        this.$('.sync-status').append(alert_for_xhr(xhr));
         this.$('button').button('reset');
     },
 });
@@ -112,9 +108,7 @@ window.SystemLoanRequestModal = Backbone.View.extend({
                 {type: 'success'});
     },
     save_error: function (model, xhr) {
-        $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText)
-            .appendTo(this.$('.sync-status'));
+        this.$('.sync-status').append(alert_for_xhr(xhr));
         this.$('button').button('reset');
     },
 });

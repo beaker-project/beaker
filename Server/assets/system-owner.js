@@ -34,9 +34,7 @@ window.SystemOwnerView = Backbone.View.extend({
     },
     remove_cc_error: function (model, xhr) {
         $(evt.currentTarget).button('reset');
-        this.$el.append(
-            $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText));
+        this.$el.append(alert_for_xhr(xhr));
     },
 });
 
@@ -75,9 +73,7 @@ var SystemAddCcForm = Backbone.View.extend({
         evt.preventDefault();
     },
     error: function (model, xhr) {
-        this.$el.append(
-            $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText));
+        this.$el.append(alert_for_xhr(xhr));
         this.$('button').button('reset');
     },
 });
@@ -112,9 +108,7 @@ var SystemOwnerChangeModal = Backbone.View.extend({
         this.$el.modal('hide');
     },
     save_error: function (model, xhr) {
-        $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText)
-            .appendTo(this.$('.sync-status'));
+        this.$('.sync-status').append(alert_for_xhr(xhr));
         this.$('button').button('reset');
     },
 });

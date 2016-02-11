@@ -71,11 +71,7 @@ window.SystemAccessPolicyView = Backbone.View.extend({
     },
 
     sync_error: function (xhr) {
-        var msg = 'Server request failed: ' + xhr.statusText;
-        if (xhr.status >= 400 && xhr.status < 500)
-            msg += ': ' + xhr.responseText;
-        this.$('.sync-status').empty().append(
-                $('<span class="alert alert-error"/>').text(msg));
+        this.$('.sync-status').empty().append(alert_for_xhr(xhr));
         this.request_in_progress = false;
         this.update_state();
     },

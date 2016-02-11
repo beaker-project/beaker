@@ -33,11 +33,7 @@ window.UserRootPasswordView = Backbone.View.extend({
         var new_root_password = $form.find('[name=root_password]').val();
         this.model.save({root_password: new_root_password}, {patch: true, wait: true})
             .always(function () { $form.find('button').button('reset'); })
-            .fail(function (xhr) {
-                $form.append(
-                    $('<div class="alert alert-error"/>')
-                        .text(xhr.statusText + ': ' + xhr.responseText));
-            });
+            .fail(function (xhr) { $form.append(alert_for_xhr(xhr)); });
     },
 });
 
@@ -62,10 +58,7 @@ window.UserSSHPublicKeysView = Backbone.View.extend({
         this.$('.alert-error').remove();
         this.model.add_ssh_public_key(this.$('[name=key]').val())
             .always(function () { $form.find('button').button('reset'); })
-            .fail(function (xhr) {
-                $el.append($('<div class="alert alert-error"/>')
-                        .text(xhr.statusText + ': ' + xhr.responseText));
-            });
+            .fail(function (xhr) { $el.append(alert_for_xhr(xhr)); });
     },
 });
 
@@ -88,9 +81,7 @@ var UserSSHPublicKeyListItem = Backbone.View.extend({
             .always(function () { $el.find('button').button('reset'); })
             .fail(function (xhr) {
                 // show it in a growl because we can't cram it inside the list item
-                $.bootstrapGrowl('<h4>Failed to remove SSH public key</h4>' +
-                        xhr.statusText + ': ' + xhr.responseText,
-                        {type: 'error'});
+                growl_for_xhr(xhr, 'Failed to remove SSH public key');
             });
     },
 });
@@ -126,10 +117,7 @@ window.UserSubmissionDelegatesView = Backbone.View.extend({
         $form.find('button').button('loading');
         this.model.add_submission_delegate(this.$('[name=user_name]').val())
             .always(function () { $form.find('button').button('reset'); })
-            .fail(function (xhr) {
-                $el.append($('<div class="alert alert-error"/>')
-                        .text(xhr.statusText + ': ' + xhr.responseText));
-            });
+            .fail(function (xhr) { $el.append(alert_for_xhr(xhr)); });
     },
     remove: function (evt) {
         var $button = $(evt.currentTarget);
@@ -138,9 +126,7 @@ window.UserSubmissionDelegatesView = Backbone.View.extend({
             .always(function () { $button.button('reset'); })
             .fail(function (xhr) {
                 // show it in a growl because we can't cram it inside the list item
-                $.bootstrapGrowl('<h4>Failed to remove submission delegate</h4>' +
-                        xhr.statusText + ': ' + xhr.responseText,
-                        {type: 'error'});
+                growl_for_xhr(xhr, 'Failed to remove submission delegate');
             });
     },
 });

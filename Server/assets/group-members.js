@@ -26,9 +26,7 @@ window.GroupMembersListItemView = Backbone.View.extend({
        model.remove_member(this.member.get('user_name'))
         .fail(function (jqxhr, status, error) {
              $(evt.currentTarget).button('reset');
-             $.bootstrapGrowl('<h4>Failed to remove group member</h4> ' +
-                   jqxhr.statusText + ': ' + jqxhr.responseText,
-                     {type: 'error'});
+             growl_for_xhr(jqxhr, 'Failed to remove group member');
          });
        evt.preventDefault();
      },
@@ -54,9 +52,7 @@ window.GroupExcludedUsersListItemView = Backbone.View.extend({
        model.remove_excluded_user(this.user.get('user_name'))
         .fail(function (jqxhr, status, error) {
              $(evt.currentTarget).button('reset');
-             $.bootstrapGrowl('<h4>Failed to remove user</h4> ' +
-                   jqxhr.statusText + ': ' + jqxhr.responseText,
-                     {type: 'error'});
+             growl_for_xhr(jqxhr, 'Failed to remove user');
          });
        evt.preventDefault();
      },
@@ -135,9 +131,7 @@ var GroupAddMemberForm = Backbone.View.extend({
     },
     error: function (jqxhr, status, error) {
         this.$('button').button('reset');
-        this.$el.append(
-            $('<div class="alert alert-error"/>')
-            .text(jqxhr.statusText + ': ' + jqxhr.responseText));
+        this.$el.append(alert_for_xhr(jqxhr));
     },
 });
 
@@ -175,9 +169,7 @@ var GroupExcludeUserForm = Backbone.View.extend({
     },
     error: function (jqxhr, status, error) {
         this.$('button').button('reset');
-        this.$el.append(
-            $('<div class="alert alert-error"/>')
-            .text(jqxhr.statusText + ': ' + jqxhr.responseText));
+        this.$el.append(alert_for_xhr(jqxhr));
     },
 });
 
