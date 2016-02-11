@@ -87,11 +87,10 @@ class TestPowerTypesGrid(WebDriverTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1215034
     def test_anonymous_cant_see_form_elements(self):
-        self.browser = self.get_browser()
-        self.browser.get(get_server_base() + 'powertypes/')
-        self.assertEqual(
-            'Authenticated user required',
-            self.browser.find_element_by_tag_name('body').text)
+        b = self.get_browser()
+        b.get(get_server_base() + 'powertypes/')
+        b.find_element_by_css_selector('ul.power-types-list')
+        b.find_element_by_xpath('//body[not(.//form) and not(.//button)]')
 
 
 class PowerTypeEditHTTPTest(DatabaseTestCase):
