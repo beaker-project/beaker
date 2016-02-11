@@ -16,6 +16,7 @@ from bkr.server import identity
 from bkr.server.bexceptions import BX, InsufficientSystemPermissions, DatabaseLookupError, \
     StaleTaskStatusException
 from bkr.server.search_utility import lucene_to_sqlalchemy
+from bkr.server.util import absolute_url
 
 # http://flask.pocoo.org/snippets/45/
 def request_wants_json():
@@ -205,6 +206,11 @@ def auth_required(f):
     @functools.wraps(f)
     def wrapper(*args, **kwds):
         if not identity.current.user:
+            if request.method in ['GET', 'HEAD'] and not request_wants_json():
+                forward_url = request.path
+                if request.query_string:
+                    forward_url += '?' + request.query_string
+                return redirect(absolute_url('/login', forward_url=forward_url))
             raise Unauthorised401("Authenticated user required")
         return f(*args, **kwds)
     return wrapper
