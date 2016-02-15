@@ -6,7 +6,7 @@
 """Clear removed users from groups
 
 Revision ID: 2091c783bda6
-Revises: 1b4aec9ce90d
+Revises: b830bfac525
 Create Date: 2015-12-01 15:40:16.063518
 """
 

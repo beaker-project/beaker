@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import datetime
 import lxml.etree
 import os.path
 import pkg_resources
@@ -22,7 +23,8 @@ class TestJobsController(DatabaseTestCase):
         session.begin()
         from bkr.server.jobs import Jobs
         self.controller = Jobs()
-        self.user = data_setup.create_user()
+        self.user = data_setup.create_user(user_name=u'test-job-owner',
+                email_address=u'test-job-owner@example.com')
         group = data_setup.create_group(group_name='somegroup')
         group.add_member(self.user)
         testutil.set_identity_user(self.user)
@@ -71,6 +73,51 @@ class TestJobsController(DatabaseTestCase):
         job = testutil.call(self.controller.process_xmljob, xmljob, self.user)
         roundtripped_xml = lxml.etree.tostring(job.to_xml(clone=True), pretty_print=True, encoding='utf8')
         self.assertMultiLineEqual(roundtripped_xml, complete_job_xml)
+
+    def test_complete_job_results(self):
+        complete_job_xml = pkg_resources.resource_string('bkr.inttest', 'complete-job.xml')
+        xmljob = lxml.etree.fromstring(complete_job_xml)
+        job = testutil.call(self.controller.process_xmljob, xmljob, self.user)
+        session.flush()
+
+        # Complete the job, filling in values to match what's hardcoded in 
+        # complete-job-results.xml...
+        recipe = job.recipesets[0].recipes[0]
+        guestrecipe = recipe.guests[0]
+        data_setup.mark_recipe_running(recipe, fqdn=u'system.test-complete-job-results',
+                start_time=datetime.datetime(2016, 1, 31, 23, 0, 0),
+                install_started=datetime.datetime(2016, 1, 31, 23, 0, 1))
+        data_setup.mark_recipe_installation_finished(recipe,
+                install_finished=datetime.datetime(2016, 1, 31, 23, 0, 2),
+                postinstall_finished=datetime.datetime(2016, 1, 31, 23, 0, 3))
+        data_setup.mark_recipe_complete(guestrecipe, fqdn=u'guest.test-complete-job-results',
+                mac_address='ff:ff:ff:00:00:00',
+                start_time=datetime.datetime(2016, 1, 31, 23, 30, 0),
+                install_started=datetime.datetime(2016, 1, 31, 23, 30, 1),
+                install_finished=datetime.datetime(2016, 1, 31, 23, 30, 2),
+                postinstall_finished=datetime.datetime(2016, 1, 31, 23, 30, 3),
+                finish_time=datetime.datetime(2016, 1, 31, 23, 30, 4))
+        data_setup.mark_recipe_complete(recipe, only=True,
+                start_time=datetime.datetime(2016, 1, 31, 23, 0, 4),
+                finish_time=datetime.datetime(2016, 1, 31, 23, 59, 0))
+        session.flush()
+        # Hack up the database ids... This will fail if it's flushed, but it's 
+        # the easiest way to make them match the expected values.
+        job.id = 1
+        job.recipesets[0].id = 1
+        recipe.id = 1
+        guestrecipe.id = 2
+        recipe.tasks[0].id = 1
+        recipe.tasks[1].id = 2
+        guestrecipe.tasks[0].id = 3
+        guestrecipe.tasks[0].results[0].id = 1
+        recipe.tasks[0].results[0].id = 2
+        recipe.tasks[1].results[0].id = 3
+
+        expected_results_xml = pkg_resources.resource_string('bkr.inttest', 'complete-job-results.xml')
+        actual_results_xml = lxml.etree.tostring(job.to_xml(clone=False),
+                pretty_print=True, encoding='utf8')
+        self.assertMultiLineEqual(expected_results_xml, actual_results_xml)
 
     def test_does_not_fail_when_whiteboard_empty(self):
         xml = """

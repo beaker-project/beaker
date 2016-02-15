@@ -196,9 +196,9 @@ class Search(WebDriverTestCase):
         self.browser = self.get_browser()
         login(self.browser)
 
-    def perform_search(self, searchcriteria):
+    def perform_search(self, searchcriteria, search_url=''):
         b = self.browser
-        b.get(get_server_base())
+        b.get(get_server_base() + search_url)
         b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
 
@@ -444,6 +444,21 @@ class Search(WebDriverTestCase):
         self.perform_search([('System/NumaNodes', 'less than', '2')])
         check_system_search_results(b, present=[self.system_three],
                 absent=[self.system_one, self.system_two])
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1304927
+    def test_search_works_on_reserve_report(self):
+        # Reserve Report is a specialisation of the regular systems grid, so we 
+        # aren't testing it exhaustively, we just want to make sure that the 
+        # search is wired up properly.
+        with session.begin():
+            included = data_setup.create_system()
+            data_setup.create_manual_reservation(included)
+            excluded = data_setup.create_system(fqdn=data_setup.unique_name(u'aardvark%s'))
+            data_setup.create_manual_reservation(excluded)
+        b = self.browser
+        self.perform_search([('System/Name', 'is', included.fqdn)],
+                search_url='reports/')
+        check_system_search_results(b, present=[included], absent=[excluded])
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1120705
     def test_searchbar_dropdowns_are_sorted(self):

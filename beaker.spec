@@ -109,6 +109,7 @@ BuildRequires:  python-flask
 BuildRequires:  python-markdown
 BuildRequires:  python-passlib
 BuildRequires:  python-alembic
+BuildRequires:  python-daemon
 %if %{with_systemd}
 BuildRequires:  systemd
 %endif

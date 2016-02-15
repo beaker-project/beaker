@@ -68,17 +68,17 @@ class TestPowerTypeEdit(WebDriverTestCase):
 
     def test_errors_when_deleting_referenced_power_type(self):
         with session.begin():
-            system = data_setup.create_system()
-            power_type = system.power.power_type
+            system = data_setup.create_system(with_power=False)
+            data_setup.configure_system_power(system, power_type=u'ilo')
             power_type_count = PowerType.query.count()
 
         b = self.browser
         b.get(get_server_base() + 'powertypes/')
-        b.find_element_by_xpath('//li[contains(., "%s")]/button' % power_type.name).click()
+        b.find_element_by_xpath('//li[contains(., "ilo")]/button').click()
 
-        self.assertRegexpMatches(
-            b.find_element_by_css_selector('.alert-error').text,
-            'Power type %s.*.still referenced' % power_type.name)
+        b.find_element_by_xpath('//div[contains(@class, "alert-error") and '
+                'h4/text()="Error deleting power type" and '
+                'contains(string(.), "Power type ilo still referenced")]')
         with session.begin():
             self.assertEqual(power_type_count, PowerType.query.count())
 
@@ -87,11 +87,10 @@ class TestPowerTypesGrid(WebDriverTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1215034
     def test_anonymous_cant_see_form_elements(self):
-        self.browser = self.get_browser()
-        self.browser.get(get_server_base() + 'powertypes/')
-        self.assertEqual(
-            'Authenticated user required',
-            self.browser.find_element_by_tag_name('body').text)
+        b = self.get_browser()
+        b.get(get_server_base() + 'powertypes/')
+        b.find_element_by_css_selector('ul.power-types-list')
+        b.find_element_by_xpath('//body[not(.//form) and not(.//button)]')
 
 
 class PowerTypeEditHTTPTest(DatabaseTestCase):

@@ -76,7 +76,8 @@ class SystemReservationNotificationTest(DatabaseTestCase):
         with session.begin():
             owner = data_setup.create_user(
                     email_address=u'lizlemon@kabletown.com')
-            system = data_setup.create_system(fqdn=u'funcooker.ge.invalid')
+            system = data_setup.create_system(fqdn=u'funcooker.ge.invalid',
+                    lab_controller=data_setup.create_labcontroller())
             distro_tree = data_setup.create_distro_tree(distro_name=u'MicrowaveOS',
                     variant=u'ThreeHeats', arch=u'x86_64')
             job = data_setup.create_running_job(owner=owner, system=system,

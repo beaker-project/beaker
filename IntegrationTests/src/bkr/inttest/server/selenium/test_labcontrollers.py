@@ -609,7 +609,7 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
         with session.begin():
             distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20')
             # Helper to build the commands
-            def _make_command(lc=None, creation_date=None):
+            def _make_command(lc, creation_date=None):
                 job = data_setup.create_job(distro_tree=distro_tree)
                 recipe = job.recipesets[0].recipes[0]
                 system = data_setup.create_system(lab_controller=lc)
@@ -625,9 +625,10 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
             # Normal command for the current LC
             recent_task, recent_command = _make_command(lc=self.lc)
             # Old command for a different LC
+            other_lc = data_setup.create_labcontroller()
             backdated = datetime.datetime.utcnow()
             backdated -= datetime.timedelta(days=1, minutes=1)
-            old_task, old_command = _make_command(creation_date=backdated)
+            old_task, old_command = _make_command(lc=other_lc, creation_date=backdated)
 
         self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         self.server.labcontrollers.clear_running_commands(u'Staleness')

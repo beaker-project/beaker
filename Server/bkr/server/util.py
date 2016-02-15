@@ -175,7 +175,7 @@ def log_traceback(logger):
     def decorator(func):
         def decorated(*args, **kwargs):
             try:
-                func(*args, **kwargs)
+                return func(*args, **kwargs)
             except:
                 logger.exception('Uncaught exception in %s', func.__name__)
                 raise

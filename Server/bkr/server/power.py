@@ -17,7 +17,6 @@ from bkr.server.flask_util import admin_auth_required, read_json_request,\
 
 
 @app.route('/powertypes/', methods=['GET'])
-@admin_auth_required
 def get_powertypes():
     """Returns a JSON collection of all power types defined in Beaker."""
     result = PowerType.query.order_by(PowerType.name).all()

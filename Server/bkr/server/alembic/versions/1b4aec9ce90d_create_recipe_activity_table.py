@@ -6,7 +6,7 @@
 """create recipe activity table
 
 Revision ID: 1b4aec9ce90d
-Revises: 5ab8960cdb43
+Revises: 2173486573fe
 Create Date: 2015-10-27 14:44:08.028198
 
 """

@@ -6,7 +6,7 @@
 """remove orphan system access policy rows
 
 Revision ID: 171c07fb4970
-Revises: 19d89d5fbde6
+Revises: 47af1e057a74
 Create Date: 2015-05-19 13:37:02.807126
 
 """
