@@ -2527,6 +2527,31 @@ done
         self.assert_('export BEAKER_HUB_URL="%s"' % get_server_base() in k, k)
         self.assert_('yum -y install my-alternative-harness' in k, k)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=978640
+    def test_oats_api(self):
+        # This is not a documented API at all, but OATS relies on 
+        # LAB_CONTROLLER being defined in /etc/profile.d/rh-env.sh and we don't 
+        # want to break that.
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        k = recipe.installation.rendered_kickstart.kickstart
+        self.assertIn('> /etc/profile.d/rh-env.sh\n'
+                'export LAB_CONTROLLER=%s\n' % self.lab_controller.fqdn, k)
+
     def test_btrfs_volume(self):
         recipe = self.provision_recipe('''
             <job>

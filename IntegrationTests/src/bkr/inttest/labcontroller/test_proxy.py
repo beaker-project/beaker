@@ -1113,3 +1113,31 @@ class LogIndexTest(LabControllerTestCase):
         response = requests.get(url, headers={'Accept': 'application/atom+xml'})
         response.raise_for_status()
         self.check_atom_index(response, ['test.log', 'some-dir/some-file.txt'])
+
+class GetInstallationForSystemTest(LabControllerTestCase):
+
+    def setUp(self):
+        with session.begin():
+            lab_controller = data_setup.create_labcontroller()
+            self.tree_urls = [
+                'http://example.invalid/installationforsystem/',
+                'ftp://example.invalid/installationforsystem/',
+                'nfs://example.invalid:/installationforsystem/',
+            ]
+            self.distro_tree = data_setup.create_distro_tree(
+                    lab_controllers=[lab_controller], urls=self.tree_urls)
+            self.recipe = data_setup.create_recipe(distro_tree=self.distro_tree)
+            data_setup.create_job_for_recipes([self.recipe])
+            data_setup.mark_recipe_waiting(self.recipe, lab_controller=lab_controller)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=978640
+    def test_can_get_last_installation_info(self):
+        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        installinfo = s.get_installation_for_system(self.recipe.resource.fqdn)
+        self.assertItemsEqual(installinfo['distro_tree_urls'], self.tree_urls)
+        self.assertEqual(installinfo['kernel_url'],
+                'http://example.invalid/installationforsystem/pxeboot/vmlinuz')
+        self.assertEqual(installinfo['initrd_url'],
+                'http://example.invalid/installationforsystem/pxeboot/initrd')
+        self.assertEqual(installinfo['kernel_options'],
+                'ks=%s netbootloader=pxelinux.0 noverifyssl' % self.recipe.installation.rendered_kickstart.link)
