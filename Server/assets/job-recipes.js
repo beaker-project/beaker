@@ -46,7 +46,7 @@ var RecipeSetView = Backbone.View.extend({
     render: function () {
         this.$el.html(this.template(this.model.attributes))
                 .attr('id', 'set' + this.model.get('id'));
-        new RecipeSetCommentsLink({model: this.model, el: this.$('td.recipeset-comments')}).render();
+        new RecipeSetCommentsLink({model: this.model}).$el.appendTo(this.$('td.recipeset-comments'));
         var $el = this.$el;
         _.each(this.model.get('machine_recipes'), function (recipe) {
             $el.append(new JobRecipeRow({model: recipe}).render().el);
@@ -83,28 +83,61 @@ var RecipeSetView = Backbone.View.extend({
 });
 
 var RecipeSetCommentsLink = Backbone.View.extend({
+    template: JST['recipeset-comments-link'],
+    initialize: function () {
+        this.listenTo(this.model.get('comments'), 'reset add remove', this.render);
+        this.render();
+    },
+    render: function () {
+        this.$el.html(this.template(this.model.attributes));
+        this.$('.comments-link').beaker_popover({
+            model: this.model,
+            view_type: RecipeSetCommentsPopover,
+        });
+        return this;
+    },
+});
+
+window.RecipeSetCommentsPopover = BeakerPopoverView.extend({
+    className: 'popover recipeset-comments-popover',
+    render: function () {
+        BeakerPopoverView.prototype.render.apply(this);
+        new RecipeSetCommentsList({model: this.model}).$el
+            .appendTo(this.$('.popover-content'));
+        if (this.model.get('can_comment')) {
+            new RecipeSetCommentForm({model: this.model}).$el
+                .appendTo(this.$('.popover-content'));
+        }
+    },
+});
+
+var RecipeSetCommentsList = Backbone.View.extend({
+    template: JST['recipeset-comments'],
+    initialize: function (options) {
+        this.listenTo(this.model.get('comments'), 'reset add remove', this.render);
+        this.render();
+    },
+    render: function () {
+        this.$el.html(this.template(this.model.attributes));
+        if (!this.model.get('comments').isEmpty()) {
+            this.$el.addClass('comments');
+        }
+        return this;
+    },
+});
+
+var RecipeSetCommentForm = Backbone.View.extend({
     events: {
         'submit form.new-comment': 'add_comment',
     },
-    initialize: function () {
-        this.listenTo(this.model.get('comments'), 'reset add remove', this.render);
+    template: JST['recipeset-comment-form'],
+    className: 'recipeset-comment-form',
+    initialize: function (options) {
+        this.render();
     },
     render: function () {
-        this.$el.empty();
-        if (!this.model.get('can_comment') && this.model.get('comments').isEmpty())
-            return;
-        var model = this.model;
-        $('<a href="#" class="comments-link"></a>')
-            .append(this.model.get('comments').size() || '')
-            .append(' ')
-            .append('<i class="fa fa-comment-o" aria-label="comments"></i>')
-            .on('click', function (evt) { evt.preventDefault(); })
-            .popover({
-                placement: 'bottom',
-                html: true,
-                content: function () { return JST['recipeset-comments'](model.attributes); },
-            })
-            .appendTo(this.$el);
+        this.$el.html(this.template(this.model.attributes));
+        return this;
     },
     add_comment: function (evt) {
         evt.preventDefault();
@@ -113,8 +146,13 @@ var RecipeSetCommentsLink = Backbone.View.extend({
         var comment = this.$('textarea[name=comment]').val();
         this.model.get('comments').create({comment: comment}, {
             wait: true,
+            success: _.bind(this.save_success, this),
             error: _.bind(this.save_error, this),
         });
+    },
+    save_success: function (model, xhr, options) {
+        this.$('button').button('reset');
+        this.$('textarea[name=comment]').val('');
     },
     save_error: function (model, xhr, options) {
         $('<div class="alert alert-error"/>')

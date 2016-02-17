@@ -76,6 +76,7 @@ def _create_env(source_dir, output_dir, **kwargs):
             'beaker-backgrid.js',
             'beaker-typeaheads.js',
             'beaker-bootbox.js',
+            'beaker-popover.js',
             'bootstrap-select-defaults.js',
             'activity-model.js',
             'activity.js',

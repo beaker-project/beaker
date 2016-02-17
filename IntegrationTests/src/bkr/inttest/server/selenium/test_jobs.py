@@ -372,12 +372,12 @@ class TestViewJob(WebDriverTestCase):
         # first recipe set row should have comments link
         comments_link = b.find_element_by_xpath(
                 '//tbody[1]/tr[@class="recipeset"]/td[@class="recipeset-comments"]'
-                '/a[@class="comments-link"]')
+                '/div/a[@class="comments-link"]')
         self.assertEqual(comments_link.text, '1') # it's actually "1 <commenticon>"
         # second recipe set row should have no comments link
         b.find_element_by_xpath(
                 '//tbody[2]/tr[@class="recipeset"]/td[@class="recipeset-comments" and '
-                'not(./a)]')
+                'not(./div/a)]')
 
     def test_authenticated_user_can_comment(self):
         with session.begin():
@@ -389,20 +389,36 @@ class TestViewJob(WebDriverTestCase):
         login(b, user=user.user_name, password='otheruser')
         self.go_to_job_page(job)
         b.find_element_by_xpath('//td[@class="recipeset-comments"]'
-                '/a[@class="comments-link"]').click()
+                '/div/a[@class="comments-link"]').click()
         popover = b.find_element_by_class_name('popover')
         popover.find_element_by_name('comment').send_keys(comment_text)
         popover.find_element_by_tag_name('form').submit()
-        # wait for popover to close indicating the comment is submitted
-        b.find_element_by_xpath('//body[not(.//div[contains(@class, "popover")])]')
+        # check if the commit is in the comments list indicating the comment is submitted
+        popover.find_element_by_xpath('//div[@class="comments"]//div[@class="comment"]'
+            '/p[2][text()="%s"]' % comment_text)
+        self.assertEqual(popover.find_element_by_name('comment').text, '')
         with session.begin():
             session.expire_all()
             self.assertEqual(job.recipesets[0].comments[0].user, user)
             self.assertEqual(job.recipesets[0].comments[0].comment, comment_text)
         # comments link should indicate the new comment
         comments_link = b.find_element_by_xpath('//td[@class="recipeset-comments"]'
-                '/a[@class="comments-link"]')
-        self.assertEqual(comments_link.text, '1')
+                '/div/a[@class="comments-link"]').text
+        self.assertEqual(comments_link, '1')
+
+    def test_popup_comment_box_is_closed_when_clicking_outside(self):
+        with session.begin():
+            job = data_setup.create_completed_job()
+            user = data_setup.create_user(password=u'otheruser')
+        b = self.browser
+        login(b, user=user.user_name, password='otheruser')
+        self.go_to_job_page(job)
+        b.find_element_by_xpath('//td[@class="recipeset-comments"]'
+                '/div/a[@class="comments-link"]').click()
+        # make sure the popover is open
+        b.find_element_by_class_name('popover')
+        b.find_element_by_xpath('//h1').click()
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "popover")])]')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1215030
     def test_html_in_comments_is_escaped(self):
@@ -421,13 +437,13 @@ class TestViewJob(WebDriverTestCase):
         # showing the comment should not execute a script
         b.find_element_by_class_name('comments-link').click()
         comment_paragraph = b.find_element_by_xpath(
-                '//td[@class="recipeset-comments"]//div[@class="comment"]/p[2]')
+                '//div[@class="comments"]//div[@class="comment"]/p[2]')
         self.assertEqual(comment_paragraph.text, bad_comment)
         # reload the page, showing the comment should not execute a script
         self.go_to_job_page(job)
         b.find_element_by_class_name('comments-link').click()
         comment_paragraph = b.find_element_by_xpath(
-                '//td[@class="recipeset-comments"]//div[@class="comment"]/p[2]')
+                '//div[@class="comments"]//div[@class="comment"]/p[2]')
         self.assertEqual(comment_paragraph.text, bad_comment)
 
     def test_can_control_recipe_reviewed_state(self):
