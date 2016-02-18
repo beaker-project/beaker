@@ -2481,7 +2481,12 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         # Record the start of this Recipe.
         if not self.start_time \
            and self.status == TaskStatus.running:
-            self.start_time = datetime.utcnow()
+            if self.installation.rebooted:
+                self.start_time = self.installation.rebooted
+            elif self.first_task.start_time:
+                self.start_time = self.first_task.start_time
+            else:
+                self.start_time = datetime.utcnow()
 
         if self.start_time and not self.finish_time and self.is_finished():
             # Record the completion of this Recipe.

@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import datetime
 from threading import Thread, Event
 import pkg_resources
 import lxml.etree
@@ -116,6 +117,39 @@ class TestUpdateStatus(DatabaseTestCase):
                 TaskStatus.aborted)
         self.assertEquals(job.recipesets[0].recipes[0].guests[0].status,
                 TaskStatus.aborted)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1309530
+    def test_recipe_start_time_is_set_to_rebooted_timestamp(self):
+        # For a normal recipe running on a system, update_status should set 
+        # recipe.start_time to the rebooted timestamp.
+        job = data_setup.create_job()
+        data_setup.mark_job_scheduled(job)
+        recipe = job.recipesets[0].recipes[0]
+        self.assertIsNone(recipe.start_time)
+        # When the reboot is done, the recipe's first task is started.
+        recipe.provision()
+        recipe.installation.rebooted = datetime.datetime(2016, 2, 18, 13, 0, 0)
+        recipe.first_task.start()
+        recipe.first_task.start_time = datetime.datetime(2016, 2, 18, 13, 0, 1)
+        job.update_status()
+        self.assertEqual(recipe.start_time, datetime.datetime(2016, 2, 18, 13, 0, 0))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1309530
+    def test_recipe_start_time_is_set_to_first_task_start_time(self):
+        # For guest recipes, and systems without power control, there is no 
+        # rebooted timestamp. Instead the first task just gets started.
+        job = data_setup.create_job(num_recipes=1, num_guestrecipes=1)
+        data_setup.mark_job_scheduled(job)
+        guestrecipe = job.recipesets[0].recipes[0].guests[0]
+        self.assertIsNone(guestrecipe.start_time)
+        # /distribution/virt/install starts the first task before it starts 
+        # running the guest installation.
+        guestrecipe.provision()
+        guestrecipe.first_task.start()
+        guestrecipe.first_task.start_time = datetime.datetime(2016, 2, 18, 14, 0, 0)
+        self.assertIsNone(guestrecipe.installation.rebooted)
+        job.update_status()
+        self.assertEqual(guestrecipe.start_time, datetime.datetime(2016, 2, 18, 14, 0, 0))
 
     def test_update_status_can_be_roundtripped_35508(self):
         complete_job_xml = pkg_resources.resource_string('bkr.inttest', 'job_35508.xml')

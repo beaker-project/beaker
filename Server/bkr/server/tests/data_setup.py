@@ -624,6 +624,11 @@ def mark_recipe_scheduled(recipe, start_time=None, system=None, fqdn=None,
     recipe.watchdog = Watchdog()
     log.debug('Marked %s as scheduled with system %s', recipe.t_id, recipe.resource.fqdn)
 
+def mark_job_scheduled(job, **kwargs):
+    for recipeset in job.recipesets:
+        for recipe in recipeset.recipes:
+            mark_recipe_scheduled(recipe, **kwargs)
+
 def mark_recipe_waiting(recipe, start_time=None, only=False, **kwargs):
     if start_time is None:
         start_time = datetime.datetime.utcnow()
