@@ -418,15 +418,14 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                 'noapic runlevel=3',
                 kickstart)
         with session.begin():
-            rendered_kickstart = RenderedKickstart.query\
-                    .order_by(RenderedKickstart.id.desc()).first()
+            rendered_kickstart = system.installations[0].rendered_kickstart
             self.assert_(kickstart in rendered_kickstart.kickstart)
+            self.assertEquals(system.installations[0].distro_tree, self.distro_tree)
+            self.assertEquals(system.installations[0].kernel_options,
+                    'console=ttyS0 ks=%s ksdevice=eth0 netbootloader=pxelinux.0 noapic noverifyssl' % rendered_kickstart.link)
             self.assertEquals(system.command_queue[0].action, 'on')
             self.assertEquals(system.command_queue[1].action, 'off')
             self.assertEquals(system.command_queue[2].action, 'configure_netboot')
-            self.assertEquals(system.command_queue[2].distro_tree, self.distro_tree)
-            self.assertEquals(system.command_queue[2].kernel_options,
-                    'console=ttyS0 ks=%s ksdevice=eth0 netbootloader=pxelinux.0 noapic noverifyssl' % rendered_kickstart.link)
             self.assertEquals(system.command_queue[3].action, 'clear_logs')
 
     def test_provision_without_reboot(self):
@@ -474,11 +473,9 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                 None, 'ksdevice=eth1')
         with session.begin():
             # console=ttyS0 comes from arch default, created in setUp()
-            self.assertEquals(system.command_queue[0].action, 'on')
-            self.assertEquals(system.command_queue[1].action, 'off')
-            self.assert_('console=ttyS0' in system.command_queue[2].kernel_options)
-            self.assert_('ksdevice=eth1' in system.command_queue[2].kernel_options)
-            self.assert_('ksdevice=eth0' not in system.command_queue[2].kernel_options)
+            self.assertIn('console=ttyS0', system.installations[0].kernel_options)
+            self.assertIn('ksdevice=eth1', system.installations[0].kernel_options)
+            self.assertNotIn('ksdevice=eth0', system.installations[0].kernel_options)
 
     def test_provision_expired_user_root_password(self):
         system = self.usable_system
@@ -506,10 +503,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         self.server.systems.provision(system.fqdn, self.distro_tree.id,
                 'method=nfs', bad_arg)
         with session.begin():
-            self.assertEquals(system.command_queue[0].action, 'on')
-            self.assertEquals(system.command_queue[1].action, 'off')
-            self.assertEquals(system.command_queue[2].action, 'configure_netboot')
-            self.assertEquals(system.command_queue[2].kernel_options,
+            self.assertEquals(system.installations[0].kernel_options,
                     'console=ttyS0 %s ksdevice=eth0 netbootloader=pxelinux.0 noverifyssl' % bad_arg)
 
 class LegacyPushXmlRpcTest(XmlRpcTestCase):

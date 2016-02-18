@@ -52,6 +52,7 @@ from .distrolibrary import (OSMajor, OSVersion, Distro, DistroTree,
         LabControllerDistroTree)
 from .tasklibrary import Task, TaskPackage
 from .inventory import System, SystemActivity, Reservation
+from .installation import Installation
 
 log = logging.getLogger(__name__)
 
@@ -526,15 +527,17 @@ class TaskBase(object):
         """Return True if the recipe abort was suspicious. Suspicious meaning
         that all tasks in a recipe are aborted."""
         return (all([task.status == TaskStatus.aborted for task in self.tasks]) and
-                self.install_started is None)
+                (self.installation is None or
+                 self.installation.install_started is None))
 
     @is_suspiciously_aborted.expression
     def is_suspiciously_aborted(cls): # pylint: disable=E0213
         """Returns an SQL expression evaluating to TRUE if the recipe abort was
         suspicious. Note: There is no 'ALL' operator in SQL to get rid of the
         double negation."""
+        # lazy import to avoid cycles
         return and_(not_(cls.tasks.any(RecipeTask.status != TaskStatus.aborted)),
-                    RecipeResource.install_started == None)
+                    Installation.install_started == None)
 
     # TODO: it would be good to split the bar definition out to a utility
     # module accepting a mapping of div classes to percentages and then
@@ -1953,9 +1956,8 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
     recipeset = relationship(RecipeSet, back_populates='recipes')
     distro_tree_id = Column(Integer, ForeignKey('distro_tree.id'))
     distro_tree = relationship(DistroTree, back_populates='recipes')
-    rendered_kickstart_id = Column(Integer, ForeignKey('rendered_kickstart.id',
-            name='recipe_rendered_kickstart_id_fk', ondelete='SET NULL'))
-    rendered_kickstart = relationship('RenderedKickstart')
+    installation = relationship(Installation, uselist=False,
+            back_populates='recipe')
     result = Column(TaskResult.db_type(), nullable=False,
             default=TaskResult.new, index=True)
     status = Column(TaskStatus.db_type(), nullable=False,
@@ -1966,7 +1968,8 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
     _host_requires = Column(UnicodeText())
     _distro_requires = Column(UnicodeText())
     # This column is actually a custom user-supplied kickstart *template*
-    # (if not NULL), the generated kickstart for the recipe is defined above
+    # (if not NULL), the generated kickstart for the recipe is stored on the
+    # installation
     kickstart = Column(UnicodeText())
     # type = recipe, machine_recipe or guest_recipe
     type = Column(String(30), nullable=False)
@@ -2050,10 +2053,6 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             return True
         return False
 
-    @property
-    def install_started(self):
-        return getattr(self.resource, 'install_started', None)
-
     def build_ancestors(self, *args, **kw):
         """
         return a tuple of strings containing the Recipes RS and J
@@ -2098,9 +2097,13 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         How we delete a Recipe.
         """
         self.logs = []
-        if self.rendered_kickstart:
-            session.delete(self.rendered_kickstart)
-            self.rendered_kickstart = None
+        # Hacking up the associated Installation like this is a little dodgy, 
+        # the idea is just to save on disk space in the kickstart table. In 
+        # theory no user will ever end up looking at the Installation now that 
+        # the recipe is deleted anyway...
+        if self.installation and self.installation.rendered_kickstart:
+            session.delete(self.installation.rendered_kickstart)
+            self.installation.rendered_kickstart = None
         for task in self.tasks:
             task.delete()
 
@@ -2155,8 +2158,8 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             kickstart = etree.Element("kickstart")
             kickstart.text = etree.CDATA('%s' % self.kickstart)
             recipe.append(kickstart)
-        if self.rendered_kickstart and not clone:
-            recipe.set('kickstart_url', self.rendered_kickstart.link)
+        if self.installation and self.installation.rendered_kickstart and not clone:
+            recipe.set('kickstart_url', self.installation.rendered_kickstart.link)
         recipe.set("ks_meta", "%s" % self.ks_meta and self.ks_meta or '')
         recipe.set("kernel_options", "%s" % self.kernel_options and self.kernel_options or '')
         recipe.set("kernel_options_post", "%s" % self.kernel_options_post and self.kernel_options_post or '')
@@ -2179,16 +2182,16 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             recipe.set("system", "%s" % self.resource.fqdn)
         if not clone:
             installation = etree.Element('installation')
-            if self.resource:
-                if self.resource.install_started:
+            if self.installation:
+                if self.installation.install_started:
                     installation.set('install_started',
-                            self.resource.install_started.strftime('%Y-%m-%d %H:%M:%S'))
-                if self.resource.install_finished:
+                            self.installation.install_started.strftime('%Y-%m-%d %H:%M:%S'))
+                if self.installation.install_finished:
                     installation.set('install_finished',
-                            self.resource.install_finished.strftime('%Y-%m-%d %H:%M:%S'))
-                if self.resource.postinstall_finished:
+                            self.installation.install_finished.strftime('%Y-%m-%d %H:%M:%S'))
+                if self.installation.postinstall_finished:
                     installation.set('postinstall_finished',
-                            self.resource.postinstall_finished.strftime('%Y-%m-%d %H:%M:%S'))
+                            self.installation.postinstall_finished.strftime('%Y-%m-%d %H:%M:%S'))
             recipe.append(installation)
         packages = etree.Element("packages")
         if self.custom_packages:
@@ -2530,7 +2533,7 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
                 raise ValueError('Failed to find repo for harness')
         if 'ks' in install_options.kernel_options:
             # Use it as is
-            pass
+            rendered_kickstart = None
         elif self.kickstart:
             # add in cobbler packages snippet...
             packages_slot = 0
@@ -2583,37 +2586,38 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             kickstart = kicktemplate % dict(
                                         beforepackages = beforepackages,
                                         afterpackages = afterpackages)
-            self.rendered_kickstart = generate_kickstart(install_options,
+            rendered_kickstart = generate_kickstart(install_options,
                     distro_tree=self.distro_tree,
                     system=getattr(self.resource, 'system', None),
                     user=self.recipeset.job.owner,
                     recipe=self, kickstart=kickstart)
-            install_options.kernel_options['ks'] = self.rendered_kickstart.link
+            install_options.kernel_options['ks'] = rendered_kickstart.link
         else:
             ks_appends = [ks_append.ks_append for ks_append in self.ks_appends]
-            self.rendered_kickstart = generate_kickstart(install_options,
+            rendered_kickstart = generate_kickstart(install_options,
                     distro_tree=self.distro_tree,
                     system=getattr(self.resource, 'system', None),
                     user=self.recipeset.job.owner,
                     recipe=self, ks_appends=ks_appends)
-            install_options.kernel_options['ks'] = self.rendered_kickstart.link
+            install_options.kernel_options['ks'] = rendered_kickstart.link
 
+        self.installation = Installation(distro_tree=self.distro_tree,
+                kernel_options=install_options.kernel_options_str,
+                rendered_kickstart=rendered_kickstart)
         if isinstance(self.resource, SystemResource):
-            self.resource.system.configure_netboot(self.distro_tree,
-                    install_options.kernel_options_str,
-                    service=u'Scheduler',
-                    callback=u'bkr.server.model.auto_cmd_handler')
+            self.resource.system.installations.append(self.installation)
+            self.resource.system.configure_netboot(installation=self.installation,
+                    service=u'Scheduler')
             self.resource.system.action_power(action=u'reboot',
-                                     callback=u'bkr.server.model.auto_cmd_handler')
+                    installation=self.installation, service=u'Scheduler')
             self.resource.system.record_activity(user=self.recipeset.job.owner,
                     service=u'Scheduler', action=u'Provision',
                     field=u'Distro Tree', old=u'',
                     new=unicode(self.distro_tree))
         elif isinstance(self.resource, VirtResource):
-            self.resource.kernel_options = install_options.kernel_options_str
             manager = dynamic_virt.VirtManager(self.recipeset.job.owner)
             manager.start_vm(self.resource.instance_id)
-            self.resource.rebooted = datetime.utcnow()
+            self.installation.rebooted = datetime.utcnow()
             self.tasks[0].start()
 
     def cleanup(self):
@@ -3704,10 +3708,6 @@ class RecipeResource(DeclarativeMappedObject):
     recipe = relationship(Recipe, back_populates='resource')
     type = Column(ResourceType.db_type(), nullable=False)
     fqdn = Column(Unicode(255), default=None, index=True)
-    rebooted = Column(DateTime, nullable=True, default=None)
-    install_started = Column(DateTime, nullable=True, default=None)
-    install_finished = Column(DateTime, nullable=True, default=None)
-    postinstall_finished = Column(DateTime, nullable=True, default=None)
     __mapper_args__ = {'polymorphic_on': type, 'polymorphic_identity': None}
 
     def __str__(self):
@@ -3823,7 +3823,6 @@ class VirtResource(RecipeResource):
     lab_controller_id = Column(Integer, ForeignKey('lab_controller.id',
             name='virt_resource_lab_controller_id_fk'))
     lab_controller = relationship(LabController)
-    kernel_options = Column(Unicode(2048))
     __mapper_args__ = {'polymorphic_identity': ResourceType.virt}
 
     @classmethod
@@ -3922,30 +3921,3 @@ class GuestResource(RecipeResource):
 
     def release(self):
         pass
-
-class RenderedKickstart(DeclarativeMappedObject):
-
-    # This is for storing final generated kickstarts to be provisioned,
-    # not user-supplied kickstart templates or anything else like that.
-
-    __tablename__ = 'rendered_kickstart'
-    __table_args__ = {'mysql_engine': 'InnoDB'}
-    id = Column(Integer, primary_key=True)
-    # Either kickstart or url should be populated -- if url is present,
-    # it means fetch the kickstart from there instead
-    kickstart = Column(UnicodeText)
-    url = Column(UnicodeText)
-
-    def __repr__(self):
-        return '%s(id=%r, kickstart=%s, url=%r)' % (self.__class__.__name__,
-                self.id, '<%s chars>' % len(self.kickstart)
-                if self.kickstart is not None else 'None', self.url)
-
-    @property
-    def link(self):
-        if self.url:
-            return self.url
-        assert self.id is not None, 'not flushed?'
-        url = absolute_url('/kickstart/%s' % self.id, scheme='http',
-                           labdomain=True)
-        return url

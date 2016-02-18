@@ -20,7 +20,6 @@ from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction, \
         DummyVirtManager, DatabaseTestCase
 from bkr.inttest.assertions import assert_sorted
-from bkr.server import dynamic_virt
 from bkr.server.model import Cpu, Key, Key_Value_String, System, \
         SystemStatus, SystemPermission, Job, Disk
 from bkr.inttest.server.webdriver_utils import check_system_search_results, login
@@ -330,13 +329,10 @@ class IpxeScriptHTTPTest(DatabaseTestCase):
     def setUp(self):
         with session.begin():
             self.lc = data_setup.create_labcontroller()
-        self.orig_VirtManager = dynamic_virt.VirtManager
-        dynamic_virt.VirtManager = DummyVirtManager
         DummyVirtManager.lab_controller = self.lc
 
     def tearDown(self):
         DummyVirtManager.lab_controller = None
-        dynamic_virt.VirtManager = self.orig_VirtManager
 
     def test_unknown_uuid(self):
         response = requests.get(get_server_base() +
@@ -352,7 +348,7 @@ class IpxeScriptHTTPTest(DatabaseTestCase):
         with session.begin():
             recipe = data_setup.create_recipe()
             data_setup.create_job_for_recipes([recipe])
-            data_setup.mark_recipe_running(recipe, virt=True)
+            data_setup.mark_recipe_scheduled(recipe, virt=True)
             # VM is created but recipe.provision() hasn't been called yet
         response = requests.get(get_server_base() +
                 'systems/by-uuid/%s/ipxe-script' % recipe.resource.instance_id)
@@ -368,7 +364,6 @@ class IpxeScriptHTTPTest(DatabaseTestCase):
             data_setup.create_job_for_recipes([recipe])
             data_setup.mark_recipe_waiting(recipe, virt=True,
                     lab_controller=self.lc)
-            recipe.provision()
         response = requests.get(get_server_base() +
                 'systems/by-uuid/%s/ipxe-script' % recipe.resource.instance_id)
         response.raise_for_status()
@@ -376,7 +371,7 @@ class IpxeScriptHTTPTest(DatabaseTestCase):
 kernel http://example.com/ipxe-test/F20/x86_64/os/pxeboot/vmlinuz console=tty0 console=ttyS0,115200n8 ks=%s noverifyssl netboot_method=ipxe
 initrd http://example.com/ipxe-test/F20/x86_64/os/pxeboot/initrd
 boot
-""" % recipe.rendered_kickstart.link)
+""" % recipe.installation.rendered_kickstart.link)
 
 class SystemHTTPTest(DatabaseTestCase):
     """

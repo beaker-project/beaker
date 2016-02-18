@@ -429,11 +429,13 @@ class LabControllers(RPCRoot):
                     'passwd': cmd.system.power.power_passwd,
                 }
             elif cmd.action == u'configure_netboot':
-                distro_tree_url = cmd.distro_tree.url_in_lab(lab_controller,
+                installation = cmd.installation
+                distro_tree = cmd.installation.distro_tree
+                distro_tree_url = distro_tree.url_in_lab(lab_controller,
                         scheme=['http', 'ftp'])
                 if not distro_tree_url:
                     cmd.abort(u'No usable URL found for distro tree %s in lab %s'
-                            % (cmd.distro_tree.id, lab_controller.fqdn))
+                            % (distro_tree.id, lab_controller.fqdn))
                     continue
 
                 if cmd.system.kernel_type.uboot:
@@ -443,69 +445,55 @@ class LabControllers(RPCRoot):
                     by_kernel = ImageType.kernel
                     by_initrd = ImageType.initrd
 
-                kernel = cmd.distro_tree.image_by_type(by_kernel,
-                                                       cmd.system.kernel_type)
+                kernel = distro_tree.image_by_type(by_kernel, cmd.system.kernel_type)
                 if not kernel:
-                    cmd.abort(u'Kernel image not found for distro tree %s' % cmd.distro_tree.id)
+                    cmd.abort(u'Kernel image not found for distro tree %s' % distro_tree.id)
                     continue
-                initrd = cmd.distro_tree.image_by_type(by_initrd,
-                                                       cmd.system.kernel_type)
+                initrd = distro_tree.image_by_type(by_initrd, cmd.system.kernel_type)
                 if not initrd:
-                    cmd.abort(u'Initrd image not found for distro tree %s' % cmd.distro_tree.id)
+                    cmd.abort(u'Initrd image not found for distro tree %s' % distro_tree.id)
                     continue
                 d['netboot'] = {
-                    'arch': cmd.distro_tree.arch.arch,
-                    'distro_tree_id': cmd.distro_tree.id,
+                    'arch': distro_tree.arch.arch,
+                    'distro_tree_id': distro_tree.id,
                     'kernel_url': urlparse.urljoin(distro_tree_url, kernel.path),
                     'initrd_url': urlparse.urljoin(distro_tree_url, initrd.path),
-                    'kernel_options': cmd.kernel_options or '',
+                    'kernel_options': installation.kernel_options or '',
                 }
             result.append(d)
         return result
 
     @cherrypy.expose
-    def get_last_netboot_for_system(self, fqdn):
-        """
-        This is only a temporary API for bz828927 until installation tracking 
-        is properly fleshed out. At that point beaker-proxy should be updated 
-        to use the new API.
-        """
-        cmd = CommandActivity.query\
-                .join(CommandActivity.system)\
-                .options(contains_eager(CommandActivity.system))\
-                .filter(System.fqdn == fqdn)\
-                .filter(CommandActivity.action == u'configure_netboot')\
-                .filter(CommandActivity.status == CommandStatus.completed)\
-                .order_by(CommandActivity.id.desc())\
-                .first()
-        if not cmd:
+    def get_installation_for_system(self, fqdn):
+        system = System.by_fqdn(fqdn, identity.current.user)
+        if not system.installations:
             raise ValueError('System %s has never been provisioned' % fqdn)
-        distro_tree_url = cmd.distro_tree.url_in_lab(cmd.system.lab_controller, 'http')
+        installation = system.installations[0]
+        distro_tree = installation.distro_tree
+        distro_tree_url = distro_tree.url_in_lab(system.lab_controller, 'http')
         if not distro_tree_url:
             raise ValueError('No usable URL found for distro tree %s in lab %s'
-                    % (cmd.distro_tree.id, cmd.system.lab_controller.fqdn))
+                    % (distro_tree.id, system.lab_controller.fqdn))
 
-        if cmd.system.kernel_type.uboot:
+        if system.kernel_type.uboot:
             by_kernel = ImageType.uimage
             by_initrd = ImageType.uinitrd
         else:
             by_kernel = ImageType.kernel
             by_initrd = ImageType.initrd
 
-        kernel = cmd.distro_tree.image_by_type(by_kernel,
-                                               cmd.system.kernel_type)
+        kernel = distro_tree.image_by_type(by_kernel, system.kernel_type)
         if not kernel:
-            raise ValueError('Kernel image not found for distro tree %s' % cmd.distro_tree.id)
-        initrd = cmd.distro_tree.image_by_type(by_initrd,
-                                               cmd.system.kernel_type)
+            raise ValueError('Kernel image not found for distro tree %s' % distro_tree.id)
+        initrd = distro_tree.image_by_type(by_initrd, system.kernel_type)
         if not initrd:
-            raise ValueError('Initrd image not found for distro tree %s' % cmd.distro_tree.id)
+            raise ValueError('Initrd image not found for distro tree %s' % distro_tree.id)
         return {
             'kernel_url': urlparse.urljoin(distro_tree_url, kernel.path),
             'initrd_url': urlparse.urljoin(distro_tree_url, initrd.path),
-            'kernel_options': cmd.kernel_options or '',
-            'distro_tree_urls': [lca.url for lca in cmd.distro_tree.lab_controller_assocs
-                    if lca.lab_controller == cmd.system.lab_controller],
+            'kernel_options': installation.kernel_options or '',
+            'distro_tree_urls': [lca.url for lca in distro_tree.lab_controller_assocs
+                    if lca.lab_controller == system.lab_controller],
         }
 
     @cherrypy.expose
@@ -532,6 +520,11 @@ class LabControllers(RPCRoot):
         if cmd.status != CommandStatus.running:
             raise ValueError('Command %s not running' % command_id)
         cmd.change_status(CommandStatus.completed)
+        if cmd.action == u'on' and cmd.installation:
+            cmd.installation.rebooted = datetime.utcnow()
+            recipe = cmd.installation.recipe
+            if recipe and not recipe.first_task.is_finished():
+                recipe.first_task.start()
         cmd.log_to_system_history()
         return True
 
@@ -567,6 +560,8 @@ class LabControllers(RPCRoot):
         # don't support it and will report a "failure" in that case.
         if cmd.action != 'interrupt' and cmd.system.status == SystemStatus.automated:
             cmd.system.mark_broken(reason=u'Power command failed: %s' % message)
+        if cmd.installation and cmd.installation.recipe:
+            cmd.installation.recipe.abort('Command %s failed' % cmd.id)
         cmd.log_to_system_history()
         return True
 
@@ -582,10 +577,6 @@ class LabControllers(RPCRoot):
         # effects of this by purging all stale commands (those more than a
         # day old) whenever a lab controller restarts and tries to clear the
         # possibly interrupted commands for that lab.
-        # We deliberately bypass the callbacks on these old commands, since
-        # the affected systems may now be running unrelated recipes. Longer
-        # term, we'll likely update the command system to remember the
-        # associated recipe, not just the associated system
         # See https://bugzilla.redhat.com/show_bug.cgi?id=974319 and
         # https://bugzilla.redhat.com/show_bug.cgi?id=974352 for more
         # details.

@@ -591,7 +591,7 @@ class InstallDoneTest(LabControllerTestCase):
         s.install_done(self.recipe.id, 'somefqdn')
         with session.begin():
             session.expire_all()
-            self.assert_(self.recipe.resource.install_finished is not None)
+            self.assert_(self.recipe.installation.install_finished is not None)
 
     def test_install_done_GET(self):
         response = requests.get('%sinstall_done/%s/%s' %
@@ -599,7 +599,7 @@ class InstallDoneTest(LabControllerTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assert_(self.recipe.resource.install_finished is not None)
+            self.assert_(self.recipe.installation.install_finished is not None)
 
 class PostrebootTest(LabControllerTestCase):
 

@@ -98,10 +98,10 @@ class SystemProvisionWebUITest(WebDriverTestCase):
         b.find_element_by_xpath('//div[contains(@class, "alert-success")]'
                 '/h4[text()="Provisioning successful"]')
         with session.begin():
+            self.assertEquals(system.installations[0].distro_tree, self.distro_tree)
             self.assertEquals(system.command_queue[0].action, 'on')
             self.assertEquals(system.command_queue[1].action, 'off')
             self.assertEquals(system.command_queue[2].action, 'configure_netboot')
-            self.assertEquals(system.command_queue[2].distro_tree, self.distro_tree)
             self.assertEquals(system.command_queue[3].action, 'clear_logs')
 
     def test_provision_with_ssh_key(self):
@@ -163,9 +163,8 @@ class SystemProvisionWebUITest(WebDriverTestCase):
                 './/div[contains(@class, "modal")]//button[text()="OK"]').click()
         b.find_element_by_xpath('//div[contains(@class, "alert-success")]'
                 '/h4[text()="Provisioning successful"]')
-        self.assertEquals(system.command_queue[2].action, 'configure_netboot')
         self.assert_(u'key1=value1 key1=value2 key2=value key3' in \
-                         system.command_queue[2].kernel_options)
+                         system.installations[0].kernel_options)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1144195
     def test_refreshing_commands_grid_is_triggered_by_provision(self):

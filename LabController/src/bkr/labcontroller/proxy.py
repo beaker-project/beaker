@@ -839,8 +839,7 @@ class Proxy(ProxyHelper):
         A system can call this to get the details of the distro tree which was
         most recently installed on it.
         """
-        # TODO tie this in to installation tracking when that is implemented
-        return self.hub.labcontrollers.get_last_netboot_for_system(fqdn)
+        return self.hub.labcontrollers.get_installation_for_system(fqdn)
 
 class ProxyHTTP(object):
 

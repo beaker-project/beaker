@@ -219,10 +219,13 @@ class Recipes(RPCRoot):
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
             raise BX(_("Invalid Recipe ID %s" % recipe_id))
+        if not recipe.installation:
+            raise BX(_('Recipe %s not provisioned yet') % recipe_id)
 
+        installation = recipe.installation
         first_task = recipe.first_task
-        if not recipe.resource.install_started:
-            recipe.resource.install_started = datetime.utcnow()
+        if not installation.install_started:
+            installation.install_started = datetime.utcnow()
             # extend watchdog by 3 hours 60 * 60 * 3
             kill_time = 10800
             # XXX In future releases where 'Provisioning'
@@ -247,7 +250,9 @@ class Recipes(RPCRoot):
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
             raise BX(_(u'Invalid Recipe ID %s' % recipe_id))
-        recipe.resource.postinstall_finished = datetime.utcnow()
+        if not recipe.installation:
+            raise BX(_('Recipe %s not provisioned yet') % recipe_id)
+        recipe.installation.postinstall_finished = datetime.utcnow()
         return True
 
 
@@ -266,8 +271,10 @@ class Recipes(RPCRoot):
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
             raise BX(_("Invalid Recipe ID %s" % recipe_id))
+        if not recipe.installation:
+            raise BX(_('Recipe %s not provisioned yet') % recipe_id)
 
-        recipe.resource.install_finished = datetime.utcnow()
+        recipe.installation.install_finished = datetime.utcnow()
         # We don't want to change an existing FQDN, just set it
         # if it hasn't been set already (see BZ#879146)
         configured = recipe.resource.fqdn

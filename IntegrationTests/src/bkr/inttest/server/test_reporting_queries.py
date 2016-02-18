@@ -25,12 +25,14 @@ class ReportingQueryTest(DatabaseTestCase):
         # expecting here.
         for resource in VirtResource.query:
             resource.recipe.start_time = None
-            resource.install_started = None
-            resource.install_finished = None
+            if resource.recipe.installation:
+                resource.recipe.installation.install_started = None
+                resource.recipe.installation.install_finished = None
         for resource in GuestResource.query:
             resource.recipe.start_time = None
-            resource.install_started = None
-            resource.install_finished = None
+            if resource.recipe.installation:
+                resource.recipe.installation.install_started = None
+                resource.recipe.installation.install_finished = None
         session.flush()
 
     def execute_reporting_query(self, name):
@@ -100,14 +102,14 @@ class ReportingQueryTest(DatabaseTestCase):
         two_hours = datetime.timedelta(hours=2)
         three_hours = datetime.timedelta(hours=3)
 
-        virt_recipe.resource.install_finished = virt_recipe.resource.install_started + one_hour
-        virt_recipe2.resource.install_finished = virt_recipe2.resource.install_started + two_hours
+        virt_recipe.installation.install_finished = virt_recipe.installation.install_started + one_hour
+        virt_recipe2.installation.install_finished = virt_recipe2.installation.install_started + two_hours
 
-        guest_recipe.resource.install_finished = guest_recipe.resource.install_started + two_hours
-        guest_recipe2.resource.install_finished = guest_recipe2.resource.install_started + three_hours
+        guest_recipe.installation.install_finished = guest_recipe.installation.install_started + two_hours
+        guest_recipe2.installation.install_finished = guest_recipe2.installation.install_started + three_hours
 
-        system_recipe.resource.install_finished = system_recipe.resource.install_started + one_hour
-        system_recipe2.resource.install_finished = system_recipe2.resource.install_started + three_hours
+        system_recipe.installation.install_finished = system_recipe.installation.install_started + one_hour
+        system_recipe2.installation.install_finished = system_recipe2.installation.install_started + three_hours
         session.flush()
 
         rows = self.execute_reporting_query('install-duration-by-resource')
@@ -452,18 +454,14 @@ class ReportingQueryTest(DatabaseTestCase):
                 status='Automated', lab_controller=data_setup.create_labcontroller())
         recipe = data_setup.create_recipe(distro_name=u'RHEL-7.1', variant=u'Server')
         data_setup.create_job_for_recipes([recipe], owner=cee_user)
-        data_setup.mark_recipe_waiting(recipe, system=provisioned_system)
-        recipe.provision()
-        data_setup.mark_recipe_complete(recipe, only=True)
+        data_setup.mark_recipe_complete(recipe, system=provisioned_system)
         # Create a non-CEE system which has been provisioned 20 times
         noncee_provisioned_system = data_setup.create_system(fqdn=u'noncee.provisioned',
                 status='Automated', lab_controller=data_setup.create_labcontroller())
         for _ in range(20):
             recipe = data_setup.create_recipe()
             data_setup.create_job_for_recipes([recipe], owner=cee_user)
-            data_setup.mark_recipe_waiting(recipe, system=noncee_provisioned_system)
-            recipe.provision()
-            data_setup.mark_recipe_complete(recipe, only=True)
+            data_setup.mark_recipe_complete(recipe, system=noncee_provisioned_system)
         session.flush()
 
         rows = self.execute_reporting_query('cee/all-systems').fetchall()

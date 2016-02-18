@@ -37,11 +37,12 @@ from .inventory import (System, SystemStatusDuration, SystemCc, Hypervisor,
         SystemAccessPolicy, SystemAccessPolicyRule, Reservation,
                         SystemActivity, CommandActivity, SystemPool,
                         SystemPoolActivity)
+from .installation import Installation, RenderedKickstart
 from .scheduler import (Watchdog, TaskBase, Job, RecipeSet, Recipe,
         RecipeTaskResult, MachineRecipe, GuestRecipe, RecipeTask, Log,
         LogRecipe, LogRecipeTask, LogRecipeTaskResult, JobCc, RecipeResource,
         SystemResource, GuestResource, VirtResource, RetentionTag,
-        Product, RenderedKickstart, RecipeSetActivity, RecipeRepo,
+        Product, RecipeSetActivity, RecipeRepo,
         RecipeKSAppend, RecipeTaskParam, JobActivity, RecipeReservationRequest)
 from .reviewing import RecipeSetComment, RecipeReviewedState
 from .openstack import OpenStackRegion
@@ -90,14 +91,3 @@ class_mapper(Reservation).add_properties({
 ## Static list of device_classes -- used by master.kid
 # (This is populated by bkr.server.wsgi:init before the first request.)
 device_classes = []
-
-def auto_cmd_handler(command, new_status):
-    if not command.system.open_reservation:
-        return
-    recipe = command.system.open_reservation.recipe
-    if new_status in (CommandStatus.failed, CommandStatus.aborted):
-        recipe.abort("Command %s failed" % command.id)
-    elif command.action == u'on':
-        recipe.resource.rebooted = datetime.utcnow()
-        first_task = recipe.first_task
-        first_task.start()

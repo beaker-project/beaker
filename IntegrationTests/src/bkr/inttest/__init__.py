@@ -24,6 +24,8 @@ import unittest2 as unittest
 import cherrypy
 import turbogears
 from turbogears.database import session
+import bkr.server.model
+from bkr.server import dynamic_virt
 from bkr.server.controllers import Root
 from bkr.server.util import load_config
 from bkr.server.tests import data_setup
@@ -331,6 +333,10 @@ def setup_package():
     turbogears.testutil.make_app(Root)
     turbogears.testutil.start_server()
 
+    global orig_VirtManager
+    orig_VirtManager = dynamic_virt.VirtManager
+    dynamic_virt.VirtManager = DummyVirtManager
+
     global processes
     processes = []
     if 'BEAKER_SERVER_BASE_URL' not in os.environ:
@@ -363,6 +369,8 @@ def setup_package():
 def teardown_package():
     for process in processes:
         process.stop()
+
+    dynamic_virt.VirtManager = orig_VirtManager
 
     turbogears.testutil.stop_server()
 

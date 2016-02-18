@@ -16,7 +16,7 @@ from bkr.inttest import data_setup, Process
 from bkr.inttest.assertions import wait_for_condition
 from bkr.inttest.labcontroller import LabControllerTestCase, processes, \
         daemons_running_externally
-from bkr.server.model import System, User
+from bkr.server.model import System, User, Installation
 
 log = logging.getLogger(__name__)
 
@@ -244,8 +244,9 @@ class ConfigureNetbootTest(LabControllerTestCase):
                     lab_controllers=[lc],
                     # /slow/600 means the response will be delayed 10 minutes
                     urls=['http://localhost:19998/slow/600/'])
-            system.configure_netboot(distro_tree=distro_tree,
-                    kernel_options=u'', service=u'testdata')
+            installation = Installation(distro_tree=distro_tree, system=system,
+                    kernel_options=u'')
+            system.configure_netboot(installation=installation, service=u'testdata')
         wait_for_commands_to_finish(system, timeout=(2 * get_conf().get('SLEEP_TIME')
                 + get_conf().get('IMAGE_FETCH_TIMEOUT')))
         self.assertEquals(system.command_queue[0].action, u'configure_netboot')

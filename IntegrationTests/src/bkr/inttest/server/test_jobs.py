@@ -100,6 +100,8 @@ class TestJobsController(DatabaseTestCase):
         data_setup.mark_recipe_complete(recipe, only=True,
                 start_time=datetime.datetime(2016, 1, 31, 23, 0, 4),
                 finish_time=datetime.datetime(2016, 1, 31, 23, 59, 0))
+        recipe.installation.rendered_kickstart.url = u'http://example.com/recipe.ks'
+        guestrecipe.installation.rendered_kickstart.url = u'http://example.com/guest.ks'
         session.flush()
         # Hack up the database ids... This will fail if it's flushed, but it's 
         # the easiest way to make them match the expected values.

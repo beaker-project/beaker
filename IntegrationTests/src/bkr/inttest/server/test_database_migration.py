@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -16,7 +15,7 @@ from sqlalchemy.sql import func
 from alembic.environment import MigrationContext
 from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, User, \
         OSMajor, OSMajorInstallOptions, GroupMembershipType, SystemActivity, \
-        Activity, RecipeSetComment, Recipe, RecipeSet
+        Activity, RecipeSetComment, Recipe, RecipeSet, CommandActivity
 
 def has_initial_sublist(larger, prefix):
     """ Return true iff list *prefix* is an initial sublist of list 
@@ -241,6 +240,11 @@ class MigrationTest(unittest.TestCase):
         for table_name in metadata.tables:
             expected_columns = metadata.tables[table_name].columns.keys()
             actual_columns = self.migration_metadata.tables[table_name].columns.keys()
+            if table_name == 'command_queue':
+                # may be left over from 22
+                for col in ['callback', 'distro_tree_id', 'kernel_options']:
+                    if col in actual_columns:
+                        actual_columns.remove(col)
             if table_name == 'virt_resource':
                 # may be left over from 0.16
                 if 'system_name' in actual_columns:
@@ -267,6 +271,11 @@ class MigrationTest(unittest.TestCase):
                     metadata.tables[table_name])
             actual_indexes = dict((index.name, [col.name for col in index.columns])
                     for index in self.migration_metadata.tables[table_name].indexes)
+            if table_name == 'command_queue':
+                # may be left over from 22
+                actual_indexes = dict((name, cols) for name, cols
+                        in actual_indexes.iteritems()
+                        if cols != ['distro_tree_id'])
             if table_name == 'virt_resource':
                 if 'ix_virt_resource_mac_address' in actual_indexes:
                     # may be left over from 0.16
@@ -718,3 +727,37 @@ class MigrationTest(unittest.TestCase):
         # check that the recipe is marked as reviewed by admin
         recipe = self.migration_session.query(Recipe).get(1)
         self.assertEqual(recipe.get_reviewed_state(User.by_user_name(u'admin')), True)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=991245
+    def test_populate_installation_from_recipe_resource(self):
+        connection = self.migration_metadata.bind.connect()
+        # Populate empty database
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/22.sql'))
+        # Populate test data for migration: one job which ran on a regular system.
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'bz991245-migration-setup.sql'))
+        # Run migration
+        upgrade_db(self.migration_metadata)
+        # Check that installation has been populated
+        recipe = self.migration_session.query(Recipe).get(1)
+        self.assertEqual(recipe.installation.distro_tree.distro.name, u'distro')
+        self.assertEqual(recipe.installation.kernel_options, u'ks=lol')
+        self.assertEqual(recipe.installation.rendered_kickstart.kickstart, u'lol')
+        self.assertEqual(recipe.installation.system.fqdn, u'test.fqdn.name')
+        self.assertEqual(recipe.installation.rebooted,
+                datetime.datetime(2016, 2, 16, 1, 0, 5))
+        self.assertEqual(recipe.installation.install_started,
+                datetime.datetime(2016, 2, 16, 1, 1, 0))
+        self.assertEqual(recipe.installation.install_finished,
+                datetime.datetime(2016, 2, 16, 1, 20, 0))
+        self.assertEqual(recipe.installation.postinstall_finished,
+                datetime.datetime(2016, 2, 16, 1, 21, 0))
+        self.assertEqual(recipe.installation.created,
+                datetime.datetime(2016, 2, 16, 1, 0, 0))
+        installation_cmd = self.migration_session.query(CommandActivity).get(1)
+        self.assertEqual(installation_cmd.installation, recipe.installation)
+        manual_cmd = self.migration_session.query(CommandActivity).get(2)
+        self.assertEqual(manual_cmd.installation, None)
+        reprovision_cmd = self.migration_session.query(CommandActivity).get(3)
+        self.assertEqual(reprovision_cmd.installation, None)

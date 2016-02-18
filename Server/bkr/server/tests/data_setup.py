@@ -30,7 +30,7 @@ from bkr.server.model import LabController, User, Group, UserGroup, \
         GuestResource, VirtResource, SystemStatusDuration, SystemAccessPolicy, \
         SystemPermission, DistroTreeImage, ImageType, KernelType, \
         RecipeReservationRequest, OSMajorInstallOptions, SystemPool, \
-        GroupMembershipType
+        GroupMembershipType, Installation, CommandStatus
 from bkr.server.model.types import mac_unix_padded_dialect
 
 log = logging.getLogger(__name__)
@@ -588,11 +588,9 @@ def mark_job_complete(job, finish_time=None, only=False, **kwargs):
             recipe.resource.reservation.finish_time = finish_time
             recipe.finish_time = finish_time
 
-def mark_recipe_waiting(recipe, start_time=None, system=None, fqdn=None,
+def mark_recipe_scheduled(recipe, start_time=None, system=None, fqdn=None,
         mac_address=None, lab_controller=None, virt=False, instance_id=None,
         **kwargs):
-    if start_time is None:
-        start_time = datetime.datetime.utcnow()
     recipe.process()
     recipe.queue()
     recipe.schedule()
@@ -613,7 +611,7 @@ def mark_recipe_waiting(recipe, start_time=None, system=None, fqdn=None,
                             fqdn=fqdn, lab_controller=lab_controller)
                 recipe.resource = SystemResource(system=system)
                 recipe.resource.allocate()
-                recipe.resource.reservation.start_time = start_time
+                recipe.resource.reservation.start_time = start_time or datetime.datetime.utcnow()
                 recipe.recipeset.lab_controller = system.lab_controller
         elif isinstance(recipe, GuestRecipe):
             recipe.resource = GuestResource()
@@ -623,12 +621,35 @@ def mark_recipe_waiting(recipe, start_time=None, system=None, fqdn=None,
                         dialect=mac_unix_padded_dialect)
     if not recipe.distro_tree.url_in_lab(recipe.recipeset.lab_controller):
         add_distro_tree_to_lab(recipe.distro_tree, recipe.recipeset.lab_controller)
-    recipe.start_time = start_time
     recipe.watchdog = Watchdog()
+    log.debug('Marked %s as scheduled with system %s', recipe.t_id, recipe.resource.fqdn)
+
+def mark_recipe_waiting(recipe, start_time=None, only=False, **kwargs):
+    if start_time is None:
+        start_time = datetime.datetime.utcnow()
+    if not only:
+        mark_recipe_scheduled(recipe, start_time=start_time, **kwargs)
+    recipe.start_time = start_time
+    recipe.provision()
+    if recipe.installation.commands:
+        # Because we run a real beaker-provision in the dogfood tests, it will pick 
+        # up the freshly created configure_netboot commands and try pulling down 
+        # non-existent kernel+initrd images. When that fails, it will abort our 
+        # newly created recipe which we don't want. To work around this, we hack 
+        # the commands to be already completed so that beaker-provision skips them.
+        # I would like to have a better solution here...
+        for cmd in recipe.installation.commands:
+            cmd.status = CommandStatus.completed
+        recipe.installation.rebooted = start_time
+        recipe.extend(600)
+    else:
+        # System without power control, there are no power commands. In the 
+        # real world the recipe sits in Waiting with no watchdog kill time 
+        # until someone powers on the system.
+        pass
     recipe.waiting()
-    recipe.resource.rebooted = start_time
     recipe.recipeset.job.update_status()
-    log.debug('Marked %s as waiting with system %s', recipe.t_id, recipe.resource.fqdn)
+    log.debug('Provisioned %s', recipe.t_id)
 
 def mark_job_waiting(job, **kwargs):
     for recipeset in job.recipesets:
@@ -640,7 +661,7 @@ def mark_recipe_running(recipe, fqdn=None, only=False, install_started=None, **k
         install_started = datetime.datetime.utcnow()
     if not only:
         mark_recipe_waiting(recipe, fqdn=fqdn, **kwargs)
-    recipe.resource.install_started = install_started
+    recipe.installation.install_started = install_started
     recipe.tasks[0].start()
     recipe.tasks[0].start_time = install_started
     if isinstance(recipe, GuestRecipe):
@@ -657,8 +678,8 @@ def mark_recipe_installation_finished(recipe, fqdn=None, install_finished=None,
         if fqdn is None:
             fqdn = '%s-for-recipe-%s' % (recipe.resource.__class__.__name__, recipe.id)
         recipe.resource.fqdn = fqdn
-    recipe.resource.install_finished = install_finished or datetime.datetime.utcnow()
-    recipe.resource.postinstall_finished = postinstall_finished or datetime.datetime.utcnow()
+    recipe.installation.install_finished = install_finished or datetime.datetime.utcnow()
+    recipe.installation.postinstall_finished = postinstall_finished or datetime.datetime.utcnow()
     recipe.recipeset.job.update_status()
 
 def mark_job_running(job, **kw):

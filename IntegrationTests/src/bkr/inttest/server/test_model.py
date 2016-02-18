@@ -1244,9 +1244,14 @@ class WatchdogTest(DatabaseTestCase):
         r1 = data_setup.create_recipe()
         r2 = data_setup.create_recipe()
         job = data_setup.create_job_for_recipes([r1, r2])
-        data_setup.mark_recipe_waiting(r1)
+        data_setup.mark_recipe_scheduled(r1)
         data_setup.mark_recipe_running(r2)
+        # r2 has a kill time hence it's "active", whereas r1 has a watchdog 
+        # with no kill time so it's not.
+        self.assertIsNone(r1.watchdog.kill_time)
+        self.assertIsNotNone(r2.watchdog.kill_time)
         session.flush()
+
         active_watchdogs = Watchdog.by_status()
         self.assert_(r1.watchdog not in active_watchdogs)
         self.assert_(r2.watchdog in active_watchdogs)
@@ -1326,7 +1331,6 @@ class DistroTreeTest(DatabaseTestCase):
         recipe = data_setup.create_recipe(distro_tree=distro_tree)
         data_setup.create_job_for_recipes([recipe])
         data_setup.mark_recipe_waiting(recipe, lab_controller=self.lc)
-        recipe.provision()
         return recipe
 
     def test_custom_netbootloader(self):
@@ -1337,10 +1341,7 @@ class DistroTreeTest(DatabaseTestCase):
         rhel6_ppc64 = data_setup.create_distro_tree(distro=distro_rhel6,
                                                     arch=u'ppc64')
         r1 = self.provision_distro_tree(rhel6_ppc64)
-        system1 = r1.resource.system
-        self.assertEqual(system1.command_queue[2].action, 'configure_netboot')
-        self.assertIn('netbootloader=yaboot',
-                      system1.command_queue[2].kernel_options)
+        self.assertIn('netbootloader=yaboot', r1.installation.kernel_options)
 
         # ppc64, RHEL 7.0
         distro_rhel7 = data_setup.create_distro(osmajor='RedHatEnterpriseLinux7',
@@ -1348,10 +1349,7 @@ class DistroTreeTest(DatabaseTestCase):
         rhel7_ppc64 = data_setup.create_distro_tree(distro=distro_rhel7,
                                                     arch=u'ppc64')
         r2 = self.provision_distro_tree(rhel7_ppc64)
-        system2 = r2.resource.system
-        self.assertEqual(system2.command_queue[2].action, 'configure_netboot')
-        self.assertIn('netbootloader=yaboot',
-                      system2.command_queue[2].kernel_options)
+        self.assertIn('netbootloader=yaboot', r2.installation.kernel_options)
 
         # ppc64, RHEL 7.1
         distro_rhel71 = data_setup.create_distro(osmajor='RedHatEnterpriseLinux7',
@@ -1359,10 +1357,8 @@ class DistroTreeTest(DatabaseTestCase):
         rhel71_ppc64 = data_setup.create_distro_tree(distro=distro_rhel71,
                                                      arch=u'ppc64')
         r3 = self.provision_distro_tree(rhel71_ppc64)
-        system3 = r3.resource.system
-        self.assertEqual(system3.command_queue[2].action, 'configure_netboot')
         self.assertIn('netbootloader=boot/grub2/powerpc-ieee1275/core.elf',
-                      system3.command_queue[2].kernel_options)
+                      r3.installation.kernel_options)
 
         # admin set distro option to override the default netbootloader
         distro_tree = data_setup.create_distro_tree(distro=data_setup.create_distro(),
@@ -1371,10 +1367,7 @@ class DistroTreeTest(DatabaseTestCase):
                                                     {'kernel_options'
                                                      :'netbootloader=something/weird'})
         r4 = self.provision_distro_tree(distro_tree)
-        system4 = r4.resource.system
-        self.assertEqual(system4.command_queue[2].action, 'configure_netboot')
-        self.assertIn('netbootloader=something/weird',
-                      system4.command_queue[2].kernel_options)
+        self.assertIn('netbootloader=something/weird', r4.installation.kernel_options)
 
         # ppc64, Fedora 21
         distro_f21 = data_setup.create_distro(osmajor='Fedora21',
@@ -1382,21 +1375,16 @@ class DistroTreeTest(DatabaseTestCase):
         f21_ppc64 = data_setup.create_distro_tree(distro=distro_f21,
                                                     arch=u'ppc64')
         r5 = self.provision_distro_tree(f21_ppc64)
-        system5 = r5.resource.system
-        self.assertEqual(system5.command_queue[2].action, 'configure_netboot')
         self.assertIn('netbootloader=boot/grub2/powerpc-ieee1275/core.elf',
-                      system5.command_queue[2].kernel_options)
+                      r5.installation.kernel_options)
 
         # ppc64, Fedora 21, custom bootloader specified as kernel option
-        system6 = data_setup.create_system(shared=True, lab_controller=self.lc)
         r6 = data_setup.create_recipe(distro_tree=f21_ppc64)
         data_setup.create_job_for_recipes([r6])
         r6.kernel_options = u'netbootloader=a/new/bootloader'
-        data_setup.mark_recipe_waiting(r6, system=system6, lab_controller=self.lc)
-        r6.provision()
-        self.assertEqual(system6.command_queue[2].action, 'configure_netboot')
+        data_setup.mark_recipe_waiting(r6)
         self.assertIn('netbootloader=a/new/bootloader',
-                      system6.command_queue[2].kernel_options)
+                      r6.installation.kernel_options)
 
         # Manual provision
         system7 = data_setup.create_system(shared=True, lab_controller=self.lc)
@@ -1409,9 +1397,7 @@ class DistroTreeTest(DatabaseTestCase):
     def test_leavebootorder_kernel_option_is_set_by_default_for_ppc(self):
         distro_tree = data_setup.create_distro_tree(arch=u'ppc64')
         recipe = self.provision_distro_tree(distro_tree)
-        system = recipe.resource.system
-        self.assertEqual(system.command_queue[2].action, u'configure_netboot')
-        self.assertIn(u'leavebootorder', system.command_queue[2].kernel_options.split())
+        self.assertIn(u'leavebootorder', recipe.installation.kernel_options.split())
 
 class OSMajorTest(DatabaseTestCase):
 
