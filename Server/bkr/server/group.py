@@ -716,10 +716,7 @@ def grant_ownership(group_name):
     user_name = data['user_name']
     user = _get_user_by_username(user_name)
     if not group.has_owner(user):
-        if user in group.users:
-            group.grant_ownership(user, agent=identity.current.user)
-        else:
-            group.add_member(user, is_owner=True, agent=identity.current.user)
+        group.grant_ownership(user, agent=identity.current.user)
     else:
         raise Conflict409('User %s is already an owner of group %s' % (user.user_name, group_name))
     return '', 204

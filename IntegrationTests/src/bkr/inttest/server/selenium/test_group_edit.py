@@ -1144,6 +1144,24 @@ class GroupHTTPTest(DatabaseTestCase):
             self.assertEquals(self.group.activity[-1].action, 'Added')
             self.assertEquals(self.group.activity[-1].new_value, unicode(user))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1308625
+    def test_can_grant_ownership_to_additional_users_on_inverted_groups(self):
+        with session.begin():
+            user = data_setup.create_user(password=u'password')
+            group = data_setup.create_group(owner=user,
+                membership_type=GroupMembershipType.inverted)
+            user2 = data_setup.create_user()
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': user.user_name,
+                'password': u'password'}).raise_for_status()
+        # add user2 to the group owners list
+        response = post_json(get_server_base() + 'groups/%s/owners/' % group.group_name,
+                session=s, data={'user_name': user2.user_name})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertTrue(group.has_owner(user2))
+
     def test_can_grant_ownership_to_non_group_member(self):
         with session.begin():
             user = data_setup.create_user()
