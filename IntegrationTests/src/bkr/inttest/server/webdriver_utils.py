@@ -215,5 +215,15 @@ class BootstrapSelect(object):
         self.element.find_element_by_link_text(text).click()
 
     @property
+    def options(self):
+        # Need to open the menu in order to grab the options -- I think this is 
+        # due to Webdriver hiding "invisible" elements from us
+        self.element.find_element_by_tag_name('button').click()
+        options = [span.text for span in self.element.find_elements_by_xpath(
+                './/ul[contains(@class, "dropdown-menu")]/li//span[@class="text"]')]
+        self.element.find_element_by_tag_name('button').click() # close it again
+        return options
+
+    @property
     def selected_option_text(self):
         return self.element.find_element_by_tag_name('button').text.strip()
