@@ -2765,6 +2765,10 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         return self.can_edit(user) and self.status not in (TaskStatus.completed,
                 TaskStatus.cancelled, TaskStatus.aborted, TaskStatus.reserved)
 
+    def can_comment(self, user):
+        """Returns True iff the given user can comment on this recipe."""
+        return self.recipeset.can_comment(user)
+
     def get_reviewed_state(self, user):
         if user is None:
             raise RuntimeError('Cannot get reviewed state for anonymous')
@@ -3461,6 +3465,10 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
         """Returns True iff the given user can stop this recipe task"""
         return self.recipe.recipeset.job.can_stop(user)
 
+    def can_comment(self, user):
+        """Returns True iff the given user can comment on this recipe task."""
+        return self.recipe.can_comment(user)
+
 Index('ix_recipe_task_name_version', RecipeTask.name, RecipeTask.version)
 
 
@@ -3711,6 +3719,10 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
         if not self.path or self.path == '/':
             return self.log or './'
         return self.short_path or './'
+
+    def can_comment(self, user):
+        """Returns True iff the given user can comment on this recipe task result."""
+        return self.recipetask.can_comment(user)
 
     def __json__(self):
         data = {
