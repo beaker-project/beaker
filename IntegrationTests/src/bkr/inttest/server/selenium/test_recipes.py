@@ -112,6 +112,26 @@ class TestRecipeView(WebDriverTestCase):
             b.find_element_by_xpath('//ul[contains(@class, "recipe-nav")]'
                     '//a[text()="%s"]' % tab).click()
 
+    def test_possible_systems(self):
+        with session.begin():
+            self.system.user = self.user
+            queued_job = data_setup.create_job(owner=self.user,
+                    distro_tree=self.distro_tree)
+            data_setup.mark_job_queued(queued_job)
+            recipe = queued_job.recipesets[0].recipes[0]
+            recipe.systems[:] = [self.system]
+        b = self.browser
+        self.go_to_recipe_view(recipe)
+        b.find_element_by_xpath('//div[@class="recipe-summary"]'
+                '//a[normalize-space(text())="1 possible system"]').click()
+        # Make sure our system link is there
+        b.find_element_by_link_text(self.system.fqdn)
+        # Make sure out user link is there
+        b.find_element_by_link_text(self.system.user.user_name)
+        # Make sure the Reserved column is showing a link to the current user
+        system_rows = b.find_elements_by_xpath('//table[@id="widget"]/tbody/tr')
+        self.assert_(len(system_rows) == 1)
+
     def test_log_url_looks_right(self):
         b = self.browser
         self.go_to_recipe_view(tab='Installation')

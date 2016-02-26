@@ -23,6 +23,12 @@
       } else {
           %><%- resource.get('fqdn') %><%
       } %><%
+  } %><%
+  if (status == 'Queued' && !_.isEmpty(possible_systems)) { %>
+      <br/>on
+      <a href="<%- beaker_url_prefix %>recipes/systems?recipe_id=<%- id %>">
+      <%- _.size(possible_systems) %> possible
+      <%- _.size(possible_systems) > 1 ? 'systems' : 'system' %></a><%
   } %><% if (!_.isEmpty(role) && role != 'None' && role != 'STANDALONE' && role != 'RECIPE_MEMBERS') { %>
       <br/>with role <%- role %><%
   } %>.

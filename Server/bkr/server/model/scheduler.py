@@ -2816,6 +2816,7 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             'repos': [{'name': repo.name, 'url': repo.url} for repo in self.repos],
             'partitions': self._parse_partitions(),
             'logs': self.logs,
+            'possible_systems': [{'fqdn': system.fqdn} for system in self.systems],
             # for backwards compatibility only:
             'recipe_id': self.id,
             'job_id': self.recipeset.job.t_id,
