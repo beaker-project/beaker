@@ -270,6 +270,10 @@ window.Task = Backbone.Model.extend({
 });
 
 window.RecipeTask = Backbone.Model.extend({
+    url: function () {
+        // XXX this should not be hardcoded here...
+        return _.result(this.get('recipe'), 'url') + '/tasks/' + this.get('id');
+    },
     parse: function (data) {
         var recipe_task = this;
         data['task'] = !_.isEmpty(data['task']) ? new Task(data['task']) : null;
@@ -281,17 +285,37 @@ window.RecipeTask = Backbone.Model.extend({
                 if (result) {
                     result.set(result.parse(resultdata));
                 } else {
-                    result = new RecipeTaskResult(resultdata);
+                    result = new RecipeTaskResult(resultdata, {parse: true});
                 }
                 result.set({recipe_task: recipe_task}, {silent: true});
                 return result;
             });
         }
+        if (data['comments']) {
+            var comments = this.get('comments') ||new RecipeTaskComments([], {recipetask: this});
+            comments.reset(data['comments'], {parse: true});
+            data['comments'] = comments;
+        }
         return data;
     },
 });
 
-window.RecipeTaskResult = Backbone.Model.extend({});
+window.RecipeTaskResult = Backbone.Model.extend({
+    url: function () {
+        // XXX this should not be hardcoded here...
+        return _.result(this.get('recipe_task'), 'url') + '/results/' + this.get('id');
+    },
+    parse: function (data) {
+        var recipe_task_result = this;
+        if (data['comments']) {
+            var comments = this.get('comments') ||new RecipeTaskResultComments([],
+                {recipe_task_result: this});
+            comments.reset(data['comments'], {parse: true});
+            data['comments'] = comments;
+        }
+        return data;
+    },
+});
 
 window.RecipeResource = Backbone.Model.extend({
     parse: function (data) {
@@ -345,6 +369,26 @@ var RecipeSetComments = Backbone.Collection.extend({
     },
     url: function () {
         return _.result(this.recipeset, 'url') + '/comments/';
+    },
+});
+
+var RecipeTaskComments = Backbone.Collection.extend({
+    model: Comment,
+    initialize: function (attributes, options) {
+        this.recipetask = options.recipetask;
+    },
+    url: function () {
+        return _.result(this.recipetask, 'url') + '/comments/';
+    },
+});
+
+var RecipeTaskResultComments = Backbone.Collection.extend({
+    model: Comment,
+    initialize: function (attributes, options) {
+        this.recipe_task_result = options.recipe_task_result;
+    },
+    url: function () {
+        return _.result(this.recipe_task_result, 'url') + '/comments/';
     },
 });
 

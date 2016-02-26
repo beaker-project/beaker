@@ -10,7 +10,8 @@ import re
 import requests
 from turbogears.database import session
 
-from bkr.server.model import TaskStatus, TaskResult, RecipeTaskResult, Task
+from bkr.server.model import TaskStatus, TaskResult, RecipeTaskResult, \
+    Task, RecipeTaskComment, RecipeTaskResultComment
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_text_present
 from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
@@ -344,6 +345,57 @@ class TestRecipeView(WebDriverTestCase):
         b.find_element_by_xpath('//h1[contains(string(.), "%s")]' % recipe.t_id)
         with session.begin():
             self.assertEqual(recipe.get_reviewed_state(self.user), True)
+
+    def test_anonymous_can_see_recipetask_comments(self):
+        with session.begin():
+            recipe = data_setup.create_recipe(num_tasks=2)
+            job = data_setup.create_job_for_recipes([recipe])
+            recipetask = recipe.tasks[0]
+            # comment on first recipe task, no comments on second task
+            recipetask.comments.append(RecipeTaskComment(
+                    comment=u'something', user=data_setup.create_user()))
+        b = self.browser
+        self.go_to_recipe_view(recipe, tab='Tasks')
+        # first task row should have comments link
+        tab = b.find_element_by_id('recipe-tasks')
+        comments_link = tab.find_element_by_xpath(
+                '//div[@id="task%s"]//div[@class="task-comments"]'
+                '/div/a[@class="comments-link"]' % recipetask.id).text
+        self.assertEqual(comments_link, '1') # it's actually "1 <commenticon>"
+        # second recipe task should have no comments link
+        tab.find_element_by_xpath(
+                '//div[@id="task%s"]//div[@class="task-comments" and '
+                'not(./div/a)]' % recipe.tasks[1].id)
+
+    def test_authenticated_user_can_comment_recipetask(self):
+        with session.begin():
+            recipe = data_setup.create_recipe()
+            job = data_setup.create_job_for_recipes([recipe])
+            recipetask = recipe.tasks[0]
+            # no special permissions required to comment
+            user = data_setup.create_user(password=u'otheruser')
+        comment_text = u'comments are fun'
+        b = self.browser
+        login(b, user=user.user_name, password='otheruser')
+        self.go_to_recipe_view(recipe, tab='Tasks')
+        tab = b.find_element_by_id('recipe-tasks')
+        tab.find_element_by_xpath('//div[@class="task-comments"]'
+                '/div/a[@class="comments-link"]').click()
+        popover = b.find_element_by_class_name('popover')
+        popover.find_element_by_name('comment').send_keys(comment_text)
+        popover.find_element_by_tag_name('form').submit()
+        # check if the commit is in the comments list indicating the comment is submitted
+        popover.find_element_by_xpath('//div[@class="comments"]//div[@class="comment"]'
+            '/p[2][text()="%s"]' % comment_text)
+        self.assertEqual(popover.find_element_by_name('comment').text, '')
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(recipetask.comments[0].user, user)
+            self.assertEqual(recipetask.comments[0].comment, comment_text)
+        # comments link should indicate the new comment
+        comments_link = tab.find_element_by_xpath('//div[@class="task-comments"]'
+                '/div/a[@class="comments-link"]').text
+        self.assertEqual(comments_link, '1')
 
 
 class RecipeHTTPTest(DatabaseTestCase):

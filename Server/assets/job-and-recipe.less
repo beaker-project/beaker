@@ -24,6 +24,28 @@
     }
 }
 
+.popover.comments-popover {
+    min-width: 27em;
+    max-width: 40em;
+    .popover-content {
+        padding: 9px 0;
+    }
+    div.comment, div.comment-form {
+        padding: 0 14px;
+    }
+    div.comment + div.comment, div.comments + div.comment-form {
+        padding-top: 1em;
+        border-top: 1px solid @grayLighter;
+        margin-top: 1em;
+    }
+    p:last-child {
+        margin-bottom: 0;
+    }
+    .comment-metadata {
+        .muted;
+    }
+}
+
 .popover.logs-popover {
     ul {
         margin: 0;

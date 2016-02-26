@@ -104,6 +104,7 @@ var RecipeTaskSummary = Backbone.View.extend({
                 .appendTo(this.$('.recipe-task-status'));
         }
         new LogsLink({model: this.model}).$el.appendTo(this.$('div.task-logs'));
+        new CommentsLink({model: this.model}).$el.appendTo(this.$('div.task-comments'));
         return this;
     },
 });
@@ -205,6 +206,7 @@ var RecipeTaskResultView = Backbone.View.extend({
         this.$el.html(this.template(_.extend({start_time_diff: start_time_diff},
             this.model.attributes)));
         new LogsLink({model: this.model}).$el.appendTo(this.$('div.task-result-logs'));
+        new CommentsLink({model: this.model}).$el.appendTo(this.$('div.task-result-comments'));
         return this;
     },
 });
