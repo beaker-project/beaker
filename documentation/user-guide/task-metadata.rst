@@ -224,6 +224,16 @@ For example::
 
     RhtsRequires: test(/distribution/rhts/common)
 
+RhtsOptions
+-----------
+
+You can indicate that your task does not need to be run inside the 
+``rhts-compat`` service::
+
+    RhtsOptions: -Compatible
+
+This option has no effect on newer distros. See :doc:`rhts-compat`.
+
 RunFor
 ------
 
