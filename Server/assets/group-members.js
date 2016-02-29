@@ -117,8 +117,8 @@ var GroupAddMemberForm = Backbone.View.extend({
         if (evt.currentTarget.checkValidity()) {
             this.$('.alert').remove();
             var new_member = this.$('input[name=group_member]').val();
-            if (this.model.get('members')
-                .find(function(m) { return m.get('user_name') == new_member })) {
+            if (_.find(this.model.get('members'),
+                function(m) { return m.get('user_name') == new_member })) {
                 // nothing to do
                 this.$('input[name="group_member"]').typeahead('setQuery', '');
                 return false;
