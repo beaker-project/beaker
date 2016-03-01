@@ -484,6 +484,33 @@ class GroupModifyTest(ClientTestCase):
         except ClientError, e:
             self.assert_('Cannot modify group ownership')
 
+    def test_inverted_group_modify_grant_owner(self):
+        with session.begin():
+            group = data_setup.create_group(owner=self.user,
+                    membership_type=GroupMembershipType.inverted)
+            user1 = data_setup.create_user()
+            group.add_member(user1)
+            user2 = data_setup.create_user()
+            group.add_member(user2)
+            # user3 is not associated but can also be set as the group owner.
+            user3 = data_setup.create_user()
+
+        out = run_client(['bkr', 'group-modify',
+                          '--grant-owner', user1.user_name,
+                          '--grant-owner', user2.user_name,
+                          '--grant-owner', user3.user_name,
+                          group.group_name],
+                         config = self.client_config)
+
+        with session.begin():
+            session.expire_all()
+            self.assertTrue(group.has_owner(user1))
+            self.assertTrue(group.has_owner(user2))
+            self.assertTrue(group.has_owner(user3))
+            self.assertEquals(group.activity[-1].action, u'Added')
+            self.assertEquals(group.activity[-1].field_name, u'Owner')
+            self.assertEquals(group.activity[-1].new_value, user3.user_name)
+            self.assertEquals(group.activity[-1].service, u'HTTP')
 
     def test_group_modify_revoke_owner(self):
         with session.begin():

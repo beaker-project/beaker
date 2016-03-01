@@ -60,17 +60,11 @@ class Groups(RPCRoot):
         if len(group.owners())==1 and not identity.current.user.is_admin():
             raise GroupOwnerModificationForbidden('Cannot remove the only owner')
         else:
-            for assoc in group.user_group_assocs:
-                if assoc.user == user:
-                    if assoc.is_owner:
-                        assoc.is_owner = False
-                        group.record_activity(user=identity.current.user, service=service,
-                                              field=u'Owner', action='Removed',
-                                              old=user.user_name, new=u'')
-                        # hack to return the user removing this owner
-                        # so that if the user was logged in as a group
-                        # owner, he/she can be redirected appropriately
-                        return str(identity.current.user.user_id)
+            group.revoke_ownership(user=user, agent=identity.current.user, service=service)
+            # hack to return the user removing this owner
+            # so that if the user was logged in as a group
+            # owner, he/she can be redirected appropriately
+            return str(identity.current.user.user_id)
 
     #XML-RPC interface
     @identity.require(identity.not_anonymous())
@@ -112,14 +106,8 @@ class Groups(RPCRoot):
         if user not in group.users:
             raise GroupOwnerModificationForbidden('User is not a group member')
         else:
-            for assoc in group.user_group_assocs:
-                if assoc.user == user:
-                    if not assoc.is_owner:
-                        assoc.is_owner = True
-                        group.record_activity(user=identity.current.user, service=service,
-                                              field=u'Owner', action='Added',
-                                              old=u'', new=user.user_name)
-                        return ''
+            group.grant_ownership(user=user, agent=identity.current.user, service=service)
+            return ''
 
     #XML-RPC interface
     @identity.require(identity.not_anonymous())
