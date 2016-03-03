@@ -826,6 +826,46 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
                         pass # Possibly already removed
         return logs_to_return
 
+    @hybrid_property
+    def is_expired(self):
+        """
+        A job is expired if:
+            * it's not already deleted; and
+            * a user has explicitly requested that it be deleted; or
+            * it's older than the expiry time specified by its retention tag.
+        Expired jobs will be purged by beaker-log-delete when it runs.
+        """
+        if self.deleted:
+            return False
+        if self.to_delete:
+            return True
+        expire_in_days = self.retention_tag.expire_in_days
+        if expire_in_days and self.completed_n_days_ago(expire_in_days):
+            return True
+        return False
+
+    @is_expired.expression
+    def is_expired(cls): #pylint: disable=E0213
+        # We *could* rely on the caller to join Job.retention_tag and then use 
+        # RetentionTag.expire_in_days directly here, instead of a having this 
+        # correlated subquery. We have used that approach elsewhere in other 
+        # hybrids. It produces faster queries too. *BUT* if we did that here, 
+        # and then the caller accidentally forgot to do the join, this clause 
+        # would silently result in EVERY JOB being expired which would be 
+        # a huge disaster.
+        expire_in_days_subquery = select([RetentionTag.expire_in_days])\
+                .where(RetentionTag.jobs).correlate(Job).label('expire_in_days')
+        return and_(
+            Job.deleted == None,
+            or_(
+                Job.to_delete != None,
+                and_(
+                    expire_in_days_subquery > 0,
+                    Job.completed_n_days_ago(expire_in_days_subquery)
+                )
+            )
+        )
+
     @classmethod
     def expired_logs(cls, limit=None):
         """Iterate over log files for expired recipes
@@ -833,15 +873,8 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         Will not yield recipes that have already been deleted. Does
         yield recipes that are marked to be deleted though.
         """
-        job_ids = [job_id for job_id, in cls.marked_for_deletion().values(Job.id)]
-        for tag in RetentionTag.get_transient():
-            expire_in = tag.expire_in_days
-            tag_name = tag.tag
-            job_ids.extend(job_id for job_id, in cls.find_jobs(tag=tag_name,
-                complete_days=expire_in, include_to_delete=True).values(Job.id))
-        job_ids = list(set(job_ids))
-        if limit is not None:
-            job_ids = job_ids[:limit]
+        job_ids = [job_id for job_id, in
+                Job.query.filter(Job.is_expired).limit(limit).values(Job.id)]
         for job_id in job_ids:
             job = Job.by_id(job_id)
             logs = job.get_log_dirs()

@@ -25,8 +25,9 @@ def setUpModule():
     # It makes our tests simpler here if they only need to worry about deleting 
     # logs which they themselves have created, rather than ones which might have 
     # been left behind from earlier tests in the run.
-    for job, _ in Job.expired_logs():
-        job.delete()
+    with session.begin():
+        for job in Job.query.filter(Job.is_expired):
+            job.delete()
 
 class LogDelete(DatabaseTestCase):
 
