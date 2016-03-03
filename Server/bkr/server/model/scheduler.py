@@ -777,15 +777,35 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
 
         return current_nacks
 
-    @classmethod
-    def complete_delta(cls, delta, query):
-        delta = timedelta(**delta)
-        if not query:
-            query = cls.query
-        query = query.join(cls.recipesets, RecipeSet.recipes)\
-            .filter(func.coalesce(Recipe.finish_time, RecipeSet.queue_time) < datetime.utcnow() - delta)\
-            .filter(cls.status.in_([status for status in TaskStatus if status.finished]))
-        return query
+    @hybrid_method
+    def completed_n_days_ago(self, n):
+        """
+        Returns True if all recipes in this job finished more than *n* days ago.
+        """
+        # Note that Recipe.finish_time may be null even for a finished recipe, 
+        # that indicates it was cancelled/aborted before it ever started. In 
+        # that case we look at RecipeSet.queue_time instead.
+        if not self.is_finished():
+            return False
+        cutoff = datetime.utcnow() - timedelta(days=n)
+        for rs in self.recipesets:
+            for recipe in rs.recipes:
+                finish_time = recipe.finish_time or rs.queue_time
+                if finish_time >= cutoff:
+                    return False
+        return True
+
+    @completed_n_days_ago.expression
+    def completed_n_days_ago(cls, n): #pylint: disable=E0213
+        # We let cutoff be computed on the SQL side, in case n is also a SQL 
+        # expression and not a constant.
+        cutoff = func.adddate(func.utc_timestamp(), -n)
+        return and_(
+            cls.is_finished(),
+            not_(exists([1], from_obj=Recipe.__table__.join(RecipeSet.__table__),
+                 whereclause=and_(RecipeSet.job_id == Job.id,
+                    func.coalesce(Recipe.finish_time, RecipeSet.queue_time) >= cutoff)))
+        )
 
     @classmethod
     def _remove_descendants(cls, list_of_logs):
@@ -1061,8 +1081,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         if not include_to_delete:
             query = query.filter(Job.to_delete == None)
         if complete_days:
-            #This takes the same kw names as timedelta
-            query = cls.complete_delta({'days':int(complete_days)}, query)
+            query = query.filter(Job.completed_n_days_ago(int(complete_days)))
         if family:
             try:
                 OSMajor.by_name(family)

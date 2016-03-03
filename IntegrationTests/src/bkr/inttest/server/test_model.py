@@ -1116,6 +1116,32 @@ class TestJob(DatabaseTestCase):
         self.assertIn('<task name="/distribution/inventory" role="STANDALONE"/>',
                       job_xml)
 
+    def test_completed_n_days_ago(self):
+        old_completed_job = data_setup.create_completed_job(
+                finish_time=datetime.datetime.utcnow() - datetime.timedelta(days=90))
+        recently_completed_job = data_setup.create_completed_job(
+                finish_time=datetime.datetime.utcnow())
+        old_running_job = data_setup.create_running_job(
+                queue_time=datetime.datetime.utcnow() - datetime.timedelta(days=92),
+                start_time=datetime.datetime.utcnow() - datetime.timedelta(days=91))
+        partially_complete_job = data_setup.create_running_job(num_recipes=2,
+                queue_time=datetime.datetime.utcnow() - datetime.timedelta(days=92),
+                start_time=datetime.datetime.utcnow() - datetime.timedelta(days=91))
+        data_setup.mark_recipe_complete(
+                partially_complete_job.recipesets[0].recipes[0], only=True,
+                finish_time=datetime.datetime.utcnow() - datetime.timedelta(days=90))
+
+        self.assertTrue(old_completed_job.completed_n_days_ago(30))
+        self.assertFalse(recently_completed_job.completed_n_days_ago(30))
+        self.assertFalse(old_running_job.completed_n_days_ago(30))
+        self.assertFalse(partially_complete_job.completed_n_days_ago(30))
+
+        jobs = Job.query.filter(Job.completed_n_days_ago(30)).all()
+        self.assertIn(old_completed_job, jobs)
+        self.assertNotIn(recently_completed_job, jobs)
+        self.assertNotIn(old_running_job, jobs)
+        self.assertNotIn(partially_complete_job, jobs)
+
 class DistroTreeByFilterTest(DatabaseTestCase):
 
     def setUp(self):

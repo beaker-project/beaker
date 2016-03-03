@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import datetime
 from turbogears.database import session
 from turbogears import expose, flash, widgets, validate, validators, redirect, paginate, url
 from cherrypy import response
@@ -255,7 +256,7 @@ class Jobs(RPCRoot):
         if tags:
             jobs = Job.by_tag(tags, jobs)
         if complete_days:
-            jobs = Job.complete_delta({'days':int(complete_days)}, jobs)
+            jobs = jobs.filter(Job.completed_n_days_ago(int(complete_days)))
         if family:
             jobs = Job.has_family(family, jobs)
         if product:
