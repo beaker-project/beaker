@@ -249,7 +249,6 @@ setup(
             'product-update = bkr.server.tools.product_update:main',
             'beakerd = bkr.server.tools.beakerd:main',
             'beaker-usage-reminder = bkr.server.tools.usage_reminder:main',
-            'log-delete = bkr.server.tools.log_delete:legacy_main',
             'beaker-log-delete = bkr.server.tools.log_delete:main',
             'beaker-check = bkr.server.tools.check_beaker:main',
             'beaker-create-ipxe-image = bkr.server.tools.ipxe_image:main',

@@ -33,7 +33,6 @@ except ImportError:
     _kerberos_available = False
 
 logger = logging.getLogger(__name__)
-warnings.filterwarnings('always', 'Use beaker-log-delete instead', DeprecationWarning)
 
 __description__ = 'Script to delete expired log files'
 
@@ -49,10 +48,6 @@ class MultipleAuth(requests.auth.AuthBase):
             request = auth(request)
         return request
 
-
-def legacy_main(argv=None):
-    warnings.warn("Use beaker-log-delete instead", DeprecationWarning)
-    return main(argv)
 
 def main(argv=None):
 

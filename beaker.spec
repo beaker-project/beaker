@@ -479,7 +479,6 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/beaker-init
 %{_bindir}/beaker-usage-reminder
 %{_bindir}/beaker-log-delete
-%{_bindir}/log-delete
 %{_bindir}/beaker-check
 %{_bindir}/product-update
 %{_bindir}/beaker-repo-update
