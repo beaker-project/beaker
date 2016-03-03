@@ -453,8 +453,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
             'id': self.id,
             'fqdn': self.fqdn,
             'lab_controller_id': None,
-            'possible_lab_controllers': [{'id': lc.id, 'fqdn': lc.fqdn}
-                    for lc in LabController.query],
+            'possible_lab_controllers': LabController.query.filter(
+                    LabController.removed == None).all(),
             'owner': self.owner,
             'notify_cc': list(self.cc),
             'status': self.status,

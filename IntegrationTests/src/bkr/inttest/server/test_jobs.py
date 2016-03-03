@@ -222,3 +222,21 @@ class TestJobsController(DatabaseTestCase):
         ''')
         job = self.controller.process_xmljob(xmljob, self.user)
         self.assertEqual(job.recipesets[0].recipes[0].reservation_request.duration, 600)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1302857
+    def test_strips_whitespace_from_whiteboard(self):
+        xmljob = lxml.etree.fromstring('''
+            <job>
+                <whiteboard>
+                    so pretty
+                </whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires/> <hostRequires/>
+                        <task name="/distribution/install"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+        ''')
+        job = self.controller.process_xmljob(xmljob, self.user)
+        self.assertEqual(job.whiteboard, u'so pretty')

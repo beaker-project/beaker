@@ -506,7 +506,7 @@ class Jobs(RPCRoot):
         job_retention = xmljob.get('retention_tag')
         job_product = xmljob.get('product')
         tag, product = self._process_job_tag_product(retention_tag=job_retention, product=job_product)
-        job = Job(whiteboard=xmljob.findtext('whiteboard', default=''),
+        job = Job(whiteboard=xmljob.findtext('whiteboard', default='').strip(),
                   ttasks=0,
                   owner=owner,
                   group=group,

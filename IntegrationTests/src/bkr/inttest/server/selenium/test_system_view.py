@@ -826,6 +826,18 @@ class SystemViewTestWD(WebDriverTestCase):
                 '(return the system first)',
                 tab.find_element_by_class_name('alert-error').text)
 
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1309059
+    def test_removed_lab_controllers_are_not_visible(self):
+        with session.begin():
+            lab_controller = data_setup.create_labcontroller()
+            lab_controller.removed = datetime.datetime.utcnow()
+        b = self.browser
+        login(b)
+        self.go_to_system_view(tab='Essentials')
+        tab = b.find_element_by_id('essentials')
+        options = BootstrapSelect(b.find_element_by_name('lab_controller_id')).options
+        self.assertNotIn(lab_controller.fqdn, options)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=714974
     def test_change_hypervisor(self):
         b = self.browser

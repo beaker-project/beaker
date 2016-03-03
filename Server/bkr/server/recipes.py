@@ -123,7 +123,7 @@ class Recipes(RPCRoot):
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
-        return list(recipe.all_logs)
+        return [log.dict for log in recipe.all_logs]
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
