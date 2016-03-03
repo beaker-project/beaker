@@ -1157,12 +1157,6 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
     def counts_as_deleted(self):
         return self.deleted or self.to_delete
 
-    def build_ancestors(self, *args, **kw):
-        """
-        I have no ancestors
-        """
-        return ()
-
     def set_response(self, response):
         for rs in self.recipesets:
             rs.set_response(response)
@@ -1802,12 +1796,6 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
         """
         return self.job.can_change_priority(user)
 
-    def build_ancestors(self, *args, **kw):
-        """
-        return a tuple of strings containing the Recipes RS and J
-        """
-        return (self.job.t_id,)
-
     def owner(self):
         return self.job.owner
     owner = property(owner)
@@ -2122,12 +2110,6 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
     @property
     def install_started(self):
         return getattr(self.resource, 'install_started', None)
-
-    def build_ancestors(self, *args, **kw):
-        """
-        return a tuple of strings containing the Recipes RS and J
-        """
-        return (self.recipeset.job.t_id, self.recipeset.t_id)
 
     def clone_link(self):
         """ return link to clone this recipe
@@ -3174,9 +3156,6 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
                 job.id // Log.MAX_ENTRIES_PER_DIRECTORY, job.id,
                 recipe.id, self.id)
     filepath = property(filepath)
-
-    def build_ancestors(self, *args, **kw):
-        return (self.recipe.recipeset.job.t_id, self.recipe.recipeset.t_id, self.recipe.t_id)
 
     def get_log_dirs(self):
         recipe_task_logs = self._get_log_dirs()
