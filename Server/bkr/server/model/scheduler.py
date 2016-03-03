@@ -1131,7 +1131,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         valid_jobs = []
         if jobs:
             for j in jobs:
-                if j.is_finished() and not j.counts_as_deleted():
+                if j.is_finished() and not j.is_deleted:
                     valid_jobs.append(j)
             return valid_jobs
         elif query:
@@ -1153,9 +1153,6 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         for rs in self.recipesets:
             rs.delete()
         self.deleted = datetime.utcnow()
-
-    def counts_as_deleted(self):
-        return self.deleted or self.to_delete
 
     def set_response(self, response):
         for rs in self.recipesets:

@@ -988,7 +988,7 @@ class Jobs(RPCRoot):
             flash(_(u"Invalid job id %s" % id))
             redirect(".")
 
-        if job.counts_as_deleted():
+        if job.is_deleted:
             flash(_(u'Invalid %s, has been deleted' % job.t_id))
             redirect(".")
 
