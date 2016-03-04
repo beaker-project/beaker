@@ -123,7 +123,7 @@ class Recipes(RPCRoot):
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
-        return list(recipe.all_logs)
+        return [log.dict for log in recipe.all_logs]
 
     @cherrypy.expose
     @identity.require(identity.in_group('lab_controller'))
@@ -137,9 +137,8 @@ class Recipes(RPCRoot):
         except InvalidRequestError:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
         for mylog in recipe.all_logs:
-            myserver = '%s/%s/' % (server, mylog['filepath'])
-            mybasepath = '%s/%s/' % (basepath, mylog['filepath'])
-            self.change_file(mylog['tid'], myserver, mybasepath)
+            mylog.server = '%s/%s/' % (server, mylog.parent.filepath)
+            mylog.basepath = '%s/%s/' % (basepath, mylog.parent.filepath)
         recipe.log_server = urlparse.urlparse(server)[1]
         return True
 

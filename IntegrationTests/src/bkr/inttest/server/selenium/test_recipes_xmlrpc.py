@@ -6,7 +6,7 @@
 
 import datetime
 from turbogears.database import session
-from bkr.server.model import TaskStatus, TaskResult
+from bkr.server.model import TaskStatus, TaskResult, LogRecipe
 from bkr.inttest import data_setup
 from bkr.inttest.assertions import assert_datetime_within
 from bkr.inttest.server.selenium import XmlRpcTestCase
@@ -127,3 +127,14 @@ class RecipesXmlRpcTest(XmlRpcTestCase):
             for log in [recipe.logs[0], recipe.tasks[0].logs[0], recipe.tasks[0].results[0].logs[0]]:
                 self.assert_(log.server.startswith('http://archive.example.com/beaker-logs/'), log.server)
                 self.assert_(log.basepath.startswith('/var/www/html/beaker-logs/'), log.basepath)
+
+    def test_gets_logs(self):
+        with session.begin():
+            system = data_setup.create_system(lab_controller=self.lc)
+            recipe = data_setup.create_recipe()
+            recipe.logs.append(LogRecipe(filename=u'test.log'))
+            data_setup.create_job_for_recipes([recipe])
+        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
+        logs = self.server.recipes.files(recipe.id)
+        self.assertEqual(len(logs), 1)
+        self.assertEqual(logs[0]['filename'], u'test.log')
