@@ -2784,18 +2784,18 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         # Get all the logs from log_* tables directly to avoid doing N database
         # queries for N results on large recipes.
         recipe_logs = LogRecipe.query\
-                .filter(LogRecipe.recipe_id == self.id).all()
+                .filter(LogRecipe.recipe_id == self.id)
         recipe_task_logs = LogRecipeTask.query\
                 .join(LogRecipeTask.parent)\
                 .join(RecipeTask.recipe)\
                 .options(contains_eager(LogRecipeTask.parent))\
-                .filter(Recipe.id == self.id).all()
+                .filter(Recipe.id == self.id)
         recipe_task_result_logs =  LogRecipeTaskResult.query\
                 .join(LogRecipeTaskResult.parent)\
                 .join(RecipeTaskResult.recipetask)\
                 .join(RecipeTask.recipe)\
                 .options(contains_eager(LogRecipeTaskResult.parent))\
-                .filter(Recipe.id == self.id).all()
+                .filter(Recipe.id == self.id)
         return chain(recipe_logs, recipe_task_logs, recipe_task_result_logs)
 
     def is_task_applicable(self, task):
@@ -3294,13 +3294,12 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
         Returns an iterator all logs in this task.
         """
         recipe_task_logs = LogRecipeTask.query\
-                .filter(LogRecipeTask.recipe_task_id == self.id).all()
+                .filter(LogRecipeTask.recipe_task_id == self.id)
         recipe_task_result_logs =  LogRecipeTaskResult.query\
                 .join(LogRecipeTaskResult.parent)\
                 .join(RecipeTaskResult.recipetask)\
                 .filter(RecipeTask.id == self.id)\
-                .options(contains_eager(LogRecipeTaskResult.parent))\
-                .all()
+                .options(contains_eager(LogRecipeTaskResult.parent))
         return chain(recipe_task_logs, recipe_task_result_logs)
 
     @property
