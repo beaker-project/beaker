@@ -154,6 +154,8 @@ class Groups(RPCRoot):
                  Group name (maximum 16 characters)
             'display_name'
                  Group display name
+            'description'
+                 Group description
             'ldap'
                  Populate users from LDAP (True/False)
 
@@ -163,6 +165,7 @@ class Groups(RPCRoot):
         """
         display_name = kw.get('display_name')
         group_name = kw.get('group_name')
+        description = kw.get('description')
         ldap = kw.get('ldap')
         password = kw.get('root_password')
 
@@ -177,6 +180,7 @@ class Groups(RPCRoot):
                     field=u'Group', action=u'Created')
             group.display_name = display_name
             group.group_name = group_name
+            group.description = description
             group.root_password = password
             if ldap:
                 group.membership_type = GroupMembershipType.ldap
@@ -402,6 +406,7 @@ def create_group():
 
     :jsonparam string group_name: Symbolic name for the group.
     :jsonparam string display_name: Human-friendly display name for the group.
+    :jsonparam string description: Description of the group.
     :jsonparam string root_password: Optional root password for group jobs.
       If this is not set, group jobs will use the root password preferences of 
       the job submitter.
@@ -434,6 +439,7 @@ def create_group():
     with convert_internal_errors():
         group = Group.lazy_create(group_name=data['group_name'])
         group.display_name = data['display_name']
+        group.description = data.get('description')
         group.root_password = data.get('root_password')
         session.add(group)
         group.record_activity(user=user, service=u'HTTP',
@@ -500,6 +506,7 @@ def update_group(group_name):
 
     :jsonparam string group_name: New name for the group.
     :jsonparam string display_name: Display name of the group.
+    :jsonparam string description: Description of the group.
     :jsonparam string root_password: Optional password. Can be an empty string.
       If empty, group jobs will use the root password preferences of the job submitter.
     :jsonparam string membership_type: New membership type for the group.
@@ -526,6 +533,10 @@ def update_group(group_name):
             new_display_name = data['display_name']
             if new_display_name != group.display_name:
                 group.set_display_name(user, u'HTTP', new_display_name)
+        if 'description' in data:
+            new_description = data['description']
+            if new_description != group.description:
+                group.set_description(user, u'HTTP', new_description)
         if 'root_password' in data:
             new_root_password = data['root_password']
             if new_root_password != group.root_password:

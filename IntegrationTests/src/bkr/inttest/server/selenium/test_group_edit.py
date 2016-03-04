@@ -135,42 +135,31 @@ class TestGroupsWD(WebDriverTestCase):
     def test_dictionary_password_rejected(self):
         b = self.browser
         login(b, user=self.user.user_name, password='password')
-        self.go_to_group_page()
-        b.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
-        modal = b.find_element_by_class_name('modal')
-        modal.find_element_by_id('root_password').clear()
-        modal.find_element_by_id('root_password').send_keys(self.simple_password)
-        modal.find_element_by_tag_name('form').submit()
-        self.assertIn('the password is based on a dictionary word',
-                               modal.find_element_by_class_name('alert-error').text)
-
-    def _update_root_password(self, password):
-        b = self.browser
-        b.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
-        modal = b.find_element_by_class_name('modal')
-        modal.find_element_by_id('root_password').clear()
-        modal.find_element_by_id('root_password').send_keys(password)
-        modal.find_element_by_tag_name('form').submit()
-        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
+        self.go_to_group_page(tab='Root Password')
+        tab = b.find_element_by_id('rootpassword')
+        tab.find_element_by_name('root_password').send_keys(self.simple_password)
+        tab.find_element_by_tag_name('form').submit()
+        self.assertIn('Root password is based on a dictionary word',
+                tab.find_element_by_class_name('alert-error').text)
 
     def test_set_hashed_password(self):
         b = self.browser
         login(b, user=self.user.user_name, password='password')
-        self.go_to_group_page()
-        self._update_root_password(self.hashed_password)
-        b.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
-        modal = b.find_element_by_class_name('modal')
-        new_hash = modal.find_element_by_id('root_password').get_attribute('value')
+        self.go_to_group_page(tab='Root Password')
+        tab = b.find_element_by_id('rootpassword')
+        tab.find_element_by_name('root_password').send_keys(self.hashed_password)
+        tab.find_element_by_tag_name('form').submit()
+        new_hash = tab.find_element_by_xpath('p[1]/code').text
         self.failUnless(crypt.crypt(self.clear_password, new_hash) == self.hashed_password)
 
     def test_set_plaintext_password(self):
         b = self.browser
         login(b, user=self.user.user_name, password='password')
-        self.go_to_group_page()
-        self._update_root_password(self.clear_password)
-        b.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
-        modal = b.find_element_by_class_name('modal')
-        clear_pass = modal.find_element_by_id('root_password').get_attribute('value')
+        self.go_to_group_page(tab='Root Password')
+        tab = b.find_element_by_id('rootpassword')
+        tab.find_element_by_name('root_password').send_keys(self.clear_password)
+        tab.find_element_by_tag_name('form').submit()
+        clear_pass = tab.find_element_by_xpath('p[1]/code').text
         self.assertEquals(clear_pass, self.clear_password)
 
         # check if the change has been recorded in the acitivity table
@@ -184,18 +173,25 @@ class TestGroupsWD(WebDriverTestCase):
         # no change should be recorded if the same password is supplied
         group_activities = len([x for x in self.group.activity if
                                 x.field_name == 'Root Password'])
-        self.go_to_group_page()
-        self._update_root_password(clear_pass)
-        session.refresh(self.group)
-        self.assertEquals(group_activities, len([x for x in self.group.activity if
-                                                 x.field_name == 'Root Password']))
+        self.go_to_group_page(tab='Root Password')
+        tab = b.find_element_by_id('rootpassword')
+        tab.find_element_by_name('root_password').send_keys(clear_pass)
+        tab.find_element_by_tag_name('form').submit()
+        tab.find_element_by_xpath('p[contains(text(), "The group root password is")]')
+        with session.begin():
+            session.refresh(self.group)
+            self.assertEquals(group_activities, len([x for x in self.group.activity if
+                                                     x.field_name == 'Root Password']))
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=1020091
     def test_password_visibility_members(self):
         b = self.browser
         login(b, user=self.user.user_name, password='password')
-        self.go_to_group_page()
-        self._update_root_password(self.clear_password)
+        self.go_to_group_page(tab='Root Password')
+        tab = b.find_element_by_id('rootpassword')
+        tab.find_element_by_name('root_password').send_keys(self.clear_password)
+        tab.find_element_by_tag_name('form').submit()
+        tab.find_element_by_xpath('p[contains(text(), "The group root password is")]')
         logout(b)
 
         # add a new user as a group member
@@ -204,9 +200,10 @@ class TestGroupsWD(WebDriverTestCase):
             self.group.add_member(user, is_owner=True)
         # login as the new user
         login(b, user=user.user_name, password='password')
-        self.go_to_group_page()
-        self.assertEquals(b.find_element_by_xpath("//div[@id='root_pw_display']/p").text,
-                          "The group root password is: %s" % self.clear_password)
+        self.go_to_group_page(tab='Root Password')
+        tab = b.find_element_by_id('rootpassword')
+        self.assertEquals(tab.find_element_by_xpath('p[1]/code').text,
+                self.clear_password)
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=1020091
     def test_password_not_set_visibility_members(self):
@@ -217,18 +214,23 @@ class TestGroupsWD(WebDriverTestCase):
             self.group.add_member(user)
         # login as the new user
         login(b, user=user.user_name, password='password')
-        self.go_to_group_page()
-        self.assertEquals(b.find_element_by_xpath("//div[@id='root_pw_display']/p").text,
+        self.go_to_group_page(tab='Root Password')
+        tab = b.find_element_by_id('rootpassword')
+        self.assertEquals(tab.find_element_by_xpath("p[1]").text,
                           "No group root password set. "
                           "Group jobs will use the root password preferences of the submitting user.")
 
     def test_can_edit_owned_group(self):
         b = self.browser
         login(b, user=self.user.user_name, password='password')
-        self.go_to_group_page()
-        self._update_root_password(u'blapppy7')
-        session.expire(self.group)
-        self.assertEquals('blapppy7', self.group.root_password)
+        self.go_to_group_page(tab='Root Password')
+        tab = b.find_element_by_id('rootpassword')
+        tab.find_element_by_name('root_password').send_keys(u'blapppy7')
+        tab.find_element_by_tag_name('form').submit()
+        tab.find_element_by_xpath('p[contains(text(), "The group root password is")]')
+        with session.begin():
+            session.expire_all()
+            self.assertEquals('blapppy7', self.group.root_password)
 
     def test_cannot_edit_unowned_group(self):
         with session.begin():
@@ -500,6 +502,31 @@ class TestGroupsWD(WebDriverTestCase):
         # check
         self.assertIn('Cannot rename protected group',
             b.find_element_by_class_name('alert-error').text)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=960359
+    def test_edit_group_description(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            group = data_setup.create_group(owner=user)
+        b = self.browser
+        login(b, user=user.user_name, password='password')
+        new_description = 'This is a boring group'
+        # edit
+        self.go_to_group_page(group)
+        b.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_id('description').clear()
+        modal.find_element_by_id('description').send_keys(new_description)
+        modal.find_element_by_tag_name('form').submit()
+        # check
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
+        b.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
+        modal = b.find_element_by_class_name('modal')
+        self.assertEquals(modal.find_element_by_id('description'). \
+                              get_attribute('value'), new_description)
+        with session.begin():
+            session.refresh(group)
+            self.assertEquals(group.description, new_description)
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=908174
     def test_add_remove_owner_group(self):
@@ -792,12 +819,14 @@ class GroupHTTPTest(DatabaseTestCase):
         response = post_json(get_server_base() + 'groups/', session=s, data={
             'group_name': 'FBZ',
             'display_name': 'Group FBZ',
+            'description': 'Group FBZ description',
             'root_password': 'blapppy7',
         })
         response.raise_for_status()
         with session.begin():
             group = Group.by_name(u'FBZ')
             self.assertEquals(group.display_name, u'Group FBZ')
+            self.assertEquals(group.description, u'Group FBZ description')
             self.assert_(group.has_owner(self.user))
             self.assertEquals(group.activity[-1].action, u'Added')
             self.assertEquals(group.activity[-1].field_name, u'Owner')
@@ -875,6 +904,22 @@ class GroupHTTPTest(DatabaseTestCase):
             self.assertEquals(self.group.group_name, u'newname')
             self.assertEquals(self.group.display_name, u'newdisplayname')
             self.assertEquals(self.group.root_password, u'$1$NaCl$O34mAzBXtER6obhoIodu8.')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=960359
+    def test_update_group_description(self):
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': self.user.user_name,
+                                                  'password': u'password'}).raise_for_status()
+        response = patch_json(get_server_base() +
+                'groups/%s' % self.group.group_name, session=s,
+                data={'description': u'newdescription'})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.group.description, u'newdescription')
+            self.assertEquals(self.group.activity[-1].action, u'Changed')
+            self.assertEquals(self.group.activity[-1].field_name, u'Description')
+            self.assertEquals(self.group.activity[-1].new_value, u'newdescription')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
     def test_update_a_group_to_LDAP_group_with_old_format(self):

@@ -12,7 +12,7 @@ window.GroupDetailsView = Backbone.View.extend({
     render: function () {
       new GroupPageHeaderView({model: this.model}).$el
           .appendTo(this.$el);
-      new GroupRootPasswordView({model: this.model}).$el
+      new GroupDescription({model: this.model}).$el
           .appendTo(this.$el);
     },
 });
@@ -50,21 +50,26 @@ window.GroupPageHeaderView = Backbone.View.extend({
     },
 });
 
-window.GroupRootPasswordView = Backbone.View.extend({
-    id: 'root_pw_display',
-    template: JST['group-rootpassword'],
+window.GroupDescription = Backbone.View.extend({
     initialize: function () {
-        this.listenTo(this.model, 'change:root_password change:can_view_rootpassword', this.render);
+        this.listenTo(this.model, 'change:description', this.render);
         this.render();
     },
-    render: function function_name() {
-      this.$el.html(this.template(this.model.attributes));
+    render: function () {
+        var description = this.model.get('description');
+        if (description) {
+            this.$el.html(marked(this.model.get('description'),
+                    {sanitize: true, smartypants: true}));
+        } else {
+            this.$el.empty();
+        }
+        return this;
     },
 });
 
 var GroupEditModal = Backbone.View.extend({
     tagName: 'div',
-    className: 'modal',
+    className: 'modal group-edit-modal',
     template: JST['group-edit'],
     events: {
         'submit form': 'submit',
@@ -78,7 +83,7 @@ var GroupEditModal = Backbone.View.extend({
     render: function () {
         this.$el.html(this.template(this.model.attributes));
         var model = this.model;
-        this.$('input, select').each(function (i, elem) {
+        this.$('input, select, textarea').each(function (i, elem) {
             $(elem).val(model.get(elem.name));
         });
         this.$('select').selectpicker();
@@ -87,7 +92,7 @@ var GroupEditModal = Backbone.View.extend({
         evt.preventDefault();
         this.$('.sync-status').empty();
         this.$('.modal-footer button').button('loading');
-        var attributes = _.object(_.map(this.$('input, select'),
+        var attributes = _.object(_.map(this.$('input, select, textarea'),
                 function (elem) { return [elem.name, $(elem).val()]; }));
         this.model.save(attributes,
             {patch: true, wait: true})

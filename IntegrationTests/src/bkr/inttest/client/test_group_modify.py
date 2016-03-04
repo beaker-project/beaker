@@ -269,6 +269,18 @@ class GroupModifyTest(ClientTestCase):
             self.assertEquals(group.group_name, protected_group_name)
             self.assertEquals(group.display_name, new_display_name)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=960359
+    def test_group_modify_description(self):
+        description = 'This is a boring description'
+        out = run_client(['bkr', 'group-modify',
+                          '--description', description,
+                          self.group.group_name],
+                         config = self.client_config)
+
+        with session.begin():
+            session.refresh(self.group)
+            self.assertEquals(self.group.description, description)
+
     def test_group_modify_add_member(self):
         with session.begin():
             user = data_setup.create_user()

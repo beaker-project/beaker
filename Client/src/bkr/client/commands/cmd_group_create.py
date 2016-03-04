@@ -31,6 +31,10 @@ Options
 
    Display name of the group.
 
+.. option:: --description
+
+   Description of the group.
+
 .. option:: --root-password
 
    Root password for group jobs.
@@ -71,6 +75,11 @@ class Group_Create(BeakerCommand):
         )
 
         self.parser.add_option(
+            "--description",
+            help="Description of the group",
+        )
+
+        self.parser.add_option(
             "--ldap",
             default=False,
             action="store_true",
@@ -89,6 +98,7 @@ class Group_Create(BeakerCommand):
 
         group_name = args[0]
         display_name = kwargs.get('display_name')
+        description = kwargs.get('description', None)
         if not display_name:
             display_name = group_name
         ldap = kwargs.get('ldap', False)
@@ -98,4 +108,5 @@ class Group_Create(BeakerCommand):
         print self.hub.groups.create(dict(group_name=group_name,
                                           root_password=password,
                                           display_name=display_name,
+                                          description=description,
                                           ldap=ldap))

@@ -31,6 +31,10 @@ Options
 
    New name of the group
 
+.. option:: --description
+
+   New description of the group
+
 .. option:: --add-member
 
    Add a user to the group
@@ -114,6 +118,11 @@ class Group_Modify(BeakerCommand):
             )
 
         self.parser.add_option(
+            "--description",
+            help="New description of the group",
+            )
+
+        self.parser.add_option(
             "--add-member",
             help="Username of the member to add",
             )
@@ -151,13 +160,14 @@ class Group_Modify(BeakerCommand):
 
         display_name = kwargs.get('display_name', None)
         group_name = kwargs.get('group_name', None)
+        description = kwargs.get('description', None)
         add_member = kwargs.get('add_member', None)
         remove_member = kwargs.get('remove_member', None)
         grant_owner = kwargs.get('grant_owner', None)
         revoke_owner = kwargs.get('revoke_owner', None)
         password = kwargs.get('root_password', None)
 
-        if not any([group_name, display_name, add_member, grant_owner,
+        if not any([group_name, display_name, description, add_member, grant_owner,
             revoke_owner, password,remove_member]):
             self.parser.error('Please specify an attribute to modify.')
 
@@ -191,6 +201,8 @@ class Group_Modify(BeakerCommand):
             group_attrs['group_name'] = group_name
         if display_name:
             group_attrs['display_name'] = display_name
+        if description:
+            group_attrs['description'] = description
         if password:
             group_attrs['root_password'] = password
         if group_attrs:

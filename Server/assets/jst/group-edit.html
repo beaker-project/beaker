@@ -10,8 +10,9 @@
   <label for="display_name">Display Name</label>
   <input type="text" id="display_name" name="display_name" placeholder="Display Name" required maxlength="255"
         pattern="[^\s](.*[^\s])?"/>
-  <label for="display_name">Root Password</label>
-  <input type="text" id="root_password" name="root_password" placeholder="Root Password"/>
+  <label for="description">Description</label>
+  <textarea id="description" name="description" class="input-block-level" rows="7" />
+  <p class="help-block">The description is rendered as Markdown.</p>
   <label for="membership_type">Membership Type</label>
   <select id="membership_type" name="membership_type">
     <option value="normal">Normal</option>

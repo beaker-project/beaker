@@ -473,6 +473,7 @@ class Group(DeclarativeMappedObject, ActivityMixin):
     id = synonym('group_id')
     group_name = Column(Unicode(255), unique=True, nullable=False)
     display_name = Column(Unicode(255))
+    description = Column(Unicode(4000))
     _root_password = Column('root_password', String(255), nullable=True,
         default=None)
     membership_type = Column(GroupMembershipType.db_type(), nullable=False,
@@ -520,6 +521,7 @@ class Group(DeclarativeMappedObject, ActivityMixin):
             'id': self.group_id,
             'group_name': self.group_name,
             'display_name': self.display_name,
+            'description':self.description,
             'membership_type': self.membership_type,
         }
         # for backwards compatibility only:
@@ -598,7 +600,7 @@ class Group(DeclarativeMappedObject, ActivityMixin):
             try:
                 cracklib.VeryFascistCheck(password)
             except ValueError, msg:
-                msg = re.sub(r'^it', 'the password', str(msg))
+                msg = re.sub(r'^it', 'Root password', str(msg))
                 raise ValueError(msg)
             else:
                 self._root_password = password
@@ -680,6 +682,17 @@ class Group(DeclarativeMappedObject, ActivityMixin):
             self.record_activity(user=user, service=service,
                                  field=u'Display Name',
                                  old=old_display_name, new=display_name)
+
+    def set_description(self, user, service, description):
+        """
+        Set a group's description and record any change as group activity
+        """
+        old_description = self.description
+        if description != old_description:
+            self.description = description
+            self.record_activity(user=user, service=service,
+                                 field=u'Description',
+                                 old=old_description, new=description)
 
     def can_modify_membership(self, user):
         return self.membership_type != GroupMembershipType.ldap and self.can_edit(user)

@@ -110,7 +110,7 @@ class GroupCreateTest(ClientTestCase):
                               group_name])
             self.fail('Expected to fail due to short password')
         except ClientError, e:
-            self.assertTrue('the password is too short' in e.stderr_output,
+            self.assertTrue('Root password is too short' in e.stderr_output,
                 e.stderr_output)
 
         try:
@@ -120,7 +120,7 @@ class GroupCreateTest(ClientTestCase):
 
             self.fail('Expected to fail due to dictionary words')
         except ClientError, e:
-            self.assertTrue('the password is based on a dictionary word' in
+            self.assertTrue('Root password is based on a dictionary word' in
                 e.stderr_output, e.stderr_output)
         out = run_client(['bkr', 'group-create',
                           '--root-password', 'Borrow or rob?',
@@ -143,3 +143,15 @@ class GroupCreateTest(ClientTestCase):
         except ClientError,e:
             self.assert_('Group already exists' in e.stderr_output,
                          e.stderr_output)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=960359
+    def test_group_description(self):
+        group_name = data_setup.unique_name('group%s')
+        description = 'This is a boring group'
+        out = run_client(['bkr', 'group-create',
+                          '--description', description,
+                          group_name])
+        self.assert_('Group created' in out, out)
+        with session.begin():
+            group = Group.by_name(group_name)
+            self.assertEquals(group.description, description)

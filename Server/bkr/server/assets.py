@@ -115,6 +115,7 @@ def _create_env(source_dir, output_dir, **kwargs):
             'group-members.js',
             'group-owners.js',
             'group-permissions.js',
+            'group-rootpassword.js',
             'group-create.js',
             'groups.js',
             'labcontrollers.js',

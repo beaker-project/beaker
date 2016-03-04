@@ -13,6 +13,7 @@
         new GroupMembersListView({model: group, el: $('#members')});
         new GroupOwnersListView({model: group, el: $('#owners')});
         new GroupPermissionsListView({model: group, el: $('#permissions')});
+        new GroupRootPasswordView({model: group, el: $('#rootpassword')});
     });
   </script>
   <div id="group-details" class="group-details"></div>
@@ -20,11 +21,13 @@
     <li><a data-toggle="tab" href="#members">Members</a></li>
     <li><a data-toggle="tab" href="#owners">Owners</a></li>
     <li><a data-toggle="tab" href="#permissions">Permissions</a></li>
+    <li><a data-toggle="tab" href="#rootpassword">Root Password</a></li>
   </ul>
   <div class="tab-content group-tabs">
     <div class="tab-pane" id="members"></div>
     <div class="tab-pane" id="owners"></div>
     <div class="tab-pane" id="permissions"></div>
+    <div class="tab-pane" id="rootpassword"></div>
   </div>
   <script type="text/javascript">
     $(function () { link_tabs_to_anchor('beaker_group_tabs', '.group-nav'); });
