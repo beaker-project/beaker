@@ -11,6 +11,7 @@
 __requires__ = ['CherryPy < 3.0']
 
 import sys
+import os, os.path
 import errno
 import shutil
 import urlparse
@@ -36,6 +37,32 @@ logger = logging.getLogger(__name__)
 
 __description__ = 'Script to delete expired log files'
 
+def remove_descendants(paths):
+    """
+    Given a list of URLs (or filesystem paths) to directories we want to 
+    delete, for example:
+        http://server/a/
+        http://server/a/x/
+        http://server/a/y/
+        http://server/b/
+        ...
+    this function filters out any paths which have a common prefix with an 
+    earlier item in the list, and returns what's left. In this example:
+        http://server/a/
+        http://server/b/
+        ...
+
+    This is necessary because if we first delete the subtree under 
+        http://server/a/
+    we cannot then delete the subtree under
+        http://server/a/x/
+    because it's already gone.
+    """
+    previous = None
+    for path in sorted(paths):
+        if previous is None or not path.startswith(previous):
+            previous = path
+            yield path
 
 class MultipleAuth(requests.auth.AuthBase):
 
@@ -102,16 +129,25 @@ def log_delete(print_logs=False, dry=False, limit=None):
         logger.debug('Available authentication methods: %s' %
             ', '.join(available_auth_names))
 
-    for job, logs in Job.expired_logs(limit):
-        logger.info('Deleting logs for %s', job.t_id)
+    for jobid, in Job.query.filter(Job.is_expired).limit(limit).values(Job.id):
+        logger.info('Deleting logs for job %s', jobid)
         try:
             session.begin()
-            for log in logs:
+            job = Job.by_id(jobid)
+            all_logs = job.all_logs(load_parent=False)
+            # We always delete entire directories, not individual log files, 
+            # because that's faster, and because we never mix unrelated log 
+            # files together in the same directory so it's safe to do that.
+            # We keep a trailing slash on the directories otherwise when we try 
+            # to DELETE them, Apache will first redirect us to the trailing 
+            # slash.
+            log_dirs = (os.path.dirname(log.full_path) + '/' for log in all_logs)
+            for path in remove_descendants(log_dirs):
                 if not dry:
-                    if urlparse.urlparse(log).scheme:
+                    if urlparse.urlparse(path).scheme:
                         # We need to handle redirects ourselves, since requests
                         # turns DELETE into GET on 302 which we do not want.
-                        response = requests_session.delete(log, allow_redirects=False)
+                        response = requests_session.delete(path, allow_redirects=False)
                         redirect_limit = 10
                         while redirect_limit > 0 and response.status_code in (
                                 301, 302, 303, 307):
@@ -123,12 +159,12 @@ def log_delete(print_logs=False, dry=False, limit=None):
                             response.raise_for_status()
                     else:
                         try:
-                            shutil.rmtree(log)
+                            shutil.rmtree(path)
                         except OSError, e:
                             if e.errno == errno.ENOENT:
                                 pass
                 if print_logs:
-                    print log
+                    print path
             if not dry:
                 job.delete()
                 session.commit()
@@ -136,9 +172,8 @@ def log_delete(print_logs=False, dry=False, limit=None):
             else:
                 session.close()
         except Exception, e:
-            logger.exception('Exception while deleting logs for %s', job.t_id)
+            logger.exception('Exception while deleting logs for job %s', jobid)
             failed = True
-            # session needs to be open for job.t_id in the log message above
             session.close()
             continue
     return 1 if failed else 0

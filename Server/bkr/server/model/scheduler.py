@@ -591,21 +591,6 @@ class TaskBase(object):
                 return '%s:%s' % (t, self.id)
     t_id = property(t_id)
 
-    def _get_log_dirs(self):
-        """
-        Returns the directory names of all a task's logs,
-        with a trailing slash.
-
-        URLs are also returned with a trailing slash.
-        """
-        logs_to_return = []
-        for log in self.logs:
-            full_path = os.path.dirname(log.full_path)
-            if not full_path.endswith('/'):
-                full_path += '/'
-            logs_to_return.append(full_path)
-        return logs_to_return
-
 
 class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
     """
@@ -807,25 +792,6 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
                     func.coalesce(Recipe.finish_time, RecipeSet.queue_time) >= cutoff)))
         )
 
-    @classmethod
-    def _remove_descendants(cls, list_of_logs):
-        """Return a list of paths with common descendants removed
-        """
-        set_of_logs = set(list_of_logs)
-        logs_A = copy(set_of_logs)
-        logs_to_return = copy(set_of_logs)
-
-        # This is a simple way to remove descendants,
-        # as long as our list of logs doesn't get too large
-        for log_A in logs_A:
-            for log_B in set_of_logs:
-                if log_B.startswith(log_A) and log_A != log_B:
-                    try:
-                        logs_to_return.remove(log_B)
-                    except KeyError:
-                        pass # Possibly already removed
-        return logs_to_return
-
     @hybrid_property
     def is_expired(self):
         """
@@ -865,23 +831,6 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
                 )
             )
         )
-
-    @classmethod
-    def expired_logs(cls, limit=None):
-        """Iterate over log files for expired recipes
-
-        Will not yield recipes that have already been deleted. Does
-        yield recipes that are marked to be deleted though.
-        """
-        job_ids = [job_id for job_id, in
-                Job.query.filter(Job.is_expired).limit(limit).values(Job.id)]
-        for job_id in job_ids:
-            job = Job.by_id(job_id)
-            logs = job.get_log_dirs()
-            if logs:
-                logs = cls._remove_descendants(logs)
-            yield (job, logs)
-        return
 
     @classmethod
     def has_family(cls, family, query=None, **kw):
@@ -1220,20 +1169,12 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
             raise BeakerException(u'%s is already marked to delete' % self.t_id)
         self.to_delete = datetime.utcnow()
 
-    def get_log_dirs(self):
-        logs = []
-        for rs in self.recipesets:
-            rs_logs = rs.get_log_dirs()
-            if rs_logs:
-                logs.extend(rs_logs)
-        return logs
-
-    @property
-    def all_logs(self):
+    def all_logs(self, load_parent=True):
         """
         Returns an iterator of all logs in this job.
         """
-        return (log for rs in self.recipesets for log in rs.all_logs)
+        return (log for rs in self.recipesets
+                for log in rs.all_logs(load_parent=load_parent))
 
     @property
     def all_activity(self):
@@ -1794,20 +1735,12 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
             'machine_recipes': list(self.machine_recipes),
         }
 
-    def get_log_dirs(self):
-        logs = []
-        for recipe in self.recipes:
-            r_logs = recipe.get_log_dirs()
-            if r_logs:
-                logs.extend(r_logs)
-        return logs
-
-    @property
-    def all_logs(self):
+    def all_logs(self, load_parent=True):
         """
         Returns an iterator of all logs in this recipeset.
         """
-        return (log for recipe in self.recipes for log in recipe.all_logs)
+        return (log for recipe in self.recipes
+                for log in recipe.all_logs(load_parent=load_parent))
 
     def set_response(self, response):
         old_response = None
@@ -2181,14 +2114,6 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
                 job.id // Log.MAX_ENTRIES_PER_DIRECTORY, job.id, self.id)
     filepath = property(filepath)
 
-    def get_log_dirs(self):
-        recipe_logs = self._get_log_dirs()
-        for task in self.tasks:
-            rt_log = task.get_log_dirs()
-            if rt_log:
-                recipe_logs.extend(rt_log)
-        return recipe_logs
-
     def owner(self):
         return self.recipeset.job.owner
     owner = property(owner)
@@ -2201,8 +2126,8 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         if self.rendered_kickstart:
             session.delete(self.rendered_kickstart)
             self.rendered_kickstart = None
-        for task in self.tasks:
-            task.delete()
+        for log in self.all_logs(load_parent=False):
+            session.delete(log)
 
     def task_repo(self):
         return ('beaker-tasks',absolute_url('/repos/%s' % self.id,
@@ -2776,8 +2701,7 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             for task_result in task.results:
                 yield task_result
 
-    @property
-    def all_logs(self):
+    def all_logs(self, load_parent=True):
         """
         Returns an iterator of all logs in this recipe.
         """
@@ -2788,14 +2712,17 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         recipe_task_logs = LogRecipeTask.query\
                 .join(LogRecipeTask.parent)\
                 .join(RecipeTask.recipe)\
-                .options(contains_eager(LogRecipeTask.parent))\
                 .filter(Recipe.id == self.id)
+        if load_parent:
+            recipe_task_logs = recipe_task_logs.options(contains_eager(LogRecipeTask.parent))
         recipe_task_result_logs =  LogRecipeTaskResult.query\
                 .join(LogRecipeTaskResult.parent)\
                 .join(RecipeTaskResult.recipetask)\
                 .join(RecipeTask.recipe)\
-                .options(contains_eager(LogRecipeTaskResult.parent))\
                 .filter(Recipe.id == self.id)
+        if load_parent:
+            recipe_task_result_logs = recipe_task_result_logs\
+                    .options(contains_eager(LogRecipeTaskResult.parent))
         return chain(recipe_logs, recipe_task_logs, recipe_task_result_logs)
 
     def is_task_applicable(self, task):
@@ -3189,11 +3116,6 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
             'result': self.result,
         }
 
-    def delete(self):
-        self.logs = []
-        for r in self.results:
-            r.delete()
-
     def filepath(self):
         """
         Return file path for this task
@@ -3205,14 +3127,6 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
                 job.id // Log.MAX_ENTRIES_PER_DIRECTORY, job.id,
                 recipe.id, self.id)
     filepath = property(filepath)
-
-    def get_log_dirs(self):
-        recipe_task_logs = self._get_log_dirs()
-        for result in self.results:
-            rtr_log = result.get_log_dirs()
-            if rtr_log:
-                recipe_task_logs.extend(rtr_log)
-        return recipe_task_logs
 
     def to_xml(self, clone=False, *args, **kw):
         task = etree.Element("task")
@@ -3288,8 +3202,7 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
             span.text = self.name
             return span
 
-    @property
-    def all_logs(self):
+    def all_logs(self, load_parent=True):
         """
         Returns an iterator all logs in this task.
         """
@@ -3298,8 +3211,10 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
         recipe_task_result_logs =  LogRecipeTaskResult.query\
                 .join(LogRecipeTaskResult.parent)\
                 .join(RecipeTaskResult.recipetask)\
-                .filter(RecipeTask.id == self.id)\
-                .options(contains_eager(LogRecipeTaskResult.parent))
+                .filter(RecipeTask.id == self.id)
+        if load_parent:
+            recipe_task_result_logs = recipe_task_result_logs\
+                    .options(contains_eager(LogRecipeTaskResult.parent))
         return chain(recipe_task_logs, recipe_task_result_logs)
 
     @property
@@ -3675,9 +3590,6 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
                 recipe.id, task_id, self.id)
     filepath = property(filepath)
 
-    def delete(self, *args, **kw):
-        self.logs = []
-
     def to_xml(self, *args, **kw):
         """
         Return result in xml
@@ -3691,15 +3603,11 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
             score=unicode(self.score)
         )
 
-    @property
     def all_logs(self):
         """
         Returns an iterator of all logs in this result.
         """
         return iter(self.logs)
-
-    def get_log_dirs(self):
-        return self._get_log_dirs()
 
     def task_info(self):
         """

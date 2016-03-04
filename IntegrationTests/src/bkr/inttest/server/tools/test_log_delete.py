@@ -13,9 +13,11 @@ from unittest2 import SkipTest
 import tempfile
 import subprocess
 import sys
+import mock
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server.model import LogRecipe, TaskBase, Job, Recipe, \
-    RenderedKickstart, TaskStatus
+    RenderedKickstart, TaskStatus, RecipeTask, RecipeTaskResult, \
+    LogRecipeTask, LogRecipeTaskResult
 from bkr.inttest import data_setup, with_transaction, Process, DatabaseTestCase
 from bkr.server.tools import log_delete
 from turbogears.database import session
@@ -235,6 +237,8 @@ class RemoteLogDeletionTest(DatabaseTestCase):
                         filename=filename)]
             for rt in job.recipesets[0].recipes[0].tasks:
                 rt.logs[:] = []
+                for rtr in rt.results:
+                    rtr.logs[:] = []
 
     def test_deletion(self):
         open(os.path.join(self.recipe_logs_dir, 'dummy.txt'), 'w').write('dummy')
@@ -257,3 +261,41 @@ class RemoteLogDeletionTest(DatabaseTestCase):
     def test_404(self):
         self.create_deleted_job_with_log(u'notexist/', u'dummy.txt')
         self.assertEquals(log_delete.log_delete(), 0) # exit status
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1293011
+    def test_does_not_load_RecipeTaskResults(self):
+        # In large jobs with many RecipeTasks and RecipeTaskResults, 
+        # beaker-log-delete would previously take a long time and a lot of 
+        # memory, because it was traversing the entire object graph down to 
+        # RecipeTaskResult and loading them all into memory.
+        # This test is asserting that no RecipeTask or RecipeTaskResult 
+        # instances are loaded when beaker-log-delete runs.
+
+        with session.begin():
+            job = data_setup.create_completed_job()
+            job.to_delete = datetime.datetime.utcnow()
+            self.assertTrue(job.is_expired)
+            recipe = job.recipesets[0].recipes[0]
+
+            server = self.log_server_url + '/recipe/'
+            open(os.path.join(self.recipe_logs_dir, 'recipe.log'), 'w').write('dummy')
+            recipe.logs[:] = [LogRecipe(server=server, filename=u'recipe.log')]
+            open(os.path.join(self.recipe_logs_dir, 'task.log'), 'w').write('dummy')
+            recipe.tasks[0].logs[:] = [LogRecipeTask(server=server, filename=u'task.log')]
+            open(os.path.join(self.recipe_logs_dir, 'result.log'), 'w').write('dummy')
+            recipe.tasks[0].results[0].logs[:] = \
+                [LogRecipeTaskResult(server=server, filename=u'result.log')]
+
+        # RecipeTasks/RecipeTaskResults are already loaded from the data_setup 
+        # calls above, expunge the session so that log_delete starts from 
+        # a clean slate.
+        session.expunge_all()
+
+        with mock.patch.object(RecipeTask, '__new__', side_effect=AssertionError):
+            with mock.patch.object(RecipeTaskResult, '__new__', side_effect=AssertionError):
+                self.assertEquals(log_delete.log_delete(), 0) # exit status
+
+        # Check that we really deleted something, if not the test setup was faulty.
+        with session.begin():
+            job = Job.by_id(job.id)
+            self.assertIsNotNone(job.deleted)

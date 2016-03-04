@@ -14,10 +14,29 @@ import time
 from shutil import copy, rmtree
 from tempfile import mkdtemp
 from turbogears.database import session, get_engine
-from bkr.server.tools import ipxe_image
+from bkr.server.tools import ipxe_image, log_delete
 from bkr.server.tools.repo_update import update_repos
 from bkr.server.tests import data_setup
 from bkr.server.model import OSMajor
+
+class LogDelete(unittest.TestCase):
+    """Tests the log_delete.py script"""
+
+    def test_remove_descendants(self):
+        input = [
+            'http://server/a/x/',
+            'http://server/a/y/',
+            'http://server/a/',
+            'http://server/b/',
+            'http://server/b/z/',
+            'http://server/c/',
+        ]
+        expected = [
+            'http://server/a/',
+            'http://server/b/',
+            'http://server/c/',
+        ]
+        self.assertEquals(list(log_delete.remove_descendants(input)), expected)
 
 
 class RepoUpdate(unittest.TestCase):

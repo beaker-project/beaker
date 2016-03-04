@@ -1880,7 +1880,7 @@ class RecipeTest(DatabaseTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1240809
     def test_get_all_logs(self):
         job = data_setup.create_completed_job(server_log=True)
-        all_logs = job.recipesets[0].recipes[0].all_logs
+        all_logs = job.recipesets[0].recipes[0].all_logs()
         self.assertEqual('http://dummy-archive-server/beaker/recipe_path/dummy.txt',
                          all_logs.next().absolute_url)
         self.assertEqual('http://dummy-archive-server/beaker/tasks/dummy.txt',
