@@ -1188,7 +1188,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
     @property
     def all_logs(self):
         """
-        Returns an iterator of all logs in this job.
+        Returns an iterator of dicts describing all logs in this job.
         """
         return (log for rs in self.recipesets for log in rs.all_logs)
 
@@ -1762,7 +1762,7 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
     @property
     def all_logs(self):
         """
-        Returns an iterator of all logs in this recipeset.
+        Returns an iterator of dicts describing all logs in this recipeset.
         """
         return (log for recipe in self.recipes for log in recipe.all_logs)
 
@@ -2748,7 +2748,7 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
     @property
     def all_logs(self):
         """
-        Returns an iterator of all logs in this recipe.
+        Returns an iterator of dicts describing all logs in this recipe.
         """
         # Get all the logs from log_* tables directly to avoid doing N database
         # queries for N results on large recipes.
@@ -2765,7 +2765,9 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
                 .join(RecipeTask.recipe)\
                 .options(contains_eager(LogRecipeTaskResult.parent))\
                 .filter(Recipe.id == self.id).all()
-        return chain(recipe_logs, recipe_task_logs, recipe_task_result_logs)
+        return chain((log.dict for log in recipe_logs),
+               (log.dict for log in recipe_task_logs),
+               (log.dict for log in recipe_task_result_logs))
 
     def is_task_applicable(self, task):
         """ Does the given task apply to this recipe?
@@ -3263,7 +3265,7 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
     @property
     def all_logs(self):
         """
-        Returns an iterator all logs in this task.
+        Returns an iterator of dicts describing all logs in this task.
         """
         recipe_task_logs = LogRecipeTask.query\
                 .filter(LogRecipeTask.recipe_task_id == self.id).all()
@@ -3273,7 +3275,8 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
                 .filter(RecipeTask.id == self.id)\
                 .options(contains_eager(LogRecipeTaskResult.parent))\
                 .all()
-        return chain(recipe_task_logs, recipe_task_result_logs)
+        return chain([log.dict for log in recipe_task_logs],
+               [log.dict for log in recipe_task_result_logs])
 
     @property
     def is_dirty(self):
@@ -3667,9 +3670,9 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
     @property
     def all_logs(self):
         """
-        Returns an iterator of all logs in this result.
+        Returns an iterator of dicts describing all logs in this result.
         """
-        return iter(self.logs)
+        return (mylog.dict for mylog in self.logs)
 
     def get_log_dirs(self):
         return self._get_log_dirs()
