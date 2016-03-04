@@ -126,7 +126,7 @@ class Recipes(RPCRoot):
         return list(recipe.all_logs)
 
     @cherrypy.expose
-    @identity.require(identity.not_anonymous())
+    @identity.require(identity.in_group('lab_controller'))
     def change_files(self, recipe_id, server, basepath):
         """
         Change the server and basepath where the log files lives, Usually
@@ -144,7 +144,7 @@ class Recipes(RPCRoot):
         return True
 
     @cherrypy.expose
-    @identity.require(identity.not_anonymous())
+    @identity.require(identity.in_group('lab_controller'))
     def change_file(self, tid, server, basepath):
         """
         Change the server and basepath where the log file lives, Usually
