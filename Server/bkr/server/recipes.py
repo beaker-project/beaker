@@ -143,23 +143,6 @@ class Recipes(RPCRoot):
         return True
 
     @cherrypy.expose
-    @identity.require(identity.in_group('lab_controller'))
-    def change_file(self, tid, server, basepath):
-        """
-        Change the server and basepath where the log file lives, Usually
-         used to move from lab controller cache to archive storage.
-        """
-        log_type, log_id = tid.split(":")
-        if log_type.upper() in self.log_types.keys():
-            try:
-                mylog = self.log_types[log_type.upper()].by_id(log_id)
-            except InvalidRequestError:
-                raise BX(_("Invalid %s" % tid))
-        mylog.server = server
-        mylog.basepath = basepath
-        return True
-
-    @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def extend(self, recipe_id, kill_time):
         """
