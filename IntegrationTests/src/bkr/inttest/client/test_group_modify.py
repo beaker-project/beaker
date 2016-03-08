@@ -76,8 +76,8 @@ class GroupModifyTest(ClientTestCase):
                               'group-like-non-other'],
                              config = self.client_config)
             self.fail('Must fail or die')
-        except ClientError, e:
-            self.assert_('Group does not exist' in e.stderr_output,
+        except ClientError as e:
+            self.assert_('Group group-like-non-other does not exist' in e.stderr_output,
                          e.stderr_output)
 
     def test_group_modify_invalid(self):
@@ -101,9 +101,8 @@ class GroupModifyTest(ClientTestCase):
                               self.group.group_name],
                              config = self.rand_client_config)
             self.fail('Must fail or die')
-        except ClientError, e:
-            self.assert_('You are not an owner of group' in
-                         e.stderr_output, e.stderr_output)
+        except ClientError as e:
+            self.assertIn('Cannot edit group', e.stderr_output)
 
     def test_group_modify_display_name(self):
         display_name = 'A New Group Display Name'
@@ -121,7 +120,7 @@ class GroupModifyTest(ClientTestCase):
             self.assertEquals(group.activity[-1].user.user_id,
                               self.user.user_id)
             self.assertEquals(group.activity[-1].new_value, display_name)
-            self.assertEquals(group.activity[-1].service, u'XMLRPC')
+            self.assertEquals(group.activity[-1].service, u'HTTP')
 
         try:
             out = run_client(['bkr', 'group-modify',
@@ -150,7 +149,7 @@ class GroupModifyTest(ClientTestCase):
             self.assertEquals(group.activity[-1].user.user_id,
                               self.user.user_id)
             self.assertEquals(group.activity[-1].new_value, group_name)
-            self.assertEquals(group.activity[-1].service, u'XMLRPC')
+            self.assertEquals(group.activity[-1].service, u'HTTP')
 
         try:
             out = run_client(['bkr', 'group-modify',
@@ -176,7 +175,7 @@ class GroupModifyTest(ClientTestCase):
             self.assertEquals(group.activity[-1].field_name, u'Root Password')
             self.assertEquals(group.activity[-1].user.user_id,
                               self.user.user_id)
-            self.assertEquals(group.activity[-1].service, u'XMLRPC')
+            self.assertEquals(group.activity[-1].service, u'HTTP')
 
         # Test successful cleartext password change
         good_password = data_setup.unique_name('Borrow or %srob?')
@@ -190,7 +189,7 @@ class GroupModifyTest(ClientTestCase):
             self.assertEquals(group.activity[-1].field_name, u'Root Password')
             self.assertEquals(group.activity[-1].user.user_id,
                               self.user.user_id)
-            self.assertEquals(group.activity[-1].service, u'XMLRPC')
+            self.assertEquals(group.activity[-1].service, u'HTTP')
 
         # Test unsuccessful cleartext password change
         short_password = 'fail'
@@ -232,8 +231,8 @@ class GroupModifyTest(ClientTestCase):
                               group2.group_name],
                              config = self.client_config)
             self.fail('Must fail or die')
-        except ClientError, e:
-            self.assert_('Group name already exists' in e.stderr_output)
+        except ClientError as e:
+            self.assert_('Group %s already exists' % group1.group_name in e.stderr_output)
 
     def test_admin_cannot_rename_protected_group(self):
         # See https://bugzilla.redhat.com/show_bug.cgi?id=961206
@@ -274,7 +273,6 @@ class GroupModifyTest(ClientTestCase):
         with session.begin():
             user = data_setup.create_user()
 
-
         out = run_client(['bkr', 'group-modify',
                           '--add-member', user.user_name,
                           self.group.group_name],
@@ -286,7 +284,6 @@ class GroupModifyTest(ClientTestCase):
             self.assert_(user.user_name in
                          [u.user_name for u in group.users])
 
-
         self.check_notification(user, group, action='Added')
 
         try:
@@ -296,7 +293,7 @@ class GroupModifyTest(ClientTestCase):
                              config = self.client_config)
             self.fail('Must fail or die')
         except ClientError, e:
-            self.assert_('User does not exist' in
+            self.assert_('User idontexist does not exist' in
                          e.stderr_output, e.stderr_output)
 
         try:
@@ -306,8 +303,9 @@ class GroupModifyTest(ClientTestCase):
                              config = self.client_config)
             self.fail('Must fail or die')
         except ClientError, e:
-            self.assert_('User %s is already in group' % user.user_name in
-                         e.stderr_output, e.stderr_output)
+            self.assert_('User %s is already a member of group %s'
+                % (user.user_name, self.group.group_name)
+                in e.stderr_output, e.stderr_output)
 
         with session.begin():
             session.refresh(self.group)
@@ -317,7 +315,7 @@ class GroupModifyTest(ClientTestCase):
             self.assertEquals(group.activity[-1].user.user_id,
                               self.user.user_id)
             self.assertEquals(group.activity[-1].new_value, user.user_name)
-            self.assertEquals(group.activity[-1].service, u'XMLRPC')
+            self.assertEquals(group.activity[-1].service, u'HTTP')
 
         try:
             out = run_client(['bkr', 'group-modify',
@@ -325,8 +323,9 @@ class GroupModifyTest(ClientTestCase):
                               self.fake_ldap_group.group_name])
             self.fail('Must fail or die')
         except ClientError, e:
-            self.assert_('Cannot edit membership of an LDAP group' in e.stderr_output,
-                         e.stderr_output)
+            self.assert_('Cannot edit membership of group %s'
+                         % self.fake_ldap_group.group_name
+                         in e.stderr_output,e.stderr_output)
 
     def test_group_modify_remove_member(self):
         with session.begin():
@@ -356,7 +355,7 @@ class GroupModifyTest(ClientTestCase):
                               self.user.user_id)
             self.assertEquals(group.activity[-1].old_value, user.user_name)
             self.assertEquals(group.activity[-1].new_value, None)
-            self.assertEquals(group.activity[-1].service, u'XMLRPC')
+            self.assertEquals(group.activity[-1].service, u'HTTP')
 
         try:
             out = run_client(['bkr', 'group-modify',
@@ -365,7 +364,7 @@ class GroupModifyTest(ClientTestCase):
                              config = self.client_config)
             self.fail('Must fail or die')
         except ClientError, e:
-            self.assert_('User does not exist' in
+            self.assert_('User idontexist does not exist' in
                          e.stderr_output, e.stderr_output)
         try:
             out = run_client(['bkr', 'group-modify',
@@ -374,8 +373,9 @@ class GroupModifyTest(ClientTestCase):
                              config = self.client_config)
             self.fail('Must fail or die')
         except ClientError, e:
-            self.assert_('No user %s in group' % user.user_name in
-                         e.stderr_output, e.stderr_output)
+            self.assert_('User %s is not a member of group %s'
+                         % (user.user_name, self.group.group_name)
+                        in e.stderr_output, e.stderr_output)
 
         try:
             out = run_client(['bkr', 'group-modify',
@@ -384,7 +384,7 @@ class GroupModifyTest(ClientTestCase):
                              config = self.client_config)
             self.fail('Must fail or die')
         except ClientError, e:
-            self.assert_('Cannot remove member' in
+            self.assert_('Cannot remove user' in
                          e.stderr_output, e.stderr_output)
 
         # remove the last group member/owner as 'admin'
@@ -410,7 +410,7 @@ class GroupModifyTest(ClientTestCase):
                               '--remove-member', 'admin', 'admin'])
             self.fail('Must fail or die')
         except ClientError, e:
-            self.assert_('Cannot remove member' in
+            self.assert_('Cannot remove user' in
                          e.stderr_output, e.stderr_output)
 
         try:
@@ -419,8 +419,9 @@ class GroupModifyTest(ClientTestCase):
                               self.fake_ldap_group.group_name])
             self.fail('Must fail or die')
         except ClientError, e:
-            self.assert_('Cannot edit membership of an LDAP group' in e.stderr_output,
-                         e.stderr_output)
+            self.assert_('Cannot edit membership of group %s'
+                          % self.fake_ldap_group.group_name
+                          in e.stderr_output, e.stderr_output)
 
     def test_group_modify_grant_owner(self):
         with session.begin():
@@ -441,23 +442,26 @@ class GroupModifyTest(ClientTestCase):
             group = Group.by_name(self.group.group_name)
             self.assert_(user1.user_id in [u.user_id for u in group.owners()])
             self.assert_(user2.user_id in [u.user_id for u in group.owners()])
-            self.assertEquals(Activity.query.filter_by(service=u'XMLRPC',
+            self.assertEquals(Activity.query.filter_by(service=u'HTTP',
                                                        field_name=u'Owner', action=u'Added',
                                                        new_value=user2.user_name).count(), 1)
             group = Group.by_name(group.group_name)
             self.assertEquals(group.activity[-1].action, u'Added')
             self.assertEquals(group.activity[-1].field_name, u'Owner')
             self.assertEquals(group.activity[-1].new_value, user2.user_name)
-            self.assertEquals(group.activity[-1].service, u'XMLRPC')
+            self.assertEquals(group.activity[-1].service, u'HTTP')
 
-        try:
-            out = run_client(['bkr', 'group-modify',
-                              '--grant-owner', user3.user_name,
-                              self.group.group_name],
-                             config = self.client_config)
-            self.fail('Must fail or die')
-        except ClientError, e:
-            self.assert_('User is not a group member' in e.stderr_output)
+        # If the user is not a group member, add the user into the members list
+        # first and then grant the group ownership.
+        out = run_client(['bkr', 'group-modify',
+                          '--grant-owner', user3.user_name,
+                          self.group.group_name],
+                         config = self.client_config)
+        with session.begin():
+            session.refresh(self.group)
+            group = Group.by_name(self.group.group_name)
+            self.assertIn(user3, group.users)
+            self.assertTrue(group.has_owner(user3))
 
         try:
             out = run_client(['bkr', 'group-modify',
@@ -466,7 +470,7 @@ class GroupModifyTest(ClientTestCase):
                              config = self.client_config)
             self.fail('Must fail or die')
         except ClientError, e:
-            self.assert_('An LDAP group does not have an owner')
+            self.assert_('Cannot modify group ownership')
 
 
     def test_group_modify_revoke_owner(self):
@@ -494,13 +498,13 @@ class GroupModifyTest(ClientTestCase):
             group = Group.by_name(self.group.group_name)
             self.assert_(user1.user_id not in [u.user_id for u in group.owners()])
             self.assert_(user2.user_id not in [u.user_id for u in group.owners()])
-            self.assertEquals(Activity.query.filter_by(service=u'XMLRPC',
+            self.assertEquals(Activity.query.filter_by(service=u'HTTP',
                                                        field_name=u'Owner', action=u'Removed',
                                                        old_value=user2.user_name).count(), 1)
             self.assertEquals(group.activity[-1].action, u'Removed')
             self.assertEquals(group.activity[-1].field_name, u'Owner')
             self.assertEquals(group.activity[-1].old_value, user2.user_name)
-            self.assertEquals(group.activity[-1].service, u'XMLRPC')
+            self.assertEquals(group.activity[-1].service, u'HTTP')
 
         try:
             out = run_client(['bkr', 'group-modify',
@@ -509,8 +513,7 @@ class GroupModifyTest(ClientTestCase):
                              config = self.client_config)
             self.fail('Must fail or die')
         except ClientError, e:
-            self.assert_('User is not a group member' in e.stderr_output)
-
+            self.assert_('User is not a member of group' in e.stderr_output)
         try:
             out = run_client(['bkr', 'group-modify',
                               '--revoke-owner', user3.user_name,
@@ -518,4 +521,4 @@ class GroupModifyTest(ClientTestCase):
                              config = self.client_config)
             self.fail('Must fail or die')
         except ClientError, e:
-            self.assert_('An LDAP group does not have an owner')
+            self.assert_('Cannot modify group ownership')

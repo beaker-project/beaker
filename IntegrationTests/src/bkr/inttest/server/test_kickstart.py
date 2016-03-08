@@ -2076,7 +2076,7 @@ sed -i -e '/\[updates\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora-up
     def test_whiteboards(self):
         # This test checks that the job and recipe whiteboards are made
         # available in the test environments via the kickstart templates
-        whiteboard = '''This "1"\nIs '2' '''
+        whiteboard = '''This "1"\nIs '2'a'''
         recipe_xml = '''
             <job>
                 <whiteboard>Job: %s</whiteboard>
@@ -2105,10 +2105,10 @@ sed -i -e '/\[updates\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora-up
         self.assertEqual(job_whiteboard, job_entry)
 
         ks = recipe.installation.rendered_kickstart.kickstart
-        self.assertIn("""export BEAKER_JOB_WHITEBOARD='Job: This "1"\nIs '"'"'2'"'"' '""", ks)
-        self.assertIn("""export BEAKER_RECIPE_WHITEBOARD='Recipe: This "1" Is '"'"'2'"'"' '""", ks)
-        self.assertIn("""setenv BEAKER_JOB_WHITEBOARD 'Job: This "1"\nIs '"'"'2'"'"' '""", ks)
-        self.assertIn("""setenv BEAKER_RECIPE_WHITEBOARD 'Recipe: This "1" Is '"'"'2'"'"' '""", ks)
+        self.assertIn("""export BEAKER_JOB_WHITEBOARD='Job: This "1"\nIs '"'"'2'"'"'a'""", ks)
+        self.assertIn("""export BEAKER_RECIPE_WHITEBOARD='Recipe: This "1" Is '"'"'2'"'"'a'""", ks)
+        self.assertIn("""setenv BEAKER_JOB_WHITEBOARD 'Job: This "1"\nIs '"'"'2'"'"'a'""", ks)
+        self.assertIn("""setenv BEAKER_RECIPE_WHITEBOARD 'Recipe: This "1" Is '"'"'2'"'"'a'""", ks)
 
     def test_no_whiteboards(self):
         # This test checks that everything works as expected with no

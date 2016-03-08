@@ -14,8 +14,7 @@ import time
 from shutil import copy, rmtree
 from tempfile import mkdtemp
 from turbogears.database import session, get_engine
-from bkr.server.tools import ipxe_image
-from bkr.server.tools.log_delete import legacy_main
+from bkr.server.tools import ipxe_image, log_delete
 from bkr.server.tools.repo_update import update_repos
 from bkr.server.tests import data_setup
 from bkr.server.model import OSMajor
@@ -23,33 +22,21 @@ from bkr.server.model import OSMajor
 class LogDelete(unittest.TestCase):
     """Tests the log_delete.py script"""
 
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
-
-    def test_deprecated_command(self):
-        # This is currently how we test if we are in a dogfood task.
-        if 'BEAKER_LABCONTROLLER_HOSTNAME' in os.environ:
-            p = subprocess.Popen(['/usr/bin/log-delete', '--dry-run'], stderr=subprocess.PIPE)
-            _, err = p.communicate()
-            self.assertIn('DeprecationWarning: Use beaker-log-delete instead', err)
-            self.assertEquals(p.returncode, 0)
-        else:
-            faux_stderr = StringIO.StringIO()
-            orig_stderr = sys.stderr
-            try:
-                sys.stderr = faux_stderr
-                returncode = legacy_main(['--dry-run'])
-                faux_stderr.seek(0)
-                output = faux_stderr.read()
-                self.assertIn(
-                    'DeprecationWarning: Use beaker-log-delete instead', output)
-                self.assertEquals(returncode, 0)
-            finally:
-                sys.stderr = orig_stderr
-                faux_stderr.close()
+    def test_remove_descendants(self):
+        input = [
+            'http://server/a/x/',
+            'http://server/a/y/',
+            'http://server/a/',
+            'http://server/b/',
+            'http://server/b/z/',
+            'http://server/c/',
+        ]
+        expected = [
+            'http://server/a/',
+            'http://server/b/',
+            'http://server/c/',
+        ]
+        self.assertEquals(list(log_delete.remove_descendants(input)), expected)
 
 
 class RepoUpdate(unittest.TestCase):

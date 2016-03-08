@@ -45,9 +45,7 @@ window.SystemPoolHeading = Backbone.View.extend({
     },
     delete_error: function(xhr) {
         if (!_.isEmpty(xhr)) {
-            $.bootstrapGrowl('<h4>Failed to delete</h4> ' +
-                  xhr.statusText + ': ' + xhr.responseText,
-                    {type: 'error'});
+            growl_for_xhr(xhr, 'Failed to delete');
             this.$('button.delete').button('reset');
         }
     },
@@ -143,9 +141,7 @@ var SystemPoolEditModal = Backbone.View.extend({
             this.$el.modal('hide');
     },
     save_error: function (xhr) {
-        $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText)
-            .appendTo(this.$('.sync-status'));
+        this.$('.sync-status').append(alert_for_xhr(xhr));
         this.$('.modal-footer button').button('reset');
     },
 });

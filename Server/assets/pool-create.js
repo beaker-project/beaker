@@ -37,9 +37,7 @@ window.PoolCreateModal = Backbone.View.extend({
         window.location = xhr.getResponseHeader('Location');
     },
     save_error: function (xhr) {
-        $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText)
-            .appendTo(this.$('.sync-status'));
+        this.$('.sync-status').append(alert_for_xhr(xhr));
         this.$('button').button('reset');
     },
 });

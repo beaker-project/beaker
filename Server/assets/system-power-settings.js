@@ -66,10 +66,7 @@ window.SystemPowerSettingsView = Backbone.View.extend({
     },
     sync_error: function (xhr) {
         this.$('.form-actions button').button('reset');
-        $('<div class="alert alert-error"/>')
-            .text('Server request failed: ' + xhr.statusText + ': ' +
-                    xhr.responseText)
-            .appendTo(this.$('.sync-status'));
+        this.$('.sync-status').append(alert_for_xhr(xhr));
     },
     submit: function (evt) {
         evt.preventDefault();

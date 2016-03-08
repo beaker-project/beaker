@@ -38,9 +38,7 @@ window.SystemReportProblemModal = Backbone.View.extend({
                 {type: 'success'});
     },
     save_error: function (model, xhr) {
-        $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText)
-            .appendTo(this.$('.sync-status'));
+        this.$('.sync-status').append(alert_for_xhr(xhr));
         this.$('button').button('reset');
     },
 });

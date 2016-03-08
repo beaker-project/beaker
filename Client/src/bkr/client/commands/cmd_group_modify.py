@@ -157,28 +157,42 @@ class Group_Modify(BeakerCommand):
         revoke_owner = kwargs.get('revoke_owner', None)
         password = kwargs.get('root_password', None)
 
-        attribs = dict(group_name=group_name,
-                       display_name=display_name,
-                       add_member=add_member,
-                       grant_owner=grant_owner,
-                       revoke_owner=revoke_owner,
-                       root_password=password,
-                       remove_member=remove_member)
-
-        if not any(attribs.values()):
+        if not any([group_name, display_name, add_member, grant_owner,
+            revoke_owner, password,remove_member]):
             self.parser.error('Please specify an attribute to modify.')
 
         self.set_hub(**kwargs)
+        requests_session = self.requests_session()
 
-        if attribs.get('grant_owner'):
-            members = attribs.pop('grant_owner')
-            for member in members:
-                print self.hub.groups.grant_ownership(group,
-                                                      dict(member_name=member))
-        if attribs.get('revoke_owner'):
-            members = attribs.pop('revoke_owner')
-            for member in members:
-                self.hub.groups.revoke_ownership(group,
-                                                 dict(member_name=member))
-        # others
-        self.hub.groups.modify(group, attribs)
+        if add_member:
+            url = 'groups/%s/members/' % group
+            res = requests_session.post(url, json={'user_name': add_member})
+            res.raise_for_status()
+
+        if remove_member:
+            url = 'groups/%s/members/?user_name=%s' % (group, remove_member)
+            res = requests_session.delete(url)
+            res.raise_for_status()
+
+        if grant_owner:
+            for member in grant_owner:
+                url = 'groups/%s/owners/' % group
+                res = requests_session.post(url, json={'user_name': member})
+                res.raise_for_status()
+
+        if revoke_owner:
+            for member in revoke_owner:
+                url = 'groups/%s/owners/?user_name=%s' % (group, member)
+                res = requests_session.delete(url)
+                res.raise_for_status()
+
+        group_attrs = {}
+        if group_name:
+            group_attrs['group_name'] = group_name
+        if display_name:
+            group_attrs['display_name'] = display_name
+        if password:
+            group_attrs['root_password'] = password
+        if group_attrs:
+            res = requests_session.patch('groups/%s' % group, json=group_attrs)
+            res.raise_for_status()

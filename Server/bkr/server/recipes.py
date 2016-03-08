@@ -123,10 +123,10 @@ class Recipes(RPCRoot):
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
-        return list(recipe.all_logs)
+        return [log.dict for log in recipe.all_logs()]
 
     @cherrypy.expose
-    @identity.require(identity.not_anonymous())
+    @identity.require(identity.in_group('lab_controller'))
     def change_files(self, recipe_id, server, basepath):
         """
         Change the server and basepath where the log files lives, Usually
@@ -136,28 +136,10 @@ class Recipes(RPCRoot):
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
-        for mylog in recipe.all_logs:
-            myserver = '%s/%s/' % (server, mylog['filepath'])
-            mybasepath = '%s/%s/' % (basepath, mylog['filepath'])
-            self.change_file(mylog['tid'], myserver, mybasepath)
+        for mylog in recipe.all_logs():
+            mylog.server = '%s/%s/' % (server, mylog.parent.filepath)
+            mylog.basepath = '%s/%s/' % (basepath, mylog.parent.filepath)
         recipe.log_server = urlparse.urlparse(server)[1]
-        return True
-
-    @cherrypy.expose
-    @identity.require(identity.not_anonymous())
-    def change_file(self, tid, server, basepath):
-        """
-        Change the server and basepath where the log file lives, Usually
-         used to move from lab controller cache to archive storage.
-        """
-        log_type, log_id = tid.split(":")
-        if log_type.upper() in self.log_types.keys():
-            try:
-                mylog = self.log_types[log_type.upper()].by_id(log_id)
-            except InvalidRequestError:
-                raise BX(_("Invalid %s" % tid))
-        mylog.server = server
-        mylog.basepath = basepath
         return True
 
     @cherrypy.expose

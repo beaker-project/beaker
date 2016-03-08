@@ -93,10 +93,7 @@ window.ReserveWorkflow = Backbone.View.extend({
             this.request_in_progress = false;
             this.$('.submit-status').empty();
             this.update_button_state();
-            this.$('.form-actions').prepend(
-                    $('<div class="alert alert-error"></div>')
-                    .text('Failed to submit job: ' +
-                        xhr.statusText + ': ' + xhr.responseText));
+            this.$('.form-actions').prepend(alert_for_xhr(xhr, 'Failed to submit job'));
         }, this));
     },
 });

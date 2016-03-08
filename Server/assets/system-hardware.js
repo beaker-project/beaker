@@ -45,10 +45,7 @@ window.SystemHardwareEssentialsView = Backbone.View.extend({
         this.request_in_progress = false;
         this.update_button_state();
         this.$('.sync-status').empty();
-        this.$el.append(
-            $('<div class="alert alert-error"/>')
-            .text('Server request failed: ' + xhr.statusText + ': ' +
-                    xhr.responseText));
+        this.$el.append(alert_for_xhr(xhr));
     },
     submit: function (evt) {
         if (this.request_in_progress) return false;
@@ -100,10 +97,7 @@ window.SystemHardwareDetailsView = Backbone.View.extend({
                 $(evt.currentTarget).button('reset');
             },
             error: function (xhr, status, error) {
-                $('.hardware-scan-status').after(
-                    $('<div class="alert alert-error"/>')
-                        .text('Server request failed: ' + xhr.statusText + ': ' +
-                              xhr.responseText));
+                $('.hardware-scan-status').after(alert_for_xhr(xhr));
                 $(evt.currentTarget).button('reset');
 
             },
@@ -147,9 +141,7 @@ var SystemHardwareDetailsEdit = Backbone.View.extend({
         this.$el.modal('hide');
     },
     save_error: function (model, xhr) {
-        this.$('.modal-footer').prepend(
-            $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText));
+        this.$('.modal-footer').prepend(alert_for_xhr(xhr));
         this.$('button').button('reset');
     },
 });

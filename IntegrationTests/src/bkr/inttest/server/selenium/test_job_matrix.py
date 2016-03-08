@@ -61,6 +61,17 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         b.find_element_by_id('remote_form_do_filter').click()
         b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % whiteboard)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1302857
+    def test_whiteboard_filtering_handles_whiteboards_with_embedded_newlines(self):
+        whiteboard = u' Colonel Tear\n\tWon'
+        with session.begin():
+            data_setup.create_completed_job(whiteboard=whiteboard)
+        b = self.browser
+        b.get(get_server_base() + 'matrix')
+        b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % whiteboard).click()
+        b.find_element_by_xpath('//button[@type="submit" and text()="Generate"]').click()
+        b.find_element_by_link_text('Pass: 1')
+
     def test_deleted_whiteboard_not_shown(self):
         b = self.browser
         with session.begin():

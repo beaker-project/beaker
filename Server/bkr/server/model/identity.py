@@ -705,11 +705,14 @@ class Group(DeclarativeMappedObject, ActivityMixin):
                              new=None)
 
     def grant_ownership(self, user, service=u'HTTP', agent=None):
-        assoc, = [a for a in self.user_group_assocs if a.user == user]
-        assoc.is_owner = True
-        self.record_activity(user=agent, service=service,
-                             action=u'Added', field=u'Owner', old=None,
-                             new=unicode(user))
+        if any(assc.user == user for assc in self.user_group_assocs):
+            assoc, = [a for a in self.user_group_assocs if a.user == user]
+            assoc.is_owner = True
+            self.record_activity(user=agent, service=service,
+                                 action=u'Added', field=u'Owner', old=None,
+                                 new=unicode(user))
+        else:
+            self.add_member(user, is_owner=True, service=service, agent=agent)
 
     def revoke_ownership(self, user, service=u'HTTP', agent=None):
         assoc, = [a for a in self.user_group_assocs if a.user == user]

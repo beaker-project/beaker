@@ -256,7 +256,7 @@ class Jobs(RPCRoot):
         if tags:
             jobs = Job.by_tag(tags, jobs)
         if complete_days:
-            jobs = Job.complete_delta({'days':int(complete_days)}, jobs)
+            jobs = jobs.filter(Job.completed_n_days_ago(int(complete_days)))
         if family:
             jobs = Job.has_family(family, jobs)
         if product:
@@ -507,7 +507,7 @@ class Jobs(RPCRoot):
         job_retention = xmljob.get('retention_tag')
         job_product = xmljob.get('product')
         tag, product = self._process_job_tag_product(retention_tag=job_retention, product=job_product)
-        job = Job(whiteboard=xmljob.findtext('whiteboard', default=''),
+        job = Job(whiteboard=xmljob.findtext('whiteboard', default='').strip(),
                   ttasks=0,
                   owner=owner,
                   group=group,
@@ -961,7 +961,7 @@ class Jobs(RPCRoot):
             flash(_(u"Invalid job id %s" % id))
             redirect(".")
 
-        if job.counts_as_deleted():
+        if job.is_deleted:
             flash(_(u'Invalid %s, has been deleted' % job.t_id))
             redirect(".")
 

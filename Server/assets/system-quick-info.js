@@ -77,9 +77,7 @@ window.SystemQuickUsage = Backbone.View.extend({
     error: function (model, xhr) {
         this.request_in_progress = false;
         // XXX this isn't great... better to use notification float thingies
-        this.$el.append(
-            $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText));
+        this.$el.append(alert_for_xhr(xhr));
         this.$('a.btn').button('reset');
     },
     take: function (evt) {

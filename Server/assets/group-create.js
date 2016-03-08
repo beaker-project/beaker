@@ -27,7 +27,7 @@ window.GroupCreateModal = Backbone.View.extend({
     submit: function (evt) {
         evt.preventDefault();
         this.$('.sync-status').empty();
-        this.$('button').button('loading');
+        this.$('.modal-footer button').button('loading');
         var attributes = {
             group_name: this.$('[name=group_name]').val(),
             display_name: this.$('[name=display_name]').val(),
@@ -43,10 +43,8 @@ window.GroupCreateModal = Backbone.View.extend({
         window.location = xhr.getResponseHeader('Location');
     },
     save_error: function (xhr) {
-        $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText)
-            .appendTo(this.$('.sync-status'));
-        this.$('button').button('reset');
+        this.$('.sync-status').append(alert_for_xhr(xhr));
+        this.$('.modal-footer button').button('reset');
     },
 });
 

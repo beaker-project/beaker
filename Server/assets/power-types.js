@@ -30,8 +30,7 @@
         remove_power_type_error: function (model, xhr) {
             this.$('button').button('reset');
             // Inconsistent: Using growl here, since appending an error div to the list item will be worse.
-            $.bootstrapGrowl('<h4>Error deleting power type</h4>' +
-                             xhr.statusText + ': ' + xhr.responseText, {type: 'error'});
+            growl_for_xhr(xhr, 'Error deleting power type');
         },
     })
 
@@ -88,9 +87,7 @@
         },
         error: function(model, xhr) {
             this.reset_button();
-            this.$el.append(
-                $('<div class="alert alert-error" />')
-                    .text(xhr.statusText + ': ' + xhr.responseText));
+            this.$el.append(alert_for_xhr(xhr));
         }
     })
 

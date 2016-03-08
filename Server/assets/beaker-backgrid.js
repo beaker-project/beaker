@@ -338,10 +338,7 @@ window.BeakerGrid = Backbone.View.extend({
         if ( xhr.statusText != 'abort' ) {
             this.grid.body.$el.empty();
             // can't put a <div/> inside a <tbody/> so it goes at the bottom instead
-            this.$el.append(
-                $('<div class="alert alert-error"/>')
-                .text('Failed to fetch data while populating grid: ' +
-                    xhr.statusText + ': ' + xhr.responseText)); 
+            this.$el.append(alert_for_xhr(xhr, 'Failed to fetch data while populating grid'));
         }
     },
     fetch_success: function (collection) {

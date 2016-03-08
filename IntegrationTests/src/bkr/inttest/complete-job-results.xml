@@ -3,9 +3,7 @@
     <cc>dan@example.com</cc>
     <cc>ray@example.com</cc>
   </notify>
-  <whiteboard>
-    valid job
-  </whiteboard>
+  <whiteboard>valid job</whiteboard>
   <b:option xmlns:b="http://example.com/bar">--foobar arbitrary</b:option>
   <f:test xmlns:f="http://example.com/foo">unicode text: heißer Шис</f:test>
   <recipeSet priority="Normal" response="ack" id="1">

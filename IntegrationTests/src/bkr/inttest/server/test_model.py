@@ -1116,6 +1116,58 @@ class TestJob(DatabaseTestCase):
         self.assertIn('<task name="/distribution/inventory" role="STANDALONE"/>',
                       job_xml)
 
+    def test_completed_n_days_ago(self):
+        old_completed_job = data_setup.create_completed_job(
+                finish_time=datetime.datetime.utcnow() - datetime.timedelta(days=90))
+        recently_completed_job = data_setup.create_completed_job(
+                finish_time=datetime.datetime.utcnow())
+        old_running_job = data_setup.create_running_job(
+                queue_time=datetime.datetime.utcnow() - datetime.timedelta(days=92),
+                start_time=datetime.datetime.utcnow() - datetime.timedelta(days=91))
+        partially_complete_job = data_setup.create_running_job(num_recipes=2,
+                queue_time=datetime.datetime.utcnow() - datetime.timedelta(days=92),
+                start_time=datetime.datetime.utcnow() - datetime.timedelta(days=91))
+        data_setup.mark_recipe_complete(
+                partially_complete_job.recipesets[0].recipes[0], only=True,
+                finish_time=datetime.datetime.utcnow() - datetime.timedelta(days=90))
+
+        self.assertTrue(old_completed_job.completed_n_days_ago(30))
+        self.assertFalse(recently_completed_job.completed_n_days_ago(30))
+        self.assertFalse(old_running_job.completed_n_days_ago(30))
+        self.assertFalse(partially_complete_job.completed_n_days_ago(30))
+
+        jobs = Job.query.filter(Job.completed_n_days_ago(30)).all()
+        self.assertIn(old_completed_job, jobs)
+        self.assertNotIn(recently_completed_job, jobs)
+        self.assertNotIn(old_running_job, jobs)
+        self.assertNotIn(partially_complete_job, jobs)
+
+    def test_is_expired(self):
+        job_marked_for_deletion = data_setup.create_completed_job()
+        job_marked_for_deletion.to_delete = datetime.datetime.utcnow()
+        job_already_deleted = data_setup.create_completed_job()
+        job_already_deleted.deleted = datetime.datetime.utcnow()
+        expired_job = data_setup.create_completed_job(retention_tag=u'60days',
+                finish_time=datetime.datetime.utcnow() - datetime.timedelta(days=61))
+        unexpired_job = data_setup.create_completed_job(retention_tag=u'60days',
+                finish_time=datetime.datetime.utcnow() - datetime.timedelta(days=59))
+        archived_job = data_setup.create_completed_job(retention_tag=u'audit',
+                product=data_setup.create_product(),
+                finish_time=datetime.datetime.utcnow() - datetime.timedelta(days=600))
+
+        self.assertTrue(job_marked_for_deletion.is_expired)
+        self.assertFalse(job_already_deleted.is_expired)
+        self.assertTrue(expired_job.is_expired)
+        self.assertFalse(unexpired_job.is_expired)
+        self.assertFalse(archived_job.is_expired)
+
+        expired_jobs = Job.query.filter(Job.is_expired).all()
+        self.assertIn(job_marked_for_deletion, expired_jobs)
+        self.assertNotIn(job_already_deleted, expired_jobs)
+        self.assertIn(expired_job, expired_jobs)
+        self.assertNotIn(unexpired_job, expired_jobs)
+        self.assertNotIn(archived_job, expired_jobs)
+
 class DistroTreeByFilterTest(DatabaseTestCase):
 
     def setUp(self):
@@ -1837,13 +1889,13 @@ class RecipeTest(DatabaseTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1240809
     def test_get_all_logs(self):
         job = data_setup.create_completed_job(server_log=True)
-        all_logs = job.recipesets[0].recipes[0].all_logs
+        all_logs = job.recipesets[0].recipes[0].all_logs()
         self.assertEqual('http://dummy-archive-server/beaker/recipe_path/dummy.txt',
-                all_logs.next()['url'])
+                         all_logs.next().absolute_url)
         self.assertEqual('http://dummy-archive-server/beaker/tasks/dummy.txt',
-                all_logs.next()['url'])
+                         all_logs.next().absolute_url)
         self.assertEqual('http://dummy-archive-server/beaker/result.txt',
-                all_logs.next()['url'])
+                         all_logs.next().absolute_url)
 
 
 class CheckDynamicVirtTest(DatabaseTestCase):

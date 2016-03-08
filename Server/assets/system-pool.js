@@ -33,9 +33,7 @@
         },
         remove_pool_error: function (model, xhr) {
             this.$('button').button('reset');
-            this.$el.append(
-                $('<div class="alert alert-error"/>')
-                    .text(xhr.statusText + ': ' + xhr.responseText));
+            this.$el.append(alert_for_xhr(xhr));
         },
 
     });
@@ -94,9 +92,7 @@
         },
         error: function (xhr) {
             this.$('button').button('reset');
-            this.$el.append(
-                $('<div class="alert alert-error"/>')
-                    .text(xhr.statusText + ': ' + xhr.responseText));
+            this.$el.append(alert_for_xhr(xhr));
         },
     });
 

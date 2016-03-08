@@ -33,6 +33,7 @@ carry out these and other related functions.
    task-metadata
    task-makefile-targets
    multihost
+   rhts-compat
 
 .. todo::
 

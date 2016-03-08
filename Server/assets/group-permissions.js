@@ -26,9 +26,7 @@ window.GroupPermissionsListItemView = Backbone.View.extend({
         $(evt.currentTarget).button('loading');
         model.remove_permission(this.permission)
           .fail(function (jqxhr, status, error) {
-            $.bootstrapGrowl('<h4>Failed to remove group permission</h4> ' +
-                jqxhr.statusText + ': ' + jqxhr.responseText,
-                {type: 'error'});
+                growl_for_xhr(jqxhr, 'Failed to remove group permission');
           });
         $(evt.currentTarget).button('reset');
         evt.preventDefault();
@@ -90,9 +88,7 @@ var GroupAddPermissionForm = Backbone.View.extend({
     },
     error: function (jqxhr, status, error) {
         this.$('button').button('reset');
-        this.$el.append(
-            $('<div class="alert alert-error"/>')
-            .text(jqxhr.statusText + ': ' + jqxhr.responseText));
+        this.$el.append(alert_for_xhr(jqxhr));
     },
 });
 
