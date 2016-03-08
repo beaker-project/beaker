@@ -163,8 +163,7 @@ window.UserUIPreferencesView = Backbone.View.extend({
                 $el.find('.form-actions button').button('reset');
             })
             .fail(function (xhr) {
-                $el.append($('<div class="alert alert-error"/>')
-                        .text(xhr.statusText + ': ' + xhr.responseText));
+                $el.append(alert_for_xhr(xhr));
             })
             .done(function (xhr) {
                 // Bootstrap's button reset happens in setTimeout for... 

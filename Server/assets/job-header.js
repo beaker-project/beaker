@@ -61,9 +61,7 @@ window.JobHeaderView = Backbone.View.extend({
             .done(function () { window.location = beaker_url_prefix + 'jobs/mine'; });
     },
     delete_error: function(xhr) {
-        $.bootstrapGrowl('<h4>Failed to delete</h4> ' +
-                xhr.statusText + ': ' + xhr.responseText,
-                {type: 'error'});
+        growl_for_xhr(xhr, 'Failed to delete');
         this.$('button.delete').button('reset');
     },
 });
@@ -126,9 +124,7 @@ var JobEditModal = Backbone.View.extend({
         this.$el.modal('hide');
     },
     save_error: function (xhr) {
-        $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText)
-            .appendTo(this.$('.sync-status'));
+        alert_for_xhr(xhr).appendTo(this.$('.sync-status'));
         this.$('.modal-footer button').button('reset');
     },
 });
@@ -162,9 +158,7 @@ var JobCancelModal = Backbone.View.extend({
         this.$el.modal('hide');
     },
     save_error: function (xhr) {
-        $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText)
-            .appendTo(this.$('.sync-status'));
+        alert_for_xhr(xhr).appendTo(this.$('.sync-status'));
         this.$('.modal-footer button').button('reset');
     },
 });

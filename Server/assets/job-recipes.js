@@ -72,10 +72,7 @@ var RecipeSetView = Backbone.View.extend({
     },
     unwaive_error: function (xhr) {
         this.$('button.unwaive').button('reset');
-        $.bootstrapGrowl(
-                '<h4>Error unwaiving ' + this.model.get('t_id') + '</h4>' +
-                xhr.statusText + ': ' + xhr.responseText,
-                {type: 'error'});
+        growl_for_xhr(xhr, 'Error unwaiving ' + this.model.get('t_id'));
     },
     cancelling: function () {
         this.$('button.cancel').button('loading');
@@ -155,9 +152,7 @@ var RecipeSetCommentForm = Backbone.View.extend({
         this.$('textarea[name=comment]').val('');
     },
     save_error: function (model, xhr, options) {
-        $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText)
-            .appendTo(this.$('.sync-status'));
+        alert_for_xhr(xhr).appendTo(this.$('.sync-status'));
         this.$('button').button('reset');
     },
 });
@@ -226,9 +221,7 @@ var RecipeSetPriorityModal = Backbone.View.extend({
         this.$el.modal('hide');
     },
     save_error: function (xhr) {
-        $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText)
-            .appendTo(this.$('.sync-status'));
+        alert_for_xhr(xhr).appendTo(this.$('.sync-status'));
         this.$('.modal-footer button').button('reset');
     },
 });
@@ -262,9 +255,7 @@ var RecipeSetCancelModal = Backbone.View.extend({
         this.$el.modal('hide');
     },
     save_error: function (xhr) {
-        $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText)
-            .appendTo(this.$('.sync-status'));
+        alert_for_xhr(xhr).appendTo(this.$('.sync-status'));
         this.$('.modal-footer button').button('reset');
     },
 });
@@ -298,9 +289,7 @@ var RecipeSetWaiveModal = Backbone.View.extend({
         this.$el.modal('hide');
     },
     save_error: function (xhr) {
-        $('<div class="alert alert-error"/>')
-            .text(xhr.statusText + ': ' + xhr.responseText)
-            .appendTo(this.$('.sync-status'));
+        alert_for_xhr(xhr).appendTo(this.$('.sync-status'));
         this.$('.modal-footer button').button('reset');
     },
 });
