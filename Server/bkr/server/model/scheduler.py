@@ -3701,10 +3701,14 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
         result.
         In a sense this is the duration of the stuff that happened in order to 
         produce this result.
+        The duration can be None if the task was never started.
         """
         index = self.recipetask.results.index(self)
         if index == 0:
-            return self.start_time - self.recipetask.start_time
+            if self.recipetask.start_time:
+                return self.start_time - self.recipetask.start_time
+            else:
+                return None
         else:
             previous_result = self.recipetask.results[index - 1]
             return self.start_time - previous_result.start_time
