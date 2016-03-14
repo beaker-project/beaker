@@ -1,0 +1,8 @@
+Ready-for-Checks+1: Matt Jia <mjia@redhat.com>
+Code-Review+2: Dan Callaghan <dcallagh@redhat.com>
+Verified+1: Matt Jia <mjia@redhat.com>
+Submitted-by: Matt Jia <mjia@redhat.com>
+Submitted-at: Mon, 14 Mar 2016 05:59:42 +0000
+Reviewed-on: http://gerrit.beaker-project.org/4722
+Project: beaker
+Branch: refs/heads/results-reporting-improvements-take3
