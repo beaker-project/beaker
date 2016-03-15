@@ -6,7 +6,29 @@
 
 // This file contains styles which apply to both the job and recipe pages,
 // where we want to follow the same visual pattern across them both.
-
+.alternative-formats {
+    margin-top: 1em;
+    float: right;
+    p {
+        display: inline;
+    }
+    ul {
+        display: inline;
+        margin: 0;
+        list-style: none;
+        > li {
+            display: inline;
+        }
+        > li + li {
+            padding-left: 0.5em;
+        }
+        > li + li:before {
+            content: "\00b7"; /* middot */
+            padding-right: 0.5em;
+            .muted;
+        }
+    }
+}
 .job-recipes .recipe-status, .recipe-tasks .recipe-status {
     white-space: nowrap;
     text-align: right;

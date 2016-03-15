@@ -20,6 +20,7 @@ from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
 from bkr.server.recipetasks import RecipeTasks
 from bkr.server.controller_utilities import _custom_status, _custom_result
+from bkr.server.junitxml import recipe_to_junit_xml
 from datetime import timedelta
 import urlparse
 
@@ -33,10 +34,11 @@ from bkr.server.app import app
 from bkr.server.flask_util import BadRequest400, NotFound404, Gone410, \
     Forbidden403, auth_required, read_json_request, convert_internal_errors, \
     request_wants_json, render_tg_template
-from flask import request, jsonify, redirect as flask_redirect
+from flask import request, jsonify, redirect as flask_redirect, make_response
 from bkr.server.bexceptions import BeakerException
 
 import logging
+import lxml.etree
 log = logging.getLogger(__name__)
 
 class Recipes(RPCRoot):
@@ -510,6 +512,31 @@ def get_recipe(id):
         'title': recipe.t_id,
         'recipe': recipe,
     })
+
+@app.route('/recipes/<int:id>.xml', methods=['GET'])
+def recipe_xml(id):
+    """
+    Returns the recipe in Beaker results XML format.
+
+    :status 200: The recipe xml file was successfully generated.
+    """
+    recipe = _get_recipe_by_id(id)
+    xmlstr = lxml.etree.tostring(recipe.to_xml(), pretty_print=True)
+    response = make_response(xmlstr)
+    response.status_code = 200
+    response.headers.add('Content-Type', 'text/xml')
+    return response
+
+@app.route('/recipes/<int:id>.junit.xml', methods=['GET'])
+def recipe_junit_xml(id):
+    """
+    Returns the recipe in JUnit-compatible XML format.
+    """
+    recipe = _get_recipe_by_id(id)
+    response = make_response(recipe_to_junit_xml(recipe))
+    response.status_code = 200
+    response.headers.add('Content-Type', 'text/xml')
+    return response
 
 def _record_activity(recipe, field, old, new, action=u'Changed'):
     recipe.record_activity(user=identity.current.user, service=u'HTTP',

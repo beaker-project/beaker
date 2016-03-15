@@ -8,6 +8,7 @@ import datetime
 import logging
 import re
 import requests
+import lxml.etree
 from turbogears.database import session
 
 from bkr.server.model import TaskStatus, TaskResult, RecipeTaskResult, \
@@ -442,6 +443,21 @@ class RecipeHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         json = response.json()
         self.assertEquals(json['t_id'], self.recipe.t_id)
+
+    def test_get_recipe_xml(self):
+        response = requests.get(get_server_base() + 'recipes/%s.xml' % self.recipe.id)
+        response.raise_for_status()
+        self.assertEquals(response.status_code, 200)
+        self.assertEquals(lxml.etree.tostring(self.recipe.to_xml(), pretty_print=True), response.content)
+
+    def test_get_junit_xml(self):
+        with session.begin():
+            data_setup.mark_job_complete(self.job)
+        response = requests.get(get_server_base() + 'recipes/%s.junit.xml' % self.recipe.id)
+        response.raise_for_status()
+        self.assertEquals(response.status_code, 200)
+        junitxml = lxml.etree.fromstring(response.content)
+        self.assertEqual(junitxml.tag, 'testsuites')
 
     def test_410_for_deleted_job(self):
         with session.begin():

@@ -129,7 +129,7 @@ def _create_env(source_dir, output_dir, **kwargs):
             'users.js',
             'prefs.js',
             'logs-link.js',
-            'recipe-page-header.js',
+            'recipe-header.js',
             'recipe-info.js',
             'recipe-installation.js',
             'recipe-tasks.js',

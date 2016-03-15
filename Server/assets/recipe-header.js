@@ -7,7 +7,7 @@
 ;(function () {
 
 window.RecipePageHeaderView = Backbone.View.extend({
-    template: JST['recipe-page-header'],
+    template: JST['recipe-header'],
     events: {
         'click .edit': 'edit',
     },
