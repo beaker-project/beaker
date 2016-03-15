@@ -28,14 +28,14 @@
   <div class="recipe-page-header"></div>
   <div class="recipe-quick-info"></div>
   <ul class="nav nav-tabs recipe-nav">
-    <li><a data-toggle="tab" href="#recipe-installation">Installation</a></li>
-    <li><a data-toggle="tab" href="#recipe-tasks">Tasks</a></li>
-    <li><a data-toggle="tab" href="#recipe-reservation">Reservation</a></li>
+    <li><a data-toggle="tab" href="#installation">Installation</a></li>
+    <li><a data-toggle="tab" href="#tasks">Tasks</a></li>
+    <li><a data-toggle="tab" href="#reservation">Reservation</a></li>
   </ul>
   <div class="tab-content recipe-tabs">
-    <div class="tab-pane recipe-installation" id="recipe-installation"></div>
-    <div class="tab-pane recipe-tasks" id="recipe-tasks"></div>
-    <div class="tab-pane recipe-reservation" id="recipe-reservation"></div>
+    <div class="tab-pane recipe-installation" id="installation"></div>
+    <div class="tab-pane recipe-tasks" id="tasks"></div>
+    <div class="tab-pane recipe-reservation" id="reservation"></div>
   </div>
   <script type="text/javascript">
     $(function () { link_tabs_to_anchor('beaker_recipe_tabs', '.recipe-nav'); });

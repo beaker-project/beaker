@@ -115,7 +115,7 @@ class TestRecipeView(WebDriverTestCase):
     def test_log_url_looks_right(self):
         b = self.browser
         self.go_to_recipe_view(tab='Installation')
-        tab = b.find_element_by_id('recipe-installation')
+        tab = b.find_element_by_id('installation')
         log_link = tab.find_element_by_xpath('//span[@class="main-log"]/a')
         self.assertEquals(log_link.get_attribute('href'),
             get_server_base() + 'recipes/%s/logs/recipe_path/dummy.txt' %
@@ -186,7 +186,7 @@ class TestRecipeView(WebDriverTestCase):
             job.update_status()
         b = self.browser
         self.go_to_recipe_view(recipe, tab='Tasks')
-        tab = b.find_element_by_id('recipe-tasks')
+        tab = b.find_element_by_id('tasks')
         # The in class is an indication that a task is expanded.
         tab.find_element_by_xpath('//div[@id="recipe-task-details-%s" and '
             'contains(@class, "in")]' % recipe.tasks[0].id)
@@ -202,7 +202,7 @@ class TestRecipeView(WebDriverTestCase):
             job.update_status()
         b = self.browser
         self.go_to_recipe_view(recipe, tab='Tasks')
-        tab = b.find_element_by_id('recipe-tasks')
+        tab = b.find_element_by_id('tasks')
         for task in recipe.tasks:
             tab.find_element_by_xpath('//div[@id="recipe-task-details-%s" and '
                     'not(contains(@class, "in"))]' % task.id)
@@ -215,7 +215,7 @@ class TestRecipeView(WebDriverTestCase):
             data_setup.mark_recipe_running(recipe)
         b = self.browser
         self.go_to_recipe_view(recipe, tab='Tasks')
-        tab = b.find_element_by_id('recipe-tasks')
+        tab = b.find_element_by_id('tasks')
         start_time = tab.find_element_by_xpath('//div[@id="task%s"]'
                 '//div[@class="task-start-time"]/time' % recipe.tasks[0].id)
         self.check_datetime_localised(start_time.get_attribute('title'))
@@ -231,7 +231,7 @@ class TestRecipeView(WebDriverTestCase):
             data_setup.mark_job_running(job)
         b = self.browser
         self.go_to_recipe_view(recipe, tab='Reservation')
-        b.find_element_by_xpath('//div[@id="recipe-reservation" and '
+        b.find_element_by_xpath('//div[@id="reservation" and '
                 'not(.//button[normalize-space(string(.))="Edit"])]')
 
     def test_authenticated_user_can_request_reservation(self):
@@ -242,7 +242,7 @@ class TestRecipeView(WebDriverTestCase):
         b = self.browser
         login(b)
         self.go_to_recipe_view(recipe, tab='Reservation')
-        tab = b.find_element_by_id('recipe-reservation')
+        tab = b.find_element_by_id('reservation')
         tab.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
         modal = b.find_element_by_class_name('modal')
         modal.find_element_by_xpath('.//button[text()="Yes"]').click()
@@ -264,7 +264,7 @@ class TestRecipeView(WebDriverTestCase):
         b = self.browser
         login(b)
         self.go_to_recipe_view(recipe, tab='Reservation')
-        tab = b.find_element_by_id('recipe-reservation')
+        tab = b.find_element_by_id('reservation')
         tab.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
         modal = b.find_element_by_class_name('modal')
         modal.find_element_by_name('duration').clear()
@@ -283,11 +283,11 @@ class TestRecipeView(WebDriverTestCase):
         b = self.browser
         self.go_to_recipe_view(recipe, tab='Reservation')
         #No extend button
-        b.find_element_by_xpath('//div[@id="recipe-reservation" and '
+        b.find_element_by_xpath('//div[@id="reservation" and '
                 'not(.//button[normalize-space(string(.))="Extend the reservation"])]')
 
         #No return button
-        b.find_element_by_xpath('//div[@id="recipe-reservation" and '
+        b.find_element_by_xpath('//div[@id="reservation" and '
                 'not(.//button[normalize-space(string(.))="Return the reservation"])]')
 
     def test_authenticated_user_can_extend_reservation(self):
@@ -299,7 +299,7 @@ class TestRecipeView(WebDriverTestCase):
         b = self.browser
         login(b)
         self.go_to_recipe_view(recipe, tab='Reservation')
-        tab = b.find_element_by_id('recipe-reservation')
+        tab = b.find_element_by_id('reservation')
         tab.find_element_by_xpath('.//button[contains(text(), "Extend the reservation")]')\
                 .click()
         modal = b.find_element_by_class_name('modal')
@@ -322,7 +322,7 @@ class TestRecipeView(WebDriverTestCase):
         b = self.browser
         login(b)
         self.go_to_recipe_view(recipe, tab='Reservation')
-        tab = b.find_element_by_id('recipe-reservation')
+        tab = b.find_element_by_id('reservation')
         tab.find_element_by_xpath('.//button[contains(text(), "Return the reservation")]')\
                 .click()
         modal = b.find_element_by_class_name('modal')
@@ -357,7 +357,7 @@ class TestRecipeView(WebDriverTestCase):
         b = self.browser
         self.go_to_recipe_view(recipe, tab='Tasks')
         # first task row should have comments link
-        tab = b.find_element_by_id('recipe-tasks')
+        tab = b.find_element_by_id('tasks')
         comments_link = tab.find_element_by_xpath(
                 '//div[@id="task%s"]//div[@class="task-comments"]'
                 '/div/a[@class="comments-link"]' % recipetask.id).text
@@ -378,7 +378,7 @@ class TestRecipeView(WebDriverTestCase):
         b = self.browser
         login(b, user=user.user_name, password='otheruser')
         self.go_to_recipe_view(recipe, tab='Tasks')
-        tab = b.find_element_by_id('recipe-tasks')
+        tab = b.find_element_by_id('tasks')
         tab.find_element_by_xpath('//div[@class="task-comments"]'
                 '/div/a[@class="comments-link"]').click()
         popover = b.find_element_by_class_name('popover')

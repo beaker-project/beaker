@@ -30,16 +30,19 @@ window.link_tabs_to_anchor = function (cookie_name, tab_selector) {
     var open_tab = function (href) {
         $tabs.find('a[href="' + href + '"]').tab('show');
     };
+    var tab_exists = function (href) {
+        return $tabs.find('a[href="' + href + '"]').length > 0;
+    };
     $(window).on('hashchange', function () {
         open_tab(location.hash);
         return false;
     });
-    if (location.hash) {
+    var stored = localStorage.getItem(cookie_name);
+    if (location.hash && tab_exists(location.hash)) {
         open_tab(location.hash);
-    } else if (localStorage.getItem(cookie_name)) {
-        var href = localStorage.getItem(cookie_name);
-        window.history.replaceState(undefined, undefined, href);
-        open_tab(href);
+    } else if (stored && tab_exists(stored)) {
+        window.history.replaceState(undefined, undefined, stored);
+        open_tab(stored);
     } else {
         $tabs.find('a:first').tab('show');
     }
