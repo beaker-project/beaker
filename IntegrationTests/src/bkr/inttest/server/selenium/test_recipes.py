@@ -100,13 +100,14 @@ class TestRecipeView(WebDriverTestCase):
             self.distro_tree = data_setup.create_distro_tree(arch=u'x86_64')
             self.job = data_setup.create_completed_job(owner=user,
                     distro_tree=self.distro_tree, server_log=True)
+            self.recipe = self.job.recipesets[0].recipes[0]
             for recipe in self.job.all_recipes:
                 recipe.system = self.system
         self.browser = self.get_browser()
 
     def go_to_recipe_view(self, recipe=None, tab=None):
         if recipe is None:
-            recipe = self.job.recipesets[0].recipes[0]
+            recipe = self.recipe
         b = self.browser
         b.get(get_server_base() + 'recipes/%s' % recipe.id)
         if tab:
@@ -133,6 +134,14 @@ class TestRecipeView(WebDriverTestCase):
         system_rows = b.find_elements_by_xpath('//table[@id="widget"]/tbody/tr')
         self.assert_(len(system_rows) == 1)
 
+    def test_clone_recipe(self):
+        b = self.browser
+        login(b)
+        self.go_to_recipe_view()
+        b.find_element_by_link_text("Clone").click()
+        b.find_element_by_xpath('//h1[normalize-space(text())="Clone Recipeset %s"]' %
+                self.recipe.recipeset.id)
+
     def test_log_url_looks_right(self):
         b = self.browser
         self.go_to_recipe_view(tab='Installation')
@@ -140,7 +149,7 @@ class TestRecipeView(WebDriverTestCase):
         log_link = tab.find_element_by_xpath('//span[@class="main-log"]/a')
         self.assertEquals(log_link.get_attribute('href'),
             get_server_base() + 'recipes/%s/logs/recipe_path/dummy.txt' %
-                    self.job.recipesets[0].recipes[0].id)
+                    self.recipe.id)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1072133
     def test_watchdog_time_remaining_display(self):
@@ -194,7 +203,6 @@ class TestRecipeView(WebDriverTestCase):
         with session.begin():
             session.refresh(recipe)
             self.assertEqual(recipe.whiteboard, 'testwhiteboard')
-
 
     def test_first_faild_task_should_expand_when_first_loading(self):
         with session.begin():
@@ -358,7 +366,7 @@ class TestRecipeView(WebDriverTestCase):
 
     def test_opening_recipe_page_marks_it_as_reviewed(self):
         with session.begin():
-            recipe = self.job.recipesets[0].recipes[0]
+            recipe = self.recipe
             self.assertEqual(recipe.get_reviewed_state(self.user), False)
         b = self.browser
         login(b, user=self.user.user_name, password='password')
