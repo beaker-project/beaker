@@ -245,3 +245,42 @@ Version 3.4-8 of the ``/distribution/reservesys`` task has also been released:
 
 * :issue:`1205989`: The task can now be used with the restraint harness.
   (Contributed by Bill Peck)
+
+Beaker 22.2
+~~~~~~~~~~~
+
+* :issue:`1302857`: When a job is submitted, Beaker now strips surrounding
+  whitespace from the ``<whiteboard/>`` XML element. This restores the 
+  behaviour from Beaker releases prior to 22.0, which many job XML generating 
+  tools are relying on. The job matrix whiteboard filtering now also correctly 
+  handles whiteboard values with embedded newlines, which may occur in jobs 
+  submitted to Beaker while this whitespace stripping behaviour was not in 
+  effect. (Contributed by Dan Callaghan)
+* :issue:`923637`: The :program:`beaker-wizard` tool supports a new skeleton
+  type, ``parametrized``, for generating tasks which use the ``$PACKAGES`` and 
+  ``$REQUIRES`` convention from beakerlib. (Contributed by Iveta Wiedermann)
+* :issue:`1309059`: The Essentials tab on the system page no longer offers
+  lab controllers which have been removed, when picking a lab controller to 
+  associate the system with. (Contributed by Matt Jia)
+* :issue:`1301410`: The :program:`beaker-init` command no longer attempts to
+  populate the database with pre-defined values when downgrading, since that is 
+  always unnecessary and in many circumstances will fail. (Contributed by Dan 
+  Callaghan)
+* :issue:`1304927`: Fixed a regression in Beaker 22.0 which caused all search
+  queries on the Reserve Report to be ignored. (Contributed by Dan Callaghan)
+* :issue:`1311904`: Fixed unintentional usage of ECMAScript 6 features on the
+  group page, which caused errors when using the page in Google Chrome 44. 
+  (Contributed by Matt Jia)
+
+Version 4.69 of the ``rhts`` test development and execution library has also 
+been released:
+
+* :issue:`1277575`: The internal :program:`rhts-db-submit-result` command no
+  longer uses any hashing algorithms. Previously, when run outside of the beah 
+  execution evironment (for example, by a user invoking ``extendtesttime.sh``), 
+  the command would unnecessarily use MD5, which fails in FIPS mode. 
+  (Contributed by Dan Callaghan)
+* :issue:`1298934`: The :program:`rhts-reboot` command no longer attempts to
+  inform beah about the upcoming reboot when it is run outside of the beah 
+  execution environment. This avoids a confusing traceback in the output. 
+  (Contributed by Dan Callaghan)

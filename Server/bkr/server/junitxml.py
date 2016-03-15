@@ -36,9 +36,10 @@ def _testcases_for_task(task):
         classname=task.name)
     for result in task.results:
         testcase = E.testcase(
-            classname=task.name,
-            name=result.short_path.lstrip('/') or '(none)',
-            time='%.0f' % total_seconds(result.duration))
+                classname=task.name,
+                name=result.short_path.lstrip('/') or '(none)')
+        if result.duration:
+            testcase.set('time', '%.0f' % total_seconds(result.duration))
         # For Cancelled and Aborted, the final Warn is the reason message
         if (task.status == TaskStatus.cancelled and
                 result == task.results[-1] and

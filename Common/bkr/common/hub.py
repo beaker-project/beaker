@@ -12,6 +12,7 @@ import base64
 import ssl
 import xmlrpclib
 import urlparse
+import tempfile
 from bkr.common.pyconfig import PyConfigParser, ImproperlyConfigured
 from bkr.common.xmlrpc import CookieTransport, SafeCookieTransport, \
     retry_request_decorator
@@ -165,6 +166,13 @@ class HubProxy(object):
 
         if ccache is not None:
             ccache = krbV.CCache(name='FILE:' + ccache, context=ctx)
+        elif keytab is not None:
+            # If we will be init'ing the ccache using a keytab, we need to 
+            # always avoid using the default shared ccache, as a workaround for 
+            # a race condition in krb5_cc_initialize() between unlink() and open()
+            # (see RHBZ#1313580).
+            ccache_tmpfile = tempfile.NamedTemporaryFile(prefix='krb5cc_bkr_')
+            ccache = krbV.CCache(name='FILE:' + ccache_tmpfile.name, context=ctx)
         else:
             ccache = ctx.default_ccache()
 

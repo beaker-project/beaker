@@ -61,7 +61,7 @@ Highlights
 
 * provide reasonable defaults wherever possible
 * flexible confirmation (``--every``, ``--common``, ``--yes``)
-* predefined skeletons (beaker, beakerlib, simple, multihost, empty)
+* predefined skeletons (beaker, beakerlib, simple, multihost, library, parametrized, empty)
 * saved user preferences (defaults, user skeletons, licenses)
 * Bugzilla integration (fetch bug info, reproducers, suggest name, description)
 * Makefile edit mode (quick adding of bugs, limiting archs or releases...)
@@ -2301,6 +2301,36 @@ class Skeleton(SingleChoice):
             rlJournalPrintText
             rlJournalEnd
         </skeleton>
+        <skeleton name="parametrized">
+            # Include Beaker environment
+            . /usr/bin/rhts-environment.sh || exit 1
+            . /usr/share/beakerlib/beakerlib.sh || exit 1
+
+            # Packages to be tested
+            PACKAGES=${PACKAGES:-<runfor />}
+            # Other required packages
+            REQUIRES=${REQUIRES:-<requires />}
+
+            rlJournalStart
+                rlPhaseStartSetup
+                    rlAssertRpm --all
+                    rlRun "TmpDir=\$(mktemp -d)" 0 "Creating tmp directory"
+                    rlRun "pushd $TmpDir"
+                rlPhaseEnd
+
+                rlPhaseStartTest
+                    rlRun "touch foo" 0 "Creating the foo test file"
+                    rlAssertExists "foo"
+                    rlRun "ls -l foo" 0 "Listing the foo test file"
+                rlPhaseEnd
+
+                rlPhaseStartCleanup
+                    rlRun "popd"
+                    rlRun "rm -r $TmpDir" 0 "Removing tmp directory"
+                rlPhaseEnd
+            rlJournalPrintText
+            rlJournalEnd
+        </skeleton>
     </skeletons>
             """)
 
@@ -2515,6 +2545,10 @@ class Skeleton(SingleChoice):
                         value = test.testname.bugs.show()
                     elif name == "reproducers":
                         value = test.testname.bugs.reproducers.show()
+                    elif name == "runfor":
+                        value = ' '.join(test.runfor.data)
+                    elif name == "requires":
+                        value = ' '.join(test.requires.data)
                     else:
                         # map long names to the real vars
                         map = {

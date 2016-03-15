@@ -230,3 +230,50 @@ class JUnitXMLUnitTest(unittest.TestCase):
 </testsuites>
 """ % recipe.id
         self.assertMultiLineEqual(expected, out)
+
+    # htps://bugzilla.redhat.com/show_bug.cgi?id=1316045
+    def test_cancelled_recipe_has_tasks_never_started(self):
+        job = data_setup.create_job(recipe_whiteboard=u'cancelled',
+                task_name=u'/test_junixml/cancelled')
+        job.cancel(msg=u'I cancelled it')
+        recipe = job.recipesets[0].recipes[0]
+        job.update_status()
+        out = to_junit_xml(job)
+        expected = """\
+<?xml version=\'1.0\' encoding=\'utf8\'?>
+<testsuites>
+  <testsuite name="cancelled" id="R:%s" tests="1" failures="0" errors="0">
+    <testcase classname="/test_junixml/cancelled">
+      <system-out></system-out>
+    </testcase>
+    <testcase classname="/test_junixml/cancelled" name="(none)">
+      <skipped message="I cancelled it" type="skipped"/>
+      <system-out></system-out>
+    </testcase>
+  </testsuite>
+</testsuites>
+""" % recipe.id
+        self.assertMultiLineEqual(expected, out)
+
+    # htps://bugzilla.redhat.com/show_bug.cgi?id=1316045
+    def test_aborted_recipe_has_tasks_never_started(self):
+        job = data_setup.create_job(recipe_whiteboard=u'aborted')
+        job.abort(msg=u'External Watchdog Expired')
+        job.update_status()
+        recipe = job.recipesets[0].recipes[0]
+        out = to_junit_xml(job)
+        expected = """\
+<?xml version='1.0' encoding='utf8'?>
+<testsuites>
+  <testsuite name="aborted" id="R:%s" tests="2" failures="0" errors="1">
+    <testcase classname="/distribution/reservesys">
+      <system-out></system-out>
+    </testcase>
+    <testcase classname="/distribution/reservesys" name="(none)">
+      <error message="External Watchdog Expired" type="error"/>
+      <system-out></system-out>
+    </testcase>
+  </testsuite>
+</testsuites>
+""" % recipe.id
+        self.assertMultiLineEqual(expected, out)

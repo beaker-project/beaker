@@ -130,3 +130,16 @@ class TestWizard(BaseWizardTestCase):
         self.assertIn('\t@echo "RhtsRequires:    '
                  'library(perl/lib1) library(scl/lib2)" >> $(METADATA)\n',
                  makefile_contents)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=923637
+    def test_creates_parametrized_runtest(self):
+        out = run_wizard(['beaker-wizard',
+                          '-s', 'parametrized',
+                          '-o', 'wget,curl',
+                          '-q', 'httpd,nginx',
+                          'wget/Sanity/test-it-works'], cwd=self.tempdir)
+
+        runtest_contents = open(
+            os.path.join(self.tempdir, 'Sanity', 'test-it-works', 'runtest.sh'), 'r').readlines()
+        self.assertIn('PACKAGES=${PACKAGES:-curl wget}\n', runtest_contents)
+        self.assertIn('REQUIRES=${REQUIRES:-httpd nginx wget}\n', runtest_contents)

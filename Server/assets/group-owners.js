@@ -70,8 +70,8 @@ var GroupAddOwnerForm = Backbone.View.extend({
         if (evt.currentTarget.checkValidity()) {
             this.$('.alert').remove();
             var new_owner = this.$('input[name=group_owner]').val();
-            if (this.model.get('owners')
-                .find(function(o) { return o.get('user_name') == new_owner })) {
+            if (_.find(this.model.get('owners'),
+                function(o) { return o.get('user_name') == new_owner })) {
                 // nothing to do
                 this.$('input[name=group_owner]').typeahead('setQuery', '');
                 return false;
