@@ -61,6 +61,7 @@ class Installation(DeclarativeMappedObject):
             'install_started': self.install_started,
             'install_finished': self.install_finished,
             'postinstall_finished': self.postinstall_finished,
+            'commands': self.commands,
         }
 
 

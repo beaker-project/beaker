@@ -77,9 +77,13 @@ var RecipeInstallationProgress = Backbone.View.extend({
         this.render();
     },
     render: function () {
+        var installation = this.model.get('installation');
+        var commands = installation ? installation.commands : [];
+        var configure_netboot = _.findWhere(commands, {action: 'configure_netboot'});
         this.$el.html(this.template(_.extend({},
                 this.model.attributes,
-                {get_time_difference: get_time_difference})));
+                {configure_netboot: configure_netboot,
+                 get_time_difference: get_time_difference})));
         this.linkify_ks();
         return this;
     },

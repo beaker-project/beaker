@@ -1,11 +1,15 @@
 <% if (!_.isEmpty(installation)) { %>
     <table class="table">
-        <% if (installation.created) { %>
+        <% if (configure_netboot) { %>
             <tr>
                 <td>
-                    <time datetime="<%- moment.utc(installation.created).toISOString() %>"
-                         title="<%- installation.created %>">
-                         <%= get_time_difference(installation.created, start_time) %>
+                    <%
+                    // In future it should be changed to configure_netboot.update when
+                    // https://bugzilla.redhat.com/show_bug.cgi?id=1318524 is fixed.
+                    %>
+                    <time datetime="<%- moment.utc(configure_netboot.submitted).toISOString() %>"
+                         title="<%- configure_netboot.submitted %>">
+                         <%= get_time_difference(configure_netboot.submitted, start_time) %>
                     </time>
                  </td>
                  <td>
