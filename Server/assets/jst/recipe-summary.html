@@ -8,11 +8,24 @@
         <time datetime="<%- moment.utc(finish_time).toISOString() %>"
               title="<%- finish_time %>">
         <%- moment.utc(moment(finish_time,"DD/MM/YYYY HH:mm:ss").diff(moment(start_time,"DD/MM/YYYY HH:mm:ss"))).format("HH:mm:ss")%></time><% } %>.
-  <% } else if (recipeset.get('queue_time')) { %>
-  Queued
-  <time datetime="<%- moment.utc(recipeset.get('queue_time')).toISOString() %>"
-      title="<%- recipeset.get('queue_time') %>">
-  <%- moment.utc(recipeset.get('queue_time')).local().fromNow() %></time>.<% } %>
+  <% } else { %>
+      <%
+        // If a recipe is aborted or cancelled and was never started,
+        // we use the started time of the last task result as the time
+        // that the recipe was aborted or cancelled.
+      %>
+      <% if (is_finished) { %>
+          <%- status %>
+          <time datetime="<%- moment.utc(last_result_started).toISOString() %>"
+                title="<%- last_result_started %>">
+            <%- moment.utc(last_result_started).local().fromNow() %></time>
+          without starting.
+      <% } else if (recipeset.get('queue_time')) { %>
+      Queued
+      <time datetime="<%- moment.utc(recipeset.get('queue_time')).toISOString() %>"
+          title="<%- recipeset.get('queue_time') %>">
+      <%- moment.utc(recipeset.get('queue_time')).local().fromNow() %></time>.<% } %>
+  <% } %>
 </p>
 <p>
   Using <%= distro_tree.toHTML() %><%

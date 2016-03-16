@@ -260,6 +260,16 @@ window.Recipe = Backbone.Model.extend({
             return model.fetch(); // refresh recipe
         });
     },
+    get_last_result_started: function() {
+        // Get the started time of the last task result of a recipe was never started.
+        if (this.get('is_finished') && !this.get('start_time')) {
+            var last_task = _.last(this.get('tasks'));
+            var last_task_result = last_task ? _.last(last_task.get('results'))
+                    : '';
+            if (last_task_result)
+                return last_task_result.get('start_time');
+        }
+    },
 });
 
 window.Task = Backbone.Model.extend({

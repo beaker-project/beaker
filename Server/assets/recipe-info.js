@@ -33,7 +33,9 @@ window.RecipeSummaryView = Backbone.View.extend({
         this.render();
     },
     render: function () {
-        this.$el.html(this.template(this.model.attributes));
+        this.$el.html(this.template(_.extend({
+            last_result_started: this.model.get_last_result_started()},
+            this.model.attributes)));
     },
 });
 
