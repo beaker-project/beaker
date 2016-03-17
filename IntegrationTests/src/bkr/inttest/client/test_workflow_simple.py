@@ -185,6 +185,31 @@ class WorkflowSimpleTest(ClientTestCase):
                 '--task', self.task.name])
         self.assertIn('<device vendor_id="8086"/>', out)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=883020
+    def test_hostrequire_shows_error_for_unparseable_values(self):
+        with self.assertRaises(ClientError) as assertion:
+            out = run_client(['bkr', 'workflow-simple',
+                    '--dryrun', '--prettyxml',
+                    '--hostrequire', 'asdf',
+                    '--arch', self.distro_tree.arch.arch,
+                    '--family', self.distro.osversion.osmajor.osmajor,
+                    '--task', self.task.name])
+        self.assertIn(
+                '--hostrequire option must be in the form "TAG OPERATOR VALUE"',
+                assertion.exception.stderr_output)
+
+    def test_keyvalue_shows_error_for_unparseable_values(self):
+        with self.assertRaises(ClientError) as assertion:
+            out = run_client(['bkr', 'workflow-simple',
+                    '--dryrun', '--prettyxml',
+                    '--keyvalue', 'asdf',
+                    '--arch', self.distro_tree.arch.arch,
+                    '--family', self.distro.osversion.osmajor.osmajor,
+                    '--task', self.task.name])
+        self.assertIn(
+                '--keyvalue option must be in the form "KEY OPERATOR VALUE"',
+                assertion.exception.stderr_output)
+
     def test_reserve(self):
         out = run_client(['bkr', 'workflow-simple',
                 '--dry-run', '--pretty-xml',

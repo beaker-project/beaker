@@ -604,6 +604,12 @@ class BeakerWorkflow(BeakerCommand):
             recipe = None
         return recipe
 
+class BeakerJobTemplateError(ValueError):
+    """
+    Raised to indicate that something invalid or impossible has been requested 
+    while a BeakerJob template was being used to generate a job definition.
+    """
+    pass
 
 class BeakerBase(object):
     doc = xml.dom.minidom.Document()
@@ -734,7 +740,10 @@ class BeakerRecipeBase(BeakerBase):
                 self.addHostRequires(systemType)
             p2 = re.compile(r'\s*([\!=<>]+|&gt;|&lt;|(?<=\s)like(?=\s))\s*')
             for keyvalue in keyvalues:
-                key, op, value = p2.split(keyvalue,3)
+                splitkeyvalue = p2.split(keyvalue,3)
+                if len(splitkeyvalue) != 3:
+                    raise BeakerJobTemplateError('--keyvalue option must be in the form "KEY OPERATOR VALUE"')
+                key, op, value = splitkeyvalue
                 mykeyvalue = self.doc.createElement('key_value')
                 mykeyvalue.setAttribute('key', '%s' % key)
                 mykeyvalue.setAttribute('op', '%s' % op)
@@ -744,7 +753,10 @@ class BeakerRecipeBase(BeakerBase):
                 if require.lstrip().startswith('<'):
                     myrequire = xml.dom.minidom.parseString(require).documentElement
                 else:
-                    key, op, value = p2.split(require,3)
+                    splitrequire = p2.split(require,3)
+                    if len(splitrequire) != 3:
+                        raise BeakerJobTemplateError('--hostrequire option must be in the form "TAG OPERATOR VALUE"')
+                    key, op, value = splitrequire
                     myrequire = self.doc.createElement('%s' % key)
                     myrequire.setAttribute('op', '%s' % op)
                     myrequire.setAttribute('value', '%s' % value)
@@ -912,11 +924,11 @@ EOF
             partition = self.doc.createElement('partition')
             partition.setAttribute('name', str(name))
         else:
-            raise ValueError(u'You must specify name when adding a partition')
+            raise BeakerJobTemplateError(u'You must specify name when adding a partition')
         if size:
             partition.setAttribute('size', str(size))
         else:
-            raise ValueError(u'You must specify size when adding a partition')
+            raise BeakerJobTemplateError(u'You must specify size when adding a partition')
         if type:
             partition.setAttribute('type', str(type))
         if fs:
