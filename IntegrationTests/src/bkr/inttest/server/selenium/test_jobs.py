@@ -302,6 +302,15 @@ class TestViewJob(WebDriverTestCase):
         activity_row.find_element_by_xpath('./td[4][text()="%s"]' % job.t_id)
         activity_row.find_element_by_xpath('./td[6][text()="%s"]' % u'change')
 
+    def test_view_job_which_does_not_have_submitter(self):
+        with session.begin():
+            job = data_setup.create_job()
+            job.submitter = None
+        b = self.browser
+        login(b)
+        self.go_to_job_page(job)
+        b.find_element_by_xpath('//button[normalize-space(string(.))="Edit"]')
+
     def test_export_xml(self):
         # Make sure the export link is present on the jobs page. We can't click 
         # it because WebDriver can't handle XML documents in the browser. 
@@ -1322,6 +1331,19 @@ class JobHTTPTest(DatabaseTestCase):
         json = response.json()
         self.assertEquals(json['id'], self.job.id)
         self.assertEquals(json['owner']['user_name'], self.owner.user_name)
+
+    def test_get_job_which_does_not_have_submitter(self):
+        # A job may not have a submitter prior to Beaker 14.
+        # In this case, it should return the owner as the submitter.
+        with session.begin():
+            job = data_setup.create_job(owner=self.owner)
+            job.submitter = None
+        response = requests.get(get_server_base() + 'jobs/%s' % job.id,
+                headers={'Accept': 'application/json'})
+        response.raise_for_status()
+        json = response.json()
+        self.assertEquals(json['id'], job.id)
+        self.assertEquals(json['submitter']['user_name'], self.owner.user_name)
 
     def test_get_job_xml(self):
         response = requests.get(get_server_base() + 'jobs/%s.xml' % self.job.id)

@@ -679,7 +679,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         data = {
             'id': self.id,
             't_id': self.t_id,
-            'submitter': self.submitter,
+            'submitter': self.submitter or self.owner, # submitter may be NULL prior to Beaker 0.14
             'owner': self.owner,
             'group': self.group,
             'status': self.status,
