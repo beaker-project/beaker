@@ -268,6 +268,8 @@ Beaker 22.2
   Callaghan)
 * :issue:`1304927`: Fixed a regression in Beaker 22.0 which caused all search
   queries on the Reserve Report to be ignored. (Contributed by Dan Callaghan)
+* :issue:`1308625`: Fixed an error which prevented adding owners to inverted
+  groups. (Contributed by Matt Jia)
 * :issue:`1311904`: Fixed unintentional usage of ECMAScript 6 features on the
   group page, which caused errors when using the page in Google Chrome 44. 
   (Contributed by Matt Jia)
