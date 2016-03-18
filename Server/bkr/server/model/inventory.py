@@ -1556,7 +1556,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
 
     def suspicious_abort(self):
         # Delayed import to avoid circular dependency
-        from . import Recipe, RecipeResource
+        from . import Recipe
         if self.status == SystemStatus.broken:
             return # nothing to do
         if self.type != SystemType.machine:
@@ -1575,7 +1575,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
                 SystemActivity.field_name == u'Status',
                 SystemActivity.action == u'Changed'))\
             .subquery()
-        nonsuspicious_aborted_recipe_subquery = self.dyn_recipes.join(Recipe.resource)\
+        nonsuspicious_aborted_recipe_subquery = self.dyn_recipes\
             .filter(not_(Recipe.is_suspiciously_aborted))\
             .with_entities(func.max(Recipe.finish_time))\
             .subquery()
