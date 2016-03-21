@@ -7,9 +7,6 @@
 ;(function () {
 
 window.RecipeQuickInfoView = Backbone.View.extend({
-    initialize: function () {
-        this.render();
-    },
     render: function () {
         this.$el.empty();
         new RecipeSummaryView({model: this.model}).$el

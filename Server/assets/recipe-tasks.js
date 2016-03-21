@@ -7,55 +7,46 @@
 ;(function () {
 
 window.RecipeTasksView = Backbone.View.extend({
+    className: 'tab-pane recipe-tasks',
     initialize: function () {
         this.render();
     },
-    expand_recipetask: function(task_id) {
+    expand_task_ids: function (ids) {
+        // We set the classes and heights directly here, rather than invoking 
+        // the Boostrap plugins "properly" by calling .collapse(), so that the 
+        // transitions are skipped and no events are fired. We only want that 
+        // to happen when a *user* does the expanding, not a script.
         this.$('.recipe-task')
-            .filter('#task' + task_id)
+            .has('.collapse.in')
+            .filter(function () { return !_.contains(ids, this.dataset.taskId); })
+            .find('.collapse')
+            .removeClass('in')
+            .height(0);
+        this.$('.recipe-task')
+            .filter(function () { return _.contains(ids, this.dataset.taskId); })
             .find('.collapse')
             .addClass('in')
-            .css('height', 'auto')
-            .trigger('shown');
+            .height('auto');
+    },
+    expanded_task_ids: function () {
+        var expanded = this.$('.recipe-task').has('.collapse.in');
+        return _.map(expanded.get(), function (elem) { return elem.dataset.taskId; });
     },
     render: function () {
-        var $el = this.$el;
+        var view = this;
         var model= this.model;
-        $el.empty().append(new RecipeTasksSummary({model: model}).render().el);
-        var is_finished = _.every(model.get('tasks'), function(task) {
-                return task.get('is_finished') == true; }) ? true : false;
-        var all_collapsed = true;
-        var expand_task_id;
+        this.$el.empty().append(new RecipeTasksSummary({model: model}).render().el);
         _.each(model.get('tasks'), function (task) {
             var recipe_task = $('<div/>', {"class": "recipe-task",
-                    "id": "task" + task.id});
+                    "id": "task" + task.id, "data-task-id": task.id});
             var task_summary = new RecipeTaskSummary({model: task,
                 recipe_start_time: model.get('start_time')}).render().el;
             var task_details = new RecipeTaskDetails({model: task,
                 recipe_start_time: model.get('start_time')}).render().el;
             recipe_task.append(task_summary).append(task_details);
-            var status = task.get('status');
-            var result = task.get('result');
-            var expand = false;
-            // expand the currently running task if the recipe is not finished.
-            if (is_finished) {
-                // expand the first failed task
-                if ((result == 'Warn' || result == 'Fail' || result == 'Panic') &&
-                    all_collapsed) {
-                    expand_task_id = task.get('id');
-                    all_collapsed = false;
-                }
-            } else {
-                // expand the currently running task
-                if (status == 'Running') {
-                    expand_task_id = task.get('id');
-                }
-            }
-            $el.append(recipe_task);
+            recipe_task.find('.collapse').on('shown hidden', function () { view.trigger('expand:task'); });
+            view.$el.append(recipe_task);
         });
-        if(expand_task_id) {
-            this.expand_recipetask(expand_task_id);
-        }
     }
 });
 

@@ -13,7 +13,6 @@ window.RecipePageHeaderView = Backbone.View.extend({
     },
     initialize: function () {
         this.listenTo(this.model, 'change', this.render);
-        this.render();
     },
     render: function () {
         var all_recipes = _.size(this.model.get('recipeset').get('job').all_recipes());

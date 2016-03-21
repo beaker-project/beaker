@@ -164,7 +164,7 @@ from bkr.server.reports import Reports
     </div>
 </nav>
 
-<div class="container-fluid">
+<div id="container" class="container-fluid">
 
     <?python
     from bkr.server import motd

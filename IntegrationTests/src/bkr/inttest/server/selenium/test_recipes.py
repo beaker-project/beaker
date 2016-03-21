@@ -7,6 +7,7 @@
 import datetime
 import logging
 import re
+import urlparse
 import requests
 import lxml.etree
 from turbogears.database import session
@@ -204,7 +205,32 @@ class TestRecipeView(WebDriverTestCase):
             session.refresh(recipe)
             self.assertEqual(recipe.whiteboard, 'testwhiteboard')
 
-    def test_first_faild_task_should_expand_when_first_loading(self):
+    def test_shows_reservation_tab_when_reserved(self):
+        with session.begin():
+            recipe = data_setup.create_recipe(reservesys=True)
+            job = data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_tasks_finished(recipe)
+            job.update_status()
+            self.assertEqual(recipe.status, TaskStatus.reserved)
+        b = self.browser
+        self.go_to_recipe_view(recipe)
+        b.find_element_by_css_selector('#reservation.active')
+        _, fragment = urlparse.urldefrag(b.current_url)
+        self.assertEquals(fragment, 'reservation')
+
+    def test_shows_installation_tab_while_installing(self):
+        with session.begin():
+            recipe = data_setup.create_recipe()
+            job = data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_waiting(recipe)
+            job.update_status()
+        b = self.browser
+        self.go_to_recipe_view(recipe)
+        b.find_element_by_css_selector('#installation.active')
+        _, fragment = urlparse.urldefrag(b.current_url)
+        self.assertEquals(fragment, 'installation')
+
+    def test_first_failed_task_should_expand_when_first_loading(self):
         with session.begin():
             recipe = data_setup.create_recipe(task_list=[
                 Task.by_name(u'/distribution/install'),
@@ -214,11 +240,12 @@ class TestRecipeView(WebDriverTestCase):
             data_setup.mark_recipe_tasks_finished(recipe, result=TaskResult.fail)
             job.update_status()
         b = self.browser
-        self.go_to_recipe_view(recipe, tab='Tasks')
-        tab = b.find_element_by_id('tasks')
+        self.go_to_recipe_view(recipe)
         # The in class is an indication that a task is expanded.
-        tab.find_element_by_xpath('//div[@id="recipe-task-details-%s" and '
-            'contains(@class, "in")]' % recipe.tasks[0].id)
+        b.find_element_by_css_selector('#task%s .recipe-task-details.collapse.in'
+                % recipe.tasks[0].id)
+        _, fragment = urlparse.urldefrag(b.current_url)
+        self.assertEquals(fragment, 'task%s' % recipe.tasks[0].id)
 
     def test_task_without_failed_results_should_not_expand(self):
         with session.begin():
@@ -230,11 +257,38 @@ class TestRecipeView(WebDriverTestCase):
             data_setup.mark_recipe_tasks_finished(recipe, result=TaskResult.pass_)
             job.update_status()
         b = self.browser
-        self.go_to_recipe_view(recipe, tab='Tasks')
-        tab = b.find_element_by_id('tasks')
+        self.go_to_recipe_view(recipe)
         for task in recipe.tasks:
-            tab.find_element_by_xpath('//div[@id="recipe-task-details-%s" and '
+            b.find_element_by_xpath('//div[@id="recipe-task-details-%s" and '
                     'not(contains(@class, "in"))]' % task.id)
+        _, fragment = urlparse.urldefrag(b.current_url)
+        self.assertEquals(fragment, 'tasks')
+
+    def test_tasks_are_expanded_according_to_anchor(self):
+        with session.begin():
+            recipe = data_setup.create_recipe(num_tasks=2)
+            job = data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_tasks_finished(recipe, result=TaskResult.pass_)
+            job.update_status()
+        b = self.browser
+        b.get(get_server_base() + 'recipes/%s#task%s,task%s'
+                % (recipe.id, recipe.tasks[0].id, recipe.tasks[1].id))
+        b.find_element_by_css_selector('#task%s .recipe-task-details.collapse.in'
+                % recipe.tasks[0].id)
+        b.find_element_by_css_selector('#task%s .recipe-task-details.collapse.in'
+                % recipe.tasks[1].id)
+
+    def test_unrecognised_anchor_is_replaced_with_default(self):
+        with session.begin():
+            recipe = data_setup.create_recipe()
+            job = data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_waiting(recipe)
+            job.update_status()
+        b = self.browser
+        b.get(get_server_base() + 'recipes/%s#no-such-anchor-exists' % recipe.id)
+        b.find_element_by_css_selector('#installation.active')
+        _, fragment = urlparse.urldefrag(b.current_url)
+        self.assertEquals(fragment, 'installation')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=706435
     def test_task_start_time_is_localised(self):

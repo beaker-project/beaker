@@ -7,6 +7,7 @@
 ;(function () {
 
 window.RecipeInstallationView = Backbone.View.extend({
+    className: 'tab-pane recipe-installation',
     template: JST['recipe-installation'],
     initialize: function() {
         this.render();

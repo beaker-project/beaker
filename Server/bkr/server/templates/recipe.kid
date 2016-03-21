@@ -10,11 +10,11 @@
     var recipe = new Recipe(${tg.to_json(recipe.to_json(include_recipeset=True))},
         {parse: true, url: ${tg.to_json(tg.url(recipe.href))}});
     $(function () {
-        new RecipePageHeaderView({model: recipe, el: $('.recipe-page-header')});
-        new RecipeQuickInfoView({model: recipe, el: $('.recipe-quick-info')});
-        new RecipeInstallationView({model: recipe, el: $('.recipe-installation')});
-        new RecipeTasksView({model: recipe, el: $('.recipe-tasks')});
-        new RecipeReservationView({model: recipe, el: $('.recipe-reservation')});
+        var layout = new RecipePageLayout({model: recipe});
+        $('#container').append(layout.el);
+        // Bootstrap tabs don't work properly until they are inserted into the DOM >:(
+        // so we have to do this here, after insertion, and not inside .render()
+        layout.update_viewstate_from_hash();
     });
     // auto-refresh while the job is not finished
     var autofetch = function () {
@@ -24,21 +24,6 @@
         }
     };
     _.delay(autofetch, 30000);
-  </script>
-  <div class="recipe-page-header"></div>
-  <div class="recipe-quick-info"></div>
-  <ul class="nav nav-tabs recipe-nav">
-    <li><a data-toggle="tab" href="#installation">Installation</a></li>
-    <li><a data-toggle="tab" href="#tasks">Tasks</a></li>
-    <li><a data-toggle="tab" href="#reservation">Reservation</a></li>
-  </ul>
-  <div class="tab-content recipe-tabs">
-    <div class="tab-pane recipe-installation" id="installation"></div>
-    <div class="tab-pane recipe-tasks" id="tasks"></div>
-    <div class="tab-pane recipe-reservation" id="reservation"></div>
-  </div>
-  <script type="text/javascript">
-    $(function () { link_tabs_to_anchor('beaker_recipe_tabs', '.recipe-nav'); });
   </script>
 </body>
 </html>

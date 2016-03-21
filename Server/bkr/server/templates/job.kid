@@ -16,7 +16,7 @@
         if (old_anchor_match != null) {
             location.hash = '#set' + old_anchor_match[1];
         }
-        $('.container-fluid')
+        $('#container')
             .append(new JobHeaderView({model: job}).el)
             .append(new JobInfoView({model: job}).el)
             .append(new JobRecipesView({model: job}).el);

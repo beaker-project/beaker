@@ -7,6 +7,7 @@
 ;(function () {
 
 window.RecipeReservationView = Backbone.View.extend({
+    className: 'tab-pane recipe-reservation',
     initialize: function () {
         this.listenTo(this.model, 'change', this.render);
         this.render();
