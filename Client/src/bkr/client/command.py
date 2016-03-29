@@ -139,7 +139,7 @@ class PluginContainer(object):
         parent_plugins = cls._get_parent_plugins(cls.normalize_name).items()
         class_plugins = getattr(cls, "_class_plugins", {}).items()
         for name, plugin_class in parent_plugins + class_plugins:
-            result[name] = type(plugin_class.__name__, (plugin_class, ), {"__doc__": plugin_class.__doc__})
+            result[name] = plugin_class
         return result
 
     @classmethod
@@ -190,7 +190,7 @@ class PluginContainer(object):
         return plugin
 
     @classmethod
-    def register_plugin(cls, plugin):
+    def register_plugin(cls, plugin, name=None):
         """Register a new plugin. Return normalized plugin name."""
 
         if cls is PluginContainer:
@@ -202,9 +202,10 @@ class PluginContainer(object):
         if not getattr(plugin, "enabled", False):
             return
 
-        normalized_name = cls.normalize_name(plugin.__name__)
-        cls._class_plugins[normalized_name] = plugin
-        return normalized_name
+        if not name:
+            name = cls.normalize_name(plugin.__name__)
+        cls._class_plugins[name] = plugin
+        return name
 
     @classmethod
     def register_module(cls, module, prefix=None, skip_broken=False):

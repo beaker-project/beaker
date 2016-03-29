@@ -8,6 +8,7 @@
 
 import os
 import sys
+import pkg_resources
 from optparse import Option, IndentedHelpFormatter, SUPPRESS_HELP
 import xmlrpclib
 import cgi
@@ -22,7 +23,19 @@ __all__ = (
 
 
 class BeakerCommandContainer(ClientCommandContainer):
-    pass
+
+    @classmethod
+    def register_all(cls):
+        # Load all modules in the bkr.client.commands package as commands, for 
+        # backwards compatibility with older packages that just drop their files 
+        # into the bkr.client.commands package.
+        import bkr.client.commands
+        cls.register_module(bkr.client.commands, prefix='cmd_')
+        # Load subcommands from setuptools entry points in the bkr.client.commands 
+        # group. This is the new, preferred way for other packages to provide their 
+        # own bkr subcommands.
+        for entrypoint in pkg_resources.iter_entry_points('bkr.client.commands'):
+            cls.register_plugin(entrypoint.load(), name=entrypoint.name)
 
 class BeakerOptionParser(CommandOptionParser):
     standard_option_list = [
@@ -36,14 +49,10 @@ class BeakerOptionParser(CommandOptionParser):
             help=SUPPRESS_HELP),
     ]
 
-# register default command plugins
-import bkr.client.commands
+BeakerCommandContainer.register_all()
 from bkr.client import conf, BeakerJobTemplateError
-BeakerCommandContainer.register_module(bkr.client.commands, prefix="cmd_")
-
 
 def main():
-
     global conf
     command_container = BeakerCommandContainer(conf=conf)
     formatter = IndentedHelpFormatter(max_help_position=60, width=120)
