@@ -263,31 +263,55 @@ class Utility:
             if custom_options:
                 options.update(custom_options())
 
-            return name_string,title_string,options,my_getter
+            return dict(name=name_string, title=title_string, options=options, getter=my_getter)
 
         fields = []
+        systems = sorted(list(systems))
         if systems:
+            default_result_column_order = (
+                'System/Name',
+                'System/Arch',
+                'System/Vendor',
+                'System/Model',
+            )
+            widget_attrs = []
+
+            for column_desc in default_result_column_order:
+                table, column = column_desc.split('/')
+                if column_desc in systems:
+                    widget_attrs.append((table, column))
+
             for column_desc in systems:
-                table,column = column_desc.split('/')
-                if column.lower() in ('name', 'vendor', 'lender', 'location',
-                                      'memory', 'model', 'location', 'status', 'user', 'reserved',
-                                      'type', 'powertype'):
-                    sort_me = True
-                else:
-                    sort_me = False
+                if column_desc in default_result_column_order:
+                    continue
 
-                if others:
-                    (name_string, title_string, options, my_getter) = get_widget_attrs(table, column, with_desc=True, sortable=sort_me)
-                else:
-                    (name_string, title_string, options, my_getter) = get_widget_attrs(table, column, with_desc=False, sortable=sort_me)
+                table, column = column_desc.split('/')
+                widget_attrs.append((table, column))
 
-                new_widget = widgets.PaginateDataGrid.Column(name=name_string, getter=my_getter, title=title_string, options=options)
-                if column == 'Name':
-                    fields.insert(0, new_widget)
-                else:
-                    fields.append(new_widget)
+            for table, column in widget_attrs:
+                attrs = get_widget_attrs(table, column, with_desc=others, sortable=field_is_sortable(column))
+                widget = widgets.PaginateDataGrid.Column(**attrs)
+                fields.append(widget)
 
         return fields
+
+def field_is_sortable(column):
+    sortable_fields = (
+        'name',
+        'vendor',
+        'lender',
+        'location',
+        'memory',
+        'model',
+        'location',
+        'status',
+        'user',
+        'reserved',
+        'type',
+        'powertype',
+    )
+    return column.lower() in sortable_fields
+
 
 def restrict_http_method(method):
     def outer(fn):

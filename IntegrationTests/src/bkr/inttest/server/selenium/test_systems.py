@@ -42,8 +42,7 @@ class TestSystemsGrid(WebDriverTestCase):
         b.find_element_by_xpath('/html/head/link[@rel="feed" '
                 'and @title="Atom feed" and contains(@href, "tg_format=atom")]')
 
-    # https://bugzilla.redhat.com/show_bug.cgi?id=704082
-    def test_show_all_columns_works(self):
+    def show_all_columns(self):
         b = self.browser
         b.get(get_server_base())
         b.find_element_by_link_text('Show Search Options').click()
@@ -52,10 +51,50 @@ class TestSystemsGrid(WebDriverTestCase):
         b.find_element_by_link_text('Toggle Result Columns').click()
         b.find_element_by_link_text('Select All').click()
         b.find_element_by_id('searchform').submit()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=704082
+    def test_show_all_columns_works(self):
+        self.show_all_columns()
+
+        b = self.browser
         b.find_element_by_xpath('//title[text()="Systems"]')
         # check number of columns in the table
         ths = b.find_elements_by_xpath('//table[@id="widget"]//th')
         self.assertEquals(len(ths), 31)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1321740
+    def test_grid_columns_order_is_preserved(self):
+        self.show_all_columns()
+
+        b = self.browser
+        b.find_element_by_xpath('//title[text()="Systems"]')
+        # headings should stay sorted after a reload
+        headings = [th.text for th in
+                b.find_elements_by_xpath('//table[@id="widget"]/thead//th')]
+        b.find_element_by_link_text('System-Name').click()
+
+        new_headings = [th.text for th in
+                        b.find_elements_by_xpath('//table[@id="widget"]/thead//th')]
+        self.assertEqual(headings, new_headings)
+
+    def test_first_columns_order_is_fixed(self):
+        expected_headings = ['System-Name', 'System-Arch', 'System-Vendor', 'System-Model']
+        self.show_all_columns()
+
+        b = self.browser
+        b.find_element_by_xpath('//title[text()="Systems"]')
+        headings = [th.text for th in
+                b.find_elements_by_xpath('//table[@id="widget"]/thead//th')]
+
+        # these headings should always be the first in that order
+        self.assertEqual(expected_headings, headings[:4])
+
+        # they stay fixed even after a reload
+        b.find_element_by_link_text('System-Name').click()
+        headings = [th.text for th in
+                b.find_elements_by_xpath('//table[@id="widget"]/thead//th')]
+        self.assertEqual(expected_headings, headings[:4])
+
 
 class TestSystemsGridSorting(WebDriverTestCase):
 

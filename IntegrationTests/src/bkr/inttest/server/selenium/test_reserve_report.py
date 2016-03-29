@@ -27,9 +27,9 @@ class ReserveReportTest(WebDriverTestCase):
         b = self.browser
         headers = b.find_elements_by_xpath('//div/table[@id="widget"]/thead/tr/th')
         expected = [u'Name',
+                    u'LoanedTo',
+                    u'Pools',
                     u'Reserved',
                     u'User',
-                    u'Pools',
-                    u'LoanedTo',
                     ]
         self.assertEqual(expected, [x.text for x in headers])
