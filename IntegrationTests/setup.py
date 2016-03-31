@@ -12,7 +12,7 @@ def get_compose_layout():
 
 setup(
     name='bkr.inttest',
-    version='beaker-22.3',
+    version='22.3',
     packages=find_packages('src'),
     package_dir={'': 'src'},
     package_data={'': [
