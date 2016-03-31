@@ -28,8 +28,7 @@ circumstances:
 * when there is a run of suspicious aborted recipes
 
   A recipe is considered "suspicious" (that is, indicating the system might be
-  broken) if all tasks in the recipe are aborted and the installation did not
-  start.
+  broken) if all tasks in the recipe are aborted.
 
   It is considered to be a "run" if there has been two or more consecutive
   suspicious recipes, with no intervening non-suspicious recipes and no manual

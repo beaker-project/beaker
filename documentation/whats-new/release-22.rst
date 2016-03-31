@@ -268,6 +268,8 @@ Beaker 22.2
   Callaghan)
 * :issue:`1304927`: Fixed a regression in Beaker 22.0 which caused all search
   queries on the Reserve Report to be ignored. (Contributed by Dan Callaghan)
+* :issue:`1308625`: Fixed an error which prevented adding owners to inverted
+  groups. (Contributed by Matt Jia)
 * :issue:`1311904`: Fixed unintentional usage of ECMAScript 6 features on the
   group page, which caused errors when using the page in Google Chrome 44. 
   (Contributed by Matt Jia)
@@ -284,3 +286,25 @@ been released:
   inform beah about the upcoming reboot when it is run outside of the beah 
   execution environment. This avoids a confusing traceback in the output. 
   (Contributed by Dan Callaghan)
+
+Beaker 22.3
+~~~~~~~~~~~
+
+* :issue:`1296552`: Beaker now considers an aborted reciped to be "suspicious"
+  for the purposes of :doc:`broken system detection 
+  <../user-guide/systems/broken-system-detection>` if all tasks in the recipe 
+  are Aborted -- regardless of whether the installation started or not. This 
+  restores the original behaviour prior to Beaker 21.2. (Contributed by Róman 
+  Joost)
+* :issue:`1313580`: When the :program:`bkr` client is configured to use
+  a Kerberos keytab for authentication, it will now use a unique temporary 
+  filename for the Kerberos credentials cache. This is to workaround a race 
+  condition in libkrb5 when multiple processes are initializing a shared 
+  credentials cache file. (Contributed by Dan Callaghan)
+* :issue:`1316045`: Fixed an error in the JUnit XML results output, when
+  a recipe was cancelled or aborted before it started. (Contributed by Matt 
+  Jia)
+* :issue:`883020`: The :program:`bkr` workflow commands now show a more
+  descriptive error message in case a malformed value is passed to the 
+  :option:`--hostrequire <bkr --hostrequire>` or
+  :option:`--keyvalue <bkr --keyvalue>` options. (Contributed by Dan Callaghan)

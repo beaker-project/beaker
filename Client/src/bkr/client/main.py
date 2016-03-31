@@ -38,7 +38,7 @@ class BeakerOptionParser(CommandOptionParser):
 
 # register default command plugins
 import bkr.client.commands
-from bkr.client import conf
+from bkr.client import conf, BeakerJobTemplateError
 BeakerCommandContainer.register_module(bkr.client.commands, prefix="cmd_")
 
 
@@ -87,6 +87,9 @@ def main():
         content_type, _ = cgi.parse_header(e.response.headers.get('Content-Type', ''))
         if content_type == 'text/plain':
             sys.stderr.write(e.response.content.rstrip('\n') + '\n')
+        return 1
+    except BeakerJobTemplateError, e:
+        sys.stderr.write('%s\n' % e)
         return 1
 
 
