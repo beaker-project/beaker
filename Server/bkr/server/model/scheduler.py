@@ -3329,6 +3329,8 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
             raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
         if not self.start_time:
             raise BX(_('recipe task %s was never started' % self.id))
+        if self.is_finished():
+            raise ValueError('Cannot change status for finished task %s' % self.t_id)
         if self.start_time and not self.finish_time:
             self.finish_time = datetime.utcnow()
         self._change_status(TaskStatus.completed)

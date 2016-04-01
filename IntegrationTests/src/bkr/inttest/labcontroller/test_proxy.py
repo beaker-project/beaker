@@ -260,6 +260,26 @@ class TaskStatusTest(LabControllerTestCase):
             task = self.recipe.tasks[0]
             self.assertEquals(task.status, TaskStatus.completed)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1322219
+    def test_cannot_complete_aborted_task(self):
+        # The scenario is that the task itself invokes rhts-abort -t recipe, 
+        # which aborts all tasks, and then the harness tries to complete the 
+        # task. We want the task to stay Aborted, not Completed, so the stop 
+        # request should fail.
+        with session.begin():
+            self.recipe.abort('someone ran rhts-abort -t recipe')
+        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        try:
+            s.task_stop(self.recipe.tasks[0].id, 'stop')
+            self.fail('should raise')
+        except xmlrpclib.Fault as fault:
+            self.assertIn('Cannot change status for finished task',
+                    fault.faultString)
+        with session.begin():
+            session.expire_all()
+            task = self.recipe.tasks[0]
+            self.assertEquals(task.status, TaskStatus.aborted)
+
     def test_xmlrpc_task_abort(self):
         s = xmlrpclib.ServerProxy(self.get_proxy_url())
         s.task_stop(self.recipe.tasks[0].id, 'abort', 'fooed the bar up')
