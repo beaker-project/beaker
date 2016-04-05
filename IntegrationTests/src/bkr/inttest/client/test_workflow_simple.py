@@ -453,3 +453,12 @@ install
         with session.begin():
             job = Job.by_id(job_id)
             self.assertEquals(job.recipesets[0].recipes[0].ks_meta, u'')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1323921
+    def test_can_do_dry_run_anonymously(self):
+        config = create_client_config(username=u'ignored', password=u'ignored',
+                auth_method=u'none')
+        out = run_client(['bkr', 'workflow-simple', '--distro', self.distro.name,
+                '--task', self.task.name, '--dry-run', '--pretty-xml'],
+                config=config)
+        self.assertIn('<job', out)
