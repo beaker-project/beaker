@@ -24,7 +24,7 @@ class HubProxy(object):
     """A Hub client (thin ServerProxy wrapper)."""
 
     def __init__(self, conf, client_type=None, logger=None, transport=None,
-            auto_login=True, auto_logout=True, timeout=120, **kwargs):
+            auto_login=True, timeout=120, **kwargs):
         self._conf = PyConfigParser()
         self._hub = None
 
@@ -43,7 +43,6 @@ class HubProxy(object):
         self._client_type = client_type or "client"
         self._hub_url = self._conf["HUB_URL"]
         self._auth_method = self._conf["AUTH_METHOD"]
-        self._auto_logout = auto_logout
         self._logger = logger
         self._logged_in = False
 
@@ -71,11 +70,6 @@ class HubProxy(object):
     def __del__(self):
         if hasattr(self._transport, "retry_count"):
             self._transport.retry_count = 0
-        if getattr(self, "_auto_logout", False) and self._logged_in:
-            try:
-                self._logout()
-            except:
-                pass
 
     def __getattr__(self, name):
         try:
@@ -95,32 +89,22 @@ class HubProxy(object):
         if not hasattr(self, login_method_name):
             raise ImproperlyConfigured("Unknown authentication method: %s" % self._auth_method)
 
-        if force or self._hub.auth.renew_session():
-            self._logger and self._logger.info("Creating new session...")
-            try:
-                # logout to delete current session information
-                self._logout()
-            except KeyboardInterrupt:
-                raise
-            except Exception, ex:
-                self._logger and self._logger.error("Failed to log out: %s" % ex)
-
-            try:
-                login_method = getattr(self, login_method_name)
-                login_method()
-                self._logged_in = True
-            except KeyboardInterrupt:
-                raise
-            except Exception, ex:
-                self._logger and self._logger.error("Failed to create new session: %s" % ex)
-                raise
-            else:
-                self._logger and self._logger.info("New session created.")
+        self._logger and self._logger.info("Creating new session...")
+        try:
+            login_method = getattr(self, login_method_name)
+            login_method()
+            self._logged_in = True
+        except KeyboardInterrupt:
+            raise
+        except Exception, ex:
+            self._logger and self._logger.error("Failed to create new session: %s" % ex)
+            raise
+        else:
+            self._logger and self._logger.info("New session created.")
 
     def _logout(self):
-        """Logout from hub"""
-        if hasattr(self, "_hub"):
-            self._hub.auth.logout()
+        """No-op for backwards compatibility."""
+        pass
 
     def _login_password(self):
         """Login using username and password."""

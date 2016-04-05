@@ -104,7 +104,7 @@ class ProxyHelper(object):
 
         # self.hub is created here
         self.hub = HubProxy(logger=logging.getLogger('bkr.common.hub.HubProxy'), conf=self.conf,
-                auto_logout=False, **kwargs)
+                **kwargs)
         self.log_storage = LogStorage(self.conf.get("CACHEPATH"),
                 "%s://%s/beaker/logs" % (self.conf.get('URL_SCHEME',
                 'http'), self.conf.get_url_domain()),
