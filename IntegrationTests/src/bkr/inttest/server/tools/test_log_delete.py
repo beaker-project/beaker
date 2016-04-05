@@ -152,10 +152,11 @@ class LogDelete(DatabaseTestCase):
             self.job_to_delete.to_delete = datetime.datetime.utcnow()
             recipe = self.job_to_delete.recipesets[0].recipes[0]
             ks = RenderedKickstart(kickstart=u'This is not a real kickstart.')
-            recipe.rendered_kickstart = ks
+            recipe.installation.rendered_kickstart = ks
         log_delete.log_delete()
         with session.begin():
-            self.assertEqual(Recipe.by_id(recipe.id).rendered_kickstart, None)
+            session.expire_all()
+            self.assertEqual(recipe.installation.rendered_kickstart, None)
             self.assertRaises(NoResultFound, RenderedKickstart.by_id, ks.id)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1273302

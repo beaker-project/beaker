@@ -1,0 +1,81 @@
+
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+
+// This file contains styles which apply to both the job and recipe pages,
+// where we want to follow the same visual pattern across them both.
+.alternative-formats {
+    margin-top: 1em;
+    float: right;
+    p {
+        display: inline;
+    }
+    ul {
+        display: inline;
+        margin: 0;
+        list-style: none;
+        > li {
+            display: inline;
+        }
+        > li + li {
+            padding-left: 0.5em;
+        }
+        > li + li:before {
+            content: "\00b7"; /* middot */
+            padding-right: 0.5em;
+            .muted;
+        }
+    }
+}
+.job-recipes .recipe-status, .recipe-tasks .recipe-status {
+    white-space: nowrap;
+    text-align: right;
+    .label {
+        font-size: 1em;
+    }
+    .progress-text {
+        margin-right: 0.5em;
+    }
+    .progress {
+            display: inline-block;
+            min-width: 200px;
+            max-height: 12px;
+            margin-bottom: 0;
+    }
+}
+
+.popover.comments-popover {
+    min-width: 27em;
+    max-width: 40em;
+    .popover-content {
+        padding: 9px 0;
+    }
+    div.comment, div.comment-form {
+        padding: 0 14px;
+    }
+    div.comment + div.comment, div.comments + div.comment-form {
+        padding-top: 1em;
+        border-top: 1px solid @grayLighter;
+        margin-top: 1em;
+    }
+    p:last-child {
+        margin-bottom: 0;
+    }
+    .comment-metadata {
+        .muted;
+    }
+}
+
+.popover.logs-popover {
+    ul {
+        margin: 0;
+        & > li {
+            max-width: 25em;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+    }
+}

@@ -372,6 +372,19 @@ class UserHTTPTest(DatabaseTestCase):
             session.expire_all()
             self.assertIsNone(user._root_password)
 
+    def test_set_use_old_job_page(self):
+        with session.begin():
+            user = data_setup.create_user(password=u'password')
+            user.use_old_job_page = True
+        s = requests.Session()
+        requests_login(s, user=user.user_name, password='password')
+        response = patch_json(get_server_base() + 'users/%s' % user.user_name,
+                data={'use_old_job_page': False}, session=s)
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(user.use_old_job_page, False)
+
     def test_add_ssh_public_key(self):
         with session.begin():
             user = data_setup.create_user()

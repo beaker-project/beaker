@@ -1,0 +1,10 @@
+<div class="recipe-tasks-summary">
+    <div>
+        <% if (result != 'New') { %>
+            <span class="label label-result-<%- result.toLowerCase() %>"><%- result %></span>
+            with
+        <% } %>
+        <%- finished_task_count %> out of <%- task_count %> tasks finished.
+    </div>
+    <div class="recipe-status"><% /* populated by the render() method */ %></div>
+</div>

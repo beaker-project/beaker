@@ -20,7 +20,8 @@ from bkr.server.model import System, SystemActivity, SystemStatus, SystemPool, \
         SystemPermission, SystemAccessPolicyRule, ImageType, KernelType, \
         VirtResource, Hypervisor, Numa, LabController, SystemType, \
         CommandActivity, Power, PowerType, ReleaseAction, Task, \
-        Recipe, RecipeSet, RecipeTask, RecipeResource, Job, TaskStatus
+        Recipe, RecipeSet, RecipeTask, RecipeResource, Job, TaskStatus, \
+        Installation
 from bkr.server.installopts import InstallOptions
 from bkr.server.kickstart import generate_kickstart
 from bkr.server.app import app
@@ -223,15 +224,21 @@ class SystemsController(controllers.Controller):
                     distro_tree=distro_tree,
                     system=system, user=identity.current.user, kickstart=kickstart)
             options.kernel_options['ks'] = rendered_kickstart.link
-        system.configure_netboot(distro_tree, options.kernel_options_str,
-                service=u'XMLRPC')
+        else:
+            rendered_kickstart = None
+        installation = Installation(distro_tree=distro_tree,
+                kernel_options=options.kernel_options_str,
+                rendered_kickstart=rendered_kickstart)
+        system.installations.append(installation)
+        system.configure_netboot(installation=installation, service=u'XMLRPC')
         system.record_activity(user=identity.current.user,
                 service=u'XMLRPC', action=u'Provision',
                 field=u'Distro Tree', old=u'',
                 new=u'Success: %s' % distro_tree)
 
         if reboot:
-            system.action_power(action='reboot', service=u'XMLRPC')
+            system.action_power(action='reboot', installation=installation,
+                    service=u'XMLRPC')
 
         return system.fqdn # because turbogears makes us return something
 
@@ -1125,7 +1132,6 @@ def provision_system(fqdn):
       installation.
     :jsonparam boolean reboot: If true, the system will be rebooted immediately 
       after the installer netboot configuration has been set up.
-    :status 201: The installation has been successfully enqueued.
     """
     system = _get_system_by_FQDN(fqdn)
     if not system.can_configure_netboot(identity.current.user):
@@ -1146,16 +1152,21 @@ def provision_system(fqdn):
             kickstart = generate_kickstart(install_options,
                     distro_tree=distro_tree, system=system, user=user)
             install_options.kernel_options['ks'] = kickstart.link
-        system.configure_netboot(distro_tree,
-                install_options.kernel_options_str, service=u'HTTP')
+        else:
+            kickstart = None
+        installation = Installation(distro_tree=distro_tree,
+                kernel_options=install_options.kernel_options_str,
+                rendered_kickstart=kickstart,
+                system=system)
+        system.configure_netboot(installation=installation, service=u'HTTP')
         system.record_activity(user=identity.current.user, service=u'HTTP',
                 action=u'Provision', field=u'Distro Tree',
                 new=unicode(distro_tree))
         if data.get('reboot'):
-            system.action_power(action=u'reboot', service=u'HTTP')
-    # in future "installations" will be a real thing in our model,
-    # but for now we have nothing to return
-    return 'Provisioned', 201
+            system.action_power(action=u'reboot', installation=installation,
+                    service=u'HTTP')
+    session.flush() # to get an id
+    return jsonify(installation.__json__())
 
 @app.route('/systems/<fqdn>/commands/', methods=['GET'])
 def get_system_command_queue(fqdn):
@@ -1365,12 +1376,13 @@ def ipxe_script(uuid):
         resource = VirtResource.by_instance_id(uuid)
     except (NoResultFound, ValueError):
         raise NotFound404('Instance is not known to Beaker')
-    if resource.kernel_options is None:
+    recipe = resource.recipe
+    if recipe.installation is None:
         # recipe.provision() hasn't been called yet
         # We need to handle this case because the VM is created and boots up 
         # *before* we generate the kickstart etc
         raise ServiceUnavailable503('Recipe has not been provisioned yet')
-    distro_tree = resource.recipe.distro_tree
+    distro_tree = recipe.distro_tree
     distro_tree_url = distro_tree.url_in_lab(resource.lab_controller,
             scheme=['http', 'ftp'])
     kernel = distro_tree.image_by_type(ImageType.kernel,
@@ -1378,14 +1390,14 @@ def ipxe_script(uuid):
     if not kernel:
         raise BadRequest400('Kernel image not found for distro tree %s'
                 % distro_tree.id)
-    initrd = resource.recipe.distro_tree.image_by_type(ImageType.initrd,
+    initrd = recipe.distro_tree.image_by_type(ImageType.initrd,
             KernelType.by_name(u'default'))
     if not initrd:
         raise BadRequest400('Initrd image not found for distro tree %s'
                 % distro_tree.id)
     kernel_url = urlparse.urljoin(distro_tree_url, kernel.path)
     initrd_url = urlparse.urljoin(distro_tree_url, initrd.path)
-    kernel_options = resource.kernel_options + ' netboot_method=ipxe'
+    kernel_options = recipe.installation.kernel_options + ' netboot_method=ipxe'
 
     # strip out netbootloader=.. string since it doesn't make sense for
     # ipxe

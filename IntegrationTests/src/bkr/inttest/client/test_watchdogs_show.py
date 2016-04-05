@@ -30,6 +30,5 @@ class WatchdogShowTest(ClientTestCase):
         with session.begin():
             r1 = data_setup.create_recipe()
             data_setup.create_job_for_recipes([r1])
-            data_setup.mark_recipe_waiting(r1)
         out = run_client(['bkr', 'watchdog-show', '%s' % r1.tasks[0].id])
         self.assertEquals(out, '%s: N/A\n' % r1.tasks[0].id, out)

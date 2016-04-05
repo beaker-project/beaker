@@ -1,0 +1,35 @@
+
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+
+// OLD, DEPRECATED job and recipe page widgets
+table.job, table.recipe {
+    & > tbody > tr {
+        & > th {
+            text-align: right;
+        }
+        & > th, & > td {
+            border: none;
+        }
+    }
+}
+div.recipeset {
+    border: 2px solid @tableBorder;
+    padding: 1em;
+    margin: 1em 0;
+}
+div.recipe {
+    margin-top: 1em;
+    border-top: 2px solid @tableBorder;
+    padding-top: 1em;
+}
+div.recipe .tab-content {
+    // if the results table overflows we want the viewport to scroll, not the tab pane
+    // https://bugzilla.redhat.com/show_bug.cgi?id=1014962
+    overflow: visible !important;
+}
+table.recipe {
+    margin-bottom: 0;
+}

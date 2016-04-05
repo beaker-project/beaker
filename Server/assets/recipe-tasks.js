@@ -7,75 +7,210 @@
 ;(function () {
 
 window.RecipeTasksView = Backbone.View.extend({
+    className: 'tab-pane recipe-tasks',
+    initialize: function () {
+        this.render();
+    },
+    expand_task_ids: function (ids) {
+        // We set the classes and heights directly here, rather than invoking 
+        // the Boostrap plugins "properly" by calling .collapse(), so that the 
+        // transitions are skipped and no events are fired. We only want that 
+        // to happen when a *user* does the expanding, not a script.
+        this.$('.recipe-task')
+            .has('.collapse.in')
+            .filter(function () { return !_.contains(ids, this.dataset.taskId); })
+            .find('.collapse')
+            .removeClass('in')
+            .height(0);
+        this.$('.recipe-task')
+            .filter(function () { return _.contains(ids, this.dataset.taskId); })
+            .find('.collapse')
+            .addClass('in')
+            .height('auto');
+    },
+    expanded_task_ids: function () {
+        var expanded = this.$('.recipe-task').has('.collapse.in');
+        return _.map(expanded.get(), function (elem) { return elem.dataset.taskId; });
+    },
+    render: function () {
+        var view = this;
+        var model= this.model;
+        this.$el.empty().append(new RecipeTasksSummary({model: model}).render().el);
+        _.each(model.get('tasks'), function (task) {
+            var recipe_task = $('<div/>', {"class": "recipe-task",
+                    "id": "task" + task.id, "data-task-id": task.id});
+            var task_summary = new RecipeTaskSummary({model: task,
+                recipe_start_time: model.get('start_time')}).render().el;
+            var task_details = new RecipeTaskDetails({model: task,
+                recipe_start_time: model.get('start_time')}).render().el;
+            recipe_task.append(task_summary).append(task_details);
+            recipe_task.find('.collapse').on('shown hidden', function () { view.trigger('expand:task'); });
+            view.$el.append(recipe_task);
+        });
+    }
+});
+
+var RecipeTasksSummary = Backbone.View.extend({
+    template: JST['recipe-tasks-summary'],
+    render: function () {
+        var task_count = _.size(this.model.get('tasks'));
+        var finished_task_count = _.size(_.filter(this.model.get('tasks'),
+            function (r) { return r.get('is_finished'); }));
+        var template_data = _.extend({
+                task_count: task_count,
+                finished_task_count: finished_task_count,
+        }, this.model.attributes);
+        this.$el.html(this.template(template_data));
+        this.$('.recipe-status').append(new RecipeProgressBar({model: this.model}).el);
+        return this;
+    },
+});
+
+var RecipeTaskSummary = Backbone.View.extend({
+    template: JST['recipe-task-summary'],
+    className: 'recipe-task-summary',
+    initialize: function (options) {
+        this.recipe_start_time = options.recipe_start_time;
+    },
+    render: function () {
+        var start_time_diff = get_time_difference(this.model.get('start_time'),
+            this.recipe_start_time);
+        this.$el.html(this.template(_.extend({start_time_diff: start_time_diff},
+            this.model.attributes)));
+        var status = this.model.get('status');
+        var result = this.model.get('result');
+        if (status == 'Cancelled' || status == 'Aborted') {
+            $('<span/>')
+                .addClass('label label-warning')
+                .text(status)
+                .appendTo(this.$('.recipe-task-status'));
+        } else if (status == 'Running') {
+            $('<span/>')
+                .text(status)
+                .appendTo(this.$('.recipe-task-status'));
+        } else if (status == 'Completed') {
+            $('<span/>')
+                .addClass('label label-result-' + result.toLowerCase())
+                .text(result)
+                .appendTo(this.$('.recipe-task-status'));
+        }
+        new LogsLink({model: this.model}).$el.appendTo(this.$('div.task-logs'));
+        new CommentsLink({model: this.model}).$el.appendTo(this.$('div.task-comments'));
+        return this;
+    },
+});
+
+var RecipeTaskDetails = Backbone.View.extend({
+    template: JST['recipe-task-details'],
+    className: 'recipe-task-details collapse',
+    attributes : function () {
+       return {
+         id : "recipe-task-details-" + this.model.id
+       };
+    },
     events: {
-        'show .results-tabs a': 'tab_shown',
+        'hidden.bs.collapse': 'toggle_task_details',
+        'shown.bs.collapse': 'toggle_task_details',
+        'click .toggle-results-settings button': 'toggle_results_settings'
+    },
+    toggle_task_details: function(e) {
+        var id = this.model.id;
+        switch (e.type) {
+            case 'shown':
+                $('#recipe-task-icon-' + id).find("i")
+                        .removeClass("fa-caret-right").addClass("fa-caret-down");
+                break;
+            case 'hidden':
+                $('#recipe-task-icon-' + id).find("i")
+                        .removeClass("fa-caret-down").addClass("fa-caret-right");
+                break;
+        }
+    },
+    toggle_results_settings: function (evt) {
+        var selected_side;
+        if (!_.isEmpty(evt)) {
+            evt.preventDefault();
+            selected_side = $(evt.currentTarget).text() ;
+        } else {
+            selected_side = 'Results';
+        }
+        switch (selected_side) {
+            case 'Results':
+                this.$('.recipe-task-results').show();
+                this.$('.recipe-task-settings').hide();
+                break;
+            case 'Settings':
+                this.$('.recipe-task-results').hide();
+                this.$('.recipe-task-settings').show();
+                break;
+        }
     },
     initialize: function (options) {
-        this.recipe_id = options.recipe_id;
-        // lazy load failed tab
-        this.$('.failed-tab').one('show', _.bind(this.load_failed, this));
+        this.recipe_start_time = options.recipe_start_time;
+    },
+    render: function () {
+        var model = this.model;
+        var $el = this.$el;
+        $el.html(this.template(model.attributes));
+        var recipe_start_time = this.recipe_start_time;
+        this.$(".recipe-task-results-settings").empty()
+            .append(new RecipeTaskResults({model: this.model,
+                recipe_start_time: this.recipe_start_time}).el)
+            .append(new RecipeTaskSettings({model: this.model}).el);
+        this.toggle_results_settings();
+        return this;
+    },
+});
 
-        if (window.location.hash) {
-            // anchor might be in our results, need to load them immediately
-            this.load_results().then(_.bind(this.activate_tab, this));
+var RecipeTaskResults = Backbone.View.extend({
+    className: 'recipe-task-results',
+    template: JST['recipe-task-results'],
+    initialize: function (options) {
+        this.recipe_start_time = options.recipe_start_time;
+        this.render();
+    },
+    render: function () {
+        this.$el.empty();
+        if (_.isEmpty(this.model.get('results'))) {
+            this.$el.text('No results reported for this task.');
         } else {
-            // lazy load results tab
-            this.$('.results-tab').one('show', _.bind(this.load_results, this));
-            this.activate_tab();
+            var $el = this.$el;
+            var recipe_start_time = this.recipe_start_time;
+            _.each(this.model.get('results'), function (result) {
+                $el.append(new RecipeTaskResultView({model: result,
+                    recipe_start_time: recipe_start_time}).render().el);
+            });
         }
+        return this;
+    }
+});
+
+var RecipeTaskResultView = Backbone.View.extend({
+    template: JST['recipe-task-result'],
+    className: 'recipe-task-result',
+    initialize: function (options) {
+        this.recipe_start_time = options.recipe_start_time;
     },
-    activate_tab: function () {
-        // 1. Is window.location.hash pointing at a task in our results?
-        // 2. Is there a state saved in localStorage?
-        // 3. Hide by default
-        var cookie_value = this.get_saved_state();
-        if (window.location.hash && this.$('.results-pane ' + window.location.hash).length) {
-            this.$('.results-tab').tab('show').addClass('active');
-            window.location.hash = window.location.hash;
-        } else if (cookie_value) {
-            this.$('.results-tabs a')
-                .filter(function () { return $(this).data('cookieValue') == cookie_value; })
-                .tab('show').addClass('active');
-        } else {
-            this.$('.hide-results-tab').tab('show').addClass('active');
-        }
+    render: function () {
+        var start_time_diff = get_time_difference(this.model.get('start_time'),
+            this.recipe_start_time);
+        this.$el.html(this.template(_.extend({start_time_diff: start_time_diff},
+            this.model.attributes)));
+        new LogsLink({model: this.model}).$el.appendTo(this.$('div.task-result-logs'));
+        new CommentsLink({model: this.model}).$el.appendTo(this.$('div.task-result-comments'));
+        return this;
     },
-    load_results: function () {
-        var $pane = this.$('.results-pane');
-        $pane.html('<i class="fa fa-spinner fa-spin"></i> Loading&hellip;');
-        return $.ajax({
-            url: '../tasks/do_search?tasks_tgp_order=id&tasks_tgp_limit=0&recipe_id=' + this.recipe_id,
-            dataType: 'html',
-            success: function (data) { $pane.html(data); },
-            error: function (jqxhr, status, error) { $pane.addClass('alert alert-error').text(error); },
-        });
+});
+
+var RecipeTaskSettings = Backbone.View.extend({
+    className: 'recipe-task-settings',
+    template: JST['recipe-task-settings'],
+    initialize: function (options) {
+        this.render();
     },
-    load_failed: function () {
-        var $pane = this.$('.failed-pane');
-        $pane.html('<i class="fa fa-spinner fa-spin"></i> Loading&hellip;');
-        return $.ajax({
-            url: '../tasks/do_search?tasks_tgp_order=id&tasks_tgp_limit=0&is_failed=1&recipe_id=' + this.recipe_id,
-            dataType: 'html',
-            success: function (data) { $pane.html(data); },
-            error: function (jqxhr, status, error) { $pane.addClass('alert alert-error').text(error); },
-        });
-    },
-    get_saved_state: function () {
-        try {
-            return localStorage.getItem('beaker_recipe_' + this.recipe_id);
-        } catch (e) {
-            return undefined;
-        }
-    },
-    set_saved_state: function (value) {
-        try {
-            localStorage.setItem('beaker_recipe_' + this.recipe_id, value);
-        } catch (e) {
-            // ignore
-        }
-    },
-    tab_shown: function (evt) {
-        this.set_saved_state($(evt.target).data('cookieValue'));
+    render: function () {
+        this.$el.html(this.template(this.model.attributes));
+        return this;
     },
 });
 

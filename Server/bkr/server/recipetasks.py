@@ -19,10 +19,12 @@ import cherrypy
 
 from bkr.server.model import (session, RecipeTask, LogRecipeTask,
                               RecipeTaskResult, LogRecipeTaskResult,
-                              LabController, Watchdog, ResourceType)
-from flask import redirect
+                              LabController, Watchdog, ResourceType,
+                              RecipeTaskComment, RecipeTaskResultComment)
+from flask import redirect, request, jsonify
 from bkr.server.app import app
-from bkr.server.flask_util import NotFound404
+from bkr.server.flask_util import auth_required, convert_internal_errors, \
+    BadRequest400, NotFound404, Forbidden403, read_json_request
 
 class RecipeTasks(RPCRoot):
     # For XMLRPC methods in this class.
@@ -289,6 +291,41 @@ def get_recipe_task_log(recipeid, taskid, path):
             return redirect(log.absolute_url, code=307)
     return NotFound404('Task log %s for recipe %s task %s not found' % (path, recipeid, taskid))
 
+@app.route('/recipes/<int:recipeid>/tasks/<int:taskid>/comments/', methods=['GET'])
+def get_recipe_task_comments(recipeid, taskid):
+    """
+    Returns a JSON collection of comments made on a recipe task.
+
+    :param recipeid: Recipe id.
+    :param taskid: Recipe task id.
+    """
+    task = _get_recipe_task_by_id(recipeid, taskid)
+    with convert_internal_errors():
+        return jsonify({'entries': task.comments})
+
+@app.route('/recipes/<int:recipeid>/tasks/<int:taskid>/comments/', methods=['POST'])
+@auth_required
+def post_recipe_task_comment(recipeid, taskid):
+    """
+    Adds a new comment to a recipe task. The request must be :mimetype:`application/json`.
+
+    :param recipeid: Recipe id.
+    :param taskid: Recipe task id.
+    :jsonparam string comment: Comment text.
+    """
+    task = _get_recipe_task_by_id(recipeid, taskid)
+    if not task.can_comment(identity.current.user):
+        raise Forbidden403('Cannot post recipe task comment')
+    data = read_json_request(request)
+    if 'comment' not in data:
+        raise BadRequest400('Missing "comment" key')
+    with convert_internal_errors():
+        comment = RecipeTaskComment(user=identity.current.user,
+                comment=data['comment'])
+        task.comments.append(comment)
+    session.flush() # to populate the id
+    return jsonify(comment.__json__())
+
 def _get_recipe_task_result_by_id(recipeid, taskid, resultid):
     try:
         result = RecipeTaskResult.by_id(resultid)
@@ -314,3 +351,40 @@ def get_recipe_task_result_log(recipeid, taskid, resultid, path):
             return redirect(log.absolute_url, code=307)
     return NotFound404('Result log %s for recipe %s task %s result %s not found'
             % (path, recipeid, taskid, resultid))
+
+@app.route('/recipes/<int:recipeid>/tasks/<int:taskid>/results/<int:resultid>/comments/', methods=['GET'])
+def get_recipe_task_result_comments(recipeid, taskid, resultid):
+    """
+    Returns a JSON collection of comments made on a recipe task result.
+
+    :param recipeid: Recipe id.
+    :param taskid: Recipe task id.
+    :param resultid: Recipe task result id.
+    """
+    result = _get_recipe_task_result_by_id(recipeid, taskid, resultid)
+    with convert_internal_errors():
+        return jsonify({'entries': result.comments})
+
+@app.route('/recipes/<int:recipeid>/tasks/<int:taskid>/results/<int:resultid>/comments/', methods=['POST'])
+@auth_required
+def post_recipe_task_result_comment(recipeid, taskid, resultid):
+    """
+    Adds a new comment to a recipe task. The request must be :mimetype:`application/json`.
+
+    :param recipeid: Recipe id.
+    :param taskid: Recipe task id.
+    :param resultid: Recipe task result id.
+    :jsonparam string comment: Comment text.
+    """
+    result = _get_recipe_task_result_by_id(recipeid, taskid, resultid)
+    if not result.can_comment(identity.current.user):
+        raise Forbidden403('Cannot post recipe task result comment')
+    data = read_json_request(request)
+    if 'comment' not in data:
+        raise BadRequest400('Missing "comment" key')
+    with convert_internal_errors():
+        comment = RecipeTaskResultComment(user=identity.current.user,
+                comment=data['comment'])
+        result.comments.append(comment)
+    session.flush() # to populate the id
+    return jsonify(comment.__json__())

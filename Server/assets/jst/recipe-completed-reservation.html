@@ -1,0 +1,16 @@
+<% if (reservation_request.get('reserve')) { %>
+    <p>
+    The reservation has been expired.
+    <% if (!_.isEmpty(running_recipes)) { %>
+       However, the system has not been released yet because the following
+       recipes are still running:
+       <ul class="running-recipes-list">
+        <% _.each(running_recipes, function (recipe) { %>
+            <li><%= recipe.toHTML() %></li>
+        <% }) %>
+      </ul>
+    </p>
+    <% } %>
+<% } else { %>
+    <p>The system was not reserved at the end of the recipe.<p>
+<% } %>

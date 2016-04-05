@@ -33,9 +33,6 @@ class JobExportXML(WebDriverTestCase):
                 '//tr[normalize-space(string(./td[1]))="%s"]'
                 '//a[text()="Export"]'
                 % self.job_to_export.t_id)
-        # Make sure the Export button is present on the job page.
-        b.get(get_server_base() + 'jobs/%s' % self.job_to_export.id)
-        b.find_element_by_link_text('Export')
         # Fetch the exported XML directly.
         response = requests.get(get_server_base() +
                 'to_xml?taskid=%s&pretty=False' % self.job_to_export.t_id)

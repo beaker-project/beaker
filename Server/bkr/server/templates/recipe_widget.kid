@@ -41,8 +41,8 @@
    <td colspan="5"><span py:if="recipe.resource" py:strip="True">${recipe.resource.link}</span></td>
    <th>Kickstart</th>
    <td>
-    <span py:if="recipe.rendered_kickstart" py:strip="True">
-      <a href="${tg.url('/kickstart/%s' % recipe.rendered_kickstart.id)}">(view)</a>
+    <span py:if="recipe.installation and recipe.installation.rendered_kickstart" py:strip="True">
+      <a href="${tg.url('/kickstart/%s' % recipe.installation.rendered_kickstart.id)}">(view)</a>
     </span>
    </td>
   </tr>
@@ -82,7 +82,7 @@
 </div>
 <script type="text/javascript">
 $(function () {
-    new RecipeTasksView({el: $('#recipe${recipe.id}'), recipe_id: ${recipe.id}});
+    new RecipeTasksOldView({el: $('#recipe${recipe.id}'), recipe_id: ${recipe.id}});
 });
 </script>
 </div>

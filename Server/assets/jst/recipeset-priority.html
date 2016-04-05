@@ -1,0 +1,25 @@
+<form>
+<div class="modal-header">
+  <a href="#" class="close" data-dismiss="modal" aria-hidden="true">&times;</a>
+  <h3>Priority for <%- t_id %></h3>
+</div>
+<div class="modal-body">
+  <div class="btn-group" data-toggle="buttons-radio">
+    <% _.each(possible_priorities, function (p) { %>
+      <button type="button" class="btn"
+        <% if (!_.contains(allowed_priorities, p)) { %>disabled<% } %>
+        value="<%- p %>"><%- p %></button>
+    <% }) %>
+  </div>
+  <% if (allowed_priorities.length != possible_priorities.length) { %>
+    <span class="help-block">You only have permission to <em>reduce</em> the 
+    priority of your recipe set. A Beaker queue administrator can increase the 
+    priority.</span>
+  <% } %>
+</div>
+<div class="modal-footer">
+  <div class="sync-status"/>
+  <button type="button" class="btn" data-dismiss="modal" data-loading-text="Cancel">Cancel</button>
+  <button type="submit" class="btn btn-primary" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Saving&hellip;">Save changes</button>
+</div>
+</form>

@@ -1,0 +1,17 @@
+<div class="alternative-formats">
+  <p>View as:</p>
+  <ul><li><a href="<%- id %>.xml">Beaker results XML</a></li><li><a href="<%- id %>.junit.xml">JUnit XML</a></li></ul>
+</div>
+<div class="page-header">
+    <h1><abbr title="Recipe">R</abbr>:<%- id %>
+        <small>
+          1 of <%- all_recipes %> recipes in <%= recipeset.get('job').toHTML()%>
+        </small>
+        <div class="btn-group recipe-btn-group">
+        <% if (can_edit) { %>
+            <button class="btn edit"><i class="fa fa-pencil-square-o"></i> Edit</button>
+        <% } %>
+        <a href="<%- clone_href %>" class="btn"><i class="fa fa-copy"></i> Clone</a>
+        </div>
+    </h1>
+</div>

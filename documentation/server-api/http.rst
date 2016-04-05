@@ -245,7 +245,8 @@ Recipe tasks
 ------------
 
 .. autoflask:: bkr.server.wsgi:app
-   :endpoints: get_recipe_task_log, get_recipe_task_result_log
+   :endpoints: get_recipe_task_log, get_recipe_task_result_log, get_recipe_task_comments,
+     post_recipe_task_comment, get_recipe_task_result_comments, post_recipe_task_result_comment
 
 Activity
 --------

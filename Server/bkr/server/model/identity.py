@@ -113,6 +113,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
     openstack_username = Column(Unicode(255))
     openstack_password = Column(Unicode(2048))
     openstack_tenant_name = Column(Unicode(2048))
+    use_old_job_page = Column(Boolean, nullable=False, default=False)
     created = Column(DateTime, default=datetime.utcnow)
     disabled = Column(Boolean, nullable=False, default=False)
     removed = Column(DateTime, nullable=True, default=None)

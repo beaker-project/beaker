@@ -1,9 +1,9 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import datetime
 import unittest2 as unittest
 import pkg_resources
 import sqlalchemy
@@ -15,7 +15,7 @@ from sqlalchemy.sql import func
 from alembic.environment import MigrationContext
 from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, User, \
         OSMajor, OSMajorInstallOptions, GroupMembershipType, SystemActivity, \
-        Activity
+        Activity, RecipeSetComment, Recipe, RecipeSet, CommandActivity
 
 def has_initial_sublist(larger, prefix):
     """ Return true iff list *prefix* is an initial sublist of list 
@@ -221,21 +221,30 @@ class MigrationTest(unittest.TestCase):
         # one. There are some exceptions because the migrations intentionally 
         # leave behind some structures to avoid destroying data in case the 
         # admin wants to downgrade later. So we have to account for those here.
+        ignored_tables = [
+            # may be left over from 22
+            'response',
+            'recipe_set_nacked',
+            # may be left over from 19
+            'system_group',
+            # may be left over from 0.16
+            'lab_controller_data_center',
+        ]
         expected_tables = metadata.tables.keys()
         expected_tables.append('alembic_version') # it exists, just not in metadata
         actual_tables = self.migration_metadata.tables.keys()
-        if 'lab_controller_data_center' in actual_tables:
-            # may be left over from 0.16
-            actual_tables.remove('lab_controller_data_center')
-        # As part of the migration to system pools, we do not delete
-        # the system_group table, but simply stop using it. But, if
-        # we are upgrading from a version which has it, just remove it
-        if 'system_group' in actual_tables:
-            actual_tables.remove('system_group')
+        for ignored_table in ignored_tables:
+            if ignored_table in actual_tables:
+                actual_tables.remove(ignored_table)
         self.assertItemsEqual(expected_tables, actual_tables)
         for table_name in metadata.tables:
             expected_columns = metadata.tables[table_name].columns.keys()
             actual_columns = self.migration_metadata.tables[table_name].columns.keys()
+            if table_name == 'command_queue':
+                # may be left over from 22
+                for col in ['callback', 'distro_tree_id', 'kernel_options']:
+                    if col in actual_columns:
+                        actual_columns.remove(col)
             if table_name == 'virt_resource':
                 # may be left over from 0.16
                 if 'system_name' in actual_columns:
@@ -262,6 +271,11 @@ class MigrationTest(unittest.TestCase):
                     metadata.tables[table_name])
             actual_indexes = dict((index.name, [col.name for col in index.columns])
                     for index in self.migration_metadata.tables[table_name].indexes)
+            if table_name == 'command_queue':
+                # may be left over from 22
+                actual_indexes = dict((name, cols) for name, cols
+                        in actual_indexes.iteritems()
+                        if cols != ['distro_tree_id'])
             if table_name == 'virt_resource':
                 if 'ix_virt_resource_mac_address' in actual_indexes:
                     # may be left over from 0.16
@@ -661,3 +675,89 @@ class MigrationTest(unittest.TestCase):
         self.assertEquals(
                 self.migration_session.query(SystemActivity).filter_by(id=1).count(),
                 0)
+
+    def test_migrate_recipe_set_comments_and_waived_from_nacked(self):
+        connection = self.migration_metadata.bind.connect()
+        # populate empty database
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/21.sql'))
+        # job owned by admin, with a recipe set which has been nacked and commented
+        connection.execute(
+                "INSERT INTO job (owner_id, retention_tag_id, dirty_version, clean_version) "
+                "VALUES (1, 1, '', '')")
+        connection.execute(
+                "INSERT INTO recipe_set (job_id, queue_time) "
+                "VALUES (1, '2015-11-05 16:31:01')")
+        connection.execute(
+                "INSERT INTO recipe_set_nacked (recipe_set_id, response_id, comment, created) "
+                "VALUES (1, 2, 'it broke', '2015-11-05 16:32:40')")
+        # run migration
+        upgrade_db(self.migration_metadata)
+        # check that the comment row was created
+        comments = self.migration_session.query(RecipeSetComment).all()
+        self.assertEqual(len(comments), 1)
+        self.assertEqual(comments[0].recipe_set_id, 1)
+        self.assertEqual(comments[0].comment, u'it broke')
+        self.assertEqual(comments[0].user.user_name, u'admin')
+        self.assertEqual(comments[0].created, datetime.datetime(2015, 11, 5, 16, 32, 40))
+        # check that the recipe set is waived
+        recipeset = self.migration_session.query(RecipeSet).first()
+        self.assertEqual(recipeset.waived, True)
+
+    def test_migrate_recipe_reviewed_status_from_nacked(self):
+        connection = self.migration_metadata.bind.connect()
+        # populate empty database
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/21.sql'))
+        # job owned by admin, with a recipe set which has been acked
+        connection.execute(
+                "INSERT INTO job (owner_id, retention_tag_id, dirty_version, clean_version) "
+                "VALUES (1, 1, '', '')")
+        connection.execute(
+                "INSERT INTO recipe_set (job_id, queue_time) "
+                "VALUES (1, '2015-11-09 17:03:04')")
+        connection.execute(
+                "INSERT INTO recipe (type, recipe_set_id, autopick_random) "
+                "VALUES ('machine_recipe', 1, FALSE)")
+        connection.execute(
+                "INSERT INTO recipe_set_nacked (recipe_set_id, response_id, comment, created) "
+                "VALUES (1, 1, NULL, '2015-11-09 17:32:03')")
+        # run migration
+        upgrade_db(self.migration_metadata)
+        # check that the recipe is marked as reviewed by admin
+        recipe = self.migration_session.query(Recipe).get(1)
+        self.assertEqual(recipe.get_reviewed_state(User.by_user_name(u'admin')), True)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=991245
+    def test_populate_installation_from_recipe_resource(self):
+        connection = self.migration_metadata.bind.connect()
+        # Populate empty database
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/22.sql'))
+        # Populate test data for migration: one job which ran on a regular system.
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'bz991245-migration-setup.sql'))
+        # Run migration
+        upgrade_db(self.migration_metadata)
+        # Check that installation has been populated
+        recipe = self.migration_session.query(Recipe).get(1)
+        self.assertEqual(recipe.installation.distro_tree.distro.name, u'distro')
+        self.assertEqual(recipe.installation.kernel_options, u'ks=lol')
+        self.assertEqual(recipe.installation.rendered_kickstart.kickstart, u'lol')
+        self.assertEqual(recipe.installation.system.fqdn, u'test.fqdn.name')
+        self.assertEqual(recipe.installation.rebooted,
+                datetime.datetime(2016, 2, 16, 1, 0, 5))
+        self.assertEqual(recipe.installation.install_started,
+                datetime.datetime(2016, 2, 16, 1, 1, 0))
+        self.assertEqual(recipe.installation.install_finished,
+                datetime.datetime(2016, 2, 16, 1, 20, 0))
+        self.assertEqual(recipe.installation.postinstall_finished,
+                datetime.datetime(2016, 2, 16, 1, 21, 0))
+        self.assertEqual(recipe.installation.created,
+                datetime.datetime(2016, 2, 16, 1, 0, 0))
+        installation_cmd = self.migration_session.query(CommandActivity).get(1)
+        self.assertEqual(installation_cmd.installation, recipe.installation)
+        manual_cmd = self.migration_session.query(CommandActivity).get(2)
+        self.assertEqual(manual_cmd.installation, None)
+        reprovision_cmd = self.migration_session.query(CommandActivity).get(3)
+        self.assertEqual(reprovision_cmd.installation, None)

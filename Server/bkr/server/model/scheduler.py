@@ -20,6 +20,7 @@ import uuid
 import urlparse
 import urllib
 import netaddr
+import numbers
 from kid import Element
 from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
         Integer, Unicode, DateTime, Boolean, UnicodeText, String, Numeric)
@@ -34,8 +35,7 @@ from turbogears.config import get
 from turbogears.database import session
 from lxml import etree
 from lxml.builder import E
-
-from bkr.common.helpers import makedirs_ignore
+from bkr.common.helpers import makedirs_ignore, total_seconds
 from bkr.server import identity, metrics, mail, dynamic_virt
 from bkr.server.bexceptions import BX, BeakerException, StaleTaskStatusException, DatabaseLookupError
 from bkr.server.helpers import make_link, make_fake_link
@@ -52,6 +52,7 @@ from .distrolibrary import (OSMajor, OSVersion, Distro, DistroTree,
         LabControllerDistroTree)
 from .tasklibrary import Task, TaskPackage
 from .inventory import System, SystemActivity, Reservation
+from .installation import Installation
 
 log = logging.getLogger(__name__)
 
@@ -381,6 +382,14 @@ class Log(object):
         else:
             return 1
 
+    def __json__(self):
+        return {
+            'id': self.id,
+            'start_time': self.start_time,
+            'path': self.combined_path,
+            'href': url(self.href),
+        }
+
 class LogRecipe(Log, DeclarativeMappedObject):
     type = 'R'
 
@@ -666,7 +675,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         data = {
             'id': self.id,
             't_id': self.t_id,
-            'submitter': self.submitter,
+            'submitter': self.submitter or self.owner, # submitter may be NULL prior to Beaker 0.14
             'owner': self.owner,
             'group': self.group,
             'status': self.status,
@@ -683,6 +692,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
             'ftasks': self.ftasks,
             'ktasks': self.ktasks,
             'ttasks': self.ttasks,
+            'clone_href': self.clone_link(),
             'recipesets': self.recipesets,
         }
         if identity.current.user:
@@ -722,43 +732,6 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
                     .filter(Group.group_id.in_([g.group_id for g in owner.groups]))
         else:
             return cls.query.filter(literal(False))
-
-    @classmethod
-    def get_nacks(self,jobs):
-        queri = select([RecipeSet.id], from_obj=Job.__table__.join(RecipeSet.__table__), whereclause=Job.id.in_(jobs),distinct=True)
-        results = queri.execute()
-        current_nacks = []
-        for r in results:
-            rs_id = r[0]
-            rs = RecipeSet.by_id(rs_id)
-            response = getattr(rs.nacked,'response',None)
-            if response == Response.by_response('nak'):
-                current_nacks.append(rs_id)
-        return current_nacks
-
-    @classmethod
-    def update_nacks(cls,job_ids,rs_nacks):
-        """
-        update_nacks() takes a list of job_ids and updates the job's recipesets with the correct nacks
-        """
-        queri = select([RecipeSet.id], from_obj=Job.__table__.join(RecipeSet.__table__), whereclause=Job.id.in_(job_ids),distinct=True)
-        results = queri.execute()
-        current_nacks = []
-        if len(rs_nacks) > 0:
-            rs_nacks = map(lambda x: int(x), rs_nacks) # they come in as unicode objs
-        for res in results:
-            rs_id = res[0]
-            rs = RecipeSet.by_id(rs_id)
-            if rs_id not in rs_nacks and rs.nacked: #looks like we're deleting it then
-                rs.nacked = []
-            else:
-                if not rs.nacked and rs_id in rs_nacks: #looks like we're adding it then
-                    rs.nacked = [RecipeSetResponse()]
-                    current_nacks.append(rs_id)
-                elif rs.nacked:
-                    current_nacks.append(rs_id)
-
-        return current_nacks
 
     @hybrid_method
     def completed_n_days_ago(self, n):
@@ -1153,9 +1126,9 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
             rs.delete()
         self.deleted = datetime.utcnow()
 
-    def set_response(self, response):
+    def set_waived(self, waived):
         for rs in self.recipesets:
-            rs.set_response(response)
+            rs.set_waived(waived)
 
     def requires_product(self):
         return self.retention_tag.requires_product()
@@ -1403,8 +1376,14 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         """Returns True iff the given user can cancel the job"""
         return self._can_administer(user)
 
-    def can_set_response(self, user=None):
-        """Returns True iff the given user can set the response to this job"""
+    def can_comment(self, user):
+        """Returns True iff the given user can comment on this job."""
+        if user is None:
+            return False
+        return True # anyone can comment on any job
+
+    def can_waive(self, user=None):
+        """Returns True iff the given user can waive recipe sets in this job."""
         return self._can_administer(user) or self._can_administer_old(user)
 
     def _can_administer(self, user=None):
@@ -1607,70 +1586,6 @@ class RetentionTag(BeakerTag):
             'needs_product': self.needs_product,
         }
 
-class Response(DeclarativeMappedObject):
-
-    __tablename__ = 'response'
-    __table_args__ = {'mysql_engine': 'InnoDB'}
-    id = Column(Integer, autoincrement=True, primary_key=True)
-    response = Column(Unicode(50), nullable=False)
-
-    @classmethod
-    def get_all(cls,*args,**kw):
-        return cls.query
-
-    @classmethod
-    def by_response(cls,response,*args,**kw):
-        return cls.query.filter_by(response = response).one()
-
-    def __repr__(self):
-        return self.response
-
-    def __str__(self):
-        return self.response
-
-class RecipeSetResponse(DeclarativeMappedObject):
-    """
-    An acknowledgment of a RecipeSet's results. Can be used for filtering reports
-    """
-
-    __tablename__ = 'recipe_set_nacked'
-    __table_args__ = {'mysql_engine': 'InnoDB'}
-    recipe_set_id = Column(Integer, ForeignKey('recipe_set.id',
-            onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)
-    recipesets = relationship('RecipeSet') #: not a list in spite of its name
-    response_id = Column(Integer, ForeignKey('response.id',
-            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
-    response = relationship(Response)
-    comment = Column(Unicode(255), nullable=True)
-    created = Column(DateTime, nullable=False, default=datetime.utcnow)
-
-    def __init__(self,type=None,response_id=None,comment=None):
-        super(RecipeSetResponse, self).__init__()
-        if response_id is not None:
-            res = Response.by_id(response_id)
-        elif type is not None:
-            res = Response.by_response(type)
-        self.response = res
-        self.comment = comment
-
-    @classmethod
-    def by_id(cls,id):
-        return cls.query.filter_by(recipe_set_id=id).one()
-
-    @classmethod
-    def by_jobs(cls,job_ids):
-        if isinstance(job_ids, list):
-            clause = Job.id.in_(job_ids)
-        elif isinstance(job_ids, int):
-            clause = Job.id == job_ids
-        else:
-            raise BeakerException('job_ids needs to be either type \'int\' or \'list\'. Found %s' % type(job_ids))
-        queri = cls.query.outerjoin('recipesets','job').filter(clause)
-        results = {}
-        for elem in queri:
-            results[elem.recipe_set_id] = elem.comment
-        return results
-
 class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
     """
     A Collection of Recipes that must be executed at the same time.
@@ -1705,8 +1620,8 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
     recipes = relationship('Recipe', back_populates='recipeset')
     activity = relationship(RecipeSetActivity, back_populates='object',
             order_by=[RecipeSetActivity.created.desc(), RecipeSetActivity.id.desc()])
-    nacked = relationship(RecipeSetResponse, cascade='all, delete-orphan',
-            uselist=False)
+    waived = Column(Boolean, nullable=False, default=False)
+    comments = relationship('RecipeSetComment', cascade='all, delete-orphan')
 
     activity_type = RecipeSetActivity
 
@@ -1718,7 +1633,7 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
         self.priority = priority
 
     def __json__(self):
-        return {
+        data = {
             'id': self.id,
             't_id': self.t_id,
             'status': self.status,
@@ -1730,8 +1645,33 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
             'ktasks': self.ktasks,
             'ttasks': self.ttasks,
             'priority': self.priority,
+            'possible_priorities': list(TaskPriority),
+            'waived': self.waived,
+            'comments': self.comments,
+            'clone_href': self.clone_link(),
             'machine_recipes': list(self.machine_recipes),
+            'queue_time': self.queue_time,
         }
+        if identity.current.user:
+            u = identity.current.user
+            data['can_change_priority'] = self.can_change_priority(u)
+            data['allowed_priorities'] = self.allowed_priorities(u)
+            data['can_cancel'] = self.can_cancel(u)
+            data['can_comment'] = self.can_comment(u)
+            data['can_waive'] = self.can_waive(u)
+        else:
+            data['can_change_priority'] = False
+            data['allowed_priorities'] = []
+            data['can_cancel'] = False
+            data['can_comment'] = False
+            data['can_waive'] = False
+        return data
+
+    def to_json(self, include_job=False):
+        data = self.__json__()
+        if include_job:
+            data['job'] = self.job.__json__()
+        return data
 
     def all_logs(self, load_parent=True):
         """
@@ -1740,25 +1680,24 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
         return (log for recipe in self.recipes
                 for log in recipe.all_logs(load_parent=load_parent))
 
-    def set_response(self, response):
-        old_response = None
-        if self.nacked is None:
-            self.nacked = RecipeSetResponse(type=response)
-        else:
-            old_response = self.nacked.response
-            self.nacked.response = Response.by_response(response)
+    def set_waived(self, waived):
         self.record_activity(user=identity.current.user, service=u'XMLRPC',
-                             field=u'Ack/Nak', action='Changed',
-                             old=old_response, new=self.nacked.response)
+                             field=u'Waived', action=u'Changed',
+                             old=unicode(self.waived), new=unicode(waived))
+        self.waived = waived
 
     def is_owner(self, user):
         if self.owner == user:
             return True
         return False
 
-    def can_set_response(self, user=None):
-        """Return True iff the given user can change the response to this recipeset"""
-        return self.job.can_set_response(user)
+    def can_comment(self, user):
+        """Returns True iff the given user can comment on this recipe set."""
+        return self.job.can_comment(user)
+
+    def can_waive(self, user):
+        """Return True iff the given user can waive this recipe set."""
+        return self.job.can_waive(user)
 
     def can_stop(self, user=None):
         """Returns True iff the given user can stop this recipeset"""
@@ -1786,15 +1725,27 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
         return_node = recipeSet
 
         if not clone:
-            response = self.get_response()
-            if response:
-                recipeSet.set('response','%s' % str(response))
+            # For backwards compatibility, we still use
+            # response="ack" and response="nak" in the <recipeSet/> element
+            if self.waived:
+                recipeSet.set('response', 'nak')
+            else:
+                recipeSet.set('response', 'ack')
 
         if not clone:
             recipeSet.set("id", "%s" % self.id)
 
         for r in self.machine_recipes:
             recipeSet.append(r.to_xml(clone, from_recipeset=True))
+
+        if not clone:
+            if self.comments:
+                comments = etree.Element('comments')
+                for c in self.comments:
+                    comments.append(E.comment(c.comment, user=c.user.user_name,
+                            created=c.created.strftime('%Y-%m-%d %H:%M:%S')))
+                recipeSet.append(comments)
+
         if not from_job:
             job = self.job._create_job_elem(clone)
             job.append(recipeSet)
@@ -1916,10 +1867,6 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
                         order_by='count')
         return map(lambda x: MachineRecipe.query.filter_by(id=x[0]).first(), session.connection(RecipeSet).execute(query).fetchall())
 
-    def get_response(self):
-        response = getattr(self.nacked,'response',None)
-        return response
-
     def task_info(self):
         """
         Method for exporting RecipeSet status for TaskWatcher
@@ -1973,7 +1920,20 @@ class RecipeReservationRequest(DeclarativeMappedObject):
         return {
             'id': self.id,
             'recipe_id': self.recipe_id,
-            'duration': self.duration,
+            'duration': self.duration
+        }
+
+    @classmethod
+    def empty_json(cls):
+        """
+        Returns the JSON representation of a default empty reservation request,
+        to be used in the cases where a recipe does not have a reservation request
+        yet.
+        """
+        return {
+            'id': None,
+            'recipe_id': None,
+            'duration': None
         }
 
 
@@ -1990,9 +1950,8 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
     recipeset = relationship(RecipeSet, back_populates='recipes')
     distro_tree_id = Column(Integer, ForeignKey('distro_tree.id'))
     distro_tree = relationship(DistroTree, back_populates='recipes')
-    rendered_kickstart_id = Column(Integer, ForeignKey('rendered_kickstart.id',
-            name='recipe_rendered_kickstart_id_fk', ondelete='SET NULL'))
-    rendered_kickstart = relationship('RenderedKickstart')
+    installation = relationship(Installation, uselist=False,
+            back_populates='recipe')
     result = Column(TaskResult.db_type(), nullable=False,
             default=TaskResult.new, index=True)
     status = Column(TaskStatus.db_type(), nullable=False,
@@ -2003,7 +1962,8 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
     _host_requires = Column(UnicodeText())
     _distro_requires = Column(UnicodeText())
     # This column is actually a custom user-supplied kickstart *template*
-    # (if not NULL), the generated kickstart for the recipe is defined above
+    # (if not NULL), the generated kickstart for the recipe is stored on the
+    # installation
     kickstart = Column(UnicodeText())
     # type = recipe, machine_recipe or guest_recipe
     type = Column(String(30), nullable=False)
@@ -2117,9 +2077,13 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         How we delete a Recipe.
         """
         self.logs = []
-        if self.rendered_kickstart:
-            session.delete(self.rendered_kickstart)
-            self.rendered_kickstart = None
+        # Hacking up the associated Installation like this is a little dodgy, 
+        # the idea is just to save on disk space in the kickstart table. In 
+        # theory no user will ever end up looking at the Installation now that 
+        # the recipe is deleted anyway...
+        if self.installation and self.installation.rendered_kickstart:
+            session.delete(self.installation.rendered_kickstart)
+            self.installation.rendered_kickstart = None
         for log in self.all_logs(load_parent=False):
             session.delete(log)
 
@@ -2174,8 +2138,8 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             kickstart = etree.Element("kickstart")
             kickstart.text = etree.CDATA('%s' % self.kickstart)
             recipe.append(kickstart)
-        if self.rendered_kickstart and not clone:
-            recipe.set('kickstart_url', self.rendered_kickstart.link)
+        if self.installation and self.installation.rendered_kickstart and not clone:
+            recipe.set('kickstart_url', self.installation.rendered_kickstart.link)
         recipe.set("ks_meta", "%s" % self.ks_meta and self.ks_meta or '')
         recipe.set("kernel_options", "%s" % self.kernel_options and self.kernel_options or '')
         recipe.set("kernel_options_post", "%s" % self.kernel_options_post and self.kernel_options_post or '')
@@ -2198,16 +2162,16 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             recipe.set("system", "%s" % self.resource.fqdn)
         if not clone:
             installation = etree.Element('installation')
-            if self.resource:
-                if self.resource.install_started:
+            if self.installation:
+                if self.installation.install_started:
                     installation.set('install_started',
-                            self.resource.install_started.strftime('%Y-%m-%d %H:%M:%S'))
-                if self.resource.install_finished:
+                            self.installation.install_started.strftime('%Y-%m-%d %H:%M:%S'))
+                if self.installation.install_finished:
                     installation.set('install_finished',
-                            self.resource.install_finished.strftime('%Y-%m-%d %H:%M:%S'))
-                if self.resource.postinstall_finished:
+                            self.installation.install_finished.strftime('%Y-%m-%d %H:%M:%S'))
+                if self.installation.postinstall_finished:
                     installation.set('postinstall_finished',
-                            self.resource.postinstall_finished.strftime('%Y-%m-%d %H:%M:%S'))
+                            self.installation.postinstall_finished.strftime('%Y-%m-%d %H:%M:%S'))
             recipe.append(installation)
         packages = etree.Element("packages")
         if self.custom_packages:
@@ -2315,8 +2279,8 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         """ set _partitions """
         self._partitions = value
 
-    def _partitionsKSMeta(self):
-        """ Parse partitions xml into ks_meta variable which cobbler will understand """
+    def _parse_partitions(self):
+        """ Parse partitions xml """
         partitions = []
         try:
             prs = xml.dom.minidom.parseString(self.partitions)
@@ -2330,10 +2294,23 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             type = partition.getAttribute('type') or 'part'
             size = partition.getAttribute('size') or '5'
             if fs:
-                partitions.append('%s:%s:%s:%s' % (name, type, size, fs))
+                partitions.append(dict(name=name, type=type, size=size, fs=fs))
             else:
-                partitions.append('%s:%s:%s' % (name, type, size))
+                partitions.append(dict(name=name, type=type, size=size))
+        return partitions
+
+    def _partitionsKSMeta(self):
+        """ Add partitions into ks_meta variable which cobbler will understand """
+        partitions = []
+        for partition in self._parse_partitions():
+            if partition.get('fs'):
+                partitions.append('%s:%s:%s:%s' % (partition['name'],
+                    partition['type'], partition['size'], partition['fs']))
+            else:
+                partitions.append('%s:%s:%s' % (partition['name'],
+                    partition['type'], partition['size']))
         return ';'.join(partitions)
+
     partitionsKSMeta = property(_partitionsKSMeta)
 
     def queue(self):
@@ -2421,7 +2398,6 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
 
     def return_reservation(self):
         self.extend(0)
-        self.recipeset.job._mark_dirty()
 
     def _abort_cancel(self, status, msg=None):
         """
@@ -2497,7 +2473,12 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         # Record the start of this Recipe.
         if not self.start_time \
            and self.status == TaskStatus.running:
-            self.start_time = datetime.utcnow()
+            if self.installation.rebooted:
+                self.start_time = self.installation.rebooted
+            elif self.first_task.start_time:
+                self.start_time = self.first_task.start_time
+            else:
+                self.start_time = datetime.utcnow()
 
         if self.start_time and not self.finish_time and self.is_finished():
             # Record the completion of this Recipe.
@@ -2549,7 +2530,7 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
                 raise ValueError('Failed to find repo for harness')
         if 'ks' in install_options.kernel_options:
             # Use it as is
-            pass
+            rendered_kickstart = None
         elif self.kickstart:
             # add in cobbler packages snippet...
             packages_slot = 0
@@ -2602,37 +2583,38 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             kickstart = kicktemplate % dict(
                                         beforepackages = beforepackages,
                                         afterpackages = afterpackages)
-            self.rendered_kickstart = generate_kickstart(install_options,
+            rendered_kickstart = generate_kickstart(install_options,
                     distro_tree=self.distro_tree,
                     system=getattr(self.resource, 'system', None),
                     user=self.recipeset.job.owner,
                     recipe=self, kickstart=kickstart)
-            install_options.kernel_options['ks'] = self.rendered_kickstart.link
+            install_options.kernel_options['ks'] = rendered_kickstart.link
         else:
             ks_appends = [ks_append.ks_append for ks_append in self.ks_appends]
-            self.rendered_kickstart = generate_kickstart(install_options,
+            rendered_kickstart = generate_kickstart(install_options,
                     distro_tree=self.distro_tree,
                     system=getattr(self.resource, 'system', None),
                     user=self.recipeset.job.owner,
                     recipe=self, ks_appends=ks_appends)
-            install_options.kernel_options['ks'] = self.rendered_kickstart.link
+            install_options.kernel_options['ks'] = rendered_kickstart.link
 
+        self.installation = Installation(distro_tree=self.distro_tree,
+                kernel_options=install_options.kernel_options_str,
+                rendered_kickstart=rendered_kickstart)
         if isinstance(self.resource, SystemResource):
-            self.resource.system.configure_netboot(self.distro_tree,
-                    install_options.kernel_options_str,
-                    service=u'Scheduler',
-                    callback=u'bkr.server.model.auto_cmd_handler')
+            self.resource.system.installations.append(self.installation)
+            self.resource.system.configure_netboot(installation=self.installation,
+                    service=u'Scheduler')
             self.resource.system.action_power(action=u'reboot',
-                                     callback=u'bkr.server.model.auto_cmd_handler')
+                    installation=self.installation, service=u'Scheduler')
             self.resource.system.record_activity(user=self.recipeset.job.owner,
                     service=u'Scheduler', action=u'Provision',
                     field=u'Distro Tree', old=u'',
                     new=unicode(self.distro_tree))
         elif isinstance(self.resource, VirtResource):
-            self.resource.kernel_options = install_options.kernel_options_str
             manager = dynamic_virt.VirtManager(self.recipeset.job.owner)
             manager.start_vm(self.resource.instance_id)
-            self.resource.rebooted = datetime.utcnow()
+            self.installation.rebooted = datetime.utcnow()
             self.tasks[0].start()
 
     def cleanup(self):
@@ -2671,8 +2653,19 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         """
         if not self.watchdog:
             raise BX(_('No watchdog exists for recipe %s' % self.id))
-        self.watchdog.kill_time = datetime.utcnow() + timedelta(
-                                                              seconds=kill_time)
+        if not isinstance(kill_time, numbers.Number):
+            raise TypeError('Pass number of seconds to extend the watchdog by')
+        if kill_time:
+            self.watchdog.kill_time = datetime.utcnow() + timedelta(
+                    seconds=kill_time)
+        else:
+            # kill_time of zero is a special case, it means someone wants to 
+            # end the recipe right now.
+            self.watchdog.kill_time = datetime.utcnow()
+            # We need to mark the job as dirty so that update_status will take
+            # notice and finish the recipe. beaker-watchdog won't be monitoring
+            # this recipe since it's no longer active, from its point of view.
+            self.recipeset.job._mark_dirty()
         return self.status_watchdog()
 
     def status_watchdog(self):
@@ -2754,6 +2747,11 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
     def first_task(self):
         return self.dyn_tasks.order_by(RecipeTask.id).first()
 
+    @property
+    def href(self):
+        """Returns a relative URL for recipe's page."""
+        return urllib.quote(u'/recipes/%s' % self.id)
+
     def can_edit(self, user=None):
         """Returns True iff the given user can edit this recipe"""
         return self.recipeset.job.can_edit(user)
@@ -2762,6 +2760,28 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         """Returns True iff the given user can update the reservation request"""
         return self.can_edit(user) and self.status not in (TaskStatus.completed,
                 TaskStatus.cancelled, TaskStatus.aborted, TaskStatus.reserved)
+
+    def can_comment(self, user):
+        """Returns True iff the given user can comment on this recipe."""
+        return self.recipeset.can_comment(user)
+
+    def get_reviewed_state(self, user):
+        if user is None:
+            raise RuntimeError('Cannot get reviewed state for anonymous')
+        # Delayed import to avoid circular dependency
+        from bkr.server.model import RecipeReviewedState
+        rrs = session.object_session(self).query(RecipeReviewedState).filter_by(
+                recipe_id=self.id, user_id=user.user_id).first()
+        if rrs is not None:
+            return rrs.reviewed
+        return False
+
+    def set_reviewed_state(self, user, reviewed):
+        if user is None:
+            raise RuntimeError('Cannot set reviewed state for anonymous')
+        # Delayed import to avoid circular dependency
+        from bkr.server.model import RecipeReviewedState
+        RecipeReviewedState.lazy_create(recipe=self, user=user, reviewed=reviewed)
 
     def __json__(self):
         data = {
@@ -2772,25 +2792,57 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             'result': self.result,
             'whiteboard': self.whiteboard,
             'distro_tree': self.distro_tree,
-            'resource': self.resource,
             'role': self.role,
+            'resource': self.resource,
+            'installation': self.installation,
             'ntasks': self.ntasks,
             'ptasks': self.ptasks,
             'wtasks': self.wtasks,
             'ftasks': self.ftasks,
             'ktasks': self.ktasks,
             'ttasks': self.ttasks,
+            'tasks': self.tasks,
+            'start_time': self.start_time,
+            'finish_time': self.finish_time,
+            'ks_meta': self.ks_meta,
+            'kernel_options': self.kernel_options,
+            'kernel_options_post': self.kernel_options_post,
+            'packages': [package.package for package in self.custom_packages],
+            'ks_appends': [ks_append.ks_append for ks_append in self.ks_appends],
+            'repos': [{'name': repo.name, 'url': repo.url} for repo in self.repos],
+            'partitions': self._parse_partitions(),
+            'logs': self.logs,
+            'possible_systems': [{'fqdn': system.fqdn} for system in self.systems],
+            'clone_href': self.clone_link(),
             # for backwards compatibility only:
             'recipe_id': self.id,
             'job_id': self.recipeset.job.t_id,
         }
+        if self.watchdog:
+            data['time_remaining_seconds'] = int(total_seconds(self.time_remaining))
+        else:
+            data['time_remaining_seconds'] = None
+        if  self.reservation_request:
+            data['reservation_request'] = self.reservation_request.__json__()
+        else:
+            data['reservation_request'] = RecipeReservationRequest.empty_json()
         if identity.current.user:
             u = identity.current.user
             data['can_edit'] = self.can_edit(u)
             data['can_update_reservation_request'] = self.can_update_reservation_request(u)
+            data['can_comment'] = self.can_comment(u)
+            data['reviewed'] = self.get_reviewed_state(u)
         else:
             data['can_edit'] = False
             data['can_update_reservation_request'] = False
+            data['can_comment'] = False
+            data['reviewed'] = None
+        return data
+
+    def to_json(self, include_recipeset=False):
+        data = self.__json__()
+        if include_recipeset:
+            data['recipeset'] = self.recipeset.to_json(include_job=True)
         return data
 
 
@@ -3096,7 +3148,7 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
         return value
 
     def __json__(self):
-        return {
+        data = {
             'id': self.id,
             'name': self.name,
             'version': self.version,
@@ -3105,10 +3157,24 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
             't_id': self.t_id,
             'task': self.task,
             'distro_tree': self.recipe.distro_tree,
+            'fetch_url': self.fetch_url,
+            'fetch_subdir': self.fetch_subdir,
+            'role': self.role,
             'start_time': self.start_time,
             'finish_time': self.finish_time,
             'result': self.result,
+            'params': self.params,
+            'results': self.results,
+            'is_finished': self.is_finished(),
+            'logs': self.logs,
+            'comments': self.comments,
         }
+        if identity.current.user:
+            u = identity.current.user
+            data['can_comment'] = self.can_comment(u)
+        else:
+            data['can_comment'] = False
+        return data
 
     def filepath(self):
         """
@@ -3406,6 +3472,10 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
         """Returns True iff the given user can stop this recipe task"""
         return self.recipe.recipeset.job.can_stop(user)
 
+    def can_comment(self, user):
+        """Returns True iff the given user can comment on this recipe task."""
+        return self.recipe.can_comment(user)
+
 Index('ix_recipe_task_name_version', RecipeTask.name, RecipeTask.version)
 
 
@@ -3431,6 +3501,13 @@ class RecipeTaskParam(DeclarativeMappedObject):
         param.set("name", "%s" % self.name)
         param.set("value", "%s" % self.value)
         return param
+
+    def __json__(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'value': self.value
+        }
 
 
 class RecipeRepo(DeclarativeMappedObject):
@@ -3479,21 +3556,6 @@ class RecipeKSAppend(DeclarativeMappedObject):
 
     def __repr__(self):
         return self.ks_append
-
-class RecipeTaskComment(DeclarativeMappedObject):
-    """
-    User comments about the task execution.
-    """
-
-    __tablename__ = 'recipe_task_comment'
-    __table_args__ = {'mysql_engine': 'InnoDB'}
-    id = Column(Integer, primary_key=True)
-    recipe_task_id = Column(Integer, ForeignKey('recipe_task.id'))
-    recipetask = relationship(RecipeTask, back_populates='comments')
-    comment = Column(UnicodeText)
-    created = Column(DateTime)
-    user_id = Column(Integer, ForeignKey('tg_user.user_id'), index=True)
-    user = relationship(User)
 
 
 class RecipeTaskBugzilla(DeclarativeMappedObject):
@@ -3561,6 +3623,7 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
     start_time = Column(DateTime, default=datetime.utcnow)
     logs = relationship(LogRecipeTaskResult, back_populates='parent',
             cascade='all, delete-orphan')
+    comments = relationship('RecipeTaskResultComment', back_populates='recipetaskresult')
 
     def __init__(self, recipetask=None, path=None, result=None,
             score=None, log=None):
@@ -3668,6 +3731,29 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
             return self.log or './'
         return self.short_path or './'
 
+    def can_comment(self, user):
+        """Returns True iff the given user can comment on this recipe task result."""
+        return self.recipetask.can_comment(user)
+
+    def __json__(self):
+        data = {
+            'id': self.id,
+            'path': self.path,
+            'message': self.log,
+            'result': self.result,
+            'score': self.score,
+            'start_time': self.start_time,
+            'logs': self.logs,
+            'comments': self.comments,
+        }
+        if identity.current.user:
+            u = identity.current.user
+            data['can_comment'] = self.can_comment(u)
+        else:
+            data['can_comment'] = False
+        return data
+
+
 class RecipeResource(DeclarativeMappedObject):
     """
     Base class for things on which a recipe can be run.
@@ -3683,10 +3769,6 @@ class RecipeResource(DeclarativeMappedObject):
     recipe = relationship(Recipe, back_populates='resource')
     type = Column(ResourceType.db_type(), nullable=False)
     fqdn = Column(Unicode(255), default=None, index=True)
-    rebooted = Column(DateTime, nullable=True, default=None)
-    install_started = Column(DateTime, nullable=True, default=None)
-    install_finished = Column(DateTime, nullable=True, default=None)
-    postinstall_finished = Column(DateTime, nullable=True, default=None)
     __mapper_args__ = {'polymorphic_on': type, 'polymorphic_identity': None}
 
     def __str__(self):
@@ -3694,6 +3776,11 @@ class RecipeResource(DeclarativeMappedObject):
 
     def __unicode__(self):
         return unicode(self.fqdn)
+
+    def __json__(self):
+        return {
+            'fqdn': self.fqdn,
+        }
 
     @staticmethod
     def _lowest_free_mac():
@@ -3750,10 +3837,9 @@ class SystemResource(RecipeResource):
                 self.reservation)
 
     def __json__(self):
-        return {
-            'fqdn': self.fqdn,
-            'system': self.system,
-        }
+        data = super(SystemResource, self).__json__()
+        data['system'] = self.system
+        return data
 
     @property
     def mac_address(self):
@@ -3802,7 +3888,6 @@ class VirtResource(RecipeResource):
     lab_controller_id = Column(Integer, ForeignKey('lab_controller.id',
             name='virt_resource_lab_controller_id_fk'))
     lab_controller = relationship(LabController)
-    kernel_options = Column(Unicode(2048))
     __mapper_args__ = {'polymorphic_identity': ResourceType.virt}
 
     @classmethod
@@ -3819,10 +3904,9 @@ class VirtResource(RecipeResource):
         self.lab_controller = lab_controller
 
     def __json__(self):
-        return {
-            'fqdn': self.fqdn,
-            'instance_id': self.instance_id,
-        }
+        data = super(VirtResource, self).__json__()
+        data['instance_id'] = self.instance_id
+        return data
 
     @property
     def link(self):
@@ -3882,9 +3966,6 @@ class GuestResource(RecipeResource):
         return '%s(fqdn=%r, mac_address=%r)' % (self.__class__.__name__,
                 self.fqdn, self.mac_address)
 
-    def __json__(self):
-        return {'fqdn': self.fqdn}
-
     @property
     def link(self):
         return self.fqdn # just text, not a link
@@ -3901,30 +3982,3 @@ class GuestResource(RecipeResource):
 
     def release(self):
         pass
-
-class RenderedKickstart(DeclarativeMappedObject):
-
-    # This is for storing final generated kickstarts to be provisioned,
-    # not user-supplied kickstart templates or anything else like that.
-
-    __tablename__ = 'rendered_kickstart'
-    __table_args__ = {'mysql_engine': 'InnoDB'}
-    id = Column(Integer, primary_key=True)
-    # Either kickstart or url should be populated -- if url is present,
-    # it means fetch the kickstart from there instead
-    kickstart = Column(UnicodeText)
-    url = Column(UnicodeText)
-
-    def __repr__(self):
-        return '%s(id=%r, kickstart=%s, url=%r)' % (self.__class__.__name__,
-                self.id, '<%s chars>' % len(self.kickstart)
-                if self.kickstart is not None else 'None', self.url)
-
-    @property
-    def link(self):
-        if self.url:
-            return self.url
-        assert self.id is not None, 'not flushed?'
-        url = absolute_url('/kickstart/%s' % self.id, scheme='http',
-                           labdomain=True)
-        return url

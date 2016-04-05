@@ -20,6 +20,7 @@ from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
 from bkr.server.recipetasks import RecipeTasks
 from bkr.server.controller_utilities import _custom_status, _custom_result
+from bkr.server.junitxml import recipe_to_junit_xml
 from datetime import timedelta
 import urlparse
 
@@ -30,13 +31,14 @@ from bkr.server.model import (Recipe, RecipeSet, TaskStatus, Job, System,
                               LogRecipe, LogRecipeTask, LogRecipeTaskResult,
                               RecipeResource, TaskBase, RecipeReservationRequest)
 from bkr.server.app import app
-from bkr.server.flask_util import BadRequest400, NotFound404, \
+from bkr.server.flask_util import BadRequest400, NotFound404, Gone410, \
     Forbidden403, auth_required, read_json_request, convert_internal_errors, \
     request_wants_json, render_tg_template
-from flask import request, jsonify, redirect as flask_redirect
+from flask import request, jsonify, redirect as flask_redirect, make_response
 from bkr.server.bexceptions import BeakerException
 
 import logging
+import lxml.etree
 log = logging.getLogger(__name__)
 
 class Recipes(RPCRoot):
@@ -201,10 +203,13 @@ class Recipes(RPCRoot):
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
             raise BX(_("Invalid Recipe ID %s" % recipe_id))
+        if not recipe.installation:
+            raise BX(_('Recipe %s not provisioned yet') % recipe_id)
 
+        installation = recipe.installation
         first_task = recipe.first_task
-        if not recipe.resource.install_started:
-            recipe.resource.install_started = datetime.utcnow()
+        if not installation.install_started:
+            installation.install_started = datetime.utcnow()
             # extend watchdog by 3 hours 60 * 60 * 3
             kill_time = 10800
             # XXX In future releases where 'Provisioning'
@@ -229,7 +234,9 @@ class Recipes(RPCRoot):
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
             raise BX(_(u'Invalid Recipe ID %s' % recipe_id))
-        recipe.resource.postinstall_finished = datetime.utcnow()
+        if not recipe.installation:
+            raise BX(_('Recipe %s not provisioned yet') % recipe_id)
+        recipe.installation.postinstall_finished = datetime.utcnow()
         return True
 
 
@@ -248,8 +255,10 @@ class Recipes(RPCRoot):
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
             raise BX(_("Invalid Recipe ID %s" % recipe_id))
+        if not recipe.installation:
+            raise BX(_('Recipe %s not provisioned yet') % recipe_id)
 
-        recipe.resource.install_finished = datetime.utcnow()
+        recipe.installation.install_finished = datetime.utcnow()
         # We don't want to change an existing FQDN, just set it
         # if it hasn't been set already (see BZ#879146)
         configured = recipe.resource.fqdn
@@ -455,7 +464,7 @@ class Recipes(RPCRoot):
         return dict(title='Recipe Systems', grid=grid, list=recipe.systems,
             search_bar=None)
 
-    @expose(template="bkr.server.templates.recipe")
+    @expose(template="bkr.server.templates.recipe-old")
     def default(self, id, *args, **kwargs):
         # When flask returns a 404, it falls back to here so we need to
         # raise a cherrypy 404.
@@ -471,6 +480,7 @@ class Recipes(RPCRoot):
         if recipe.is_deleted():
             flash(_(u"Invalid %s, has been deleted" % recipe.t_id))
             redirect(".")
+        recipe.set_reviewed_state(identity.current.user, True)
         return dict(title   = 'Recipe',
                     recipe_widget        = self.recipe_widget,
                     recipe               = recipe)
@@ -490,9 +500,43 @@ def get_recipe(id):
     :param id: Recipe's id.
     """
     recipe = _get_recipe_by_id(id)
+    if recipe.recipeset.job.is_deleted:
+        return Gone410('Job %s is deleted' % recipe.recipeset.job.id)
     if request_wants_json():
         return jsonify(recipe.__json__())
-    return NotFound404('Fall back to old recipe page')
+    if identity.current.user and identity.current.user.use_old_job_page:
+        return NotFound404('Fall back to old recipe page')
+    if identity.current.user:
+        recipe.set_reviewed_state(identity.current.user, True)
+    return render_tg_template('bkr.server.templates.recipe', {
+        'title': recipe.t_id,
+        'recipe': recipe,
+    })
+
+@app.route('/recipes/<int:id>.xml', methods=['GET'])
+def recipe_xml(id):
+    """
+    Returns the recipe in Beaker results XML format.
+
+    :status 200: The recipe xml file was successfully generated.
+    """
+    recipe = _get_recipe_by_id(id)
+    xmlstr = lxml.etree.tostring(recipe.to_xml(), pretty_print=True)
+    response = make_response(xmlstr)
+    response.status_code = 200
+    response.headers.add('Content-Type', 'text/xml')
+    return response
+
+@app.route('/recipes/<int:id>.junit.xml', methods=['GET'])
+def recipe_junit_xml(id):
+    """
+    Returns the recipe in JUnit-compatible XML format.
+    """
+    recipe = _get_recipe_by_id(id)
+    response = make_response(recipe_to_junit_xml(recipe))
+    response.status_code = 200
+    response.headers.add('Content-Type', 'text/xml')
+    return response
 
 def _record_activity(recipe, field, old, new, action=u'Changed'):
     recipe.record_activity(user=identity.current.user, service=u'HTTP',
@@ -522,6 +566,8 @@ def update_recipe(id):
                 _record_activity(recipe, u'Whiteboard', recipe.whiteboard,
                     new_whiteboard)
                 recipe.whiteboard = new_whiteboard
+        if 'reviewed' in data:
+            recipe.set_reviewed_state(identity.current.user, bool(data['reviewed']))
     return jsonify(recipe.__json__())
 
 @app.route('/recipes/<int:id>/logs/<path:path>', methods=['GET'])
@@ -573,18 +619,17 @@ def update_reservation_request(id):
                 recipe.reservation_request = reservation_request
                 _record_activity(recipe, u'Reservation Request', None,
                         reservation_request.duration, 'Changed')
+            return jsonify(recipe.reservation_request.__json__())
         else:
             if recipe.reservation_request:
                 session.delete(recipe.reservation_request)
                 _record_activity(recipe, u'Reservation Request',
                         recipe.reservation_request.duration, None)
-    return jsonify(recipe.reservation_request.__json__())
+            return jsonify(RecipeReservationRequest.empty_json())
 
 def _extend_watchdog(recipe_id, data):
     recipe = _get_recipe_by_id(recipe_id)
     kill_time = data.get('kill_time')
-    if not kill_time:
-        raise BadRequest400('Time not specified')
     with convert_internal_errors():
         seconds = recipe.extend(kill_time)
     return jsonify({'seconds': seconds})

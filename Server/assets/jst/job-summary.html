@@ -1,0 +1,14 @@
+<p>
+  Submitted 
+  <time datetime="<%- moment.utc(submitted_time).toISOString() %>"
+        title="<%- submitted_time %>">
+    <%- moment.utc(submitted_time).local().fromNow() %></time><% if (submitter.get('user_name') != owner.get('user_name')) { %> by
+    <%= submitter.toHTML() %><% } %>.
+  <a href="#activity" class="activity">(Job activity)</a>
+</p>
+<% if (result != 'New') { %>
+  <p>
+    <span class="label label-result-<%- result.toLowerCase() %>"><%- result %></span>
+    with <%- finished_recipe_count %> out of <%- recipe_count %> recipes finished.
+  </p>
+<% } %>

@@ -48,6 +48,7 @@ Source11:        https://github.com/makeusabrew/bootbox/archive/ed5c62a02ab1eb51
 Source12:        https://github.com/ifightcrime/bootstrap-growl/archive/eba6d7685c842f83764290c9ab5e82f7d4ffea22/bootstrap-growl-eba6d7685c842f83764290c9ab5e82f7d4ffea22.tar.gz
 Source13:       https://github.com/eternicode/bootstrap-datepicker/archive/b374f23971817d507bded0dc16892e87a6d2fe42/bootstrap-datepicker-b374f23971817d507bded0dc16892e87a6d2fe42.tar.gz
 Source14:       https://github.com/chjj/marked/archive/2b5802f258c5e23e48366f2377fbb4c807f47658/marked-2b5802f258c5e23e48366f2377fbb4c807f47658.tar.gz
+Source15:       https://github.com/jsmreese/moment-duration-format/archive/8d0bf29a1eab180cb83d0f13f93f6974faedeafd/moment-duration-format-8d0bf29a1eab180cb83d0f13f93f6974faedeafd.tar.gz
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
@@ -339,6 +340,7 @@ tar -C Server/assets/bootbox --strip-components=1 -xzf %{SOURCE11}
 tar -C Server/assets/bootstrap-growl --strip-components=1 -xzf %{SOURCE12}
 tar -C Server/assets/bootstrap-datepicker --strip-components=1 -xzf %{SOURCE13}
 tar -C Server/assets/marked --strip-components=1 -xzf %{SOURCE14}
+tar -C Server/assets/moment-duration-format --strip-components=1 -xzf %{SOURCE15}
 
 %build
 make \

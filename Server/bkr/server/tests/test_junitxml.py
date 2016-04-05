@@ -8,7 +8,7 @@
 
 import datetime
 import unittest2 as unittest
-from bkr.server.junitxml import to_junit_xml
+from bkr.server.junitxml import job_to_junit_xml
 from bkr.server.model import session, TaskResult, TaskStatus, Task, RecipeTaskResult
 from bkr.server.tests import data_setup
 
@@ -26,7 +26,7 @@ class JUnitXMLUnitTest(unittest.TestCase):
         recipe = job.recipesets[0].recipes[0]
         recipe.tasks[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 0)
         recipe.tasks[0].results[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 10)
-        out = to_junit_xml(job)
+        out = job_to_junit_xml(job)
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
@@ -49,7 +49,7 @@ class JUnitXMLUnitTest(unittest.TestCase):
         recipe = job.recipesets[0].recipes[0]
         recipe.tasks[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 0)
         recipe.tasks[0].results[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 10)
-        out = to_junit_xml(job)
+        out = job_to_junit_xml(job)
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
@@ -74,7 +74,7 @@ class JUnitXMLUnitTest(unittest.TestCase):
         recipe = job.recipesets[0].recipes[0]
         recipe.tasks[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 0)
         recipe.tasks[0].results[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 10)
-        out = to_junit_xml(job)
+        out = job_to_junit_xml(job)
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
@@ -99,7 +99,7 @@ class JUnitXMLUnitTest(unittest.TestCase):
         recipe = job.recipesets[0].recipes[0]
         recipe.tasks[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 0)
         recipe.tasks[0].results[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 10)
-        out = to_junit_xml(job)
+        out = job_to_junit_xml(job)
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
@@ -121,7 +121,7 @@ class JUnitXMLUnitTest(unittest.TestCase):
         # but we *don't* want to just totally explode and return a 500 error.
         job = data_setup.create_job(recipe_whiteboard=u'new job')
         self.assertEqual(job.status, TaskStatus.new)
-        out = to_junit_xml(job)
+        out = job_to_junit_xml(job)
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
@@ -144,7 +144,7 @@ class JUnitXMLUnitTest(unittest.TestCase):
         recipe.tasks[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 0)
         recipe.tasks[0].results[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 10)
         self.assertEqual(job.status, TaskStatus.running)
-        out = to_junit_xml(job)
+        out = job_to_junit_xml(job)
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
@@ -171,7 +171,7 @@ class JUnitXMLUnitTest(unittest.TestCase):
         recipe.tasks[0].pass_(path=u'second', score=0, summary=u'(Pass)')
         recipe.tasks[0].results[1].start_time = datetime.datetime(2015, 12, 14, 0, 0, 13)
         recipe.tasks[0]._change_status(TaskStatus.completed)
-        out = to_junit_xml(job)
+        out = job_to_junit_xml(job)
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
@@ -206,7 +206,7 @@ class JUnitXMLUnitTest(unittest.TestCase):
         recipe.tasks[0].results[3].start_time = datetime.datetime(2015, 12, 14, 0, 0, 4)
         recipe.tasks[0].finish_time = datetime.datetime(2015, 12, 14, 0, 0, 5)
         recipe.tasks[0]._change_status(TaskStatus.completed)
-        out = to_junit_xml(job)
+        out = job_to_junit_xml(job)
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
@@ -238,7 +238,7 @@ class JUnitXMLUnitTest(unittest.TestCase):
         job.cancel(msg=u'I cancelled it')
         recipe = job.recipesets[0].recipes[0]
         job.update_status()
-        out = to_junit_xml(job)
+        out = job_to_junit_xml(job)
         expected = """\
 <?xml version=\'1.0\' encoding=\'utf8\'?>
 <testsuites>
@@ -261,7 +261,7 @@ class JUnitXMLUnitTest(unittest.TestCase):
         job.abort(msg=u'External Watchdog Expired')
         job.update_status()
         recipe = job.recipesets[0].recipes[0]
-        out = to_junit_xml(job)
+        out = job_to_junit_xml(job)
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>

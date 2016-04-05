@@ -30,7 +30,7 @@ from bkr.server.model import LabController, User, Group, UserGroup, \
         GuestResource, VirtResource, SystemStatusDuration, SystemAccessPolicy, \
         SystemPermission, DistroTreeImage, ImageType, KernelType, \
         RecipeReservationRequest, OSMajorInstallOptions, SystemPool, \
-        GroupMembershipType
+        GroupMembershipType, Installation, CommandStatus
 from bkr.server.model.types import mac_unix_padded_dialect
 
 log = logging.getLogger(__name__)
@@ -444,9 +444,12 @@ def create_retention_tag(name=None, default=False, needs_product=False):
     session.add(new_tag)
     return new_tag
 
-def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product=None,
-        retention_tag=None, group=None, submitter=None, priority=None,
-        queue_time=None, **kwargs):
+def create_job_for_recipes(recipes, **kwargs):
+    recipeset = create_recipeset_for_recipes(recipes, **kwargs)
+    return create_job_for_recipesets([recipeset], **kwargs)
+
+def create_job_for_recipesets(recipesets, owner=None, whiteboard=None, cc=None,
+        product=None, retention_tag=None, group=None, submitter=None, **kwargs):
     if retention_tag is None:
         retention_tag = RetentionTag.by_tag(u'scratch') # Don't use default, unpredictable
     else:
@@ -456,11 +459,18 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product
         owner = create_user()
     if whiteboard is None:
         whiteboard = unique_name(u'job %s')
-    job = Job(whiteboard=whiteboard, ttasks=sum(r.ttasks for r in recipes),
+    job = Job(whiteboard=whiteboard, ttasks=sum(rs.ttasks for rs in recipesets),
         owner=owner, retention_tag=retention_tag, group=group, product=product,
         submitter=submitter)
     if cc is not None:
         job.cc = cc
+    job.recipesets.extend(recipesets)
+    session.add(job)
+    session.flush()
+    log.debug('Created %s', job.t_id)
+    return job
+
+def create_recipeset_for_recipes(recipes, priority=None, queue_time=None, **kwargs):
     if priority is None:
         priority = TaskPriority.default_priority()
     recipe_set = RecipeSet(ttasks=sum(r.ttasks for r in recipes),
@@ -468,23 +478,22 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product
     if queue_time is not None:
         recipe_set.queue_time = queue_time
     recipe_set.recipes.extend(recipes)
-    job.recipesets.append(recipe_set)
-    session.add(job)
-    session.flush()
-    log.debug('Created %s', job.t_id)
-    return job
+    return recipe_set
 
-def create_job(num_recipes=1, num_guestrecipes=0, whiteboard=None,
+def create_job(num_recipesets=1, num_recipes=1, num_guestrecipes=0, whiteboard=None,
         recipe_whiteboard=None, **kwargs):
     if kwargs.get('distro_tree', None) is None:
         kwargs['distro_tree'] = create_distro_tree()
-    recipes = [create_recipe(whiteboard=recipe_whiteboard, **kwargs)
-            for _ in range(num_recipes)]
-    guestrecipes = [create_guestrecipe(host=recipes[0],
-            whiteboard=recipe_whiteboard, **kwargs)
-            for _ in range(num_guestrecipes)]
-    return create_job_for_recipes(recipes + guestrecipes,
-            whiteboard=whiteboard, **kwargs)
+    recipesets = []
+    for _ in range(num_recipesets):
+        recipes = [create_recipe(whiteboard=recipe_whiteboard, **kwargs)
+                for _ in range(num_recipes)]
+        guestrecipes = [create_guestrecipe(host=recipes[0],
+                whiteboard=recipe_whiteboard, **kwargs)
+                for _ in range(num_guestrecipes)]
+        recipesets.append(create_recipeset_for_recipes(
+                recipes + guestrecipes, **kwargs))
+    return create_job_for_recipesets(recipesets, whiteboard=whiteboard, **kwargs)
 
 def create_running_job(**kwargs):
     job = create_job(**kwargs)
@@ -579,11 +588,9 @@ def mark_job_complete(job, finish_time=None, only=False, **kwargs):
             recipe.resource.reservation.finish_time = finish_time
             recipe.finish_time = finish_time
 
-def mark_recipe_waiting(recipe, start_time=None, system=None, fqdn=None,
+def mark_recipe_scheduled(recipe, start_time=None, system=None, fqdn=None,
         mac_address=None, lab_controller=None, virt=False, instance_id=None,
         **kwargs):
-    if start_time is None:
-        start_time = datetime.datetime.utcnow()
     recipe.process()
     recipe.queue()
     recipe.schedule()
@@ -604,7 +611,7 @@ def mark_recipe_waiting(recipe, start_time=None, system=None, fqdn=None,
                             fqdn=fqdn, lab_controller=lab_controller)
                 recipe.resource = SystemResource(system=system)
                 recipe.resource.allocate()
-                recipe.resource.reservation.start_time = start_time
+                recipe.resource.reservation.start_time = start_time or datetime.datetime.utcnow()
                 recipe.recipeset.lab_controller = system.lab_controller
         elif isinstance(recipe, GuestRecipe):
             recipe.resource = GuestResource()
@@ -614,12 +621,40 @@ def mark_recipe_waiting(recipe, start_time=None, system=None, fqdn=None,
                         dialect=mac_unix_padded_dialect)
     if not recipe.distro_tree.url_in_lab(recipe.recipeset.lab_controller):
         add_distro_tree_to_lab(recipe.distro_tree, recipe.recipeset.lab_controller)
-    recipe.start_time = start_time
     recipe.watchdog = Watchdog()
+    log.debug('Marked %s as scheduled with system %s', recipe.t_id, recipe.resource.fqdn)
+
+def mark_job_scheduled(job, **kwargs):
+    for recipeset in job.recipesets:
+        for recipe in recipeset.recipes:
+            mark_recipe_scheduled(recipe, **kwargs)
+
+def mark_recipe_waiting(recipe, start_time=None, only=False, **kwargs):
+    if start_time is None:
+        start_time = datetime.datetime.utcnow()
+    if not only:
+        mark_recipe_scheduled(recipe, start_time=start_time, **kwargs)
+    recipe.start_time = start_time
+    recipe.provision()
+    if recipe.installation.commands:
+        # Because we run a real beaker-provision in the dogfood tests, it will pick 
+        # up the freshly created configure_netboot commands and try pulling down 
+        # non-existent kernel+initrd images. When that fails, it will abort our 
+        # newly created recipe which we don't want. To work around this, we hack 
+        # the commands to be already completed so that beaker-provision skips them.
+        # I would like to have a better solution here...
+        for cmd in recipe.installation.commands:
+            cmd.status = CommandStatus.completed
+        recipe.installation.rebooted = start_time
+        recipe.extend(600)
+    else:
+        # System without power control, there are no power commands. In the 
+        # real world the recipe sits in Waiting with no watchdog kill time 
+        # until someone powers on the system.
+        pass
     recipe.waiting()
-    recipe.resource.rebooted = start_time
     recipe.recipeset.job.update_status()
-    log.debug('Marked %s as waiting with system %s', recipe.t_id, recipe.resource.fqdn)
+    log.debug('Provisioned %s', recipe.t_id)
 
 def mark_job_waiting(job, **kwargs):
     for recipeset in job.recipesets:
@@ -631,7 +666,7 @@ def mark_recipe_running(recipe, fqdn=None, only=False, install_started=None, **k
         install_started = datetime.datetime.utcnow()
     if not only:
         mark_recipe_waiting(recipe, fqdn=fqdn, **kwargs)
-    recipe.resource.install_started = install_started
+    recipe.installation.install_started = install_started
     recipe.tasks[0].start()
     recipe.tasks[0].start_time = install_started
     if isinstance(recipe, GuestRecipe):
@@ -648,8 +683,8 @@ def mark_recipe_installation_finished(recipe, fqdn=None, install_finished=None,
         if fqdn is None:
             fqdn = '%s-for-recipe-%s' % (recipe.resource.__class__.__name__, recipe.id)
         recipe.resource.fqdn = fqdn
-    recipe.resource.install_finished = install_finished or datetime.datetime.utcnow()
-    recipe.resource.postinstall_finished = postinstall_finished or datetime.datetime.utcnow()
+    recipe.installation.install_finished = install_finished or datetime.datetime.utcnow()
+    recipe.installation.postinstall_finished = postinstall_finished or datetime.datetime.utcnow()
     recipe.recipeset.job.update_status()
 
 def mark_job_running(job, **kw):

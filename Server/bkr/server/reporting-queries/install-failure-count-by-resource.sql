@@ -14,10 +14,11 @@ FROM
     recipe_resource AS rr
     INNER JOIN recipe ON recipe.id = rr.recipe_id
     INNER JOIN virt_resource AS vr ON vr.id = rr.id
+    INNER JOIN installation ON installation.recipe_id = recipe.id
 WHERE
     recipe.status NOT IN('Running', 'Cancelled')
-    AND COALESCE(rr.rebooted, rr.install_started) IS NOT NULL
-    AND rr.install_finished IS NULL)
+    AND COALESCE(installation.rebooted, installation.install_started) IS NOT NULL
+    AND installation.install_finished IS NULL)
 
 UNION
 
@@ -28,24 +29,25 @@ FROM
     recipe_resource AS rr
     INNER JOIN recipe ON recipe.id = rr.recipe_id
     INNER JOIN guest_resource AS gr ON rr.id = gr.id
+    INNER JOIN installation ON installation.recipe_id = recipe.id
 WHERE
     recipe.status NOT IN('Running', 'Cancelled')
-    AND COALESCE(rr.rebooted, rr.install_started) IS NOT NULL
-    AND rr.install_finished IS NULL)
+    AND COALESCE(installation.rebooted, installation.install_started) IS NOT NULL
+    AND installation.install_finished IS NULL)
 
 UNION
 
 (SELECT
     rr.fqdn AS fqdn,
-    COUNT(rr1.id) AS failed_recipes
+    COUNT(installation.id) AS failed_recipes
 FROM
     recipe_resource AS rr
     LEFT OUTER JOIN recipe ON recipe.id = rr.recipe_id AND recipe.status NOT IN('Running', 'Cancelled')
     INNER JOIN system_resource AS sr ON sr.id = rr.id
     LEFT OUTER JOIN
-        recipe_resource AS rr1 ON recipe.id = rr1.recipe_id
-        AND COALESCE(rr1.rebooted, rr1.install_started) IS NOT NULL
-        AND rr1.install_finished IS NULL
+        installation ON installation.recipe_id = recipe.id
+        AND COALESCE(installation.rebooted, installation.install_started) IS NOT NULL
+        AND installation.install_finished IS NULL
 GROUP BY sr.system_id)
 
 ORDER BY failed_recipes desc

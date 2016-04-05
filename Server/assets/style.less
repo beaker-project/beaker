@@ -38,8 +38,8 @@
 //@import "bootstrap/less/pager.less";
 // Components: Popovers
 @import "bootstrap/less/modals.less";
-//@import "bootstrap/less/tooltip.less";
-//@import "bootstrap/less/popovers.less";
+@import "bootstrap/less/tooltip.less";
+@import "bootstrap/less/popovers.less";
 // Components: Misc
 //@import "bootstrap/less/thumbnails.less";
 @import "bootstrap/less/media.less";
@@ -68,6 +68,9 @@
 @import "bootstrap-select-bs2fixes.less";
 @import "datatables-bootstrap.less";
 @import "backgrid.less";
+// copy from boostrap 3 panels https://github.com/twbs/bootstrap/blob/v3.3.6/less/panels.less
+// and adjust the variables to match Boostrap 2.3.
+@import "panels.less";
 
 // overrides for Bootstrap variables
 @sansFontFamily:  "Liberation Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -87,10 +90,15 @@
 // workaround for https://github.com/twitter/typeahead.js/issues/147
 .modal-body {
     overflow: visible;
+    max-height: none;
 }
 
 // workaround for missing margin above help-block with bootstrap-select
 .form-horizontal .bootstrap-select + .help-block {
+    margin-top: @baseLineHeight / 2;
+}
+// missing margin above help-block with a btn-group
+form .btn-group + .help-block {
     margin-top: @baseLineHeight / 2;
 }
 
@@ -234,6 +242,11 @@ td form, td input, td select, td .input-append, td .input-prepend {
 @resultWarnColor: @orange;
 @resultNewColor: @blue;
 @resultPanicColor: @black;
+.label-result-pass  { background-color: @resultPassColor; }
+.label-result-fail  { background-color: @resultFailColor; }
+.label-result-warn  { background-color: @resultWarnColor; }
+.label-result-new   { background-color: @resultNewColor; }
+.label-result-panic { background-color: @resultPanicColor; }
 
 // XXX The above colours are used in the job matrix and are carried over
 // from our pre Bootstrap styling.
@@ -300,9 +313,11 @@ input.tt-hint {
 }
 
 @import "master.less";
+@import "quick-info.less";
 @import "system.less";
 @import "system-pool.less";
 @import "job.less";
+@import "job-old.less";
 @import "user.less";
 @import "prefs.less";
 @import "recipe-tasks.less";
@@ -312,6 +327,8 @@ input.tt-hint {
 @import "group.less";
 @import "clone-job.less";
 @import "labcontrollers.less";
+@import "recipe.less";
+@import "job-and-recipe.less";
 
 // Site-specific styles. The beaker-server package creates site.less as 
 // a symlink to /dev/null if it doesn't exist. Admins can overwrite the symlink 

@@ -175,3 +175,19 @@ class UserPrefs(WebDriverTestCase):
         pane.find_element_by_tag_name('form').submit()
         self.assertIn('Invalid SSH public key',
                 pane.find_element_by_class_name('alert-error').text)
+
+    def test_set_use_old_job_page(self):
+        with session.begin():
+            self.user.use_old_job_page = True
+        b = self.browser
+        pane = self.go_to_prefs_tab('User Interface')
+        checkbox = pane.find_element_by_name('use_old_job_page')
+        self.assertTrue(checkbox.is_selected())
+        checkbox.click()
+        pane.find_element_by_tag_name('form').submit()
+        # When the button changes back to Save Changes it means it's finished saving
+        save_btn = pane.find_element_by_xpath('//button[text()="Save Changes"]')
+        self.assertFalse(save_btn.is_enabled())
+        with session.begin():
+            session.refresh(self.user)
+            self.assertEqual(self.user.use_old_job_page, False)

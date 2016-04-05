@@ -22,7 +22,7 @@ from bkr.inttest.server.requests_utils import patch_json, post_json
 from bkr.server.model import Distro, DistroTree, Arch, ImageType, Job, \
     System, SystemStatus, TaskStatus, CommandActivity, CommandStatus, \
     KernelType, LabController, User, OSMajor, OSVersion, LabControllerActivity, \
-    Group
+    Group, Installation
 from bkr.server.tools import beakerd
 from bkr.server.wsgi import app
 from bkr.server import identity
@@ -616,8 +616,8 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
                 data_setup.mark_recipe_waiting(recipe, system=system)
                 command = CommandActivity(
                         user=None, service=u'testdata', action=u'on',
-                        status=CommandStatus.running,
-                        callback=u'bkr.server.model.auto_cmd_handler')
+                        status=CommandStatus.running)
+                command.installation = recipe.installation
                 if creation_date is not None:
                     command.created = command.updated = creation_date
                 system.command_queue.append(command)
@@ -812,7 +812,9 @@ class TestPowerFailures(XmlRpcTestCase):
                                               lab_controller=self.lab_controller,
                                               status=SystemStatus.automated, shared=True)
             distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20')
-            system.configure_netboot(distro_tree, '', service=u'testdata')
+            installation = Installation(distro_tree=distro_tree, system=system,
+                    kernel_options=u'')
+            system.configure_netboot(installation=installation, service=u'testdata')
         self.server.auth.login_password(self.lab_controller.user.user_name,
                                         u'logmein')
         queued_commands = self.server.labcontrollers.get_queued_command_details()

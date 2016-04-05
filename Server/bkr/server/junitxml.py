@@ -54,18 +54,28 @@ def _testcases_for_task(task):
         testcase.append(E(u'system-out', _systemout_for_result(result)))
         yield testcase
 
-def to_junit_xml(job):
+def _testsuite_for_recipe(recipe):
+    testsuite = E.testsuite(id=recipe.t_id, name=recipe.whiteboard or u'')
+    if recipe.resource and recipe.resource.fqdn:
+        testsuite.set('hostname', recipe.resource.fqdn)
+    for task in recipe.tasks:
+        testsuite.extend(_testcases_for_task(task))
+    testsuite.set('tests', str(
+            len(testsuite.findall('testcase')) -
+            len(testsuite.findall('testcase/skipped'))))
+    testsuite.set('failures', str(len(testsuite.findall('testcase/failure'))))
+    testsuite.set('errors', str(len(testsuite.findall('testcase/error'))))
+    return testsuite
+
+def job_to_junit_xml(job):
     testsuites = E.testsuites()
     for recipe in job.all_recipes:
-        testsuite = E.testsuite(id=recipe.t_id, name=recipe.whiteboard or u'')
-        if recipe.resource and recipe.resource.fqdn:
-            testsuite.set('hostname', recipe.resource.fqdn)
-        for task in recipe.tasks:
-            testsuite.extend(_testcases_for_task(task))
-        testsuite.set('tests', str(
-                len(testsuite.findall('testcase')) -
-                len(testsuite.findall('testcase/skipped'))))
-        testsuite.set('failures', str(len(testsuite.findall('testcase/failure'))))
-        testsuite.set('errors', str(len(testsuite.findall('testcase/error'))))
-        testsuites.append(testsuite)
-    return lxml.etree.tostring(testsuites, encoding='utf8', xml_declaration=True, pretty_print=True)
+        testsuites.append(_testsuite_for_recipe(recipe))
+    return lxml.etree.tostring(testsuites, encoding='utf8',
+            xml_declaration=True, pretty_print=True)
+
+def recipe_to_junit_xml(recipe):
+    testsuites = E.testsuites()
+    testsuites.append(_testsuite_for_recipe(recipe))
+    return lxml.etree.tostring(testsuites, encoding='utf8',
+            xml_declaration=True, pretty_print=True)

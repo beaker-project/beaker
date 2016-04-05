@@ -179,6 +179,9 @@ class MethodNotAllowed405(PlainTextHTTPException):
 class Conflict409(PlainTextHTTPException):
     code = 409
 
+class Gone410(PlainTextHTTPException):
+    code = 410
+
 class UnsupportedMediaType415(PlainTextHTTPException):
     """
     HTTP error response for when the *request* content type is not supported. 

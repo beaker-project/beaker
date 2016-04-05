@@ -18,7 +18,7 @@ from bkr.server.widgets import myPaginateDataGrid, \
     HorizontalForm, BeakerDataGrid
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
-from bkr.server.junitxml import to_junit_xml
+from bkr.server.junitxml import job_to_junit_xml
 from bkr.server import search_utility, identity, metrics
 from bkr.server.needpropertyxml import XmlHost
 from bkr.server.installopts import InstallOptions
@@ -35,15 +35,15 @@ from bkr.server.model import (Job, RecipeSet, RetentionTag, TaskBase,
                               TaskPriority, User, Group, MachineRecipe,
                               DistroTree, TaskPackage, RecipeRepo,
                               RecipeKSAppend, Task, Product, GuestRecipe,
-                              RecipeTask, RecipeTaskParam, RecipeSetResponse,
-                              Response, StaleTaskStatusException,
+                              RecipeTask, RecipeTaskParam,
+                              StaleTaskStatusException,
                               RecipeSetActivity, System, RecipeReservationRequest,
-                              TaskStatus)
+                              TaskStatus, RecipeSetComment)
 
 from bkr.common.bexceptions import BeakerException, BX
 from bkr.server.flask_util import auth_required, convert_internal_errors, \
     BadRequest400, NotFound404, Forbidden403, Conflict409, request_wants_json, \
-    read_json_request
+    read_json_request, render_tg_template
 from flask import request, jsonify, make_response
 from bkr.server.util import parse_untrusted_xml
 import cgi
@@ -674,21 +674,6 @@ class Jobs(RPCRoot):
             raise BX(_('No Tasks! You can not have a recipe with no tasks!'))
         return recipe
 
-    @expose('json')
-    def update_recipe_set_response(self,recipe_set_id,response_id):
-        rs = RecipeSet.by_id(recipe_set_id)
-        old_response = None
-        if rs.nacked is None:
-            rs.nacked = RecipeSetResponse(response_id=response_id)
-        else:
-            old_response = rs.nacked.response
-            rs.nacked.response = Response.by_id(response_id)
-        rs.record_activity(user=identity.current.user, service=u'WEBUI',
-                           field=u'Ack/Nak', action=u'Changed', old=old_response,
-                           new=rs.nacked.response)
-
-        return {'success' : 1, 'rs_id' : recipe_set_id }
-
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def set_retention_product(self, job_t_id, retention_tag_name, product_name):
@@ -745,7 +730,10 @@ class Jobs(RPCRoot):
     def set_response(self, taskid, response):
         """
         Updates the response (ack/nak) for a recipe set, or for all recipe sets 
-        in a job. This is part of the results reviewing system.
+        in a job.
+
+        Deprecated: setting 'nak' is a backwards compatibility alias for 
+        waiving a recipe set. Use the JSON API to set {waived: true} instead.
 
         :param taskid: see above
         :type taskid: string
@@ -753,31 +741,15 @@ class Jobs(RPCRoot):
         :type response: string
         """
         job = TaskBase.get_by_t_id(taskid)
-        if job.can_set_response(identity.current.user):
-            job.set_response(response)
-        else:
+        if not job.can_waive(identity.current.user):
             raise BeakerException('No permission to modify %s' % job)
-
-    @expose(format='json')
-    def save_response_comment(self,rs_id,comment):
-        try:
-            rs = RecipeSetResponse.by_id(rs_id)
-            rs.comment = comment
-            session.flush() 
-            return {'success' : True, 'rs_id' : rs_id }
-        except Exception, e:
-            log.error(e)
-            return {'success' : False, 'rs_id' : rs_id }
-
-    @expose(format='json')
-    def get_response_comment(self,rs_id):      
-        rs_nacked = RecipeSetResponse.by_id(rs_id)
-        comm = rs_nacked.comment
-
-        if comm:
-            return {'comment' : comm, 'rs_id' : rs_id }
+        if response == 'nak':
+            waived = True
+        elif response == 'ack':
+            waived = False
         else:
-            return {'comment' : 'No comment', 'rs_id' : rs_id }
+            raise ValueError('Unrecognised response %r' % response)
+        job.set_waived(waived)
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
@@ -981,7 +953,7 @@ class Jobs(RPCRoot):
             job.whiteboard = kw['whiteboard']
         return returns
 
-    @expose(template="bkr.server.templates.job") 
+    @expose(template="bkr.server.templates.job-old")
     def default(self, id):
         try:
             job = Job.by_id(id)
@@ -1044,7 +1016,12 @@ def get_job(id):
     job = _get_job_by_id(id)
     if request_wants_json():
         return jsonify(job.__json__())
-    return NotFound404('Fall back to old job page')
+    if identity.current.user and identity.current.user.use_old_job_page:
+        return NotFound404('Fall back to old job page')
+    return render_tg_template('bkr.server.templates.job', {
+        'title': job.t_id, # N.B. JobHeaderView in JS updates the page title
+        'job': job,
+    })
 
 @app.route('/jobs/<int:id>.xml', methods=['GET'])
 def job_xml(id):
@@ -1066,7 +1043,7 @@ def job_junit_xml(id):
     Returns the job in JUnit-compatible XML format.
     """
     job = _get_job_by_id(id)
-    response = make_response(to_junit_xml(job))
+    response = make_response(job_to_junit_xml(job))
     response.status_code = 200
     response.headers.add('Content-Type', 'text/xml')
     return response

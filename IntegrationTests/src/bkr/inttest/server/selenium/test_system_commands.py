@@ -78,6 +78,7 @@ class SystemCommandsTest(WebDriverTestCase):
         modal.find_element_by_xpath('.//button[text()="OK"]').click()
         pane.find_element_by_xpath('.//table/tbody/tr[1]/td[4][text()="on"]')
         with session.begin():
+            session.expire_all()
             self.assertEquals(system.command_queue[0].action, 'on')
 
     def check_clear_netboot(self, system):
@@ -94,6 +95,7 @@ class SystemCommandsTest(WebDriverTestCase):
         modal.find_element_by_xpath('.//button[text()="OK"]').click()
         pane.find_element_by_xpath('.//table/tbody/tr[1]/td[4][text()="clear_netboot"]')
         with session.begin():
+            session.expire_all()
             self.assertEquals(system.command_queue[0].action, 'clear_netboot')
 
     def test_cannot_power_when_not_logged_in(self):

@@ -1,0 +1,230 @@
+
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+
+// recipe page
+
+@mainLogWidth: 15em;
+
+.recipe-tabs {
+    overflow: visible;
+}
+.recipe-btn-group {
+    font-weight: normal;
+    margin-left: 15px;
+}
+.recipe-quick-info {
+    .quick-info;
+    p:last-child {
+        margin-bottom: 0;
+    }
+    .recipe-whiteboard {
+        min-width: 13em;
+        max-width: 35em;
+        h4 {
+            font-size: 1em;
+            color: @grayLight;
+            text-transform: uppercase;
+            margin: 0 0 (@baseLineHeight / 2) 0;
+        }
+    }
+    .recipe-runtime-status {
+        .fa-terminal.fa-border {
+            border-color: inherit;
+            padding: .1em .15em .1em;
+        }
+    }
+}
+.recipe-installation {
+    .recipe-installation-summary {
+        margin-bottom: @baseLineHeight;
+        display: flex;
+        div {
+            flex-grow: 1;
+            flex-shrink: 0;
+        }
+        .recipe-installation-logs {
+            flex-grow: 0;
+            flex-shrink: 0;
+            flex-basis: @mainLogWidth + 3em;
+        }
+        .recipe-installation-status {
+            flex-grow: 0;
+            flex-shrink: 0;
+            flex-basis: 10em;
+            text-align: right;
+            .label {
+                font-size: 1em;
+            }
+        }
+    }
+     .recipe-installation-progress {
+        table {
+            margin-bottom: 0;
+        }
+         table tr:first-child td {
+             border-top: none;
+         }
+         table tr td:last-child {
+             width: 100%;
+             white-space: nowrap;
+             overflow: hidden;
+         }
+        code {
+            color: @textColor;
+            white-space: pre-wrap;
+        }
+     }
+}
+.recipe-task-flex-box {
+    display: flex;
+    .task-icon {
+        flex-grow: 0;
+        flex-shrink: 0;
+        flex-basis: @panel-body-padding + 1px;
+        cursor: pointer;
+    }
+    .task-id, .task-result-id {
+        flex-grow: 0;
+        flex-shrink: 0;
+        flex-basis: 10em;
+    }
+    .task-start-time, .task-result-start-time {
+        flex-grow: 0;
+        flex-shrink: 0;
+        flex-basis: 6em;
+    }
+   .task-metadata, .task-result-path {
+        flex-grow: 1;
+        flex-shrink: 1;
+    }
+    .task-logs, .task-result-logs {
+        flex-grow: 0;
+        flex-shrink: 0;
+        flex-basis: @mainLogWidth + 3em;
+    }
+    .task-comments, .task-result-comments {
+        flex-grow: 0;
+        flex-shrink: 0;
+        flex-basis: 3em;
+    }
+    .recipe-task-status, .task-result-result {
+        flex-grow: 0;
+        flex-shrink: 0;
+        flex-basis: 10em;
+    }
+}
+.recipe-tasks {
+    .recipe-tasks-summary {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: @baseLineHeight;
+    }
+    .recipe-task {
+        padding-top: (@baseLineHeight / 2) - 1;
+        margin-top: @baseLineHeight / 2;
+        border-top: 1px solid @grayLighter;
+    }
+    .recipe-task-summary {
+        .recipe-task-flex-box;
+        .task-metadata {
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            .task-version, .task-role {
+                margin-left: 1em;
+                .muted;
+            }
+        }
+    }
+    .recipe-task-details {
+        .panel {
+            margin-top: @baseLineHeight / 2;
+            margin-bottom: 0;
+        }
+        div.recipe-task-result {
+            .recipe-task-flex-box;
+        }
+        div.recipe-task-result + div.recipe-task-result {
+            padding-top: (@baseLineHeight / 2) - 1;
+            margin-top: @baseLineHeight / 2;
+            border-top: 1px solid @grayLighter;
+        }
+    }
+    .recipe-status, .recipe-task-status {
+        margin-right: @panel-body-padding;
+    }
+    .recipe-task-status, .task-result-result {
+        white-space: nowrap;
+        text-align: right;
+        .label {
+            font-size: 1em;
+        }
+    }
+}
+.recipe-installation-logs, .task-logs, .task-result-logs {
+    // This line-height mess here is because this element contains
+    // inline-blocks, rather than normal inline elements. To avoid line spacing
+    // being applied twice, we set normal line height inside the inline-blocks
+    // and zero line height in the container.
+    line-height: 0;
+    span {
+        line-height: @baseLineHeight;
+        display: inline-block;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+    .main-log {
+        max-width: @mainLogWidth;
+        text-overflow: ellipsis;    
+    }
+}
+.recipe-installation-settings, .recipe-task-settings {
+    h4 {
+        font-size: 1em;
+        margin: @baseLineHeight 0 (@baseLineHeight / 2) 0;
+        &:first-child {
+            margin-top: 0;
+        }
+    }
+    code {
+        color: @textColor;
+        white-space: pre-wrap;
+    }
+    table.table {
+        width: auto;
+        th {
+            font-weight: normal;
+            font-style: italic;
+        }
+        td, th {
+            padding: 0.5em 0.75em;
+        }
+        td:first-child, th:first-child {
+            padding-left: 0;
+        }
+    }
+    .recipe-task-parameter {
+        margin: 0.5em 0;
+    }
+    .recipe-task-parameter-equals {
+        margin: 0 0.5em;
+    }
+}
+.recipe-page-header abbr, .task-id abbr, .task-result-id abbr  {
+    text-decoration: none;
+    border-bottom: none;
+}
+.recipe-reservation ul{
+    list-style-type:none;
+    margin-left: 0;
+    li{
+        float:left;
+        &:not(:first-child) {
+            margin-left: 1em;
+        }
+    }
+}

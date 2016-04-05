@@ -131,4 +131,54 @@ window.UserSubmissionDelegatesView = Backbone.View.extend({
     },
 });
 
+window.UserUIPreferencesView = Backbone.View.extend({
+    template: JST['user-ui-preferences'],
+    events: {
+        'click input': 'changed',
+        'submit form': 'submit',
+        'reset form': 'reset',
+    },
+    initialize: function () {
+        this.render();
+        this.listenTo(this.model, 'change:use_old_job_page', this.render);
+    },
+    render: function () {
+        this.$el.html(this.template(this.model.attributes));
+        this.$('[name=use_old_job_page]').prop('checked',
+                this.model.get('use_old_job_page'));
+        this.$('.form-actions button').prop('disabled', true);
+    },
+    changed: function () {
+        this.$('.form-actions button').prop('disabled', false);
+    },
+    submit: function (evt) {
+        evt.preventDefault();
+        this.$('.alert-error').remove();
+        this.$('.form-actions button').button('loading');
+        var $el = this.$el;
+        this.model.save(
+                {use_old_job_page: this.$('[name=use_old_job_page]').is(':checked')},
+                {patch: true, wait: true})
+            .always(function () {
+                $el.find('.form-actions button').button('reset');
+            })
+            .fail(function (xhr) {
+                $el.append(alert_for_xhr(xhr));
+            })
+            .done(function (xhr) {
+                // Bootstrap's button reset happens in setTimeout for... 
+                // questionable reasons, so we have to do the same here.
+                setTimeout(function () {
+                    $el.find('.form-actions button').prop('disabled', true);
+                }, 0);
+            });
+    },
+    reset: function (evt) {
+        evt.preventDefault();
+        this.$('[name=use_old_job_page]').prop('checked',
+                this.model.get('use_old_job_page'));
+        this.$('.form-actions button').prop('disabled', true);
+    },
+});
+
 })();

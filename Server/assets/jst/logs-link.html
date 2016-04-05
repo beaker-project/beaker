@@ -1,0 +1,12 @@
+<% if (main_log) { %>
+    <span class="main-log">
+    <a href="<%- main_log.href %>">
+    <i class="fa fa-file-o"></i> <%- main_log.path %></a>
+    </span>
+    <% if (_.size(other_logs) > 0) { %>
+    <span>
+        + <a href="#" class="logs-link">
+        <%- _.size(other_logs) %> <i class="fa fa-files-o" aria-label="more logs"></i></a>
+    </span>
+    <% } %>
+<% } %>

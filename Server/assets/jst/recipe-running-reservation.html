@@ -1,0 +1,14 @@
+<% if (reservation_request.get('reserve')) { %>
+The system is currently reserved.
+<% if (can_edit) { %>
+    <div class="btn-group">
+        <button class="btn extend-reservation">Extend the reservation</button>
+        <% if (time_remaining_seconds > 0) { %>
+            <button class="btn return-reservation" data-loading-text="<i class='fa fa-spinner
+            fa-spin'></i> Returnning&hellip;">Return the reservation</button>
+        <% } %>
+    </div>
+<% } %>
+<% } else { %>
+    <p>The system is not reserved at the end of the recipe.<p>
+<% } %>

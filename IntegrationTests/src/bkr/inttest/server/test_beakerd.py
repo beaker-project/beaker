@@ -400,9 +400,11 @@ class TestBeakerd(DatabaseTestCase):
 
             beakerd.schedule_queued_recipes = mock_sqrs_run_3
             # Release systemA
-            j1 = Job.by_id(j1_id)
-            data_setup.mark_job_running(j1, only=True)
-            data_setup.mark_job_complete(j1, only=True)
+            with session.begin():
+                j1 = Job.by_id(j1_id)
+                data_setup.mark_job_waiting(j1, only=True)
+                data_setup.mark_job_running(j1, only=True)
+                data_setup.mark_job_complete(j1, only=True)
             beakerd._main_recipes()
 
             with session.begin():
@@ -1069,16 +1071,15 @@ class TestBeakerd(DatabaseTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1157348
     def test_harness_repo_not_required_contained_harness(self):
         with session.begin():
-            lc = data_setup.create_labcontroller()
             distro_tree = data_setup.create_distro_tree(osmajor='MyAwesomeNewLinux', 
                                                         harness_dir=False)
             recipe = data_setup.create_recipe(distro_tree=distro_tree)
             recipe.ks_meta = "contained_harness"
             job = data_setup.create_job_for_recipes([recipe])
-            data_setup.mark_recipe_waiting(recipe, 
-                                           system=data_setup.create_system\
-                                           (lab_controller=lc))
-            job.recipesets[0].recipes[0].provision()
+            data_setup.mark_recipe_waiting(recipe)
+        # The test is just checking that recipe.provision() can be called 
+        # without exploding and aborting the recipe due to missing harness repo 
+        # directory.
 
     def test_single_processor_priority(self):
         with session.begin():
@@ -1295,9 +1296,8 @@ class TestBeakerd(DatabaseTestCase):
         with session.begin():
             job = Job.query.get(job.id)
             self.assertEqual(job.status, TaskStatus.waiting)
-            system = System.query.get(system.id)
-            self.assertEqual(system.command_queue[2].action, 'configure_netboot')
-            self.assert_('vnc' not in system.command_queue[2].kernel_options)
+            self.assertNotIn('vnc',
+                    job.recipesets[0].recipes[0].installation.kernel_options)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1067924
     def test_kernel_options_are_not_quoted(self):
@@ -1327,9 +1327,8 @@ class TestBeakerd(DatabaseTestCase):
         with session.begin():
             job = Job.query.get(job.id)
             self.assertEqual(job.status, TaskStatus.waiting)
-            system = System.query.get(system.id)
-            self.assertEqual(system.command_queue[2].action, 'configure_netboot')
-            self.assertIn(bad_arg, system.command_queue[2].kernel_options)
+            self.assertIn(bad_arg,
+                    job.recipesets[0].recipes[0].installation.kernel_options)
 
     def test_order_by(self):
         controller = Jobs()

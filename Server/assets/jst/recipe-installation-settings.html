@@ -1,0 +1,92 @@
+<h4>Kernel Options</h4>
+<div>
+<% if (!_.isEmpty(kernel_options)) { %>
+    <code><%- kernel_options %></code>
+<% } else { %>
+    <em class="muted">(none)</em>
+<% } %>
+</div>
+<h4>Post-Install Kernel Options</h4>
+<div>
+<% if (kernel_options_post) { %>
+    <code><%- kernel_options_post %></code>
+<% } else { %>
+    <em class="muted">(none)</em>
+<% } %>
+</div>
+<h4>Kickstart Metadata</h4>
+<div>
+<% if (ks_meta) { %>
+    <code><%- ks_meta %></code>
+<% } else { %>
+    <em class="muted">(none)</em>
+<% } %>
+</div>
+<h4>Additional Packages</h4>
+<% if (!_.isEmpty(packages)) { %>
+<pre>
+<% _.each(packages, function (package) { %><%- package %>
+<% })%></pre>
+<% } else { %>
+    <div><em class="muted">(none)</em></div>
+<% } %>
+<h4>Additional Repositories</h4>
+<% if (!_.isEmpty(repos)) { %>
+    <table class="table">
+        <thead>
+            <tr>
+            <th>Name</th>
+            <th>URL</th>
+            </tr>
+        </thead>
+        <tbody>
+          <% _.each(repos, function (repo) { %>
+              <tr>
+                <td><code><%- repo.name %></code></td>
+                <td><a href="<%- repo.url %>"><%- repo.url %></a></td>
+              </tr>
+          <% })%>
+        </tbody>
+     </table>
+<% } else { %>
+    <div><em class="muted">(none)</em></div>
+<% } %>
+<h4>Custom Partitions</h4>
+<% if (!_.isEmpty(partitions)) { %>
+    <table class="table">
+        <thead>
+            <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Size</th>
+            <th>File System</th>
+            </tr>
+        </thead>
+        <tbody>
+          <% _.each(partitions, function (partition) { %>
+              <tr>
+                <td><code><%- partition.name %></code></td>
+                <td><code><%- partition.type %></code></td>
+                <td><%- partition.size %> GiB</td>
+                <td>
+                    <% if (!_.isEmpty(partition.fs)) { %>
+                        <code><%- partition.fs %></code>
+                    <% } else { %>
+                        <em class="muted">(default)</em>
+                    <% } %>
+                </td>
+              </tr>
+          <% })%>
+        </tbody>
+     </table>
+<% } else { %>
+    <div><em class="muted">(none)</em></div>
+<% } %>
+<h4>Kickstart Appends</h4>
+<% if (!_.isEmpty(ks_appends)) { %>
+    <% _.each(ks_appends, function (ks_append) { %>
+        <pre><%- ks_append.trim() %></pre>
+    <% })%>
+<% } else { %>
+    <div><em class="muted">(none)</em></div>
+<% } %>

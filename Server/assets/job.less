@@ -4,32 +4,113 @@
 // the Free Software Foundation; either version 2 of the License, or
 // (at your option) any later version.
 
-// jobs, recipe sets, and recipes on job page and recipe page
-table.job, table.recipe {
-    & > tbody > tr {
-        & > th {
-            text-align: right;
-        }
-        & > th, & > td {
-            border: none;
-        }
+// job page
+.job-btn-group {
+    font-weight: normal;
+    margin-left: 15px;
+}
+.job-info {
+    .quick-info;
+}
+.modal.job-activity {
+    width: 80%;
+    margin-left: -40%;
+    .modal-body {
+        max-height: 600px;
+        overflow: auto;
     }
 }
-div.recipeset {
-    border: 2px solid @tableBorder;
-    padding: 1em;
-    margin: 1em 0;
+.job-whiteboard {
+    h4 {
+        font-size: 1em;
+        color: @grayLight;
+        text-transform: uppercase;
+        margin: 0 0 (@baseLineHeight/2) 0;
+    }
 }
-div.recipe {
-    margin-top: 1em;
-    border-top: 2px solid @tableBorder;
-    padding-top: 1em;
+.job-recipes {
+    width: 100%;
+    tbody + tbody {
+        border-top: none;
+        // tbodies can't have margin/padding for... reasons, so we use this
+        // trick to space them apart
+        &:before {
+            content: "";
+            display: block;
+            height: 1em;
+        }
+    }
+    tbody.highlight tr {
+        @keyframes yellow-fade {
+            0% { background: @warningBackground; }
+            100% { background: none; }
+        }
+        animation: yellow-fade 3s ease-in-out 1;
+    }
+    .recipeset td {
+        border-top: none;
+        vertical-align: bottom;
+    }
+    .recipeset-id {
+        font-size: 1.2em;
+        // Floating link icon left of the recipe set id
+        margin-left: -@baseFontSize*1.2;
+        .anchor {
+            width: @baseFontSize;
+            padding-right: @baseFontSize*0.2;
+            font-size: @baseFontSize;
+            // Undo link styling because it's just a link to itself
+            color: inherit !important;
+            // Invisible until they hover over the recipe set id
+            visibility: hidden;
+        }
+        &:hover .anchor {
+            visibility: visible;
+        }
+    }
+    .recipeset .label {
+        margin-left: 0.5em;
+    }
+    .recipe-reviewed {
+        margin: 0;
+    }
+    .recipe-metadata {
+        // This trick lets the cell expand to fill the width but keeps it to a
+        // single line with ellipsis truncation, in the style of Gmail.
+        max-width: 1px;
+        width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        // Some generous horizontal spacing between the different elements of
+        // the summary line, to help distinguish them visually.
+        padding-left: 1.5em;
+        .recipe-role, .recipe-distro, .recipe-resource {
+            margin-left: 1.5em;
+            .muted;
+        }
+    }
+    .recipeset-comments, .recipe-comments {
+        text-align: right;
+        .comments-link {
+            white-space: nowrap;
+        }
+    }
+    .recipeset-actions {
+        text-align: right;
+        // Buttons in grids have small padding set globally, but we reset to
+        // the default padding here because we can be more generous with space
+        // in the recipe set heading and this way the buttons match up with the
+        // job-level buttons.
+        .btn { padding: 4px 12px; }
+    }
+    .guestrecipe .recipe-id {
+        // Guest recipe ids are indented from their host recipe, to reflect the
+        // hierarchy.
+        margin-left: 1em;
+    }
 }
-div.recipe .tab-content {
-    // if the results table overflows we want the viewport to scroll, not the tab pane
-    // https://bugzilla.redhat.com/show_bug.cgi?id=1014962
-    overflow: visible !important;
-}
-table.recipe {
-    margin-bottom: 0;
+.job-header abbr, .recipeset-id abbr, .recipe-id abbr {
+    text-decoration: none;
+    border-bottom: none;
 }

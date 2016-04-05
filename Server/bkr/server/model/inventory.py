@@ -93,16 +93,17 @@ class CommandActivity(Activity):
     delay_until = Column(DateTime, default=None)
     quiescent_period = Column(Integer, default=None)
     updated = Column(DateTime, default=datetime.utcnow)
-    callback = Column(String(255))
-    distro_tree_id = Column(Integer, ForeignKey('distro_tree.id'))
-    distro_tree = relationship(DistroTree)
-    kernel_options = Column(UnicodeText)
+    # If this command was triggered as part of an installation, it will be 
+    # referenced here. Note that commands can also be manually triggered by 
+    # a user outside of any installation, so this is optional.
+    installation_id = Column(Integer, ForeignKey('installation.id',
+            name='command_queue_installation_id_fk'))
+    installation = relationship('Installation', back_populates='commands')
     __mapper_args__ = {'polymorphic_identity': u'command_activity'}
 
-    def __init__(self, user, service, action, status, callback=None, quiescent_period=0):
+    def __init__(self, user, service, action, status, quiescent_period=0):
         Activity.__init__(self, user, service, action, u'Command', u'', u'')
         self.status = status
-        self.callback = callback
         self.quiescent_period = quiescent_period
 
     @classmethod
@@ -192,21 +193,10 @@ class CommandActivity(Activity):
         log.error('Command %s aborted: %s', self.id, msg)
         self.status = CommandStatus.aborted
         self.new_value = msg
+        if self.installation and self.installation.recipe:
+            self.installation.recipe.abort(
+                    'Command %s aborted: %s' % (self.id, msg))
         self.log_to_system_history()
-
-# Switch to event listen since the AttributeExtension module is
-# deprecated in SQLAlchemy 0.9
-@event.listens_for(CommandActivity.status, 'set', retval=True)
-def handle_cmd_callback(instance, value, oldvalue, initiator):
-    if instance.callback:
-        try:
-            modname, _dot, funcname = instance.callback.rpartition(".")
-            module = import_module(modname)
-            cb = getattr(module, funcname)
-            cb(instance, value)
-        except Exception, e:
-            log.error("command callback failed: %s" % e)
-    return value
 
 class Reservation(DeclarativeMappedObject):
 
@@ -348,6 +338,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
     dyn_reservations = dynamic_loader(Reservation)
     open_reservation = relationship(Reservation, uselist=False, viewonly=True,
             primaryjoin=and_(id == Reservation.system_id, Reservation.finish_time == None))
+    installations = relationship('Installation', back_populates='system',
+            order_by='[Installation.created.desc()]')
     status_durations = relationship(SystemStatusDuration, back_populates='system',
             cascade='all, delete, delete-orphan',
             order_by=[SystemStatusDuration.start_time.desc(),
@@ -1456,6 +1448,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
                 # and ignore any errors.
                 try:
                     from bkr.server.kickstart import generate_kickstart
+                    from bkr.server.model.installation import Installation
                     install_options = self.manual_provision_install_options(
                             self.reprovision_distro_tree)
                     if 'ks' not in install_options.kernel_options:
@@ -1463,10 +1456,15 @@ class System(DeclarativeMappedObject, ActivityMixin):
                             distro_tree=self.reprovision_distro_tree,
                             system=self, user=self.owner)
                         install_options.kernel_options['ks'] = rendered_kickstart.link
-                    self.configure_netboot(self.reprovision_distro_tree,
-                        install_options.kernel_options_str,
-                        service=service)
-                    self.action_power(action=u'reboot', service=service)
+                    else:
+                        rendered_kickstart = None
+                    installation = Installation(distro_tree=self.reprovision_distro_tree,
+                            kernel_options=install_options.kernel_options_str,
+                            rendered_kickstart=rendered_kickstart)
+                    self.installations.append(installation)
+                    self.configure_netboot(installation=installation, service=service)
+                    self.action_power(action=u'reboot', installation=installation,
+                            service=service)
                 except Exception:
                     log.exception('Failed to re-provision %s on %s, ignoring',
                         self.reprovision_distro_tree, self)
@@ -1474,46 +1472,46 @@ class System(DeclarativeMappedObject, ActivityMixin):
             raise ValueError('Not a valid ReleaseAction: %r' % self.release_action)
 
 
-    def configure_netboot(self, distro_tree, kernel_options, service=u'Scheduler',
-            callback=None):
+    def configure_netboot(self, installation, service=u'Scheduler'):
         if not self.lab_controller:
             return
-        self.enqueue_command(u'clear_logs', service=service, callback=callback)
-        command = self.enqueue_command(u'configure_netboot',
-                service=service, callback=callback)
-        command.distro_tree = distro_tree
-        command.kernel_options = kernel_options
-        return command
+        self.enqueue_command(u'clear_logs', service=service,
+                installation=installation)
+        return self.enqueue_command(u'configure_netboot', service=service,
+                installation=installation)
 
-    def action_power(self, action=u'reboot', service=u'Scheduler',
-            callback=None, delay=0):
+    def action_power(self, action=u'reboot', installation=None,
+            service=u'Scheduler', delay=0):
         if not self.lab_controller or not self.power:
             return
         if action == u'reboot':
             self.enqueue_command(u'off', service=service,
-                    callback=callback, delay=delay,
+                    installation=installation, delay=delay,
                     quiescent_period=self.power.power_quiescent_period)
             return self.enqueue_command(u'on', service=service,
-                    callback=callback, delay=delay,
+                    installation=installation, delay=delay,
                     quiescent_period=self.power.power_quiescent_period)
         else:
             return self.enqueue_command(action, service=service,
-                    callback=callback, delay=delay,
+                    installation=installation, delay=delay,
                     quiescent_period=self.power.power_quiescent_period)
 
-    def clear_netboot(self, service=u'Scheduler'):
+    def clear_netboot(self, installation=None, service=u'Scheduler'):
         if not self.lab_controller:
             return
-        return self.enqueue_command(u'clear_netboot', service=service)
+        return self.enqueue_command(u'clear_netboot', service=service,
+                installation=installation)
 
-    def enqueue_command(self, action, service, callback=None,
+    def enqueue_command(self, action, service, installation=None,
             quiescent_period=None, delay=None):
         try:
             user = identity.current.user
         except Exception:
             user = None
         activity = CommandActivity(user=user, service=service,
-                action=action, status=CommandStatus.queued, callback=callback)
+                action=action, status=CommandStatus.queued)
+        if installation:
+            activity.installation = installation
         if quiescent_period:
             activity.quiescent_period = quiescent_period
         if delay:

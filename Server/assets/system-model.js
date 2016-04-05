@@ -80,21 +80,6 @@ window.SystemActivity = BeakerPageableCollection.extend({
     },
 });
 
-window.Task = Backbone.Model.extend({
-    _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>tasks/<%- id %>" title="<%- name %>"><%- name %></a>'),
-    toHTML: function () {
-        return this._toHTML_template(this.attributes);
-    },
-});
-
-window.RecipeTask = Backbone.Model.extend({
-    parse: function (data) {
-        data['task'] = !_.isEmpty(data['task']) ? new Task(data['task']) : null;
-        data['distro_tree'] = !_.isEmpty(data['distro_tree']) ? new DistroTree(data['distro_tree'], {parse: true}) : null;
-        return data;
-    },
-});
-
 window.SystemExecutedTasks = BeakerPageableCollection.extend({
     model: RecipeTask,
     initialize: function (attributes, options) {

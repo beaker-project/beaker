@@ -1,0 +1,10 @@
+<% if (reservation_request.get('reserve')) { %>
+    The system will be reserved for
+    <%- moment.duration(reservation_request.get('duration'), 'seconds').format(
+    "hh:mm:ss", {trim: false})%> at the end of the recipe.
+<% } else { %>
+    The system will not be reserved at the end of the recipe.
+<% } %>
+<% if (can_edit) { %>
+<button class="btn edit"><i class="fa fa-pencil-square-o"></i> Edit</button>
+<% } %>

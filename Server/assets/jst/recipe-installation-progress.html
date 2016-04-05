@@ -1,0 +1,77 @@
+<% if (!_.isEmpty(installation)) { %>
+    <table class="table">
+        <% if (configure_netboot) { %>
+            <tr>
+                <td>
+                    <%
+                    // In future it should be changed to configure_netboot.update when
+                    // https://bugzilla.redhat.com/show_bug.cgi?id=1318524 is fixed.
+                    %>
+                    <time datetime="<%- moment.utc(configure_netboot.submitted).toISOString() %>"
+                         title="<%- configure_netboot.submitted %>">
+                         <%= get_time_difference(configure_netboot.submitted, start_time) %>
+                    </time>
+                 </td>
+                 <td>
+                     Netboot configured
+                     <div class="recipe-installation-kernel-options"><code><%- installation.kernel_options %></code></div>
+                 </td>
+             </tr>
+        <% } %>
+        <% if (installation.rebooted) { %>
+            <tr>
+                <td>
+                     <time datetime="<%- moment.utc(installation.rebooted).toISOString() %>"
+                         title="<%- installation.rebooted %>">
+                         <%= get_time_difference(installation.rebooted, start_time) %>
+                     </time>
+                </td>
+                <td>
+                    System rebooted
+                </td>
+                <td>
+            </tr>
+        <% } %>
+        <% if (installation.install_started) { %>
+            <tr>
+                <td>
+                    <time datetime="<%- moment.utc(installation.install_started).toISOString() %>"
+                         title="<%- installation.install_started %>">
+                         <%= get_time_difference(installation.install_started, start_time) %>
+                    </time>
+                </td>
+                <td>
+                    Installation started
+                </td>
+            </tr>
+        <% } %>
+        <% if (installation.install_finished) { %>
+            <tr>
+                <td>
+                    <time datetime="<%- moment.utc(installation.install_finished).toISOString() %>"
+                         title="<%- installation.install_finished %>">
+                         <%= get_time_difference(installation.install_finished, start_time) %>
+                    </time>
+                </td>
+                <td>
+                    Installation completed
+                </td>
+            </tr>
+        <% } %>
+        <% if (installation.postinstall_finished) { %>
+            <tr>
+                <td>
+                    <time datetime="<%- moment.utc(installation.postinstall_finished).toISOString() %>"
+                         title="<%- installation.postinstall_finished %>">
+                         <%= get_time_difference(installation.postinstall_finished, start_time) %>
+                    </time>
+                </td>
+                <td>
+                    Post-install tasks completed
+                </td>
+            </tr>
+        <% } %>
+    </table>
+<% } else { %>
+    No installation progress reported.
+<% } %>
