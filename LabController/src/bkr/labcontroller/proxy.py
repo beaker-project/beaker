@@ -103,12 +103,8 @@ class ProxyHelper(object):
         self.conf.load_from_dict(kwargs)
 
         # self.hub is created here
-        if self.conf['HUB_URL'].startswith('https://'):
-            TransportClass = retry_transport(SafeCookieTransport)
-        else:
-            TransportClass = retry_transport(CookieTransport)
         self.hub = HubProxy(logger=logging.getLogger('bkr.common.hub.HubProxy'), conf=self.conf,
-                transport=TransportClass(timeout=120), auto_logout=False, **kwargs)
+                auto_logout=False, **kwargs)
         self.log_storage = LogStorage(self.conf.get("CACHEPATH"),
                 "%s://%s/beaker/logs" % (self.conf.get('URL_SCHEME',
                 'http'), self.conf.get_url_domain()),

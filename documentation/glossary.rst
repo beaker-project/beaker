@@ -47,13 +47,11 @@ Glossary
        control over the group, including adding and removing members.
 
    guest recipe
-
        Guest recipes are used to run one or more recipe tasks in one
        or more virtual machines as part of a larger :term:`host
        recipe`.
 
    host recipe
-
        A host recipe is a :term:`recipe` which runs one or more guest
        recipes in virtual machines.
 

@@ -24,7 +24,7 @@ class HubProxy(object):
     """A Hub client (thin ServerProxy wrapper)."""
 
     def __init__(self, conf, client_type=None, logger=None, transport=None,
-            auto_login=True, auto_logout=True, **kwargs):
+            auto_login=True, auto_logout=True, timeout=120, **kwargs):
         self._conf = PyConfigParser()
         self._hub = None
 
@@ -50,7 +50,7 @@ class HubProxy(object):
         if transport is not None:
             self._transport = transport
         else:
-            transport_args = {}
+            transport_args = {'timeout': timeout}
             if self._hub_url.startswith("https://"):
                 TransportClass = retry_request_decorator(SafeCookieTransport)
                 if hasattr(ssl, 'create_default_context') and self._conf.get('CA_CERT'):
