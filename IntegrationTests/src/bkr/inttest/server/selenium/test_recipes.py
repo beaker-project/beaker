@@ -522,6 +522,14 @@ class RecipeHTTPTest(DatabaseTestCase):
         # with no watchdog kill time.
         self.assertIsNone(json['time_remaining_seconds'])
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1324401
+    def test_set_vary_header(self):
+        response = requests.get(get_server_base() +
+                'recipes/%s' % self.recipe.id,
+                headers={'Accept': 'application/json'})
+        response.raise_for_status()
+        self.assertIn('Vary', response.headers)
+
     def test_get_recipe_xml(self):
         response = requests.get(get_server_base() + 'recipes/%s.xml' % self.recipe.id)
         response.raise_for_status()

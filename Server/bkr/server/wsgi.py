@@ -129,6 +129,13 @@ def commit_or_rollback_session(response):
             session.rollback()
     return response
 
+@app.after_request
+# Most of our request handlers are doing content negotation, so we need to specify
+# "Vary: Accept" header unconditionally.
+def set_vary_header(response):
+    response.headers.add('Vary', 'Accept')
+    return response
+
 @app.teardown_appcontext
 def close_session(exception=None):
     try:
