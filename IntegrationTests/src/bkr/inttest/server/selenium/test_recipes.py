@@ -506,6 +506,22 @@ class RecipeHTTPTest(DatabaseTestCase):
         json = response.json()
         self.assertEquals(json['t_id'], self.recipe.t_id)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1324305
+    def test_get_scheduled_recipe(self):
+        with session.begin():
+            recipe = data_setup.create_recipe()
+            job = data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_scheduled(recipe)
+            self.assertIsNone(recipe.watchdog.kill_time)
+        response = requests.get(get_server_base() +
+                'recipes/%s' % recipe.id,
+                headers={'Accept': 'application/json'})
+        json = response.json()
+        self.assertEquals(json['t_id'], recipe.t_id)
+        # time_remaining_seconds should be None as the recipe sits in Scheduled
+        # with no watchdog kill time.
+        self.assertIsNone(json['time_remaining_seconds'])
+
     def test_get_recipe_xml(self):
         response = requests.get(get_server_base() + 'recipes/%s.xml' % self.recipe.id)
         response.raise_for_status()

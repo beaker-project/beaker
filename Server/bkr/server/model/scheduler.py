@@ -2818,7 +2818,8 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             'recipe_id': self.id,
             'job_id': self.recipeset.job.t_id,
         }
-        if self.watchdog:
+        # watchdog may not have kill time.
+        if self.watchdog and self.watchdog.kill_time:
             data['time_remaining_seconds'] = int(total_seconds(self.time_remaining))
         else:
             data['time_remaining_seconds'] = None
