@@ -2158,6 +2158,33 @@ class Skeleton(SingleChoice):
             rlJournalPrintText
             rlJournalEnd
         </skeleton>
+        <skeleton name="conditional">
+            # Include Beaker environment
+            . /usr/bin/rhts-environment.sh || exit 1
+            . /usr/share/beakerlib/beakerlib.sh || exit 1
+
+            PACKAGE="<package/>"
+
+            rlJournalStart
+                rlPhaseStartSetup
+                    rlAssertRpm $PACKAGE || rlDie "$PACKAGE not installed"
+                    rlRun "TmpDir=\$(mktemp -d)" 0 "Creating tmp directory"
+                    rlRun "pushd $TmpDir"
+                rlPhaseEnd
+
+                rlGetTestState &amp;&amp; { rlPhaseStartTest
+                    rlRun "touch foo" 0 "Creating the foo test file"
+                    rlAssertExists "foo"
+                    rlRun "ls -l foo" 0 "Listing the foo test file"
+                rlPhaseEnd; }
+
+                rlPhaseStartCleanup
+                    rlRun "popd"
+                    rlRun "rm -r $TmpDir" 0 "Removing tmp directory"
+                rlPhaseEnd
+            rlJournalPrintText
+            rlJournalEnd
+        </skeleton>
         <skeleton name="beaker">
             # Include Beaker environment
             . /usr/bin/rhts-environment.sh || exit 1

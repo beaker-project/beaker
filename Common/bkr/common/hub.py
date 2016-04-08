@@ -88,6 +88,8 @@ class HubProxy(object):
         - self._hub instance is created in this method
         - session information is stored in a cookie in self._transport
         """
+        if self._auth_method == "none" or not self._auth_method:
+            return
 
         login_method_name = "_login_%s" % self._auth_method
         if not hasattr(self, login_method_name):
