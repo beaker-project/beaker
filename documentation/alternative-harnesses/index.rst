@@ -58,6 +58,8 @@ then configure itself according to these values.
     Base URL of the Beaker server. Note that the harness should not communicate 
     with the server directly, but it may need to pass this value on to tasks.
 
+.. _harness-http-api:
+
 HTTP resources
 --------------
 

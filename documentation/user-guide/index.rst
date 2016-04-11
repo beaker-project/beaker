@@ -33,3 +33,4 @@ Contents
    workflow
    writing-tasks
    beaker-provided-tasks
+   troubleshooting
