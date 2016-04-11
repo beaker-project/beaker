@@ -67,6 +67,8 @@ To update your Beaker server's copy of the harness packages, run the
 :program:`beaker-repo-update` command. See :doc:`beaker-repo-update 
 <man/beaker-repo-update>` for more details.
 
+.. _downgrading:
+
 Downgrading
 -----------
 
