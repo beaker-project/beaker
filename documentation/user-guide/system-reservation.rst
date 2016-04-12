@@ -144,13 +144,6 @@ After both the tasks have finished execution, the system will be
 reserved. The recipe status will be "Reserved" during the duration of
 the system being reserved.
 
-.. note::
-
-   At this stage, it is not possible to extend the reservation when
-   the system is reserved using this approach. Once :issue:`1103582` has
-   been fixed, :ref:`bkr watchdog-extend <bkr-watchdog-extend>` can be
-   used to extend the reservation.
-
 The advantage of using this approach is that this will also reserve
 the system under abnormal circumstances which cause the recipe to be
 aborted. Circumstances in which this may happen include a
@@ -178,12 +171,6 @@ recipe's page in Beaker's Web UI as "Reserved (23:40:38 remaining)"
 alongside :guilabel:`Status`. The system can be returned before the
 reservation duration expires using the :guilabel:`Release System`
 button on the recipe's page in Beaker's Web UI. 
-
-.. note::
-
-   Releasing reserved systems via the command line will be possible
-   using :ref:`bkr system-release <bkr-system-release>` once
-   :issue:`1102442` has been fixed.
 
 Changes to the test system environment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
