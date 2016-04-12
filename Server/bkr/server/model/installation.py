@@ -83,6 +83,12 @@ class RenderedKickstart(DeclarativeMappedObject):
                 self.id, '<%s chars>' % len(self.kickstart)
                 if self.kickstart is not None else 'None', self.url)
 
+    def __json__(self):
+        return {
+            'id': self.id,
+            'href': self.link,
+        }
+
     @property
     def link(self):
         if self.url:
