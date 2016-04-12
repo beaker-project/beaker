@@ -145,10 +145,13 @@ def upgrade():
         DROP FOREIGN KEY recipe_rendered_kickstart_id_fk,
         DROP COLUMN rendered_kickstart_id
         """)
-    op.drop_column('recipe_resource', 'rebooted')
-    op.drop_column('recipe_resource', 'postinstall_finished')
-    op.drop_column('recipe_resource', 'install_started')
-    op.drop_column('recipe_resource', 'install_finished')
+    op.execute("""
+        ALTER TABLE recipe_resource
+        DROP COLUMN rebooted,
+        DROP COLUMN postinstall_finished,
+        DROP COLUMN install_started,
+        DROP COLUMN install_finished
+        """)
     op.drop_column('virt_resource', 'kernel_options')
 
 
