@@ -66,6 +66,7 @@ setup(
             'default.conf',
             'power-scripts/*',
             'install-failure-patterns/*',
+            'pxemenu-templates/*'
         ],
     },
 

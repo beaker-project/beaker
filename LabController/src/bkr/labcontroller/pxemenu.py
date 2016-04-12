@@ -15,6 +15,7 @@ import urlparse
 import contextlib
 from optparse import OptionParser
 from bkr.common.helpers import atomically_replaced_file, siphon, makedirs_ignore, atomic_symlink
+from jinja2 import Environment, PackageLoader
 
 def _get_url(available):
     for lc, url in available:
@@ -47,26 +48,33 @@ def _get_images(tftp_root, distro_tree_id, url, images):
                 with atomically_replaced_file(dest_path) as dest:
                     siphon(urllib2.urlopen(image_url), dest)
 
-pxe_menu_entry_template = string.Template('''
-label ${distro_name}-${variant}-${arch}
-    menu title ${distro_name} ${variant} ${arch}
-    kernel /distrotrees/${distro_tree_id}/kernel
-    append initrd=/distrotrees/${distro_tree_id}/initrd method=${url} repo=${url} ${kernel_options}
-''')
+def _get_all_images(tftp_root, distro_trees):
+    """
+    Fetch all images for the given distro trees and return a new list of distro
+    trees for which image can be fetched.
+    """
+    trees = []
+    for distro_tree in distro_trees:
+         url = _get_url(distro_tree['available'])
+         try:
+             _get_images(tftp_root, distro_tree['distro_tree_id'],
+                     url, distro_tree['images'])
+             trees.append(distro_tree)
+         except IOError, e:
+             sys.stderr.write('Error fetching images for distro tree %s: %s\n' %
+                     (distro_tree['distro_tree_id'], e))
+    return trees
 
-efi_menu_entry_template = string.Template('''
-title ${distro_name} ${variant} ${arch}
-    root (nd)
-    kernel /distrotrees/${distro_tree_id}/kernel method=${url} repo=${url}
-    initrd /distrotrees/${distro_tree_id}/initrd
-''')
+# configure Jinja2 to load menu templates
+template_env = Environment(loader=PackageLoader('bkr.labcontroller', 'pxemenu-templates'),
+        trim_blocks=True)
+template_env.filters['get_url'] = _get_url
 
-aarch64_menu_entry_template = string.Template('''
-menuentry "${distro_name} ${variant} ${arch}" {
-    linux /distrotrees/${distro_tree_id}/kernel method=${url} repo=${url}
-    initrd /distrotrees/${distro_tree_id}/initrd
-}
-''')
+def write_menu(menu, template_name, distro_trees):
+    osmajors = _group_distro_trees(distro_trees)
+    with menu as menu:
+        template = template_env.get_template(template_name)
+        menu.write(template.render({'osmajors': osmajors}))
 
 def write_menus(tftp_root, tags, xml_filter):
     # The order of steps for cleaning images is important,
@@ -82,109 +90,54 @@ def write_menus(tftp_root, tags, xml_filter):
         existing_tree_ids = []
 
     proxy = xmlrpclib.ServerProxy('http://localhost:8000', allow_none=True)
-    x86_distrotrees = proxy.get_distro_trees({
-        'arch': ['x86_64', 'i386'],
+    distro_trees = proxy.get_distro_trees({
+        'arch': ['x86_64', 'i386', 'aarch64', 'ppc64', 'ppc64le'],
         'tags': tags,
         'xml': xml_filter,
     })
-    aarch64_distrotrees = proxy.get_distro_trees({
-        'arch': ['aarch64'],
-        'tags': tags,
-        'xml': xml_filter,
-    })
-
     current_tree_ids = set(str(dt['distro_tree_id'])
-            for dt in x86_distrotrees + aarch64_distrotrees)
+            for dt in distro_trees)
     obsolete_tree_ids = set(existing_tree_ids).difference(current_tree_ids)
     print 'Removing images for %s obsolete distro trees' % len(obsolete_tree_ids)
     for obs in obsolete_tree_ids:
         shutil.rmtree(os.path.join(tftp_root, 'distrotrees', obs), ignore_errors=True)
 
-    print 'Generating PXELINUX and EFI GRUB menus for %s distro trees' % len(x86_distrotrees)
-    osmajors = _group_distro_trees(x86_distrotrees)
+    # Fetch images for all the distro trees first.
+    print 'Fetching images for all the distro trees'
+    distro_trees = _get_all_images(tftp_root, distro_trees)
+
+    x86_distrotrees = [distro for distro in distro_trees if distro['arch'] in ['x86_64', 'i386']]
+    print 'Generating PXELINUX menus for %s distro trees' % len(x86_distrotrees)
     makedirs_ignore(os.path.join(tftp_root, 'pxelinux.cfg'), mode=0755)
     pxe_menu = atomically_replaced_file(os.path.join(tftp_root, 'pxelinux.cfg', 'beaker_menu'))
+    write_menu(pxe_menu, u'pxelinux-menu', x86_distrotrees)
+
+    print 'Generating EFI GRUB menus for %s distro trees' % len(x86_distrotrees)
     makedirs_ignore(os.path.join(tftp_root, 'grub'), mode=0755)
     atomic_symlink('../distrotrees', os.path.join(tftp_root, 'grub', 'distrotrees'))
-    efi_menu = atomically_replaced_file(os.path.join(tftp_root, 'grub', 'efidefault'))
-    with contextlib.nested(pxe_menu, efi_menu) as (pxe_menu, efi_menu):
-        pxe_menu.write('''default menu
-prompt 0
-timeout 6000
-ontimeout local
-menu title Beaker
-label local
-    menu label (local)
-    menu default
-    localboot 0
-''')
+    efi_grub_menu = atomically_replaced_file(os.path.join(tftp_root, 'grub', 'efidefault'))
+    write_menu(efi_grub_menu, u'efi-grub-menu', x86_distrotrees)
 
-        for osmajor, osversions in sorted(osmajors.iteritems(), reverse=True):
-            print 'Writing submenu %s' % osmajor
-            pxe_menu.write('''
-menu begin
-menu title %s
-''' % osmajor)
-            for osversion, distro_trees in sorted(osversions.iteritems(), reverse=True):
-                print 'Writing submenu %s -> %s' % (osmajor, osversion)
-                pxe_menu.write('''
-menu begin
-menu title %s
-''' % osversion)
-                for distro_tree in distro_trees:
-                    url = _get_url(distro_tree['available'])
-                    try:
-                        _get_images(tftp_root, distro_tree['distro_tree_id'],
-                                url, distro_tree['images'])
-                    except IOError, e:
-                        sys.stderr.write('Error fetching images for distro tree %s: %s\n' %
-                                (distro_tree['distro_tree_id'], e))
-                    else:
-                        print 'Writing menu entry for distro tree %s' % distro_tree['distro_tree_id']
-                        pxe_menu.write(pxe_menu_entry_template.substitute(
-                                distro_tree, url=url))
-                        efi_menu.write(efi_menu_entry_template.substitute(
-                                distro_tree, url=url))
-                pxe_menu.write('''
-menu end
-''')
-            pxe_menu.write('''
-menu end
-''')
+    print 'Generating GRUB2 menus for x86 EFI for %s distro trees' % len(x86_distrotrees)
+    makedirs_ignore(os.path.join(tftp_root, 'boot', 'grub2'), mode=0755)
+    x86_grub2_menu = atomically_replaced_file(os.path.join(tftp_root, 'boot', 'grub2',
+            'beaker_menu_x86.cfg'))
+    write_menu(x86_grub2_menu, u'grub2-menu', x86_distrotrees)
 
+    # XXX: would be nice if we can find a good time to move this into boot/grub2
+    aarch64_distrotrees = [distro for distro in distro_trees if distro['arch'] == 'aarch64']
     if aarch64_distrotrees:
-        print 'Generating aarch64 menu for %s distro trees' % len(aarch64_distrotrees)
-        osmajors = _group_distro_trees(aarch64_distrotrees)
+        print 'Generating GRUB2 menus for aarch64 for %s distro trees' % len(aarch64_distrotrees)
         makedirs_ignore(os.path.join(tftp_root, 'aarch64'), mode=0755)
         aarch64_menu = atomically_replaced_file(os.path.join(tftp_root, 'aarch64', 'beaker_menu.cfg'))
-        with aarch64_menu as aarch64_menu:
-            aarch64_menu.write('''set default="Exit PXE"
-set timeout=60
-menuentry "Exit PXE" {
-    exit
-}
-''')
+        write_menu(aarch64_menu, u'grub2-menu', aarch64_distrotrees)
 
-            for osmajor, osversions in sorted(osmajors.iteritems(), reverse=True):
-                print 'Writing submenu %s' % osmajor
-                aarch64_menu.write('\nsubmenu "%s" {\n' % osmajor)
-                for osversion, distro_trees in sorted(osversions.iteritems(), reverse=True):
-                    print 'Writing submenu %s -> %s' % (osmajor, osversion)
-                    aarch64_menu.write('\nsubmenu "%s" {\n' % osversion)
-                    for distro_tree in distro_trees:
-                        url = _get_url(distro_tree['available'])
-                        try:
-                            _get_images(tftp_root, distro_tree['distro_tree_id'],
-                                    url, distro_tree['images'])
-                        except IOError, e:
-                            sys.stderr.write('Error fetching images for distro tree %s: %s\n' %
-                                    (distro_tree['distro_tree_id'], e))
-                        else:
-                            print 'Writing menu entry for distro tree %s' % distro_tree['distro_tree_id']
-                            aarch64_menu.write(aarch64_menu_entry_template.substitute(
-                                    distro_tree, url=url))
-                    aarch64_menu.write('\n}\n')
-                aarch64_menu.write('\n}\n')
+    ppc64_distrotrees = [distro for distro in distro_trees if distro['arch'] in ['ppc64', 'ppc64le']]
+    if ppc64_distrotrees:
+        print 'Generating GRUB2 menus for ppc64 for %s distro trees' % len(ppc64_distrotrees)
+        ppc64_menu = atomically_replaced_file(os.path.join(tftp_root, 'boot', 'grub2',
+                'beaker_menu_ppc64.cfg'))
+        write_menu(ppc64_menu, u'grub2-menu', ppc64_distrotrees)
 
 def main():
     parser = OptionParser(description='''Writes a netboot menu to the TFTP root

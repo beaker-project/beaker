@@ -1,0 +1,25 @@
+set default="Exit PXE"
+set timeout=60
+menuentry "Exit PXE" {
+    exit
+}
+
+{% for osmajor, osversions in osmajors.iteritems()|sort(reverse=True) %}
+submenu "{{ osmajor }}" {
+
+{% for osversion, distro_trees in osversions.iteritems()|sort(reverse=True) %}
+submenu "{{ osversion }}" {
+
+{% for distro_tree in distro_trees %}
+menuentry "{{ distro_tree.distro_name }} {{ distro_tree.variant }} {{ distro_tree.arch }}" {
+    linux /distrotrees/{{ distro_tree.distro_tree_id }}/kernel method={{ distro_tree.available|get_url }} repo={{
+    distro_tree.available| get_url }}
+    initrd /distrotrees/{{ distro_tree.distro_tree_id }}/initrd
+}
+
+{% endfor %}
+}
+
+{% endfor %}
+}
+{% endfor %}

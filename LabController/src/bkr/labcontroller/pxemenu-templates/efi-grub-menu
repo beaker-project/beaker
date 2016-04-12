@@ -1,0 +1,11 @@
+{% for osmajor, osversions in osmajors.iteritems()|sort(reverse=True) %}
+{% for osversion, distro_trees in osversions.iteritems()|sort(reverse=True) %}
+{% for distro_tree in distro_trees %}
+
+title {{ distro_tree.distro_name }} {{ distro_tree.variant }} {{ distro_tree.arch }}
+    root (nd)
+    kernel /distrotrees/{{ distro_tree.distro_tree_id }}/kernel method={{ distro_tree.available|get_url }} repo={{ distro_tree.available|get_url }}
+    initrd /distrotrees/{{ distro_tree.distro_tree_id }}/initrd
+{% endfor %}
+{% endfor %}
+{% endfor %}

@@ -1,0 +1,30 @@
+default menu
+prompt 0
+timeout 6000
+ontimeout local
+menu title Beaker
+label local
+    menu label (local)
+    menu default
+    localboot 0
+
+{% for osmajor, osversions in osmajors.iteritems()|sort(reverse=True) %}
+menu begin
+menu title {{ osmajor }}
+
+{% for osversion, distro_trees in osversions.iteritems()|sort(reverse=True) %}
+menu begin
+menu title {{ osversion }}
+
+{% for distro_tree in distro_trees %}
+label {{ distro_tree.distro_name }}-{{ distro_tree.variant }}-{{ distro_tree.arch }}
+    menu title {{ distro_tree.distro_name }} {{ distro_tree.variant }} {{ distro_tree.arch }}
+    kernel /distrotrees/{{ distro_tree.distro_tree_id }}/kernel
+    append initrd=/distrotrees/{{ distro_tree.distro_tree_id }}/initrd method={{ distro_tree.available|get_url }} repo={{ distro_tree.available|get_url }} {{ distro_tree.kernel_options }}
+
+{% endfor %}
+menu end
+
+{% endfor %}
+menu end
+{% endfor %}

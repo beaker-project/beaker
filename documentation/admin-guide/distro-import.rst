@@ -110,8 +110,8 @@ Generating a boot menu
 Beaker includes a command, ``beaker-pxemenu``, which can be run on the lab 
 controller to generate a boot menu containing the distros in Beaker. Users in 
 the lab can then perform manual installations by selecting a distro from the 
-menu. Boot menus are generated for ``menu.c32`` (PXELINUX), EFI GRUB, and 
-64-bit ARM.
+menu. Boot menus are generated for ``menu.c32`` (PXELINUX), EFI GRUB, 64-bit
+ARM and 64-bit PowerPC.
 
 You can limit the menu to only contain distros tagged in Beaker with a
 certain tag, by passing the ``--tag`` option to ``beaker-pxemenu``. By
@@ -153,6 +153,22 @@ menu. For example::
     }
     menuentry "Install distro from Beaker" {
         configfile aarch64/beaker_menu.cfg
+    }
+
+If you are using GRUB2 boot menus, you should edit the default configuration for
+x86 EFI and 64-bit PowerPC :file:`boot/grub2/grub.cfg` to exit after a timeout,
+with an option to load the menus. For example::
+
+    set default="Exit PXE"
+    set timeout=60
+    menuentry "Exit PXE" {
+        exit
+    }
+    menuentry "Install distro from Beaker (x86)" {
+        configfile boot/grub2/beaker_menu_x86.cfg
+    }
+    menuentry "Install distro from Beaker (ppc64)" {
+        configfile boot/grub2/beaker_menu_ppc64.cfg
     }
 
 If your site imports distros into Beaker infrequently, you may prefer to

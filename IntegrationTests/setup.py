@@ -21,6 +21,7 @@ setup(
         'client/workflow_kickstart.cfg.tmpl',
         'client/.beaker_client/*',
         'labcontroller/install-failure-logs/*',
+        'labcontroller/pxemenu-templates/*',
         'server/*.sql',
         'server/database-dumps/*.sql',
         'server/kickstarts/*',

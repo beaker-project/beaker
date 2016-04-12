@@ -36,6 +36,19 @@ class PxemenuTest(LabControllerTestCase):
         shutil.rmtree(cls.tftp_dir, ignore_errors=True)
         cls.distro_server.stop()
 
+    def test_skip_distro_tree_for_which_image_cannot_be_fetched(self):
+        with session.begin():
+            lc = self.get_lc()
+            tag = u'test_image_not_found'
+            distro_tree = data_setup.create_distro_tree(
+                    osmajor=u'SuperBadWindows10', osminor=u'1',
+                    distro_name=u'SuperBadWindows10.1', distro_tags=[tag],
+                    arch=u'x86_64', lab_controllers=[lc],
+                    urls=['http://localhost:19998/error/404'])
+        write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
+        menu = open(os.path.join(self.tftp_dir, 'pxelinux.cfg', 'beaker_menu')).read()
+        self.assertNotIn('menu title SuperBadWindows10', menu)
+
     def test_pxelinux_menu(self):
         with session.begin():
             lc = self.get_lc()
@@ -116,6 +129,74 @@ submenu "PinkUshankaLinux8" {
 submenu "PinkUshankaLinux8.1" {
 
 menuentry "PinkUshankaLinux8.1 Server aarch64" {
+    linux /distrotrees/%s/kernel method=http://localhost:19998/ repo=http://localhost:19998/
+    initrd /distrotrees/%s/initrd
+}
+
+}
+
+}
+''' % (distro_tree.id, distro_tree.id))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1087090
+    def test_grub2_menu_for_efi(self):
+        with session.begin():
+            lc = self.get_lc()
+            tag = u'test_grub2_menu_for_efi'
+            distro_tree = data_setup.create_distro_tree(
+                    osmajor=u'PinkUshankaLinux8', osminor=u'1',
+                    distro_name=u'PinkUshankaLinux8.1', distro_tags=[tag],
+                    arch=u'x86_64', lab_controllers=[lc],
+                    urls=['http://localhost:19998/'])
+        write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
+        menu = open(os.path.join(self.tftp_dir, 'boot', 'grub2',
+            'beaker_menu_x86.cfg')).read()
+        self.assertEquals(menu, '''\
+set default="Exit PXE"
+set timeout=60
+menuentry "Exit PXE" {
+    exit
+}
+
+submenu "PinkUshankaLinux8" {
+
+submenu "PinkUshankaLinux8.1" {
+
+menuentry "PinkUshankaLinux8.1 Server x86_64" {
+    linux /distrotrees/%s/kernel method=http://localhost:19998/ repo=http://localhost:19998/
+    initrd /distrotrees/%s/initrd
+}
+
+}
+
+}
+''' % (distro_tree.id, distro_tree.id))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1087090
+    def test_ppc64_menu(self):
+        with session.begin():
+            lc = self.get_lc()
+            tag = u'test_ppc64_menu'
+            distro_tree = data_setup.create_distro_tree(
+                    osmajor=u'PinkUshankaLinux8', osminor=u'1',
+                    distro_name=u'PinkUshankaLinux8.1', distro_tags=[tag],
+                    arch=u'ppc64', lab_controllers=[lc],
+                    urls=['http://localhost:19998/'])
+        write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
+        menu = open(os.path.join(self.tftp_dir, 'boot', 'grub2',
+            'beaker_menu_ppc64.cfg')).read()
+        self.assertEquals(menu, '''\
+set default="Exit PXE"
+set timeout=60
+menuentry "Exit PXE" {
+    exit
+}
+
+submenu "PinkUshankaLinux8" {
+
+submenu "PinkUshankaLinux8.1" {
+
+menuentry "PinkUshankaLinux8.1 Server ppc64" {
     linux /distrotrees/%s/kernel method=http://localhost:19998/ repo=http://localhost:19998/
     initrd /distrotrees/%s/initrd
 }
