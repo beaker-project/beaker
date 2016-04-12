@@ -50,6 +50,15 @@ class Installation(DeclarativeMappedObject):
             name='installation_recipe_id_fk'))
     recipe = relationship('Recipe', back_populates='installation')
 
+    def __repr__(self):
+        return ('%s(created=%r, system=%r, distro_tree=%r, kernel_options=%r, '
+                'rendered_kickstart=%r, rebooted=%r, install_started=%r, '
+                'install_finished=%r, postinstall_finished=%r)'
+                % (self.__class__.__name__, self.created, self.system,
+                self.distro_tree, self.kernel_options, self.rendered_kickstart,
+                self.rebooted, self.install_started, self.install_finished,
+                self.postinstall_finished))
+
     def __json__(self):
         return {
             'id': self.id,

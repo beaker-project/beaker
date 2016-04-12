@@ -377,8 +377,10 @@ class TestRecipeView(WebDriverTestCase):
     def test_anonymous_cannot_extend_or_return_reservation(self):
         with session.begin():
             recipe = data_setup.create_recipe(reservesys=True)
-            data_setup.create_job_for_recipes([recipe])
-            data_setup.mark_recipe_complete(recipe)
+            job = data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_tasks_finished(recipe)
+            job.update_status()
+            self.assertEqual(job.status, TaskStatus.reserved)
         b = self.browser
         self.go_to_recipe_view(recipe, tab='Reservation')
         #No extend button
@@ -395,6 +397,7 @@ class TestRecipeView(WebDriverTestCase):
             job = data_setup.create_job_for_recipes([recipe])
             data_setup.mark_recipe_tasks_finished(recipe)
             job.update_status()
+            self.assertEqual(job.status, TaskStatus.reserved)
         b = self.browser
         login(b)
         self.go_to_recipe_view(recipe, tab='Reservation')

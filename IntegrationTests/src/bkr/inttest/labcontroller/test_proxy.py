@@ -565,7 +565,12 @@ class InstallStartTest(LabControllerTestCase):
         s.install_start(self.recipe.id)
         with session.begin():
             session.expire_all()
-            self.assertEqual(self.recipe.tasks[0].results[0].path, u'/start')
+            assert_datetime_within(self.recipe.installation.install_started,
+                    tolerance=datetime.timedelta(seconds=10),
+                    reference=datetime.datetime.utcnow())
+            assert_datetime_within(self.recipe.watchdog.kill_time,
+                    tolerance=datetime.timedelta(seconds=10),
+                    reference=datetime.datetime.utcnow() + datetime.timedelta(hours=3))
 
     def test_install_start_GET(self):
         response = requests.get('%sinstall_start/%s' %
@@ -573,7 +578,12 @@ class InstallStartTest(LabControllerTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEqual(self.recipe.tasks[0].results[0].path, u'/start')
+            assert_datetime_within(self.recipe.installation.install_started,
+                    tolerance=datetime.timedelta(seconds=10),
+                    reference=datetime.datetime.utcnow())
+            assert_datetime_within(self.recipe.watchdog.kill_time,
+                    tolerance=datetime.timedelta(seconds=10),
+                    reference=datetime.datetime.utcnow() + datetime.timedelta(hours=3))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=954219
     def test_install_start_faulty(self):

@@ -86,10 +86,10 @@ class TestJobsController(DatabaseTestCase):
         guestrecipe = recipe.guests[0]
         data_setup.mark_recipe_running(recipe, fqdn=u'system.test-complete-job-results',
                 start_time=datetime.datetime(2016, 1, 31, 23, 0, 0),
-                install_started=datetime.datetime(2016, 1, 31, 23, 0, 1))
-        data_setup.mark_recipe_installation_finished(recipe,
+                install_started=datetime.datetime(2016, 1, 31, 23, 0, 1),
                 install_finished=datetime.datetime(2016, 1, 31, 23, 0, 2),
-                postinstall_finished=datetime.datetime(2016, 1, 31, 23, 0, 3))
+                postinstall_finished=datetime.datetime(2016, 1, 31, 23, 0, 3),
+                task_start_time=datetime.datetime(2016, 1, 31, 23, 0, 4))
         data_setup.mark_recipe_complete(guestrecipe, fqdn=u'guest.test-complete-job-results',
                 mac_address='ff:ff:ff:00:00:00',
                 start_time=datetime.datetime(2016, 1, 31, 23, 30, 0),

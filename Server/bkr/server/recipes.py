@@ -196,8 +196,8 @@ class Recipes(RPCRoot):
     @identity.require(identity.not_anonymous())
     def install_start(self, recipe_id=None):
         """
-        Report comencement of provisioning of a recipe's resource, extend
-        first task's watchdog, and report 'Install Started' against it.
+        Records the start of a recipe's installation. The watchdog is extended 
+        by 3 hours to allow the installation to complete.
         """
         try:
             recipe = Recipe.by_id(recipe_id)
@@ -207,21 +207,16 @@ class Recipes(RPCRoot):
             raise BX(_('Recipe %s not provisioned yet') % recipe_id)
 
         installation = recipe.installation
-        first_task = recipe.first_task
         if not installation.install_started:
             installation.install_started = datetime.utcnow()
+            recipe.installing()
             # extend watchdog by 3 hours 60 * 60 * 3
             kill_time = 10800
-            # XXX In future releases where 'Provisioning'
-            # is a valid recipe state, we will no longer
-            # need the following block.
-            log.debug('Extending watchdog for %s', first_task.t_id)
-            first_task.extend(kill_time)
-            log.debug('Recording /start for %s', first_task.t_id)
-            first_task.pass_(path=u'/start', score=0, summary=u'Install Started')
+            log.debug('Extending watchdog for %s', recipe.t_id)
+            recipe.extend(kill_time)
             return True
         else:
-            log.debug('Already recorded /start for %s', first_task.t_id)
+            log.debug('Already recorded install_started for %s', recipe.t_id)
             return False
 
     @cherrypy.expose

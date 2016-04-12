@@ -2383,6 +2383,19 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         # purely as an optimisation
         self._change_status(TaskStatus.waiting)
 
+    def installing(self):
+        """
+        Move from Waiting to Installing
+        """
+        # We assume the installation row has already been timestamped to 
+        # indicate that the installation is in progress, so there is actually 
+        # nothing to do here but let _update_status do the real work.
+        # NB. individual tasks do not go to Installing state because that would 
+        # make no sense. This is basically a sign that the model we had 
+        # established, where the state of a recipe is determined entirely by 
+        # the combined state of the tasks in the recipe, is falling apart...
+        self.recipeset.job._mark_dirty()
+
     def _time_remaining(self):
         duration = None
         if self.watchdog and self.watchdog.kill_time:
@@ -2437,6 +2450,14 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
 
         max_result = TaskResult.min()
         min_status = TaskStatus.max()
+
+        if self.installation \
+                and (self.installation.rebooted or self.installation.install_started) \
+                and not self.installation.postinstall_finished \
+                and not self.first_task.start_time \
+                and not self.first_task.is_finished():
+            min_status = TaskStatus.installing
+
         # I think this loop could be replaced with some sql which would be more efficient.
         for task in self.tasks:
             task._update_status()
@@ -2459,7 +2480,7 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             min_status = self._fix_zombie_tasks()
 
         if min_status.finished and min_status != TaskStatus.cancelled:
-            if self.status == TaskStatus.running and self.reservation_request:
+            if self.status in [TaskStatus.installing, TaskStatus.running] and self.reservation_request:
                 min_status = TaskStatus.reserved
                 self.extend(self.reservation_request.duration)
                 mail.reservesys_notify(self)
@@ -2472,9 +2493,11 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
 
         # Record the start of this Recipe.
         if not self.start_time \
-           and self.status == TaskStatus.running:
+           and self.status in [TaskStatus.installing, TaskStatus.running]:
             if self.installation.rebooted:
                 self.start_time = self.installation.rebooted
+            elif self.installation.install_started: # in case of manual reboot
+                self.start_time = self.installation.install_started
             elif self.first_task.start_time:
                 self.start_time = self.first_task.start_time
             else:
@@ -2615,7 +2638,6 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             manager = dynamic_virt.VirtManager(self.recipeset.job.owner)
             manager.start_vm(self.resource.instance_id)
             self.installation.rebooted = datetime.utcnow()
-            self.tasks[0].start()
 
     def cleanup(self):
         # Note that this may be called *many* times for a recipe, even when it 
@@ -3905,6 +3927,11 @@ class VirtResource(RecipeResource):
             instance_id = uuid.UUID(instance_id)
         self.instance_id = instance_id
         self.lab_controller = lab_controller
+
+    def __repr__(self):
+        return '%s(fqdn=%r, instance_id=%r, lab_controller=%r)' % (
+                self.__class__.__name__, self.fqdn, self.instance_id,
+                self.lab_controller)
 
     def __json__(self):
         data = super(VirtResource, self).__json__()

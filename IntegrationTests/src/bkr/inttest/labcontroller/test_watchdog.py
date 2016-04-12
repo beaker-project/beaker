@@ -50,7 +50,7 @@ class WatchdogConsoleLogTest(TestHelper):
             self.system = data_setup.create_system(lab_controller=self.get_lc())
             self.recipe = data_setup.create_recipe()
             data_setup.create_job_for_recipes([self.recipe])
-            data_setup.mark_recipe_running(self.recipe, system=self.system)
+            data_setup.mark_recipe_installing(self.recipe, system=self.system)
         self.console_log = os.path.join(get_conf().get('CONSOLE_LOGS'), self.system.fqdn)
         self.cached_console_log = os.path.join(get_conf().get('CACHEPATH'), 'recipes',
                 str(self.recipe.id // 1000) + '+', str(self.recipe.id), 'console.log')
@@ -146,6 +146,7 @@ class WatchdogConsoleLogTest(TestHelper):
         wait_for_condition(lambda: self.check_cached_log_contents(anaconda_success))
         with session.begin():
             data_setup.mark_recipe_installation_finished(self.recipe)
+            data_setup.mark_recipe_running(self.recipe, only=True)
         anaconda_failure = "Press 'OK' to reboot your system.\n"
         open(self.console_log, 'a').write(anaconda_failure)
         wait_for_condition(lambda: self.check_cached_log_contents(

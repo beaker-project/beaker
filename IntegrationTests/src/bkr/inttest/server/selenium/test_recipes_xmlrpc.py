@@ -102,12 +102,12 @@ class RecipesXmlRpcTest(XmlRpcTestCase):
         self.server.recipes.install_start(recipe.id)
         with session.begin():
             session.expire_all()
+            assert_datetime_within(recipe.installation.install_started,
+                    tolerance=datetime.timedelta(seconds=10),
+                    reference=datetime.datetime.utcnow())
             assert_datetime_within(recipe.watchdog.kill_time,
                     tolerance=datetime.timedelta(seconds=10),
                     reference=datetime.datetime.utcnow() + datetime.timedelta(hours=3))
-            self.assertEqual(recipe.tasks[0].results[0].result, TaskResult.pass_)
-            self.assertEqual(recipe.tasks[0].results[0].path, u'/start')
-            self.assertEqual(recipe.tasks[0].results[0].log, u'Install Started')
 
     def test_change_files(self):
         with session.begin():

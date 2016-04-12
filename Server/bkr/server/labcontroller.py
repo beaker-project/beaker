@@ -523,8 +523,8 @@ class LabControllers(RPCRoot):
         if cmd.action == u'on' and cmd.installation:
             cmd.installation.rebooted = datetime.utcnow()
             recipe = cmd.installation.recipe
-            if recipe and not recipe.first_task.is_finished():
-                recipe.first_task.start()
+            if recipe:
+                recipe.installing()
         cmd.log_to_system_history()
         return True
 

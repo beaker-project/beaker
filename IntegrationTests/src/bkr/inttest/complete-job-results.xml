@@ -36,7 +36,7 @@
           <partition fs="btrfs" name="/mnt/testarea" size="18" type="part"/>
           <partition fs="btrfs" name="/usr/local" size="8" type="part"/>
         </partitions>
-        <task name="/distribution/install" role="STANDALONE" id="3" result="Pass" status="Completed" duration="0:00:03">
+        <task name="/distribution/install" role="STANDALONE" id="3" result="Pass" status="Completed" duration="0:00:04">
           <fetch url="git://example.com/externaltasks#master" subdir="install"/>
           <roles>
             <role value="STANDALONE">
@@ -72,7 +72,7 @@
         <system_type value="Machine"/>
       </hostRequires>
       <partitions/>
-      <task name="/distribution/install" role="STANDALONE" id="1" result="Pass" status="Completed" avg_time="1200" duration="0:58:59">
+      <task name="/distribution/install" role="STANDALONE" id="1" result="Pass" status="Completed" avg_time="1200" duration="0:58:56">
         <rpm name="example-distribution-install" path="/mnt/tests//distribution/install"/>
         <roles>
           <role value="STANDALONE">

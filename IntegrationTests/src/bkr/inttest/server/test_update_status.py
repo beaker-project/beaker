@@ -126,13 +126,12 @@ class TestUpdateStatus(DatabaseTestCase):
         data_setup.mark_job_scheduled(job)
         recipe = job.recipesets[0].recipes[0]
         self.assertIsNone(recipe.start_time)
-        # When the reboot is done, the recipe's first task is started.
         recipe.provision()
         recipe.installation.rebooted = datetime.datetime(2016, 2, 18, 13, 0, 0)
-        recipe.first_task.start()
-        recipe.first_task.start_time = datetime.datetime(2016, 2, 18, 13, 0, 1)
+        recipe.installing()
         job.update_status()
         self.assertEqual(recipe.start_time, datetime.datetime(2016, 2, 18, 13, 0, 0))
+        self.assertEqual(recipe.status, TaskStatus.installing)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1309530
     def test_recipe_start_time_is_set_to_first_task_start_time(self):
@@ -150,6 +149,19 @@ class TestUpdateStatus(DatabaseTestCase):
         self.assertIsNone(guestrecipe.installation.rebooted)
         job.update_status()
         self.assertEqual(guestrecipe.start_time, datetime.datetime(2016, 2, 18, 14, 0, 0))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=991245#c12
+    def test_status_is_Waiting_when_installation_is_finished_but_tasks_have_not_started(self):
+        # Beah <= 0.7.9 will consider 'Installing' to mean that the recipe is 
+        # finished, so we want the status to go back to 'Waiting' once the 
+        # installation is finished.
+        job = data_setup.create_job()
+        recipe = job.recipesets[0].recipes[0]
+        data_setup.mark_recipe_installing(recipe)
+        data_setup.mark_recipe_installation_finished(recipe)
+        self.assertEqual(recipe.tasks[0].status, TaskStatus.waiting)
+        self.assertIsNone(recipe.tasks[0].start_time)
+        self.assertEqual(recipe.status, TaskStatus.waiting)
 
     def test_update_status_can_be_roundtripped_35508(self):
         complete_job_xml = pkg_resources.resource_string('bkr.inttest', 'job_35508.xml')
@@ -246,7 +258,6 @@ class TestUpdateStatusReserved(DatabaseTestCase):
             reservesys=True)
         job = data_setup.create_job_for_recipes([recipe])
         data_setup.mark_recipe_running(recipe)
-        data_setup.mark_recipe_installation_finished(recipe)
         # we want at least one task to be Completed here
         # https://bugzilla.redhat.com/show_bug.cgi?id=1195558
         job.recipesets[0].recipes[0].tasks[0].stop()
@@ -278,6 +289,18 @@ class TestUpdateStatusReserved(DatabaseTestCase):
         job.update_status()
         self.assertEqual(job.recipesets[0].recipes[0].status,
                           TaskStatus.aborted)
+
+    def test_recipe_installing_then_aborted(self):
+        """Like the previous case, but aborts during installation."""
+        recipe = data_setup.create_recipe(reservesys=True)
+        job = data_setup.create_job_for_recipes([recipe])
+        data_setup.mark_recipe_installing(recipe)
+        recipe.abort(msg=u'Installation failed')
+        job.update_status()
+        self.assertEqual(recipe.status, TaskStatus.reserved)
+        recipe.return_reservation()
+        job.update_status()
+        self.assertEqual(recipe.status, TaskStatus.aborted)
 
     def test_reserved_then_watchdog_expired(self):
         """ This tests the case where the external

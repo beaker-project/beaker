@@ -148,9 +148,9 @@ class ReportingQueryTest(DatabaseTestCase):
         virt_recipe = data_setup.create_recipe()
         job = data_setup.create_job_for_recipes([guest_recipe, virt_recipe, system_recipe])
 
-        data_setup.mark_recipe_running(virt_recipe, virt=True)
-        data_setup.mark_recipe_running(system_recipe)
-        data_setup.mark_recipe_running(guest_recipe)
+        data_setup.mark_recipe_installing(virt_recipe, virt=True)
+        data_setup.mark_recipe_installing(system_recipe)
+        data_setup.mark_recipe_installing(guest_recipe)
         session.flush()
 
         # Test we don't count runinng recipes
@@ -168,7 +168,8 @@ class ReportingQueryTest(DatabaseTestCase):
         self.assertEquals(system_rows[0].failed_recipes, 0)
 
         # Test completed recipes
-        data_setup.mark_job_complete(job, only=True)
+        job.abort()
+        job.update_status()
         session.flush()
         rows = self.execute_reporting_query('install-failure-count-by-resource')
         all_rows = [row for row in rows]

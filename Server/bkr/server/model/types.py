@@ -16,20 +16,21 @@ from bkr.server.enum import DeclEnum
 class TaskStatus(DeclEnum):
 
     symbols = [
-        ('new',       u'New',       dict(severity=10, finished=False, queued=True)),
-        ('processed', u'Processed', dict(severity=20, finished=False, queued=True)),
-        ('queued',    u'Queued',    dict(severity=30, finished=False, queued=True)),
-        ('scheduled', u'Scheduled', dict(severity=40, finished=False, queued=True)),
-        # RUNNING and WAITING are transient states.  It will never be final.
+        ('new',        u'New',        dict(severity=10, finished=False, queued=True)),
+        ('processed',  u'Processed',  dict(severity=20, finished=False, queued=True)),
+        ('queued',     u'Queued',     dict(severity=30, finished=False, queued=True)),
+        ('scheduled',  u'Scheduled',  dict(severity=40, finished=False, queued=True)),
+        # Waiting, Running, and Installing are transient states.  It will never be final.
         #  But having it the lowest Severity will show a job as 
         #  Running until it finishes with either Completed, Cancelled or 
         #  Aborted.
-        ('waiting',   u'Waiting',   dict(severity=7, finished=False, queued=False)),
-        ('running',   u'Running',   dict(severity=5, finished=False, queued=False)),
-        ('reserved',  u'Reserved',  dict(severity=45, finished=False, queued=False)),
-        ('completed', u'Completed', dict(severity=70, finished=True, queued=False)),
-        ('cancelled', u'Cancelled', dict(severity=60, finished=True, queued=False)),
-        ('aborted',   u'Aborted',   dict(severity=50, finished=True, queued=False)),
+        ('waiting',    u'Waiting',    dict(severity=7, finished=False, queued=False)),
+        ('installing', u'Installing', dict(severity=6, finished=False, queued=False)),
+        ('running',    u'Running',    dict(severity=5, finished=False, queued=False)),
+        ('reserved',   u'Reserved',   dict(severity=45, finished=False, queued=False)),
+        ('completed',  u'Completed',  dict(severity=70, finished=True, queued=False)),
+        ('cancelled',  u'Cancelled',  dict(severity=60, finished=True, queued=False)),
+        ('aborted',    u'Aborted',    dict(severity=50, finished=True, queued=False)),
     ]
 
     @classmethod

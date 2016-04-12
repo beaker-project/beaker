@@ -536,8 +536,8 @@ def mark_recipe_tasks_finished(recipe, result=TaskResult.pass_,
     start_time = start_time or datetime.datetime.utcnow()
     finish_time = finish_time or datetime.datetime.utcnow()
     if not only:
-        mark_recipe_running(recipe, start_time=start_time, **kwargs)
-        mark_recipe_installation_finished(recipe, **kwargs)
+        mark_recipe_running(recipe, start_time=start_time,
+                task_start_time=start_time, **kwargs)
 
     # Need to make sure recipe.watchdog has been persisted, since we delete it 
     # below when the recipe completes and sqlalchemy will barf on deleting an 
@@ -581,7 +581,6 @@ def mark_job_complete(job, finish_time=None, only=False, **kwargs):
     if not only:
         for recipe in job.all_recipes:
             mark_recipe_running(recipe, **kwargs)
-            mark_recipe_installation_finished(recipe, **kwargs)
     for recipe in job.all_recipes:
         mark_recipe_complete(recipe, finish_time=finish_time, only=True, **kwargs)
         if finish_time:
@@ -645,8 +644,6 @@ def mark_recipe_waiting(recipe, start_time=None, only=False, **kwargs):
         # I would like to have a better solution here...
         for cmd in recipe.installation.commands:
             cmd.status = CommandStatus.completed
-        recipe.installation.rebooted = start_time
-        recipe.extend(600)
     else:
         # System without power control, there are no power commands. In the 
         # real world the recipe sits in Waiting with no watchdog kill time 
@@ -661,20 +658,22 @@ def mark_job_waiting(job, **kwargs):
         for recipe in recipeset.recipes:
             mark_recipe_waiting(recipe, **kwargs)
 
-def mark_recipe_running(recipe, fqdn=None, only=False, install_started=None, **kwargs):
+def mark_recipe_installing(recipe, fqdn=None, only=False, install_started=None, **kwargs):
     if install_started is None:
         install_started = datetime.datetime.utcnow()
     if not only:
         mark_recipe_waiting(recipe, fqdn=fqdn, **kwargs)
+    if recipe.installation.commands:
+        recipe.installation.rebooted = recipe.start_time
     recipe.installation.install_started = install_started
-    recipe.tasks[0].start()
-    recipe.tasks[0].start_time = install_started
+    recipe.extend(10800)
     if isinstance(recipe, GuestRecipe):
         if not fqdn:
             fqdn = unique_name(u'guest_fqdn_%s')
         recipe.resource.fqdn = fqdn
     recipe.recipeset.job.update_status()
-    log.debug('Started %s', recipe.tasks[0].t_id)
+    assert recipe.status == TaskStatus.installing
+    log.debug('Started installation for %s', recipe.t_id)
 
 def mark_recipe_installation_finished(recipe, fqdn=None, install_finished=None,
         postinstall_finished=None, **kwargs):
@@ -686,6 +685,17 @@ def mark_recipe_installation_finished(recipe, fqdn=None, install_finished=None,
     recipe.installation.install_finished = install_finished or datetime.datetime.utcnow()
     recipe.installation.postinstall_finished = postinstall_finished or datetime.datetime.utcnow()
     recipe.recipeset.job.update_status()
+    log.debug('Finished installation for %s', recipe.t_id)
+
+def mark_recipe_running(recipe, only=False, task_start_time=None, **kwargs):
+    if not only:
+        mark_recipe_installing(recipe, **kwargs)
+        mark_recipe_installation_finished(recipe, **kwargs)
+    recipe.tasks[0].start()
+    recipe.tasks[0].start_time = task_start_time or datetime.datetime.utcnow()
+    recipe.recipeset.job.update_status()
+    assert recipe.status == TaskStatus.running
+    log.debug('Started %s', recipe.tasks[0].t_id)
 
 def mark_job_running(job, **kw):
     for recipe in job.all_recipes:

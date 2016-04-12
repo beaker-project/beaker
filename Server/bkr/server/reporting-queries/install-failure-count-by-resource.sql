@@ -16,7 +16,7 @@ FROM
     INNER JOIN virt_resource AS vr ON vr.id = rr.id
     INNER JOIN installation ON installation.recipe_id = recipe.id
 WHERE
-    recipe.status NOT IN('Running', 'Cancelled')
+    recipe.status NOT IN ('Installing', 'Running', 'Cancelled')
     AND COALESCE(installation.rebooted, installation.install_started) IS NOT NULL
     AND installation.install_finished IS NULL)
 
@@ -31,7 +31,7 @@ FROM
     INNER JOIN guest_resource AS gr ON rr.id = gr.id
     INNER JOIN installation ON installation.recipe_id = recipe.id
 WHERE
-    recipe.status NOT IN('Running', 'Cancelled')
+    recipe.status NOT IN ('Installing', 'Running', 'Cancelled')
     AND COALESCE(installation.rebooted, installation.install_started) IS NOT NULL
     AND installation.install_finished IS NULL)
 
@@ -42,7 +42,7 @@ UNION
     COUNT(installation.id) AS failed_recipes
 FROM
     recipe_resource AS rr
-    LEFT OUTER JOIN recipe ON recipe.id = rr.recipe_id AND recipe.status NOT IN('Running', 'Cancelled')
+    LEFT OUTER JOIN recipe ON recipe.id = rr.recipe_id AND recipe.status NOT IN ('Installing', 'Running', 'Cancelled')
     INNER JOIN system_resource AS sr ON sr.id = rr.id
     LEFT OUTER JOIN
         installation ON installation.recipe_id = recipe.id

@@ -758,7 +758,7 @@ class TestBrokenSystemDetection(DatabaseTestCase):
             distro_tree = data_setup.create_distro_tree(distro_tags=[u'RELEASED'])
         recipe = data_setup.create_recipe(num_tasks=num_tasks, distro_tree=distro_tree)
         job = data_setup.create_job_for_recipes([recipe])
-        data_setup.mark_recipe_running(recipe, system=self.system)
+        data_setup.mark_recipe_installing(recipe, system=self.system)
         if num_tasks_completed is not None:
             data_setup.mark_recipe_installation_finished(recipe)
             data_setup.mark_recipe_tasks_finished(
@@ -1981,12 +1981,13 @@ class MachineRecipeTest(DatabaseTestCase):
         for recipe in recipes:
             recipe.recipeset.job.update_status()
         return {u'new': len(recipes)-4,  u'processed': 1, u'queued': 1,
-                u'scheduled': 1, u'waiting': 0, u'running': 0, u'reserved': 0}
+                u'scheduled': 1, u'waiting': 0, u'installing': 0,
+                u'running': 0, u'reserved': 0}
 
     def test_get_queue_stats(self):
         expected_stats = {u'new': 0,  u'processed': 0, u'queued': 0,
-                          u'scheduled': 0, u'waiting': 0, u'running': 0, 
-                          u'reserved': 0}
+                          u'scheduled': 0, u'waiting': 0, u'running': 0,
+                          u'installing': 0, u'reserved': 0}
         whiteboard = u'test_get_queue_stats'
         def _get_queue_stats():
             cls = MachineRecipe
@@ -2003,8 +2004,8 @@ class MachineRecipeTest(DatabaseTestCase):
     def test_get_queue_stats_by_arch(self):
         expected_arches = u's390x x86_64 ppc'.split()
         default_stats = {u'new': 0,  u'processed': 0, u'queued': 0,
-                         u'scheduled': 0, u'waiting': 0, u'running': 0, 
-                         u'reserved':0}
+                         u'scheduled': 0, u'waiting': 0, u'installing': 0,
+                         u'running': 0, u'reserved':0}
 
         expected_stats = dict((arch, default_stats.copy())
                                      for arch in expected_arches)
@@ -2153,7 +2154,7 @@ class VirtResourceTest(DatabaseTestCase):
     def test_link(self):
         recipe = data_setup.create_recipe()
         data_setup.create_job_for_recipes([recipe])
-        data_setup.mark_recipe_running(recipe, virt=True)
+        data_setup.mark_recipe_installing(recipe, virt=True)
         # when recipe first starts we don't have an fqdn
         expected_hyperlink = ('<a href="http://openstack.example.invalid/'
                 'dashboard/project/instances/{0}/">{0}</a>'

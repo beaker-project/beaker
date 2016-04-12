@@ -133,13 +133,13 @@ class SystemReservationNotificationTest(DatabaseTestCase):
                     email_address=u'jackdonaghy@kabletown.com')
             distro_tree = data_setup.create_distro_tree(distro_name=u'MicrowaveOS',
                     variant=u'ThreeHeats', arch=u'x86_64')
-            job = data_setup.create_running_job(owner=owner,
-                    virt=True, instance_id=uuid.UUID('00000000-1111-2222-3333-444444444444'),
+            job = data_setup.create_job(owner=owner,
                     distro_tree=distro_tree,
                     whiteboard=u'Operation Righteous Cowboy Lightning',
                     recipe_whiteboard=u'Everything Sunny All the Time Always')
             recipe = job.recipesets[0].recipes[0]
-            data_setup.mark_recipe_installation_finished(recipe,
+            data_setup.mark_recipe_running(recipe,
+                    virt=True, instance_id=uuid.UUID('00000000-1111-2222-3333-444444444444'),
                     fqdn=u'bitenuker.ge.invalid')
 
         with session.begin():
