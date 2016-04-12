@@ -41,7 +41,8 @@ def upgrade():
             nullable=True))
 
     # Back-populate installations for system_resource rows.
-    # Kernel options are left blank here, we will fill them in below.
+    # Kernel options are left blank here, they are filled in by the 
+    # 'commands-for-recipe-installations' online data migration script.
     op.execute("""
         INSERT INTO installation (distro_tree_id, kernel_options,
             rendered_kickstart_id, created, rebooted, install_started,
@@ -60,40 +61,6 @@ def upgrade():
         INNER JOIN recipe_resource ON recipe_resource.recipe_id = recipe.id
         INNER JOIN system_resource ON recipe_resource.id = system_resource.id
         INNER JOIN reservation ON system_resource.reservation_id = reservation.id
-        """)
-
-    # Associate commands for provisioning recipes with their newly created 
-    # installation rows.
-    # There is no direct record of the relationship between commands and recipe 
-    # (that's what this whole table is for) so we have to guess by finding 
-    # commands enqueued between the start and finish times of the reservations 
-    # corresponding to recipes.
-    # The 'auto_cmd_handler' callback is the indicator that a command was 
-    # enqueued by the scheduler as part of provisioning a recipe, rather than 
-    # by a user manually or by release action ReProvision.
-    op.execute("""
-        UPDATE command_queue
-        INNER JOIN activity ON activity.id = command_queue.id
-        INNER JOIN reservation ON reservation.system_id = command_queue.system_id
-            AND activity.created >= reservation.start_time
-            AND (activity.created <= reservation.finish_time
-                 OR reservation.finish_time IS NULL)
-        INNER JOIN system_resource ON system_resource.reservation_id = reservation.id
-        INNER JOIN recipe_resource ON recipe_resource.id = system_resource.id
-        INNER JOIN installation ON installation.recipe_id = recipe_resource.recipe_id
-        SET command_queue.installation_id = installation.id
-        WHERE callback = 'bkr.server.model.auto_cmd_handler'
-        """)
-
-    # Now go back and fill in kernel_options for the installations, copied from 
-    # the configure_netboot command.
-    op.execute("""
-        UPDATE installation
-        INNER JOIN command_queue ON command_queue.installation_id = installation.id
-        INNER JOIN activity ON activity.id = command_queue.id
-        SET installation.kernel_options = command_queue.kernel_options
-        WHERE activity.action = 'configure_netboot'
-            AND command_queue.kernel_options IS NOT NULL
         """)
 
     # Back-populate installations for virt_resource rows. These are easy.

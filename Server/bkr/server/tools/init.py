@@ -15,6 +15,8 @@ __requires__ = ['CherryPy < 3.0']
 import sys
 import re
 import logging
+import pkg_resources
+import imp
 from sqlalchemy.inspection import inspect
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
@@ -314,6 +316,13 @@ def run_alembic_operation(metadata, func):
     env_context = create_alembic_env_context(metadata, func)
     env_context.run_migrations()
 
+def run_online_data_migration(metadata, name):
+    logger.info('Performing online data migration %s', name)
+    module = imp.load_source(name,
+            pkg_resources.resource_filename('bkr.server', 'data-migrations/%s.py' % name))
+    module.migrate(metadata)
+    logger.info('Online data migration %s completed', name)
+
 def get_parser():
     usage = "usage: %prog [options]"
     parser = OptionParser(usage, description=__description__,
@@ -334,6 +343,9 @@ def get_parser():
     parser.add_option("--downgrade", type="string", metavar='VERSION',
                      help="Downgrade database to a previous version "
                      "(accepts a schema version identifier or Beaker version)")
+    parser.add_option('--online-data-migration', metavar='NAME',
+            action='append', default=[],
+            help='Perform the named data migration step after the schema is upgraded')
     parser.add_option('--check', action='store_true',
             help='Instead of performing upgrades, only check if upgrades are necessary '
             '(exit status is 1 if the schema is empty or not up to date)')
@@ -400,6 +412,8 @@ def doit(opts):
             # upgrade to the latest DB version
             upgrade_db(metadata)
         populate_db(opts.user_name, opts.password, opts.display_name, opts.email_address)
+        for migration in opts.online_data_migration:
+            run_online_data_migration(metadata, migration)
     logger.info('Exiting')
     return 0
 

@@ -223,6 +223,7 @@ setup(
         'bkr.server.config': ['*.cfg'],
         'bkr.server.templates': ['*.kid'],
         'bkr.server': [
+            'data-migrations/*',
             'kickstarts/*',
             'snippets/*',
             'reporting-queries/*/*.sql',

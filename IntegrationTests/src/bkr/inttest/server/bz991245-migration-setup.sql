@@ -47,8 +47,8 @@ INSERT INTO activity (id, user_id, created, type, action, field_name, service)
 VALUES (1, 1, '2016-02-16 01:00:04', 'command_activity', 'configure_netboot',
     'Command', 'Scheduler');
 
-INSERT INTO command_queue (id, system_id, kernel_options, callback)
-VALUES (1, 1, 'ks=lol', 'bkr.server.model.auto_cmd_handler');
+INSERT INTO command_queue (id, updated, system_id, kernel_options, callback)
+VALUES (1, '2016-02-16 01:00:04', 1, 'ks=lol', 'bkr.server.model.auto_cmd_handler');
 
 -- Also include an extra configure_netboot command which was triggered 
 -- manually by a user during the recipe (it should be ignored).
@@ -57,8 +57,8 @@ INSERT INTO activity (id, user_id, created, type, action, field_name, service)
 VALUES (2, 1, '2016-02-16 01:30:00', 'command_activity', 'configure_netboot',
     'Command', 'HTTP');
 
-INSERT INTO command_queue (id, system_id, kernel_options)
-VALUES (2, 1, 'bad');
+INSERT INTO command_queue (id, updated, system_id, kernel_options)
+VALUES (2, '2016-02-16 01:30:00', 1, 'bad');
 
 -- And here is another configure_netboot command which might have been 
 -- triggered for a system with release action ReProvision. Note this one has 
@@ -68,8 +68,8 @@ INSERT INTO activity (id, user_id, created, type, action, field_name, service)
 VALUES (3, 1, '2016-02-16 01:59:59', 'command_activity', 'configure_netboot',
     'Command', 'Scheduler');
 
-INSERT INTO command_queue (id, system_id, kernel_options)
-VALUES (3, 1, 'alsobad');
+INSERT INTO command_queue (id, updated, system_id, kernel_options)
+VALUES (3, '2016-02-16 01:59:59', 1, 'alsobad');
 
 -- Recipe 2 is a guest_recipe with a guest_resource.
 

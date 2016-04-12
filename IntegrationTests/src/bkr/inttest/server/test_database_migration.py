@@ -9,7 +9,8 @@ import pkg_resources
 import sqlalchemy
 from turbogears import config
 from turbogears.database import metadata
-from bkr.server.tools.init import upgrade_db, downgrade_db, check_db
+from bkr.server.tools.init import upgrade_db, downgrade_db, check_db, \
+        run_online_data_migration
 from sqlalchemy.orm import create_session
 from sqlalchemy.sql import func
 from alembic.environment import MigrationContext
@@ -742,7 +743,7 @@ class MigrationTest(unittest.TestCase):
         # Check that installation has been populated for recipe 1 (system_resource)
         recipe = self.migration_session.query(Recipe).get(1)
         self.assertEqual(recipe.installation.distro_tree.distro.name, u'distro')
-        self.assertEqual(recipe.installation.kernel_options, u'ks=lol')
+        self.assertEqual(recipe.installation.kernel_options, u'') # populated below
         self.assertEqual(recipe.installation.rendered_kickstart.kickstart, u'lol')
         self.assertEqual(recipe.installation.system.fqdn, u'test.fqdn.name')
         self.assertEqual(recipe.installation.rebooted,
@@ -755,6 +756,12 @@ class MigrationTest(unittest.TestCase):
                 datetime.datetime(2016, 2, 16, 1, 21, 0))
         self.assertEqual(recipe.installation.created,
                 datetime.datetime(2016, 2, 16, 1, 0, 0))
+        self.migration_session.close()
+        # Run online data migration
+        run_online_data_migration(self.migration_metadata, 'commands-for-recipe-installations')
+        # Check that commands have been associated with their installation
+        recipe = self.migration_session.query(Recipe).get(1)
+        self.assertEqual(recipe.installation.kernel_options, u'ks=lol')
         installation_cmd = self.migration_session.query(CommandActivity).get(1)
         self.assertEqual(installation_cmd.installation, recipe.installation)
         manual_cmd = self.migration_session.query(CommandActivity).get(2)

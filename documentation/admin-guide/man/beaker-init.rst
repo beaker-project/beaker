@@ -52,6 +52,14 @@ Options
 
    Human-friendly display name for the administrative user.
 
+.. option:: --online-data-migration <name>
+
+   Perform the named data migration step, after all schema upgrades are 
+   complete.
+
+   Beaker upgrades usually do not require any online data migration steps to be 
+   performed. Check the release notes for details.
+
 .. option:: --downgrade <version>
 
    Downgrade the database to the given version instead of upgrading.
