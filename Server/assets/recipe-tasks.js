@@ -132,16 +132,18 @@ var RecipeTaskDetails = Backbone.View.extend({
             evt.preventDefault();
             selected_side = $(evt.currentTarget).text() ;
         } else {
-            selected_side = 'Results';
+            selected_side = !this.model.get('recipe').get('is_deleted') ? 'Results' : 'Settings';
         }
         switch (selected_side) {
             case 'Results':
                 this.$('.recipe-task-results').show();
                 this.$('.recipe-task-settings').hide();
+                this.$(".toggle-results-settings button:contains('Results')").addClass("active");
                 break;
             case 'Settings':
                 this.$('.recipe-task-results').hide();
                 this.$('.recipe-task-settings').show();
+                this.$(".toggle-results-settings button:contains('Settings')").addClass("active");
                 break;
         }
     },
@@ -151,12 +153,16 @@ var RecipeTaskDetails = Backbone.View.extend({
     render: function () {
         var model = this.model;
         var $el = this.$el;
-        $el.html(this.template(model.attributes));
+        var is_deleted = model.get('recipe').get('is_deleted');
+        $el.html(this.template(_.extend({is_deleted: is_deleted}, model.attributes)));
         var recipe_start_time = this.recipe_start_time;
-        this.$(".recipe-task-results-settings").empty()
-            .append(new RecipeTaskResults({model: this.model,
-                recipe_start_time: this.recipe_start_time}).el)
-            .append(new RecipeTaskSettings({model: this.model}).el);
+        if (!is_deleted) {
+            this.$(".recipe-task-results-settings").append(
+                new RecipeTaskResults({model: this.model,
+                    recipe_start_time: this.recipe_start_time}).el);
+        }
+        this.$(".recipe-task-results-settings").append(
+            new RecipeTaskSettings({model: this.model}).el);
         this.toggle_results_settings();
         return this;
     },

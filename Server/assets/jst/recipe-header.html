@@ -3,7 +3,10 @@
   <ul><li><a href="<%- id %>.xml">Beaker results XML</a></li><li><a href="<%- id %>.junit.xml">JUnit XML</a></li></ul>
 </div>
 <div class="page-header">
-    <h1><abbr title="Recipe">R</abbr>:<%- id %>
+    <h1>
+        <span class="recipe-id<% if (is_deleted) { %> deleted-recipe-id<% } %>">
+            <abbr title="Recipe">R</abbr>:<%- id %>
+        </span>
         <small>
           1 of <%- all_recipes %> recipes in <%= recipeset.get('job').toHTML()%>
         </small>
@@ -14,4 +17,11 @@
         <a href="<%- clone_href %>" class="btn"><i class="fa fa-copy"></i> Clone</a>
         </div>
     </h1>
+    <% if (is_deleted) { %>
+    <div class="alert alert-warning">
+        <i class="fa fa-exclamation-triangle"></i>
+        This job has been deleted. It will not appear in search results.
+        Task results and logs are no longer available.
+    </div>
+    <% } %>
 </div>

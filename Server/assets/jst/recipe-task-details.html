@@ -1,7 +1,7 @@
 <div class="panel panel-default">
   <div class="panel-heading">
     <div class="btn-group toggle-results-settings" data-toggle="buttons-radio">
-      <button type="button" class="btn active">Results</button>
+      <button type="button" class="btn" <% if (is_deleted) { %>disabled="disabled"<% } %>>Results</button>
       <button type="button" class="btn">Settings</button>
     </div>
   </div>

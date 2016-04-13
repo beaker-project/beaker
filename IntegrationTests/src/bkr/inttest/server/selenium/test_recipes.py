@@ -523,6 +523,22 @@ class TestRecipeViewReservationTab(WebDriverTestCase):
             session.expire_all()
             self.assertLessEqual(self.recipe.status_watchdog(), 0)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1314271
+    def test_view_deleted_recipe(self):
+        with session.begin():
+            recipe = data_setup.create_recipe()
+            job = data_setup.create_job_for_recipes([recipe])
+            recipetask = recipe.tasks[0]
+            job.delete()
+        b = self.browser
+        b.get(get_server_base() + 'recipes/%s#task%s'
+                % (recipe.id, recipe.tasks[0].id))
+        self.assertIn('This job has been deleted.',
+                b.find_element_by_class_name('alert-warning').text)
+        task_row = b.find_element_by_css_selector('#task%s .recipe-task-details.collapse.in'
+                % recipe.tasks[0].id)
+        task_row.find_element_by_xpath('.//button[normalize-space(string(.))="Results" and @disabled="disabled"]')
+
 
 class RecipeHTTPTest(DatabaseTestCase):
     """
@@ -589,17 +605,6 @@ class RecipeHTTPTest(DatabaseTestCase):
         self.assertEquals(response.status_code, 200)
         junitxml = lxml.etree.fromstring(response.content)
         self.assertEqual(junitxml.tag, 'testsuites')
-
-    def test_410_for_deleted_job(self):
-        with session.begin():
-            job = data_setup.create_completed_job()
-            job.soft_delete()
-            recipe = job.recipesets[0].recipes[0]
-        response = requests.get(get_server_base() +
-                'recipes/%s' % recipe.id,
-                headers={'Accept': 'application/json'})
-        self.assertEqual(response.status_code, 410)
-        self.assertRegexpMatches(response.text, 'Job %s is deleted' % job.id)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1169838
     def test_trailing_slash_should_return_404(self):

@@ -32,7 +32,7 @@ from bkr.server.model import (Recipe, RecipeSet, TaskStatus, Job, System,
                               LogRecipe, LogRecipeTask, LogRecipeTaskResult,
                               RecipeResource, TaskBase, RecipeReservationRequest)
 from bkr.server.app import app
-from bkr.server.flask_util import BadRequest400, NotFound404, Gone410, \
+from bkr.server.flask_util import BadRequest400, NotFound404, \
     Forbidden403, auth_required, read_json_request, convert_internal_errors, \
     request_wants_json, render_tg_template
 from flask import request, jsonify, redirect as flask_redirect, make_response
@@ -474,7 +474,7 @@ class Recipes(RPCRoot):
         except InvalidRequestError:
             flash(_(u"Invalid recipe id %s" % id))
             redirect(".")
-        if recipe.is_deleted():
+        if recipe.is_deleted:
             flash(_(u"Invalid %s, has been deleted" % recipe.t_id))
             redirect(".")
         recipe.set_reviewed_state(identity.current.user, True)
@@ -497,8 +497,6 @@ def get_recipe(id):
     :param id: Recipe's id.
     """
     recipe = _get_recipe_by_id(id)
-    if recipe.recipeset.job.is_deleted:
-        return Gone410('Job %s is deleted' % recipe.recipeset.job.id)
     if request_wants_json():
         return jsonify(recipe.__json__())
     if identity.current.user and identity.current.user.use_old_job_page:

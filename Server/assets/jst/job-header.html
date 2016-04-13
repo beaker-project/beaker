@@ -4,7 +4,9 @@
 </div>
 <div class="page-header">
   <h1>
-    <span class="job-id"><abbr title="Job">J</abbr>:<%- id %></span>
+    <span class="job-id<% if (is_deleted) { %> deleted-job-id<% } %>">
+        <abbr title="Job">J</abbr>:<%- id %>
+    </span>
     <small>
       owned by <%= owner.toHTML() %>
       <% if (!_.isEmpty(group)) { %> for <%= group.toHTML() %><% } %>
@@ -17,9 +19,16 @@
       <% if (can_cancel && !is_finished) { %>
         <button class="btn cancel" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Cancelling&hellip;"><i class="fa fa-times"></i> Cancel</button>
       <% } %>
-      <% if (can_delete && is_finished) { %>
+      <% if (can_delete && is_finished && !is_deleted) { %>
         <button class="btn btn-danger delete" data-loading-text="<i class='fa fa-trash-o fa-spin'></i> Deleting&hellip;"><i class="fa fa-trash-o"></i> Delete</button>
       <% } %>
     </div>
   </h1>
+  <% if (is_deleted) { %>
+  <div class="alert alert-warning">
+      <i class="fa fa-exclamation-triangle"></i>
+      This job has been deleted. It will not appear in search results.
+      Task results and logs are no longer available.
+  </div>
+  <% } %>
 </div>

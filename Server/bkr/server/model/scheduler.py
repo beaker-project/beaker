@@ -681,6 +681,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
             'group': self.group,
             'status': self.status,
             'is_finished': self.is_finished(),
+            'is_deleted': self.is_deleted,
             'result': self.result,
             'whiteboard': self.whiteboard,
             'cc': [cc.email_address for cc in self._job_ccs],
@@ -2054,6 +2055,7 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
     def is_owner(self,user):
         return self.recipeset.job.owner == user
 
+    @property
     def is_deleted(self):
         if self.recipeset.job.is_deleted:
             return True
@@ -2810,6 +2812,7 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             't_id': self.t_id,
             'status': self.status,
             'is_finished': self.is_finished(),
+            'is_deleted': self.is_deleted,
             'result': self.result,
             'whiteboard': self.whiteboard,
             'distro_tree': self.distro_tree,
