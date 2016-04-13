@@ -2100,6 +2100,13 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             self.installation.rendered_kickstart = None
         for log in self.all_logs(load_parent=False):
             session.delete(log)
+        # Delete all the task result rows as well.
+        # We need to delete the logs first because of the foreign key constraint.
+        session.flush()
+        task_ids = session.query(RecipeTask.id).filter(
+                RecipeTask.recipe_id == self.id).subquery()
+        session.query(RecipeTaskResult).filter(
+                RecipeTaskResult.recipe_task_id.in_(task_ids)).delete(synchronize_session=False)
 
     def task_repo(self):
         return ('beaker-tasks',absolute_url('/repos/%s' % self.id,

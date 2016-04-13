@@ -159,6 +159,18 @@ class LogDelete(DatabaseTestCase):
             self.assertEqual(recipe.installation.rendered_kickstart, None)
             self.assertRaises(NoResultFound, RenderedKickstart.by_id, ks.id)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1322700
+    def test_recipe_task_result_rows_are_deleted(self):
+        with session.begin():
+            self.job_to_delete.to_delete = datetime.datetime.utcnow()
+            recipe = self.job_to_delete.recipesets[0].recipes[0]
+            recipetask = recipe.tasks[0]
+            self.assertEqual(len(recipetask.results), 1)
+        log_delete.log_delete()
+        with session.begin():
+            recipetask = RecipeTask.by_id(recipetask.id)
+            self.assertEqual(len(recipetask.results), 0)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1273302
     def test_deletes_old_jobs_which_never_started(self):
         with session.begin():

@@ -16,7 +16,8 @@ from sqlalchemy.sql import func
 from alembic.environment import MigrationContext
 from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, User, \
         OSMajor, OSMajorInstallOptions, GroupMembershipType, SystemActivity, \
-        Activity, RecipeSetComment, Recipe, RecipeSet, CommandActivity
+        Activity, RecipeSetComment, Recipe, RecipeSet, RecipeTaskResult, \
+        CommandActivity
 
 def has_initial_sublist(larger, prefix):
     """ Return true iff list *prefix* is an initial sublist of list 
@@ -791,3 +792,23 @@ class MigrationTest(unittest.TestCase):
         recipe = self.migration_session.query(Recipe).get(4)
         self.assertEqual(recipe.installation.created,
                 datetime.datetime(2016, 2, 17, 0, 0, 0))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1322700
+    def test_delete_recipe_task_results_for_deleted_job(self):
+        connection = self.migration_metadata.bind.connect()
+        # populate empty database
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/22.sql'))
+        # populate test jobs
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'bz1322700-migration-setup.sql'))
+        # run migration
+        upgrade_db(self.migration_metadata)
+        # Job one's recipe task results should not be deleted
+        self.assertEquals(
+                self.migration_session.query(RecipeTaskResult).filter_by(recipe_task_id=1).count(),
+                1)
+        # Job two's recipe task results should be deleted
+        self.assertEquals(
+                self.migration_session.query(RecipeTaskResult).filter_by(recipe_task_id=2).count(),
+                0)
