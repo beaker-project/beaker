@@ -13,7 +13,7 @@ import lxml.etree
 from turbogears.database import session
 
 from bkr.server.model import TaskStatus, TaskResult, RecipeTaskResult, \
-    Task, RecipeTaskComment, RecipeTaskResultComment
+    Task, RecipeTaskComment, RecipeTaskResultComment, RecipeTask
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_text_present
 from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
@@ -114,6 +114,22 @@ class TestRecipeView(WebDriverTestCase):
         if tab:
             b.find_element_by_xpath('//ul[contains(@class, "recipe-nav")]'
                     '//a[text()="%s"]' % tab).click()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1326562
+    def test_recipe_view_shows_external_task_results(self):
+        with session.begin():
+            recipe = data_setup.create_recipe(task_name=u'/distribution/install')
+            external_task = RecipeTask.from_fetch_url(
+                url='git://example.com/externaltasks/example#master',
+                subdir='examples')
+            recipe.tasks.extend([external_task])
+            data_setup.create_job_for_recipes([recipe], whiteboard='job with external tasks')
+            data_setup.mark_recipe_complete(recipe, result=TaskResult.warn, task_status=TaskStatus.aborted)
+
+        b = self.browser
+        self.go_to_recipe_view(recipe=recipe, tab='Tasks')
+        b.find_element_by_xpath('//div[@class="task-result-path"]/.[contains(text(), "%s")]' % external_task.fetch_url)
+        b.find_element_by_xpath('//span[@class="task-name"]/.[contains(text(), "%s")]' % external_task.fetch_url)
 
     def test_possible_systems(self):
         with session.begin():

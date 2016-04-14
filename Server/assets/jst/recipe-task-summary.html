@@ -17,7 +17,7 @@
         <% if (task) { %>
             <a href="<%- beaker_url_prefix %>tasks/<%- task.get('id') %>"><%- task.get('name') %></a>
         <% } else { %>
-            <%- task.get('name') %>
+            <%- name %>
         <% } %>
     </span>
     <% if (!_.isEmpty(version)) { %>
