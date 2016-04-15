@@ -774,3 +774,13 @@ class MigrationTest(unittest.TestCase):
                 datetime.datetime(2016, 2, 16, 1, 40, 0))
         self.assertEqual(recipe.installation.postinstall_finished,
                 datetime.datetime(2016, 2, 16, 1, 41, 0))
+        self.assertEqual(recipe.installation.created,
+                datetime.datetime(2016, 2, 16, 1, 0, 0))
+        # Check that installation has been populated for recipes 3 and 4
+        # (host and guest that never started)
+        recipe = self.migration_session.query(Recipe).get(3)
+        self.assertEqual(recipe.installation.created,
+                datetime.datetime(2016, 2, 17, 0, 0, 0))
+        recipe = self.migration_session.query(Recipe).get(4)
+        self.assertEqual(recipe.installation.created,
+                datetime.datetime(2016, 2, 17, 0, 0, 0))

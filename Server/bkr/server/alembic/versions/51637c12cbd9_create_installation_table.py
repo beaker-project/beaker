@@ -123,7 +123,7 @@ def upgrade():
         SELECT recipe.distro_tree_id,
             COALESCE(recipe.kernel_options, ''),
             recipe.rendered_kickstart_id,
-            recipe.start_time,
+            COALESCE(hostreservation.start_time, '1970-01-01 00:00:01'),
             recipe_resource.rebooted,
             recipe_resource.install_started,
             recipe_resource.install_finished,
@@ -132,6 +132,11 @@ def upgrade():
         FROM recipe
         INNER JOIN recipe_resource ON recipe_resource.recipe_id = recipe.id
         INNER JOIN guest_resource ON recipe_resource.id = guest_resource.id
+        INNER JOIN machine_guest_map ON machine_guest_map.guest_recipe_id = recipe.id
+        INNER JOIN recipe hostrecipe ON machine_guest_map.machine_recipe_id = hostrecipe.id
+        LEFT JOIN recipe_resource hostresource ON hostresource.recipe_id = hostrecipe.id
+        LEFT JOIN system_resource ON hostresource.id = system_resource.id
+        LEFT JOIN reservation hostreservation ON system_resource.reservation_id = hostreservation.id
         """)
 
     # Not dropping these command_queue columns because there is no way to get 
