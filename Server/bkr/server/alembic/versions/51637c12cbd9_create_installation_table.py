@@ -121,7 +121,7 @@ def upgrade():
             rendered_kickstart_id, created, rebooted, install_started,
             install_finished, postinstall_finished, recipe_id)
         SELECT recipe.distro_tree_id,
-            recipe.kernel_options,
+            COALESCE(recipe.kernel_options, ''),
             recipe.rendered_kickstart_id,
             recipe.start_time,
             recipe_resource.rebooted,

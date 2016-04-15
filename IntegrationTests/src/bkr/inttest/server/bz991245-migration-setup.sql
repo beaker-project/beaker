@@ -21,6 +21,8 @@ VALUES (1, 1, 1, '', '', 'Completed');
 INSERT INTO recipe_set (id, job_id, queue_time, status)
 VALUES (1, 1, '2016-02-16 00:00:00', 'Completed');
 
+-- Recipe 1 is a machine_recipe with a system_resource.
+
 INSERT INTO rendered_kickstart (id, kickstart)
 VALUES (1, 'lol');
 
@@ -66,3 +68,20 @@ VALUES (3, 1, '2016-02-16 01:59:59', 'command_activity', 'configure_netboot',
 
 INSERT INTO command_queue (id, system_id, kernel_options)
 VALUES (3, 1, 'alsobad');
+
+-- Recipe 2 is a guest_recipe with a guest_resource.
+
+INSERT INTO rendered_kickstart (id, kickstart)
+VALUES (2, 'lol2');
+
+INSERT INTO recipe (id, type, recipe_set_id, autopick_random, status,
+    distro_tree_id, start_time, finish_time, rendered_kickstart_id)
+VALUES (2, 'guest_recipe', 1, FALSE, 'Completed',
+    1, '2016-02-16 01:30:00', '2016-02-16 02:00:00', 2);
+
+INSERT INTO recipe_resource (id, type, recipe_id, rebooted, install_started,
+    install_finished, postinstall_finished)
+VALUES (2, 'guest', 2, NULL, '2016-02-16 01:31:00',
+    '2016-02-16 01:40:00', '2016-02-16 01:41:00');
+
+INSERT INTO guest_resource (id) VALUES (2);

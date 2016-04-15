@@ -734,12 +734,12 @@ class MigrationTest(unittest.TestCase):
         # Populate empty database
         connection.execute(pkg_resources.resource_string('bkr.inttest.server',
                 'database-dumps/22.sql'))
-        # Populate test data for migration: one job which ran on a regular system.
+        # Populate test data for migration
         connection.execute(pkg_resources.resource_string('bkr.inttest.server',
                 'bz991245-migration-setup.sql'))
         # Run migration
         upgrade_db(self.migration_metadata)
-        # Check that installation has been populated
+        # Check that installation has been populated for recipe 1 (system_resource)
         recipe = self.migration_session.query(Recipe).get(1)
         self.assertEqual(recipe.installation.distro_tree.distro.name, u'distro')
         self.assertEqual(recipe.installation.kernel_options, u'ks=lol')
@@ -761,3 +761,16 @@ class MigrationTest(unittest.TestCase):
         self.assertEqual(manual_cmd.installation, None)
         reprovision_cmd = self.migration_session.query(CommandActivity).get(3)
         self.assertEqual(reprovision_cmd.installation, None)
+        # Check that installation has been populated for recipe 2 (guest_resource)
+        recipe = self.migration_session.query(Recipe).get(2)
+        self.assertEqual(recipe.installation.distro_tree.distro.name, u'distro')
+        self.assertEqual(recipe.installation.kernel_options, u'')
+        self.assertEqual(recipe.installation.rendered_kickstart.kickstart, u'lol2')
+        self.assertIsNone(recipe.installation.system)
+        self.assertIsNone(recipe.installation.rebooted)
+        self.assertEqual(recipe.installation.install_started,
+                datetime.datetime(2016, 2, 16, 1, 31, 0))
+        self.assertEqual(recipe.installation.install_finished,
+                datetime.datetime(2016, 2, 16, 1, 40, 0))
+        self.assertEqual(recipe.installation.postinstall_finished,
+                datetime.datetime(2016, 2, 16, 1, 41, 0))
