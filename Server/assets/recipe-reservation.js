@@ -144,7 +144,7 @@ var EditRecipeReservationModal = Backbone.View.extend({
     className: 'modal',
     template: JST['recipe-reservation-edit'],
     events: {
-        'click .btn-group .btn': 'toggle_reservation',
+        'click .toggle-reservation-form .btn-group .btn': 'toggle_reservation',
         'submit form': 'submit',
         'hidden': 'remove',
     },
@@ -182,8 +182,12 @@ var EditRecipeReservationModal = Backbone.View.extend({
         var model = this.model;
         var attributes = {};
         if (reserve) {
+            var unit = this.$('.duration-unit button.active').attr('data-duration-unit');
+            var duration = moment.duration(
+                parseInt(this.$('[name=duration]').val()), unit
+            ).asSeconds();
             attributes.reserve = true;
-            attributes.duration = parseInt(this.$('[name=duration]').val());
+            attributes.duration = duration;
         } else {
             attributes.reserve = false;
         }
