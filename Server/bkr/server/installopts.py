@@ -19,6 +19,8 @@ def _parse(s): # based on Cobbler's string_to_hash
             result.setdefault(token, None)
             continue
         name, value = token.split('=', 1)
+        name = name.decode('utf8')
+        value = value.decode('utf8')
         if not name:
             continue
 
@@ -35,9 +37,9 @@ def _unparse(d, quote=True):
     # items are sorted for predictable ordering of the output,
     # but a better solution would be to use OrderedDict in Python 2.7+
     if quote:
-        quoted_value = lambda value: pipes.quote(str(value))
+        quoted_value = lambda value: pipes.quote(unicode(value))
     else:
-        quoted_value = lambda value: str(value)
+        quoted_value = lambda value: unicode(value)
     items = []
     for key, value in sorted(d.iteritems()):
         if value is None:
@@ -45,16 +47,16 @@ def _unparse(d, quote=True):
         else:
             if isinstance(value, list):
                 for v in value:
-                    items.append('%s=%s' % (key, quoted_value(v)))
+                    items.append(u'%s=%s' % (key, quoted_value(v)))
             else:
-                items.append('%s=%s' % (key, quoted_value(value)))
+                items.append(u'%s=%s' % (key, quoted_value(value)))
 
-    return ' '.join(items)
+    return u' '.join(items)
 
 def _consolidate(base, other): # based on Cobbler's consolidate
     result = dict(base)
     for key, value in other.iteritems():
-        if key.startswith('!'):
+        if key.startswith(u'!'):
             result.pop(key[1:], None)
         else:
             result[key] = value
@@ -116,6 +118,6 @@ class InstallOptions(object):
 
 def global_install_options():
     return InstallOptions.from_strings(
-            config.get('beaker.ks_meta', ''),
-            config.get('beaker.kernel_options', 'ksdevice=bootif'),
-            config.get('beaker.kernel_options_post', ''))
+            config.get('beaker.ks_meta', u''),
+            config.get('beaker.kernel_options', u'ksdevice=bootif'),
+            config.get('beaker.kernel_options_post', u''))
