@@ -954,6 +954,9 @@ class Jobs(RPCRoot):
 
     @expose(template="bkr.server.templates.job-old")
     def default(self, id):
+        if cherrypy.request.path.endswith('/'):
+            raise cherrypy.HTTPError(404)
+
         try:
             job = Job.by_id(id)
         except InvalidRequestError:

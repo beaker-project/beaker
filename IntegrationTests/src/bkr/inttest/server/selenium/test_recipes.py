@@ -577,6 +577,11 @@ class RecipeHTTPTest(DatabaseTestCase):
         self.assertEqual(response.status_code, 410)
         self.assertRegexpMatches(response.text, 'Job %s is deleted' % job.id)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1169838
+    def test_trailing_slash_should_return_404(self):
+        response = requests.get(get_server_base() + 'recipes/%s/' % self.recipe.id)
+        self.assertEqual(response.status_code, 404)
+
     def test_get_recipe_log(self):
         with session.begin():
             job = data_setup.create_completed_job(server_log=True)

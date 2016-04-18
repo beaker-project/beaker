@@ -1362,6 +1362,11 @@ class JobHTTPTest(DatabaseTestCase):
         junitxml = lxml.etree.fromstring(response.content)
         self.assertEqual(junitxml.tag, 'testsuites')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1169838
+    def test_trailing_slash_should_return_404(self):
+        response = requests.get(get_server_base() + 'jobs/%s/' % self.job.id)
+        self.assertEqual(response.status_code, 404)
+
     def test_set_job_whiteboard(self):
         s = requests.Session()
         requests_login(s, user=self.owner, password=u'theowner')

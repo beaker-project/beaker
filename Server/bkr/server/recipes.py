@@ -467,6 +467,8 @@ class Recipes(RPCRoot):
             raise cherrypy.HTTPError(404)
         if args:
             raise cherrypy.HTTPError(404)
+        if cherrypy.request.path.endswith('/'):
+            raise cherrypy.HTTPError(404)
         try:
             recipe = Recipe.by_id(id)
         except InvalidRequestError:
