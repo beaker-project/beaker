@@ -153,7 +153,7 @@ class Job_Clone(BeakerCommand):
                     # root is job tag
                     root = lxml.etree.fromstring(jobxml)
                     root.set('user', job_owner)
-                    jobxml = lxml.etree.tostring(root).encode('utf8')
+                    jobxml = lxml.etree.tostring(root, encoding='utf8')
                 if xml or pretty:
                     print lxml.etree.tostring(lxml.etree.fromstring(jobxml),
                                             pretty_print=pretty,

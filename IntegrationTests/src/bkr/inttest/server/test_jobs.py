@@ -187,7 +187,7 @@ class TestJobsController(DatabaseTestCase):
         tree = job.to_xml(clone=True)
         self.assertEqual(2, len(tree.xpath('*[namespace-uri()]')))
         self.assertEqual('<b:option xmlns:b="http://example.com/bar">--foobar arbitrary</b:option>',
-                         lxml.etree.tostring(tree.xpath('*[namespace-uri()]')[0]))
+                         lxml.etree.tostring(tree.xpath('*[namespace-uri()]')[0], encoding='utf8'))
         self.assertEqual(u'<f:test xmlns:f="http://example.com/foo">unicode text: heißer Шис</f:test>'.encode('utf8'),
                          lxml.etree.tostring(tree.xpath('*[namespace-uri()]')[1], encoding='utf8'))
 

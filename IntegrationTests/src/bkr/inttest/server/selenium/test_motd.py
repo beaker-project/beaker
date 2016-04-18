@@ -18,7 +18,7 @@ class TestMOTD(WebDriverTestCase):
         f = open(tg.config.get('beaker.motd'), 'rb')
         parser = etree.XMLParser(recover=True)
         tree = etree.parse(f,parser)
-        the_motd = etree.tostring(tree, method='text')
+        the_motd = etree.tostring(tree, method='text', encoding=unicode)
         f.close()
         b = self.browser
         b.get(get_server_base())

@@ -220,7 +220,7 @@ class ReserveWorkflow(WebDriverTestCase):
         job_id = b.find_element_by_xpath('//h1//span[@class="job-id"]').text
         with session.begin():
             job = TaskBase.get_by_t_id(job_id)
-            cloned_job_xml = lxml.etree.tostring(job.to_xml(clone=True))  # cloning re-parses hostRequires
+            cloned_job_xml = lxml.etree.tostring(job.to_xml(clone=True), encoding=unicode)  # cloning re-parses hostRequires
             self.assertIn(
                     u'<hostRequires><labcontroller op="=" value="%s"/>'
                     u'<system_type op="=" value="Machine"/></hostRequires>'
@@ -252,7 +252,7 @@ class ReserveWorkflow(WebDriverTestCase):
         job_id = b.find_element_by_xpath('//h1//span[@class="job-id"]').text
         with session.begin():
             job = TaskBase.get_by_t_id(job_id)
-            cloned_job_xml = lxml.etree.tostring(job.to_xml(clone=True))  # cloning re-parses hostRequires
+            cloned_job_xml = lxml.etree.tostring(job.to_xml(clone=True), encoding=unicode)  # cloning re-parses hostRequires
             self.assertIn(
                 u'<hostRequires force="%s"/>' % manual_system.fqdn,
                 cloned_job_xml)

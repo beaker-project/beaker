@@ -588,7 +588,7 @@ class Task(DeclarativeMappedObject):
                 arch_elem.text=excluded_arch.arch.arch
                 excluded.append(arch_elem)
             task.append(excluded)
-        return lxml.etree.tostring(task, pretty_print=pretty)
+        return lxml.etree.tostring(task, pretty_print=pretty, encoding='utf8')
 
     def elapsed_time(self, suffixes=(' year',' week',' day',' hour',' minute',' second'), add_s=True, separator=', '):
         """

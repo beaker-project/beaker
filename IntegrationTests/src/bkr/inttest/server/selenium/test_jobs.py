@@ -1349,7 +1349,9 @@ class JobHTTPTest(DatabaseTestCase):
         response = requests.get(get_server_base() + 'jobs/%s.xml' % self.job.id)
         response.raise_for_status()
         self.assertEquals(response.status_code, 200)
-        self.assertEquals(lxml.etree.tostring(self.job.to_xml(), pretty_print=True), response.content)
+        self.assertEquals(
+                lxml.etree.tostring(self.job.to_xml(), pretty_print=True, encoding='utf8'),
+                response.content)
 
     def test_get_junit_xml(self):
         with session.begin():

@@ -43,5 +43,5 @@ class JobExportXML(WebDriverTestCase):
             # from the view will have not since our database stores only seconds
             session.expire_all()
             job = Job.by_id(self.job_to_export.id)
-            expected = lxml.etree.tostring(job.to_xml(), pretty_print=True)
+            expected = lxml.etree.tostring(job.to_xml(), pretty_print=True, encoding='utf8')
             self.assertMultiLineEqual(expected, actual)

@@ -897,7 +897,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
             recipeSet = RecipeSet(ttasks=2)
             recipe = MachineRecipe(ttasks=2)
             # Inlcude the XML definition so that cloning this job will act as expected.
-            recipe.distro_requires = etree.tostring(distro_tree.to_xml())
+            recipe.distro_requires = etree.tostring(distro_tree.to_xml(), encoding=unicode)
             recipe.distro_tree = distro_tree
             # Don't report panic's for reserve workflow.
             recipe.panic = 'ignore'
@@ -986,7 +986,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
             recipe.whiteboard = kw.get('whiteboard')
 
         # Include the XML definition so that cloning this job will act as expected.
-        recipe.distro_requires = etree.tostring(distro_tree.to_xml())
+        recipe.distro_requires = etree.tostring(distro_tree.to_xml(), encoding=unicode)
         recipe.distro_tree = distro_tree
         system = kw.get('system')
         # Some extra sanity checks, to help out the user
@@ -1005,7 +1005,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         recipeSet.recipes.append(recipe)
         job.recipesets.append(recipeSet)
         job.ttasks += recipeSet.ttasks
-        job_xml = etree.tostring(job.to_xml(clone=True))
+        job_xml = etree.tostring(job.to_xml(clone=True), encoding=unicode)
         # We have the XML now, so if dry run, roll back
         if dryrun:
             session.rollback()
@@ -2259,7 +2259,7 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             system_type.set('value', unicode(self.systemtype))
             hrs.append(system_type)
 
-        return etree.tostring(hrs)
+        return etree.tostring(hrs, encoding=unicode)
 
     @host_requires.setter
     def host_requires(self, value):
@@ -2272,7 +2272,7 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             prs = etree.fromstring(self._partitions)
         except ValueError:
             prs = etree.Element("partitions")
-        return etree.tostring(prs)
+        return etree.tostring(prs, encoding=unicode)
 
     @partitions.setter
     def partitions(self, value):
@@ -2906,7 +2906,7 @@ class GuestRecipe(Recipe):
             drs = etree.fromstring(self._distro_requires)
         except TypeError:
             drs = etree.Element("distroRequires")
-        return etree.tostring(drs)
+        return etree.tostring(drs, encoding=unicode)
 
     def _set_distro_requires(self, value):
         self._distro_requires = value

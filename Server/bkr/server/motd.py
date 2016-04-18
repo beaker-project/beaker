@@ -37,7 +37,7 @@ def _load_motd(filename):
         return None
     if tree.getroot() is None:
         return None
-    return etree.tostring(tree.getroot())
+    return etree.tostring(tree.getroot(), encoding='utf8')
 
 def get_motd():
     global _motd, _motd_loaded

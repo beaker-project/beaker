@@ -1720,13 +1720,13 @@ class RecipeSetTest(DatabaseTestCase):
         recipeset.comments.append(RecipeSetComment(user=commenter,
                 created=datetime.datetime(2015, 11, 13, 11, 54, 26),
                 comment=u'is free'))
-        xml = lxml.etree.tostring(recipeset.to_xml(clone=False))
-        self.assertIn('<comments>'
-                '<comment user="cpscott" created="2015-11-13 11:54:26">'
-                'is free'
-                '</comment>'
-                '</comments>'
-                '</recipeSet>',
+        xml = lxml.etree.tostring(recipeset.to_xml(clone=False), encoding=unicode)
+        self.assertIn(u'<comments>'
+                u'<comment user="cpscott" created="2015-11-13 11:54:26">'
+                u'is free'
+                u'</comment>'
+                u'</comments>'
+                u'</recipeSet>',
                 xml)
 
 class RecipeTest(DatabaseTestCase):
@@ -1752,12 +1752,12 @@ class RecipeTest(DatabaseTestCase):
         ])
         for i in range(3):
             data_setup.mark_recipe_running(job.recipesets[0].recipes[i], system=systems[i])
-        xml = lxml.etree.tostring(job.recipesets[0].recipes[0].to_xml(clone=False))
-        self.assert_('<roles>'
-                '<role value="CLIENTONE"><system value="clientone.roles-to-xml"/></role>'
-                '<role value="CLIENTTWO"><system value="clienttwo.roles-to-xml"/></role>'
-                '<role value="SERVER"><system value="server.roles-to-xml"/></role>'
-                '</roles>' in xml, xml)
+        xml = lxml.etree.tostring(job.recipesets[0].recipes[0].to_xml(clone=False), encoding=unicode)
+        self.assert_(u'<roles>'
+                u'<role value="CLIENTONE"><system value="clientone.roles-to-xml"/></role>'
+                u'<role value="CLIENTTWO"><system value="clienttwo.roles-to-xml"/></role>'
+                u'<role value="SERVER"><system value="server.roles-to-xml"/></role>'
+                u'</roles>' in xml, xml)
 
     def test_installation_in_xml(self):
         recipe = data_setup.create_recipe()
@@ -1787,9 +1787,9 @@ class RecipeTest(DatabaseTestCase):
         system.status = SystemStatus.broken
         job = data_setup.create_job()
 
-        host_requires = '<hostRequires force="{0}"/>'
+        host_requires = u'<hostRequires force="{0}"/>'
         job.recipesets[0].recipes[0]._host_requires = host_requires.format(system.fqdn)
-        xml = lxml.etree.tostring(job.recipesets[0].recipes[0].to_xml(clone=True))
+        xml = lxml.etree.tostring(job.recipesets[0].recipes[0].to_xml(clone=True), encoding=unicode)
         self.assertIn(host_requires.format(system.fqdn), xml)
 
     def test_recipe_reservesys_clone(self):
@@ -1804,15 +1804,15 @@ class RecipeTest(DatabaseTestCase):
             reservesys=True,
             reservesys_duration=3600)
         job = data_setup.create_job_for_recipes([recipe1, recipe2])
-        xml = lxml.etree.tostring(job.recipesets[0].recipes[0].to_xml(clone=True))
-        reservation_string = '<task name="/distribution/install" role="STANDALONE"/>' +  \
-                             '<task name="/distribution/install" role="STANDALONE"/>' + \
-                             '<reservesys duration="86400"/>'
+        xml = lxml.etree.tostring(job.recipesets[0].recipes[0].to_xml(clone=True), encoding=unicode)
+        reservation_string = u'<task name="/distribution/install" role="STANDALONE"/>' +  \
+                             u'<task name="/distribution/install" role="STANDALONE"/>' + \
+                             u'<reservesys duration="86400"/>'
         self.assertIn(reservation_string, xml)
-        xml = lxml.etree.tostring(job.recipesets[0].recipes[1].to_xml(clone=True))
-        reservation_string = '<task name="/distribution/install" role="STANDALONE"/>' +  \
-                             '<task name="/distribution/install" role="STANDALONE"/>' + \
-                             '<reservesys duration="3600"/>'
+        xml = lxml.etree.tostring(job.recipesets[0].recipes[1].to_xml(clone=True), encoding=unicode)
+        reservation_string = u'<task name="/distribution/install" role="STANDALONE"/>' +  \
+                             u'<task name="/distribution/install" role="STANDALONE"/>' + \
+                             u'<reservesys duration="3600"/>'
         self.assertIn(reservation_string, xml)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1122659
@@ -2053,10 +2053,10 @@ class GuestRecipeTest(DatabaseTestCase):
         guest_recipe = job.recipesets[0].recipes[0].guests[0]
         session.flush()
 
-        guestxml = lxml.etree.tostring(guest_recipe.to_xml())
-        self.assert_('location="nfs://something:/somewhere"' in guestxml, guestxml)
-        self.assert_('nfs_location="nfs://something:/somewhere"' in guestxml, guestxml)
-        self.assert_('http_location="http://something/somewhere"' in guestxml, guestxml)
+        guestxml = lxml.etree.tostring(guest_recipe.to_xml(), encoding=unicode)
+        self.assert_(u'location="nfs://something:/somewhere"' in guestxml, guestxml)
+        self.assert_(u'nfs_location="nfs://something:/somewhere"' in guestxml, guestxml)
+        self.assert_(u'http_location="http://something/somewhere"' in guestxml, guestxml)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=691666
     def test_guestname(self):
@@ -2066,8 +2066,8 @@ class GuestRecipeTest(DatabaseTestCase):
         guest_recipe_2 = job_2.recipesets[0].recipes[0].guests[0]
         session.flush()
 
-        guestxml_1 = lxml.etree.tostring(guest_recipe_1.to_xml())
-        guestxml_2 = lxml.etree.tostring(guest_recipe_2.to_xml())
+        guestxml_1 = lxml.etree.tostring(guest_recipe_1.to_xml(), encoding=unicode)
+        guestxml_2 = lxml.etree.tostring(guest_recipe_2.to_xml(), encoding=unicode)
         self.assert_(u'guestname=""' in guestxml_1, guestxml_1)
         self.assert_(u'guestname="blueguest"' in guestxml_2, guestxml_2)
 

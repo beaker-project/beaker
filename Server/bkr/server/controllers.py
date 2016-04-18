@@ -1107,14 +1107,14 @@ class Root(RPCRoot):
         except Exception:
             flash(_('Invalid Task: %s' % taskid))
             redirect(url('/'))
-        xml_text = lxml.etree.tostring(task.to_xml(), pretty_print=pretty)
+        xml_text = lxml.etree.tostring(task.to_xml(), pretty_print=pretty, encoding='utf8')
 
         if to_screen: #used for testing contents of XML
             cherrypy.response.headers['Content-Disposition'] = ''
-            cherrypy.response.headers['Content-Type'] = 'text/plain'
+            cherrypy.response.headers['Content-Type'] = 'text/plain; charset=utf-8'
         else:
             cherrypy.response.headers['Content-Disposition'] = 'attachment; filename=%s.xml' % taskid
-            cherrypy.response.headers['Content-Type'] = 'text/xml'
+            cherrypy.response.headers['Content-Type'] = 'text/xml; charset=utf-8'
 
         return xml_text
 

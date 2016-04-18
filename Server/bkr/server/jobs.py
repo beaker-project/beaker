@@ -361,7 +361,8 @@ class Jobs(RPCRoot):
             except InvalidRequestError:
                 flash(_(u"Invalid job id %s" % job_id))
                 redirect(".")
-            textxml = lxml.etree.tostring(job.to_xml(clone=True), pretty_print=True)
+            textxml = lxml.etree.tostring(job.to_xml(clone=True),
+                                          pretty_print=True, encoding=unicode)
         elif recipeset_id:
             title = 'Clone Recipeset %s' % recipeset_id
             try:
@@ -370,7 +371,7 @@ class Jobs(RPCRoot):
                 flash(_(u"Invalid recipeset id %s" % recipeset_id))
                 redirect(".")
             textxml = lxml.etree.tostring(recipeset.to_xml(clone=True,from_job=False),
-                                          pretty_print=True)
+                                          pretty_print=True, encoding=unicode)
         elif isinstance(filexml, cgi.FieldStorage):
             # Clone from file
             try:
@@ -380,11 +381,9 @@ class Jobs(RPCRoot):
                 redirect('.')
         elif textxml:
             try:
-                # xml.sax (and thus, xmltramp) expect raw bytes, not unicode
-                textxml = textxml.encode('utf8')
                 if not confirmed:
                     job_schema = lxml.etree.RelaxNG(self.job_schema_doc)
-                    if not job_schema.validate(lxml.etree.fromstring(textxml)):
+                    if not job_schema.validate(lxml.etree.fromstring(textxml.encode('utf8'))):
                         log.debug('Job failed validation, with errors: %r',
                                 job_schema.error_log)
                         return dict(
@@ -394,7 +393,7 @@ class Jobs(RPCRoot):
                             options = {'xsd_errors': job_schema.error_log},
                             value = dict(textxml=textxml, confirmed=True),
                         )
-                xmljob = parse_untrusted_xml(textxml)
+                xmljob = parse_untrusted_xml(textxml.encode('utf8'))
                 job = self.process_xmljob(xmljob, identity.current.user)
                 session.flush()
             except Exception,err:
@@ -515,7 +514,7 @@ class Jobs(RPCRoot):
                   )
         extra_xml = xmljob.xpath('*[namespace-uri()]')
         if extra_xml is not None:
-            job.extra_xml = u''.join([lxml.etree.tostring(x).strip() for x in extra_xml])
+            job.extra_xml = u''.join([lxml.etree.tostring(x, encoding=unicode).strip() for x in extra_xml])
         job.product = product
         job.retention_tag = tag
         email_validator = validators.Email(not_empty=True)
@@ -585,12 +584,12 @@ class Jobs(RPCRoot):
             recipe = GuestRecipe(ttasks=0)
             recipe.guestname = xmlrecipe.get('guestname')
             recipe.guestargs = xmlrecipe.get('guestargs')
-        recipe.host_requires = lxml.etree.tostring(xmlrecipe.find('hostRequires'))
-        recipe.distro_requires = lxml.etree.tostring(xmlrecipe.find('distroRequires'))
+        recipe.host_requires = lxml.etree.tostring(xmlrecipe.find('hostRequires'), encoding=unicode)
+        recipe.distro_requires = lxml.etree.tostring(xmlrecipe.find('distroRequires'), encoding=unicode)
 
         partitions = xmlrecipe.find('partitions')
         if partitions is not None:
-            recipe.partitions = lxml.etree.tostring(partitions)
+            recipe.partitions = lxml.etree.tostring(partitions, encoding=unicode)
 
         try:
             recipe.distro_tree = DistroTree.by_filter("%s" % recipe.distro_requires)[0]
@@ -1031,10 +1030,10 @@ def job_xml(id):
     :status 200: The job xml file was successfully generated.
     """
     job = _get_job_by_id(id)
-    xmlstr = lxml.etree.tostring(job.to_xml(), pretty_print=True)
+    xmlstr = lxml.etree.tostring(job.to_xml(), pretty_print=True, encoding='utf8')
     response = make_response(xmlstr)
     response.status_code = 200
-    response.headers.add('Content-Type', 'text/xml')
+    response.headers.add('Content-Type', 'text/xml; charset=utf-8')
     return response
 
 @app.route('/jobs/<int:id>.junit.xml', methods=['GET'])
@@ -1045,7 +1044,7 @@ def job_junit_xml(id):
     job = _get_job_by_id(id)
     response = make_response(job_to_junit_xml(job))
     response.status_code = 200
-    response.headers.add('Content-Type', 'text/xml')
+    response.headers.add('Content-Type', 'text/xml; charset=utf-8')
     return response
 
 @app.route('/jobs/<int:id>', methods=['PATCH'])

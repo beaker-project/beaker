@@ -329,7 +329,7 @@ class Recipes(RPCRoot):
             raise BX(_("No recipe id provided!"))
         try:
             recipexml = etree.tostring(Recipe.by_id(recipe_id).to_xml(),
-                                       pretty_print=True)
+                                       pretty_print=True, encoding='utf8')
         except InvalidRequestError:
             raise BX(_("Invalid Recipe ID %s" % recipe_id))
         return recipexml
@@ -521,10 +521,10 @@ def recipe_xml(id):
     :status 200: The recipe xml file was successfully generated.
     """
     recipe = _get_recipe_by_id(id)
-    xmlstr = lxml.etree.tostring(recipe.to_xml(), pretty_print=True)
+    xmlstr = lxml.etree.tostring(recipe.to_xml(), pretty_print=True, encoding='utf8')
     response = make_response(xmlstr)
     response.status_code = 200
-    response.headers.add('Content-Type', 'text/xml')
+    response.headers.add('Content-Type', 'text/xml; charset=utf-8')
     return response
 
 @app.route('/recipes/<int:id>.junit.xml', methods=['GET'])
@@ -535,7 +535,7 @@ def recipe_junit_xml(id):
     recipe = _get_recipe_by_id(id)
     response = make_response(recipe_to_junit_xml(recipe))
     response.status_code = 200
-    response.headers.add('Content-Type', 'text/xml')
+    response.headers.add('Content-Type', 'text/xml; charset=utf-8')
     return response
 
 def _record_activity(recipe, field, old, new, action=u'Changed'):

@@ -411,7 +411,7 @@ def create_recipe(distro_tree=None, task_list=None,
     recipe.whiteboard = whiteboard
     recipe.distro_tree = distro_tree
     recipe.role = role or u'STANDALONE'
-    recipe.distro_requires = lxml.etree.tostring(recipe.distro_tree.to_xml())
+    recipe.distro_requires = lxml.etree.tostring(recipe.distro_tree.to_xml(), encoding=unicode)
 
     if kwargs.get('reservesys', False):
         duration=kwargs.get('reservesys_duration', 86400)
