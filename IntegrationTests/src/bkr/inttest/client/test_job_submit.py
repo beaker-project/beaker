@@ -17,23 +17,23 @@ class JobSubmitTest(ClientTestCase):
     @with_transaction
     def setUp(self):
         data_setup.create_product(product_name=u'the_product')
-        data_setup.create_group(group_name='somegroup')
+        data_setup.create_group(group_name=u'somegroup')
         data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
-        self.user_foo = data_setup.create_user(password='foo')
-        self.user_bar = data_setup.create_user(password='bar')
-        self.bot = data_setup.create_user(password='bot')
+        self.user_foo = data_setup.create_user(password=u'foo')
+        self.user_bar = data_setup.create_user(password=u'bar')
+        self.bot = data_setup.create_user(password=u'bot')
         # Add bot as delegate submission of foo
         self.user_foo.add_submission_delegate(self.bot, service=u'testdata')
 
     def test_submit_job(self):
         with session.begin():
-            user = data_setup.create_user(password='password')
-            group = data_setup.create_group(group_name='somegroup')
+            user = data_setup.create_user(password=u'password')
+            group = data_setup.create_group(group_name=u'somegroup')
             group.add_member(user)
 
         # Test submitting on behalf of user's group
         config = create_client_config(username=user.user_name,
-                                       password='password')
+                                       password=u'password')
         out = run_client(['bkr', 'job-submit',
                 pkg_resources.resource_filename('bkr.inttest', 'complete-job.xml')],
                          config=config)

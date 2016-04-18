@@ -228,7 +228,7 @@ class TestSystem(DatabaseTestCase):
 
     def test_system_using_pool_access_policy(self):
         system1 = data_setup.create_system(shared=False)
-        pool = data_setup.create_system_pool(name='pool-1',
+        pool = data_setup.create_system_pool(name=u'pool-1',
                                              systems=[system1])
         pool_policy = pool.access_policy
         perm1 = SystemPermission.reserve
@@ -281,16 +281,16 @@ class TestSystemPool(DatabaseTestCase):
     def test_create_system_pool(self):
         system1 = data_setup.create_system()
         system2 = data_setup.create_system()
-        data_setup.create_system_pool(name='pool-1',
+        data_setup.create_system_pool(name=u'pool-1',
                                       systems=[system1, system2])
         session.flush()
-        pool = SystemPool.by_name('pool-1')
-        self.assertEquals(pool.name, 'pool-1')
+        pool = SystemPool.by_name(u'pool-1')
+        self.assertEquals(pool.name, u'pool-1')
         self.assertIn(system1, pool.systems)
         self.assertIn(system2, pool.systems)
 
         # invalid pool name should raise ValueError
-        self.assertRaises(ValueError, lambda: data_setup.create_system_pool(name='pool-1/'))
+        self.assertRaises(ValueError, lambda: data_setup.create_system_pool(name=u'pool-1/'))
 
     def test_system_pool_owner(self):
         user1 = data_setup.create_user()
@@ -312,7 +312,7 @@ class TestSystemPool(DatabaseTestCase):
         self.assertTrue(pool.has_owner(user1))
 
     def test_pool_permissions(self):
-        pool = data_setup.create_system_pool(name='pool-1')
+        pool = data_setup.create_system_pool(name=u'pool-1')
         pool_policy = pool.access_policy
         user1 = data_setup.create_user()
         other_user = data_setup.create_user()
@@ -327,7 +327,7 @@ class TestSystemPool(DatabaseTestCase):
 
     def test_system_pool_access_policy_deletion(self):
         system1 = data_setup.create_system()
-        pool = data_setup.create_system_pool(name='pool-1')
+        pool = data_setup.create_system_pool(name=u'pool-1')
         policy = pool.access_policy
         perm = SystemPermission.reserve
         user = data_setup.create_user()
@@ -1067,8 +1067,8 @@ class TestJob(DatabaseTestCase):
         lc = data_setup.create_labcontroller()
         system = data_setup.create_system(arch=[u'i386', u'x86_64'])
         system.lab_controller = lc
-        distro_tree1 = data_setup.create_distro_tree(osmajor='RedHatEnterpriseLinux6',
-                                                     distro_tags=['RELEASED'],
+        distro_tree1 = data_setup.create_distro_tree(osmajor=u'RedHatEnterpriseLinux6',
+                                                     distro_tags=[u'RELEASED'],
                                                      lab_controllers=[lc])
         session.flush()
         distro_tree = system.distro_tree_for_inventory()
@@ -1363,7 +1363,7 @@ class DistroTreeTest(DatabaseTestCase):
     def test_custom_netbootloader(self):
 
         # ppc64, RHEL 6
-        distro_rhel6 = data_setup.create_distro(osmajor='RedHatEnterpriseLinux6',
+        distro_rhel6 = data_setup.create_distro(osmajor=u'RedHatEnterpriseLinux6',
                                                 osminor=u'5')
         rhel6_ppc64 = data_setup.create_distro_tree(distro=distro_rhel6,
                                                     arch=u'ppc64')
@@ -1371,7 +1371,7 @@ class DistroTreeTest(DatabaseTestCase):
         self.assertIn('netbootloader=yaboot', r1.installation.kernel_options)
 
         # ppc64, RHEL 7.0
-        distro_rhel7 = data_setup.create_distro(osmajor='RedHatEnterpriseLinux7',
+        distro_rhel7 = data_setup.create_distro(osmajor=u'RedHatEnterpriseLinux7',
                                                 osminor=u'0')
         rhel7_ppc64 = data_setup.create_distro_tree(distro=distro_rhel7,
                                                     arch=u'ppc64')
@@ -1379,7 +1379,7 @@ class DistroTreeTest(DatabaseTestCase):
         self.assertIn('netbootloader=yaboot', r2.installation.kernel_options)
 
         # ppc64, RHEL 7.1
-        distro_rhel71 = data_setup.create_distro(osmajor='RedHatEnterpriseLinux7',
+        distro_rhel71 = data_setup.create_distro(osmajor=u'RedHatEnterpriseLinux7',
                                                  osminor=u'1')
         rhel71_ppc64 = data_setup.create_distro_tree(distro=distro_rhel71,
                                                      arch=u'ppc64')
@@ -1397,7 +1397,7 @@ class DistroTreeTest(DatabaseTestCase):
         self.assertIn('netbootloader=something/weird', r4.installation.kernel_options)
 
         # ppc64, Fedora 21
-        distro_f21 = data_setup.create_distro(osmajor='Fedora21',
+        distro_f21 = data_setup.create_distro(osmajor=u'Fedora21',
                                                 osminor=u'0')
         f21_ppc64 = data_setup.create_distro_tree(distro=distro_f21,
                                                     arch=u'ppc64')
@@ -2474,48 +2474,48 @@ class TestSystemInventoryDistro(DatabaseTestCase):
             self.system6.lab_controller = self.lc
             self.system7 = data_setup.create_system(arch=[u'aarch64'])
             self.system7.lab_controller = self.lc
-            self.distro_tree1 = data_setup.create_distro_tree(osmajor='RedHatEnterpriseLinux6',
-                                                              distro_tags=['RELEASED'],
+            self.distro_tree1 = data_setup.create_distro_tree(osmajor=u'RedHatEnterpriseLinux6',
+                                                              distro_tags=[u'RELEASED'],
                                                               lab_controllers=[self.lc])
-            self.distro_tree2 = data_setup.create_distro_tree(osmajor='RedHatEnterpriseLinux6',
+            self.distro_tree2 = data_setup.create_distro_tree(osmajor=u'RedHatEnterpriseLinux6',
                                                               arch=u'x86_64',
-                                                              distro_tags=['RELEASED'],
+                                                              distro_tags=[u'RELEASED'],
                                                               lab_controllers=[self.lc])
-            self.distro_tree3 = data_setup.create_distro_tree(osmajor='RedHatEnterpriseLinux7',
+            self.distro_tree3 = data_setup.create_distro_tree(osmajor=u'RedHatEnterpriseLinux7',
                                                               arch=u'ppc64',
-                                                              distro_tags=['RELEASED'],
+                                                              distro_tags=[u'RELEASED'],
                                                               lab_controllers=[self.lc])
-            self.distro_tree4 = data_setup.create_distro_tree(osmajor='RedHatEnterpriseLinux7',
+            self.distro_tree4 = data_setup.create_distro_tree(osmajor=u'RedHatEnterpriseLinux7',
                                                               arch=u'ppc64le',
-                                                              distro_tags=['RELEASED'],
+                                                              distro_tags=[u'RELEASED'],
                                                               lab_controllers=[self.lc])
-            self.distro_tree5 = data_setup.create_distro_tree(osmajor='RedHatEnterpriseLinux6',
+            self.distro_tree5 = data_setup.create_distro_tree(osmajor=u'RedHatEnterpriseLinux6',
                                                               arch=u's390x',
-                                                              distro_tags=['RELEASED'],
+                                                              distro_tags=[u'RELEASED'],
                                                               lab_controllers=[self.lc])
-            self.distro_tree6 = data_setup.create_distro_tree(osmajor='RedHatEnterpriseLinux6',
+            self.distro_tree6 = data_setup.create_distro_tree(osmajor=u'RedHatEnterpriseLinux6',
                                                               arch=u's390',
-                                                              distro_tags=['RELEASED'],
+                                                              distro_tags=[u'RELEASED'],
                                                               lab_controllers=[self.lc])
-            self.distro_tree7 = data_setup.create_distro_tree(osmajor='RedHatEnterpriseLinux7',
+            self.distro_tree7 = data_setup.create_distro_tree(osmajor=u'RedHatEnterpriseLinux7',
                                                               arch=u'aarch64',
                                                               lab_controllers=[self.lc])
 
             # setup a system in a different LC with only a Fedora distro
             self.lc1 = data_setup.create_labcontroller()
-            self.system8 = data_setup.create_system(arch=['i386', 'x86_64'])
+            self.system8 = data_setup.create_system(arch=[u'i386', u'x86_64'])
             self.system8.lab_controller = self.lc1
-            self.distro_tree8 = data_setup.create_distro_tree(osmajor='Fedora22',
+            self.distro_tree8 = data_setup.create_distro_tree(osmajor=u'Fedora22',
                                                               arch=u'i386',
-                                                              distro_tags=['RELEASED'],
+                                                              distro_tags=[u'RELEASED'],
                                                               lab_controllers=[self.lc1])
             # setup a system in a different LC with a unknown distro
             self.lc2 = data_setup.create_labcontroller()
-            self.system9 = data_setup.create_system(arch=['i386', 'x86_64'])
+            self.system9 = data_setup.create_system(arch=[u'i386', u'x86_64'])
             self.system9.lab_controller = self.lc2
-            self.distro_tree9 = data_setup.create_distro_tree(osmajor='MyDistro',
+            self.distro_tree9 = data_setup.create_distro_tree(osmajor=u'MyDistro',
                                                               arch=u'x86_64',
-                                                              distro_tags=['RELEASED'],
+                                                              distro_tags=[u'RELEASED'],
                                                               lab_controllers=[self.lc2])
 
     def test_select_inventory_distro_tree_released(self):

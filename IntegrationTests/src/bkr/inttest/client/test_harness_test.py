@@ -8,13 +8,13 @@ class HarnessTest(ClientTestCase):
     def setUp(self):
         i386 = Arch.by_name(u'i386')
         x86_64 = Arch.by_name(u'x86_64')
-        self.distro = data_setup.create_distro(osmajor='MyAwesomeLinux',
+        self.distro = data_setup.create_distro(osmajor=u'MyAwesomeLinux',
                                                tags=[u'STABLE'],
                                                arches=[i386, x86_64])
         data_setup.create_distro_tree(distro=self.distro,
-                                      arch='i386')
+                                      arch=u'i386')
         data_setup.create_distro_tree(distro=self.distro,
-                                      arch='x86_64')
+                                      arch=u'x86_64')
 
     def test_submit_job(self):
         out = run_client(['bkr', 'harness-test',

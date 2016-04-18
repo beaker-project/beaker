@@ -69,9 +69,9 @@ class DistroTreesListTest(DatabaseTestCase):
             distro_tree_out = data_setup.create_distro_tree()
             lc = data_setup.create_labcontroller()
             distro_tree_in.lab_controller_assocs.append(LabControllerDistroTree(
-                    lab_controller=lc, url='nfs://example.com/somewhere/'))
+                    lab_controller=lc, url=u'nfs://example.com/somewhere/'))
             distro_tree_out.lab_controller_assocs.append(LabControllerDistroTree(
-                    lab_controller=lc, url='nfs://example.com/nowhere/'))
+                    lab_controller=lc, url=u'nfs://example.com/nowhere/'))
         output = run_client(['bkr', 'distro-trees-list', '--format=json', '--treepath', '%somewhere%'])
         trees = json.loads(output)
         self.assert_(any(distro_tree_in.id == tree['distro_tree_id'] for tree in trees))

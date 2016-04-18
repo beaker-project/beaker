@@ -16,19 +16,19 @@ class GroupModifyTest(ClientTestCase):
 
     def setUp(self):
         with session.begin():
-            self.user = data_setup.create_user(password = 'asdf')
+            self.user = data_setup.create_user(password=u'asdf')
             self.group = data_setup.create_group(owner=self.user)
             self.client_config = create_client_config(username=self.user.user_name,
-                                                      password='asdf')
+                                                      password=u'asdf')
 
-            rand_user = data_setup.create_user(password = 'asdf')
+            rand_user = data_setup.create_user(password=u'asdf')
             self.group.add_member(rand_user)
             self.rand_client_config = create_client_config(username=rand_user.user_name,
-                                                           password='asdf')
+                                                           password=u'asdf')
 
-            admin = data_setup.create_admin(password='password')
+            admin = data_setup.create_admin(password=u'password')
             self.admin_client_config = create_client_config(username=admin.user_name,
-                                                            password='password')
+                                                            password=u'password')
 
             self.fake_ldap_group = data_setup.create_group(
                     membership_type=GroupMembershipType.ldap)
@@ -134,7 +134,7 @@ class GroupModifyTest(ClientTestCase):
                     e.stderr_output)
 
     def test_group_modify_group_name(self):
-        group_name = 'mynewgroup'
+        group_name = u'mynewgroup'
         out = run_client(['bkr', 'group-modify',
                           '--group-name', group_name,
                           self.group.group_name],
@@ -205,8 +205,8 @@ class GroupModifyTest(ClientTestCase):
                 self.assertEquals(group.root_password, good_password)
 
     def test_group_modify_group_and_display_names(self):
-        display_name = 'Shiny New Display Name'
-        group_name = 'shinynewgroup'
+        display_name = u'Shiny New Display Name'
+        group_name = u'shinynewgroup'
         out = run_client(['bkr', 'group-modify',
                           '--display-name', display_name,
                           '--group-name', group_name,
@@ -236,7 +236,7 @@ class GroupModifyTest(ClientTestCase):
 
     def test_admin_cannot_rename_protected_group(self):
         # See https://bugzilla.redhat.com/show_bug.cgi?id=961206
-        protected_group_name = 'admin'
+        protected_group_name = u'admin'
         with session.begin():
             group = Group.by_name(protected_group_name)
             expected_display_name = group.display_name
@@ -408,7 +408,7 @@ class GroupModifyTest(ClientTestCase):
 
         # try to remove self from admin group
         # first remove all other users except 'admin'
-        group = Group.by_name('admin')
+        group = Group.by_name(u'admin')
         group_users = group.users
         # remove  all other users from 'admin'
         for usr in group_users:

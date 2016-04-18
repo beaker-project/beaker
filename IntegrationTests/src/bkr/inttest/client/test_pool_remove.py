@@ -12,7 +12,7 @@ from bkr.inttest.client import run_client, ClientError, ClientTestCase, \
 class TestSystemPoolRemove(ClientTestCase):
 
     def test_remove_systems_from_pool(self):
-        pool_name = data_setup.unique_name('mypool%s')
+        pool_name = data_setup.unique_name(u'mypool%s')
         with session.begin():
             s1 = data_setup.create_system()
             s2 = data_setup.create_system()
@@ -37,7 +37,7 @@ class TestSystemPoolRemove(ClientTestCase):
                           e.stderr_output)
 
     def test_remove_system_from_non_existent_pool(self):
-        pool_name = data_setup.unique_name('mypool%s')
+        pool_name = data_setup.unique_name(u'mypool%s')
         with session.begin():
             s1 = data_setup.create_system()
         try:
@@ -49,11 +49,11 @@ class TestSystemPoolRemove(ClientTestCase):
                           e.stderr_output)
 
     def test_remove_systems_pool_privileges(self):
-        pool_name = data_setup.unique_name('mypool%s')
+        pool_name = data_setup.unique_name(u'mypool%s')
         with session.begin():
-            system_owner = data_setup.create_user(password='password')
-            pool_owner = data_setup.create_user(password='password')
-            random_user = data_setup.create_user(password='password')
+            system_owner = data_setup.create_user(password=u'password')
+            pool_owner = data_setup.create_user(password=u'password')
+            random_user = data_setup.create_user(password=u'password')
             s1 = data_setup.create_system(owner=system_owner)
             s2 = data_setup.create_system(owner=system_owner)
             s3 = data_setup.create_system(owner=system_owner)

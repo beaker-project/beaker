@@ -11,7 +11,7 @@ from bkr.inttest.client import run_client, ClientError, ClientTestCase
 class CreateSystemPool(ClientTestCase):
 
     def test_create_pool_defaults(self):
-        pool_name = data_setup.unique_name('mypool%s')
+        pool_name = data_setup.unique_name(u'mypool%s')
         run_client(['bkr', 'pool-create', pool_name])
 
         with session.begin():
@@ -31,7 +31,7 @@ class CreateSystemPool(ClientTestCase):
                           e.stderr_output)
 
     def test_create_pool_set_description(self):
-        pool_name = data_setup.unique_name('mypool%s')
+        pool_name = data_setup.unique_name(u'mypool%s')
         run_client(['bkr', 'pool-create',
                     '--description', 'My Pool',
                     pool_name])
@@ -41,7 +41,7 @@ class CreateSystemPool(ClientTestCase):
             self.assertEquals(pool.description, 'My Pool')
 
     def test_create_pool_set_owner(self):
-        pool_name = data_setup.unique_name('mypool%s')
+        pool_name = data_setup.unique_name(u'mypool%s')
         owner = data_setup.create_user()
         run_client(['bkr', 'pool-create',
                     '--owner', owner.user_name,
@@ -52,7 +52,7 @@ class CreateSystemPool(ClientTestCase):
             self.assertTrue(p.owning_user.user_name,
                             owner.user_name)
 
-        pool_name = data_setup.unique_name('mypool%s')
+        pool_name = data_setup.unique_name(u'mypool%s')
 
         owning_group = data_setup.create_group()
         run_client(['bkr', 'pool-create',

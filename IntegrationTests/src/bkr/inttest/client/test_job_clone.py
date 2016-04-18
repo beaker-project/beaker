@@ -18,11 +18,11 @@ class JobCloneTest(ClientTestCase):
 
     def setUp(self):
         with session.begin():
-            distro_tree = data_setup.create_distro_tree(distro_name='DansAwesomeLinux6.5')
-            self.job = data_setup.create_completed_job(whiteboard="foo", distro_tree=distro_tree)
-            self.user_foo = data_setup.create_user(password='foo')
-            self.user_bar = data_setup.create_user(password='bar')
-            self.bot = data_setup.create_user(password='bot')
+            distro_tree = data_setup.create_distro_tree(distro_name=u'DansAwesomeLinux6.5')
+            self.job = data_setup.create_completed_job(whiteboard=u"foo", distro_tree=distro_tree)
+            self.user_foo = data_setup.create_user(password=u'foo')
+            self.user_bar = data_setup.create_user(password=u'bar')
+            self.bot = data_setup.create_user(password=u'bot')
             # Add bot as delegate submission of foo
             self.user_foo.add_submission_delegate(self.bot, service=u'testdata')
 

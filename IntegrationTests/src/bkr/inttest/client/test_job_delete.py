@@ -79,7 +79,7 @@ class JobDeleteTest(ClientTestCase):
             tag = data_setup.create_retention_tag(name=u'myblahtag')
             job1 = data_setup.create_completed_job(owner=other_user)
             job2 = data_setup.create_completed_job(owner=other_user, \
-                                                   retention_tag=tag)
+                                                   retention_tag=tag.tag)
 
         # As the default admin user
         # Admin can delete other's job with job ID

@@ -13,8 +13,8 @@ from bkr.inttest.client import run_client, ClientError, create_client_config, \
 class GroupCreateTest(ClientTestCase):
 
     def test_group_create(self):
-        group_name = data_setup.unique_name('group%s')
-        display_name = 'My Group'
+        group_name = data_setup.unique_name(u'group%s')
+        display_name = u'My Group'
         out = run_client(['bkr', 'group-create',
                           '--display-name', display_name,
                           group_name])
@@ -33,7 +33,7 @@ class GroupCreateTest(ClientTestCase):
             self.assertEquals(group.activity[-3].action, u'Created')
             self.assertEquals(group.activity[-3].service, u'XMLRPC')
 
-        group_name = data_setup.unique_name('group%s')
+        group_name = data_setup.unique_name(u'group%s')
         out = run_client(['bkr', 'group-create',
                           group_name])
         self.assert_('Group created' in out, out)
@@ -43,7 +43,7 @@ class GroupCreateTest(ClientTestCase):
             self.assertEqual(group.group_name, group_name)
             self.assertEqual(group.display_name, group_name)
 
-        group_name = data_setup.unique_name('group%s')
+        group_name = data_setup.unique_name(u'group%s')
 
         try:
             out = run_client(['bkr', 'group-create',
@@ -73,8 +73,8 @@ class GroupCreateTest(ClientTestCase):
 
     def test_ldap_group(self):
 
-        group_name = 'wyfp'
-        display_name = 'My LDAP Group'
+        group_name = u'wyfp'
+        display_name = u'My LDAP Group'
         out = run_client(['bkr', 'group-create', '--ldap',
                           '--display-name', display_name,
                           group_name])
@@ -89,8 +89,8 @@ class GroupCreateTest(ClientTestCase):
         rand_client_config = create_client_config(username=rand_user.user_name,
                                                   password='asdf')
 
-        group_name = 'alp'
-        display_name = 'ALP'
+        group_name = u'alp'
+        display_name = u'ALP'
         try:
             out = run_client(['bkr', 'group-create', '--ldap',
                           '--display-name', display_name,
@@ -102,7 +102,7 @@ class GroupCreateTest(ClientTestCase):
                          e.stderr_output)
 
     def test_group_passwords(self):
-        group_name = data_setup.unique_name('group%s')
+        group_name = data_setup.unique_name(u'group%s')
 
         try:
             out = run_client(['bkr', 'group-create',
@@ -128,8 +128,8 @@ class GroupCreateTest(ClientTestCase):
         self.assertTrue('Group created' in out)
 
     def test_group_duplicate(self):
-        group_name = data_setup.unique_name('group%s')
-        display_name = 'My Group'
+        group_name = data_setup.unique_name(u'group%s')
+        display_name = u'My Group'
         out = run_client(['bkr', 'group-create',
                           '--display-name', display_name,
                           group_name])
@@ -146,7 +146,7 @@ class GroupCreateTest(ClientTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=960359
     def test_group_description(self):
-        group_name = data_setup.unique_name('group%s')
+        group_name = data_setup.unique_name(u'group%s')
         description = 'This is a boring group'
         out = run_client(['bkr', 'group-create',
                           '--description', description,

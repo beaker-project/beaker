@@ -1405,7 +1405,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
         supported_distro_trees = None
         inventory_osmajors = config.get('beaker.inventory_osmajors')
         for osmajor in inventory_osmajors:
-            supported_distro_trees = self.distro_trees(osmajor_name=osmajor)
+            supported_distro_trees = self.distro_trees(osmajor_name=osmajor.decode('utf8'))
             if supported_distro_trees.count():
                 break
         # if none of the "preferred" distro trees were found
@@ -1417,14 +1417,14 @@ class System(DeclarativeMappedObject, ActivityMixin):
         # Prefer x86_64 over i386, ppc64 over ppc64le, s390x over s390
         if supported_distro_trees.count():
             supported_distro_tree_archs = [dt.arch.arch for dt in supported_distro_trees.all()]
-            if 'x86_64' in  supported_distro_tree_archs and len(supported_distro_tree_archs) != 1:
-                supported_distro_trees = supported_distro_trees.filter(DistroTree.arch==Arch.by_name('x86_64'))
-            if 'ppc64' in supported_distro_tree_archs and len(supported_distro_tree_archs) != 1:
-                supported_distro_trees = supported_distro_trees.filter(DistroTree.arch==Arch.by_name('ppc64'))
-            if 's390x' in  supported_distro_tree_archs and len(supported_distro_tree_archs) != 1:
-                supported_distro_trees = supported_distro_trees.filter(DistroTree.arch==Arch.by_name('s390x'))
+            if u'x86_64' in  supported_distro_tree_archs and len(supported_distro_tree_archs) != 1:
+                supported_distro_trees = supported_distro_trees.filter(DistroTree.arch==Arch.by_name(u'x86_64'))
+            if u'ppc64' in supported_distro_tree_archs and len(supported_distro_tree_archs) != 1:
+                supported_distro_trees = supported_distro_trees.filter(DistroTree.arch==Arch.by_name(u'ppc64'))
+            if u's390x' in  supported_distro_tree_archs and len(supported_distro_tree_archs) != 1:
+                supported_distro_trees = supported_distro_trees.filter(DistroTree.arch==Arch.by_name(u's390x'))
 
-            released = supported_distro_trees.filter(Distro.tags.contains('RELEASED'))
+            released = supported_distro_trees.filter(Distro.tags.contains(u'RELEASED'))
             if released.count():
                 distro_tree = released.order_by(Distro.date_created.desc()).first()
             else:

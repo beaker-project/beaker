@@ -32,7 +32,7 @@ class SystemStatusTest(ClientTestCase):
             fqdn = recipe.resource.system.fqdn
             user = recipe.resource.system.user
             recipe.resource.system.loaned = user
-            recipe.resource.system.loan_comment = 'Amy, must I jujitsu my ma?'
+            recipe.resource.system.loan_comment = u'Amy, must I jujitsu my ma?'
         system = recipe.resource.system
         # JSON output
         json_out = run_client(['bkr', 'system-status', fqdn, '--format',
@@ -67,7 +67,7 @@ class SystemStatusTest(ClientTestCase):
         with session.begin():
             system = data_setup.create_system(status=SystemStatus.manual)
             user = data_setup.create_user()
-            system.reserve_manually('TESTING', user=user)
+            system.reserve_manually(u'TESTING', user=user)
         json_out = run_client(['bkr', 'system-status', system.fqdn,
             '--format', 'json'])
         json_out = loads(json_out)

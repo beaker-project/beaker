@@ -17,8 +17,8 @@ class UpdateInventoryTest(ClientTestCase):
             self.lc = data_setup.create_labcontroller()
             self.system1 = data_setup.create_system(arch=[u'i386', u'x86_64'])
             self.system1.lab_controller = self.lc
-            self.distro_tree1 = data_setup.create_distro_tree(osmajor='RedHatEnterpriseLinux6',
-                                                              distro_tags=['RELEASED'],
+            self.distro_tree1 = data_setup.create_distro_tree(osmajor=u'RedHatEnterpriseLinux6',
+                                                              distro_tags=[u'RELEASED'],
                                                               lab_controllers=[self.lc])
     def test_update_inventory(self):
         out = run_client(['bkr', 'update-inventory', self.system1.fqdn])

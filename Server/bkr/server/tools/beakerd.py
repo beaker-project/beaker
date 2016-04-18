@@ -455,7 +455,7 @@ def schedule_queued_recipes(*args):
                 session.begin(nested=True)
                 try:
                     recipe=MachineRecipe.by_id(recipe_id)
-                    recipe.recipeset.abort("Aborted in schedule_queued_recipe: %s" % e)
+                    recipe.recipeset.abort(u"Aborted in schedule_queued_recipe: %s" % e)
                     session.commit()
                 except Exception, e:
                     log.exception("Error during error handling in schedule_queued_recipe: %s" % e)

@@ -188,7 +188,7 @@ class TestBeakerd(DatabaseTestCase):
             dt_for_guest = DistroTree.by_id(dt_for_guest_id)
             dt_for_guest.lab_controller_assocs.append(
                 LabControllerDistroTree(lab_controller=host_lab_controller,
-                    url='http://whatevs.com'))
+                    url=u'http://whatevs.com'))
         beakerd.schedule_queued_recipes()
         beakerd.update_dirty_jobs()
         with session.begin():
@@ -336,8 +336,8 @@ class TestBeakerd(DatabaseTestCase):
 
             def mock_sqrs(run_number, guest_recipe_id=None):
                 with session.begin():
-                    systemA = System.by_id(sysA_id, User.by_user_name('admin'))
-                    systemB = System.by_id(sysB_id, User.by_user_name('admin'))
+                    systemA = System.by_id(sysA_id, User.by_user_name(u'admin'))
+                    systemB = System.by_id(sysB_id, User.by_user_name(u'admin'))
                     if run_number == 1:
                         r1 = Recipe.by_id(r1_id)
                         r1.systems[:] = [systemB]
@@ -568,8 +568,8 @@ class TestBeakerd(DatabaseTestCase):
         with session.begin():
             r1 = Recipe.by_id(r1_id)
             data_setup.mark_recipe_running(r1)
-            systemA = System.by_fqdn(systemA.fqdn, User.by_user_name('admin'))
-            systemB = System.by_fqdn(systemB.fqdn, User.by_user_name('admin'))
+            systemA = System.by_fqdn(systemA.fqdn, User.by_user_name(u'admin'))
+            systemB = System.by_fqdn(systemB.fqdn, User.by_user_name(u'admin'))
             r2 = data_setup.create_recipe()
             r3 = data_setup.create_recipe()
             j2 = data_setup.create_job_for_recipes([r2,r3])
@@ -588,8 +588,8 @@ class TestBeakerd(DatabaseTestCase):
         self.assertEqual(r3.status, TaskStatus.scheduled)
 
         with session.begin():
-            systemA = System.by_fqdn(systemA.fqdn, User.by_user_name('admin'))
-            systemB = System.by_fqdn(systemB.fqdn, User.by_user_name('admin'))
+            systemA = System.by_fqdn(systemA.fqdn, User.by_user_name(u'admin'))
+            systemB = System.by_fqdn(systemB.fqdn, User.by_user_name(u'admin'))
             r4 = data_setup.create_recipe()
             r5 = data_setup.create_recipe()
             j3 = data_setup.create_job_for_recipes([r4,r5])
@@ -630,7 +630,7 @@ class TestBeakerd(DatabaseTestCase):
             system.loaned = user
             job = data_setup.create_job(owner=user)
             job.recipesets[0].recipes[0]._host_requires = (
-                    '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
+                    u'<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                     % system.fqdn)
         beakerd.process_new_recipes()
         beakerd.update_dirty_jobs()
@@ -645,7 +645,7 @@ class TestBeakerd(DatabaseTestCase):
                     shared=True, lab_controller=self.lab_controller)
             job = data_setup.create_job(owner=user)
             job.recipesets[0].recipes[0]._host_requires = (
-                    '<hostRequires><and><hostname op="=" value="%s"/></and></hostRequires>'
+                    u'<hostRequires><and><hostname op="=" value="%s"/></and></hostRequires>'
                     % system.fqdn)
 
         beakerd.process_new_recipes()
@@ -1071,7 +1071,7 @@ class TestBeakerd(DatabaseTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1157348
     def test_harness_repo_not_required_contained_harness(self):
         with session.begin():
-            distro_tree = data_setup.create_distro_tree(osmajor='MyAwesomeNewLinux', 
+            distro_tree = data_setup.create_distro_tree(osmajor=u'MyAwesomeNewLinux', 
                                                         harness_dir=False)
             recipe = data_setup.create_recipe(distro_tree=distro_tree)
             recipe.ks_meta = "contained_harness"
@@ -1218,11 +1218,11 @@ class TestBeakerd(DatabaseTestCase):
             # before system2
             # See: bkr.server.model.inventory:scheduler_ordering
             system1 = data_setup.create_system(shared=True,
-                                               fqdn='no-longer-has-access1.invalid',
+                                               fqdn=u'no-longer-has-access1.invalid',
                                                lab_controller=self.lab_controller)
             system1.pools.append(data_setup.create_system_pool())
             system2 = data_setup.create_system(shared=True,
-                    fqdn='no-longer-has-access2.invalid',
+                    fqdn=u'no-longer-has-access2.invalid',
                     lab_controller=self.lab_controller)
             distro_tree = data_setup.create_distro_tree()
             job = data_setup.create_job(owner=job_owner, distro_tree=distro_tree)
@@ -1587,7 +1587,7 @@ class TestBeakerd(DatabaseTestCase):
             job2 = data_setup.create_job(distro_tree=distro_tree)
             job3 = data_setup.create_job(distro_tree=distro_tree)
 
-            host_requires = '<hostRequires force="{0}" />'
+            host_requires = u'<hostRequires force="{0}" />'
             job1.recipesets[0].recipes[0]._host_requires = host_requires.format(system1.fqdn)
             job2.recipesets[0].recipes[0]._host_requires = host_requires.format(system2.fqdn)
             job3.recipesets[0].recipes[0]._host_requires = host_requires.format(system3.fqdn)
@@ -1725,7 +1725,7 @@ class TestBeakerd(DatabaseTestCase):
                 task_list=[Task.by_name(u'/distribution/install')] * 2,
                 reservesys=True)
             recipe._host_requires = (
-                '<hostRequires><hostname op="=" value="Ineverexisted.fqdn"/></hostRequires>')
+                u'<hostRequires><hostname op="=" value="Ineverexisted.fqdn"/></hostRequires>')
             job = data_setup.create_job_for_recipes([recipe])
 
         beakerd.process_new_recipes()

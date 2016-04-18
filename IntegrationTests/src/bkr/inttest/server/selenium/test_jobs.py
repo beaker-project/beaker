@@ -794,7 +794,7 @@ class NewJobTest(WebDriverTestCase):
 
     def test_valid_job_xml_doesnt_trigger_xsd_warning(self):
         with session.begin():
-            group = data_setup.create_group(group_name='somegroup')
+            group = data_setup.create_group(group_name=u'somegroup')
             user = data_setup.create_user(password=u'hornet')
             group.add_member(user)
 

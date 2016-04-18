@@ -11,7 +11,7 @@ from bkr.inttest.client import run_client, ClientError, ClientTestCase, create_c
 class TestSystemPoolAdd(ClientTestCase):
 
     def test_add_systems_to_pool(self):
-        pool_name = data_setup.unique_name('mypool%s')
+        pool_name = data_setup.unique_name(u'mypool%s')
         with session.begin():
             pool = data_setup.create_system_pool(name=pool_name)
             s1 = data_setup.create_system()
@@ -24,7 +24,7 @@ class TestSystemPoolAdd(ClientTestCase):
             self.assertItemsEqual([s1, s2], pool.systems)
 
     def test_add_systems_to_non_existent_pool(self):
-        pool_name = data_setup.unique_name('mypool%s')
+        pool_name = data_setup.unique_name(u'mypool%s')
         with session.begin():
             s1 = data_setup.create_system()
         try:
@@ -36,10 +36,10 @@ class TestSystemPoolAdd(ClientTestCase):
                           e.stderr_output)
 
     def test_add_systems_pool_privileges(self):
-        pool_name = data_setup.unique_name('mypool%s')
+        pool_name = data_setup.unique_name(u'mypool%s')
         with session.begin():
-            system_owner = data_setup.create_user(password='password')
-            pool_owner = data_setup.create_user(password='password')
+            system_owner = data_setup.create_user(password=u'password')
+            pool_owner = data_setup.create_user(password=u'password')
             s1 = data_setup.create_system(owner=system_owner)
             pool = data_setup.create_system_pool(name=pool_name,
                                                  owning_user=pool_owner)

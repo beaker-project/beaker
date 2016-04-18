@@ -133,7 +133,7 @@ class RemoveAccountTest(ClientTestCase):
     def test_invalid_newowner_errors(self):
         """If an invalid username is passed as a new owner, we expect the
         command to error without changing the system."""
-        invalid_username = 'asdfasdfasdf'
+        invalid_username = u'asdfasdfasdf'
         with session.begin():
             user = data_setup.create_user()
             data_setup.create_system()

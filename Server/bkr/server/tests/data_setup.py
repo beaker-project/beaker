@@ -296,7 +296,7 @@ def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.aut
     log.debug('Created system %r', system)
     return system
 
-def create_system_pool(name=None, description='A system Pool',
+def create_system_pool(name=None, description=u'A system Pool',
                        owning_group=None, owning_user=None, systems=[]):
     if owning_group and owning_user:
         raise ValueError('Must supply either an owning user or an owning group')

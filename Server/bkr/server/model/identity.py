@@ -740,7 +740,7 @@ class Group(DeclarativeMappedObject, ActivityMixin):
             self.revoke_ownership(user)
         self.excluded_user_group_assocs.append(ExcludedUserGroup(user=user))
         self.record_activity(user=agent, service=service, field=u'User',
-                             action='Excluded', old=None, new=unicode(user))
+                             action=u'Excluded', old=None, new=unicode(user))
 
     def readd_user(self, user, service=u'HTTP', agent=None):
         if not self.membership_type == GroupMembershipType.inverted:

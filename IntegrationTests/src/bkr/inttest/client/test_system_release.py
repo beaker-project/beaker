@@ -25,7 +25,7 @@ class SystemReleaseTest(ClientTestCase):
         with session.begin():
             system = data_setup.create_system(status=SystemStatus.manual)
             user = data_setup.create_user()
-            system.reserve_manually('TESTING', user=user)
+            system.reserve_manually(u'TESTING', user=user)
         self.assertEqual(system.user, user)
         run_client(['bkr', 'system-release', system.fqdn])
         with session.begin():

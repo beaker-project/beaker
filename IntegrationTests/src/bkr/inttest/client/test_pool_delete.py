@@ -12,7 +12,7 @@ class DeleteSystemPool(ClientTestCase):
 
     def test_delete_pool(self):
         with session.begin():
-            pool_name = data_setup.unique_name('mypool%s')
+            pool_name = data_setup.unique_name(u'mypool%s')
             data_setup.create_system_pool(name=pool_name)
         run_client(['bkr', 'pool-delete', pool_name])
 

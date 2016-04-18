@@ -15,13 +15,13 @@ class TaskDetailsTest(ClientTestCase):
 
     def test_task_details_xml(self):
         with session.begin():
-            task=data_setup.create_task(path='/testing/path',
-                                        description='blah',
-                                        exclude_arch=['i386','ppc'],
-                                        exclude_osmajor=['MajorFoo', 'WunderFooBar'],
-                                        requires=['2+2', 'Tofudebeast'],
-                                        runfor=['philip', 'bradley'],
-                                        type=['type3', 'type4'],
+            task=data_setup.create_task(path=u'/testing/path',
+                                        description=u'blah',
+                                        exclude_arch=[u'i386', u'ppc'],
+                                        exclude_osmajor=[u'MajorFoo', u'WunderFooBar'],
+                                        requires=[u'2+2', u'Tofudebeast'],
+                                        runfor=[u'philip', u'bradley'],
+                                        type=[u'type3', u'type4'],
                                         )
 
         # regular xml
@@ -57,11 +57,11 @@ class TaskDetailsTest(ClientTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=624417
     def test_details_include_owner_and_priority(self):
         with session.begin():
-            owner = data_setup.create_user()
+            owner = u'billybob@example.com'
             task = data_setup.create_task(owner=owner, priority=u'Low')
         out = run_client(['bkr', 'task-details', task.name])
         details = eval(out[len(task.name) + 1:]) # XXX dodgy
-        self.assertEquals(details['owner'], owner.user_name)
+        self.assertEquals(details['owner'], owner)
         self.assertEquals(details['priority'], u'Low')
 
     def test_details_without_owner(self):
@@ -84,7 +84,7 @@ class TaskDetailsTest(ClientTestCase):
 
     def test_details_invalid_tasks(self):
         with session.begin():
-            task = data_setup.create_task(name='invalid_task', valid=False)
+            task = data_setup.create_task(name=u'invalid_task', valid=False)
             task.uploader = None
         out = run_client(['bkr', 'task-details', '--invalid', task.name])
         details = eval(out[len(task.name) + 1:]) # XXX dodgy

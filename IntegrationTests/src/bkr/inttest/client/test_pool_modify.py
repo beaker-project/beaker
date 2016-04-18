@@ -14,7 +14,7 @@ class PoolModifyTest(ClientTestCase):
     def test_pool_modify_insufficient_priv(self):
         with session.begin():
             user1 = data_setup.create_user()
-            user2 = data_setup.create_user(password='password')
+            user2 = data_setup.create_user(password=u'password')
             pool = data_setup.create_system_pool(owning_user=user1)
         try:
             run_client(['bkr', 'pool-modify',
@@ -31,7 +31,7 @@ class PoolModifyTest(ClientTestCase):
         with session.begin():
             pool = data_setup.create_system_pool()
             pool1 = data_setup.create_system_pool()
-        new_name = data_setup.unique_name('newpool%s')
+        new_name = data_setup.unique_name(u'newpool%s')
         run_client(['bkr', 'pool-modify',
                     '--name', new_name,
                     pool.name])
@@ -63,7 +63,7 @@ class PoolModifyTest(ClientTestCase):
         with session.begin():
             group = data_setup.create_group()
             group_name = group.group_name
-            pool_name = data_setup.unique_name('pool%s')
+            pool_name = data_setup.unique_name(u'pool%s')
             pool = data_setup.create_system_pool(name=pool_name)
         run_client(['bkr', 'pool-modify',
                     '--owning-group', group_name,

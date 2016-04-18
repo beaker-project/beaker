@@ -2497,7 +2497,7 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             for guest in getattr(self, 'guests', []):
                 if (not guest.is_finished() and
                         guest.watchdog and not guest.watchdog.kill_time):
-                    guest.abort(msg='Aborted: host %s finished but guest never started'
+                    guest.abort(msg=u'Aborted: host %s finished but guest never started'
                             % self.t_id)
 
     def _fix_zombie_tasks(self):
