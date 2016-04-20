@@ -3178,7 +3178,6 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
             'status': unicode(self.status),
             'recipe_id': self.recipe_id,
             't_id': self.t_id,
-            'task': self.task,
             'distro_tree': self.recipe.distro_tree,
             'fetch_url': self.fetch_url,
             'fetch_subdir': self.fetch_subdir,
@@ -3192,6 +3191,13 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
             'logs': self.logs,
             'comments': self.comments,
         }
+        if self.task:
+            data['task'] = {
+                'id': self.task.id,
+                'name': self.task.name
+            }
+        else:
+            data['task'] = None
         if identity.current.user:
             u = identity.current.user
             data['can_comment'] = self.can_comment(u)
