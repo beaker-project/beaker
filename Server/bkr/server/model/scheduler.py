@@ -1649,7 +1649,8 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
             'waived': self.waived,
             'comments': self.comments,
             'clone_href': self.clone_link(),
-            'machine_recipes': list(self.machine_recipes),
+            'machine_recipes': [recipe.to_json(include_tasks=False) for recipe
+                    in self.machine_recipes],
             'queue_time': self.queue_time,
         }
         if identity.current.user:
@@ -2862,10 +2863,12 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             data['reviewed'] = None
         return data
 
-    def to_json(self, include_recipeset=False):
+    def to_json(self, include_recipeset=False, include_tasks=True):
         data = self.__json__()
         if include_recipeset:
             data['recipeset'] = self.recipeset.to_json(include_job=True)
+        if not include_tasks:
+            data.pop('tasks')
         return data
 
 
