@@ -2535,6 +2535,29 @@ done
         self.assert_('export BEAKER_HUB_URL="%s"' % get_server_base() in k, k)
         self.assert_('yum -y install my-alternative-harness' in k, k)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1328153
+    def test_harness_is_installed_with_multilib_policy_best_on_ia64(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="harness=restraint-rhts">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL5-Server-U8" />
+                            <distro_arch op="=" value="ia64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>''')
+        self.assertIn(
+                'cp -p /etc/yum.conf{,.orig}\n'
+                'echo multilib_policy=best >>/etc/yum.conf\n'
+                'yum -y install restraint-rhts\n'
+                'mv /etc/yum.conf{.orig,}\n',
+                recipe.rendered_kickstart.kickstart)
+
     def test_btrfs_volume(self):
         recipe = self.provision_recipe('''
             <job>
