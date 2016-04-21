@@ -53,11 +53,11 @@
       <label class="control-label" for="reserve_days">Reserve time</label>
       <div class="controls">
         <div class="input-append">
-          <input type="number" id="reserve_days" name="reserve_days" class="input-small"
-              value="<%- selection.get('reserve_days') %>"
-              min="1" max="7" step="1" pattern="[1-7]" title="Number between 1 and 7"
+          <input type="number" id="reserve_duration" name="reserve_duration" class="input-small"
+              value="<%- selection.get('reserve_duration') %>"
+              min="1" max="356400" step="1" title="Number in seconds"
               />
-          <span class="add-on">days</span>
+          <span class="add-on">seconds</span>
         </div>
       </div>
     </div>

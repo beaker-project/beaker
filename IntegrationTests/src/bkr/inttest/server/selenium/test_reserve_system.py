@@ -169,8 +169,8 @@ class ReserveWorkflow(WebDriverTestCase):
         Select(b.find_element_by_name('distro')).select_by_visible_text(self.distro.name)
         Select(b.find_element_by_name('distro_tree_id'))\
             .select_by_visible_text('%s Server i386' % self.distro.name)
-        b.find_element_by_name('reserve_days').clear()
-        b.find_element_by_name('reserve_days').send_keys('4')
+        b.find_element_by_name('reserve_duration').clear()
+        b.find_element_by_name('reserve_duration').send_keys('345600')
         b.find_element_by_xpath('//button[normalize-space(text())="Submit job"]').click()
         # should end up on the job page
         jid = b.find_element_by_xpath('//h1//span[@class="job-id"]').text
@@ -180,6 +180,30 @@ class ReserveWorkflow(WebDriverTestCase):
             self.assertEquals(reserve_task.task.name, '/distribution/reservesys')
             self.assertEquals(reserve_task.params[0].name, 'RESERVETIME')
             self.assertEquals(reserve_task.params[0].value, '345600') # 4 days in seconds
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1284368
+    def test_html5_invalid_if_reserve_time_exceeds_maximum(self):
+        login(self.browser)
+        b = self.browser
+        b.get(get_server_base() + 'reserveworkflow/')
+        Select(b.find_element_by_name('osmajor'))\
+            .select_by_visible_text(self.distro.osversion.osmajor.osmajor)
+        Select(b.find_element_by_name('distro')).select_by_visible_text(self.distro.name)
+        Select(b.find_element_by_name('distro_tree_id'))\
+            .select_by_visible_text('%s Server i386' % self.distro.name)
+        b.find_element_by_name('reserve_duration').clear()
+        b.find_element_by_name('reserve_duration').send_keys('604800')
+        self.assertEqual(
+            'reserve_duration',
+            b.find_element_by_css_selector('input:invalid').get_attribute('name'))
+
+    def test_reserve_time_defaults_to_day_in_seconds(self):
+        login(self.browser)
+        b = self.browser
+        b.get(get_server_base() + 'reserveworkflow/')
+        self.assertEqual(
+            u'86400',
+            b.find_element_by_name('reserve_duration').get_attribute('value'))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1122659
     def test_only_reserves_machines(self):

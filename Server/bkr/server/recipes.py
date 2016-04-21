@@ -19,7 +19,7 @@ from bkr.server import search_utility, identity, dynamic_virt
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
 from bkr.server.recipetasks import RecipeTasks
-from bkr.server.reserve_workflow import MAX_DAYS_PROVISION
+from bkr.server.reserve_workflow import MAX_SECONDS_PROVISION, MAX_HOURS_PROVISION
 from bkr.server.controller_utilities import _custom_status, _custom_result
 from bkr.server.junitxml import recipe_to_junit_xml
 from datetime import timedelta
@@ -605,10 +605,8 @@ def update_reservation_request(id):
             if 'duration' not in data:
                 raise BadRequest400('No duration specified')
             duration = data['duration']
-            max_limit_in_seconds = MAX_DAYS_PROVISION * 24 * 60 * 60
-            if duration > max_limit_in_seconds:
-                raise BadRequest400('%s sec exceeds maximum time of %s sec (% days) to reserve the system' % (
-                    duration, max_limit_in_seconds, MAX_DAYS_PROVISION))
+            if duration > MAX_SECONDS_PROVISION:
+                raise BadRequest400('Reservation time exceeds maximum time of %s hours' % MAX_HOURS_PROVISION)
             if recipe.reservation_request:
                 old_duration = recipe.reservation_request.duration
                 recipe.reservation_request.duration = data['duration']

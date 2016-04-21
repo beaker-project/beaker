@@ -19,8 +19,9 @@ from bkr.server.util import absolute_url
 import logging
 log = logging.getLogger(__name__)
 
-MAX_DAYS_PROVISION = 7
-DEFAULT_RESERVE_DAYS = 1
+MAX_HOURS_PROVISION = 99
+MAX_SECONDS_PROVISION = MAX_HOURS_PROVISION * 60 * 60
+DEFAULT_RESERVE_SECONDS = 24 * 60 * 60
 
 @app.route('/reserveworkflow/doit', methods=['POST'])
 @auth_required
@@ -44,9 +45,10 @@ def doit():
             job_details['lab'] = LabController.by_name(request.form.get('lab'))
         except NoResultFound:
             raise BadRequest400('Lab controller %s not found' % request.form.get('lab'))
-    days = int(request.form.get('reserve_days') or DEFAULT_RESERVE_DAYS)
-    days = min(days, MAX_DAYS_PROVISION)
-    job_details['reservetime'] = days * 24 * 60 * 60
+    reservetime = int(request.form.get('reserve_duration') or DEFAULT_RESERVE_SECONDS)
+    if reservetime > MAX_SECONDS_PROVISION:
+        raise BadRequest400('Reservation time exceeds maximum time of %s hours' % MAX_HOURS_PROVISION)
+    job_details['reservetime'] = reservetime
     job_details['whiteboard'] = request.form.get('whiteboard')
     job_details['ks_meta'] = request.form.get('ks_meta')
     job_details['koptions'] = request.form.get('koptions')
