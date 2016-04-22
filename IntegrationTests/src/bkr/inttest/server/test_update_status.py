@@ -128,7 +128,6 @@ class TestUpdateStatus(DatabaseTestCase):
         self.assertIsNone(recipe.start_time)
         recipe.provision()
         recipe.installation.rebooted = datetime.datetime(2016, 2, 18, 13, 0, 0)
-        recipe.installing()
         job.update_status()
         self.assertEqual(recipe.start_time, datetime.datetime(2016, 2, 18, 13, 0, 0))
         self.assertEqual(recipe.status, TaskStatus.installing)
@@ -538,6 +537,7 @@ class RecoveryTest(DatabaseTestCase):
         self.assert_(systems[0].open_reservation is not None)
         self.assert_(systems[1].open_reservation is not None)
 
+        job._mark_dirty() # in reality, we did this by hand
         job.update_status()
         session.flush()
         session.expire_all()
@@ -551,7 +551,7 @@ class RecoveryTest(DatabaseTestCase):
         # recipe is cancelled but system has still been assigned
         recipe = data_setup.create_recipe()
         data_setup.create_job_for_recipes([recipe])
-        recipe._abort_cancel(TaskStatus.cancelled)
+        recipe.recipeset.job.cancel()
         recipe.recipeset.job.update_status()
         system = data_setup.create_system()
         recipe.resource = SystemResource(system=system)
@@ -563,6 +563,7 @@ class RecoveryTest(DatabaseTestCase):
         self.assert_(system.user is not None)
         self.assert_(recipe.watchdog is not None)
 
+        recipe.recipeset.job._mark_dirty() # in reality, we did this by hand
         recipe.recipeset.job.update_status()
         session.flush()
         session.expire_all()
@@ -578,6 +579,7 @@ class RecoveryTest(DatabaseTestCase):
         job.recipesets[0].recipes[0].tasks[-1].status = TaskStatus.running
         session.flush()
 
+        job._mark_dirty() # in reality, we did this by hand
         job.update_status()
         self.assertEquals(job.status, TaskStatus.aborted)
         self.assertEquals(job.recipesets[0].recipes[0].status, TaskStatus.aborted)

@@ -153,10 +153,10 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.queue_processed_recipesets()
         beakerd.update_dirty_jobs()
         beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
         j1_id = j1.id
         with session.begin():
             j1 = Job.by_id(j1_id)
-            j1.update_status()
             self.assertEquals(j1.status, TaskStatus.queued, j1.status)
 
     def test_host_and_guest_no_common_lab_controllers_stay_queued(self):
@@ -179,11 +179,11 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.queue_processed_recipesets()
         beakerd.update_dirty_jobs()
         beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
         j1_id = j1.id
         dt_for_guest_id = dt_for_guest.id
         with session.begin():
             j1 = Job.by_id(j1_id)
-            j1.update_status()
             self.assertEquals(j1.status, TaskStatus.queued, j1.status)
             dt_for_guest = DistroTree.by_id(dt_for_guest_id)
             dt_for_guest.lab_controller_assocs.append(
@@ -193,7 +193,6 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.update_dirty_jobs()
         with session.begin():
             j1 = Job.by_id(j1_id)
-            j1.update_status()
             self.assertEquals(j1.status, TaskStatus.scheduled, j1.status)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1033032
@@ -250,7 +249,6 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.by_id(job_id)
-            job.update_status()
             self.assertEqual(job.status, TaskStatus.scheduled)
             r1 = Recipe.by_id(r1_id)
             self.assertEqual(r1.status, TaskStatus.scheduled)
@@ -274,8 +272,6 @@ class TestBeakerd(DatabaseTestCase):
             data_setup.mark_job_queued(j1)
             r1.systems[:] = [system]
             data_setup.mark_job_running(j2, system=system)
-            j1.update_status()
-            j2.update_status()
 
         # Mark system broken and cancel the job
         with session.begin():
@@ -452,14 +448,13 @@ class TestBeakerd(DatabaseTestCase):
             beakerd.schedule_queued_recipes()
         finally:
             beakerd.schedule_queued_recipe = original_sqr
+        beakerd.update_dirty_jobs()
 
         for a in aborted_recipes:
             a = Recipe.by_id(a.id)
-            a.recipeset.job.update_status()
             self.assertEqual(a.status, TaskStatus.aborted)
         for s in scheduled_recipes:
             s = Recipe.by_id(s.id)
-            s.recipeset.job.update_status()
             self.assertEquals(s.status, TaskStatus.scheduled)
 
     def test_just_in_time_systems(self):
@@ -1814,7 +1809,7 @@ class TestBeakerdMetrics(DatabaseTestCase):
             running = Recipe.query.filter(not_(Recipe.status.in_(
                 [s for s in TaskStatus if s.finished])))
             for recipe in running:
-                recipe._abort_cancel(TaskStatus.cancelled)
+                recipe.recipeset.cancel()
                 recipe.recipeset.job.update_status()
         except Exception, e:
             session.rollback()

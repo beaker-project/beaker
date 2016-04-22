@@ -210,7 +210,6 @@ class Recipes(RPCRoot):
         installation = recipe.installation
         if not installation.install_started:
             installation.install_started = datetime.utcnow()
-            recipe.installing()
             # extend watchdog by 3 hours 60 * 60 * 3
             kill_time = 10800
             log.debug('Extending watchdog for %s', recipe.t_id)

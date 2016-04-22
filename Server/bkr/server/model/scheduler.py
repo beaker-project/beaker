@@ -23,7 +23,8 @@ import netaddr
 import numbers
 from kid import Element
 from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
-        Integer, Unicode, DateTime, Boolean, UnicodeText, String, Numeric)
+        Integer, Unicode, DateTime, Boolean, UnicodeText, String, Numeric,
+        event)
 from sqlalchemy.sql import select, union, and_, or_, not_, func, literal, exists
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import (mapper, relationship, object_mapper,
@@ -1289,6 +1290,16 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
     all_recipes = property(all_recipes)
 
     def update_status(self):
+        if not self.is_dirty:
+            # This error should be impossible to trigger in beakerd's 
+            # update_dirty_jobs thread.
+            # If you are seeing this in a test case, it means something 
+            # *before* this point has failed to mark this job as dirty even 
+            # though the tests were expecting it to be dirty. That's a real bug 
+            # which needs fixing in whatever happened before this point.
+            # For example: https://bugzilla.redhat.com/show_bug.cgi?id=991245#c15
+            raise RuntimeError('Invoked update_status on '
+                    'job %s which was not dirty' % self.id)
         self._update_status()
         self._mark_clean()
 
@@ -2384,19 +2395,6 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         # purely as an optimisation
         self._change_status(TaskStatus.waiting)
 
-    def installing(self):
-        """
-        Move from Waiting to Installing
-        """
-        # We assume the installation row has already been timestamped to 
-        # indicate that the installation is in progress, so there is actually 
-        # nothing to do here but let _update_status do the real work.
-        # NB. individual tasks do not go to Installing state because that would 
-        # make no sense. This is basically a sign that the model we had 
-        # established, where the state of a recipe is determined entirely by 
-        # the combined state of the tasks in the recipe, is falling apart...
-        self.recipeset.job._mark_dirty()
-
     def _time_remaining(self):
         duration = None
         if self.watchdog and self.watchdog.kill_time:
@@ -2882,6 +2880,18 @@ def _roles_to_xml(recipe):
                 system.set("value", "%s" % r.resource.fqdn)
                 role.append(system)
         yield(role)
+
+
+# The recipe status will change Waiting <-> Installing based on the timestamps 
+# recorded on the installation. So we need to ensure that the job is marked 
+# dirty whenever a timestamp is recorded, so that beakerd will call update_status.
+def _mark_installation_recipe_dirty(installation, value, oldvalue, initiator):
+    if installation.recipe:
+        installation.recipe.recipeset.job._mark_dirty()
+event.listen(Installation.rebooted,             'set', _mark_installation_recipe_dirty)
+event.listen(Installation.install_started,      'set', _mark_installation_recipe_dirty)
+event.listen(Installation.install_finished,     'set', _mark_installation_recipe_dirty)
+event.listen(Installation.postinstall_finished, 'set', _mark_installation_recipe_dirty)
 
 
 class GuestRecipe(Recipe):

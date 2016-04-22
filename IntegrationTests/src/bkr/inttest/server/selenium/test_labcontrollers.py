@@ -758,13 +758,15 @@ class TestPowerFailures(XmlRpcTestCase):
             system = System.query.get(system.id)
             command = system.command_queue[0]
             self.assertEquals(command.action, 'on')
+        session.close()
 
         self.server.labcontrollers.mark_command_running(command.id)
         self.server.labcontrollers.mark_command_failed(command.id,
                 u'needs moar powa')
+        beakerd.update_dirty_jobs()
+
         with session.begin():
             job = Job.query.get(job.id)
-            job.update_status()
             self.assertEqual(job.recipesets[0].recipes[0].status,
                              TaskStatus.aborted)
 
@@ -796,13 +798,15 @@ class TestPowerFailures(XmlRpcTestCase):
             system = System.query.get(system.id)
             command = system.command_queue[2]
             self.assertEquals(command.action, 'configure_netboot')
+        session.close()
 
         self.server.labcontrollers.mark_command_running(command.id)
         self.server.labcontrollers.mark_command_failed(command.id,
                 u'oops it borked')
+        beakerd.update_dirty_jobs()
+
         with session.begin():
             job = Job.query.get(job.id)
-            job.update_status()
             self.assertEqual(job.recipesets[0].recipes[0].status,
                              TaskStatus.aborted)
 

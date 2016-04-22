@@ -574,6 +574,7 @@ def mark_recipe_tasks_finished(recipe, result=TaskResult.pass_,
         recipe_task.logs = [rt_log()]
         recipe_task.finish_time = finish_time
         recipe_task._change_status(task_status)
+        recipe.recipeset.job._mark_dirty()
     log.debug('Marked %s tasks in %s as %s with result %s',
               num_tasks or 'all', recipe.t_id, task_status, result)
 
@@ -706,6 +707,7 @@ def mark_job_queued(job):
         recipe.process()
         recipe.queue()
     job.update_status()
+    assert job.status == TaskStatus.queued
 
 def playback_task_results(task, xmltask):
     # Start task

@@ -1030,7 +1030,6 @@ class TestJob(DatabaseTestCase):
         recipe.tasks[1].fail(u'/', 0, u'')
         recipe.tasks[2].fail(u'/', 0, u'')
         data_setup.mark_job_complete(job)
-        job.update_status()
         self.check_progress_bar(job.progress_bar,
                                 0, 33.333, 0, 66.667, 0)
 
@@ -1045,7 +1044,6 @@ class TestJob(DatabaseTestCase):
         recipe.tasks[4].warn(u'/', 0, u'')
         recipe.tasks[5].fail(u'/', 0, u'')
         data_setup.mark_job_complete(job)
-        job.update_status()
         self.check_progress_bar(job.progress_bar,
                                 0, 66.667, 16.667, 16.667, 0)
 
@@ -1059,7 +1057,6 @@ class TestJob(DatabaseTestCase):
         # third task will be "New" due to no results recorded
         data_setup.mark_job_complete(job, result=None)
         self.assertEquals(recipe.tasks[2].result, TaskResult.new)
-        job.update_status()
         self.check_progress_bar(job.progress_bar,
                                 33.333, 66.667, 0, 0, 0)
 
@@ -1978,8 +1975,7 @@ class MachineRecipeTest(DatabaseTestCase):
         for i in range(2):
             recipes[i].queue()
         recipes[0].schedule()
-        for recipe in recipes:
-            recipe.recipeset.job.update_status()
+        recipes[0].recipeset.job.update_status()
         return {u'new': len(recipes)-4,  u'processed': 1, u'queued': 1,
                 u'scheduled': 1, u'waiting': 0, u'installing': 0,
                 u'running': 0, u'reserved': 0}

@@ -237,8 +237,7 @@ class TestRecipeView(WebDriverTestCase):
         with session.begin():
             recipe = data_setup.create_recipe()
             job = data_setup.create_job_for_recipes([recipe])
-            data_setup.mark_recipe_waiting(recipe)
-            job.update_status()
+            data_setup.mark_recipe_installing(recipe)
         b = self.browser
         go_to_recipe_view(b, recipe)
         b.find_element_by_css_selector('#installation.active')
@@ -297,8 +296,7 @@ class TestRecipeView(WebDriverTestCase):
         with session.begin():
             recipe = data_setup.create_recipe()
             job = data_setup.create_job_for_recipes([recipe])
-            data_setup.mark_recipe_waiting(recipe)
-            job.update_status()
+            data_setup.mark_recipe_installing(recipe)
         b = self.browser
         b.get(get_server_base() + 'recipes/%s#no-such-anchor-exists' % recipe.id)
         b.find_element_by_css_selector('#installation.active')
