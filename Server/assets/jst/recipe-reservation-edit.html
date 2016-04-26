@@ -1,38 +1,24 @@
 <form class="form">
-<div class="modal-header">
-  <a href="#" class="close" data-dismiss="modal" aria-hidden="true">&times;</a>
-  <h3>Edit the reservation</h3>
-</div>
-<div class="modal-body">
+  <div class="modal-header">
+    <a href="#" class="close" data-dismiss="modal" aria-hidden="true">&times;</a>
+    <h3>Edit the reservation</h3>
+  </div>
+  <div class="modal-body">
     <div class="control-group">
-        <label class="control-label" style="white-space: nowrap;">
-          Reserve the system?
-        </label>
-        <div class="toggle-reservation-form">
-            <div class="btn-group" data-toggle="buttons-radio">
-            <button type="button" class="btn" data-reserve="true">Yes</button>
-            <button type="button" class="btn" data-reserve="false">No</button>
-            </div>
+      <label class="control-label" style="white-space: nowrap;">
+        Reserve the system?
+      </label>
+      <div class="toggle-reservation-form">
+        <div class="btn-group" data-toggle="buttons-radio">
+          <button type="button" class="btn" data-reserve="true">Yes</button>
+          <button type="button" class="btn" data-reserve="false">No</button>
         </div>
+      </div>
     </div>
-    <div class="control-group recipe-reservation-duration">
-        <label class="control-label" for="duration">
-            Time to reserve
-        </label>
-        <div class="input-append">
-          <div class="btn-group duration-unit" data-toggle="buttons-radio">
-            <input type="number" step="1" id="duration" name="duration"
-                   min="1" value="0" required/>
-            <button type="button" class="btn active" data-duration-unit="seconds">Seconds</button>
-            <button type="button" class="btn" data-duration-unit="minutes">Minutes</button>
-            <button type="button" class="btn" data-duration-unit="hours">Hours</button>
-          </div>
-        </div>
-    </div>
-</div>
-<div class="modal-footer">
-  <div class="sync-status"/>
-  <button type="button" class="btn" data-dismiss="modal" data-loading-text="Cancel">Cancel</button>
-  <button type="submit" class="btn btn-primary" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Saving&hellip;">Save changes</button>
-</div>
+  </div>
+  <div class="modal-footer">
+    <div class="sync-status"/>
+    <button type="button" class="btn" data-dismiss="modal" data-loading-text="Cancel">Cancel</button>
+    <button type="submit" class="btn btn-primary" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Saving&hellip;">Save changes</button>
+  </div>
 </form>

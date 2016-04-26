@@ -465,8 +465,8 @@ class TestRecipeViewReservationTab(WebDriverTestCase):
         tab.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
         modal = b.find_element_by_class_name('modal')
         modal.find_element_by_xpath('.//button[text()="Yes"]').click()
-        modal.find_element_by_name('duration').clear()
-        modal.find_element_by_name('duration').send_keys('5')
+        modal.find_element_by_name('reserve_duration').clear()
+        modal.find_element_by_name('reserve_duration').send_keys('5')
         modal.find_element_by_xpath('.//button[text()="Minutes"]').click()
         modal.find_element_by_xpath('.//button[text()="Save changes"]').click()
         b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
@@ -483,14 +483,31 @@ class TestRecipeViewReservationTab(WebDriverTestCase):
         tab.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
         modal = b.find_element_by_class_name('modal')
         modal.find_element_by_xpath('.//button[text()="Yes"]').click()
-        modal.find_element_by_name('duration').clear()
-        modal.find_element_by_name('duration').send_keys('1')
+        modal.find_element_by_name('reserve_duration').clear()
+        modal.find_element_by_name('reserve_duration').send_keys('1')
         modal.find_element_by_xpath('.//button[text()="Hours"]').click()
         modal.find_element_by_xpath('.//button[text()="Save changes"]').click()
         b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
         with session.begin():
             session.expire_all()
             self.assertEqual(self.recipe.reservation_request.duration, 3600)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1327020
+    def test_reservation_input_sets_html5_maximum_attribute_for_validation(self):
+        b = self.browser
+        login(b)
+        go_to_recipe_view(b, self.recipe, tab='Reservation')
+        tab = b.find_element_by_id('reservation')
+        tab.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_xpath('.//button[text()="Yes"]').click()
+        modal.find_element_by_xpath('.//button[text()="Hours"]').click()
+        self.assertEqual(
+            u'99', b.find_element_by_css_selector('input:invalid').get_attribute('max'))
+
+        modal.find_element_by_xpath('.//button[text()="Minutes"]').click()
+        self.assertEqual(
+            u'5940', b.find_element_by_css_selector('input:invalid').get_attribute('max'))
 
     def test_authenticated_user_can_request_reservation(self):
         with session.begin():
@@ -504,8 +521,8 @@ class TestRecipeViewReservationTab(WebDriverTestCase):
         tab.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
         modal = b.find_element_by_class_name('modal')
         modal.find_element_by_xpath('.//button[text()="Yes"]').click()
-        modal.find_element_by_name('duration').clear()
-        modal.find_element_by_name('duration').send_keys('300')
+        modal.find_element_by_name('reserve_duration').clear()
+        modal.find_element_by_name('reserve_duration').send_keys('300')
         modal.find_element_by_xpath('.//button[text()="Save changes"]').click()
         b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
         self.assertIn('The system will be reserved for 00:05:00 at the end of the recipe',
@@ -521,8 +538,8 @@ class TestRecipeViewReservationTab(WebDriverTestCase):
         tab = b.find_element_by_id('reservation')
         tab.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
         modal = b.find_element_by_class_name('modal')
-        modal.find_element_by_name('duration').clear()
-        modal.find_element_by_name('duration').send_keys('300')
+        modal.find_element_by_name('reserve_duration').clear()
+        modal.find_element_by_name('reserve_duration').send_keys('300')
         modal.find_element_by_xpath('.//button[text()="Save changes"]').click()
         b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
         with session.begin():

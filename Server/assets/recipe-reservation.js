@@ -142,28 +142,28 @@ var EditRecipeReservationModal = Backbone.View.extend({
     },
     toggle_reservation: function (evt) {
         if ($(evt.currentTarget).data('reserve')) {
-            this.$('.recipe-reservation-duration').show()
-                 .find(':input').prop('disabled', false);
+          this.reserve_input.$el.find(':input').prop('disabled', false);
         } else {
-            this.$('.recipe-reservation-duration').hide()
-                 .find(':input').prop('disabled', true);
+          this.reserve_input.$el.find(':input').prop('disabled', true);
         }
     },
     initialize: function () {
+        this.reserve_input = new ReservationDurationSelection({});
         this.render();
         this.$el.modal();
     },
     render: function () {
         this.$el.html(this.template(this.model.attributes));
+        this.$('.modal-body').append(this.reserve_input.$el);
+        this.reserve_input.render();
         var model = this.model;
         var reservation_request = this.model.get('reservation_request');
         if (reservation_request.get('reserve')) {
             this.$('button[data-reserve="true"]').addClass('active');
-            this.$('input[name="duration"]').val(reservation_request.get('duration'));
+            this.reserve_input.$(':input').val(reservation_request.get('duration'));
         } else {
             this.$('button[data-reserve="false"]').addClass('active');
-            this.$('.recipe-reservation-duration').hide()
-                 .find(':input').prop('disabled', true);
+            this.reserve_input.$el.find(':input').prop('disabled', true);
         }
     },
     submit: function (evt) {
@@ -174,12 +174,8 @@ var EditRecipeReservationModal = Backbone.View.extend({
         var model = this.model;
         var attributes = {};
         if (reserve) {
-            var unit = this.$('.duration-unit button.active').attr('data-duration-unit');
-            var duration = moment.duration(
-                parseInt(this.$('[name=duration]').val()), unit
-            ).asSeconds();
             attributes.reserve = true;
-            attributes.duration = duration;
+            attributes.duration = this.reserve_input.get_reservation_duration().asSeconds();
         } else {
             attributes.reserve = false;
         }

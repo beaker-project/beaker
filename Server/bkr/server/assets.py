@@ -137,6 +137,7 @@ def _create_env(source_dir, output_dir, **kwargs):
             'recipe-tasks.js',
             'recipe-tasks-old.js',
             'recipe-reservation.js',
+            'reservation-duration-selection.js',
             filters=['uglifyjs'],
             output='beaker-%(version)s.js')
     return env

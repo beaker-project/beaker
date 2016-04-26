@@ -1,0 +1,12 @@
+<label class="control-label" for="reserve_duration">
+    Time to reserve
+</label>
+<div class="controls reservation-input">
+  <input type="number" step="1" id="reserve_duration" name="reserve_duration"
+         min="1" max="356400" value="<%- reserve_duration %>" required/>
+  <div class="btn-group duration-unit" data-toggle="buttons-radio">
+    <button type="button" class="btn active" data-duration-unit="seconds">Seconds</button>
+    <button type="button" class="btn" data-duration-unit="minutes">Minutes</button>
+    <button type="button" class="btn" data-duration-unit="hours">Hours</button>
+  </div>
+</div>
