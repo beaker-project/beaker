@@ -30,6 +30,8 @@ window.ReserveWorkflow = Backbone.View.extend({
             pick: options.selection['pick'] || default_pick,
             reserve_duration: options.selection['reserve_duration'] || (24 * 60 * 60),
         });
+        this.reserve_input = new ReservationDurationSelection(
+            {reserve_duration: this.selection.get('reserve_duration')});
         // sync our selection from distro picker's selection
         this.listenTo(this.distro_picker.selection, 'change', function (model) {
             this.selection.set('distro_tree_id', model.get('distro_tree_id'));
@@ -40,6 +42,8 @@ window.ReserveWorkflow = Backbone.View.extend({
     },
     render: function () {
         this.$el.html(this.template(this));
+        this.$('.job-options > legend').after(this.reserve_input.$el);
+        this.reserve_input.render();
         this.distro_picker.setElement(this.$('.distro-picker')).render();
         this.update_button_state();
     },
@@ -74,6 +78,7 @@ window.ReserveWorkflow = Backbone.View.extend({
     },
     submit: function (evt) {
         evt.preventDefault();
+        this.selection.set('reserve_duration', this.reserve_input.get_reservation_duration().asSeconds());
         var xhr = $.ajax({
             url: 'doit',
             type: 'POST',

@@ -170,7 +170,8 @@ class ReserveWorkflow(WebDriverTestCase):
         Select(b.find_element_by_name('distro_tree_id'))\
             .select_by_visible_text('%s Server i386' % self.distro.name)
         b.find_element_by_name('reserve_duration').clear()
-        b.find_element_by_name('reserve_duration').send_keys('345600')
+        b.find_element_by_name('reserve_duration').send_keys('96')
+        b.find_element_by_xpath('.//button[text()="Hours"]').click()
         b.find_element_by_xpath('//button[normalize-space(text())="Submit job"]').click()
         # should end up on the job page
         jid = b.find_element_by_xpath('//h1//span[@class="job-id"]').text
