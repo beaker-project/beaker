@@ -512,7 +512,6 @@ class TestRecipeViewReservationTab(WebDriverTestCase):
         b = self.browser
         login(b)
         go_to_recipe_view(b, self.recipe, tab='Reservation')
-        b.save_screenshot('/home/dev/beaker/foo.png')
         tab = b.find_element_by_id('reservation')
         tab.find_element_by_xpath('.//button[contains(text(), "Return the reservation")]')\
                 .click()
