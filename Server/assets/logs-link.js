@@ -14,7 +14,8 @@ window.get_main_log = function(logs) {
     var log = _.find(logs, function(log) {
         var path = log.path;
         if(path.startsWith('anaconda.log') || path.startsWith('TESTOUT') ||
-            path.startsWith('test_log')) {
+            path.startsWith('test_log') || path == 'taskout.log' ||
+            path == 'resultoutputfile.log') {
                 return log;
         }
     });
