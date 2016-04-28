@@ -114,6 +114,22 @@ class TestRecipeView(WebDriverTestCase):
                 recipe.system = self.system
         self.browser = self.get_browser()
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1314271
+    def test_view_deleted_recipe(self):
+        with session.begin():
+            recipe = data_setup.create_recipe()
+            job = data_setup.create_job_for_recipes([recipe])
+            recipetask = recipe.tasks[0]
+            job.delete()
+        b = self.browser
+        b.get(get_server_base() + 'recipes/%s#task%s'
+                % (recipe.id, recipe.tasks[0].id))
+        self.assertIn('This job has been deleted.',
+                b.find_element_by_class_name('alert-warning').text)
+        task_row = b.find_element_by_css_selector('#task%s .recipe-task-details.collapse.in'
+                % recipe.tasks[0].id)
+        task_row.find_element_by_xpath('.//button[normalize-space(string(.))="Results" and @disabled="disabled"]')
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1326562
     def test_recipe_view_shows_external_task_results(self):
         with session.begin():
@@ -555,22 +571,6 @@ class TestRecipeViewReservationTab(WebDriverTestCase):
         with session.begin():
             session.expire_all()
             self.assertLessEqual(self.recipe.status_watchdog(), 0)
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=1314271
-    def test_view_deleted_recipe(self):
-        with session.begin():
-            recipe = data_setup.create_recipe()
-            job = data_setup.create_job_for_recipes([recipe])
-            recipetask = recipe.tasks[0]
-            job.delete()
-        b = self.browser
-        b.get(get_server_base() + 'recipes/%s#task%s'
-                % (recipe.id, recipe.tasks[0].id))
-        self.assertIn('This job has been deleted.',
-                b.find_element_by_class_name('alert-warning').text)
-        task_row = b.find_element_by_css_selector('#task%s .recipe-task-details.collapse.in'
-                % recipe.tasks[0].id)
-        task_row.find_element_by_xpath('.//button[normalize-space(string(.))="Results" and @disabled="disabled"]')
 
 
 class RecipeHTTPTest(DatabaseTestCase):
