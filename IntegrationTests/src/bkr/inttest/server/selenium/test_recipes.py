@@ -386,11 +386,27 @@ class TestRecipeViewInstallationTab(WebDriverTestCase):
 
     def setUp(self):
         with session.begin():
-            self.recipe = data_setup.create_recipe()
+            self.recipe = data_setup.create_recipe(
+                    distro_name=u'PurpleUmbrellaLinux5.11-20160428',
+                    variant=u'Server', arch=u'x86_64')
             data_setup.create_job_for_recipes([self.recipe])
             data_setup.mark_recipe_installing(self.recipe)
         self.browser = self.get_browser()
         go_to_recipe_view(self.browser, self.recipe, tab='Installation')
+
+    def test_shows_installation_in_progress(self):
+        # When the status is Installing, the Installation tab should say that 
+        # it's installing. Sounds obvious, I know, but until Beaker 23 it was 
+        # Running instead so it didn't actually work this way...
+        b = self.browser
+        tab = b.find_element_by_id('installation')
+        summary = tab.find_element_by_xpath(
+                './/div[@class="recipe-installation-summary"]/div[1]').text
+        self.assertEqual(summary.strip(),
+                'Installing PurpleUmbrellaLinux5.11-20160428 Server x86_64.')
+        status = tab.find_element_by_xpath(
+                './/div[@class="recipe-installation-status"]').text
+        self.assertEqual(status.strip(), 'Installing')
 
     def test_recipe_start_time_is_displayed_as_positive_zero(self):
         b = self.browser
