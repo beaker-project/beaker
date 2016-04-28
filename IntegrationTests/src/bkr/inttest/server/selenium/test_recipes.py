@@ -581,6 +581,30 @@ class TestRecipeViewReservationTab(WebDriverTestCase):
             session.expire_all()
             self.assertLessEqual(self.recipe.status_watchdog(), 0)
 
+    def test_shows_other_recipes_in_recipeset_holding_this_reservation(self):
+        # Beaker keeps all systems in a recipe set reserved until all recipes 
+        # in the set are finished. This is to allow for things like multi-host 
+        # tests and virt testing, where one recipe might "drop off the end" but 
+        # the other machines still want to talk to it.
+        # This is a frequent gotcha for users ("why is this system still 
+        # reserved even though the recipe is finished?") so we went to some 
+        # lengths in the new recipe page to indicate when this happens.
+        with session.begin():
+            job = data_setup.create_job(num_recipes=2, num_guestrecipes=1)
+            recipe = job.recipesets[0].recipes[0]
+            data_setup.mark_recipe_complete(recipe)
+            data_setup.mark_recipe_running(job.recipesets[0].recipes[1])
+        b = self.browser
+        go_to_recipe_view(b, recipe, tab='Reservation')
+        tab = b.find_element_by_id('reservation')
+        self.assertEqual(tab.find_element_by_xpath('div/p[2]').text,
+                'However, the system has not been released yet because '
+                'the following recipes are still running:')
+        running_recipes_list_items = [li.text for li in
+                tab.find_elements_by_xpath('.//ul[@class="running-recipes-list"]/li')]
+        self.assertEqual(running_recipes_list_items,
+                [job.recipesets[0].recipes[1].t_id,
+                 job.recipesets[0].recipes[2].t_id])
 
 class RecipeHTTPTest(DatabaseTestCase):
     """

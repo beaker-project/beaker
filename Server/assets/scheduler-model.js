@@ -242,6 +242,12 @@ window.Recipe = Backbone.Model.extend({
                     {recipe: this});
             }
         }
+        if (!_.isEmpty(data['reservation_held_by_recipes'])) {
+            data['reservation_held_by_recipes'] = _.map(
+                data['reservation_held_by_recipes'], function (recipedata, i) {
+                    return new Recipe(recipedata, {parse: true});
+                });
+        }
         return data;
     },
     _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>recipes/<%- id %>"><%- t_id %></a>'),

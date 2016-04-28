@@ -2869,6 +2869,12 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             data['reservation_request'] = self.reservation_request.__json__()
         else:
             data['reservation_request'] = RecipeReservationRequest.empty_json()
+        if self.is_finished() and not self.recipeset.is_finished():
+            data['reservation_held_by_recipes'] = \
+                [{'id': recipe.id, 't_id': recipe.t_id}
+                 for recipe in self.recipeset.recipes if not recipe.is_finished()]
+        else:
+            data['reservation_held_by_recipes'] = []
         if identity.current.user:
             u = identity.current.user
             data['can_edit'] = self.can_edit(u)

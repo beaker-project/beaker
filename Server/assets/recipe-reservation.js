@@ -38,15 +38,7 @@ var RecipeCompletedReservation = Backbone.View.extend({
         this.render();
     },
     render: function () {
-        var all_recipes = this.model.get('recipeset')
-           .get('job').all_recipes();
-        var running_recipes = _.filter(all_recipes,
-            function(recipe){ return (
-                recipe.get('status') != 'Completed' &&
-                recipe.get('status') != 'Cancelled' &&
-                recipe.get('status') != 'Aborted' ); });
-        this.$el.html(this.template(_.extend({running_recipes: running_recipes},
-            this.model.attributes)));
+        this.$el.html(this.template(this.model.attributes));
     }
 });
 
