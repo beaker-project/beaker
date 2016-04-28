@@ -188,3 +188,11 @@ class ModifySystemTest(ClientTestCase):
                 self.assertEquals(s.status, SystemStatus.manual)
                 self.assertFalse(s.active_access_policy.grants(user1, perm))
                 self.assertTrue(s.active_access_policy.grants(user2, perm))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1268811
+    def test_no_fqdn(self):
+        try:
+            run_client(['bkr', 'system-modify'])
+            self.fail('Must raise')
+        except ClientError as e:
+            self.assertIn('Specify one or more system FQDNs to modify', e.stderr_output)

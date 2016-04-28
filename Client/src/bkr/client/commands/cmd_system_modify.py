@@ -113,6 +113,9 @@ class System_Modify(BeakerCommand):
 
         self.set_hub(**kwargs)
 
+        if not args:
+            self.parser.error('Specify one or more system FQDNs to modify')
+
         if not any(option is not None for option in
                 [owner, condition, host_hypervisor, pool, custom_policy]):
             self.parser.error('At least one option is required, specifying what to change')
