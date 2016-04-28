@@ -382,6 +382,23 @@ class TestRecipeView(WebDriverTestCase):
                 '/div/a[@class="comments-link"]').text
         self.assertEqual(comments_link, '1')
 
+class TestRecipeViewInstallationTab(WebDriverTestCase):
+
+    def setUp(self):
+        with session.begin():
+            self.recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([self.recipe])
+            data_setup.mark_recipe_installing(self.recipe)
+        self.browser = self.get_browser()
+        go_to_recipe_view(self.browser, self.recipe, tab='Installation')
+
+    def test_recipe_start_time_is_displayed_as_positive_zero(self):
+        b = self.browser
+        tab = b.find_element_by_id('installation')
+        rebooted_timestamp = tab.find_element_by_xpath(
+                './/div[@class="recipe-installation-progress"]/table'
+                '//td[contains(string(following-sibling::td), "System rebooted")]').text
+        self.assertEqual(rebooted_timestamp, '+00:00:00')
 
 class TestRecipeViewReservationTab(WebDriverTestCase):
 

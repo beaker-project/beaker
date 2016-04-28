@@ -64,7 +64,7 @@ window.get_time_difference = function(date_one, date_two) {
     var diff, date_format='hh:mm:ss';
     diff = moment.utc(moment(date_one)).diff(moment.utc(
         moment(date_two)));
-    if (diff > 0) {
+    if (diff >= 0) {
         date_format = '+' + date_format;
         return moment.duration(diff).format("+hh:mm:ss", { trim: false });
     }
