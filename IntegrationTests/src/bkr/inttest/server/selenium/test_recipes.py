@@ -114,6 +114,15 @@ class TestRecipeView(WebDriverTestCase):
                 recipe.system = self.system
         self.browser = self.get_browser()
 
+    def test_page_header(self):
+        with session.begin():
+            job = data_setup.create_job(num_recipes=2, num_guestrecipes=1)
+            recipe = job.recipesets[0].recipes[0]
+        b = self.browser
+        go_to_recipe_view(b, recipe)
+        subtitle = b.find_element_by_xpath('//div[@class="page-header"]/h1/small')
+        self.assertEqual(subtitle.text, '1 of 3 recipes in %s' % job.t_id)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1314271
     def test_view_deleted_recipe(self):
         with session.begin():

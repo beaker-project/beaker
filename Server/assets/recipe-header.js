@@ -15,8 +15,7 @@ window.RecipePageHeaderView = Backbone.View.extend({
         this.listenTo(this.model, 'change', this.render);
     },
     render: function () {
-        var all_recipes = _.size(this.model.get('recipeset').get('job').all_recipes());
-        this.$el.html(this.template(_.extend({all_recipes: all_recipes}, this.model.attributes)));
+        this.$el.html(this.template(this.model.attributes));
         var title = this.model.get('t_id');
         if (this.model.get('whiteboard'))
             title += ' \u00b7 ' + truncated_whiteboard(this.model.get('whiteboard'));

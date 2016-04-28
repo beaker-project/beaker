@@ -673,6 +673,9 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
     max_by_whiteboard = 20
 
     def __json__(self):
+        return self.to_json()
+
+    def to_json(self, include_recipesets=True):
         data = {
             'id': self.id,
             't_id': self.t_id,
@@ -694,8 +697,8 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
             'ftasks': self.ftasks,
             'ktasks': self.ktasks,
             'ttasks': self.ttasks,
+            'recipe_count': self.recipe_count,
             'clone_href': self.clone_link(),
-            'recipesets': self.recipesets,
         }
         if identity.current.user:
             u = identity.current.user
@@ -714,6 +717,8 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
             data['can_cancel'] = False
             data['can_delete'] = False
             data['can_edit'] = False
+        if include_recipesets:
+            data['recipesets'] = self.recipesets
         return data
 
     @classmethod
@@ -1290,6 +1295,10 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
                 yield recipe
     all_recipes = property(all_recipes)
 
+    @property
+    def recipe_count(self):
+        return Recipe.query.join(Recipe.recipeset).filter(RecipeSet.job == self).count()
+
     def update_status(self):
         if not self.is_dirty:
             # This error should be impossible to trigger in beakerd's 
@@ -1645,6 +1654,9 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
         self.priority = priority
 
     def __json__(self):
+        return self.to_json()
+
+    def to_json(self, include_job=False, include_recipes=True):
         data = {
             'id': self.id,
             't_id': self.t_id,
@@ -1661,8 +1673,6 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
             'waived': self.waived,
             'comments': self.comments,
             'clone_href': self.clone_link(),
-            'machine_recipes': [recipe.to_json(include_tasks=False) for recipe
-                    in self.machine_recipes],
             'queue_time': self.queue_time,
         }
         if identity.current.user:
@@ -1678,12 +1688,11 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
             data['can_cancel'] = False
             data['can_comment'] = False
             data['can_waive'] = False
-        return data
-
-    def to_json(self, include_job=False):
-        data = self.__json__()
         if include_job:
-            data['job'] = self.job.__json__()
+            data['job'] = self.job.to_json(include_recipesets=False)
+        if include_recipes:
+            data['machine_recipes'] = [recipe.to_json(include_tasks=False)
+                    for recipe in self.machine_recipes]
         return data
 
     def all_logs(self, load_parent=True):
@@ -2814,6 +2823,9 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         RecipeReviewedState.lazy_create(recipe=self, user=user, reviewed=reviewed)
 
     def __json__(self):
+        return self.to_json()
+
+    def to_json(self, include_recipeset=False, include_tasks=True):
         data = {
             'id': self.id,
             't_id': self.t_id,
@@ -2832,7 +2844,6 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             'ftasks': self.ftasks,
             'ktasks': self.ktasks,
             'ttasks': self.ttasks,
-            'tasks': self.tasks,
             'start_time': self.start_time,
             'finish_time': self.finish_time,
             'ks_meta': self.ks_meta,
@@ -2869,14 +2880,11 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             data['can_update_reservation_request'] = False
             data['can_comment'] = False
             data['reviewed'] = None
-        return data
-
-    def to_json(self, include_recipeset=False, include_tasks=True):
-        data = self.__json__()
         if include_recipeset:
-            data['recipeset'] = self.recipeset.to_json(include_job=True)
-        if not include_tasks:
-            data.pop('tasks')
+            data['recipeset'] = self.recipeset.to_json(
+                    include_job=True, include_recipes=False)
+        if include_tasks:
+            data['tasks'] = self.tasks
         return data
 
 
@@ -2977,8 +2985,8 @@ class MachineRecipe(Recipe):
 
     systemtype = 'Machine'
 
-    def __json__(self):
-        data = super(MachineRecipe, self).__json__()
+    def to_json(self, **kwargs):
+        data = super(MachineRecipe, self).to_json(**kwargs)
         data.update({'guest_recipes': self.guests})
         return data
 

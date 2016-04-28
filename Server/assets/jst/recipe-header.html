@@ -8,7 +8,7 @@
             <abbr title="Recipe">R</abbr>:<%- id %>
         </span>
         <small>
-          1 of <%- all_recipes %> recipes in <%= recipeset.get('job').toHTML()%>
+          1 of <%- recipeset.get('job').get('recipe_count') %> recipes in <%= recipeset.get('job').toHTML()%>
         </small>
         <div class="btn-group recipe-btn-group">
         <% if (can_edit) { %>
