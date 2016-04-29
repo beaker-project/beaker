@@ -15,7 +15,7 @@ Synopsis
 --------
 
 | :program:`bkr job-clone` [*options*]
-|       [--wait] [--dryrun] [--xml] [--prettyxml] <taskspec>...
+|       [--wait] [--dry-run] [--xml] [--pretty-xml] <taskspec>...
 
 Description
 -----------
@@ -34,18 +34,18 @@ Options
 
 .. option:: --wait
 
-   When this option is given, the command will not terminate until the clone 
+   When this option is given, the command will not terminate until the clone
    job has finished running.
 
 .. option:: --xml
 
    Print the job XML before submitting it.
 
-.. option:: --prettyxml
+.. option:: --pretty-xml
 
    Print the job XML in a easily readable format before submitting it.
 
-.. option:: --dryrun
+.. option:: --dry-run
 
    Run through the job-clone process without actually submitting the cloned job
 
@@ -102,7 +102,8 @@ class Job_Clone(BeakerCommand):
             help="wait on job completion",
         )
         self.parser.add_option(
-            "--dryrun",
+            "--dry-run", "--dryrun",
+            dest="dryrun",
             default=False,
             action="store_true",
             help="Test the likely output of job-clone without cloning anything",
@@ -114,7 +115,8 @@ class Job_Clone(BeakerCommand):
             help="print the jobxml that it would submit",
         )
         self.parser.add_option(
-            "--prettyxml",
+            "--pretty-xml", "--prettyxml",
+            dest="prettyxml",
             action="store_true",
             default=False,
             help="print the jobxml that it would submit, in pretty format",

@@ -16,7 +16,7 @@ Synopsis
 
 | :program:`bkr job-submit` [*options*]
 |       [--debug] [--convert] [--combine] [--ignore-missing-tasks]
-|       [:option:`--dryrun` | :option:`--wait`]
+|       [:option:`--dry-run` | :option:`--wait`]
 |       [<filename>...]
 
 Description
@@ -43,7 +43,7 @@ Options
 .. option:: --convert
 
    Attempt to convert legacy RHTS XML to Beaker XML. Use this with 
-   :option:`--xml` and :option:`--dryrun` to grab the converted XML without 
+   :option:`--xml` and :option:`--dry-run` to grab the converted XML without
    submitting it.
 
 .. option:: --combine
@@ -57,7 +57,7 @@ Options
    discard these from the recipe. Normally this is a fatal error which prevents 
    submission of the job.
 
-.. option:: --dryrun
+.. option:: --dry-run
 
    Do not submit the job(s) to Beaker. Use this with :option:`--xml` to see 
    what would be submitted.
@@ -146,7 +146,8 @@ stdin."""
             help="print the jobxml that it would submit",
         )
         self.parser.add_option(
-            "--dryrun",
+            "--dry-run", "--dryrun",
+            dest="dryrun",
             default=False,
             action="store_true",
             help="Don't submit job to scheduler",

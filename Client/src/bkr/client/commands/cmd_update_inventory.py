@@ -15,8 +15,8 @@ Synopsis
 --------
 
 |  :program:`bkr update-inventory` [*options*]
-|       [:option:`--xml` | :option:`--prettyxml`]
-|       [:option:`--dryrun` | :option:`--wait`]
+|       [:option:`--xml` | :option:`--pretty-xml`]
+|       [:option:`--dry-run` | :option:`--wait`]
 |       [<fqdn>...]
 
 Description
@@ -45,17 +45,17 @@ Options
 .. option:: --xml
 
    Print the generated Job XML that was submitted. Use this with
-   :option:`--dryrun` if you just want to see what would be submitted.
+   :option:`--dry-run` if you just want to see what would be submitted.
 
-.. option:: --prettyxml
+.. option:: --pretty-xml
 
    Pretty print the generated Job XML that was submitted. Use this with
-   :option:`--dryrun` if you just want to see what would be submitted.
+   :option:`--dry-run` if you just want to see what would be submitted.
 
-.. option:: --dryrun
+.. option:: --dry-run
 
    Do not submit the job(s) to Beaker. Use this with :option:`--xml`
-   or :option:`--prettyxml` to see what would be submitted.
+   or :option:`--pretty-xml` to see what would be submitted.
 
 .. option:: --wait
 
@@ -77,7 +77,7 @@ Submit an inventory job for test1.example.com::
 
 Do not submit an inventory job, but just pretty print the generated job XML::
 
-   bkr update-inventory --dryrun --prettyxml test1.example.com
+   bkr update-inventory --dry-run --pretty-xml test1.example.com
 
 
 See also
@@ -98,9 +98,10 @@ class Update_Inventory(BeakerCommand):
     def options(self):
         self.parser.usage = "%%prog %s <fqdn>.." % self.normalized_name
         self.parser.add_option(
-            '--dryrun',
+            '--dry-run', '--dryrun',
             default=False,
             action='store_true',
+            dest='dryrun',
             help='Do not submit an inventory job',
         )
         self.parser.add_option(
@@ -109,9 +110,9 @@ class Update_Inventory(BeakerCommand):
             action='store_true',
             help='Print the generated Job XML',
         )
-
         self.parser.add_option(
-            '--prettyxml',
+            '--pretty-xml', '--prettyxml',
+            dest='prettyxml',
             default=False,
             action='store_true',
             help='Pretty print the generated Job XML',
