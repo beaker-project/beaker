@@ -63,8 +63,10 @@ window.JobHeaderView = Backbone.View.extend({
             .done(function () { window.location = beaker_url_prefix + 'jobs/mine'; });
     },
     delete_error: function(xhr) {
-        growl_for_xhr(xhr, 'Failed to delete');
-        this.$('button.delete').button('reset');
+        if (!_.isEmpty(xhr)) {
+            growl_for_xhr(xhr, 'Failed to delete');
+            this.$('button.delete').button('reset');
+        }
     },
 });
 

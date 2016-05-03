@@ -92,6 +92,20 @@ class JobDeleteWD(WebDriverTestCase):
         self.job_delete(self.job_to_delete)
         self.job_delete_jobpage(self.job_to_delete_2)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1330405
+    def test_can_cancel_delete_modal_successfully(self):
+        login(self.browser)
+        b = self.browser
+        job = self.job_to_delete
+        b.get(get_server_base() + 'jobs/%d' % job.id)
+        b.find_element_by_xpath('//button[normalize-space(string(.))="Delete"]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_xpath('.//p[text()="Are you sure you want to '
+                'delete this job?"]')
+        modal.find_element_by_xpath('.//button[text()="Cancel"]').click()
+        # if delete action is cancelled, the modal is dismissed
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
+
     def job_delete_jobpage(self, job):
         b = self.browser
         b.get(get_server_base() + 'jobs/%d' % \
