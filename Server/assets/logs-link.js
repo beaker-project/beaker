@@ -34,7 +34,7 @@ window.LogsLink = Backbone.View.extend({
     render: function () {
         var all_logs = this.model.get('logs') || [];
         // console.log is treated specially on the page
-        var all_logs = _.reject(all_logs, function (log) { return log.path == 'console.log'; });
+        all_logs = _.reject(all_logs, function (log) { return log.path == 'console.log'; });
         var main_log = get_main_log(all_logs);
         // filter out the main log
         var other_logs = _.reject(all_logs, function(log){return log.id == main_log.id; });
