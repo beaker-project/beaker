@@ -1262,7 +1262,7 @@ class TreeInfoFedoraArm(TreeInfoFedora, Importer):
         else:
             kernel_type = ''
         return self.parser.get('images-%s%s' % (kernel_type,
-                                                self.tree['arch']),'uimage')
+                                                self.tree['arch']),'uimage', "")
 
     def get_uinitrd_path(self, kernel_type=None):
         if kernel_type:
@@ -1270,7 +1270,7 @@ class TreeInfoFedoraArm(TreeInfoFedora, Importer):
         else:
             kernel_type = ''
         return self.parser.get('images-%s%s' % (kernel_type,
-                                                self.tree['arch']),'uinitrd')
+                                                self.tree['arch']),'uinitrd', "")
 
     def get_images(self):
         images = []
@@ -1278,10 +1278,14 @@ class TreeInfoFedoraArm(TreeInfoFedora, Importer):
                                         path=self.get_kernel_path()))
         images.append(dict(type='initrd',
                                         path=self.get_initrd_path()))
-        images.append(dict(type='uimage',
-                                        path=self.get_uimage_path()))
-        images.append(dict(type='uinitrd',
-                                        path=self.get_uinitrd_path()))
+        uimage = self.get_uimage_path()
+        if uimage:
+            images.append(dict(type='uimage',
+                               path=uimage))
+        uinitrd = self.get_uinitrd_path()
+        if uinitrd:
+            images.append(dict(type='uinitrd',
+                               path=uinitrd))
         kernel_type_string = self.parser.get(self.tree['arch'],
                                              'platforms', '')
         kernel_types = map(string.strip,
@@ -1688,7 +1692,7 @@ kernel = images/pxeboot/vmlinuz
         else:
             kernel_type = ''
         return self.parser.get('images-%s%s' % (kernel_type,
-                                                self.tree['arch']),'uimage')
+                                                self.tree['arch']),'uimage', "")
 
     def get_uinitrd_path(self, kernel_type=None):
         if kernel_type:
@@ -1696,17 +1700,21 @@ kernel = images/pxeboot/vmlinuz
         else:
             kernel_type = ''
         return self.parser.get('images-%s%s' % (kernel_type,
-                                                self.tree['arch']),'uinitrd')
+                                                self.tree['arch']),'uinitrd', "")
     def get_images(self):
         images = []
         images.append(dict(type='kernel',
                                         path=self.get_kernel_path()))
         images.append(dict(type='initrd',
                                         path=self.get_initrd_path()))
-        images.append(dict(type='uimage',
-                                        path=self.get_uimage_path()))
-        images.append(dict(type='uinitrd',
-                                        path=self.get_uinitrd_path()))
+        uimage = self.get_uimage_path()
+        if uimage:
+            images.append(dict(type='uimage',
+                               path=uimage))
+        uinitrd = self.get_uinitrd_path()
+        if uinitrd:
+            images.append(dict(type='uinitrd',
+                               path=uinitrd))
         kernel_type_string = self.parser.get(self.tree['arch'],
                                              'platforms', '')
         kernel_types = map(string.strip,
