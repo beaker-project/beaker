@@ -126,7 +126,7 @@ result.
 
 .. describe:: <result>
 
-   Result to report. Valid values are ``PASS`` or ``FAIL``.
+   Result to report. Valid values are ``PASS``, ``WARN``, or ``FAIL``.
 
 .. describe:: <outputfile>
 
