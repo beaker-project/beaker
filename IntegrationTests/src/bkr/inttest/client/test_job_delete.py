@@ -99,3 +99,19 @@ class JobDeleteTest(ClientTestCase):
             fail('should raise')
         except ClientError, e:
             self.assert_('Invalid taskspec' in e.stderr_output)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=990943
+    def test_zero_value_completeDays(self):
+        try:
+            run_client(['bkr', 'job-delete', '--completeDays', '0'])
+            self.fail('Must raise')
+        except ClientError as e:
+            self.assertIn('Please pass a positive integer to completeDays', e.stderr_output)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=990943
+    def test_negative_value_completeDays(self):
+        try:
+            run_client(['bkr', 'job-delete', '--completeDays', '-1'])
+            self.fail('Must raise')
+        except ClientError as e:
+            self.assertIn('Please pass a positive integer to completeDays', e.stderr_output)

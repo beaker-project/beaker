@@ -114,6 +114,7 @@ class Job_Delete(BeakerCommand):
         self.parser.add_option(
             "-c",
             "--completeDays",
+            type='int',
             help="Number of days it's been complete for"
         )
 
@@ -142,6 +143,10 @@ class Job_Delete(BeakerCommand):
             if complete_days or tag or family or product or len(args) > 0:
                 self.parser.error('You can only specify --userDeleted with no other flags')
         """
+
+        if complete_days is not None and complete_days < 1:
+            self.parser.error('Please pass a positive integer to completeDays')
+
         if len(args) < 1 and tag is None and complete_days is None and family is None and product is None:
             self.parser.error('Please specify either a job, recipeset, tag, family, product or complete days')
         if len(args) > 0:
@@ -155,4 +160,3 @@ class Job_Delete(BeakerCommand):
             for job in args:
                 jobs.append(job)
         print self.hub.jobs.delete_jobs(jobs,tag,complete_days,family,dryrun, product)
-
