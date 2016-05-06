@@ -156,8 +156,8 @@ menu. For example::
     }
 
 If you are using GRUB2 boot menus, you should edit the default configuration for
-x86 EFI and 64-bit PowerPC :file:`boot/grub2/grub.cfg` to exit after a timeout,
-with an option to load the menus. For example::
+x86 EFI :file:`boot/grub2/grub.cfg` to exit after a timeout, with an option to
+load the menus. For example::
 
     set default="Exit PXE"
     set timeout=60
@@ -166,9 +166,6 @@ with an option to load the menus. For example::
     }
     menuentry "Install distro from Beaker (x86)" {
         configfile boot/grub2/beaker_menu_x86.cfg
-    }
-    menuentry "Install distro from Beaker (ppc64)" {
-        configfile boot/grub2/beaker_menu_ppc64.cfg
     }
 
 If your site imports distros into Beaker infrequently, you may prefer to

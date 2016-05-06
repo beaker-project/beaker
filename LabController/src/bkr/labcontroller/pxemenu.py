@@ -91,7 +91,7 @@ def write_menus(tftp_root, tags, xml_filter):
 
     proxy = xmlrpclib.ServerProxy('http://localhost:8000', allow_none=True)
     distro_trees = proxy.get_distro_trees({
-        'arch': ['x86_64', 'i386', 'aarch64', 'ppc64', 'ppc64le'],
+        'arch': ['x86_64', 'i386', 'aarch64'],
         'tags': tags,
         'xml': xml_filter,
     })
@@ -131,13 +131,6 @@ def write_menus(tftp_root, tags, xml_filter):
         makedirs_ignore(os.path.join(tftp_root, 'aarch64'), mode=0755)
         aarch64_menu = atomically_replaced_file(os.path.join(tftp_root, 'aarch64', 'beaker_menu.cfg'))
         write_menu(aarch64_menu, u'grub2-menu', aarch64_distrotrees)
-
-    ppc64_distrotrees = [distro for distro in distro_trees if distro['arch'] in ['ppc64', 'ppc64le']]
-    if ppc64_distrotrees:
-        print 'Generating GRUB2 menus for ppc64 for %s distro trees' % len(ppc64_distrotrees)
-        ppc64_menu = atomically_replaced_file(os.path.join(tftp_root, 'boot', 'grub2',
-                'beaker_menu_ppc64.cfg'))
-        write_menu(ppc64_menu, u'grub2-menu', ppc64_distrotrees)
 
 def main():
     parser = OptionParser(description='''Writes a netboot menu to the TFTP root
