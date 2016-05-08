@@ -455,6 +455,21 @@ class SystemFilterMethodsTest(DatabaseTestCase):
                 included=[owned, loaned, shared],
                 excluded=[not_shared])
 
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1216257
+    def test_diskcount(self):
+        one_disk_system = data_setup.create_system()
+        one_disk_system.disks[:] = [
+                Disk(size=8000000000, sector_size=512, phys_sector_size=512)]
+        two_disk_system = data_setup.create_system()
+        two_disk_system.disks[:] = [
+                Disk(size=500000000000, sector_size=512, phys_sector_size=512),
+                Disk(size=8000000000, sector_size=4096, phys_sector_size=4096)]
+        self.check_hybrid(System.query,
+                lambda s: s.diskcount >= 2,
+                included=[two_disk_system],
+                excluded=[one_disk_system])
+
+
 class TestSystemKeyValue(DatabaseTestCase):
 
     def setUp(self):

@@ -642,6 +642,13 @@ the Free Software Foundation; either version 2 of the License, or
         <ref name="bytes_units"/>
         <attribute name="value"/>
       </element>
+      <element name="diskcount">
+        <a:documentation xml:lang="en">
+          Selects systems by total number of disks.
+        </a:documentation>
+        <ref name="op"/>
+        <attribute name="value"/>
+      </element>
       <element name="group">
         <a:documentation xml:lang="en">
           Deprecated.  Use &lt;pool&gt; instead.

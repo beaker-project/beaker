@@ -1115,6 +1115,18 @@ class XmlDiskSpace(ElementWrapper):
             query = getattr(System.diskspace, op)(value)
         return (joins, query)
 
+class XmlDiskCount(ElementWrapper):
+    """
+    Filter systems by total number of disks
+    """
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', int, None)
+        query = None
+        if value:
+            query = getattr(System.diskcount, op)(value)
+        return (joins, query)
+
 class XmlCpu(XmlAnd):
     subclassDict = {
                     'and': XmlAnd,
@@ -1170,6 +1182,7 @@ class XmlHost(XmlAnd):
                     'device': XmlDevice,
                     'disk': XmlDisk,
                     'diskspace': XmlDiskSpace,
+                    'diskcount': XmlDiskCount,
                     'pool': XmlPool,
                     # for backward compatibility
                     'group': XmlPool,

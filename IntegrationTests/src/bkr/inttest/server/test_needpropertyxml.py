@@ -914,6 +914,38 @@ class SystemFilteringTest(DatabaseTestCase):
             """,
             present=[two_disks], absent=[one_disk])
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1216257
+    def test_filtering_by_diskcount(self):
+        one_disk = data_setup.create_system()
+        one_disk.disks[:] = [Disk(size=8000000000, sector_size=512, phys_sector_size=512)]
+        two_disks = data_setup.create_system()
+        two_disks.disks[:] = [Disk(size=500000000000, sector_size=512, phys_sector_size=512),
+                              Disk(size=8000000000, sector_size=4096, phys_sector_size=4096)]
+        three_disks = data_setup.create_system()
+        three_disks.disks[:] = [Disk(size=400000000000, sector_size=4096, phys_sector_size=4096),
+                                Disk(size=9000000000, sector_size=512, phys_sector_size=512),
+                                Disk(size=200000000000, sector_size=512, phys_sector_size=512)]
+        self.check_filter("""
+            <hostRequires>
+                <diskcount op="&lt;" value="2" />
+            </hostRequires>
+            """,
+            present=[one_disk], absent=[two_disks, three_disks])
+
+        self.check_filter("""
+            <hostRequires>
+                <diskcount op="==" value="2" />
+            </hostRequires>
+            """,
+            present=[two_disks], absent=[one_disk, three_disks])
+
+        self.check_filter("""
+            <hostRequires>
+                <diskcount op="&gt;" value="2"/>
+            </hostRequires>
+            """,
+            present=[three_disks], absent=[one_disk, two_disks])
+
     # <group> is deprecated, but we keep the tests to prevent regressive behaviour
     def test_group(self):
         pool_a = data_setup.create_system_pool()

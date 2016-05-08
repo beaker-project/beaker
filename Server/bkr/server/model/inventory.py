@@ -479,6 +479,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             'numa_nodes': None,
             'cpu_model_name': None,
             'disk_space': None,
+            'disk_count': None,
             'queue_size': None,
             'pools': [pool.name for pool in self.pools],
             'disks': self.disks,
@@ -528,6 +529,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             })
         if self.disks:
             data['disk_space'] = sum(disk.size for disk in self.disks)
+            data['disk_count'] = len(self.disks)
         if self.status == SystemStatus.automated:
             data['queue_size'] = Recipe.query\
                 .filter(Recipe.status == TaskStatus.queued)\
@@ -648,6 +650,15 @@ class System(DeclarativeMappedObject, ActivityMixin):
     def diskspace(cls): #pylint: disable=E0213
         return select([func.sum(Disk.size)]).\
                 where(Disk.system_id == cls.id).label('diskspace')
+
+    @hybrid_property
+    def diskcount(self):
+        return len(self.disks)
+
+    @diskcount.expression
+    def diskcount(cls): #pylint: disable=E0213
+        return select([func.count(Disk.id)]).\
+                where(Disk.system_id == cls.id).label('diskcount')
 
     @hybrid_property
     def visible_to_anonymous(self):
