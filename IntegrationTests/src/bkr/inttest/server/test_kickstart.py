@@ -2548,7 +2548,7 @@ done
                 'echo multilib_policy=best >>/etc/yum.conf\n'
                 'yum -y install restraint-rhts\n'
                 'mv /etc/yum.conf{.orig,}\n',
-                recipe.rendered_kickstart.kickstart)
+                recipe.installation.rendered_kickstart.kickstart)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=978640
     def test_oats_api(self):
