@@ -12,7 +12,7 @@
   <% if (!_.isEmpty(removed)) { %>
     <div class="alert">Account was removed
       <time datetime="<%- moment.utc(removed).toISOString() %>" title="<%- removed %>">
-        <%- moment.utc(removed).local().fromNow() %></time>.
+        <%- moment.utc(removed).fromNow() %></time>.
     </div>
   <% } else if (disabled) { %>
     <div class="alert">Account is currently disabled.</div>

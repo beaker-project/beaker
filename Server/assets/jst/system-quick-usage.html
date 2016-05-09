@@ -15,13 +15,13 @@
     <% } %>
     <time datetime="<%- moment.utc(current_reservation.get('start_time')).toISOString() %>"
           title="<%- current_reservation.get('start_time') %>">
-      <%- moment.utc(current_reservation.get('start_time')).local().fromNow() %></time>.
+      <%- moment.utc(current_reservation.get('start_time')).fromNow() %></time>.
   <% } else { %>
     <span class="label">Idle</span> since
     <% var idle_since = previous_reservation ? previous_reservation.get('finish_time') : created_date; %>
     <time datetime="<%- moment.utc(idle_since).toISOString() %>"
           title="<%- idle_since %>">
-      <%- moment.utc(idle_since).local().fromNow() %></time>.
+      <%- moment.utc(idle_since).fromNow() %></time>.
   <% } %>
 </p>
 <% if (queue_size) { %>

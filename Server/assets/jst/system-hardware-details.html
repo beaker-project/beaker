@@ -8,7 +8,7 @@
   Hardware scan was last run
   <time datetime="<%- moment.utc(hardware_scan_date).toISOString() %>"
         title="<%- hardware_scan_date %>">
-    <%- moment.utc(hardware_scan_date).local().fromNow() %></time>.
+    <%- moment.utc(hardware_scan_date).fromNow() %></time>.
 <% } else { %>
    Hardware scan has never been run.
 <% } %>

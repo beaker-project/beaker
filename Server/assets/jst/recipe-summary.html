@@ -3,7 +3,7 @@
   Started
   <time datetime="<%- moment.utc(start_time).toISOString() %>"
         title="<%- start_time %>">
-    <%- moment.utc(start_time).local().fromNow() %></time><% if (is_finished) { %> and
+    <%- moment.utc(start_time).fromNow() %></time><% if (is_finished) { %> and
         finished in
         <time datetime="<%- moment.utc(finish_time).toISOString() %>"
               title="<%- finish_time %>">
@@ -18,13 +18,13 @@
           <%- status %>
           <time datetime="<%- moment.utc(last_result_started).toISOString() %>"
                 title="<%- last_result_started %>">
-            <%- moment.utc(last_result_started).local().fromNow() %></time>
+            <%- moment.utc(last_result_started).fromNow() %></time>
           without starting.
       <% } else if (recipeset.get('queue_time')) { %>
       Queued
       <time datetime="<%- moment.utc(recipeset.get('queue_time')).toISOString() %>"
           title="<%- recipeset.get('queue_time') %>">
-      <%- moment.utc(recipeset.get('queue_time')).local().fromNow() %></time>.<% } %>
+      <%- moment.utc(recipeset.get('queue_time')).fromNow() %></time>.<% } %>
   <% } %>
 </p>
 <p>

@@ -19,7 +19,7 @@
 <% if (is_removed) { %>
 <small>Removed
   <time datetime="<%- moment.utc(removed).toISOString() %>" title="<%- removed %>">
-    <%- moment.utc(removed).local().fromNow() %>
+    <%- moment.utc(removed).fromNow() %>
   </time>
 </small>
 <% } %>

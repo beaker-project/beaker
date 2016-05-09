@@ -10,7 +10,7 @@
   <% } %>
   <time datetime="<%- moment.utc(status_since).toISOString() %>"
         title="<%- status_since %>">
-    <%- moment.utc(status_since).local().fromNow() %></time>.
+    <%- moment.utc(status_since).fromNow() %></time>.
 </p>
 <% if (status_reason) { %>
 <p class="system-status-reason"><%- status_reason %></p>
