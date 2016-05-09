@@ -41,9 +41,9 @@ class Configuration(AdminPage):
 
     value_grid = BeakerDataGrid(fields=[
                     ('Value', lambda x: x.value),
-                    ('Effective from', lambda x: x.valid_from),
+                    ('Effective from', lambda x: x.valid_from, {'datetime': True}),
                     ('Set by', lambda x: x.user),
-                    ('Date set', lambda x: x.modified),
+                    ('Date set', lambda x: x.modified, {'datetime': True}),
                     ('', lambda x: x.valid_from <= datetime.utcnow() and " " or \
                                    make_link(url = 'delete?item=%s&id=%s' % (x.config_item.id, x.id), text = 'Delete')),
                  ])
