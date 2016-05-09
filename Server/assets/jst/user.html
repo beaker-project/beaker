@@ -11,7 +11,8 @@
 <div class="user-status">
   <% if (!_.isEmpty(removed)) { %>
     <div class="alert">Account was removed
-      <time datetime="<%- moment.utc(removed).toISOString() %>" title="<%- removed %>">
+      <time datetime="<%- moment.utc(removed).toISOString() %>"
+            title="<%- moment.utc(removed).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
         <%- moment.utc(removed).fromNow() %></time>.
     </div>
   <% } else if (disabled) { %>

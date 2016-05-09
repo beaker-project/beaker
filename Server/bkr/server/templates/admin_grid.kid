@@ -6,7 +6,7 @@
 <script type='text/javascript' src="${tg.url('/static/javascript/util.js')}" />
 <title>$title</title>
 </head>
-<body>
+<body class="with-localised-datetimes">
 <div class="page-header">
   <h1>$title</h1>
 </div>

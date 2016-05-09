@@ -8,7 +8,7 @@
     <title>Task ${task.name}</title>
 </head>
 
-<body>
+<body class="with-localised-datetimes">
 <div class="page-header">
   <h1>Task ${task.name}</h1>
 </div>

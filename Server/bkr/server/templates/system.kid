@@ -51,7 +51,7 @@
   </script>
  </head>
 
-<body>
+<body class="with-localised-datetimes">
   <div class="page-header"><h1>${value.fqdn}</h1></div>
   <div class="system-quick-info"></div>
   <div class="system-main-content">

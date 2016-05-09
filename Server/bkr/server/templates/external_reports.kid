@@ -5,7 +5,7 @@
 <title>${title}</title>
 <link rel="stylesheet" type="text/css" href="${tg.url('/static/css/external_report.css')}" />
 </head>
-<body>
+<body class="with-localised-datetimes">
 <h2>$title</h2>
 <div xmlns="http://www.w3.org/1999/xhtml" xmlns:py="http://purl.org/kid/ns#">
   <div py:for="report in value" class='external-report'>

@@ -7,7 +7,7 @@
 
     <title>Executed Tasks</title>
 </head>
-<body>
+<body class="with-localised-datetimes">
 <div class="page-header">
   <h1>Executed Tasks</h1>
 </div>

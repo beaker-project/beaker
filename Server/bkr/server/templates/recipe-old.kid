@@ -8,7 +8,7 @@
     <title>Recipe ${recipe.t_id} - ${recipe.recipeset.job.whiteboard}/${recipe.whiteboard} | ${recipe.status} | ${recipe.result}</title>
 </head>
 
-<body>
+<body class="with-localised-datetimes">
 <h1><a href="${tg.url('/jobs/%s' % recipe.recipeset.job.id)}">Job: ${recipe.recipeset.job.t_id}</a></h1>
 <p py:content="recipe_widget(recipe=recipe)">Recipe goes here</p>
 </body>

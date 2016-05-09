@@ -8,7 +8,7 @@
  </head>
 
 
-<body>
+<body class="with-localised-datetimes">
 <div class="page-header">
   <h1>${value.name}</h1>
 </div>

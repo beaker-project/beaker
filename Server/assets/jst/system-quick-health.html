@@ -9,7 +9,7 @@
     <span class="label"><%- status %></span> since
   <% } %>
   <time datetime="<%- moment.utc(status_since).toISOString() %>"
-        title="<%- status_since %>">
+        title="<%- moment.utc(status_since).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
     <%- moment.utc(status_since).fromNow() %></time>.
 </p>
 <% if (status_reason) { %>

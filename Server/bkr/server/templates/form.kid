@@ -9,7 +9,7 @@
 </head>
 
 
-<body>
+<body class="with-localised-datetimes">
   <div class="page-header">
     <h1>${value_of('title', 'Form')}</h1>
   </div>

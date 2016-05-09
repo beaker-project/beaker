@@ -5,7 +5,7 @@
 <meta content="text/html; charset=utf-8" http-equiv="Content-Type" py:replace="''"/>
 <title>$title</title>
 </head>
-<body>
+<body class="with-localised-datetimes">
 <div class="page-header">
   <h1>$title</h1>
 </div>

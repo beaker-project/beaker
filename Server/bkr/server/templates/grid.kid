@@ -6,7 +6,7 @@
 <title>$title</title>
 <link py:if="defined('atom_url')" rel="feed" title="Atom feed" href="${atom_url}" />
 </head>
-<body>
+<body class="with-localised-datetimes">
 <div class="page-header">
   <h1>$title</h1>
 </div>

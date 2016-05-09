@@ -8,7 +8,7 @@
     <title>${title}</title>
 </head>
 
-<body>
+<body class="with-localised-datetimes">
   <div class="page-header">
     <h1>${title} <small>${subtitle}</small></h1>
   </div>

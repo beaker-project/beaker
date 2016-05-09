@@ -77,7 +77,7 @@
     </script>
     <title>Job ${job.t_id} - ${job.whiteboard} | ${job.status} | ${job.result}</title>
 </head>
-<body>
+<body class="with-localised-datetimes">
  <a data-toggle="collapse" href="#job_history">Toggle Job history</a>
  <div style='padding-bottom:0.25em' id="job_history" class="collapse">
    ${job_history_grid.display(job_history)}

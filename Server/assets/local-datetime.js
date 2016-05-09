@@ -4,6 +4,17 @@
 // the Free Software Foundation; either version 2 of the License, or
 // (at your option) any later version.
 
+/**
+ * Decorates all jQuery DOM manipulation methods in order to convert timestamps 
+ * from UTC to local time.
+ *
+ * Because this is so expensive and hacky, this is not used on any new pages. 
+ * Templates rendered client-side should ensure that they format timestamps in 
+ * the user's local time explicitly. This script remains enabled on older 
+ * TurboGears pages where the template is rendered server side and there is no 
+ * straightforward way to localize timestamps.
+ */
+
 (function ($) {
     $.fn.localDatetime = function () {
         this.each(function (i, elem) {
@@ -37,18 +48,22 @@
         $('.datetime').localDatetime();
         $('time').localDatetime();
     };
-    $(document).ready(localise);
-    // decorate all jQuery DOM manipulation methods to
-    // re-do datetime localisation
-    $.each(['append', 'prepend', 'after', 'before', 'wrap', 'attr',
-            'removeAttr', 'addClass', 'removeClass', 'toggleClass',
-            'empty', 'remove', 'html'],
-        function (i, method) {
-            var decorated = $.fn[method];
-            $.fn[method] = function () {
-                var retval = decorated.apply(this, arguments);
-                localise();
-                return retval;
-            };
-        });
+    $(document).ready(function () {
+        if ($(document.body).is('.with-localised-datetimes')) {
+            localise();
+            // decorate all jQuery DOM manipulation methods to
+            // re-do datetime localisation
+            $.each(['append', 'prepend', 'after', 'before', 'wrap', 'attr',
+                    'removeAttr', 'addClass', 'removeClass', 'toggleClass',
+                    'empty', 'remove', 'html'],
+                function (i, method) {
+                    var decorated = $.fn[method];
+                    $.fn[method] = function () {
+                        var retval = decorated.apply(this, arguments);
+                        localise();
+                        return retval;
+                    };
+                });
+        }
+    });
 })(jQuery);

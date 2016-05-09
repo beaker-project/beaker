@@ -6,7 +6,7 @@
     <title>${value}</title>
     <script src="${tg.url('/static/javascript/magic_forms.js')}" type='text/javascript'/>
 </head>
-<body>
+<body class="with-localised-datetimes">
 <div class="page-header">
   <h1>${value}</h1>
 </div>
