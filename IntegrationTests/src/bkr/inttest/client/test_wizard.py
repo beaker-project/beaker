@@ -143,3 +143,20 @@ class TestWizard(BaseWizardTestCase):
             os.path.join(self.tempdir, 'Sanity', 'test-it-works', 'runtest.sh'), 'r').readlines()
         self.assertIn('PACKAGES=${PACKAGES:-curl wget}\n', runtest_contents)
         self.assertIn('REQUIRES=${REQUIRES:-httpd nginx wget}\n', runtest_contents)
+
+    def test_wizard_creates_test_in_current_directory(self):
+        out = run_wizard(['beaker-wizard',
+                          '--current-directory',
+                          'wget/Sanity/http/test-it-works'], cwd=self.tempdir)
+
+        self.assertIn('File ./runtest.sh written', out)
+        self.assertIn('File ./Makefile written', out)
+        self.assertIn('File ./PURPOSE written', out)
+        self.assertIn('Package : wget', out)
+        self.assertIn('Test type : Sanity', out)
+        self.assertIn('Relative path : http', out)
+        self.assertIn('Test name : test-it-works', out)
+
+        runtest_contents = open(
+            os.path.join(self.tempdir, 'runtest.sh'), 'r').readlines()
+        self.assertIn('PACKAGE="wget"\n', runtest_contents)

@@ -918,6 +918,11 @@ class Options:
             dest="git",
             action="store_true",
             help="add created files to the git repository")
+        groupCreate.add_option("-C", "--current-directory",
+            dest="use_current_dir",
+            action="store_true",
+            default=False,
+            help="create test in current directory")
 
         # setup default to correctly display in help
         defaultEverything = defaultCommon = defaultNothing = ""
@@ -2858,10 +2863,13 @@ class Test(SingleChoice):
 
     def relativePath(self):
         """ Return relative path from package directory"""
-        return "%s%s/%s" % (
-                self.type.value(),
-                self.path.value(),
-                self.testname.value())
+        path = "%s%s/%s" % (
+            self.type.value(),
+            self.path.value(),
+            self.testname.value())
+        if self.options.opt.use_current_dir:
+            path = "."
+        return path
 
     def fullPath(self):
         """ Return complete test path """
