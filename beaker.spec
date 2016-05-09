@@ -101,7 +101,6 @@ BuildRequires:  python-novaclient
 BuildRequires:  python-glanceclient
 BuildRequires:  ipxe-bootimgs
 BuildRequires:  syslinux
-BuildRequires:  dosfstools
 BuildRequires:  mtools
 BuildRequires:  python-itsdangerous
 BuildRequires:  python-decorator
@@ -195,7 +194,6 @@ Requires:       python-novaclient
 Requires:       python-glanceclient
 Requires:       ipxe-bootimgs
 Requires:       syslinux
-Requires:       dosfstools
 Requires:       mtools
 Requires:       python-itsdangerous
 Requires:       python-decorator

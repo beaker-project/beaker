@@ -41,8 +41,7 @@ def _image_name():
 def generate_image():
     f = tempfile.NamedTemporaryFile(suffix='.beaker-ipxe-image')
     log.debug('Generating image in %s', f.name)
-    f.truncate(4 * 1024 * 1024) # 4MB
-    subprocess.check_call(['mkdosfs', f.name], stdout=open('/dev/null', 'a'))
+    subprocess.check_call(['mformat', '-i', f.name, '-C', '-t', '4', '-h', '64', '-n', '32', '::'])
     subprocess.check_call(['syslinux', '--install', f.name])
     subprocess.check_call(['mcopy', '-i', f.name,
             '/usr/share/ipxe/ipxe.lkrn', '::ipxe.lkrn'])
