@@ -7,17 +7,35 @@
 ;(function () {
 
 window.CommentsLink = Backbone.View.extend({
-    template: JST['comments-link'],
+    // This view is using DOM methods instead of a JST template for speed, 
+    // since it's in the hot path for task results.
     initialize: function () {
         this.listenTo(this.model.get('comments'), 'reset add remove', this.render);
         this.render();
     },
     render: function () {
-        this.$el.html(this.template(this.model.attributes));
-        this.$('.comments-link').beaker_popover({
-            model: this.model,
-            view_type: CommentsPopover,
-        });
+        this.$el.empty();
+        if (this.model.get('can_comment') || !this.model.get('comments').isEmpty()) {
+            var comments = this.model.get('comments');
+            var comments_link = document.createElement('a');
+            comments_link.href = '#';
+            comments_link.className = 'comments-link';
+            if (comments.size()) {
+                comments_link.appendChild(document.createTextNode(comments.size().toString()));
+                comments_link.appendChild(document.createTextNode(' '));
+            }
+            var comments_icon = document.createElement('i');
+            comments_icon.className = 'fa fa-comment-o';
+            var comments_icon_arialabel = document.createAttribute('aria-label');
+            comments_icon_arialabel.value = 'comments';
+            comments_icon.setAttributeNode(comments_icon_arialabel);
+            comments_link.appendChild(comments_icon);
+            this.el.appendChild(comments_link);
+            $(comments_link).beaker_popover({
+                model: this.model,
+                view_type: CommentsPopover,
+            });
+        }
         return this;
     },
 });
