@@ -35,18 +35,19 @@ window.RecipeTasksView = Backbone.View.extend({
     render: function () {
         var view = this;
         var model= this.model;
-        this.$el.empty().append(new RecipeTasksSummary({model: model}).render().el);
-        _.each(model.get('tasks'), function (task) {
-            var recipe_task = $('<div/>', {"class": "recipe-task",
-                    "id": "task" + task.id, "data-task-id": task.id});
-            var task_summary = new RecipeTaskSummary({model: task,
-                recipe_start_time: model.get('start_time')}).render().el;
-            var task_details = new RecipeTaskDetails({model: task,
-                recipe_start_time: model.get('start_time')}).render().el;
-            recipe_task.append(task_summary).append(task_details);
-            recipe_task.find('.collapse').on('shown hidden', function () { view.trigger('expand:task'); });
-            view.$el.append(recipe_task);
-        });
+        this.$el.empty()
+            .append(new RecipeTasksSummary({model: model}).render().el)
+            .append(_.map(model.get('tasks'), function (task) {
+                var recipe_task = $('<div/>', {"class": "recipe-task",
+                        "id": "task" + task.id, "data-task-id": task.id});
+                var task_summary = new RecipeTaskSummary({model: task,
+                    recipe_start_time: model.get('start_time')}).render().el;
+                var task_details = new RecipeTaskDetails({model: task,
+                    recipe_start_time: model.get('start_time')}).render().el;
+                recipe_task.append(task_summary).append(task_details);
+                recipe_task.find('.collapse').on('shown hidden', function () { view.trigger('expand:task'); });
+                return recipe_task;
+            }));
     }
 });
 
@@ -182,10 +183,10 @@ var RecipeTaskResults = Backbone.View.extend({
         } else {
             var $el = this.$el;
             var recipe_start_time = this.recipe_start_time;
-            _.each(this.model.get('results'), function (result) {
-                $el.append(new RecipeTaskResultView({model: result,
-                    recipe_start_time: recipe_start_time}).render().el);
-            });
+            this.$el.append(_.map(this.model.get('results'), function (result) {
+                return new RecipeTaskResultView({model: result,
+                    recipe_start_time: recipe_start_time}).render().el;
+            }));
         }
         return this;
     }
