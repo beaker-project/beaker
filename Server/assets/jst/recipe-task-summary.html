@@ -6,8 +6,8 @@
 </div>
 <div class="task-start-time">
   <% if (start_time) { %>
-    <time datetime="<%- moment.utc(start_time).toISOString() %>"
-          title="<%- moment.utc(start_time).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
+    <time datetime="<%- start_time.toISOString() %>"
+          title="<%- start_time.local().format('YYYY-MM-DD HH:mm:ss Z') %>">
           <%- start_time_diff %>
     </time>
   <% } %>

@@ -67,6 +67,10 @@ window.Job = Backbone.Model.extend({
                 return recipeset;
             });
         }
+        if (data['submitted_time']) {
+            var parsed = moment.utc(data['submitted_time']);
+            data['submitted_time'] = parsed.isSame(this.get('submitted_time')) ? this.get('submitted_time') : parsed;
+        }
         return data;
     },
     all_recipes: function () {
@@ -130,6 +134,10 @@ window.RecipeSet = Backbone.Model.extend({
             var comments = this.get('comments') || new RecipeSetComments([], {recipeset: this});
             comments.reset(data['comments'], {parse: true});
             data['comments'] = comments;
+        }
+        if (data['queue_time']) {
+            var parsed = moment.utc(data['queue_time']);
+            data['queue_time'] = parsed.isSame(this.get('queue_time')) ? this.get('queue_time') : parsed;
         }
         return data;
     },
@@ -257,6 +265,14 @@ window.Recipe = Backbone.Model.extend({
                     return new Recipe(recipedata, {parse: true});
                 });
         }
+        if (data['start_time']) {
+            var parsed = moment.utc(data['start_time']);
+            data['start_time'] = parsed.isSame(this.get('start_time')) ? this.get('start_time') : parsed;
+        }
+        if (data['finish_time']) {
+            var parsed = moment.utc(data['finish_time']);
+            data['finish_time'] = parsed.isSame(this.get('finish_time')) ? this.get('finish_time') : parsed;
+        }
         return data;
     },
     _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>recipes/<%- id %>"><%- t_id %></a>'),
@@ -321,6 +337,14 @@ window.RecipeTask = Backbone.Model.extend({
             comments.reset(data['comments'], {parse: true});
             data['comments'] = comments;
         }
+        if (data['start_time']) {
+            var parsed = moment.utc(data['start_time']);
+            data['start_time'] = parsed.isSame(this.get('start_time')) ? this.get('start_time') : parsed;
+        }
+        if (data['finish_time']) {
+            var parsed = moment.utc(data['finish_time']);
+            data['finish_time'] = parsed.isSame(this.get('finish_time')) ? this.get('finish_time') : parsed;
+        }
         return data;
     },
 });
@@ -337,6 +361,10 @@ window.RecipeTaskResult = Backbone.Model.extend({
                 {recipe_task_result: this});
             comments.reset(data['comments'], {parse: true});
             data['comments'] = comments;
+        }
+        if (data['start_time']) {
+            var parsed = moment.utc(data['start_time']);
+            data['start_time'] = parsed.isSame(this.get('start_time')) ? this.get('start_time') : parsed;
         }
         return data;
     },

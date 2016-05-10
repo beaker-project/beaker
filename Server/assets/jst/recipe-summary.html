@@ -1,13 +1,13 @@
 <p>
   <% if (start_time) { %>
   Started
-  <time datetime="<%- moment.utc(start_time).toISOString() %>"
-        title="<%- moment.utc(start_time).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
-    <%- moment.utc(start_time).fromNow() %></time><% if (is_finished) { %> and
+  <time datetime="<%- start_time.toISOString() %>"
+        title="<%- start_time.local().format('YYYY-MM-DD HH:mm:ss Z') %>">
+    <%- start_time.fromNow() %></time><% if (is_finished) { %> and
         finished in
-        <time datetime="<%- moment.utc(finish_time).toISOString() %>"
-              title="<%- moment.utc(finish_time).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
-        <%- moment.utc(moment(finish_time,"DD/MM/YYYY HH:mm:ss").diff(moment(start_time,"DD/MM/YYYY HH:mm:ss"))).format("HH:mm:ss")%></time><% } %>.
+        <time datetime="<%- finish_time.toISOString() %>"
+              title="<%- finish_time.local().format('YYYY-MM-DD HH:mm:ss Z') %>">
+        <%- moment.duration(finish_time.diff(start_time)).format("HH:mm:ss") %></time><% } %>.
   <% } else { %>
       <%
         // If a recipe is aborted or cancelled and was never started,
@@ -22,9 +22,9 @@
           without starting.
       <% } else if (recipeset.get('queue_time')) { %>
       Queued
-      <time datetime="<%- moment.utc(recipeset.get('queue_time')).toISOString() %>"
-            title="<%- moment.utc(recipeset.get('queue_time')).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
-      <%- moment.utc(recipeset.get('queue_time')).fromNow() %></time>.<% } %>
+      <time datetime="<%- recipeset.get('queue_time').toISOString() %>"
+            title="<%- recipeset.get('queue_time').local().format('YYYY-MM-DD HH:mm:ss Z') %>">
+      <%- recipeset.get('queue_time').fromNow() %></time>.<% } %>
   <% } %>
 </p>
 <p>

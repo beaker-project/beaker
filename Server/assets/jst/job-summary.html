@@ -1,8 +1,8 @@
 <p>
   Submitted 
-  <time datetime="<%- moment.utc(submitted_time).toISOString() %>"
-        title="<%- moment.utc(submitted_time).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
-    <%- moment.utc(submitted_time).fromNow() %></time><% if (submitter.get('user_name') != owner.get('user_name')) { %> by
+  <time datetime="<%- submitted_time.toISOString() %>"
+        title="<%- submitted_time.local().format('YYYY-MM-DD HH:mm:ss Z') %>">
+    <%- submitted_time.fromNow() %></time><% if (submitter.get('user_name') != owner.get('user_name')) { %> by
     <%= submitter.toHTML() %><% } %>.
   <a href="#activity" class="activity">(Job activity)</a>
 </p>

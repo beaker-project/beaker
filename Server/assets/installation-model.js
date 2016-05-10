@@ -8,6 +8,14 @@
 
 window.Installation = Backbone.Model.extend({
     parse: function (data) {
+        var dateattrs = ['rebooted', 'install_started', 'install_finished', 'postinstall_finished'];
+        var model = this;
+        _.each(dateattrs, function (dateattr) {
+            if (data[dateattr]) {
+                var parsed = moment.utc(data[dateattr]);
+                data[dateattr] = parsed.isSame(model.get(dateattr)) ? model.get(dateattr) : parsed;
+            }
+        });
         if (!_.isEmpty(data['commands'])) {
             var commands = this.get('commands') || [];
             data['commands'] = _.map(data['commands'], function (commanddata, i) {

@@ -56,6 +56,10 @@ window.SystemAccessPolicy = Backbone.Model.extend({
 window.Command = Backbone.Model.extend({
     parse: function (data) {
         data['user'] = !_.isEmpty(data['user']) ? new User(data['user']) : null;
+        if (data['submitted']) {
+            var parsed = moment.utc(data['submitted']);
+            data['submitted'] = parsed.isSame(this.get('submitted')) ? this.get('submitted') : parsed;
+        }
         return data;
     },
 });

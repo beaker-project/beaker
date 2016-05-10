@@ -2,8 +2,8 @@
     <abbr title="Recipe Task Result">TR</abbr>:<%- id %>
 </div>
 <div class="task-result-start-time">
-    <time datetime="<%- moment.utc(start_time).toISOString() %>"
-          title="<%- moment.utc(start_time).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
+    <time datetime="<%- start_time.toISOString() %>"
+          title="<%- start_time.local().format('YYYY-MM-DD HH:mm:ss Z') %>">
           <%- start_time_diff %>
     </time>
 </div>

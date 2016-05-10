@@ -6,8 +6,8 @@
                 // In future it should be changed to configure_netboot.update when
                 // https://bugzilla.redhat.com/show_bug.cgi?id=1318524 is fixed.
                 %>
-                <time datetime="<%- moment.utc(configure_netboot.get('submitted')).toISOString() %>"
-                      title="<%- moment.utc(configure_netboot.get('submitted')).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
+                <time datetime="<%- configure_netboot.get('submitted').toISOString() %>"
+                      title="<%- configure_netboot.get('submitted').local().format('YYYY-MM-DD HH:mm:ss Z') %>">
                      <%= get_time_difference(configure_netboot.get('submitted'), start_time) %>
                 </time>
              </td>
@@ -20,8 +20,8 @@
     <% if (rebooted) { %>
         <tr>
             <td>
-                 <time datetime="<%- moment.utc(rebooted).toISOString() %>"
-                       title="<%- moment.utc(rebooted).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
+                 <time datetime="<%- rebooted.toISOString() %>"
+                       title="<%- rebooted.local().format('YYYY-MM-DD HH:mm:ss Z') %>">
                      <%= get_time_difference(rebooted, start_time) %>
                  </time>
             </td>
@@ -34,8 +34,8 @@
     <% if (install_started) { %>
         <tr>
             <td>
-                <time datetime="<%- moment.utc(install_started).toISOString() %>"
-                      title="<%- moment.utc(install_started).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
+                <time datetime="<%- install_started.toISOString() %>"
+                      title="<%- install_started.local().format('YYYY-MM-DD HH:mm:ss Z') %>">
                      <%= get_time_difference(install_started, start_time) %>
                 </time>
             </td>
@@ -47,8 +47,8 @@
     <% if (install_finished) { %>
         <tr>
             <td>
-                <time datetime="<%- moment.utc(install_finished).toISOString() %>"
-                      title="<%- moment.utc(install_finished).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
+                <time datetime="<%- install_finished.toISOString() %>"
+                      title="<%- install_finished.local().format('YYYY-MM-DD HH:mm:ss Z') %>">
                      <%= get_time_difference(install_finished, start_time) %>
                 </time>
             </td>
@@ -60,8 +60,8 @@
     <% if (postinstall_finished) { %>
         <tr>
             <td>
-                <time datetime="<%- moment.utc(postinstall_finished).toISOString() %>"
-                      title="<%- moment.utc(postinstall_finished).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
+                <time datetime="<%- postinstall_finished.toISOString() %>"
+                      title="<%- postinstall_finished.local().format('YYYY-MM-DD HH:mm:ss Z') %>">
                      <%= get_time_difference(postinstall_finished, start_time) %>
                 </time>
             </td>

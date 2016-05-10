@@ -73,7 +73,9 @@ window.BackgridDateTimeCell = Backgrid.Cell.extend({
         fromRaw: function (value) {
             if (!value)
                 return '';
-            return moment.utc(value).local().format('YYYY-MM-DD HH:mm:ss Z');
+            if (!moment.isMoment(value))
+                value = moment.utc(value);
+            return value.local().format('YYYY-MM-DD HH:mm:ss Z');
         },
         toRaw: function (value) {
             return value;
