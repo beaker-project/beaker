@@ -1,5 +1,8 @@
+Updating Your Data Mining Queries for Beaker 23
+-----------------------------------------------
+
 New ``installation`` database table
-===================================
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This release adds a new database table, ``installation``, which records each 
 new installation of a distro on a system. The database upgrade process will 
