@@ -90,6 +90,7 @@ def _create_env(source_dir, output_dir, **kwargs):
             'pools.js',
             'query-builder.js',
             'reserve-workflow.js',
+            'installation-model.js',
             'scheduler-model.js',
             'access-policy.js',
             'access-policy-model.js',

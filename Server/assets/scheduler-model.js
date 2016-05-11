@@ -217,6 +217,15 @@ window.Recipe = Backbone.Model.extend({
                 data['resource'] = new RecipeResource(data['resource'], {parse: true});
             }
         }
+        if (!_.isEmpty(data['installation'])) {
+            if (this.get('installation')) {
+                var installation = this.get('installation') || new Installation();
+                installation.set(installation.parse(data['installation']));
+                data['installation'] = installation;
+            } else {
+                data['installation'] = new Installation(data['installation'], {parse: true});
+            }
+        }
         if (!_.isEmpty(data['tasks'])) {
             var tasks = this.get('tasks') || [];
             data['tasks'] = _.map(data['tasks'], function (taskdata, i) {

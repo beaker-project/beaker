@@ -1,77 +1,73 @@
-<% if (!_.isEmpty(installation)) { %>
-    <table class="table">
-        <% if (configure_netboot) { %>
-            <tr>
-                <td>
-                    <%
-                    // In future it should be changed to configure_netboot.update when
-                    // https://bugzilla.redhat.com/show_bug.cgi?id=1318524 is fixed.
-                    %>
-                    <time datetime="<%- moment.utc(configure_netboot.submitted).toISOString() %>"
-                          title="<%- moment.utc(configure_netboot.submitted).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
-                         <%= get_time_difference(configure_netboot.submitted, start_time) %>
-                    </time>
-                 </td>
-                 <td>
-                     Netboot configured
-                     <div class="recipe-installation-kernel-options"><code><%- installation.kernel_options %></code></div>
-                 </td>
-             </tr>
-        <% } %>
-        <% if (installation.rebooted) { %>
-            <tr>
-                <td>
-                     <time datetime="<%- moment.utc(installation.rebooted).toISOString() %>"
-                           title="<%- moment.utc(installation.rebooted).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
-                         <%= get_time_difference(installation.rebooted, start_time) %>
-                     </time>
-                </td>
-                <td>
-                    System rebooted
-                </td>
-                <td>
-            </tr>
-        <% } %>
-        <% if (installation.install_started) { %>
-            <tr>
-                <td>
-                    <time datetime="<%- moment.utc(installation.install_started).toISOString() %>"
-                          title="<%- moment.utc(installation.install_started).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
-                         <%= get_time_difference(installation.install_started, start_time) %>
-                    </time>
-                </td>
-                <td>
-                    Installation started
-                </td>
-            </tr>
-        <% } %>
-        <% if (installation.install_finished) { %>
-            <tr>
-                <td>
-                    <time datetime="<%- moment.utc(installation.install_finished).toISOString() %>"
-                          title="<%- moment.utc(installation.install_finished).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
-                         <%= get_time_difference(installation.install_finished, start_time) %>
-                    </time>
-                </td>
-                <td>
-                    Installation completed
-                </td>
-            </tr>
-        <% } %>
-        <% if (installation.postinstall_finished) { %>
-            <tr>
-                <td>
-                    <time datetime="<%- moment.utc(installation.postinstall_finished).toISOString() %>"
-                          title="<%- moment.utc(installation.postinstall_finished).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
-                         <%= get_time_difference(installation.postinstall_finished, start_time) %>
-                    </time>
-                </td>
-                <td>
-                    Post-install tasks completed
-                </td>
-            </tr>
-        <% } %>
-    </table>
-<% } else { %>
-    No installation progress reported.
-<% } %>
+<table class="table">
+    <% if (configure_netboot) { %>
+        <tr>
+            <td>
+                <%
+                // In future it should be changed to configure_netboot.update when
+                // https://bugzilla.redhat.com/show_bug.cgi?id=1318524 is fixed.
+                %>
+                <time datetime="<%- moment.utc(configure_netboot.get('submitted')).toISOString() %>"
+                      title="<%- moment.utc(configure_netboot.get('submitted')).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
+                     <%= get_time_difference(configure_netboot.get('submitted'), start_time) %>
+                </time>
+             </td>
+             <td>
+                 Netboot configured
+                 <div class="recipe-installation-kernel-options"><code><%- kernel_options %></code></div>
+             </td>
+         </tr>
+    <% } %>
+    <% if (rebooted) { %>
+        <tr>
+            <td>
+                 <time datetime="<%- moment.utc(rebooted).toISOString() %>"
+                       title="<%- moment.utc(rebooted).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
+                     <%= get_time_difference(rebooted, start_time) %>
+                 </time>
+            </td>
+            <td>
+                System rebooted
+            </td>
+            <td>
+        </tr>
+    <% } %>
+    <% if (install_started) { %>
+        <tr>
+            <td>
+                <time datetime="<%- moment.utc(install_started).toISOString() %>"
+                      title="<%- moment.utc(install_started).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
+                     <%= get_time_difference(install_started, start_time) %>
+                </time>
+            </td>
+            <td>
+                Installation started
+            </td>
+        </tr>
+    <% } %>
+    <% if (install_finished) { %>
+        <tr>
+            <td>
+                <time datetime="<%- moment.utc(install_finished).toISOString() %>"
+                      title="<%- moment.utc(install_finished).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
+                     <%= get_time_difference(install_finished, start_time) %>
+                </time>
+            </td>
+            <td>
+                Installation completed
+            </td>
+        </tr>
+    <% } %>
+    <% if (postinstall_finished) { %>
+        <tr>
+            <td>
+                <time datetime="<%- moment.utc(postinstall_finished).toISOString() %>"
+                      title="<%- moment.utc(postinstall_finished).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
+                     <%= get_time_difference(postinstall_finished, start_time) %>
+                </time>
+            </td>
+            <td>
+                Post-install tasks completed
+            </td>
+        </tr>
+    <% } %>
+</table>

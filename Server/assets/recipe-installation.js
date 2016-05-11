@@ -79,13 +79,21 @@ var RecipeInstallationProgress = Backbone.View.extend({
     },
     render: function () {
         var installation = this.model.get('installation');
-        var commands = installation ? installation.commands : [];
-        var configure_netboot = _.findWhere(commands, {action: 'configure_netboot'});
-        this.$el.html(this.template(_.extend({},
-                this.model.attributes,
-                {configure_netboot: configure_netboot,
-                 get_time_difference: get_time_difference})));
-        this.linkify_ks();
+        // If the recipe is still queued there will be no associated 
+        // installation, so we have to handle the possibility that it's null 
+        // here.
+        if (_.isEmpty(installation)) {
+            this.$el.text('No installation progress reported.');
+        } else {
+            var configure_netboot = _.find(installation.get('commands'),
+                    function (command) { return command.get('action') == 'configure_netboot'; });
+            this.$el.html(this.template(_.extend({},
+                    installation.attributes,
+                    {configure_netboot: configure_netboot,
+                     start_time: this.model.get('start_time'),
+                     get_time_difference: get_time_difference})));
+            this.linkify_ks();
+        }
         return this;
     },
     linkify_ks: function () {

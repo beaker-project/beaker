@@ -1,10 +1,10 @@
 <div class="recipe-installation-summary">
     <div>
-        <% if (installation && installation.install_finished) { %>
+        <% if (installation && installation.get('install_finished')) { %>
             Installation of <%= distro_tree.toHTML() %> finished.
         <% } else if (status == 'Installing') { %>
             Installing <%= distro_tree.toHTML() %>.
-        <% } else if (installation && installation.rebooted && status == 'Aborted') { %>
+        <% } else if (installation && installation.get('rebooted') && status == 'Aborted') { %>
             Installation of <%= distro_tree.toHTML() %> aborted.
         <% } else { %>
             Installation of <%= distro_tree.toHTML() %> not started.
@@ -14,7 +14,7 @@
         <% /* installation logs go here */ %>
     </div>
     <div class="recipe-installation-status">
-        <% if (installation && installation.install_finished) { %>
+        <% if (installation && installation.get('install_finished')) { %>
             <span class="label label-success">Completed</span>
         <% } else if (status == 'Installing') { %>
             Installing
