@@ -71,6 +71,7 @@ var CommentsList = Backbone.View.extend({
 var CommentForm = Backbone.View.extend({
     events: {
         'submit form.new-comment': 'add_comment',
+        'keydown': 'keydown',
     },
     template: JST['comment-form'],
     className: 'comment-form',
@@ -80,6 +81,13 @@ var CommentForm = Backbone.View.extend({
     render: function () {
         this.$el.html(this.template(this.model.attributes));
         return this;
+    },
+    keydown: function (evt) {
+        if ((evt.keyCode == 10 || evt.keyCode == 13) && evt.ctrlKey) {
+            // submit the form on Ctrl-Enter
+            evt.preventDefault();
+            this.$('form').submit();
+        }
     },
     add_comment: function (evt) {
         evt.preventDefault();

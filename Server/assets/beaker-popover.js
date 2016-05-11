@@ -32,6 +32,9 @@ var BeakerPopover = function(element, options) {
         // Don't try to navigate to href="#" or whatever on links
         evt.preventDefault();
         popover.show(evt);
+        // If the popover content has an input or textarea, focus it
+        // so that the user can start typing straight away.
+        popover.tip().find('input,textarea:first').focus();
     });
 };
 
