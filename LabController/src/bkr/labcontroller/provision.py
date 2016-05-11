@@ -15,6 +15,7 @@ import daemon
 import datetime
 import pkg_resources
 import subprocess
+import xmlrpclib
 from daemon import pidfile
 from optparse import OptionParser
 import gevent, gevent.hub, gevent.socket, gevent.event, gevent.monkey
@@ -246,6 +247,14 @@ def main_loop(poller=None, conf=None):
     while True:
         try:
             poller.poll()
+        except xmlrpclib.Fault, fault:
+            if 'Anonymous access denied' in fault.faultString:
+                # Trigger a reauthentication if the server is down longer than visit.timeout
+                # which defaults to 2 weeks. Then beaker-provision will recover
+                # once the server is back.
+                poller.hub.auth.renew_session()
+            else:
+                raise
         except:
             logger.exception('Failed to poll for queued commands')
         if shutting_down.wait(timeout=conf.get('SLEEP_TIME', 20)):
