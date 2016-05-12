@@ -6,7 +6,7 @@
     <h1>
         <span class="recipe-id<% if (is_deleted) { %> deleted-recipe-id<% } %>"><abbr title="Recipe">R</abbr>:<%- id %></span>
         <small>
-          1 of <%- recipeset.get('job').get('recipe_count') %> recipes in <%= recipeset.get('job').toHTML()%>
+          <%- position_in_job %> of <%- recipeset.get('job').get('recipe_count') %> recipes in <%= recipeset.get('job').toHTML()%>
         </small>
         <div class="btn-group recipe-btn-group">
         <% if (can_edit) { %>

@@ -2783,6 +2783,23 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         return _roles_to_xml(self)
 
     @property
+    def position_in_job(self):
+        """
+        Returns an ordinal indicating the position of this recipe in the job. 
+        The first recipe is 1, the second recipe is 2, etc.
+        """
+        # Using a db query for this in order to avoid loading all recipes in 
+        # the job.
+        # Note that recipe sets/recipes have no explicitly persisted ordering, 
+        # it's implicit based on insertion order which is then reflected in the 
+        # id ordering. So the ordinal position of this recipe is really the 
+        # number of recipes in the job with a lower id than this one, plus 1.
+        recipes_before_self = Recipe.query.join(RecipeSet)\
+                .filter(RecipeSet.job == self.recipeset.job)\
+                .filter(Recipe.id < self.id)
+        return recipes_before_self.with_entities(func.count(Recipe.id)).scalar() + 1
+
+    @property
     def first_task(self):
         return self.dyn_tasks.order_by(RecipeTask.id).first()
 
@@ -2856,6 +2873,7 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             'logs': self.logs,
             'possible_systems': [{'fqdn': system.fqdn} for system in self.systems],
             'clone_href': self.clone_link(),
+            'position_in_job': self.position_in_job,
             # for backwards compatibility only:
             'recipe_id': self.id,
             'job_id': self.recipeset.job.t_id,
