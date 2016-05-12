@@ -7,6 +7,10 @@
 ;(function () {
 
 window.Job = Backbone.Model.extend({
+    url: function () {
+        // XXX this should not be hardcoded here...
+        return window.beaker_url_prefix + 'jobs/' + this.get('id');
+    },
     initialize: function (attributes, options) {
         options = options || {};
         if (options.url)
