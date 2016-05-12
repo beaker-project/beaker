@@ -7,7 +7,7 @@
         finished in
         <time datetime="<%- finish_time.toISOString() %>"
               title="<%- finish_time.local().format('YYYY-MM-DD HH:mm:ss Z') %>">
-        <%- moment.duration(finish_time.diff(start_time)).format("HH:mm:ss") %></time><% } %>.
+        <%- moment.duration(finish_time.diff(start_time)).format("HH:mm:ss", {trim: false}) %></time><% } %>.
   <% } else { %>
       <%
         // If a recipe is aborted or cancelled and was never started,
