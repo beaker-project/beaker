@@ -198,6 +198,15 @@ window.Recipe = Backbone.Model.extend({
                 data['recipeset'] = new RecipeSet(data['recipeset'], {parse: true});
             }
         }
+        if (!_.isEmpty(data['hostrecipe'])) {
+            if (this.get('hostrecipe')) {
+                var hostrecipe = this.get('hostrecipe');
+                hostrecipe.set(hostrecipe.parse(data['hostrecipe']));
+                data['hostrecipe'] = hostrecipe;
+            } else {
+                data['hostrecipe'] = new Recipe(data['hostrecipe'], {parse: true});
+            }
+        }
         if (!_.isEmpty(data['guest_recipes'])) {
             var recipes = this.get('guest_recipes') || [];
             data['guest_recipes'] = _.map(data['guest_recipes'], function (recipedata, i) {
@@ -279,7 +288,7 @@ window.Recipe = Backbone.Model.extend({
         }
         return data;
     },
-    _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>recipes/<%- id %>"><%- t_id %></a>'),
+    _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>recipes/<%- id %>" title="<%- truncated_whiteboard(whiteboard) %>"><%- t_id %></a>'),
     toHTML: function () {
         return this._toHTML_template(this.attributes);
     },

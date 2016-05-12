@@ -1,3 +1,21 @@
+<% if (typeof hostrecipe != 'undefined' && hostrecipe) { %>
+  <h4>Guest Name</h4>
+  <div>
+  <% if (!_.isEmpty(guestname)) { %>
+      <code><%- guestname %></code>
+  <% } else { %>
+      <em class="muted">(none)</em>
+  <% } %>
+  </div>
+  <h4>Guest Arguments for virt-install</h4>
+  <div>
+  <% if (!_.isEmpty(guestargs)) { %>
+      <code><%- guestargs %></code>
+  <% } else { %>
+      <em class="muted">(none)</em>
+  <% } %>
+  </div>
+<% } %>
 <h4>Kernel Options</h4>
 <div>
 <% if (!_.isEmpty(kernel_options)) { %>

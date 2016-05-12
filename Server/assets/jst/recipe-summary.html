@@ -28,6 +28,10 @@
   <% } %>
 </p>
 <p>
+  <% if (typeof hostrecipe != 'undefined' && hostrecipe) { %>
+    Guest recipe hosted by <%= hostrecipe.toHTML() %>.
+    <br/>
+  <% } %>
   Using <%= distro_tree.toHTML() %><%
   if (!_.isEmpty(resource)) { %>
       <br/>on <%

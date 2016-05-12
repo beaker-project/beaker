@@ -139,6 +139,27 @@ class TestRecipeView(WebDriverTestCase):
                 % recipe.tasks[0].id)
         task_row.find_element_by_xpath('.//button[normalize-space(string(.))="Results" and @disabled="disabled"]')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=626529
+    def test_guest_recipe_info(self):
+        with session.begin():
+            job = data_setup.create_job(num_recipes=1, num_guestrecipes=1)
+            guest = job.recipesets[0].recipes[0].guests[0]
+            guest.guestname = u'guest1'
+            guest.guestargs = u'--kvm --ram 1024'
+        b = self.browser
+        go_to_recipe_view(b, guest, tab='Installation')
+        summary = b.find_element_by_xpath('//div[@class="recipe-summary"]/p[2]').text
+        b.find_element_by_xpath('//div[@id="installation"]//button[text()="Settings"]').click()
+        self.assertIn('Guest recipe hosted by %s' % guest.hostrecipe.t_id, summary)
+        self.assertEqual(
+                b.find_element_by_xpath('//div[@class="recipe-installation-settings"]'
+                    '/div[preceding-sibling::h4/text()="Guest Name"]/code').text,
+                'guest1')
+        self.assertEqual(
+                b.find_element_by_xpath('//div[@class="recipe-installation-settings"]'
+                    '/div[preceding-sibling::h4/text()="Guest Arguments for virt-install"]/code').text,
+                '--kvm --ram 1024')
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1326562
     def test_recipe_view_shows_external_task_results(self):
         with session.begin():

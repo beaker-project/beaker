@@ -2889,7 +2889,7 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             data['reservation_request'] = RecipeReservationRequest.empty_json()
         if self.is_finished() and not self.recipeset.is_finished():
             data['reservation_held_by_recipes'] = \
-                [{'id': recipe.id, 't_id': recipe.t_id}
+                [{'id': recipe.id, 't_id': recipe.t_id, 'whiteboard': recipe.whiteboard}
                  for recipe in self.recipeset.recipes if not recipe.is_finished()]
         else:
             data['reservation_held_by_recipes'] = []
@@ -2948,6 +2948,15 @@ class GuestRecipe(Recipe):
             uselist=False, back_populates='guests')
 
     systemtype = 'Virtual'
+
+    def to_json(self, include_hostrecipe=True, **kwargs):
+        data = super(GuestRecipe, self).to_json(**kwargs)
+        data['guestname'] = self.guestname
+        data['guestargs'] = self.guestargs
+        if include_hostrecipe:
+            data['hostrecipe'] = self.hostrecipe.to_json(include_guests=False,
+                    include_tasks=False, include_recipeset=False)
+        return data
 
     def to_xml(self, clone=False, from_recipeset=False, from_machine=False):
         recipe = etree.Element("guestrecipe")
@@ -3009,9 +3018,12 @@ class MachineRecipe(Recipe):
 
     systemtype = 'Machine'
 
-    def to_json(self, **kwargs):
+    def to_json(self, include_guests=True, **kwargs):
         data = super(MachineRecipe, self).to_json(**kwargs)
-        data.update({'guest_recipes': self.guests})
+        if include_guests:
+            data['guest_recipes'] = [g.to_json(include_hostrecipe=False,
+                    include_recipeset=False, include_tasks=False)
+                    for g in self.guests]
         return data
 
     def to_xml(self, clone=False, from_recipeset=False):
