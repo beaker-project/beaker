@@ -20,7 +20,7 @@ test suite, and if the queries require changes in future releases this will
 be called out in the release notes. Advance warning will also be provided
 for any such changes on the `beaker-devel mailing list`_.
 
-.. _beaker-devel mailing list: https://lists.fedorahosted.org/mailman/listinfo/beaker-devel
+.. _beaker-devel mailing list: https://lists.fedorahosted.org/archives/list/beaker-devel@lists.fedorahosted.org/
 
 The supported SQL queries are written using the MySQL SQL dialect, and
 automatically tested against MySQL. Accordingly, they may require translation

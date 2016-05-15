@@ -59,7 +59,7 @@ there.
 
 You can also ask your question in the `"beaker-testing" tag on Stack Overflow 
 <http://stackoverflow.com/questions/ask?tags=beaker-testing>`__, or post it to 
-the `beaker-devel <https://fedorahosted.org/mailman/listinfo/beaker-devel>`_ 
+the `beaker-devel <https://lists.fedorahosted.org/archives/list/beaker-devel@lists.fedorahosted.org/>`_ 
 mailing list.
 
 If you've found a bug in Beaker, please report it in `Red Hat Bugzilla 
