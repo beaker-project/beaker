@@ -327,8 +327,27 @@ window.RecipeTask = Backbone.Model.extend({
     },
     parse: function (data) {
         var recipe_task = this;
-        data['task'] = !_.isEmpty(data['task']) ? new Task(data['task']) : null;
-        data['distro_tree'] = !_.isEmpty(data['distro_tree']) ? new DistroTree(data['distro_tree'], {parse: true}) : null;
+        if (!_.isEmpty(data['task'])) {
+            if (this.get('task')) {
+                var task = this.get('task') || new Task();
+                task.set(task.parse(data['task']));
+                data['task'] = task;
+            } else {
+                data['task'] = new Task(data['task'], {parse: true});
+            }
+        }
+        // distro_tree should actually be obtained from Recipe, it's not an 
+        // attribute of RecipeTask, this is just here because the system 
+        // executed tasks view needed it...
+        if (!_.isEmpty(data['distro_tree'])) {
+            if (this.get('distro_tree')) {
+                var distro_tree = this.get('distro_tree') || new DistroTree();
+                distro_tree.set(distro_tree.parse(data['distro_tree']));
+                data['distro_tree'] = distro_tree;
+            } else {
+                data['distro_tree'] = new DistroTree(data['distro_tree'], {parse: true});
+            }
+        }
         if (!_.isEmpty(data['results'])) {
             var results = this.get('results') || [];
             data['results'] = _.map(data['results'], function (resultdata, i) {

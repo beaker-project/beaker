@@ -40,10 +40,8 @@ window.RecipeTasksView = Backbone.View.extend({
             .append(_.map(model.get('tasks'), function (task) {
                 var recipe_task = $('<div/>', {"class": "recipe-task",
                         "id": "task" + task.id, "data-task-id": task.id});
-                var task_summary = new RecipeTaskSummary({model: task,
-                    recipe_start_time: model.get('start_time')}).render().el;
-                var task_details = new RecipeTaskDetails({model: task,
-                    recipe_start_time: model.get('start_time')}).render().el;
+                var task_summary = new RecipeTaskSummary({model: task}).render().el;
+                var task_details = new RecipeTaskDetails({model: task}).render().el;
                 recipe_task.append(task_summary).append(task_details);
                 recipe_task.find('.collapse').on('shown hidden', function () { view.trigger('expand:task'); });
                 return recipe_task;
@@ -53,6 +51,13 @@ window.RecipeTasksView = Backbone.View.extend({
 
 var RecipeTasksSummary = Backbone.View.extend({
     template: JST['recipe-tasks-summary'],
+    initialize: function () {
+        this.listenTo(this.model, 'change:result', this.render);
+        var view = this;
+        _.each(this.model.get('tasks'), function (task) {
+            view.listenTo(task, 'change:is_finished', view.render);
+        });
+    },
     render: function () {
         var task_count = _.size(this.model.get('tasks'));
         var finished_task_count = _.size(_.filter(this.model.get('tasks'),
@@ -71,11 +76,12 @@ var RecipeTaskSummary = Backbone.View.extend({
     template: JST['recipe-task-summary'],
     className: 'recipe-task-summary',
     initialize: function (options) {
-        this.recipe_start_time = options.recipe_start_time;
+        this.listenTo(this.model, 'change', this.render);
+        this.listenTo(this.model.get('recipe'), 'change:start_time', this.render);
     },
     render: function () {
         var start_time_diff = get_time_difference(this.model.get('start_time'),
-            this.recipe_start_time);
+            this.model.get('recipe').get('start_time'));
         this.$el.html(this.template(_.extend({start_time_diff: start_time_diff},
             this.model.attributes)));
         var status = this.model.get('status');
@@ -149,18 +155,15 @@ var RecipeTaskDetails = Backbone.View.extend({
         }
     },
     initialize: function (options) {
-        this.recipe_start_time = options.recipe_start_time;
+        this.listenTo(this.model.get('recipe'), 'change:start_time change:is_deleted', this.render);
     },
     render: function () {
         var model = this.model;
-        var $el = this.$el;
         var is_deleted = model.get('recipe').get('is_deleted');
-        $el.html(this.template(_.extend({is_deleted: is_deleted}, model.attributes)));
-        var recipe_start_time = this.recipe_start_time;
+        this.$el.html(this.template(_.extend({is_deleted: is_deleted}, model.attributes)));
         if (!is_deleted) {
             this.$(".recipe-task-results-settings").append(
-                new RecipeTaskResults({model: this.model,
-                    recipe_start_time: this.recipe_start_time}).el);
+                new RecipeTaskResults({model: this.model}).el);
         }
         this.$(".recipe-task-results-settings").append(
             new RecipeTaskSettings({model: this.model}).el);
@@ -173,7 +176,7 @@ var RecipeTaskResults = Backbone.View.extend({
     className: 'recipe-task-results',
     template: JST['recipe-task-results'],
     initialize: function (options) {
-        this.recipe_start_time = options.recipe_start_time;
+        this.listenTo(this.model, 'change:results', this.render);
         this.render();
     },
     render: function () {
@@ -181,11 +184,8 @@ var RecipeTaskResults = Backbone.View.extend({
         if (_.isEmpty(this.model.get('results'))) {
             this.$el.text('No results reported for this task.');
         } else {
-            var $el = this.$el;
-            var recipe_start_time = this.recipe_start_time;
             this.$el.append(_.map(this.model.get('results'), function (result) {
-                return new RecipeTaskResultView({model: result,
-                    recipe_start_time: recipe_start_time}).render().el;
+                return new RecipeTaskResultView({model: result}).render().el;
             }));
         }
         return this;
@@ -196,11 +196,12 @@ var RecipeTaskResultView = Backbone.View.extend({
     template: JST['recipe-task-result'],
     className: 'recipe-task-result',
     initialize: function (options) {
-        this.recipe_start_time = options.recipe_start_time;
+        this.listenTo(this.model, 'change', this.render);
+        this.listenTo(this.model.get('recipe_task').get('recipe'), 'change:start_time', this.render);
     },
     render: function () {
         var start_time_diff = get_time_difference(this.model.get('start_time'),
-            this.recipe_start_time);
+            this.model.get('recipe_task').get('recipe').get('start_time'));
         this.$el.html(this.template(_.extend({start_time_diff: start_time_diff},
             this.model.attributes)));
         new LogsLink({model: this.model}).$el.appendTo(this.$('div.task-result-logs'));

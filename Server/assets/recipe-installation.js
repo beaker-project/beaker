@@ -10,6 +10,14 @@ window.RecipeInstallationView = Backbone.View.extend({
     className: 'tab-pane recipe-installation',
     template: JST['recipe-installation'],
     initialize: function() {
+        this.listenTo(this.model, 'change:status', this.render);
+        this.listenTo(this.model, 'change:installation', function () {
+            this.render();
+            this.listenTo(this.model.get('installation'), 'change', this.render);
+        });
+        if (!_.isEmpty(this.model.get('installation'))) {
+            this.listenTo(this.model.get('installation'), 'change', this.render);
+        }
         this.render();
     },
     render: function () {

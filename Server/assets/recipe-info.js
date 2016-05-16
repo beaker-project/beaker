@@ -7,6 +7,9 @@
 ;(function () {
 
 window.RecipeQuickInfoView = Backbone.View.extend({
+    initialize: function () {
+        this.listenTo(this.model, 'change:status', this.render);
+    },
     render: function () {
         this.$el.empty();
         new RecipeSummaryView({model: this.model}).$el
@@ -27,6 +30,7 @@ window.RecipeSummaryView = Backbone.View.extend({
     className: 'recipe-summary',
     template: JST['recipe-summary'],
     initialize: function () {
+        this.listenTo(this.model, 'change', this.render);
         this.render();
     },
     render: function () {
@@ -61,7 +65,7 @@ window.RecipeRuntimeStatusView = Backbone.View.extend({
     className: 'recipe-runtime-status',
     template: JST['recipe-runtime-status'],
     initialize: function () {
-        this.listenTo(this.model, 'change:time_remaining_seconds', this.render);
+        this.listenTo(this.model, 'change:logs change:time_remaining_seconds', this.render);
         this.render();
     },
     clearTimer: function () {

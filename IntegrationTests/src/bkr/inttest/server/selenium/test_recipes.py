@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import time
 import datetime
 import logging
 import re
@@ -104,15 +105,88 @@ class TestRecipeView(WebDriverTestCase):
         with session.begin():
             self.user = user = data_setup.create_user(display_name=u'Bob Brown',
                     password='password')
+            self.lab_controller = data_setup.create_labcontroller()
             self.system_owner = data_setup.create_user()
-            self.system = data_setup.create_system(owner=self.system_owner, arch=u'x86_64')
-            self.distro_tree = data_setup.create_distro_tree(arch=u'x86_64')
+            self.system = data_setup.create_system(owner=self.system_owner, arch=u'x86_64',
+                    lab_controller=self.lab_controller)
+            self.distro_tree = data_setup.create_distro_tree(arch=u'x86_64',
+                    distro_name=u'PurpleUmbrellaLinux5.11-20160428',
+                    variant=u'Server')
             self.job = data_setup.create_completed_job(owner=user,
                     distro_tree=self.distro_tree, server_log=True)
             self.recipe = self.job.recipesets[0].recipes[0]
             for recipe in self.job.all_recipes:
                 recipe.system = self.system
         self.browser = self.get_browser()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1335343
+    def test_page_updates_itself_while_recipe_is_running(self):
+        with session.begin():
+            job = data_setup.create_job(owner=self.user, distro_tree=self.distro_tree)
+            recipe = job.recipesets[0].recipes[0]
+        b = self.browser
+        # Open the recipe page while the recipe is still Queued.
+        go_to_recipe_view(b, recipe)
+        # Let the recipe finish (in reality there are of course many 
+        # intermediate steps here, but jumping straight to a finished recipe 
+        # still lets us check that all the pieces are updating themselves).
+        with session.begin():
+            start_time = datetime.datetime.utcnow()
+            finish_time = start_time + datetime.timedelta(seconds=1)
+            system = data_setup.create_system(arch=u'x86_64',
+                    fqdn=u'pewlett-hackard-x004.example.com',
+                    lab_controller=self.lab_controller)
+            data_setup.mark_recipe_complete(recipe, system=system,
+                    result=TaskResult.pass_,
+                    start_time=start_time, finish_time=finish_time)
+        # Wait for the page to re-fetch the recipe JSON.
+        time.sleep(30)
+        # Check that everything has updated itself.
+        self.assertEqual(
+                b.find_element_by_xpath('//div[@class="recipe-summary"]/p[1]').text,
+                'Started a few seconds ago and finished in 00:00:01.')
+        self.assertEqual(
+                b.find_element_by_xpath('//div[@class="recipe-summary"]/p[2]').text,
+                'Using PurpleUmbrellaLinux5.11-20160428 Server x86_64\n'
+                'on pewlett-hackard-x004.example.com.')
+        self.assertEqual(
+                b.find_element_by_xpath('//div[@class="recipe-installation-summary"]/div[1]').text,
+                'Installation of PurpleUmbrellaLinux5.11-20160428 Server x86_64 finished.')
+        b.find_element_by_xpath('//div[@class="recipe-installation-status"]'
+                '/span[@class="label label-success" and text()="Completed"]')
+        b.find_element_by_xpath('//div[@class="recipe-installation-progress"]'
+                '//td[contains(text(), "Netboot configured")]')
+        b.find_element_by_xpath('//div[@class="recipe-installation-progress"]'
+                '//td[contains(text(), "System rebooted")]')
+        b.find_element_by_xpath('//div[@class="recipe-installation-progress"]'
+                '//td[contains(text(), "Installation started")]')
+        b.find_element_by_xpath('//div[@class="recipe-installation-progress"]'
+                '//td[contains(text(), "Installation completed")]')
+        b.find_element_by_xpath('//div[@class="recipe-installation-progress"]'
+                '//td[contains(text(), "Post-install tasks completed")]')
+        b.find_element_by_xpath('//ul[contains(@class, "recipe-nav")]'
+                '//a[text()="Tasks"]').click()
+        self.assertEqual(
+                b.find_element_by_xpath('//div[@class="recipe-tasks-summary"]/div[1]').text,
+                'Pass with 1 out of 1 tasks finished.')
+        b.find_element_by_xpath('//div[@class="recipe-progress"]/span[text()="100%"]')
+        b.find_element_by_xpath('//div[@class="recipe-progress"]'
+                '/div[@class="progress"]/div[@class="bar bar-success" and @style="width: 100%;"]')
+        task_element = b.find_element_by_xpath('//div[@id="task%s"]' % recipe.tasks[0].id)
+        self.assertEqual(
+                task_element.find_element_by_class_name('recipe-task-status').text,
+                'Pass')
+        task_element.find_element_by_class_name('task-icon').click()
+        result_element = task_element.find_element_by_class_name('recipe-task-result')
+        result_element.find_element_by_xpath('div[@class="task-result-id"'
+                ' and normalize-space(string(.))="%s"]' % recipe.tasks[0].results[0].t_id)
+        result_element.find_element_by_xpath('div[@class="task-result-result"]'
+                '/span[@class="label label-result-pass" and text()="Pass"]')
+        b.find_element_by_xpath('//ul[contains(@class, "recipe-nav")]'
+                '//a[text()="Reservation"]').click()
+        self.assertEqual(
+                b.find_element_by_xpath('//div[@id="reservation"]/div/p').text,
+                'The system was not reserved at the end of the recipe.')
 
     def test_page_header(self):
         with session.begin():

@@ -10,6 +10,7 @@ window.RecipeProgressBar = Backbone.View.extend({
     tagName: 'div',
     className: 'recipe-progress',
     initialize: function () {
+        this.listenTo(this.model, 'change', this.render);
         this.render();
     },
     render: function () {
