@@ -15,7 +15,7 @@ from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client, start_client, \
     create_client_config, ClientError, ClientTestCase
-from bkr.server.model import Job, Arch
+from bkr.server.model import Job, Arch, SystemStatus
 
 class WorkflowSimpleTest(ClientTestCase):
 
@@ -462,3 +462,15 @@ install
                 '--task', self.task.name, '--dry-run', '--pretty-xml'],
                 config=config)
         self.assertIn('<job', out)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1319988
+    def test_ignore_system_status(self):
+        with session.begin():
+            lc = data_setup.create_labcontroller()
+            system = data_setup.create_system(lab_controller=lc,
+                                               status=SystemStatus.broken)
+        out = run_client(['bkr', 'workflow-simple', '--distro', self.distro.name,
+                          '--machine', system.fqdn,
+                          '--ignore-system-status',
+                          '--task', self.task.name, '--dry-run', '--pretty-xml'])
+        self.assertIn('<hostRequires force="%s"/>' % system.fqdn, out)

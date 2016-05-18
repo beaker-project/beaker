@@ -154,6 +154,10 @@ Options for selecting system(s):
    Run the job on system with <fqdn>. This option will always select a single 
    system, and so does not make sense combined with any other system options.
 
+.. option:: --ignore-system-status
+
+   Always use the system given by --machine, regardless of its status.
+
 .. option:: --systype <type>
 
    Run the job on system(s) of type <type>. This defaults to ``Machine`` which 

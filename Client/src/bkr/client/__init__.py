@@ -236,6 +236,12 @@ class BeakerWorkflow(BeakerCommand):
             help="Require this machine for job",
         )
         system_options.add_option(
+            "--ignore-system-status",
+            action="store_true",
+            default=False,
+            help="Always use the system given by --machine, regardless of its status"
+        )
+        system_options.add_option(
             "--systype", metavar="TYPE",
             default=None,
             help="Require system of TYPE for job (Machine, Laptop, ..) [default: Machine]",
