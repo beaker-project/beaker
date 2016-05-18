@@ -4,9 +4,7 @@
 </div>
 <div class="page-header">
   <h1>
-    <span class="job-id<% if (is_deleted) { %> deleted-job-id<% } %>">
-        <abbr title="Job">J</abbr>:<%- id %>
-    </span>
+    <span class="job-id<% if (is_deleted) { %> deleted-job-id<% } %>"><abbr title="Job">J</abbr>:<%- id %></span>
     <small>
       owned by <%= owner.toHTML() %>
       <% if (!_.isEmpty(group)) { %> for <%= group.toHTML() %><% } %>
