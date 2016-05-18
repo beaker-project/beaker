@@ -407,6 +407,9 @@ class System(DeclarativeMappedObject, ActivityMixin):
     def validate_status_reason(self, key, value):
         if value is None:
             return value
+        if  not self.status.bad:
+            raise ValueError('Cannot set status reason when status is %s'
+                        % self.status)
         max_length = object_mapper(self).columns[key].type.length
         if len(value) > max_length:
             raise ValueError('System condition report is longer than '
@@ -2430,6 +2433,19 @@ class Power(DeclarativeMappedObject):
             'power_quiescent_period': self.power_quiescent_period,
             'possible_power_types': [t.name for t in PowerType.query.order_by(PowerType.name)],
         }
+
+    @validates('power_address')
+    def validate_power_address(self, key, power_address):
+        if not power_address:
+            raise ValueError('Power address is required')
+        return power_address
+
+    @validates('power_quiescent_period')
+    def validate_quiescent_period(self, key, power_quiescent_period):
+        if not power_quiescent_period > 0:
+            raise ValueError('Quiescent period for power control must be greater'
+                    ' than or equal to zero')
+        return power_quiescent_period
 
     @classmethod
     def empty_json(cls):

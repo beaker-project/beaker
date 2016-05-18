@@ -30,7 +30,7 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         Group, User, ActivityMixin, SystemAccessPolicy, SystemPermission, \
         RecipeTask, RecipeTaskResult, DeclarativeMappedObject, OSVersion, \
         RecipeReservationRequest, ReleaseAction, SystemPool, CommandStatus, \
-        GroupMembershipType, RecipeSetComment
+        GroupMembershipType, RecipeSetComment, Power
 
 from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
@@ -191,6 +191,34 @@ class TestSystem(DatabaseTestCase):
             self.fail('Must fail or die')
         except ValueError as e:
             self.assertIn('Invalid FQDN for system', str(e))
+
+    def test_invalid_power_address(self):
+        system = data_setup.create_system()
+        system.power = Power()
+        try:
+            system.power.power_address = u''
+            self.fail('Must fail or die')
+        except ValueError as e:
+            self.assertIn('Power address is required', str(e))
+
+    def test_invalid_power_quiescent_period(self):
+        system = data_setup.create_system()
+        system.power = Power()
+        try:
+            system.power.power_quiescent_period = -1
+            self.fail('Must fail or die')
+        except ValueError as e:
+            self.assertIn('Quiescent period for power control must be greater'
+                    ' than or equal to zero', str(e))
+
+    def test_cannot_set_status_reason_when_system_is_not_bad(self):
+        system = data_setup.create_system(status=SystemStatus.automated)
+        try:
+            system.status_reason = u'Currently is broken'
+            self.fail('Must fail or die')
+        except ValueError as e:
+            self.assertIn('Cannot set status reason when status is %s' % SystemStatus.automated,
+                    str(e))
 
     def test_distros(self):
         lc = data_setup.create_labcontroller()

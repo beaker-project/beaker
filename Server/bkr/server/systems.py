@@ -319,131 +319,13 @@ def _get_system_by_FQDN(fqdn):
     except NoResultFound:
         raise NotFound404('System not found')
 
-@app.route('/systems/', methods=['POST'])
-@auth_required
-def add_system():
-    """
-    Adds a new system to Beaker. The request must be 
-    :mimetype:`application/x-www-form-urlencoded` or 
-    :mimetype:`application/json`.
-
-    :jsonparam string fqdn: Fully-qualified domain name for the new system.
-
-    :status 302: The system was successfully created and can be found at the
-      redirected location.
-    """
-    # We accept JSON or form-encoded for convenience
-    if request.json:
-        if 'fqdn' not in request.json:
-            raise BadRequest400('Missing fqdn key')
-        new_fqdn = request.json['fqdn']
-    elif request.form:
-        if 'fqdn' not in request.form:
-            raise BadRequest400('Missing fqdn parameter')
-        new_fqdn = request.form['fqdn']
-    else:
-        raise UnsupportedMediaType415
-    with convert_internal_errors():
-        if System.query.filter(System.fqdn == new_fqdn).count() != 0:
-            raise Conflict409('System with fqdn %r already exists' % new_fqdn)
-        system = System(fqdn=new_fqdn, owner=identity.current.user)
-        session.add(system)
-        # new systems are visible to everybody by default
-        system.custom_access_policy = SystemAccessPolicy()
-        system.custom_access_policy.add_rule(SystemPermission.view,
-                everybody=True)
-    # XXX this should be 201 with Location: /systems/FQDN/ but 302 is more 
-    # convenient because it lets us use a traditional browser form without AJAX 
-    # handling, and for now we're redirecting to /view/FQDN until that is moved 
-    # to /systems/FQDN/
-    return flask_redirect(absolute_url(system.href))
-
-# XXX need to move /view/FQDN to /systems/FQDN/
-@app.route('/systems/<fqdn>/', methods=['GET'])
-def get_system(fqdn):
-    """
-    Provides detailed information about a system in JSON format. In a future 
-    release this will be consolidated with the :http:get:`/view/(fqdn)` 
-    resource.
-
-    :param fqdn: The system's fully-qualified domain name.
-    """
-    system = _get_system_by_FQDN(fqdn)
-    return jsonify(system.__json__())
-
-@app.route('/systems/<fqdn>/', methods=['PATCH'])
-@auth_required
-def update_system(fqdn):
-    """
-    Updates attributes of an existing system. The request body must be a JSON 
-    object containing one or more of the following keys.
-
-    :param fqdn: The system's fully-qualified domain name.
-    :jsonparam string fqdn: New FQDN for the system (it will be renamed).
-    :jsonparam object owner: JSON object containing a ``user_name`` key 
-      identifying the new owner for the system.
-    :jsonparam string status: System status: ``Automated``, ``Manual``, 
-      ``Broken``, or ``Removed``.
-    :jsonparam string status_reason: Description of why the status has been 
-      changed. Only valid when the status is ``Broken`` or ``Removed``.
-    :jsonparam string type: System type: ``Machine``, ``Prototype``, 
-      ``Resource``.
-    :jsonparam array arches: Array of architecture names (strings) supported by 
-      the system, for example ``['i386', 'x86_64']``.
-    :jsonparam int lab_controller_id: Lab controller which the system is 
-      attached to.
-    :jsonparam string power_type: Remote power control type. This value must be 
-      a valid power type configured by the Beaker administrator (or one of the 
-      Beaker defaults).
-    :jsonparam string power_address: Address passed to the power control script.
-    :jsonparam string power_user: Username passed to the power control script.
-    :jsonparam string power_password: Password passed to the power control script.
-    :jsonparam string power_id: Unique identifier passed to the power control 
-      script. The meaning of the power ID depends on which power type is 
-      selected. Typically this field identifies a particular plug, socket, 
-      port, or virtual guest name.
-    :jsonparam int power_quiescent_period: Quiescent period for power control. 
-      Beaker will delay at least this long between consecutive power commands. 
-    :jsonparam string release_action: Action to take whenever a reservation for 
-      this system is returned: ``PowerOff``, ``LeaveOn``, ``ReProvision``.
-    :jsonparam object reprovision_distro_tree: JSON object containing an ``id`` 
-      key identifying the distro tree to be installed when the release action 
-      is ``ReProvision``.
-    :jsonparam string location: Physical location of the system.
-    :jsonparam string lender: Organization who lent this system to Beaker's 
-      inventory.
-    :jsonparam string kernel_type: Kernel types are only relevant for the ARM 
-      architecture.
-    :jsonparam string hypervisor: Type of hypervisor which this system is 
-      hosted on, or ``null`` if it is not virtualized. Valid values are 
-      configurable by the Beaker administrator, but by default include: 
-      ``KVM``, ``Xen``, ``HyperV``, ``VMWare``.
-    :jsonparam string vendor: Vendor who produced the system.
-    :jsonparam string model: Model name or number.
-    :jsonparam string serial_number: Serial number.
-    :jsonparam string mac_address: MAC address of the default network interface.
-    :jsonparam int memory: Amount of memory (MB) installed in the system.
-    :jsonparam int numa_nodes: Number of nodes in the system's NUMA topology.
-    :jsonparam object active_access_policy: JSON object containing a ``pool_name``
-      key with the name of the system pool or a ``custom`` key set to True to change
-      the active access policy for the system.
-
-    :status 200: System was updated.
-    :status 400: Invalid data was given.
-    :status 409: Attempted to change the lab controller while the system is 
-      reserved. Return the system (cancel the running recipe) before changing 
-      which lab controller it is attached to.
-    """
-    system = _get_system_by_FQDN(fqdn)
-    data = read_json_request(request)
+def _update_system(system, data={}):
+    changed = False
     # helper for recording activity below
     def record_activity(field, old, new, action=u'Changed'):
         system.record_activity(user=identity.current.user, service=u'HTTP',
                 action=action, field=field, old=old, new=new)
     with convert_internal_errors():
-        # XXX what a nightmare... need to use a validation/conversion library, 
-        # and maybe simplify/relocate the activity recording stuff somehow
-        changed = False
         if 'active_access_policy' in data:
             if not system.can_edit_policy(identity.current.user):
                 raise Forbidden403('Cannot edit system access policy')
@@ -470,16 +352,6 @@ def update_system(fqdn):
                 changed = True
         if data and not system.can_edit(identity.current.user):
             raise Forbidden403('Cannot edit system')
-        renamed = False
-        if 'fqdn' in data:
-            new_fqdn = data['fqdn'].lower()
-            if new_fqdn != system.fqdn:
-                if System.query.filter(System.fqdn == new_fqdn).count():
-                    raise Conflict409('System %s already exists' % new_fqdn)
-                record_activity(u'FQDN', system.fqdn, new_fqdn)
-                system.fqdn = new_fqdn
-                changed = True
-                renamed = True
         if 'owner' in data and data['owner'].get('user_name') != system.owner.user_name:
             if not system.can_change_owner(identity.current.user):
                 raise Forbidden403('Cannot change owner')
@@ -501,9 +373,6 @@ def update_system(fqdn):
                 changed = True
         if 'status_reason' in data:
             new_reason = data['status_reason'] or None
-            if new_reason and not system.status.bad:
-                raise ValueError('Cannot set status reason when status is %s'
-                        % system.status)
             if new_reason != system.status_reason:
                 record_activity(u'Status Reason', system.status_reason, new_reason)
                 system.status_reason = new_reason
@@ -525,9 +394,12 @@ def update_system(fqdn):
                     record_activity(u'Arch', removed_arch, None, u'Removed')
                 system.arch[:] = new_arches
                 changed = True
-        if 'lab_controller_id' in data:
-            if data['lab_controller_id']:
+        if 'lab_controller_id' in data or 'lab_controller' in data:
+            if data.get('lab_controller_id'):
                 new_lc = LabController.by_id(data['lab_controller_id'])
+            elif data.get('lab_controller'):
+                if data['lab_controller'].get('fqdn'):
+                    new_lc = LabController.by_name(data['lab_controller'].get('fqdn'))
             else:
                 new_lc = None
             if new_lc != system.lab_controller:
@@ -554,8 +426,6 @@ def update_system(fqdn):
                 changed = True
         if 'power_address' in data:
             new_power_address = data['power_address']
-            if not new_power_address:
-                raise ValueError('Power address is required')
             if new_power_address != system.power.power_address:
                 record_activity(u'power_address', system.power.power_address,
                         data['power_address'])
@@ -671,10 +541,149 @@ def update_system(fqdn):
                 record_activity(u'NUMA/Nodes', system.numa.nodes, new_numa_nodes)
                 system.numa.nodes = new_numa_nodes
                 changed = True
-        if changed:
-            # XXX clear checksum!?
-            system.date_modified = datetime.datetime.utcnow()
+    return changed
 
+@app.route('/systems/', methods=['POST'])
+@auth_required
+def add_system():
+    """
+    Adds a new system to Beaker. The request must be :mimetype:`application/json`.
+
+    :jsonparam string fqdn: Fully-qualified domain name for the new system.
+    :jsonparam object owner: JSON object containing a ``user_name`` key 
+      identifying the new owner for the system.
+    :jsonparam string status: System status: ``Automated``, ``Manual``, 
+      ``Broken``, or ``Removed``.
+    :jsonparam string status_reason: Description of why the status has been 
+      changed. Only valid when the status is ``Broken`` or ``Removed``.
+    :jsonparam string type: System type: ``Machine``, ``Prototype``, 
+      ``Resource``.
+    :jsonparam array arches: Array of architecture names (strings) supported by 
+      the system, for example ``['i386', 'x86_64']``.
+    :jsonparam int lab_controller_id: Lab controller which the system is 
+      attached to.
+    :jsonparam object lab_controller: JSON object containing a ``fqdn`` key 
+      identifying the lab controller which the system is attached to.
+    :jsonparam string power_type: Remote power control type. This value must be 
+      a valid power type configured by the Beaker administrator (or one of the 
+      Beaker defaults).
+    :jsonparam string power_address: Address passed to the power control script.
+    :jsonparam string power_user: Username passed to the power control script.
+    :jsonparam string power_password: Password passed to the power control script.
+    :jsonparam string power_id: Unique identifier passed to the power control 
+      script. The meaning of the power ID depends on which power type is 
+      selected. Typically this field identifies a particular plug, socket, 
+      port, or virtual guest name.
+    :jsonparam int power_quiescent_period: Quiescent period for power control. 
+      Beaker will delay at least this long between consecutive power commands. 
+    :jsonparam string release_action: Action to take whenever a reservation for 
+      this system is returned: ``PowerOff``, ``LeaveOn``, ``ReProvision``.
+    :jsonparam object reprovision_distro_tree: JSON object containing an ``id`` 
+      key identifying the distro tree to be installed when the release action 
+      is ``ReProvision``.
+    :jsonparam string location: Physical location of the system.
+    :jsonparam string lender: Organization who lent this system to Beaker's 
+      inventory.
+    :jsonparam string kernel_type: Kernel types are only relevant for the ARM 
+      architecture.
+    :jsonparam string hypervisor: Type of hypervisor which this system is 
+      hosted on, or ``null`` if it is not virtualized. Valid values are 
+      configurable by the Beaker administrator, but by default include: 
+      ``KVM``, ``Xen``, ``HyperV``, ``VMWare``.
+    :jsonparam string vendor: Vendor who produced the system.
+    :jsonparam string model: Model name or number.
+    :jsonparam string serial_number: Serial number.
+    :jsonparam string mac_address: MAC address of the default network interface.
+    :jsonparam int memory: Amount of memory (MB) installed in the system.
+    :jsonparam int numa_nodes: Number of nodes in the system's NUMA topology.
+    :jsonparam object active_access_policy: JSON object containing a ``pool_name``
+      key with the name of the system pool or a ``custom`` key set to True to change
+      the active access policy for the system.
+
+    :status 302: The system was successfully created and can be found at the
+      redirected location.
+    """
+    # We accept JSON or form-encoded for convenience
+    # XXX: need to remove form-encoded once the systems page is ported to backgrid.
+    if request.json:
+        if 'fqdn' not in request.json:
+            raise BadRequest400('Missing fqdn key')
+        new_fqdn = request.json['fqdn']
+        data = read_json_request(request)
+    elif request.form:
+        if 'fqdn' not in request.form:
+            raise BadRequest400('Missing fqdn parameter')
+        new_fqdn = request.form['fqdn']
+        data = {}
+    else:
+        raise UnsupportedMediaType415
+    user = identity.current.user
+    with convert_internal_errors():
+        if System.query.filter(System.fqdn == new_fqdn).count() != 0:
+            raise Conflict409('System with fqdn %r already exists' % new_fqdn)
+        system = System(fqdn=new_fqdn, owner=user)
+        session.add(system)
+        # new systems are visible to everybody by default
+        system.custom_access_policy = SystemAccessPolicy()
+        system.custom_access_policy.add_rule(SystemPermission.view,
+                everybody=True)
+        _update_system(system, data)
+    # XXX this should be 201 with Location: /systems/FQDN/ but 302 is more 
+    # convenient because it lets us use a traditional browser form without AJAX 
+    # handling, and for now we're redirecting to /view/FQDN until that is moved 
+    # to /systems/FQDN/
+    return flask_redirect(absolute_url(system.href))
+
+# XXX need to move /view/FQDN to /systems/FQDN/
+@app.route('/systems/<fqdn>/', methods=['GET'])
+def get_system(fqdn):
+    """
+    Provides detailed information about a system in JSON format. In a future 
+    release this will be consolidated with the :http:get:`/view/(fqdn)` 
+    resource.
+
+    :param fqdn: The system's fully-qualified domain name.
+    """
+    system = _get_system_by_FQDN(fqdn)
+    return jsonify(system.__json__())
+
+@app.route('/systems/<fqdn>/', methods=['PATCH'])
+@auth_required
+def update_system(fqdn):
+    """
+    Updates attributes of an existing system. The request body must be a JSON 
+    object containing one or more of the following keys.
+
+    :param fqdn: The system's fully-qualified domain name.
+    :jsonparam string fqdn: New FQDN for the system (it will be renamed).
+
+    See :http:POST:`/systems/` for more parameters.
+
+    :status 200: System was updated.
+    :status 400: Invalid data was given.
+    :status 409: Attempted to change the lab controller while the system is 
+      reserved. Return the system (cancel the running recipe) before changing 
+      which lab controller it is attached to.
+    """
+    system = _get_system_by_FQDN(fqdn)
+    data = read_json_request(request)
+    changed = _update_system(system, data)
+    renamed = False
+    with convert_internal_errors():
+        if 'fqdn' in data:
+            new_fqdn = data['fqdn'].lower()
+            if new_fqdn != system.fqdn:
+                if System.query.filter(System.fqdn == new_fqdn).count():
+                    raise Conflict409('System %s already exists' % new_fqdn)
+                system.record_activity(user=identity.current.user,
+                        service=u'HTTP', action=u'Changed', field=u'FQDN',
+                        old=system.fqdn, new=new_fqdn)
+                system.fqdn = new_fqdn
+                changed = True
+                renamed = True
+    if changed:
+        # XXX clear checksum!?
+        system.date_modified = datetime.datetime.utcnow()
     response = jsonify(system.__json__())
     if renamed:
         response.headers.add('Location', absolute_url(system.href))

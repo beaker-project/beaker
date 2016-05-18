@@ -689,3 +689,24 @@ class SystemHTTPTest(DatabaseTestCase):
             session.expire_all()
             self.assertTrue(system.active_access_policy, system.custom_access_policy)
             self.assertEquals(system.activity, [])
+
+    #  https://bugzilla.redhat.com/show_bug.cgi?id=1323885
+    def test_update_lab_controller_with_lab_controller_object(self):
+        with session.begin():
+            system = data_setup.create_system()
+            lc = data_setup.create_labcontroller()
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': data_setup.ADMIN_USER,
+                'password': data_setup.ADMIN_PASSWORD}).raise_for_status()
+        response = patch_json(get_server_base() +
+                              'systems/%s/' % system.fqdn, session=s,
+                              data={'lab_controller': {'fqdn': lc.fqdn}},
+        )
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertTrue(system.lab_controller, lc)
+            self.assertEquals(system.activity[-1].field_name, 'Lab Controller')
+            self.assertEquals(system.activity[-1].action, 'Changed')
+            self.assertEquals(system.activity[-1].old_value, None)
+            self.assertEquals(system.activity[-1].new_value, lc.fqdn)
