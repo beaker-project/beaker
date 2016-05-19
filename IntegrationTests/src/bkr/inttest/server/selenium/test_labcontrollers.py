@@ -884,7 +884,6 @@ class LabControllerHTTPTest(DatabaseTestCase):
             session=s,
             data={'fqdn': 'lc1.beer.newtest',
                   'user_name': user_name,
-                  'display_name': display_name,
                   'email_address': 'different@redhat.com',
             })
 
@@ -892,7 +891,9 @@ class LabControllerHTTPTest(DatabaseTestCase):
         with session.begin():
             lc = LabController.query.filter_by(fqdn='lc1.beer.newtest').one()
             self.assertEqual(lc.user.user_name, user_name)
-            self.assertEqual(lc.user.email_address, 'different@redhat.com')
+            # The existing user's display name and email address should be overridden.
+            self.assertEqual(lc.user.display_name, lc.fqdn)
+            self.assertEqual(lc.user.email_address, 'different@redhat.com' )
             self.assertIn(Group.by_name(u'lab_controller'), lc.user.groups)
 
     def test_creates_labcontroller_with_existing_labcontroller_user(self):

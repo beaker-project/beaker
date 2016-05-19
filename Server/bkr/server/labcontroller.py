@@ -106,8 +106,8 @@ def update_user(user, display_name=None, email_address=None, password=''):
         raise BadRequest400(
             'User %s is already associated with lab controller %s' % (
                 user, user.lab_controller))
-    user.display_name = display_name or user.display_name
-    user.email_address = email_address or user.email_address
+    user.display_name = display_name
+    user.email_address = email_address
     if password:
         user.password = password
 
@@ -242,8 +242,8 @@ def _create_labcontroller_helper(data):
         user = update_user(
             user=user,
             display_name=data['fqdn'],
-            email_address=data.get('email_address'),
-            password=data.get('password', '')
+            email_address=data.get('email_address', user.email_address),
+            password=data.get('password', user.password)
         )
         labcontroller = LabController(fqdn=data['fqdn'], disabled=False)
         labcontroller.record_activity(
