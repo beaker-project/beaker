@@ -9,6 +9,8 @@ INSERT INTO recipe_task (id, recipe_id, name, fetch_subdir)
 VALUES (1, 1, 'test', '');
 INSERT INTO recipe_task_result (id, recipe_task_id)
 VALUES (1, 1);
+INSERT INTO log_recipe_task_result (id, recipe_task_result_id, path, filename, start_time)
+VALUES (1, 1, '/', 'test_log1', '2016-02-06 00:00:00');
 -- Job which is deleted
 INSERT INTO job (id, owner_id, retention_tag_id, dirty_version, clean_version, status, deleted)
 VALUES (2, 1, 1, '', '', 'Completed', '2016-02-05 00:00:00');
@@ -20,4 +22,6 @@ INSERT INTO recipe_task (id, recipe_id, name, fetch_subdir)
 VALUES (2, 2, 'test', '');
 INSERT INTO recipe_task_result (id, recipe_task_id)
 VALUES (2, 2);
+INSERT INTO log_recipe_task_result (id, recipe_task_result_id, path, filename, start_time)
+VALUES (2, 2, '/', 'test_log2', '2016-02-06 01:00:00');
 COMMIT;
