@@ -5,7 +5,6 @@
 # (at your option) any later version.
 
 import lxml.etree
-import time
 from bkr.server.model import TaskStatus, Job, LabControllerDistroTree
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction, fix_beakerd_repodata_perms, \
@@ -19,11 +18,8 @@ class TestBeakerd(DatabaseTestCase):
     @with_transaction
     def setUp(cls):
         # Create two unique labs
-        lab1 = data_setup.create_labcontroller(fqdn=u'lab_%d' %
-                                               int(time.time() * 1000))
-        lab2 = data_setup.create_labcontroller(fqdn=u'lab_%d' %
-                                               int(time.time() * 1000))
-
+        lab1 = data_setup.create_labcontroller()
+        lab2 = data_setup.create_labcontroller()
         # Create two distros and only put one in each lab.
         cls.distro_tree1 = data_setup.create_distro_tree()
         cls.distro_tree2 = data_setup.create_distro_tree()

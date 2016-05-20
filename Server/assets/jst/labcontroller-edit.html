@@ -5,7 +5,11 @@
   </div>
   <div class="modal-body">
     <label for="fqdn">FQDN</label>
-    <input type="text" class="input-block-level" id="fqdn" name="fqdn" placeholder="FQDN" required />
+    <!-- pattern is the same one used by is_valid_fqdn on the server -->
+    <input type="text" id="fqdn" name="fqdn" class="input-block-level"
+        placeholder="FQDN" required maxlength="255"
+        pattern="[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?)*\.?"
+        title="Fully-qualified domain name of up to 255 characters" />
     <label for="user_name">Username</label>
     <input type="text" class="input-block-level" id="user_name" name="user_name" placeholder="Username" required />
     <label for="password">Password</label>

@@ -1064,6 +1064,26 @@ class LabControllerHTTPTest(DatabaseTestCase):
             self.assertFalse(self.lc.disabled)
             self.assertIsNone(self.lc.removed)
 
+    def test_update_labcontroller_with_empty_fqdn(self):
+        s = requests.Session()
+        web_login(s)
+        response = patch_json(
+            get_server_base() + 'labcontrollers/' + self.lc.fqdn,
+            session=s,
+            data={'fqdn': u''})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Lab controller FQDN must not be empty', response.text)
+
+    def test_update_labcontroller_with_invalid_fqdn(self):
+        s = requests.Session()
+        web_login(s)
+        response = patch_json(
+            get_server_base() + 'labcontrollers/' + self.lc.fqdn,
+            session=s,
+            data={'fqdn': u'invalid_lc_fqdn'})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Invalid FQDN for lab controller', response.text)
+
     # backwards compatibility
     # remove me once https://bugzilla.redhat.com/show_bug.cgi?id=1211119 is fixed
     def test_save_creates_labcontroller(self):

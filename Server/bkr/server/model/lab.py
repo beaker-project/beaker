@@ -7,8 +7,9 @@
 import urllib
 from sqlalchemy import (Column, ForeignKey, Integer, Unicode, Boolean,
         DateTime)
-from sqlalchemy.orm import relationship, synonym
+from sqlalchemy.orm import relationship, synonym, validates
 from sqlalchemy.orm.exc import NoResultFound
+from bkr.server.util import is_valid_fqdn
 from .base import DeclarativeMappedObject
 from .activity import Activity, ActivityMixin
 from .identity import User
@@ -97,3 +98,11 @@ class LabController(DeclarativeMappedObject, ActivityMixin):
     def href(self):
         """Returns a relative URL."""
         return urllib.quote((u'/labcontrollers/%s' % self.fqdn).encode('utf8'))
+
+    @validates('fqdn')
+    def validate_fqdn(self, key, fqdn):
+        if not fqdn:
+            raise ValueError('Lab controller FQDN must not be empty')
+        if not is_valid_fqdn(fqdn):
+            raise ValueError('Invalid FQDN for lab controller: %s' % fqdn)
+        return fqdn

@@ -139,55 +139,53 @@ def update_labcontroller(fqdn):
     labcontroller = find_labcontroller_or_raise404(fqdn)
     if not labcontroller.can_edit(identity.current.user):
         raise Forbidden403('Cannot edit lab controller')
-
     data = read_json_request(request)
+    with convert_internal_errors():
+        # should the lab controller be removed?
+        if data.get('removed', False) and not labcontroller.removed:
+            remove_labcontroller(labcontroller)
 
-    # should the lab controller be removed?
-    if data.get('removed', False) and not labcontroller.removed:
-        remove_labcontroller(labcontroller)
+        # should the controller be restored?
+        if data.get('removed') is False and labcontroller.removed:
+            restore_labcontroller(labcontroller)
+        fqdn_changed = False
+        new_fqdn = data.get('fqdn', fqdn)
+        if labcontroller.fqdn != new_fqdn:
+            lc = None
+            try:
+                lc = LabController.by_name(new_fqdn)
+            except NoResultFound:
+                pass
+            if lc is not None:
+                raise BadRequest400('FQDN %s already in use' % new_fqdn)
 
-    # should the controller be restored?
-    if data.get('removed') is False and labcontroller.removed:
-        restore_labcontroller(labcontroller)
-
-    fqdn_changed = False
-    new_fqdn = data.get('fqdn', fqdn)
-    if labcontroller.fqdn != new_fqdn:
-        lc = None
-        try:
-            lc = LabController.by_name(new_fqdn)
-        except NoResultFound:
-            pass
-        if lc is not None:
-            raise BadRequest400('FQDN %s already in use' % new_fqdn)
-
-        labcontroller.record_activity(
-            user=identity.current.user, service=u'HTTP',
-            field=u'fqdn', action=u'Changed', old=labcontroller.fqdn, new=new_fqdn)
-        labcontroller.fqdn = new_fqdn
-        fqdn_changed = True
-
-    if 'user_name' in data:
-        user = find_user_or_create(data['user_name'])
-        if labcontroller.user != user:
-            user = update_user(
-                user,
-                display_name=fqdn,
-                email_address=data.get('email_address'),
-                password=data.get('password', '')
-            )
             labcontroller.record_activity(
                 user=identity.current.user, service=u'HTTP',
-                field=u'User', action=u'Changed',
-                old=labcontroller.user.user_name, new=user.user_name)
-            labcontroller.user = user
+                field=u'fqdn', action=u'Changed', old=labcontroller.fqdn, new=new_fqdn)
+            labcontroller.fqdn = new_fqdn
+            fqdn_changed = True
 
-    if labcontroller.disabled != data.get('disabled', labcontroller.disabled):
-        labcontroller.record_activity(
-            user=identity.current.user, service=u'HTTP',
-            field=u'disabled', action=u'Changed',
-            old=unicode(labcontroller.disabled), new=data['disabled'])
-        labcontroller.disabled = data['disabled']
+        if 'user_name' in data:
+            user = find_user_or_create(data['user_name'])
+            if labcontroller.user != user:
+                user = update_user(
+                    user,
+                    display_name=fqdn,
+                    email_address=data.get('email_address'),
+                    password=data.get('password', '')
+                )
+                labcontroller.record_activity(
+                    user=identity.current.user, service=u'HTTP',
+                    field=u'User', action=u'Changed',
+                    old=labcontroller.user.user_name, new=user.user_name)
+                labcontroller.user = user
+
+        if labcontroller.disabled != data.get('disabled', labcontroller.disabled):
+            labcontroller.record_activity(
+                user=identity.current.user, service=u'HTTP',
+                field=u'disabled', action=u'Changed',
+                old=unicode(labcontroller.disabled), new=data['disabled'])
+            labcontroller.disabled = data['disabled']
 
     response = jsonify(labcontroller.__json__())
     if fqdn_changed:

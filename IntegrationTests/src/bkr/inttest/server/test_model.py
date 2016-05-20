@@ -1270,8 +1270,7 @@ class DistroTreeByFilterTest(DatabaseTestCase):
     def test_distrolabcontroller(self):
         excluded = data_setup.create_distro_tree()
         included = data_setup.create_distro_tree()
-        lc = data_setup.create_labcontroller(
-                fqdn=u'DistroTreeByFilterTest.test_distrolabcontroller')
+        lc = data_setup.create_labcontroller()
         included.lab_controller_assocs.append(LabControllerDistroTree(
                 lab_controller=lc, url=u'http://notimportant'))
         session.flush()
@@ -2593,6 +2592,28 @@ class TestSystemInventoryDistro(DatabaseTestCase):
     def test_distro_tree_for_inventory_no_preferred_tree(self):
         with session.begin():
             self.assertEquals(self.system9.distro_tree_for_inventory(), self.distro_tree9)
+
+
+class TestLabController(DatabaseTestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.rollback()
+
+    def test_invalid_fqdn(self):
+        lc = data_setup.create_labcontroller()
+        try:
+            lc.fqdn = ''
+            self.fail('Must fail or die')
+        except ValueError as e:
+            self.assertIn('Lab controller FQDN must not be empty', str(e))
+        try:
+            lc.fqdn = 'invalid_lc_fqdn'
+            self.fail('Must fail or die')
+        except ValueError as e:
+            self.assertIn('Invalid FQDN for lab controller', str(e))
 
 if __name__ == '__main__':
     unittest.main()

@@ -680,9 +680,9 @@ class TestBeakerd(DatabaseTestCase):
     def test_or_lab_controller(self):
         with session.begin():
             user = data_setup.create_user()
-            lc1 = data_setup.create_labcontroller(u'test_or_labcontroller.lab1')
-            lc2 = data_setup.create_labcontroller(u'test_or_labcontroller.lab2')
-            lc3 = data_setup.create_labcontroller(u'test_or_labcontroller.lab3')
+            lc1 = data_setup.create_labcontroller()
+            lc2 = data_setup.create_labcontroller()
+            lc3 = data_setup.create_labcontroller()
             system1 = data_setup.create_system(arch=u'i386', shared=True)
             system1.lab_controller = lc1
             system2 = data_setup.create_system(arch=u'i386', shared=True)
@@ -694,11 +694,11 @@ class TestBeakerd(DatabaseTestCase):
             job.recipesets[0].recipes[0]._host_requires = (u"""
                    <hostRequires>
                     <or>
-                     <hostlabcontroller op="=" value="test_or_labcontroller.lab1"/>
-                     <hostlabcontroller op="=" value="test_or_labcontroller.lab2"/>
+                     <hostlabcontroller op="=" value="%s"/>
+                     <hostlabcontroller op="=" value="%s"/>
                     </or>
                    </hostRequires>
-                   """)
+                   """ % (lc1.fqdn, lc2.fqdn))
             session.flush()
             job_id = job.id
             system1_id = system1.id

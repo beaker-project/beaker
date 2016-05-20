@@ -24,8 +24,7 @@ class SystemAction(WebDriverTestCase):
             cls.system_fqdn = data_setup.unique_name('ncc1701d%s')
             cls.system = data_setup.create_system(fqdn=cls.system_fqdn,
                 owner=cls.system_owner)
-            cls.lc_name = data_setup.unique_name(u'testing_for_mail%s')
-            lc = data_setup.create_labcontroller(cls.lc_name)
+            lc = data_setup.create_labcontroller()
             cls.system.lab_controller = lc
             lender = u'amd'
             location = u'bne'
