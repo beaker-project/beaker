@@ -248,6 +248,19 @@ class JobCompletionNotificationTest(DatabaseTestCase):
                 'Job link %r should appear in first line %r'
                     % (job_link, first_line))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1326968
+    def test_contains_recipe_hyperlink(self):
+        with session.begin():
+            recipe = data_setup.create_recipe()
+            job = data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_job_complete(job, result=TaskResult.fail)
+
+        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        msg = email.message_from_string(raw_msg)
+        recipe_link = u'<%srecipes/%d' % (get_server_base(), recipe.id)
+        recipe_line = msg.get_payload(decode=True).splitlines()[2]
+        self.assertIn(recipe_link, recipe_line)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=720041
     def test_subject_contains_whiteboard(self):
         with session.begin():

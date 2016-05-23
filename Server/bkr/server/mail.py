@@ -39,9 +39,9 @@ def failed_recipes(job):
             msg = "%s\tRecipeSetID: %s\n" % ( msg, recipeset.id )
             for recipe in recipeset.recipes:
                 if recipe.is_failed():
-                    msg = "%s\t\tRecipeID: %s Arch: %s System: %s Distro: %s OSVersion: %s Status: %s Result: %s\n" \
+                    msg = "%s\t\tRecipeID: %s Arch: %s System: %s Distro: %s Status: %s Result: %s <%s>\n" \
                            % (msg, recipe.id, recipe.distro_tree.arch, recipe.resource, recipe.distro_tree.distro,
-                              recipe.distro_tree.distro.osversion, recipe.status, recipe.result)
+                              recipe.status, recipe.result, absolute_url('/recipes/%s' % recipe.id))
                     for task in recipe.tasks:
                         if task.is_failed():
                             msg = "%s\t\t\tTaskID: %s TaskName: %s StartTime: %s Duration: %s Status: %s Result: %s\n" \
