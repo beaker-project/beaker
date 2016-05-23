@@ -5,10 +5,8 @@
 # (at your option) any later version.
 
 from turbogears.database import session
-from turbogears import validators
 from sqlalchemy import and_, or_, not_
 from sqlalchemy.exc import InvalidRequestError
-from formencode.api import Invalid
 from bkr.common.bexceptions import BX
 from flask import request, jsonify, redirect as flask_redirect
 from bkr.server import identity
@@ -215,20 +213,11 @@ def create_user():
     data = read_json_request(request)
     with convert_internal_errors():
         new_user_name = data.get('user_name', '').strip()
-        if not new_user_name:
-            raise ValueError('Username must not be empty')
         existing_user = User.by_user_name(new_user_name)
         if existing_user is not None:
             raise Conflict409('User %s already exists' % new_user_name)
         new_display_name = data.get('display_name', '').strip()
-        if not new_display_name:
-            raise ValueError('Display name must not be empty')
-        email_validator = validators.Email(not_empty=True)
-        try:
-            new_email_address = email_validator.to_python(
-                    data.get('email_address', '').strip())
-        except Invalid as e:
-            raise ValueError('Invalid email address: %s' % e)
+        new_email_address = data.get('email_address', '').strip()
         user = User(user_name=new_user_name,
                     display_name=new_display_name,
                     email_address=new_email_address)
@@ -309,8 +298,6 @@ def update_user(username):
         with convert_internal_errors():
             if 'user_name' in data:
                 new_user_name = data['user_name'].strip()
-                if not new_user_name:
-                    raise ValueError('Username must not be empty')
                 if user.user_name != new_user_name:
                     if not user.can_rename(identity.current.user):
                         raise Forbidden403('Cannot rename user %s to %s'
@@ -320,17 +307,9 @@ def update_user(username):
                     user.user_name = new_user_name
                     renamed = True
             if 'display_name' in data:
-                new_display_name = data['display_name'].strip()
-                if not new_display_name:
-                    raise ValueError('Display name must not be empty')
-                user.display_name = new_display_name
+                user.display_name = data['display_name'].strip()
             if 'email_address' in data:
-                validator = validators.Email(not_empty=True)
-                try:
-                    new_email_address = validator.to_python(data['email_address'].strip())
-                except Invalid as e:
-                    raise ValueError('Invalid email address: %s' % e)
-                user.email_address = new_email_address
+                user.email_address = data['email_address'].strip()
             if 'root_password' in data:
                 new_root_password = data['root_password']
                 if user.root_password != new_root_password:

@@ -206,6 +206,29 @@ class UserHTTPTest(DatabaseTestCase):
             self.assertEqual(response.json()['id'], user.user_id)
             self.assertEqual(response.json()['user_name'], 'fbaggins')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1337812
+    def test_does_not_create_user_with_empty_display_name(self):
+        s = requests.Session()
+        requests_login(s)
+        response = post_json(get_server_base() + 'users/', session=s, data={
+                'user_name': 'fbagginsone',
+                'display_name': '',
+                'email_address': 'rodo@theshire.co.nz'})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text,
+                'Display name must not be empty')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1337812
+    def test_does_not_create_user_with_empty_email_address(self):
+        s = requests.Session()
+        requests_login(s)
+        response = post_json(get_server_base() + 'users/', session=s, data={
+                'user_name': 'fbagginsone',
+                'display_name': 'Frodo Baggins pne',
+                'email_address': ''})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Email address must not be empty', response.text)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=997830
     def test_whitespace_only_values_are_not_accepted(self):
         # Whitespace-only values also count as empty, because we strip
@@ -229,7 +252,7 @@ class UserHTTPTest(DatabaseTestCase):
                 'email_address': ' \t\v'})
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.text,
-                'Invalid email address: Please enter an email address')
+                'Email address must not be empty')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1086505
     def test_non_ascii_username_and_display_name(self):
@@ -332,7 +355,7 @@ class UserHTTPTest(DatabaseTestCase):
         response = patch_json(get_server_base() + 'users/%s' % user.user_name,
                 data={'email_address': u''}, session=s)
         self.assertEqual(response.status_code, 400)
-        self.assertIn('Invalid email address', response.text)
+        self.assertIn('Email address must not be empty', response.text)
 
     def test_set_password(self):
         with session.begin():

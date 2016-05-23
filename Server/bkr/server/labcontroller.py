@@ -171,8 +171,8 @@ def update_labcontroller(fqdn):
                 user = update_user(
                     user,
                     display_name=fqdn,
-                    email_address=data.get('email_address'),
-                    password=data.get('password', '')
+                    email_address=data.get('email_address', user.email_address),
+                    password=data.get('password', user.password)
                 )
                 labcontroller.record_activity(
                     user=identity.current.user, service=u'HTTP',

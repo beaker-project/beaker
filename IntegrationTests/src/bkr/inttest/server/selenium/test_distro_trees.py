@@ -56,8 +56,7 @@ class DistroTreeViewTest(WebDriverTestCase):
     def test_labcontroller(self):
         # Add
         with session.begin():
-            lc = data_setup.create_labcontroller(fqdn=data_setup. \
-                                                 unique_name(u'lc%s'))
+            lc = data_setup.create_labcontroller()
             distro_tree = data_setup.create_distro_tree()
         b = self.browser
         login(b)

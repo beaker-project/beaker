@@ -469,9 +469,9 @@ class SystemFilteringTest(DatabaseTestCase):
             present=[included], absent=[excluded])
 
     def test_or_lab_controller(self):
-        lc1 = data_setup.create_labcontroller(fqdn=u'lab1')
-        lc2 = data_setup.create_labcontroller(fqdn=u'lab2')
-        lc3 = data_setup.create_labcontroller(fqdn=u'lab3')
+        lc1 = data_setup.create_labcontroller(fqdn=u'lab1.testdata.invalid')
+        lc2 = data_setup.create_labcontroller(fqdn=u'lab2.testdata.invalid')
+        lc3 = data_setup.create_labcontroller(fqdn=u'lab3.testdata.invalid')
         included = data_setup.create_system()
         included.lab_controller = lc1
         excluded = data_setup.create_system()
@@ -479,8 +479,8 @@ class SystemFilteringTest(DatabaseTestCase):
         self.check_filter("""
                <hostRequires>
                 <or>
-                 <hostlabcontroller op="=" value="lab1"/>
-                 <hostlabcontroller op="=" value="lab2"/>
+                 <hostlabcontroller op="=" value="lab1.testdata.invalid"/>
+                 <hostlabcontroller op="=" value="lab2.testdata.invalid"/>
                 </or>
                </hostRequires>
             """,
@@ -488,8 +488,8 @@ class SystemFilteringTest(DatabaseTestCase):
         self.check_filter("""
                <hostRequires>
                 <or>
-                 <labcontroller op="=" value="lab1"/>
-                 <labcontroller op="=" value="lab2"/>
+                 <labcontroller op="=" value="lab1.testdata.invalid"/>
+                 <labcontroller op="=" value="lab2.testdata.invalid"/>
                 </or>
                </hostRequires>
             """,

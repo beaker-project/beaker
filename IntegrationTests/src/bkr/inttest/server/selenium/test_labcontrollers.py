@@ -910,6 +910,49 @@ class LabControllerHTTPTest(DatabaseTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertTrue(re.search('is already associated with lab controller', response.text))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1337812
+    def test_does_not_create_labcontroller_with_invalid_email_address(self):
+        s = requests.Session()
+        web_login(s)
+        fqdn = data_setup.unique_name('lc%s.com')
+        user_name = data_setup.unique_name('user%s')
+        data = {'fqdn': fqdn,
+                'user_name': user_name,
+                'password': '',
+                'email_address': 'asdf'}
+        response = post_json(
+            get_server_base() + '/labcontrollers/', session=s, data=data)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Invalid email address', response.text)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1337812
+    def test_does_not_create_labcontroller_with_empty_email_address(self):
+        s = requests.Session()
+        web_login(s)
+        fqdn = data_setup.unique_name('lc%s.com')
+        user_name = data_setup.unique_name('user%s')
+        data = {'fqdn': fqdn,
+                'user_name': user_name,
+                'password': '',
+                'email_address': ''}
+        response = post_json(
+            get_server_base() + '/labcontrollers/', session=s, data=data)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Email address must not be empty', response.text)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1337812
+    def test_does_not_create_labcontroller_without_email_address(self):
+        s = requests.Session()
+        web_login(s)
+        fqdn = data_setup.unique_name('lc%s.com')
+        data = {'fqdn': fqdn,
+                'user_name': data_setup.unique_name('user%s')}
+
+        response = post_json(
+            get_server_base() + '/labcontrollers/', session=s, data=data)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Email address must not be empty', response.text)
+
     def test_get_labcontroller_json(self):
         """Can successfully retrieve lab controller details in JSON."""
         response = requests.get(

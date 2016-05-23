@@ -22,6 +22,8 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import not_, and_, or_, exists
 from turbogears.config import get
 from turbogears.database import session
+from turbogears import validators
+from formencode.api import Invalid
 from bkr.server.bexceptions import BX, NoChangeException
 from bkr.server.util import convert_db_lookup_error
 from bkr.server import identity
@@ -147,12 +149,29 @@ class User(DeclarativeMappedObject, ActivityMixin):
     @validates('user_name')
     def validate_user_name(self, key, value):
         if not value:
-            raise ValueError('User must have a username')
+            raise ValueError('Username must not be empty')
         # Reject username values which would be normalized into a different
         # value according to the LDAP normalization rules [RFC4518]. For
         # sanity we always enforce this, even if LDAP is not being used.
         if self._unnormalized_username_pattern.search(value):
             raise ValueError('Username %r contains unnormalized whitespace')
+        return value
+
+    @validates('display_name')
+    def validate_display_name(self, key, value):
+        if not value:
+            raise ValueError('Display name must not be empty')
+        return value
+
+    @validates('email_address')
+    def validate_email_address(self, key, value):
+        if not value:
+            raise ValueError('Email address must not be empty')
+        email_validator = validators.Email(not_empty=True)
+        try:
+            value = email_validator.to_python(value)
+        except Invalid as e:
+            raise ValueError('Invalid email address: %s' % e)
         return value
 
     def __json__(self):
