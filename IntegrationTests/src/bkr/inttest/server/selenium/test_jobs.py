@@ -16,6 +16,7 @@ import re
 import tempfile
 import pkg_resources
 from turbogears.database import session
+from selenium.webdriver.common.keys import Keys
 from bkr.inttest.assertions import wait_for_condition
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_text_present, logout, \
@@ -218,6 +219,26 @@ class TestViewJob(WebDriverTestCase):
         b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
         b.find_element_by_xpath(u'//div[@class="page-header"]'
                 u'//button[normalize-space(string(.))="Cancelling\u2026"]')
+        with session.begin():
+            session.expire_all()
+            job.update_status()
+            self.assertEquals(job.status, TaskStatus.cancelled)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1335370
+    def test_cancel_job_submission_ctrl_enter(self):
+        with session.begin():
+            job_owner = data_setup.create_user(password=u'owner')
+            job = data_setup.create_job(owner=job_owner)
+        b = self.browser
+        login(b, user=job_owner.user_name, password=u'owner')
+        self.go_to_job_page(job)
+        b.find_element_by_xpath('//div[@class="page-header"]'
+                '//button[normalize-space(string(.))="Cancel"]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('message').send_keys('LEEEEEEROY, JENKINS' + Keys.CONTROL + Keys.ENTER)
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
+        b.find_element_by_xpath(u'//div[@class="page-header"]'
+                                u'//button[normalize-space(string(.))="Cancelling\u2026"]')
         with session.begin():
             session.expire_all()
             job.update_status()

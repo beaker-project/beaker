@@ -124,6 +124,7 @@ def _create_env(source_dir, output_dir, **kwargs):
             'groups.js',
             'labcontrollers.js',
             'comments-link.js',
+            'ctrl-enter-form-submit.js',
             'job-header.js',
             'job-info.js',
             'job-recipes.js',
