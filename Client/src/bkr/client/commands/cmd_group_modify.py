@@ -42,7 +42,8 @@ Options
 
 .. option:: --remove-member
 
-   Remove a user from the group.
+   Remove a user from the group. This option can be specified multiple
+   times to remove more than one user from the group.
 
 .. option:: --grant-owner
 
@@ -132,7 +133,9 @@ class Group_Modify(BeakerCommand):
 
         self.parser.add_option(
             "--remove-member",
-            help="Username of the member to remove",
+            action='append',
+            default=[],
+            help="Username of the member to be removed from the group",
             )
 
         self.parser.add_option(
@@ -165,7 +168,7 @@ class Group_Modify(BeakerCommand):
         group_name = kwargs.get('group_name', None)
         description = kwargs.get('description', None)
         add_member = kwargs.pop('add_member', [])
-        remove_member = kwargs.get('remove_member', None)
+        remove_member = kwargs.pop('remove_member', [])
         grant_owner = kwargs.get('grant_owner', None)
         revoke_owner = kwargs.get('revoke_owner', None)
         password = kwargs.get('root_password', None)
@@ -182,8 +185,8 @@ class Group_Modify(BeakerCommand):
             res = requests_session.post(url, json={'user_name': member})
             res.raise_for_status()
 
-        if remove_member:
-            url = 'groups/%s/members/?user_name=%s' % (group, remove_member)
+        for member in remove_member:
+            url = 'groups/%s/members/?user_name=%s' % (group, member)
             res = requests_session.delete(url)
             res.raise_for_status()
 
