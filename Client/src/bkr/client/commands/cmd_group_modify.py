@@ -29,19 +29,20 @@ Options
 
 .. option:: --group-name
 
-   New name of the group
+   New name of the group.
 
 .. option:: --description
 
-   New description of the group
+   New description of the group.
 
 .. option:: --add-member
 
-   Add a user to the group
+   Add a user to the group. This option can be specified multiple
+   times to add more than one user to the group.
 
 .. option:: --remove-member
 
-   Remove a user from the group
+   Remove a user from the group.
 
 .. option:: --grant-owner
 
@@ -124,7 +125,9 @@ class Group_Modify(BeakerCommand):
 
         self.parser.add_option(
             "--add-member",
-            help="Username of the member to add",
+            action='append',
+            default=[],
+            help="Username of the member to be added to the group",
             )
 
         self.parser.add_option(
@@ -161,7 +164,7 @@ class Group_Modify(BeakerCommand):
         display_name = kwargs.get('display_name', None)
         group_name = kwargs.get('group_name', None)
         description = kwargs.get('description', None)
-        add_member = kwargs.get('add_member', None)
+        add_member = kwargs.pop('add_member', [])
         remove_member = kwargs.get('remove_member', None)
         grant_owner = kwargs.get('grant_owner', None)
         revoke_owner = kwargs.get('revoke_owner', None)
@@ -174,9 +177,9 @@ class Group_Modify(BeakerCommand):
         self.set_hub(**kwargs)
         requests_session = self.requests_session()
 
-        if add_member:
+        for member in add_member:
             url = 'groups/%s/members/' % group
-            res = requests_session.post(url, json={'user_name': add_member})
+            res = requests_session.post(url, json={'user_name': member})
             res.raise_for_status()
 
         if remove_member:

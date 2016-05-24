@@ -339,6 +339,22 @@ class GroupModifyTest(ClientTestCase):
                          % self.fake_ldap_group.group_name
                          in e.stderr_output,e.stderr_output)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1328313
+    def test_group_modify_add_multiple_members(self):
+        with session.begin():
+            user1 = data_setup.create_user()
+            user2 = data_setup.create_user()
+
+        out = run_client(['bkr', 'group-modify',
+                          '--add-member', user1.user_name,
+                          '--add-member', user2.user_name,
+                          self.group.group_name],
+                         config=self.client_config)
+        with session.begin():
+            session.refresh(self.group)
+            self.assertIn(user1, self.group.users)
+            self.assertIn(user2, self.group.users)
+
     def test_group_modify_remove_member(self):
         with session.begin():
             user = data_setup.create_user()
