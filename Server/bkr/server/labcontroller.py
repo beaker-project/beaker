@@ -163,14 +163,14 @@ def update_labcontroller(fqdn):
                 user=identity.current.user, service=u'HTTP',
                 field=u'fqdn', action=u'Changed', old=labcontroller.fqdn, new=new_fqdn)
             labcontroller.fqdn = new_fqdn
+            labcontroller.user.display_name = new_fqdn
             fqdn_changed = True
-
         if 'user_name' in data:
             user = find_user_or_create(data['user_name'])
             if labcontroller.user != user:
                 user = update_user(
                     user,
-                    display_name=fqdn,
+                    display_name=new_fqdn,
                     email_address=data.get('email_address', user.email_address),
                     password=data.get('password', user.password)
                 )
@@ -179,7 +179,12 @@ def update_labcontroller(fqdn):
                     field=u'User', action=u'Changed',
                     old=labcontroller.user.user_name, new=user.user_name)
                 labcontroller.user = user
-
+        if 'email_address' in data:
+            new_email_address = data.get('email_address')
+            if labcontroller.user.email_address != new_email_address:
+                labcontroller.user.email_address = new_email_address
+        if data.get('password') is not None:
+            labcontroller.user.password = data.get('password')
         if labcontroller.disabled != data.get('disabled', labcontroller.disabled):
             labcontroller.record_activity(
                 user=identity.current.user, service=u'HTTP',

@@ -1017,6 +1017,8 @@ class LabControllerHTTPTest(DatabaseTestCase):
         with session.begin():
             lc = LabController.by_name(data['fqdn'])
             self.assertRaises(NoResultFound, LabController.by_name, self.lc.fqdn)
+            session.refresh(lc.user)
+            self.assertEqual(self.lc.user.display_name, data['fqdn'])
             self.assertTrue(lc)
 
     def test_renames_duplicated_labcontroller_errors(self):
@@ -1085,6 +1087,69 @@ class LabControllerHTTPTest(DatabaseTestCase):
                 'user_name': self.user.user_name,
             }, response.json())
             self.assertEqual(self.lc.fqdn, self.user.display_name)
+            self.assertIn(group, self.lc.user.groups)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1339034
+    def test_update_password(self):
+        s = requests.Session()
+        web_login(s)
+        response = patch_json(
+            get_server_base() + 'labcontrollers/' + self.lc.fqdn,
+            session=s,
+            data={'password': u'newpassword'})
+        self.assertEqual(response.status_code, 200)
+
+        with session.begin():
+            session.expire_all()
+            self.assertTrue(self.lc.user.check_password(u'newpassword'))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1339034
+    def test_update_email_address(self):
+        s = requests.Session()
+        web_login(s)
+        response = patch_json(
+            get_server_base() + 'labcontrollers/' + self.lc.fqdn,
+            session=s,
+            data={'email_address': u'new_email_address@beaker-project.org'})
+        self.assertEqual(response.status_code, 200)
+
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.lc.user.email_address, u'new_email_address@beaker-project.org')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1339034
+    def test_changes_user_and_fqdn_successfully(self):
+        """Changes the lab controller credentials and FQDN at the same time successfully."""
+        with session.begin():
+            fqdn = data_setup.unique_name('lc%s.com')
+            user = data_setup.create_user()
+            group = Group.by_name('lab_controller')
+            self.assertNotIn(group, user.groups)
+
+        s = requests.Session()
+        web_login(s)
+        response = patch_json(
+            get_server_base() + 'labcontrollers/' + self.lc.fqdn,
+            session=s,
+            data={'fqdn': fqdn,
+                  'user_name': user.user_name})
+        self.assertEqual(response.status_code, 200)
+
+        with session.begin():
+            for obj in [self.lc, user, group]:
+                session.refresh(obj)
+
+            self.assertDictEqual({
+                'id': self.lc.id,
+                'fqdn': fqdn,
+                'disabled': self.lc.disabled,
+                'is_removed': bool(self.lc.removed),
+                'removed': self.lc.removed,
+                'display_name': fqdn,
+                'email_address': user.email_address,
+                'user_name': user.user_name,
+            }, response.json())
+            self.assertEqual(self.lc.fqdn, user.display_name)
             self.assertIn(group, self.lc.user.groups)
 
     def test_removed_labcontroller_can_be_restored(self):
