@@ -384,9 +384,9 @@ class Recipes(RPCRoot):
                 action='./mine', *args, **kw)
 
     def recipes(self,recipes,action='.',*args, **kw):
-        recipes = recipes.filter(Recipe.recipeset.has(
-            RecipeSet.job.has(and_(
-            Job.deleted == None, Job.to_delete == None))))
+        recipes = recipes.join(Recipe.recipeset)\
+            .join(RecipeSet.job)\
+            .filter(not_(Job.is_deleted))
         recipes_return = self._recipes(recipes,**kw)
         searchvalue = None
         search_options = {}
