@@ -42,14 +42,27 @@ window.CommentsLink = Backbone.View.extend({
 
 var CommentsPopover = BeakerPopoverView.extend({
     className: 'popover comments-popover',
+    initialize: function () {
+        this.subviews = [];
+        BeakerPopoverView.prototype.initialize.apply(this, arguments);
+    },
     render: function () {
         BeakerPopoverView.prototype.render.apply(this);
-        new CommentsList({model: this.model}).$el
-            .appendTo(this.$('.popover-content'));
+        var comments_list = new CommentsList({model: this.model});
+        this.subviews.push(comments_list);
+        comments_list.$el.appendTo(this.$('.popover-content'));
         if (this.model.get('can_comment')) {
-            new CommentForm({model: this.model}).$el
-                .appendTo(this.$('.popover-content'));
+            var comment_form = new CommentForm({model: this.model});
+            this.subviews.push(comment_form);
+            comment_form.$el.appendTo(this.$('.popover-content'));
         }
+    },
+    remove: function () {
+        BeakerPopoverView.prototype.remove.apply(this, arguments);
+        // remove all sub views
+        _.each(this.subviews, function(view){
+            view.remove();
+        });
     },
 });
 

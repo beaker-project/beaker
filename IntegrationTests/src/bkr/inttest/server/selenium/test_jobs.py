@@ -347,6 +347,34 @@ class TestViewJob(WebDriverTestCase):
             self.assertEqual(recipeset.comments[-1].comment, u'fnord')
             self.assertEqual(recipeset.comments[-1].user, owner)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1340689
+    def test_can_waive_recipeset_after_clicking_the_comments_link(self):
+        with session.begin():
+            owner = data_setup.create_user(password=u'password')
+            job = data_setup.create_completed_job(owner=owner)
+            recipeset = job.recipesets[0]
+        b = self.browser
+        login(b, user=owner.user_name, password='password')
+        self.go_to_job_page(job)
+        rs_row = b.find_element_by_xpath(
+                '//tr[td/span[@class="recipeset-id" and normalize-space(string(.))="%s"]]'
+                % recipeset.t_id)
+        rs_row.find_element_by_class_name('comments-link').click()
+        rs_row.find_element_by_xpath('.//button[normalize-space(string(.))="Waive"]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('comment').send_keys('fnord')
+        modal.find_element_by_tag_name('form').submit()
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
+        rs_row = b.find_element_by_xpath(
+                '//tr[td/span[@class="recipeset-id" and normalize-space(string(.))="%s"]]'
+                % recipeset.t_id)
+        rs_row.find_element_by_xpath('.//span[@class="label label-warning" and text()="Waived"]')
+        with session.begin():
+            session.refresh(recipeset)
+            self.assertEqual(recipeset.waived, True)
+            self.assertEqual(recipeset.comments[-1].comment, u'fnord')
+            self.assertEqual(recipeset.comments[-1].user, owner)
+
     def test_unwaive_waived_recipeset(self):
         with session.begin():
             owner = data_setup.create_user(password=u'asdf')
