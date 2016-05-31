@@ -78,6 +78,8 @@ def update_recipeset(id):
       while a recipe set is still queued. Job owners can generally only 
       *decrease* the priority of their recipe set, queue admins can increase 
       it.
+    :jsonparam boolean waived: If true, the recipe set will be waived, regardless
+      of its result.
     """
     recipeset = _get_rs_by_id(id)
     data = read_json_request(request)
@@ -99,6 +101,8 @@ def update_recipeset_by_taskspec(taskspec):
       while a recipe set is still queued. Job owners can generally only 
       *decrease* the priority of their recipe set, queue admins can increase 
       it.
+    :jsonparam boolean waived: If true, the recipe set will be waived, regardless
+      of its result.
     """
     if not taskspec.startswith(('J', 'RS')):
         raise BadRequest400('Taskspec type must be one of [J, RS]')
