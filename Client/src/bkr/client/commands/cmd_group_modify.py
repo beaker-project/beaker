@@ -38,7 +38,8 @@ Options
 .. option:: --add-member
 
    Add a user to the group. This option can be specified multiple
-   times to add more than one user to the group.
+   times to add more than one user to the group. Should a specified
+   user fail to be added, all subsequent users are ignored.
 
 .. option:: --remove-member
 
