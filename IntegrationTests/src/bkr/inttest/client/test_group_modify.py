@@ -473,6 +473,29 @@ class GroupModifyTest(ClientTestCase):
             self.assertNotIn(user1, self.group.users)
             self.assertNotIn(user2, self.group.users)
 
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1336966
+    def test_subsequent_user_after_fail_not_removed(self):
+        with session.begin():
+            user1 = data_setup.create_user()
+            user2 = data_setup.create_user()
+            self.group.add_member(user2)
+            session.flush()
+            self.assertNotIn(user1, self.group.users)
+            self.assertIn(user2, self.group.users)
+
+        try:
+            out = run_client(['bkr', 'group-modify',
+                              '--remove-member', user1.user_name,
+                              '--remove-member', user2.user_name,
+                              self.group.group_name],
+                             config=self.client_config)
+            self.fail('Must fail or die')
+        except ClientError, e:
+            self.assert_('User %s is not a member of group %s'
+                         % (user1.user_name, self.group.group_name)
+                         in e.stderr_output, e.stderr_output)
+            self.assertIn(user2, self.group.users)
+
     def test_group_modify_grant_owner(self):
         with session.begin():
             user1 = data_setup.create_user()

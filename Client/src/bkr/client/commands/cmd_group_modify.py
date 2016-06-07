@@ -43,7 +43,8 @@ Options
 .. option:: --remove-member
 
    Remove a user from the group. This option can be specified multiple
-   times to remove more than one user from the group.
+   times to remove more than one user from the group. Should a specified
+   user fail to be removed, all subsequent users are ignored.
 
 .. option:: --grant-owner
 
