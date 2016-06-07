@@ -272,11 +272,11 @@ def _get_recipe_task_by_id(recipeid, taskid):
         task = RecipeTask.by_id(taskid)
     except NoResultFound:
         raise NotFound404('Recipe task not found')
-    if task.recipe.id != recipeid:
+    if recipeid != '_' and str(task.recipe.id) != recipeid:
         raise NotFound404('Recipe task not found')
     return task
 
-@app.route('/recipes/<int:recipeid>/tasks/<int:taskid>/logs/<path:path>', methods=['GET'])
+@app.route('/recipes/<recipeid>/tasks/<taskid>/logs/<path:path>', methods=['GET'])
 def get_recipe_task_log(recipeid, taskid, path):
     """
     Redirects to the actual storage location for the requested task log.
@@ -291,7 +291,7 @@ def get_recipe_task_log(recipeid, taskid, path):
             return redirect(log.absolute_url, code=307)
     return NotFound404('Task log %s for recipe %s task %s not found' % (path, recipeid, taskid))
 
-@app.route('/recipes/<int:recipeid>/tasks/<int:taskid>/comments/', methods=['GET'])
+@app.route('/recipes/<recipeid>/tasks/<taskid>/comments/', methods=['GET'])
 def get_recipe_task_comments(recipeid, taskid):
     """
     Returns a JSON collection of comments made on a recipe task.
@@ -303,7 +303,7 @@ def get_recipe_task_comments(recipeid, taskid):
     with convert_internal_errors():
         return jsonify({'entries': task.comments})
 
-@app.route('/recipes/<int:recipeid>/tasks/<int:taskid>/comments/', methods=['POST'])
+@app.route('/recipes/<recipeid>/tasks/<taskid>/comments/', methods=['POST'])
 @auth_required
 def post_recipe_task_comment(recipeid, taskid):
     """
@@ -331,11 +331,13 @@ def _get_recipe_task_result_by_id(recipeid, taskid, resultid):
         result = RecipeTaskResult.by_id(resultid)
     except NoResultFound:
         raise NotFound404('Recipe task result not found')
-    if result.recipetask.id != taskid or result.recipetask.recipe.id != recipeid:
+    if recipeid != '_' and str(result.recipetask.recipe.id) != recipeid:
+        raise NotFound404('Recipe task result not found')
+    if taskid != '_' and str(result.recipetask.id) != taskid:
         raise NotFound404('Recipe task result not found')
     return result
 
-@app.route('/recipes/<int:recipeid>/tasks/<int:taskid>/results/<int:resultid>/logs/<path:path>', methods=['GET'])
+@app.route('/recipes/<recipeid>/tasks/<taskid>/results/<resultid>/logs/<path:path>', methods=['GET'])
 def get_recipe_task_result_log(recipeid, taskid, resultid, path):
     """
     Redirects to the actual storage location for the requested result log.
@@ -352,7 +354,7 @@ def get_recipe_task_result_log(recipeid, taskid, resultid, path):
     return NotFound404('Result log %s for recipe %s task %s result %s not found'
             % (path, recipeid, taskid, resultid))
 
-@app.route('/recipes/<int:recipeid>/tasks/<int:taskid>/results/<int:resultid>/comments/', methods=['GET'])
+@app.route('/recipes/<recipeid>/tasks/<taskid>/results/<resultid>/comments/', methods=['GET'])
 def get_recipe_task_result_comments(recipeid, taskid, resultid):
     """
     Returns a JSON collection of comments made on a recipe task result.
@@ -365,7 +367,7 @@ def get_recipe_task_result_comments(recipeid, taskid, resultid):
     with convert_internal_errors():
         return jsonify({'entries': result.comments})
 
-@app.route('/recipes/<int:recipeid>/tasks/<int:taskid>/results/<int:resultid>/comments/', methods=['POST'])
+@app.route('/recipes/<recipeid>/tasks/<taskid>/results/<resultid>/comments/', methods=['POST'])
 @auth_required
 def post_recipe_task_result_comment(recipeid, taskid, resultid):
     """

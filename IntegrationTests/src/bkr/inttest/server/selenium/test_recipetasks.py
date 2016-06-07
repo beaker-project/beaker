@@ -194,3 +194,12 @@ class RecipeTaskResultHTTPTest(DatabaseTestCase):
                 % (self.recipe.id, self.recipetask.id, self.result.id),
                 data={'comment': 'testdata'})
         self.assertEqual(response.status_code, 401)
+
+    def test_404_response_to_string_rs_id(self):
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = post_json(get_server_base() +
+                 '/recipes/thisisnotanint/tasks/%s/comments/'
+                 % self.recipe.tasks[0].id,
+                 session=s, data={'comment': 'testdata'})
+        self.assertEqual(response.status_code, 404)

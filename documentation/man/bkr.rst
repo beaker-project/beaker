@@ -37,6 +37,8 @@ abbreviations, in descending hierarchical order:
         recipe
     T
         recipe-task
+    TR
+        task-result
 
 For example, J:123 might contain RS:456, which might contain R:789, which might 
 contain T:1234 and T:5678.
