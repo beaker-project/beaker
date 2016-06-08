@@ -42,7 +42,7 @@ from .scheduler import (Watchdog, TaskBase, Job, RecipeSet, Recipe,
         RecipeTaskResult, MachineRecipe, GuestRecipe, RecipeTask, Log,
         LogRecipe, LogRecipeTask, LogRecipeTaskResult, JobCc, RecipeResource,
         SystemResource, GuestResource, VirtResource, RetentionTag,
-        Product, RecipeSetActivity, RecipeRepo,
+        Product, RecipeActivity, RecipeSetActivity, RecipeRepo,
         RecipeKSAppend, RecipeTaskParam, JobActivity, RecipeReservationRequest)
 from .reviewing import RecipeSetComment, RecipeReviewedState, RecipeTaskComment,\
     RecipeTaskResultComment
