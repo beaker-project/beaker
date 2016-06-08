@@ -73,9 +73,20 @@ class Activity(DeclarativeMappedObject):
             'type': self.type,
         }
 
+    def __repr__(self):
+        return ('%s(id=%r, object_id=%r, created=%r, user=%r, service=%r, '
+                'action=%r, field_name=%r, old_value=%r, new_value=%r)'
+                % (self.__class__.__name__, self.id, self.object_id,
+                   self.created, self.user, self.service, self.action,
+                   self.field_name, self.old_value, self.new_value))
+
     @classmethod
     def all(cls):
         return cls.query
+
+    @property
+    def object_id(self):
+        return None
 
     def object_name(self):
         return None
