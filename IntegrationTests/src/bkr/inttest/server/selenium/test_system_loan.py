@@ -26,7 +26,7 @@ class SystemLoanTest(WebDriverTestCase):
         b.find_element_by_xpath('//ul[contains(@class, "system-nav")]'
                 '//a[text()="Loan"]').click()
 
-    def change_loan(self, loanee, comment=None):
+    def change_loan(self, loanee, comment=None, expect_success=True):
         b = self.browser
         tab = b.find_element_by_id('loan')
         tab.find_element_by_xpath('.//button[text()="Lend"]').click()
@@ -35,6 +35,9 @@ class SystemLoanTest(WebDriverTestCase):
         if comment:
             modal.find_element_by_name('comment').send_keys(comment)
         modal.find_element_by_tag_name('form').submit()
+        if expect_success:
+            # Wait for modal to close itself
+            b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
 
     def borrow(self):
         b = self.browser
@@ -232,7 +235,7 @@ class SystemLoanTest(WebDriverTestCase):
         login(b, user=user.user_name, password='password')
         self.go_to_loan_page()
         loanee_name = "this_is_not_a_valid_user_name_for_any_test"
-        self.change_loan(loanee_name)
+        self.change_loan(loanee_name, expect_success=False)
         error = "user name %s is invalid" % loanee_name
         self.verify_loan_error(error)
         # check errors don't stack up
@@ -249,6 +252,6 @@ class SystemLoanTest(WebDriverTestCase):
         login(b, user=self.owner.user_name, password='password')
         self.go_to_loan_page()
         # jgillard is defined in ldap-data.ldif
-        self.change_loan(u' jgillard')
+        self.change_loan(u' jgillard', expect_success=False)
         error = 'user name jgillard is invalid'
         self.verify_loan_error(error)
