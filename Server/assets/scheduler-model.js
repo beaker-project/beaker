@@ -24,10 +24,8 @@ window.Job = Backbone.Model.extend({
             recipeset.on('change cancelled', update_activity);
         });
     },
-    _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>jobs/<%- id %>" \
-        title="<%- truncated_whiteboard(whiteboard) %>"><%- t_id %></a>'),
     toHTML: function () {
-        return this._toHTML_template(this.attributes);
+        return JST['job-toHTML'](this.attributes);
     },
     parse: function (data) {
         var job = this;
@@ -288,9 +286,8 @@ window.Recipe = Backbone.Model.extend({
         }
         return data;
     },
-    _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>recipes/<%- id %>" title="<%- truncated_whiteboard(whiteboard) %>"><%- t_id %></a>'),
     toHTML: function () {
-        return this._toHTML_template(this.attributes);
+        return JST['recipe-toHTML'](this.attributes);
     },
     update_reservation: function (kill_time) {
         var model = this;

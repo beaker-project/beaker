@@ -84,6 +84,7 @@ class RecipeActivity(Activity):
         result['recipe'] = {
             'id': self.object.id,
             't_id': self.object.t_id,
+            'whiteboard': self.object.whiteboard,
             'recipeset': {
                 'id': self.object.recipeset.id,
                 't_id': self.object.recipeset.t_id,
