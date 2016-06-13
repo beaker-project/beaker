@@ -1,0 +1,10 @@
+Ready-for-Checks+1: Blake McIvor <bmcivor@redhat.com>
+Code-Review+1: Matt Jia <mjia@redhat.com>
+Code-Review+2: Dan Callaghan <dcallagh@redhat.com>
+Code-Review+1: Roman Joost <rjoost@redhat.com>
+Verified+1: Blake McIvor <bmcivor@redhat.com>
+Submitted-by: Blake McIvor <bmcivor@redhat.com>
+Submitted-at: Mon, 13 Jun 2016 21:05:09 +0000
+Reviewed-on: http://gerrit.beaker-project.org/4908
+Project: beaker
+Branch: refs/heads/develop
