@@ -27,3 +27,8 @@ AUTH_METHOD = "password"
 # SSL CA certificate to verify the Beaker server's SSL certificate.
 # By default, uses the system-wide CA certificate bundle.
 #CA_CERT = ""
+
+# By default the command will fail if the Beaker server's SSL certificate is
+# invalid or not signed by a trusted CA. Set this to False to disable validity
+# checks. The --insecure option has the same effect.
+#SSL_VERIFY = True

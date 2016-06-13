@@ -45,6 +45,8 @@ class BeakerOptionParser(CommandOptionParser):
             help='Use USERNAME for password authentication (overrides config file)'),
         Option('--password',
             help='Use PASSWORD for password authentication (overrides config file)'),
+        Option('--insecure', action='store_true',
+            help='Skip SSL certificate validity checks'),
         Option('--proxy-user',
             help=SUPPRESS_HELP),
     ]

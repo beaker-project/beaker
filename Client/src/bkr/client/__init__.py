@@ -66,6 +66,8 @@ class BeakerCommand(Command):
     def set_hub(self, username=None, password=None, **kwargs):
         if kwargs.get('hub'):
             self.conf['HUB_URL'] = kwargs['hub']
+        if kwargs.get('insecure'):
+            self.conf['SSL_VERIFY'] = False
         proxy_user = kwargs.get('proxy_user')
         self.container.set_hub(username, password, auto_login=self.requires_login,
             proxy_user=proxy_user)
@@ -82,6 +84,7 @@ class BeakerCommand(Command):
         cookies = self.hub._transport.cookiejar
         # use custom CA cert/bundle, if given
         ca_cert = self.conf.get('CA_CERT', None)
+        ssl_verify = self.conf.get('SSL_VERIFY', True)
         # HUB_URL will have no trailing slash in the config
         base_url = self.conf['HUB_URL'] + '/'
         class BeakerClientRequestsSession(requests.Session):
@@ -91,7 +94,9 @@ class BeakerCommand(Command):
             def __init__(self):
                 super(BeakerClientRequestsSession, self).__init__() #pylint: disable=bad-super-call
                 self.cookies = cookies
-                if ca_cert:
+                if not ssl_verify:
+                    self.verify = False
+                elif ca_cert:
                     self.verify = ca_cert
             def request(self, method, url, **kwargs):
                 # callers can pass in a relative URL and we will figure it out for them
