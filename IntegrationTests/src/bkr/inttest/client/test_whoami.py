@@ -29,8 +29,8 @@ class WhoAmITest(ClientTestCase):
                          create_client_config(
                              username=proxying_user.user_name,
                              password='password'))
-        self.assertIn("'username': '%s'" % proxied_user.user_name, out)
-        self.assertIn("'proxied_by_username': '%s'" % proxying_user.user_name, out)
+        self.assertIn('"username": "%s"' % proxied_user.user_name, out)
+        self.assertIn('"proxied_by_username": "%s"' % proxying_user.user_name, out)
 
     def test_wrong_password(self):
         with self.assertRaises(ClientError) as assertion:
