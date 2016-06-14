@@ -33,6 +33,7 @@ import cherrypy
 import cherrypy._cpwsgi
 from cherrypy.filters.basefilter import BaseFilter
 from flask import Flask
+from bkr.common import __version__
 from bkr.server import identity, assets
 from bkr.server.app import app
 
@@ -148,9 +149,10 @@ def commit_or_rollback_session(response):
     return response
 
 @app.after_request
-# Most of our request handlers are doing content negotation, so we need to specify
-# "Vary: Accept" header unconditionally.
-def set_vary_header(response):
+def set_extra_headers(response):
+    response.headers.add('X-Beaker-Version', __version__)
+    # Most of our request handlers are doing content negotation, so we need to specify
+    # "Vary: Accept" header unconditionally.
     response.headers.add('Vary', 'Accept')
     return response
 
