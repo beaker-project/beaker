@@ -569,6 +569,7 @@ def mark_recipe_tasks_finished(recipe, result=TaskResult.pass_,
         if result is not None:
             rtr = RecipeTaskResult(path=recipe_task.name, result=result,
                     log=u'(%s)' % result, score=0)
+            rtr.start_time = start_time
             rtr.logs = [rtr_log()]
             recipe_task.results.append(rtr)
         recipe_task.logs = [rt_log()]

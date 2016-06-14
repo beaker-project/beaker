@@ -7,8 +7,8 @@
   <b:option xmlns:b="http://example.com/bar">--foobar arbitrary</b:option>
   <f:test xmlns:f="http://example.com/foo">unicode text: heißer Шис</f:test>
   <recipeSet priority="Normal" response="ack" id="1">
-    <recipe id="1" job_id="1" recipe_set_id="1" whiteboard="" role="None" kickstart_url="http://example.com/recipe.ks" ks_meta="" kernel_options="" kernel_options_post="" duration="0:59:00" result="Pass" status="Completed" distro="BlueShoeLinux5-5" arch="i386" family="DansAwesomeLinux6" variant="Server" system="system.test-complete-job-results">
-      <guestrecipe guestname="" guestargs="" mac_address="ff:ff:ff:00:00:00" location="nfs://dummylab.example.invalid:/distros/BlueShoeLinux5-5/Server/i386/os/" ftp_location="ftp://dummylab.example.invalid/distros/BlueShoeLinux5-5/Server/i386/os/" http_location="http://dummylab.example.invalid/distros/BlueShoeLinux5-5/Server/i386/os/" nfs_location="nfs://dummylab.example.invalid:/distros/BlueShoeLinux5-5/Server/i386/os/" id="2" job_id="1" recipe_set_id="1" whiteboard="" role="None" kickstart_url="http://example.com/guest.ks" ks_meta="" kernel_options="" kernel_options_post="" duration="0:00:04" result="Pass" status="Completed" distro="BlueShoeLinux5-5" arch="i386" family="DansAwesomeLinux6" variant="Server" system="guest.test-complete-job-results">
+    <recipe id="1" job_id="1" recipe_set_id="1" whiteboard="" role="None" kickstart_url="http://example.com/recipe.ks" ks_meta="" kernel_options="" kernel_options_post="" start_time="2016-01-31 23:00:00" finish_time="2016-01-31 23:59:00" duration="0:59:00" result="Pass" status="Completed" distro="BlueShoeLinux5-5" arch="i386" family="DansAwesomeLinux6" variant="Server" system="system.test-complete-job-results">
+      <guestrecipe guestname="" guestargs="" mac_address="ff:ff:ff:00:00:00" location="nfs://dummylab.example.invalid:/distros/BlueShoeLinux5-5/Server/i386/os/" ftp_location="ftp://dummylab.example.invalid/distros/BlueShoeLinux5-5/Server/i386/os/" http_location="http://dummylab.example.invalid/distros/BlueShoeLinux5-5/Server/i386/os/" nfs_location="nfs://dummylab.example.invalid:/distros/BlueShoeLinux5-5/Server/i386/os/" id="2" job_id="1" recipe_set_id="1" whiteboard="" role="None" kickstart_url="http://example.com/guest.ks" ks_meta="" kernel_options="" kernel_options_post="" start_time="2016-01-31 23:30:00" finish_time="2016-01-31 23:30:04" duration="0:00:04" result="Pass" status="Completed" distro="BlueShoeLinux5-5" arch="i386" family="DansAwesomeLinux6" variant="Server" system="guest.test-complete-job-results">
         <autopick random="true"/>
         <watchdog panic="None"/>
         <installation install_started="2016-01-31 23:30:01" install_finished="2016-01-31 23:30:02" postinstall_finished="2016-01-31 23:30:03"/>
@@ -36,7 +36,7 @@
           <partition fs="btrfs" name="/mnt/testarea" size="18" type="part"/>
           <partition fs="btrfs" name="/usr/local" size="8" type="part"/>
         </partitions>
-        <task name="/distribution/install" role="STANDALONE" id="3" result="Pass" status="Completed" duration="0:00:04">
+        <task name="/distribution/install" role="STANDALONE" id="3" result="Pass" status="Completed" start_time="2016-01-31 23:30:00" finish_time="2016-01-31 23:30:04" duration="0:00:04">
           <fetch url="git://example.com/externaltasks#master" subdir="install"/>
           <roles>
             <role value="STANDALONE">
@@ -45,7 +45,7 @@
             </role>
           </roles>
           <results>
-            <result path="/distribution/install" score="0" result="Pass" id="1">(Pass)</result>
+            <result path="/distribution/install" start_time="2016-01-31 23:30:00" score="0" result="Pass" id="1">(Pass)</result>
           </results>
         </task>
       </guestrecipe>
@@ -72,7 +72,7 @@
         <system_type value="Machine"/>
       </hostRequires>
       <partitions/>
-      <task name="/distribution/install" role="STANDALONE" id="1" result="Pass" status="Completed" avg_time="1200" duration="0:58:56">
+      <task name="/distribution/install" role="STANDALONE" id="1" result="Pass" status="Completed" avg_time="1200" start_time="2016-01-31 23:00:04" finish_time="2016-01-31 23:59:00" duration="0:58:56">
         <rpm name="example-distribution-install" path="/mnt/tests//distribution/install"/>
         <roles>
           <role value="STANDALONE">
@@ -81,10 +81,10 @@
           </role>
         </roles>
         <results>
-          <result path="/distribution/install" score="0" result="Pass" id="2">(Pass)</result>
+          <result path="/distribution/install" start_time="2016-01-31 23:00:04" score="0" result="Pass" id="2">(Pass)</result>
         </results>
       </task>
-      <task name="/distribution/reservesys" role="STANDALONE" id="2" result="Pass" status="Completed" avg_time="1200" duration="0:58:56">
+      <task name="/distribution/reservesys" role="STANDALONE" id="2" result="Pass" status="Completed" avg_time="1200" start_time="2016-01-31 23:00:04" finish_time="2016-01-31 23:59:00" duration="0:58:56">
         <rpm name="example-distribution-reservesys" path="/mnt/tests//distribution/reservesys"/>
         <roles>
           <role value="STANDALONE">
@@ -95,7 +95,7 @@
           <param name="RESERVE_IF_FAIL" value="1"/>
         </params>
         <results>
-          <result path="/distribution/reservesys" score="0" result="Pass" id="3">(Pass)</result>
+          <result path="/distribution/reservesys" start_time="2016-01-31 23:00:04" score="0" result="Pass" id="3">(Pass)</result>
         </results>
       </task>
       <reservesys duration="600"/>

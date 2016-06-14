@@ -2174,6 +2174,10 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         recipe.set("ks_meta", "%s" % self.ks_meta and self.ks_meta or '')
         recipe.set("kernel_options", "%s" % self.kernel_options and self.kernel_options or '')
         recipe.set("kernel_options_post", "%s" % self.kernel_options_post and self.kernel_options_post or '')
+        if self.start_time and not clone:
+            recipe.set('start_time', unicode(self.start_time))
+        if self.finish_time and not clone:
+            recipe.set('finish_time', unicode(self.finish_time))
         if self.duration and not clone:
             recipe.set("duration", "%s" % self.duration)
         if self.result and not clone:
@@ -3302,6 +3306,10 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
                 rpm.set("name", name)
                 rpm.set("path", "%s" % self.task.path)
                 task.append(rpm)
+            if self.start_time:
+                task.set('start_time', unicode(self.start_time))
+            if self.finish_time:
+                task.set('finish_time', unicode(self.finish_time))
             if self.duration:
                 task.set("duration", "%s" % self.duration)
         if self.fetch_url:
@@ -3756,7 +3764,8 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
             id=unicode(self.id),
             path=unicode(self.path),
             result=unicode(self.result),
-            score=unicode(self.score)
+            score=unicode(self.score),
+            start_time=unicode(self.start_time),
         )
 
     def all_logs(self):
