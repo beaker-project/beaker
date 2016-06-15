@@ -244,6 +244,28 @@ class TestViewJob(WebDriverTestCase):
             job.update_status()
             self.assertEquals(job.status, TaskStatus.cancelled)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1346115
+    def test_ctrl_enter_submit_posts_once(self):
+        with session.begin():
+            job = data_setup.create_completed_job()
+            # no special permissions required to comment
+            user = data_setup.create_user(password=u'theuser')
+        comment_text = u'at least i have chicken'
+        b = self.browser
+        login(b, user=user.user_name, password='theuser')
+        self.go_to_job_page(job)
+        b.find_element_by_xpath('//td[@class="recipeset-comments"]'
+                '/div/a[@class="comments-link"]').click()
+        popover = b.find_element_by_class_name('popover')
+        popover.find_element_by_name('comment')\
+            .send_keys(comment_text + Keys.CONTROL + Keys.ENTER)
+        # check the commit is submitted to comments list, textarea is cleared
+        popover.find_element_by_xpath('//div[@class="comments"]'
+                '//div[@class="comment"]/p[2][text()="%s"]' % comment_text)
+        self.assertEqual(popover.find_element_by_name('comment').text, '')
+        with session.begin():
+            self.assertEqual(len(job.recipesets[0].comments), 1)
+
     def test_cancel_recipeset(self):
         with session.begin():
             job_owner = data_setup.create_user(password=u'owner')

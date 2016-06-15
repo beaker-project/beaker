@@ -8,6 +8,7 @@
     $(document).ready(function() {
         $("html").on("keydown", "textarea", function(evt) {
             if (evt.ctrlKey && evt.which == 13) {
+                evt.preventDefault();
                 $(evt.currentTarget).closest("form").submit();
             }
         });
