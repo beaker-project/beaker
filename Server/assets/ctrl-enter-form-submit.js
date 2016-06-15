@@ -6,10 +6,13 @@
 
 ;(function () {
     $(document).ready(function() {
-        $("html").on("keydown", "textarea", function(evt) {
+        $('html').on('keydown', 'textarea', function(evt) {
             if (evt.ctrlKey && evt.which == 13) {
-                evt.preventDefault();
-                $(evt.currentTarget).closest("form").submit();
+                var $containing_form = $(evt.currentTarget).closest('form');
+                if ($containing_form.find(':input[type=submit]').is(':enabled')) {
+                    evt.preventDefault();
+                    $containing_form.submit();
+                }
             }
         });
     });
