@@ -36,8 +36,8 @@ Server and target host relationship
 The server hosts the scheduler, the task repository and the web
 application. Optionally, the lab controllers and database can also live
 on the server. The target host makes requests to the server for packages
-that it needs to create and setup the local test environment, and run
-the the tasks specified in its recipe. These are run locally on the
+that it needs to create and setup the local test environment, then runs
+the tasks specified in its recipe. These are run locally on the
 target host.
 
 .. figure:: beaker_server_host.png

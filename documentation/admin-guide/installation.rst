@@ -138,7 +138,7 @@ Registering the lab controller
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To start with, we need to make Beaker aware of the new lab controller. Log in 
-to Beaker using your administrator account create above, and select Admin → Lab 
+to Beaker using your administrator account created above, and select Admin → Lab 
 Controllers from the menu. Click "Add ( + )" to add a new lab controller.
 
 The new lab controller form requires the following fields:

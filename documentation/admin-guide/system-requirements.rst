@@ -31,7 +31,7 @@ Your target hosts are required to have:
 
 -  KVM support.
 
-Your target hosts to need include a power controller. Here are some the
+Your target hosts also need to include a power controller. Here are some the
 most common compatible controllers that are available:
 
 -  HP iLO
@@ -45,6 +45,6 @@ most common compatible controllers that are available:
 -  APC
 
 You may mix and match any of these controllers on the target hosts, but
-you must include at least one of per system. Beaker supports the cman
-package's fence component. Beaker supports any device that you control
+you must include at least one compatible controller per system. Beaker supports
+the cman package's fence component. Beaker supports any device that you control
 from the Red Hat Enterprise Linux 5 command line.
