@@ -821,3 +821,33 @@ class MigrationTest(unittest.TestCase):
         self.assertEquals(
                 self.migration_session.query(LogRecipeTaskResult).filter_by(recipe_task_result_id=2).count(),
                 0)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1346586
+    def test_Installing_status_is_mapped_on_downgrade(self):
+        connection = self.migration_metadata.bind.connect()
+        # populate empty database
+        connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                'database-dumps/22.sql'))
+        upgrade_db(self.migration_metadata)
+        # create a job in Installing state
+        connection.execute(
+                "INSERT INTO job (owner_id, retention_tag_id, dirty_version, clean_version, status) "
+                "VALUES (1, 1, '', '', 'Installing')")
+        connection.execute(
+                "INSERT INTO recipe_set (job_id, queue_time, status) "
+                "VALUES (1, '2015-11-09 17:03:04', 'Installing')")
+        connection.execute(
+                "INSERT INTO recipe (type, recipe_set_id, autopick_random, status) "
+                "VALUES ('machine_recipe', 1, FALSE, 'Installing')")
+        # run the downgrade
+        downgrade_db(self.migration_metadata, '22')
+        # status should be Running so that it works with 22.x
+        self.assertEquals(
+                connection.scalar('SELECT status FROM job WHERE id = 1'),
+                u'Running')
+        self.assertEquals(
+                connection.scalar('SELECT status FROM recipe_set WHERE id = 1'),
+                u'Running')
+        self.assertEquals(
+                connection.scalar('SELECT status FROM recipe WHERE id = 1'),
+                u'Running')
