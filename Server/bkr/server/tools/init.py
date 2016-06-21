@@ -268,6 +268,7 @@ def upgrade_db(metadata):
 def beaker_version_to_schema_version(version):
     # This table is also part of the docs, ensure they stay in sync!
     beaker_versions = {
+        '23': '15d3fad78656',
         '22': '54395adc8646',
         '21': '171c07fb4970',
         '20': '19d89d5fbde6',
