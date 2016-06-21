@@ -525,6 +525,9 @@ class LabControllers(RPCRoot):
         cmd.change_status(CommandStatus.completed)
         if cmd.action == u'on' and cmd.installation:
             cmd.installation.rebooted = datetime.utcnow()
+            recipe = cmd.installation.recipe
+            if recipe:
+                recipe.extend(50 * 60)
         cmd.log_to_system_history()
         return True
 

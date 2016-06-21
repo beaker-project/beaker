@@ -19,6 +19,7 @@ from bkr.inttest.server.requests_utils import login as web_login
 from bkr.inttest import data_setup, get_server_base,\
     fix_beakerd_repodata_perms, DatabaseTestCase
 from bkr.inttest.server.requests_utils import patch_json, post_json
+from bkr.inttest.assertions import assert_datetime_within
 from bkr.server.model import Distro, DistroTree, Arch, ImageType, Job, \
     System, SystemStatus, TaskStatus, CommandActivity, CommandStatus, \
     KernelType, LabController, User, OSMajor, OSVersion, LabControllerActivity, \
@@ -827,6 +828,47 @@ class TestPowerFailures(XmlRpcTestCase):
         self.assertEquals(queued_commands[1]['netboot']['arch'], 'i386')
         self.assertEquals(queued_commands[1]['netboot']['distro_tree_id'],
                           distro_tree.id)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1348018
+    def test_after_reboot_watchdog_killtime_extended(self):
+        with session.begin():
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20')
+            job = data_setup.create_job(distro_tree=distro_tree)
+            recipe = job.recipesets[0].recipes[0]
+            system = data_setup.create_system(lab_controller=self.lab_controller)
+            data_setup.mark_recipe_scheduled(recipe, system=system)
+            recipe.provision()
+            recipe.waiting()
+
+        def step_by_one_cmd(cmd, action):
+            self.assertEqual(cmd.action, action)
+            self.server.labcontrollers.mark_command_running(cmd.id)
+            self.server.labcontrollers.mark_command_completed(cmd.id)
+
+        step_by_one_cmd(system.command_queue[3], 'clear_logs')
+        with session.begin():
+            session.refresh(recipe.watchdog)
+            self.assertIsNone(recipe.watchdog.kill_time)
+
+        step_by_one_cmd(system.command_queue[2], 'configure_netboot')
+        with session.begin():
+            session.refresh(recipe.watchdog)
+            self.assertIsNone(recipe.watchdog.kill_time)
+
+        step_by_one_cmd(system.command_queue[1], 'off')
+        with session.begin():
+            session.refresh(recipe.watchdog)
+            self.assertIsNone(recipe.watchdog.kill_time)
+
+        step_by_one_cmd(system.command_queue[0], 'on')
+
+        with session.begin():
+            session.refresh(recipe.watchdog)
+            self.assertIsNotNone(recipe.watchdog.kill_time)
+            assert_datetime_within(
+                recipe.watchdog.kill_time,
+                tolerance=datetime.timedelta(seconds=10),
+                reference=datetime.datetime.utcnow() + datetime.timedelta(seconds=3000))
 
 
 class LabControllerHTTPTest(DatabaseTestCase):
