@@ -211,6 +211,18 @@ class TaskResultTest(LabControllerTestCase):
         self.check_result(result_id, TaskResult.none, u'/random/junk', None,
                 u'See elsewhere for results')
 
+    def test_POST_skip(self):
+        results_url = '%srecipes/%s/tasks/%s/results/' % (self.get_proxy_url(),
+                self.recipe.id, self.recipe.tasks[0].id)
+        response = requests.post(results_url, data=dict(result='Skip',
+                path='/', message='Did not run'))
+        self.assertEquals(response.status_code, 201)
+        self.assert_(response.headers['Location'].startswith(results_url),
+                response.headers['Location'])
+        result_id = int(posixpath.basename(response.headers['Location']))
+        self.check_result(result_id, TaskResult.skip, u'/', None,
+                u'Did not run')
+
     def test_POST_missing_result(self):
         results_url = '%srecipes/%s/tasks/%s/results/' % (self.get_proxy_url(),
                 self.recipe.id, self.recipe.tasks[0].id)

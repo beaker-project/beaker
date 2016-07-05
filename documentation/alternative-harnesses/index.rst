@@ -161,7 +161,7 @@ the request body must be given as HTML form data
 
    Results may not be recorded against a task after it has finished.
 
-   :form result: The result. Must be *Pass*, *Warn*, *Fail*, or *None*.
+   :form result: The result. Must be *Pass*, *Warn*, *Fail*, *Skip*, or *None*.
    :form path: Path of the result. Conventionally the top-level result will be 
         recorded as ``$TEST``, with sub-results as ``$TEST/suffix``, but this 
         is not required. If not specified, the default is ``/``.

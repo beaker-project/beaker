@@ -56,6 +56,7 @@ class TaskResult(DeclEnum):
         ('fail',  u'Fail',  dict(severity=40)),
         ('panic', u'Panic', dict(severity=50)),
         ('none',  u'None',  dict(severity=15)),
+        ('skip',  u'Skip',  dict(severity=16)),
     ]
 
     @classmethod

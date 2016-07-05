@@ -3202,7 +3202,7 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
             cascade='all, delete-orphan')
     watchdog = relationship(Watchdog, uselist=False)
 
-    result_types = ['pass_','warn','fail','panic', 'result_none']
+    result_types = ['pass_','warn','fail','panic', 'result_none', 'skip']
     stop_types = ['stop','abort','cancel']
 
     def record_activity(self, **kwds):
@@ -3515,6 +3515,9 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
 
     def result_none(self, path, score, summary):
         return self._result(TaskResult.none, path, score, summary)
+
+    def skip(self, path, score, summary):
+        return self._result(TaskResult.skip, path, score, summary)
 
     def _result(self, result, path, score, summary):
         """

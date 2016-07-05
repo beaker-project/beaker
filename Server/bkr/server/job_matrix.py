@@ -215,6 +215,7 @@ class JobMatrix:
         case3 = case([(model.RecipeTask.result == u'Fail',1)],else_=0)
         case4 = case([(model.RecipeTask.result == u'Panic',1)],else_=0)
         case5 = case([(model.RecipeTask.result == u'None',1)],else_=0)
+        case6 = case([(model.RecipeTask.result == u'Skip',1)],else_=0)
     
         arch_alias = model.Arch.__table__.alias()
         recipe_table_alias = model.Recipe.__table__.alias()
@@ -229,6 +230,7 @@ class JobMatrix:
                      case3.label('rc3'),
                      case4.label('rc4'),
                      case5.label('rc5'),
+                     case6.label('rc6'),
                     ]
         my_from = [model.RecipeSet.__table__.join(recipe_table_alias).
                               join(model.DistroTree.__table__, model.DistroTree.id == recipe_table_alias.c.distro_tree_id).
@@ -267,6 +269,7 @@ class JobMatrix:
                               func.sum(s2.c.rc3).label('Fail'),
                               func.sum(s2.c.rc4).label('Panic'),
                               func.sum(s2.c.rc5).label('None'),
+                              func.sum(s2.c.rc6).label('Skip'),
                               s2.c.whiteboard,
                               s2.c.arch,
                               s2.c.arch_id,

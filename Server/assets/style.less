@@ -241,11 +241,13 @@ td form, td input, td select, td .input-append, td .input-prepend {
 @resultFailColor: @red;
 @resultWarnColor: @orange;
 @resultNewColor: @blue;
+@resultSkipColor: @purple;
 @resultPanicColor: @black;
 .label-result-pass  { background-color: @resultPassColor; }
 .label-result-fail  { background-color: @resultFailColor; }
 .label-result-warn  { background-color: @resultWarnColor; }
 .label-result-new   { background-color: @resultNewColor; }
+.label-result-skip  { background-color: @resultSkipColor; }
 .label-result-panic { background-color: @resultPanicColor; }
 
 // XXX The above colours are used in the job matrix and are carried over
@@ -259,10 +261,14 @@ td form, td input, td select, td .input-append, td .input-prepend {
 .statusCancelled, .resultWarn { color: @orange; }
 .statusRunning { color: @blueDark; }
 .statusDirty { font-style: italic; }
+.resultSkip { color: @purple; }
 
 // colour-coded result progress bars
 .progress .bar-result-new {
     #gradient > .vertical(lighten(@gray, 15%), @gray);
+}
+.progress .bar-result-skip {
+    #gradient > .vertical(lighten(@purple, 15%), @purple);
 }
 .progress .bar-result-pass {
     #gradient > .vertical(lighten(@green, 15%), @green);
@@ -282,6 +288,7 @@ td form, td input, td select, td .input-append, td .input-prepend {
 // override box-shadow on progress bar segments of the same colour next to each
 // other, to remove x shadow
 .progress .bar-result-new + .bar-result-new,
+.progress .bar-result-skip + .bar-result-skip,
 .progress .bar-result-pass + .bar-result-pass,
 .progress .bar-result-warn + .bar-result-warn,
 .progress .bar-result-fail + .bar-result-fail,
