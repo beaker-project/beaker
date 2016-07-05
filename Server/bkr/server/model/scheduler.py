@@ -1692,7 +1692,7 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
         if include_job:
             data['job'] = self.job.to_json(include_recipesets=False)
         if include_recipes:
-            data['machine_recipes'] = [recipe.to_json(include_tasks=False)
+            data['machine_recipes'] = [recipe.to_json(include_results=False)
                     for recipe in self.machine_recipes]
         return data
 
@@ -2847,7 +2847,7 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
     def __json__(self):
         return self.to_json()
 
-    def to_json(self, include_recipeset=False, include_tasks=True):
+    def to_json(self, include_recipeset=False, include_tasks=True, include_results=True):
         data = {
             'id': self.id,
             't_id': self.t_id,
@@ -2913,7 +2913,8 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             data['recipeset'] = self.recipeset.to_json(
                     include_job=True, include_recipes=False)
         if include_tasks:
-            data['tasks'] = self.tasks
+            data['tasks'] = [task.to_json(include_results=include_results)
+                    for task in self.tasks]
         return data
 
 
@@ -3243,6 +3244,9 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
         return value
 
     def __json__(self):
+        return self.to_json()
+
+    def to_json(self, include_results=True):
         data = {
             'id': self.id,
             'name': self.name,
@@ -3258,7 +3262,6 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
             'finish_time': self.finish_time,
             'result': self.result,
             'params': self.params,
-            'results': self.results,
             'is_finished': self.is_finished(),
             'logs': self.logs,
             'comments': self.comments,
@@ -3275,6 +3278,8 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
             data['can_comment'] = self.can_comment(u)
         else:
             data['can_comment'] = False
+        if include_results:
+            data['results'] = self.results
         return data
 
     def filepath(self):

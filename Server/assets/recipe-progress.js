@@ -15,29 +15,27 @@ window.RecipeProgressBar = Backbone.View.extend({
     },
     render: function () {
         var model = this.model;
+        var tasks = this.model.get('tasks');
+        var completed_count = _.filter(tasks,
+                function (task) { return task.get('is_finished'); }).length;
         var bar = $('<div class="progress"/>');
-        var sumtasks = 0;
-        bar.append(_.map([
-            ['ntasks', 'bar-default'],
-            ['ptasks', 'bar-success'],
-            ['wtasks', 'bar-warning'],
-            ['ftasks', 'bar-danger'],
-            ['ktasks', 'bar-info'],
-        ], function (item) {
-            var attr = item[0], barstyle = item[1];
-            var width = 100.0 * model.get(attr) / model.get('ttasks');
-            sumtasks += model.get(attr);
-            return $('<div/>')
-                .addClass('bar')
-                .addClass(barstyle)
-                .width(width.toFixed(3) + '%');
-        }));
+        _.each(tasks, function (task) {
+            if (!task.get('is_finished'))
+                return;
+            var chunk = document.createElement('a');
+            chunk.href = _.result(model, 'url') + '#task' + task.get('id');
+            chunk.title = task.get('name');
+            chunk.className = 'bar bar-result-' + task.get('result').toLowerCase();
+            var width = 100.0 / tasks.length;
+            chunk.style.width = width.toFixed(3) + '%';
+            bar.append(chunk);
+        });
         // For overall progress we want integer truncation, rather than 
         // rounding, so that a very large recipe with only one incomplete task 
         // will always be 99%, not rounded up to 100%.
         var progress = $('<span/>')
             .addClass('progress-text')
-            .text('' + Math.floor(100.0 * sumtasks / model.get('ttasks')) + '%');
+            .text('' + Math.floor(100.0 * completed_count / tasks.length) + '%');
         this.$el.empty().append(progress).append(bar);
     },
 });

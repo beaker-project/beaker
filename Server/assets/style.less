@@ -260,6 +260,35 @@ td form, td input, td select, td .input-append, td .input-prepend {
 .statusRunning { color: @blueDark; }
 .statusDirty { font-style: italic; }
 
+// colour-coded result progress bars
+.progress .bar-result-new {
+    #gradient > .vertical(lighten(@gray, 15%), @gray);
+}
+.progress .bar-result-pass {
+    #gradient > .vertical(lighten(@green, 15%), @green);
+}
+.progress .bar-result-warn {
+    #gradient > .vertical(lighten(@orange, 15%), @orange);
+}
+.progress .bar-result-fail {
+    // Bootstrap uses a slightly lighter red for the progress bars,
+    // for whatever reason...
+    #gradient > .vertical(lighten(@red, 30%), lighten(@red, 15%));
+}
+.progress .bar-result-panic {
+    #gradient > .vertical(#5bc0de, #339bb9);
+}
+
+// override box-shadow on progress bar segments of the same colour next to each
+// other, to remove x shadow
+.progress .bar-result-new + .bar-result-new,
+.progress .bar-result-pass + .bar-result-pass,
+.progress .bar-result-warn + .bar-result-warn,
+.progress .bar-result-fail + .bar-result-fail,
+.progress .bar-result-panic + .bar-result-panic {
+    .box-shadow(inset 0 -1px 0 rgba(0,0,0,.15));
+}
+
 // typeaheads
 .tt-dropdown-menu {
     min-width: 240px;

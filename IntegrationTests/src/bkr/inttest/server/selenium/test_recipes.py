@@ -171,7 +171,7 @@ class TestRecipeView(WebDriverTestCase):
                 'Pass with 1 out of 1 tasks finished.')
         b.find_element_by_xpath('//div[@class="recipe-progress"]/span[text()="100%"]')
         b.find_element_by_xpath('//div[@class="recipe-progress"]'
-                '/div[@class="progress"]/div[@class="bar bar-success" and @style="width: 100%;"]')
+                '/div[@class="progress"]/a[@class="bar bar-result-pass" and @style="width: 100%;"]')
         task_element = b.find_element_by_xpath('//div[@id="task%s"]' % recipe.tasks[0].id)
         self.assertEqual(
                 task_element.find_element_by_class_name('recipe-task-status').text,
@@ -316,6 +316,41 @@ class TestRecipeView(WebDriverTestCase):
         go_to_recipe_view(b, recipe, tab='Tasks')
         self.assertIn('1.10-23', b.find_element_by_xpath('//div[@id="task%s"]'
                 '//span[contains(@class, "task-version")]' % recipetask.id).text)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1352760
+    def test_task_progress_bar_chunks(self):
+        with session.begin():
+            recipe = data_setup.create_recipe(task_list=[
+                data_setup.create_task(name=u'/chunk/one'),
+                data_setup.create_task(name=u'/chunk/two'),
+                data_setup.create_task(name=u'/chunk/three'),
+            ])
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_complete(recipe)
+            recipe.tasks[0].results[0].result = TaskResult.pass_
+            recipe.tasks[0].result = TaskResult.pass_
+            recipe.tasks[1].results[0].result = TaskResult.fail
+            recipe.tasks[1].result = TaskResult.fail
+            recipe.tasks[2].results[0].result = TaskResult.warn
+            recipe.tasks[2].result = TaskResult.warn
+        b = self.browser
+        go_to_recipe_view(b, recipe, tab='Tasks')
+        chunks = b.find_elements_by_xpath('//div[@class="recipe-progress"]/div[@class="progress"]/*')
+        self.assertEqual(chunks[0].get_attribute('href'),
+                get_server_base() + 'recipes/%s#task%s' % (recipe.id, recipe.tasks[0].id))
+        self.assertEqual(chunks[0].get_attribute('title'),
+                '/chunk/one')
+        self.assertEqual(chunks[0].get_attribute('class'), 'bar bar-result-pass')
+        self.assertEqual(chunks[1].get_attribute('href'),
+                get_server_base() + 'recipes/%s#task%s' % (recipe.id, recipe.tasks[1].id))
+        self.assertEqual(chunks[1].get_attribute('title'),
+                '/chunk/two')
+        self.assertEqual(chunks[1].get_attribute('class'), 'bar bar-result-fail')
+        self.assertEqual(chunks[2].get_attribute('href'),
+                get_server_base() + 'recipes/%s#task%s' % (recipe.id, recipe.tasks[2].id))
+        self.assertEqual(chunks[2].get_attribute('title'),
+                '/chunk/three')
+        self.assertEqual(chunks[2].get_attribute('class'), 'bar bar-result-warn')
 
     def test_anonymous_cannot_edit_whiteboard(self):
         b = self.browser
