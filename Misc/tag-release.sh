@@ -32,4 +32,4 @@ sed -i -e "/version=/c\    version='$version$prerelease'," */setup.py
 sed -i -e "/__version__/c\__version__ = '$version$prerelease'" Common/bkr/common/__init__.py
 git add beaker.spec */setup.py Common/bkr/common/__init__.py
 git commit -m "Automatic commit of release $version$prerelease"
-git tag -a "beaker-$version$prerelease" -m "Tagging release $version$prerelease"
+git tag -s -a "beaker-$version$prerelease" -m "Tagging release $version$prerelease"
