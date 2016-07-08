@@ -17,6 +17,8 @@ from formencode.api import Invalid
 
 log = logging.getLogger(__name__)
 
+class XMLRPCMethodDoesNotExist(TypeError): pass
+
 class RPCRoot(controllers.Controller):
 
     def process_rpc(self,method,params):
@@ -35,7 +37,7 @@ class RPCRoot(controllers.Controller):
             obj = getattr(obj, name, None)
             # Use the same error message to hide private method names
             if obj is None or not getattr(obj, "exposed", False):
-                raise AssertionError("method %s does not exist" % name)
+                raise XMLRPCMethodDoesNotExist(method)
 
         # Call the method, convert it into a 1-element tuple
         # as expected by dumps
@@ -60,6 +62,10 @@ class RPCRoot(controllers.Controller):
             log.exception('Error handling XML-RPC method')
             # Can't marshal the result
             response = xmlrpclib.dumps(fault)
+        except XMLRPCMethodDoesNotExist as e:
+            session.rollback()
+            response = xmlrpclib.dumps(xmlrpclib.Fault(1,
+                    'XML-RPC method %s not implemented by this server' % e.args[0]))
         except Invalid, e:
              session.rollback()
              response = xmlrpclib.dumps(xmlrpclib.Fault(1, str(e)))
