@@ -163,14 +163,18 @@ return the reservation and others. The notification email is sent from the
 Beaker server, and hence any abnormal condition on the test system
 doesn't affect this.
 
-Returning early
-~~~~~~~~~~~~~~~
+Returning early and extending reservation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Once a system is reserved, the remaining duration is shown on the
-recipe's page in Beaker's Web UI as "Reserved (23:40:38 remaining)"
-alongside :guilabel:`Status`. The system can be returned before the
-reservation duration expires using the :guilabel:`Release System`
-button on the recipe's page in Beaker's Web UI. 
+Once a system is reserved, the remaining duration is shown at the top of the
+recipe page with the label :guilabel:`Remaining watchdog time`. To
+return the system, click the :guilabel:`Return the reservation` button on the
+:guilabel:`Reservation` tab.
+
+On the :guilabel:`Reservation` tab, you can extend the reservation by clicking
+on the :guilabel:`Extend the reservation` button and enter how much time the
+reservation should be extended by. You can also extend it by using the
+:program:`bkr watchdog-extend` command.
 
 Changes to the test system environment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
