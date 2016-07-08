@@ -4,9 +4,13 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import sys
+import pkg_resources
 import re
-from bkr.inttest import get_server_base
-from bkr.inttest.client import run_client, create_client_config, ClientTestCase
+from bkr.common import __version__
+from bkr.inttest import get_server_base, Process
+from bkr.inttest.client import run_client, create_client_config, ClientTestCase, \
+        ClientError
 
 class CommonOptionsTest(ClientTestCase):
 
@@ -26,3 +30,25 @@ class CommonOptionsTest(ClientTestCase):
         # The hub will be http:// so --insecure will have no effect, but at 
         # least this tests that the option exists...
         run_client(['bkr', 'whoami', '--insecure'])
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1029287
+    def test_on_error_warns_if_server_version_does_not_match(self):
+        fake_server = Process('http_server.py', args=[sys.executable,
+                    pkg_resources.resource_filename('bkr.inttest', 'http_server.py'),
+                    '--base', '/notexist',
+                    '--add-response-header', 'X-Beaker-Version:999.3'],
+                listen_port=19998)
+        fake_server.start()
+        self.addCleanup(fake_server.stop)
+
+        # use AUTH_METHOD=none because we can't authenticate to the fake server
+        config = create_client_config(hub_url='http://localhost:19998',
+                auth_method=u'none')
+        try:
+            run_client(['bkr', 'system-status', 'asdf.example.com'], config=config)
+            self.fail('should raise')
+        except ClientError as e:
+            self.assertEquals(e.stderr_output,
+                    'WARNING: client version is %s but server version is 999.3\n'
+                    'HTTP error: 404 Client Error: Not Found\n'
+                    % __version__)

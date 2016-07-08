@@ -54,6 +54,20 @@ class BeakerOptionParser(CommandOptionParser):
 BeakerCommandContainer.register_all()
 from bkr.client import conf, BeakerJobTemplateError
 
+def warn_on_version_mismatch(response):
+    if 'X-Beaker-Version' not in response.headers:
+        sys.stderr.write('WARNING: client version is %s '
+                'but server version is < 24.0\n'
+                % __version__)
+    else:
+        server_version = response.headers['X-Beaker-Version']
+        server_major = server_version.split('.', 1)[0]
+        client_major = __version__.split('.', 1)[0]
+        if server_major != client_major:
+            sys.stderr.write('WARNING: client version is %s '
+                    'but server version is %s\n'
+                    % (__version__, server_version))
+
 def main():
     global conf
     command_container = BeakerCommandContainer(conf=conf)
@@ -94,6 +108,7 @@ def main():
         sys.stderr.write('XML-RPC fault: %s\n' % e.faultString)
         return 1
     except maybe_http_error, e:
+        warn_on_version_mismatch(e.response)
         sys.stderr.write('HTTP error: %s\n' % e)
         content_type, _ = cgi.parse_header(e.response.headers.get('Content-Type', ''))
         if content_type == 'text/plain':
