@@ -668,7 +668,7 @@ class BeakerJob(BeakerBase):
             elif isinstance(recipeSet, xml.dom.minidom.Element):
                 node = recipeSet
             else:
-                raise
+                raise TypeError('recipeSet must be BeakerRecipeSet or xml.dom.minidom.Element')
             if len(node.getElementsByTagName('recipe')) > 0:
                 self.node.appendChild(node.cloneNode(True))
 
@@ -680,7 +680,7 @@ class BeakerJob(BeakerBase):
             elif isinstance(recipe, xml.dom.minidom.Element):
                 node = recipe
             else:
-                raise
+                raise TypeError('recipe must be BeakerRecipe or xml.dom.minidom.Element')
             if len(node.getElementsByTagName('task')) > 0:
                 recipeSet = self.doc.createElement('recipeSet')
                 recipeSet.appendChild(node.cloneNode(True))
@@ -699,7 +699,7 @@ class BeakerRecipeSet(BeakerBase):
             elif isinstance(recipe, xml.dom.minidom.Element):
                 node = recipe
             else:
-                raise
+                raise TypeError('recipe must be BeakerRecipe or xml.dom.minidom.Element')
             if len(node.getElementsByTagName('task')) > 0:
                 self.node.appendChild(node.cloneNode(True))
 
