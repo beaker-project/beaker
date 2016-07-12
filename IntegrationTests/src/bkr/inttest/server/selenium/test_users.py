@@ -12,7 +12,7 @@ from bkr.server.model import session, SystemPermission, TaskStatus, User, \
         SSHPubKey
 from bkr.inttest import data_setup, DatabaseTestCase, get_server_base
 from bkr.inttest.server.requests_utils import login as requests_login, \
-        patch_json, post_json
+        patch_json, post_json, xmlrpc as requests_xmlrpc
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, check_user_search_results
 
@@ -191,6 +191,37 @@ class UserHTTPTest(DatabaseTestCase):
                 headers={'Accept': 'application/json'})
         response.raise_for_status()
         self.assertEqual(response.json()['user_name'], user.user_name)
+
+    def test_get_self(self):
+        with session.begin():
+            user = data_setup.create_user(password=u'password')
+        s = requests.Session()
+        requests_login(s, user=user.user_name, password=u'password')
+        response = s.get(get_server_base() + 'users/+self',
+                headers={'Accept': 'application/json'})
+        response.raise_for_status()
+        self.assertEqual(response.json()['user_name'], user.user_name)
+        self.assertEqual(response.json()['email_address'], user.email_address)
+
+    def test_get_self_for_proxied_user(self):
+        with session.begin():
+            group = data_setup.create_group(permissions=[u'proxy_auth'])
+            proxying_user = data_setup.create_user(password=u'password')
+            group.add_member(proxying_user)
+            proxied_user = data_setup.create_user()
+        s = requests.Session()
+        response = requests_xmlrpc(get_server_base() + 'RPC2',
+                'auth.login_password',
+                [proxying_user.user_name, u'password', proxied_user.user_name],
+                session=s)
+        response.raise_for_status()
+        response = s.get(get_server_base() + 'users/+self',
+                headers={'Accept': 'application/json'})
+        response.raise_for_status()
+        self.assertEqual(response.json()['user_name'], proxied_user.user_name)
+        self.assertEqual(response.json()['email_address'], proxied_user.email_address)
+        self.assertEqual(response.json()['proxied_by_user']['user_name'],
+                proxying_user.user_name)
 
     def test_create_user(self):
         s = requests.Session()

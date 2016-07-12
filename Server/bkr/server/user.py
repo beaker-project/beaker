@@ -237,6 +237,17 @@ def old_get_group():
             return flask_redirect(absolute_url(user.href))
     raise NotFound404()
 
+@app.route('/users/+self', methods=['GET'])
+@auth_required
+def get_self():
+    """
+    Returns details about the currently authenticated user account.
+    """
+    attributes = user_full_json(identity.current.user)
+    if identity.current.proxied_by_user is not None:
+        attributes['proxied_by_user'] = user_full_json(identity.current.proxied_by_user)
+    return jsonify(attributes)
+
 # Note that usernames can contain /, for example Kerberos service principals,
 # so we have to use a path match in our route patterns
 @app.route('/users/<path:username>', methods=['GET'])

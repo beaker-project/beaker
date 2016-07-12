@@ -5,8 +5,19 @@
 # (at your option) any later version.
 
 import json
+import xmlrpclib
 import requests
 from bkr.inttest import data_setup, get_server_base
+
+def xmlrpc(url, xmlrpc_method, xmlrpc_args, **kwargs):
+    # marshal XMLRPC request
+    data = xmlrpclib.dumps(tuple(xmlrpc_args), methodname=xmlrpc_method, allow_none=True)
+    # add Content-Type request header
+    headers = kwargs.pop('headers', {})
+    headers.update({'Content-Type': 'text/xml'})
+    # call .request() on the session if given, else the module
+    real_request_func = kwargs.pop('session', requests).post
+    return real_request_func(url, data=data, headers=headers, **kwargs)
 
 def json_request(method, url, **kwargs):
     # encode data as json
