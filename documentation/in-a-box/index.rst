@@ -26,24 +26,13 @@ repository <http://git.beaker-project.org/cgit/~mjia/beaker-in-a-box/>`_::
 
     git clone git://git.beaker-project.org/beaker-in-a-box
 
-Setting up Ansible
-------------------
-
-Ansible is connecting with remote machines over SSH, so we need to set up
-passwordless ssh key authentication for your user account on the host machine::
-
-    ssh-copy-id <user>@localhost
-
-Using SSH keys is encouraged but password authentication can also be used where
-needed by supplying the option --ask-pass to ansible.
-
 Setting up libvirt and test systems
 -----------------------------------
 
 We will use Ansible to create a virtual network called beaker and three
 test systems on your host system::
 
-   ansible-playbook -i hosts setup_libvirt_and_virt.yml --ask-become-pass
+   ansible-playbook setup_libvirt_and_virt.yml --ask-become-pass
 
 .. note::
 
@@ -93,7 +82,7 @@ Setup server to run job
 We will now upload a few task RPMs to Beaker so that we can run jobs. The
 following playbook uses the :program:`bkr` client to upload the tasks::
 
-    ansible-playbook -i hosts --ask-become-pass add_beaker_tasks.yml
+    ansible-playbook add_beaker_tasks.yml --ask-become-pass 
 
 Next steps
 ----------
