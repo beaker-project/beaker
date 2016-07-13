@@ -8,6 +8,7 @@ import os
 import subprocess
 import tempfile
 import logging
+import pipes
 from bkr.inttest import get_server_base, data_setup, DatabaseTestCase
 from bkr.client import wizard
 
@@ -71,8 +72,8 @@ def start_client(args, config=None, env=None, extra_env=None, **kwargs):
     if config is None:
         global default_client_config
         config = default_client_config
-    log.debug('Starting client %r as %r with BEAKER_CLIENT_CONF=%s',
-            client_command, args, config.name)
+    log.debug('Starting client %r as BEAKER_CLIENT_CONF=%s %s',
+              client_command, config.name, ' '.join(pipes.quote(arg) for arg in args))
     env = dict(env or os.environ)
     env.update(extra_env or {})
     env['PYTHONUNBUFFERED'] = '1'
