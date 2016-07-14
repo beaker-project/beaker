@@ -33,10 +33,8 @@ class TestBeakerd(DatabaseTestCase):
         user = data_setup.create_user()
 
         # Create two systems but only put them in lab1.
-        system1 = data_setup.create_system(owner=user)
-        system2 = data_setup.create_system(owner=user)
-        system1.lab_controller = lab1
-        system2.lab_controller = lab1
+        system1 = data_setup.create_system(owner=user, lab_controller=lab1)
+        system2 = data_setup.create_system(owner=user, lab_controller=lab1)
 
         session.flush()
 

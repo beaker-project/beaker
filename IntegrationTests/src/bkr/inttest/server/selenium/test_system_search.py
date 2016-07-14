@@ -160,9 +160,11 @@ class Search(WebDriverTestCase):
     def setUp(self):
         with session.begin():
             self.user = data_setup.create_user(password=u'password')
-            self.system = data_setup.create_system()
+            self.system = data_setup.create_system(
+                lab_controller=data_setup.create_labcontroller())
             self.system.loaned = self.user
-            self.another_system = data_setup.create_system()
+            self.another_system = data_setup.create_system(
+                lab_controller=data_setup.create_labcontroller())
             self.another_system.loaned = self.user
         self.browser = self.get_browser()
         login(self.browser, user=self.user.user_name, password=u'password')

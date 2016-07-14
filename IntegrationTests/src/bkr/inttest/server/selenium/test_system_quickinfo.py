@@ -50,7 +50,8 @@ class SystemQuickUsageTest(WebDriverTestCase):
         with session.begin():
             user = data_setup.create_user(password=u'asdflol')
             no_access = data_setup.create_system(shared=False)
-            borrowable = data_setup.create_system()
+            lc1 = data_setup.create_labcontroller()
+            borrowable = data_setup.create_system(lab_controller=lc1)
             borrowable.custom_access_policy.add_rule(
                     SystemPermission.loan_self, user=user)
             borrowable_but_loaned = data_setup.create_system()

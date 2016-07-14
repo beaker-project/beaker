@@ -62,7 +62,9 @@ class SystemFilteringTest(DatabaseTestCase):
 
     def test_system_status(self):
         excluded = data_setup.create_system(status=SystemStatus.manual)
-        included = data_setup.create_system(status=SystemStatus.automated)
+        included = data_setup.create_system(
+            lab_controller=data_setup.create_labcontroller(),
+            status=SystemStatus.automated)
         self.check_filter("""
             <hostRequires>
                 <system><status op="==" value="Automated" /></system>

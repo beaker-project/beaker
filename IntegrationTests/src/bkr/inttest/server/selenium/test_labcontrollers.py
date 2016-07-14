@@ -147,10 +147,10 @@ class LabControllerViewTest(WebDriverTestCase):
     def test_lab_controller_remove(self):
         b = self.browser
         with session.begin():
-            # When an LC is removed, we de-associate all systems, cancel all 
-            # running recipes, and remove all distro tree associations. So this 
-            # test creates a system, job, and distro tree in the lab to cover 
-            # all those cases.
+            # When an LC is removed, we de-associate all systems, set them to
+            # broken, cancel all running recipes, and remove all distro tree
+            # associations. So this test creates a system, job, and distro tree
+            # in the lab to cover all those cases.
             sys = data_setup.create_system(lab_controller=self.lc)
             job = data_setup.create_running_job(lab_controller=self.lc)
             distro_tree = data_setup.create_distro_tree(lab_controllers=[self.lc])
@@ -161,6 +161,8 @@ class LabControllerViewTest(WebDriverTestCase):
         b.find_element_by_xpath('//li[contains(., "%s")]//button[contains(., "Restore")]' % self.lc.fqdn)
         with session.begin():
             session.expire_all()
+            # system set to broken?
+            self.assertEquals(sys.status, SystemStatus.broken)
             # check lc activity
             self.assertEquals(self.lc.activity[0].field_name, u'Removed')
             self.assertEquals(self.lc.activity[0].action, u'Changed')
@@ -169,9 +171,14 @@ class LabControllerViewTest(WebDriverTestCase):
             self.assertEquals(self.lc.activity[1].action, u'Changed')
             self.assertEquals(self.lc.activity[1].new_value, u'True')
             # check system activity
-            self.assertEquals(sys.activity[0].field_name, u'lab_controller')
+            self.assertEquals(sys.activity[0].field_name, u'Lab Controller')
             self.assertEquals(sys.activity[0].action, u'Changed')
             self.assertEquals(sys.activity[0].new_value, None)
+            self.assertEquals(sys.activity[1].field_name, u'Status')
+            self.assertEquals(sys.activity[1].action, u'Changed')
+            self.assertEquals(sys.activity[1].new_value, 'Broken')
+            # check that the status duration reflects the new system status
+            self.assertEquals(sys.status_durations[0].status, SystemStatus.broken)
             # check job status
             job.update_status()
             self.assertEquals(job.status, TaskStatus.cancelled)

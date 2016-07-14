@@ -20,17 +20,16 @@ class ReserveWorkflow(WebDriverTestCase):
     @with_transaction
     def setUp(self):
         self.lc = data_setup.create_labcontroller()
-        self.system = data_setup.create_system(arch=u'i386', shared=True)
-        self.system2 = data_setup.create_system(arch=u'x86_64', shared=True)
+        self.system = data_setup.create_system(arch=u'i386', shared=True,
+                                               lab_controller=self.lc)
+        self.system2 = data_setup.create_system(arch=u'x86_64', shared=True,
+                                                lab_controller=self.lc)
         self.unique_distro_name = data_setup.unique_name('distro%s')
         self.distro = data_setup.create_distro(name=self.unique_distro_name)
         self.distro_tree_i386 = data_setup.create_distro_tree(
                 variant=u'Server', arch=u'i386', distro=self.distro)
         self.distro_tree_x86_64= data_setup.create_distro_tree(
                 variant=u'Server', arch=u'x86_64', distro=self.distro)
-
-        self.system.lab_controller = self.lc
-        self.system2.lab_controller = self.lc
 
         self.browser = self.get_browser()
 
