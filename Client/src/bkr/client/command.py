@@ -277,6 +277,10 @@ class ClientCommandContainer(CommandContainer):
         if proxy_user:
             self.conf["PROXY_USER"] = proxy_user
 
+        cacert = self.conf.get('CA_CERT')
+        if cacert and not os.path.exists(cacert):
+            self.error('CA_CERT configuration points to non-existing file: %s' % cacert)
+
         self.hub = HubProxy(conf=self.conf, auto_login=auto_login)
 
 
