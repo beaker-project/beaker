@@ -237,6 +237,10 @@ Requires:       openldap-servers
 Requires:       python-unittest2
 Requires:       python-gunicorn
 Requires:       python-mock
+%if 0%{?rhel} == 7
+# Workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1358533
+Requires:       python-cssselect
+%endif
 %endif
 
 
