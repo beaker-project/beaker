@@ -275,7 +275,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
     user_id = Column(Integer, ForeignKey('tg_user.user_id'))
     user = relationship(User, primaryjoin=user_id == User.user_id)
     type = Column(SystemType.db_type(), nullable=False)
-    status = column_property(Column(SystemStatus.db_type(), nullable=False))
+    status = Column(SystemStatus.db_type(), nullable=False, default=SystemStatus.broken)
     status_reason = Column(Unicode(4000))
     memory = Column(Integer)
     checksum = Column(String(32))
