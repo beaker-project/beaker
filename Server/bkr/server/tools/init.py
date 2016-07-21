@@ -46,9 +46,11 @@ def check_db(metadata, target_version):
     version (does not need any upgrades/downgrades).
     """
     env_context = create_alembic_env_context(metadata)
-    current = env_context.get_context().get_current_revision()
-    target_version = beaker_version_to_schema_version(target_version)
-    target = env_context.script.get_revision(target_version).revision
+    with metadata.bind.connect() as connection:
+        env_context.configure(connection=connection, target_metadata=metadata)
+        current = env_context.get_context().get_current_revision()
+        target_version = beaker_version_to_schema_version(target_version)
+        target = env_context.script.get_revision(target_version).revision
     if current != target:
         logger.info('Current schema %s does not match target revision %s', current, target)
         return False
@@ -303,11 +305,8 @@ def create_alembic_env_context(metadata, func=None):
     config = alembic.config.Config()
     config.set_main_option('script_location', 'bkr.server:alembic')
     script = alembic.script.ScriptDirectory.from_config(config)
-    env_context = alembic.environment.EnvironmentContext(config=config,
+    return alembic.environment.EnvironmentContext(config=config,
             script=script, fn=func)
-    connection = metadata.bind.connect()
-    env_context.configure(connection=connection, target_metadata=metadata)
-    return env_context
 
 def run_alembic_operation(metadata, func):
     # We intentionally *don't* run inside the normal Alembic env.py so that we 
@@ -315,7 +314,9 @@ def run_alembic_operation(metadata, func):
     # normal global TurboGears metadata instance. Ultimately this is to make 
     # the migration testable.
     env_context = create_alembic_env_context(metadata, func)
-    env_context.run_migrations()
+    with metadata.bind.connect() as connection:
+        env_context.configure(connection=connection, target_metadata=metadata)
+        env_context.run_migrations()
 
 def run_online_data_migration(metadata, name):
     logger.info('Performing online data migration %s', name)
