@@ -847,8 +847,8 @@ class MigrationTest(unittest.TestCase):
                     "INSERT INTO job (owner_id, retention_tag_id, dirty_version, clean_version, status) "
                     "VALUES (1, 1, '', '', 'Installing')")
             connection.execute(
-                    "INSERT INTO recipe_set (job_id, queue_time, status) "
-                    "VALUES (1, '2015-11-09 17:03:04', 'Installing')")
+                    "INSERT INTO recipe_set (job_id, queue_time, waived, status) "
+                    "VALUES (1, '2015-11-09 17:03:04', FALSE, 'Installing')")
             connection.execute(
                     "INSERT INTO recipe (type, recipe_set_id, autopick_random, status) "
                     "VALUES ('machine_recipe', 1, FALSE, 'Installing')")
