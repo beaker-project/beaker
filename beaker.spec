@@ -538,6 +538,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{python2_sitelib}/bkr/inttest/
 %{python2_sitelib}/bkr.inttest-*-nspkg.pth
 %{python2_sitelib}/bkr.inttest-*.egg-info/
+%{_datadir}/beaker-integration-tests
 %endif
 
 %files client
