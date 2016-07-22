@@ -573,6 +573,32 @@ class TestViewJob(WebDriverTestCase):
         self.assertEquals(b.current_url,
                 get_server_base() + 'jobs/%s#set%s' % (job.id, recipeset.id))
 
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1334552
+    def test_recipe_whiteboard_appears_as_markdown(self):
+        with session.begin():
+            whiteboard = u'[google](http://www.google.com) is a *really* cool site!\n\nDont you agree?'
+            job = data_setup.create_job(recipe_whiteboard=whiteboard)
+            self.assertEqual(job.recipesets[0].recipes[0].whiteboard, whiteboard)
+        b = self.browser
+        login(b)
+        self.go_to_job_page(job)
+        expected_html = u'<a href="http://www.google.com">google</a> is a <em>really</em> cool site!'
+        recipe_row = b.find_element_by_xpath("//td/span[@class='recipe-whiteboard']")
+        self.assertEquals(expected_html, recipe_row.get_attribute('innerHTML'))
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1334552
+    def test_weird_recipe_whiteboard_content_should_not_be_shown(self):
+        with session.begin():
+            whiteboard = u'* foo\r * bar\r * none\r'
+            job = data_setup.create_job(recipe_whiteboard=whiteboard)
+            self.assertEqual(job.recipesets[0].recipes[0].whiteboard, whiteboard)
+        b = self.browser
+        login(b)
+        self.go_to_job_page(job)
+        recipe_row = b.find_element_by_xpath("//td/span[@class='recipe-whiteboard']")
+        self.assertEquals(recipe_row.get_attribute('innerHTML'), u'')
+
+
 class NewJobTestWD(WebDriverTestCase):
 
     def setUp(self):

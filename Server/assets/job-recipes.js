@@ -90,7 +90,18 @@ var JobRecipeRow = Backbone.View.extend({
         this.listenTo(this.model, 'change', this.render);
     },
     render: function () {
-        this.$el.html(this.template(_.extend({guest: this.guest}, this.model.attributes)));
+        var whiteboard = this.model.get('whiteboard');
+        var whiteboard_html = '';
+        if (whiteboard) {
+            // Only show the contents of the first <p> to avoid breaking out the layout
+            var first_para = $('<div/>').html(marked(whiteboard, {sanitize: true, smartypants: false}))
+                    .find('p').get(0);
+            if (first_para) {
+                whiteboard_html = first_para.innerHTML;
+            }
+        }
+        this.$el.html(this.template(_.extend({guest: this.guest,
+                whiteboard_html: whiteboard_html}, this.model.attributes)));
         var status = this.model.get('status');
         if (status == 'Running' || status == 'Completed') {
             var progressbar = new RecipeProgressBar({model: this.model});
