@@ -16,11 +16,19 @@ log = logging.getLogger(__name__)
 class ClientTestCase(DatabaseTestCase): pass
 
 def create_client_config(username=data_setup.ADMIN_USER,
-                         password=data_setup.ADMIN_PASSWORD, hub_url=None,
+                         password=data_setup.ADMIN_PASSWORD,
+                         hub_url=None,
                          auth_method=u'password',
-                         qpid_broker='localhost',qpid_krb=False):
+                         qpid_broker='localhost',
+                         qpid_krb=False,
+                         cacert=None):
     if hub_url is None:
         hub_url = get_server_base()
+
+    cacert_conf = '# CA_CERT ='
+    if cacert is not None:
+        cacert_conf = 'CA_CERT = "%s"' % cacert
+
     config = tempfile.NamedTemporaryFile(prefix='bkr-inttest-client-conf-')
     config.write('\n'.join([
                 'AUTH_METHOD = "%s"' % auth_method,
@@ -32,6 +40,7 @@ def create_client_config(username=data_setup.ADMIN_USER,
                 'QPID_HEADERS_EXCHANGE = "amqp.headers"',
                 'QPID_BROKER = "%s"' % qpid_broker,
                 'QPID_KRB = %s' % qpid_krb,
+                cacert_conf
         ]))
 
     config.flush()

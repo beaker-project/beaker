@@ -10,7 +10,8 @@ build:
 
 .PHONY: install
 install: build
-	python setup.py install -O1 --skip-build --root $(DESTDIR)
+	python setup.py install -O1 --skip-build \
+	    --install-data=/usr/share --root $(DESTDIR)
 
 .PHONY: clean
 clean:

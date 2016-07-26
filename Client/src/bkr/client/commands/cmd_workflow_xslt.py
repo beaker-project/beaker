@@ -551,7 +551,7 @@ class JobDefaults(ConfigParser.ConfigParser):
                 self.read(value)
                 setattr(parser.values, option.dest, value)
             except Exception, e:
-                raise OptionValueError('Failed to parse configuration file (%s): %s', value, str(e))
+                raise OptionValueError('Failed to parse configuration file (%s): %s' % (value, e))
         else:
             raise OptionValueError('--defaults cannot be used after --job-xml')
 

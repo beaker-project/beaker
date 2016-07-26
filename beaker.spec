@@ -237,6 +237,10 @@ Requires:       openldap-servers
 Requires:       python-unittest2
 Requires:       python-gunicorn
 Requires:       python-mock
+%if 0%{?rhel} == 7
+# Workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1358533
+Requires:       python-cssselect
+%endif
 %endif
 
 
@@ -534,6 +538,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{python2_sitelib}/bkr/inttest/
 %{python2_sitelib}/bkr.inttest-*-nspkg.pth
 %{python2_sitelib}/bkr.inttest-*.egg-info/
+%{_datadir}/beaker-integration-tests
 %endif
 
 %files client

@@ -127,7 +127,7 @@ class Task(object):
     def __str__(self):
         result = "%s%s" % ("  " * self.indentation_level, self.task_id)
         if self.task_info:
-            result += " %s" % self.task_info["method"]
+            result += " %s" % self.task_info.get("method", "unknown")
         return result
 
     def is_failed(self):

@@ -26,12 +26,14 @@ setup(
         'server/database-dumps/*.sql',
         'server/kickstarts/*',
         'server/mail-templates/*',
-        'server/motd.xml',
         'server/selenium/*.csv',
         'server/selenium/invalid-task_file',
         'server/task-rpms/*'] +
         get_compose_layout()
     },
+    data_files=[
+        ('beaker-integration-tests', ['motd.xml']),
+    ],
     namespace_packages=['bkr'],
     install_requires=[
         'bkr.server',
