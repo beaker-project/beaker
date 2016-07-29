@@ -149,3 +149,10 @@ class JobCloneTest(ClientTestCase):
         self.assert_('Submitted:' in out)
         last_job = Job.query.order_by(Job.id.desc()).first()
         self.assertEqual(user_foo_name, last_job.owner.user_name)
+
+    def test_must_provide_job_or_recipeset(self):
+        try:
+            run_client(['bkr', 'job-clone',])
+        except ClientError, e:
+            self.assertIn("Please specify a job or recipeset to clone",
+                          e.stderr_output)

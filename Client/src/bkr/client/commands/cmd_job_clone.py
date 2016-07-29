@@ -136,6 +136,9 @@ class Job_Clone(BeakerCommand):
         dryrun = kwargs.pop("dryrun", None)
         job_owner = kwargs.pop("job_owner", None)
 
+        if len(args) < 1:
+            self.parser.error('Please specify a job or recipeset to clone')
+
         submitted_jobs = []
         failed = False
         clone = True
