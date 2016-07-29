@@ -784,6 +784,20 @@ class RecipeHTTPTest(DatabaseTestCase):
         json = response.json()
         self.assertEquals(json['t_id'], self.recipe.t_id)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1361002
+    def test_get_virt_recipe(self):
+        with session.begin():
+            recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_scheduled(recipe, virt=True)
+        response = requests.get(get_server_base() +
+                'recipes/%s' % recipe.id,
+                headers={'Accept': 'application/json'})
+        response.raise_for_status()
+        json = response.json()
+        self.assertEquals(json['resource']['instance_id'],
+                unicode(recipe.resource.instance_id))
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1324305
     def test_get_scheduled_recipe(self):
         with session.begin():

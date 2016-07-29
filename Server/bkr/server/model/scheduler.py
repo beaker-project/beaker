@@ -4030,7 +4030,7 @@ class VirtResource(RecipeResource):
 
     def __json__(self):
         data = super(VirtResource, self).__json__()
-        data['instance_id'] = self.instance_id
+        data['instance_id'] = unicode(self.instance_id)
         return data
 
     @property
