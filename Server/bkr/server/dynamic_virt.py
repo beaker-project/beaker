@@ -78,7 +78,7 @@ class VirtManager(object):
 
     def _wait_for_stop(self, instance):
         for __ in range(20):
-            time.sleep(1)
+            time.sleep(5)
             log.debug('%r still stopping', instance)
             instance.get()
             if instance.status != 'ACTIVE':
