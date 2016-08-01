@@ -12,9 +12,7 @@
   <td class="recipeset-actions">
     <div class="btn-group">
       <a class="btn" href="<%- clone_href %>"><i class="fa fa-copy"></i> Clone</a>
-      <% if (can_change_priority && _.contains(['New', 'Processed', 'Queued'], status)) { %>
         <button class="btn priority"><i class="fa fa-sliders"></i> Priority</button>
-      <% } %>
       <% if (can_cancel && !is_finished) { %>
         <button class="btn cancel" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Cancelling&hellip;"><i class="fa fa-times"></i> Cancel</button>
       <% } %>

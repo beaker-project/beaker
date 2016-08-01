@@ -136,6 +136,7 @@ var RecipeSetPriorityModal = Backbone.View.extend({
         this.render();
         this.$el.modal();
         this.$('button.active').focus();
+        this.listenTo(this.model, 'change:can_change_priority change:priority', this.render)
     },
     render: function () {
         this.$el.html(this.template(this.model.attributes));

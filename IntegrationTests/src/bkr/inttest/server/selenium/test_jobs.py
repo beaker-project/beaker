@@ -309,6 +309,41 @@ class TestViewJob(WebDriverTestCase):
             session.expire_all()
             self.assertEquals(recipeset.priority, TaskPriority.low)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=980711
+    def test_priority_button_visible_on_job_complete(self):
+        with session.begin():
+            job_owner = data_setup.create_user(password=u'owner')
+            job = data_setup.create_completed_job(owner=job_owner)
+            recipeset = job.recipesets[0]
+        b = self.browser
+        login(b, user=job_owner.user_name, password=u'owner')
+        self.go_to_job_page(job)
+        rs_row = b.find_element_by_xpath(
+                '//tr[td/span[@class="recipeset-id" and normalize-space(string(.))="%s"]]'
+                % recipeset.t_id)
+        rs_row.find_element_by_xpath(
+                './/button[normalize-space(string(.))="Priority"]')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=980711
+    def test_on_job_complete_priority_settings_are_disabled_except_current_value(self):
+        with session.begin():
+            job_owner = data_setup.create_user(password=u'owner')
+            job = data_setup.create_completed_job(owner=job_owner)
+            recipeset = job.recipesets[0]
+        b = self.browser
+        login(b, user=job_owner.user_name, password=u'owner')
+        self.go_to_job_page(job)
+        rs_row = b.find_element_by_xpath(
+            '//tr[td/span[@class="recipeset-id" and normalize-space(string(.))="%s"]]'
+            % recipeset.t_id)
+        rs_row.find_element_by_xpath(
+            './/button[normalize-space(string(.))="Priority"]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_xpath('.//button[normalize-space(string(.))="Normal"]'
+                                    '[contains(@disabled, "")]')
+        modal.find_element_by_xpath('.//button[normalize-space(string(.))="Low"]'
+                                    '[contains(@disabled, "disabled")]')
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=881387
     def test_guestrecipes_appear_after_host(self):
         with session.begin():
