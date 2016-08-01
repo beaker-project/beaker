@@ -37,6 +37,7 @@ from sqlalchemy.sql import not_
 from sqlalchemy.exc import OperationalError
 import netaddr
 from bkr.inttest import data_setup, DatabaseTestCase
+from bkr.inttest.assertions import assert_datetime_within
 import turbogears
 import os
 import yum
@@ -1910,6 +1911,22 @@ class RecipeTest(DatabaseTestCase):
                          all_logs.next().absolute_url)
         self.assertEqual('http://dummy-archive-server/beaker/result.txt',
                          all_logs.next().absolute_url)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1361936
+    def test_after_reboot_watchdog_killtime_extended_on_virt_recipes(self):
+        recipe = data_setup.create_recipe()
+        data_setup.create_job_for_recipes([recipe])
+        data_setup.mark_recipe_scheduled(recipe, virt=True)
+        self.assertIsNone(recipe.watchdog.kill_time)
+        recipe.provision()
+        session.flush()
+        session.refresh(recipe.watchdog)
+        self.assertIsNotNone(recipe.installation.rebooted)
+        self.assertIsNotNone(recipe.watchdog.kill_time)
+        assert_datetime_within(
+            recipe.watchdog.kill_time,
+            tolerance=datetime.timedelta(seconds=10),
+            reference=datetime.datetime.utcnow() + datetime.timedelta(seconds=3000))
 
 
 class CheckDynamicVirtTest(DatabaseTestCase):

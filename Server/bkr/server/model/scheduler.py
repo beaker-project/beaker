@@ -2664,6 +2664,7 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             manager = dynamic_virt.VirtManager(self.recipeset.job.owner)
             manager.start_vm(self.resource.instance_id)
             self.installation.rebooted = datetime.utcnow()
+            self.initial_watchdog()
 
     def cleanup(self):
         # Note that this may be called *many* times for a recipe, even when it 
@@ -2847,6 +2848,13 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         # Delayed import to avoid circular dependency
         from bkr.server.model import RecipeReviewedState
         RecipeReviewedState.lazy_create(recipe=self, user=user, reviewed=reviewed)
+
+    def initial_watchdog(self):
+        if self.first_task.task:
+            initial_watchdog = self.first_task.task.avg_time + 1800
+        else:
+            initial_watchdog = 1800
+        self.extend(initial_watchdog)
 
     def __json__(self):
         return self.to_json()
