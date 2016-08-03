@@ -13,6 +13,8 @@ import uuid
 import itertools
 import netaddr
 import lxml.etree
+import inspect
+import unittest
 from sqlalchemy.orm.exc import NoResultFound
 import turbogears.config, turbogears.database
 from turbogears.database import session, metadata
@@ -244,6 +246,32 @@ def add_distro_tree_to_lab(distro_tree, lab_controller, urls=None):
             lab_controller=lab_controller, url=url)
         distro_tree.lab_controller_assocs.append(lab_controller_distro_tree)
 
+
+def get_test_name():
+    """Inspects the stack and guess the possible caller name from our test suite."""
+    # Explicitly delete references to frames to avoid cycles
+    try:
+        curframe = inspect.currentframe()
+        outerframes = inspect.getouterframes(curframe, 2)
+        test_name = 'testdata'
+        for outerframe in outerframes:  # to the top!!
+            try:
+                possible_testframe = outerframe[0]
+                locals = inspect.getargvalues(possible_testframe)[3]
+                if 'self' in locals:
+                    test_case = locals['self']
+                    if isinstance(test_case, unittest.TestCase):
+                        # Trim for test class and test name to avoid
+                        # unrealistic long names
+                        test_name = '.'.join(test_case.id().split('.')[-2:])
+                        break
+            finally:
+                del possible_testframe
+    finally:
+        del curframe
+    return test_name
+
+
 def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.automated,
         owner=None, fqdn=None, shared=True, exclude_osmajor=[],
         exclude_osversion=[], hypervisor=None, kernel_type=None,
@@ -251,7 +279,8 @@ def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.aut
     if owner is None:
         owner = create_user()
     if fqdn is None:
-        fqdn = unique_name(u'system%s.testdata')
+        name = get_test_name()
+        fqdn = unique_name(u'system%s.' + name.replace('_', '.'))
 
     if System.query.filter(System.fqdn == fqdn).count():
         if return_existing:
