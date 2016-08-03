@@ -25,7 +25,7 @@ from kid import Element
 from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
         Integer, Unicode, DateTime, Boolean, UnicodeText, String, Numeric,
         event)
-from sqlalchemy.sql import select, union, and_, or_, not_, func, literal, exists
+from sqlalchemy.sql import select, union, and_, or_, not_, func, literal, exists, delete
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import (mapper, relationship, object_mapper,
         dynamic_loader, validates, synonym, contains_eager)
@@ -2113,10 +2113,14 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         # Delete all the task result rows as well.
         # We need to delete the logs first because of the foreign key constraint.
         session.flush()
-        task_ids = session.query(RecipeTask.id).filter(
-                RecipeTask.recipe_id == self.id).subquery()
-        session.query(RecipeTaskResult).filter(
-                RecipeTaskResult.recipe_task_id.in_(task_ids)).delete(synchronize_session=False)
+        # sqlalchemy can't produce DELETE... JOIN queries yet:
+        # https://bitbucket.org/zzzeek/sqlalchemy/issues/959/support-mysql-delete-from-join
+        # so we just fake it with the prefixes parameter:
+        # http://stackoverflow.com/a/34854513/120202
+        query = delete(RecipeTaskResult.__table__.join(RecipeTask),
+                prefixes=[RecipeTaskResult.__table__.name])\
+                .where(RecipeTask.recipe_id == self.id)
+        session.connection(RecipeTaskResult).execute(query)
 
     def task_repo(self):
         return ('beaker-tasks',absolute_url('/repos/%s' % self.id,
