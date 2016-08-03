@@ -16,6 +16,7 @@ from bkr.server.bexceptions import BeakerException, BX, \
 from bkr.server.installopts import InstallOptions
 
 from .base import DeclarativeMappedObject, MappedObject
+from .migration import DataMigration
 from .types import (TaskStatus, CommandStatus, TaskResult, TaskPriority,
         SystemStatus, SystemType, ReleaseAction, ImageType, ResourceType,
         RecipeVirtStatus, SystemPermission, UUID, MACAddress, GroupMembershipType)
