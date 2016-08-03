@@ -378,10 +378,6 @@ class IpxeScriptHTTPTest(DatabaseTestCase):
     def setUp(self):
         with session.begin():
             self.lc = data_setup.create_labcontroller()
-        DummyVirtManager.lab_controller = self.lc
-
-    def tearDown(self):
-        DummyVirtManager.lab_controller = None
 
     def test_unknown_uuid(self):
         response = requests.get(get_server_base() +
@@ -397,7 +393,7 @@ class IpxeScriptHTTPTest(DatabaseTestCase):
         with session.begin():
             recipe = data_setup.create_recipe()
             data_setup.create_job_for_recipes([recipe])
-            data_setup.mark_recipe_scheduled(recipe, virt=True)
+            data_setup.mark_recipe_scheduled(recipe, virt=True, lab_controller=self.lc)
             # VM is created but recipe.provision() hasn't been called yet
         response = requests.get(get_server_base() +
                 'systems/by-uuid/%s/ipxe-script' % recipe.resource.instance_id)

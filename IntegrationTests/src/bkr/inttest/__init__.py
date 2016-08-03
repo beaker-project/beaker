@@ -95,10 +95,10 @@ class DummyVirtManager(object):
     def available_flavors(self):
         return []
     def create_vm(self, name, flavor):
-        return uuid.uuid4()
+        pass
     def start_vm(self, instance_id):
         pass
-    def destroy_vm(self, instance_id):
+    def destroy_vm(self, vm):
         pass
 
 def fix_beakerd_repodata_perms():

@@ -623,7 +623,7 @@ def mark_job_complete(job, finish_time=None, only=False, **kwargs):
 
 def mark_recipe_scheduled(recipe, start_time=None, system=None, fqdn=None,
         mac_address=None, lab_controller=None, virt=False, instance_id=None,
-        **kwargs):
+        network_id=None, subnet_id=None, router_id=None, **kwargs):
     recipe.process()
     recipe.queue()
     recipe.schedule()
@@ -634,7 +634,14 @@ def mark_recipe_scheduled(recipe, start_time=None, system=None, fqdn=None,
                     lab_controller = create_labcontroller(fqdn=u'dummylab.example.invalid')
                 if not instance_id:
                     instance_id = uuid.uuid4()
-                recipe.resource = VirtResource(instance_id, lab_controller)
+                if not network_id:
+                    network_id = uuid.uuid4()
+                if not subnet_id:
+                    subnet_id = uuid.uuid4()
+                if not router_id:
+                    router_id = uuid.uuid4()
+                recipe.resource = VirtResource(instance_id, network_id,
+                        subnet_id, router_id, lab_controller)
                 recipe.recipeset.lab_controller = lab_controller
             else:
                 if not system:

@@ -37,7 +37,7 @@ from turbogears.database import session
 from lxml import etree
 from lxml.builder import E
 from bkr.common.helpers import makedirs_ignore, total_seconds
-from bkr.server import identity, metrics, mail, dynamic_virt
+from bkr.server import identity, metrics, mail
 from bkr.server.bexceptions import BX, BeakerException, StaleTaskStatusException, DatabaseLookupError
 from bkr.server.helpers import make_link, make_fake_link
 from bkr.server.hybrid import hybrid_method, hybrid_property
@@ -2670,6 +2670,8 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
                     field=u'Distro Tree', old=u'',
                     new=unicode(self.distro_tree))
         elif isinstance(self.resource, VirtResource):
+            # Delayed import to avoid circular dependency
+            from bkr.server import dynamic_virt
             manager = dynamic_virt.VirtManager(self.recipeset.job.owner)
             manager.start_vm(self.resource.instance_id)
             self.installation.rebooted = datetime.utcnow()
@@ -4034,6 +4036,9 @@ class VirtResource(RecipeResource):
     # 128-bit numbers because we use the SMBIOS UUID field in our iPXE hackery. 
     # So we store it as an actual UUID, not an opaque string.
     instance_id = Column(UUID, nullable=False)
+    network_id = Column(UUID, nullable=True)
+    subnet_id = Column(UUID, nullable=True)
+    router_id = Column(UUID, nullable=True)
     lab_controller_id = Column(Integer, ForeignKey('lab_controller.id',
             name='virt_resource_lab_controller_id_fk'))
     lab_controller = relationship(LabController)
@@ -4045,12 +4050,39 @@ class VirtResource(RecipeResource):
             instance_id = uuid.UUID(instance_id)
         return cls.query.filter(cls.instance_id == instance_id).one()
 
-    def __init__(self, instance_id, lab_controller):
+    def __init__(self, instance_id, network_id, subnet_id, router_id, lab_controller):
         super(VirtResource, self).__init__()
         if isinstance(instance_id, basestring):
             instance_id = uuid.UUID(instance_id)
         self.instance_id = instance_id
+        if isinstance(network_id, basestring):
+            network_id = uuid.UUID(network_id)
+        self.network_id = network_id
+        if isinstance(subnet_id, basestring):
+            subnet_id = uuid.UUID(subnet_id)
+        self.subnet_id = subnet_id
+        if isinstance(router_id, basestring):
+            router_id = uuid.UUID(router_id)
+        self.router_id = router_id
         self.lab_controller = lab_controller
+
+    @validates('network_id')
+    def validate_network_id(self, key, network_id):
+        if not network_id:
+            raise ValueError('OpenStack instance must have an associated network')
+        return network_id
+
+    @validates('subnet_id')
+    def validate_subnet_id(self, key, subnet_id):
+        if not subnet_id:
+            raise ValueError('OpenStack instance must have an associated subnet')
+        return subnet_id
+
+    @validates('router_id')
+    def validate_router_id(self, key, router_id):
+        if not router_id:
+            raise ValueError('OpenStack instance must have an associated router')
+        return router_id
 
     def __repr__(self):
         return '%s(fqdn=%r, instance_id=%r, lab_controller=%r)' % (
@@ -4096,8 +4128,10 @@ class VirtResource(RecipeResource):
         try:
             log.debug('Releasing vm %s for recipe %s',
                     self.instance_id, self.recipe.id)
+            # Delayed import to avoid circular dependency
+            from bkr.server import dynamic_virt
             manager = dynamic_virt.VirtManager(self.recipe.recipeset.job.owner)
-            manager.destroy_vm(self.instance_id)
+            manager.destroy_vm(self)
         except Exception:
             log.exception('Failed to destroy vm %s, leaked!',
                     self.instance_id)

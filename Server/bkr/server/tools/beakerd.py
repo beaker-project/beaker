@@ -23,7 +23,7 @@ from bkr.server.bexceptions import BX, \
 from bkr.server.model import (Job, RecipeSet, Recipe, MachineRecipe,
         GuestRecipe, RecipeVirtStatus, TaskStatus, TaskPriority, LabController,
         Watchdog, System, DistroTree, LabControllerDistroTree, SystemStatus,
-        VirtResource, SystemResource, GuestResource, Arch,
+        SystemResource, GuestResource, Arch,
         SystemAccessPolicy, SystemPermission, ConfigItem, Command,
         Power, PowerType, DataMigration)
 from bkr.server.model.scheduler import machine_guest_map
@@ -634,12 +634,12 @@ def provision_virt_recipe(recipe_id):
     #virtio_possible = True
     #if self.recipe.distro_tree.distro.osversion.osmajor.osmajor == "RedHatEnterpriseLinux3":
     #    virtio_possible = False
-    instance_id = manager.create_vm(vm_name, flavor)
+    vm = manager.create_vm(vm_name, flavor)
     try:
         recipe.createRepo()
         recipe.systems = []
         recipe.watchdog = Watchdog()
-        recipe.resource = VirtResource(instance_id, manager.lab_controller)
+        recipe.resource = vm
         recipe.recipeset.lab_controller = manager.lab_controller
         recipe.virt_status = RecipeVirtStatus.succeeded
         recipe.schedule()
@@ -650,10 +650,10 @@ def provision_virt_recipe(recipe_id):
     except:
         exc_type, exc_value, exc_tb = sys.exc_info()
         try:
-            manager.destroy_vm(instance_id)
+            manager.destroy_vm(vm)
         except Exception:
-            log.exception('Failed to clean up instance %s '
-                    'during provision_virt_recipe, leaked!', instance_id)
+            log.exception('Failed to clean up vm %s '
+                    'during provision_virt_recipe, leaked!', vm.instance_id)
             # suppress this exception so the original one is not masked
         raise exc_type, exc_value, exc_tb
 

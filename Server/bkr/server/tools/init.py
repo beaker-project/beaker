@@ -209,11 +209,16 @@ def populate_db(user_name=None, password=None, user_display_name=None,
         (u'root_password', u'Plaintext root password for provisioned systems', False),
         (u'root_password_validity', u"Maximum number of days a user's root password is valid for", True),
         (u'guest_name_prefix', u'Prefix for names of dynamic guests in OpenStack', False),
+        (u'guest_private_network', u'Network address in CIDR format for private networks'
+                ' of dynamic guests in OpenStack.', False),
     ]
     for name, description, numeric in config_items:
         ConfigItem.lazy_create(name=name, description=description, numeric=numeric)
     if ConfigItem.by_name(u'root_password').current_value() is None:
         ConfigItem.by_name(u'root_password').set(u'beaker', user=admin.users[0])
+    if ConfigItem.by_name(u'guest_private_network').current_value() is None:
+        ConfigItem.by_name(u'guest_private_network').set(u'192.168.10.0/24',
+                user=admin.users[0])
 
     session.commit()
     session.close()
