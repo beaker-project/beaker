@@ -822,6 +822,8 @@ class Group(DeclarativeMappedObject, ActivityMixin):
                              'or trailing whitespace' % text)
         if len(name) > 255:
             raise ValueError('Group %s must be not more than 255 characters long' % text)
+        if '/' in name and key == 'group_name':
+            raise ValueError('Group name cannot contain \'/\'')
         return name
 
     @hybrid_method

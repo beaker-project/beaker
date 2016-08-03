@@ -745,6 +745,20 @@ class TestGroupsWD(WebDriverTestCase):
         modal.find_element_by_tag_name('form').submit()
         self.assertTrue(b.find_element_by_css_selector('input[name="group_name"]:required:invalid'))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1263921
+    def test_cannot_update_group_name_with_forward_slash(self):
+        b = self.browser
+        login(b, user=self.user.user_name, password='password')
+        self.go_to_group_page()
+        b.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_xpath('//input[@id="group_name"]').clear()
+        modal.find_element_by_xpath('//input[@id="group_name"]'). \
+            send_keys('/')
+        modal.find_element_by_tag_name('form').submit()
+        self.assertTrue(b.find_element_by_css_selector(
+            'input[name="group_name"]:required:invalid'))
+
     def test_cannot_update_group_with_empty_display_name(self):
         b = self.browser
         login(b, user=self.user.user_name, password='password')
@@ -996,6 +1010,17 @@ class GroupHTTPTest(DatabaseTestCase):
         self.assertEqual(400, response.status_code)
         self.assertEqual('Group display name must not contain leading or trailing whitespace',
                           response.text)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1263921
+    def test_cannot_update_group_name_with_forward_slash(self):
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': self.user.user_name,
+                                                  'password': u'password'}).raise_for_status()
+        response = patch_json(get_server_base() +
+                'groups/%s' % self.group.group_name, session=s,
+                data={'group_name': u'notanother/'})
+        self.assertEqual(400, response.status_code)
+        self.assertEqual('Group name cannot contain \'/\'', response.text)
 
     def test_unauthenticated_user_cannot_add_permission(self):
         with session.begin():
