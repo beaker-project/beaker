@@ -25,12 +25,12 @@ from bkr.server.model import (Job, RecipeSet, Recipe, MachineRecipe,
         Watchdog, System, DistroTree, LabControllerDistroTree, SystemStatus,
         VirtResource, SystemResource, GuestResource, Arch,
         SystemAccessPolicy, SystemPermission, ConfigItem, CommandActivity,
-        Power, PowerType)
+        Power, PowerType, DataMigration)
 from bkr.server.model.scheduler import machine_guest_map
 from bkr.server.needpropertyxml import XmlHost
 from bkr.server.util import load_config_or_exit, log_traceback
 from bkr.server.recipetasks import RecipeTasks
-from turbogears.database import session
+from turbogears.database import session, get_engine
 from turbogears import config
 from turbomail.control import interface
 from xmlrpclib import ProtocolError
@@ -696,6 +696,26 @@ def provision_scheduled_recipeset(recipeset_id):
                     % (recipe.id, e))
             return
 
+# Online data migration
+
+# This is populated by schedule() on startup, and then updated by 
+# run_data_migrations() as migrations are completed.
+_outstanding_data_migrations = []
+
+def run_data_migrations():
+    log.debug('Entering run_data_migrations')
+    migration = _outstanding_data_migrations[0]
+    log.debug('Performing online data migration %s (one batch)', migration.name)
+    finished = migration.migrate_one_batch(get_engine())
+    if finished:
+        log.debug('Marking online data migration %s as finished', migration.name)
+        with session.begin():
+            migration.mark_as_finished()
+        session.close()
+        _outstanding_data_migrations.pop(0)
+    log.debug('Exiting run_data_migrations')
+    return True
+
 # Real-time metrics reporting
 
 # Recipe queue
@@ -807,6 +827,8 @@ def _main_recipes():
     work_done |= schedule_queued_recipes()
     work_done |= update_dirty_jobs()
     work_done |= provision_scheduled_recipesets()
+    if _outstanding_data_migrations:
+        work_done |= run_data_migrations()
     return work_done
 
 @log_traceback(log)
@@ -819,6 +841,12 @@ def main_recipes_loop(*args, **kwargs):
 
 def schedule():
     global running
+    global _outstanding_data_migrations
+
+    _outstanding_data_migrations = [m for m in DataMigration.all() if not m.is_finished]
+    if _outstanding_data_migrations:
+        log.debug('Incomplete data migrations will be run: %s',
+                ', '.join(m.name for m in _outstanding_data_migrations))
 
     interface.start(config)
 

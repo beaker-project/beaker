@@ -28,45 +28,42 @@ from sqlalchemy import inspect
 
 logger = logging.getLogger(__name__)
 
-def migrate(metadata):
+def migrate_one_batch(engine):
     if not any(info['name'] == 'callback' for info
-            in inspect(metadata.bind).get_columns('command_queue')):
-        logger.info('Skipping migration: command_queue.callback column does not exist, '
+            in inspect(engine).get_columns('command_queue')):
+        logger.debug('Skipping migration: command_queue.callback column does not exist, '
                 'this database was not created by Beaker < 23')
-        return
+        return True # counts as complete
 
     # Associate commands for provisioning recipes with their newly created 
     # installation rows.
-    while True:
-        logger.info('Associating commands with installation (one batch)')
-        with metadata.bind.begin() as connection:
-            result = connection.execute("""
-                UPDATE command_queue
-                SET installation_id = (
-                    SELECT installation.id
-                    FROM reservation
-                    INNER JOIN system_resource ON system_resource.reservation_id = reservation.id
-                    INNER JOIN recipe_resource ON system_resource.id = recipe_resource.id
-                    INNER JOIN installation ON recipe_resource.recipe_id = installation.recipe_id
-                    WHERE system_resource.system_id = command_queue.system_id
-                        AND reservation.start_time <= command_queue.updated
-                    ORDER BY reservation.start_time DESC LIMIT 1
-                )
-                WHERE callback = 'bkr.server.model.auto_cmd_handler'
-                    AND command_queue.installation_id IS NULL
-                ORDER BY id DESC
-                LIMIT 4000
-                """)
-        if result.rowcount == 0:
-            logger.info('Done associating commands with installation')
-            break
-        else:
-            logger.info('Updated %d rows', result.rowcount)
+    with engine.begin() as connection:
+        result = connection.execute("""
+            UPDATE command_queue
+            SET installation_id = (
+                SELECT installation.id
+                FROM reservation
+                INNER JOIN system_resource ON system_resource.reservation_id = reservation.id
+                INNER JOIN recipe_resource ON system_resource.id = recipe_resource.id
+                INNER JOIN installation ON recipe_resource.recipe_id = installation.recipe_id
+                WHERE system_resource.system_id = command_queue.system_id
+                    AND reservation.start_time <= command_queue.updated
+                ORDER BY reservation.start_time DESC LIMIT 1
+            )
+            WHERE callback = 'bkr.server.model.auto_cmd_handler'
+                AND command_queue.installation_id IS NULL
+            ORDER BY id DESC
+            LIMIT 2000
+            """)
+    if result.rowcount != 0:
+        logger.info('Associated %d commands with installations', result.rowcount)
+        return False # more work to do
+    else:
+        logger.info('Done associating commands with installations')
 
     # Now go back and fill in kernel_options for the installations, copied from 
     # the configure_netboot command.
-    logger.info('Populating kernel options for installations')
-    with metadata.bind.begin() as connection:
+    with engine.begin() as connection:
         connection.execute("""
             UPDATE installation
             INNER JOIN command_queue ON command_queue.installation_id = installation.id
@@ -76,4 +73,5 @@ def migrate(metadata):
                 AND command_queue.kernel_options IS NOT NULL
                 AND installation.kernel_options = ''
             """)
-    logger.info('Done populating kernel options for installations')
+    logger.info('Populated kernel options for installations')
+    return True # migration complete

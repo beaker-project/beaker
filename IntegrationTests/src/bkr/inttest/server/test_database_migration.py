@@ -9,15 +9,14 @@ import pkg_resources
 import sqlalchemy
 from turbogears import config
 from turbogears.database import metadata
-from bkr.server.tools.init import upgrade_db, downgrade_db, check_db, \
-        run_online_data_migration
+from bkr.server.tools.init import upgrade_db, downgrade_db, check_db
 from sqlalchemy.orm import create_session
 from sqlalchemy.sql import func
 from alembic.environment import MigrationContext
 from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, User, \
         OSMajor, OSMajorInstallOptions, GroupMembershipType, SystemActivity, \
         Activity, RecipeSetComment, Recipe, RecipeSet, RecipeTaskResult, \
-        CommandActivity, LogRecipeTaskResult
+        CommandActivity, LogRecipeTaskResult, DataMigration
 
 def has_initial_sublist(larger, prefix):
     """ Return true iff list *prefix* is an initial sublist of list 
@@ -771,8 +770,12 @@ class MigrationTest(unittest.TestCase):
         self.assertEqual(recipe.installation.created,
                 datetime.datetime(2016, 2, 16, 1, 0, 0))
         self.migration_session.close()
-        # Run online data migration
-        run_online_data_migration(self.migration_metadata, 'commands-for-recipe-installations')
+        # Run online data migration (two batches)
+        migration = DataMigration(name=u'commands-for-recipe-installations')
+        finished = migration.migrate_one_batch(self.migration_metadata.bind)
+        self.assertFalse(finished)
+        finished = migration.migrate_one_batch(self.migration_metadata.bind)
+        self.assertTrue(finished)
         # Check that commands have been associated with their installation
         recipe = self.migration_session.query(Recipe).get(1)
         self.assertEqual(recipe.installation.kernel_options, u'ks=lol')
