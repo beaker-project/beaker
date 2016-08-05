@@ -6,13 +6,13 @@
 """add Skip result
 
 Revision ID: 38cfd9b8ce52
-Revises: 15d3fad78656
+Revises: 2e171e6198e6
 Create Date: 2016-07-05 12:56:44.933243
 """
 
 # revision identifiers, used by Alembic.
 revision = '38cfd9b8ce52'
-down_revision = '15d3fad78656'
+down_revision = '2e171e6198e6'
 
 from alembic import op
 from bkr.server.alembic.migration_utils import add_enum_value, drop_enum_value
