@@ -4031,6 +4031,7 @@ class VirtResource(RecipeResource):
     def __json__(self):
         data = super(VirtResource, self).__json__()
         data['instance_id'] = unicode(self.instance_id)
+        data['href'] = self.href
         return data
 
     @property

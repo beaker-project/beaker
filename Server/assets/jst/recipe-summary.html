@@ -37,8 +37,11 @@
       <br/>on <%
       if (!_.isEmpty(resource.get('system'))) {
           %><%= resource.get('system').toHTML() %><%
-      } else {
-          %><%- resource.get('fqdn') %><%
+      } else { %>
+          <%- resource.get('fqdn') %>
+          <% if (!_.isEmpty(resource.get('instance_id'))) { %>
+              <br/>(OpenStack instance <a href="<%- resource.get('href') %>"><%- resource.get('instance_id') %></a>)<%
+          } %><%
       } %><%
   } %><%
   if (status == 'Queued' && !_.isEmpty(possible_systems)) { %>

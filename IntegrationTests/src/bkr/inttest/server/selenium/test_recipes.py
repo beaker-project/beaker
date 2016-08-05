@@ -213,6 +213,20 @@ class TestRecipeView(WebDriverTestCase):
                 % recipe.tasks[0].id)
         task_row.find_element_by_xpath('.//button[normalize-space(string(.))="Results" and @disabled="disabled"]')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1364288
+    def test_view_virt_recipe(self):
+        with session.begin():
+            recipe = data_setup.create_recipe(distro_tree=self.distro_tree)
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_installing(recipe, fqdn=u'example.openstacklocal',
+                    virt=True)
+            recipe.resource.fqdn = u'example.openstacklocal'
+        b = self.browser
+        go_to_recipe_view(b, recipe)
+        self.assertEqual('Using PurpleUmbrellaLinux5.11-20160428 Server x86_64\n'
+            'on example.openstacklocal\n(OpenStack instance %s).' % recipe.resource.instance_id,
+            b.find_element_by_xpath('//div[@class="recipe-summary"]/p[2]').text)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=626529
     def test_guest_recipe_info(self):
         with session.begin():
