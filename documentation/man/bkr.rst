@@ -60,6 +60,11 @@ These options are applicable to all :program:`bkr` subcommands.
    ``HUB_URL`` setting from the configuration file. The URL should not include 
    a trailing slash.
 
+.. option:: --insecure
+
+   Skip all SSL certificate validity checks. This allows the client to connect 
+   to a Beaker server with an invalid, expired, or untrusted SSL certificate.
+
 .. option:: --username <username>
 
    Authenticate using password authentication, with <username>. If a password 
