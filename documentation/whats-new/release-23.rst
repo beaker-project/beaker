@@ -411,3 +411,45 @@ The following user interface bugs/RFEs are solved by the job page improvements i
       (Contributed by Róman Joost)
     * :issue:`1346586`: downgrading 23.0->22.3 leaves the database in a bad state: ValueError: Invalid value for 'TaskStatus': u''
       (Contributed by Dan Callaghan)
+
+Maintenance updates
+-------------------
+
+The following fixes have been included in Beaker 23 maintenance updates.
+
+Beaker 23.1
+~~~~~~~~~~~
+
+* :issue:`1362414`: The ``--online-data-migration`` option for
+  :program:`beaker-init` has been removed. The data migration is now performed 
+  automatically by :program:`beakerd` as necessary as part of each scheduling 
+  iteration. This fixes database deadlocks between :program:`beakerd` and the 
+  online data migration process which prevent large, heavily utilized Beaker 
+  sites from successfully completing the migration. Beaker sites which already 
+  upgraded to 23.0 using the original data migration process in 
+  :program:`beaker-init` are not affected by this bug. (Contributed by Dan 
+  Callaghan)
+* :issue:`1362439`: Inefficient ``DELETE`` queries in
+  :program:`beaker-log-delete`, introduced in Beaker 23.0, have been fixed. The 
+  inefficient queries could impact large Beaker sites causing lock wait 
+  timeouts in :program:`beakerd`. (Contributed by Dan Callaghan)
+* :issue:`1334552`: Recipe whiteboards are now rendered as Markdown when shown
+  on the job page, matching how they are displayed on the recipe page. 
+  (Contributed by Matt Jia)
+* :issue:`1345735`: The :program:`bkr` client has a new option
+  :option:`--insecure <bkr --insecure>` and corresponding configuration setting 
+  ``SSL_VERIFY`` which will disable all SSL certificate validity checks, 
+  allowing the client to connect to a Beaker server with an invalid or 
+  untrusted certificate. (Contributed by Dan Callaghan)
+* :issue:`1353825`: The documentation for ``<reservesys/>`` now describes how
+  to extend the reservation. (Contributed by Róman Joost)
+
+.. affects tests only:
+    * :issue:`1356852`: test_database_migration deadlocks itself on RHEL7 (Contributed by Dan Callaghan)
+
+Version 2.2 of the :program:`beaker-system-scan` hardware scanning utility and 
+version 1.2-8 of the ``/distribution/inventory`` task have also been released:
+
+* :issue:`1343347`: The ``kvm_hv`` kernel module is now detected on PowerNV
+  systems as indicating support for hardware virtualization. (Contributed by 
+  Dan Callaghan)
