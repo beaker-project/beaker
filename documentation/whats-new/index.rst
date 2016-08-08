@@ -36,6 +36,10 @@ version, see :doc:`../admin-guide/upgrading`.
 Beaker 23
 ---------
 
+Beaker 23 provides a new recipe state to reflect the provisioning of a machine, 
+generates GRUB2 menus for x86 EFI systems, an improved user experience for job 
+and recipe pages, as well as many other improvements.
+
 .. toctree::
    :maxdepth: 2
 
