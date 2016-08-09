@@ -13,7 +13,7 @@ from optparse import Option, IndentedHelpFormatter, SUPPRESS_HELP
 import xmlrpclib
 import cgi
 import krbV
-from bkr.client.command import CommandOptionParser, ClientCommandContainer
+from bkr.client.command import CommandOptionParser, ClientCommandContainer, BeakerClientConfigurationError
 from bkr.common import __version__
 
 
@@ -100,6 +100,9 @@ def main():
             sys.stderr.write(e.response.content.rstrip('\n') + '\n')
         return 1
     except BeakerJobTemplateError, e:
+        sys.stderr.write('%s\n' % e)
+        return 1
+    except BeakerClientConfigurationError, e:
         sys.stderr.write('%s\n' % e)
         return 1
 

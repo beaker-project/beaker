@@ -53,7 +53,9 @@ class WhoAmITest(ClientTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1350959
     def test_error_message_if_cacert_points_to_wrong_path(self):
         config = create_client_config(cacert='/does/not/exist')
+
         with self.assertRaises(ClientError) as assertion:
             run_client(['bkr', 'whoami'], config=config)
-        self.assertIn('CA_CERT configuration points to non-existing file',
-                      assertion.exception.stderr_output)
+        self.assertEqual(
+            'CA_CERT configuration points to non-existing file: /does/not/exist\n',
+            assertion.exception.stderr_output)

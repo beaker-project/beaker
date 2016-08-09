@@ -251,6 +251,13 @@ class PluginContainer(object):
                     cls.register_plugin(plugin)
 
 
+class BeakerClientConfigurationError(ValueError):
+    """
+    Raised to indicate that the Beaker client is not configured properly.
+    """
+    pass
+
+
 class CommandContainer(PluginContainer):
     """Container for Command classes."""
 
@@ -279,7 +286,7 @@ class ClientCommandContainer(CommandContainer):
 
         cacert = self.conf.get('CA_CERT')
         if cacert and not os.path.exists(cacert):
-            self.error('CA_CERT configuration points to non-existing file: %s' % cacert)
+            raise BeakerClientConfigurationError('CA_CERT configuration points to non-existing file: %s' % cacert)
 
         self.hub = HubProxy(conf=self.conf, auto_login=auto_login)
 
