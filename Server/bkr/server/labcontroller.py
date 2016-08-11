@@ -27,8 +27,7 @@ from bkr.server.model import \
     LabController, User, Group, OSMajor, OSVersion, \
     Arch, Distro, DistroTree, DistroTreeRepo, DistroTreeImage, \
     DistroTreeActivity, LabControllerDistroTree, ImageType, KernelType, \
-    System, SystemStatus, \
-    Watchdog, CommandActivity, CommandStatus
+    System, SystemStatus, Watchdog, Command, CommandStatus
 
 import logging
 log = logging.getLogger(__name__)
@@ -399,19 +398,19 @@ class LabControllers(RPCRoot):
         lab_controller = identity.current.user.lab_controller
         max_running_commands = config.get('beaker.max_running_commands')
         if max_running_commands:
-            running_commands = CommandActivity.query\
-                    .join(CommandActivity.system)\
+            running_commands = Command.query\
+                    .join(Command.system)\
                     .filter(System.lab_controller == lab_controller)\
-                    .filter(CommandActivity.status == CommandStatus.running)\
+                    .filter(Command.status == CommandStatus.running)\
                     .count()
             if running_commands >= max_running_commands:
                 return []
-        query = CommandActivity.query\
-                .join(CommandActivity.system)\
-                .options(contains_eager(CommandActivity.system))\
+        query = Command.query\
+                .join(Command.system)\
+                .options(contains_eager(Command.system))\
                 .filter(System.lab_controller == lab_controller)\
-                .filter(CommandActivity.status == CommandStatus.queued)\
-                .order_by(CommandActivity.id)
+                .filter(Command.status == CommandStatus.queued)\
+                .order_by(Command.id)
         if max_running_commands:
             query = query.limit(max_running_commands - running_commands)
         result = []
@@ -509,7 +508,7 @@ class LabControllers(RPCRoot):
     @identity.require(identity.in_group('lab_controller'))
     def mark_command_running(self, command_id):
         lab_controller = identity.current.user.lab_controller
-        cmd = CommandActivity.query.get(command_id)
+        cmd = Command.query.get(command_id)
         if cmd.system.lab_controller != lab_controller:
             raise ValueError('%s cannot update command for %s in wrong lab'
                     % (lab_controller, cmd.system))
@@ -522,7 +521,7 @@ class LabControllers(RPCRoot):
     @identity.require(identity.in_group('lab_controller'))
     def mark_command_completed(self, command_id):
         lab_controller = identity.current.user.lab_controller
-        cmd = CommandActivity.query.get(command_id)
+        cmd = Command.query.get(command_id)
         if cmd.system.lab_controller != lab_controller:
             raise ValueError('%s cannot update command for %s in wrong lab'
                     % (lab_controller, cmd.system))
@@ -544,10 +543,8 @@ class LabControllers(RPCRoot):
         # synchronously by the lab controller
         user = identity.current.user
         system = System.by_fqdn(fqdn, user)
-        cmd = CommandActivity(user=user,
-                              service=u"XMLRPC",
-                              action=action,
-                              status=CommandStatus.completed)
+        cmd = Command(user=user, service=u"XMLRPC", action=action,
+                status=CommandStatus.completed)
         system.command_queue.append(cmd)
         session.flush() # Populates cmd.system (needed for next call)
         cmd.log_to_system_history()
@@ -557,14 +554,14 @@ class LabControllers(RPCRoot):
     @identity.require(identity.in_group('lab_controller'))
     def mark_command_failed(self, command_id, message=None):
         lab_controller = identity.current.user.lab_controller
-        cmd = CommandActivity.query.get(command_id)
+        cmd = Command.query.get(command_id)
         if cmd.system.lab_controller != lab_controller:
             raise ValueError('%s cannot update command for %s in wrong lab'
                     % (lab_controller, cmd.system))
         if cmd.status != CommandStatus.running:
             raise ValueError('Command %s not running' % command_id)
         cmd.change_status(CommandStatus.failed)
-        cmd.new_value = message
+        cmd.error_message = message
         # Ignore failures for 'interrupt' commands because most power types
         # don't support it and will report a "failure" in that case.
         if cmd.action != 'interrupt' and cmd.system.status == SystemStatus.automated:
@@ -591,9 +588,9 @@ class LabControllers(RPCRoot):
         # details.
         lab_controller = identity.current.user.lab_controller
         purged = (
-            CommandActivity.__table__.update()
-            .where(CommandActivity.status == CommandStatus.running)
-            .where(CommandActivity.updated <
+            Command.__table__.update()
+            .where(Command.status == CommandStatus.running)
+            .where(Command.queue_time <
                        datetime.utcnow() - timedelta(days=1))
             .values(status=CommandStatus.aborted)
             .execute()
@@ -602,10 +599,10 @@ class LabControllers(RPCRoot):
             msg = ("Aborted %d stale commands before aborting "
                    "recent running commands for %s")
             log.warn(msg, purged.rowcount, lab_controller.fqdn)
-        running_commands = CommandActivity.query\
-                .join(CommandActivity.system)\
+        running_commands = Command.query\
+                .join(Command.system)\
                 .filter(System.lab_controller == lab_controller)\
-                .filter(CommandActivity.status == CommandStatus.running)
+                .filter(Command.status == CommandStatus.running)
         for cmd in running_commands:
             cmd.abort(message)
         return True

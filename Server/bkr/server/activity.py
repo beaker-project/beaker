@@ -10,8 +10,7 @@ from bkr.server.app import app
 from bkr.server.flask_util import json_collection, request_wants_json, \
         render_tg_template
 from bkr.server.model import (Activity, User, Distro, DistroTree,
-        LabController, System, Group, Arch,
-        CommandActivity, DistroActivity, DistroTreeActivity,
+        LabController, System, Group, Arch, DistroActivity, DistroTreeActivity,
                               LabControllerActivity, SystemActivity, GroupActivity,
                               SystemPool, SystemPoolActivity)
 
@@ -54,13 +53,6 @@ def get_activity():
         New value of the field after the action was performed (if applicable).
     """
     query = Activity.query.order_by(Activity.id.desc())
-    # Command queue inherits from activity but really it's a separate thing, so 
-    # we filter it out. The obvious way would be:
-    #   query = query.filter(Activity.type != 'command_activity')
-    # but that destroys all performance, because MySQL.
-    # Hence this outer join business.
-    query = query.outerjoin(CommandActivity.__table__)\
-            .filter(CommandActivity.id == None)
     json_result = json_collection(query,
             columns=common_activity_search_columns,
             skip_count=True)

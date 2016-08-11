@@ -10,7 +10,7 @@ from sqlalchemy.orm import relationship
 from bkr.server.util import absolute_url
 from .base import DeclarativeMappedObject
 from .distrolibrary import DistroTree
-from .inventory import System, CommandActivity
+from .inventory import System, Command
 
 
 class Installation(DeclarativeMappedObject):
@@ -42,7 +42,7 @@ class Installation(DeclarativeMappedObject):
     # Power commands which were triggered to perform this installation. Note 
     # that this list might be empty, if the installation was done on 
     # a dynamically created VM instead of a real system.
-    commands = relationship(CommandActivity, back_populates='installation')
+    commands = relationship(Command, back_populates='installation')
     # Installation can be associated with a recipe. Note this is optional, 
     # installations can also be requested by hand outside of a recipe 
     # ("manual provision").

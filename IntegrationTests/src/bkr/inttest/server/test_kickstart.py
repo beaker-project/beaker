@@ -11,7 +11,7 @@ import pipes
 import crypt
 from bkr.server import dynamic_virt
 from bkr.server.model import session, DistroTreeRepo, LabControllerDistroTree, \
-        CommandActivity, Provision, SSHPubKey, ProvisionFamily, OSMajor, Arch, \
+        Provision, SSHPubKey, ProvisionFamily, OSMajor, Arch, \
         Key, Key_Value_String, OSMajorInstallOptions
 from bkr.server.kickstart import template_env, generate_kickstart
 from bkr.server.jobs import Jobs

@@ -47,7 +47,7 @@ def migrate_one_batch(engine):
                 INNER JOIN recipe_resource ON system_resource.id = recipe_resource.id
                 INNER JOIN installation ON recipe_resource.recipe_id = installation.recipe_id
                 WHERE system_resource.system_id = command_queue.system_id
-                    AND reservation.start_time <= command_queue.updated
+                    AND reservation.start_time <= command_queue.queue_time
                 ORDER BY reservation.start_time DESC LIMIT 1
             )
             WHERE callback = 'bkr.server.model.auto_cmd_handler'
@@ -67,9 +67,8 @@ def migrate_one_batch(engine):
         connection.execute("""
             UPDATE installation
             INNER JOIN command_queue ON command_queue.installation_id = installation.id
-            INNER JOIN activity ON activity.id = command_queue.id
             SET installation.kernel_options = command_queue.kernel_options
-            WHERE activity.action = 'configure_netboot'
+            WHERE command_queue.action = 'configure_netboot'
                 AND command_queue.kernel_options IS NOT NULL
                 AND installation.kernel_options = ''
             """)

@@ -16,7 +16,7 @@ from alembic.environment import MigrationContext
 from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, User, \
         OSMajor, OSMajorInstallOptions, GroupMembershipType, SystemActivity, \
         Activity, RecipeSetComment, Recipe, RecipeSet, RecipeTaskResult, \
-        CommandActivity, LogRecipeTaskResult, DataMigration
+        Command, CommandStatus, LogRecipeTaskResult, DataMigration
 
 def has_initial_sublist(larger, prefix):
     """ Return true iff list *prefix* is an initial sublist of list 
@@ -779,11 +779,11 @@ class MigrationTest(unittest.TestCase):
         # Check that commands have been associated with their installation
         recipe = self.migration_session.query(Recipe).get(1)
         self.assertEqual(recipe.installation.kernel_options, u'ks=lol')
-        installation_cmd = self.migration_session.query(CommandActivity).get(1)
+        installation_cmd = self.migration_session.query(Command).get(1)
         self.assertEqual(installation_cmd.installation, recipe.installation)
-        manual_cmd = self.migration_session.query(CommandActivity).get(2)
+        manual_cmd = self.migration_session.query(Command).get(2)
         self.assertEqual(manual_cmd.installation, None)
-        reprovision_cmd = self.migration_session.query(CommandActivity).get(3)
+        reprovision_cmd = self.migration_session.query(Command).get(3)
         self.assertEqual(reprovision_cmd.installation, None)
         # Check that installation has been populated for recipe 2 (guest_resource)
         recipe = self.migration_session.query(Recipe).get(2)
@@ -868,3 +868,52 @@ class MigrationTest(unittest.TestCase):
             self.assertEquals(
                     connection.scalar('SELECT status FROM recipe WHERE id = 1'),
                     u'Running')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1318524
+    def test_command_queue_separated_from_activity(self):
+        with self.migration_metadata.bind.connect() as connection:
+            # populate empty database
+            connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                    'database-dumps/23.sql'))
+            # set up a test command
+            connection.execute(
+                    "INSERT INTO system (id, fqdn, date_added, owner_id, type, status, kernel_type_id) "
+                    "VALUES (1, 'example.invalid', '2016-01-01 00:00:00', 1, 'Machine', 'Manual', 1)")
+            connection.execute(
+                    "INSERT INTO activity (id, user_id, created, type, field_name, "
+                    "   service, action, old_value, new_value) "
+                    "VALUES (1, 1, '2016-08-11 16:47:56', 'command_activity', 'Command', "
+                    "   'Scheduler', 'on', '', 'ValueError: Power script /usr/lib/python2.6/site-packages/bk')")
+            connection.execute(
+                    "INSERT INTO command_queue (id, system_id, status, updated, quiescent_period) "
+                    "VALUES (1, 1, 'Failed', '2016-08-11 16:47:56', 5)")
+        # run migration
+        upgrade_db(self.migration_metadata)
+        # command should be correctly populated
+        cmd = self.migration_session.query(Command).get(1)
+        self.assertEquals(cmd.user_id, 1)
+        self.assertEquals(cmd.service, u'Scheduler')
+        self.assertEquals(cmd.system_id, 1)
+        self.assertEquals(cmd.queue_time, datetime.datetime(2016, 8, 11, 16, 47, 56))
+        self.assertEquals(cmd.action, u'on')
+        self.assertEquals(cmd.quiescent_period, 5)
+        self.assertEquals(cmd.delay_until, None)
+        self.assertEquals(cmd.status, CommandStatus.failed)
+        self.assertEquals(cmd.error_message,
+                u'ValueError: Power script /usr/lib/python2.6/site-packages/bk')
+        # old activity row should be gone
+        self.assertIsNone(self.migration_session.query(Activity).filter_by(id=1).first())
+        # downgrade back to 23
+        downgrade_db(self.migration_metadata, '23')
+        # old activity should be correctly populated
+        with self.migration_metadata.bind.connect() as connection:
+            activity_row, = connection.execute('SELECT * FROM activity WHERE id = 1')
+            self.assertEquals(activity_row.user_id, 1)
+            self.assertEquals(activity_row.created,
+                    datetime.datetime(2016, 8, 11, 16, 47, 56))
+            self.assertEquals(activity_row.type, u'command_activity')
+            self.assertEquals(activity_row.field_name, u'Command')
+            self.assertEquals(activity_row.service, u'Scheduler')
+            self.assertEquals(activity_row.old_value, u'')
+            self.assertEquals(activity_row.new_value,
+                    u'ValueError: Power script /usr/lib/python2.6/site-packages/bk')

@@ -78,31 +78,34 @@ class SystemActivity(Activity):
         return result
 
 
-class CommandActivity(Activity):
+class Command(DeclarativeMappedObject):
 
     __tablename__ = 'command_queue'
     __table_args__ = {'mysql_engine': 'InnoDB'}
-    id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    user_id = Column(Integer, ForeignKey('tg_user.user_id'), index=True)
+    user = relationship('User')
+    service = Column(Unicode(100), nullable=False, index=True)
+    queue_time = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
     system_id = Column(Integer, ForeignKey('system.id',
             onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
-    object = relationship('System', back_populates='command_queue')
-    system = synonym('object')
-    status = column_property(
-            Column('status', CommandStatus.db_type(), nullable=False, index=True))
-    task_id = Column(String(255))
+    system = relationship('System', back_populates='command_queue')
+    action = Column(Unicode(40), nullable=False, index=True)
+    status = Column('status', CommandStatus.db_type(), nullable=False, index=True)
     delay_until = Column(DateTime, default=None)
     quiescent_period = Column(Integer, default=None)
-    updated = Column(DateTime, default=datetime.utcnow)
+    error_message = Column(Unicode(4000))
     # If this command was triggered as part of an installation, it will be 
     # referenced here. Note that commands can also be manually triggered by 
     # a user outside of any installation, so this is optional.
     installation_id = Column(Integer, ForeignKey('installation.id',
             name='command_queue_installation_id_fk'))
     installation = relationship('Installation', back_populates='commands')
-    __mapper_args__ = {'polymorphic_identity': u'command_activity'}
 
     def __init__(self, user, service, action, status, quiescent_period=0):
-        Activity.__init__(self, user, service, action, u'Command', u'', u'')
+        self.user = user
+        self.service = service
+        self.action = action
         self.status = status
         self.quiescent_period = quiescent_period
 
@@ -140,16 +143,13 @@ class CommandActivity(Activity):
     def __json__(self):
         return {
             'id': self.id,
-            'submitted': self.created,
+            'submitted': self.queue_time,
             'user': self.user,
             'service': self.service,
             'action': self.action,
-            'message': self.new_value,
+            'message': self.error_message,
             'status': unicode(self.status),
         }
-
-    def object_name(self):
-        return "Command: %s %s" % (self.object.fqdn, self.action)
 
     @hybrid_property
     def finished(self):
@@ -161,9 +161,9 @@ class CommandActivity(Activity):
 
     def change_status(self, new_status):
         current_status = self.status
-        if session.connection(CommandActivity).execute(CommandActivity.__table__.update(
-                and_(CommandActivity.__table__.c.id == self.id,
-                     CommandActivity.status == current_status)),
+        if session.connection(Command).execute(Command.__table__.update(
+                and_(Command.__table__.c.id == self.id,
+                     Command.status == current_status)),
                 status=new_status).rowcount != 1:
             raise StaleCommandStatusException(
                     'Status for command %s updated in another transaction'
@@ -186,13 +186,13 @@ class CommandActivity(Activity):
     def log_to_system_history(self):
         self.system.record_activity(user=self.user, service=self.service,
                 action=self.action, field=u'Power', old=u'',
-                new=self.new_value and u'%s: %s' % (self.status, self.new_value)
+                new=self.error_message and u'%s: %s' % (self.status, self.error_message)
                     or unicode(self.status))
 
     def abort(self, msg=None):
         log.error('Command %s aborted: %s', self.id, msg)
         self.status = CommandStatus.aborted
-        self.new_value = msg
+        self.error_message = msg
         if self.installation and self.installation.recipe:
             self.installation.recipe.abort(
                     'Command %s aborted: %s' % (self.id, msg))
@@ -326,11 +326,11 @@ class System(DeclarativeMappedObject, ActivityMixin):
             order_by=[SystemActivity.__table__.c.id.desc()])
     dyn_activity = dynamic_loader(SystemActivity,
             order_by=[SystemActivity.__table__.c.id.desc()])
-    command_queue = relationship(CommandActivity, back_populates='object',
+    command_queue = relationship(Command, back_populates='system',
             cascade='all, delete, delete-orphan',
-            order_by=[CommandActivity.created.desc(), CommandActivity.id.desc()])
-    dyn_command_queue = dynamic_loader(CommandActivity,
-            order_by=[CommandActivity.created.desc(), CommandActivity.id.desc()])
+            order_by=[Command.queue_time.desc(), Command.id.desc()])
+    dyn_command_queue = dynamic_loader(Command,
+            order_by=[Command.queue_time.desc(), Command.id.desc()])
     _system_ccs = relationship('SystemCc', back_populates='system',
             cascade='all, delete, delete-orphan')
     reservations = relationship(Reservation, back_populates='system',
@@ -1534,7 +1534,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             user = identity.current.user
         except Exception:
             user = None
-        activity = CommandActivity(user=user, service=service,
+        activity = Command(user=user, service=service,
                 action=action, status=CommandStatus.queued)
         if installation:
             activity.installation = installation

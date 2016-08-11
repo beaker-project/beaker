@@ -19,7 +19,7 @@ from bkr.server.model import System, SystemActivity, SystemStatus, SystemPool, \
         DistroTree, OSMajor, DistroTag, Arch, Distro, User, Group, SystemAccessPolicy, \
         SystemPermission, SystemAccessPolicyRule, ImageType, KernelType, \
         VirtResource, Hypervisor, Numa, LabController, SystemType, \
-        CommandActivity, Power, PowerType, ReleaseAction, Task, \
+        Command, Power, PowerType, ReleaseAction, Task, \
         Recipe, RecipeSet, RecipeTask, RecipeResource, Job, TaskStatus, \
         Installation
 from bkr.server.installopts import InstallOptions
@@ -1213,18 +1213,18 @@ def get_system_command_queue(fqdn):
     system = _get_system_by_FQDN(fqdn)
     query = system.dyn_command_queue
     # outerjoin user for sorting/filtering and also for eager loading
-    query = query.outerjoin(CommandActivity.user)\
-            .options(contains_eager(CommandActivity.user))
+    query = query.outerjoin(Command.user)\
+            .options(contains_eager(Command.user))
     json_result = json_collection(query, columns={
         'user': User.user_name,
         'user.user_name': User.user_name,
         'user.email_address': User.email_address,
         'user.display_name': User.display_name,
-        'service': CommandActivity.service,
-        'submitted': CommandActivity.created,
-        'action': CommandActivity.action,
-        'message': CommandActivity.new_value,
-        'status': CommandActivity.status,
+        'service': Command.service,
+        'submitted': Command.queue_time,
+        'action': Command.action,
+        'message': Command.error_message,
+        'status': Command.status,
     })
     return jsonify(json_result)
 

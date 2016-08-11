@@ -8,7 +8,7 @@
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support.ui import Select
 from turbogears.database import session
-from bkr.server.model import User, CommandActivity, CommandStatus
+from bkr.server.model import User
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base
 

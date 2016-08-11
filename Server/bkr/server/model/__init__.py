@@ -36,8 +36,7 @@ from .inventory import (System, SystemStatusDuration, SystemCc, Hypervisor,
         Key, Key_Value_String, Key_Value_Int, Provision, ProvisionFamily,
         ProvisionFamilyUpdate, ExcludeOSMajor, ExcludeOSVersion, LabInfo,
         SystemAccessPolicy, SystemAccessPolicyRule, Reservation,
-                        SystemActivity, CommandActivity, SystemPool,
-                        SystemPoolActivity)
+        SystemActivity, Command, SystemPool, SystemPoolActivity)
 from .installation import Installation, RenderedKickstart
 from .scheduler import (Watchdog, TaskBase, Job, RecipeSet, Recipe,
         RecipeTaskResult, MachineRecipe, GuestRecipe, RecipeTask, Log,

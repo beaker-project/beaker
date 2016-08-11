@@ -251,4 +251,4 @@ class ConfigureNetbootTest(LabControllerTestCase):
                 + get_conf().get('IMAGE_FETCH_TIMEOUT')))
         self.assertEquals(system.command_queue[0].action, u'configure_netboot')
         self.assertEquals(system.command_queue[0].status, CommandStatus.failed)
-        self.assertIn(u'timed out', system.command_queue[0].new_value)
+        self.assertIn(u'timed out', system.command_queue[0].error_message)

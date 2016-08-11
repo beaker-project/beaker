@@ -21,7 +21,7 @@ from bkr.inttest import data_setup, get_server_base,\
 from bkr.inttest.server.requests_utils import patch_json, post_json
 from bkr.inttest.assertions import assert_datetime_within
 from bkr.server.model import Distro, DistroTree, Arch, ImageType, Job, \
-    System, SystemStatus, TaskStatus, CommandActivity, CommandStatus, \
+    System, SystemStatus, TaskStatus, Command, CommandStatus, \
     KernelType, LabController, User, OSMajor, OSVersion, LabControllerActivity, \
     Group, Installation
 from bkr.server.tools import beakerd
@@ -597,12 +597,12 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
     def test_clear_running_commands(self):
         with session.begin():
             system = data_setup.create_system(lab_controller=self.lc)
-            command = CommandActivity(
+            command = Command(
                     user=None, service=u'testdata', action=u'on',
                     status=CommandStatus.running)
             system.command_queue.append(command)
             other_system = data_setup.create_system()
-            other_command = CommandActivity(
+            other_command = Command(
                     user=None, service=u'testdata', action=u'on',
                     status=CommandStatus.running)
             other_system.command_queue.append(other_command)
@@ -621,12 +621,12 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
                 recipe = job.recipesets[0].recipes[0]
                 system = data_setup.create_system(lab_controller=lc)
                 data_setup.mark_recipe_waiting(recipe, system=system)
-                command = CommandActivity(
+                command = Command(
                         user=None, service=u'testdata', action=u'on',
                         status=CommandStatus.running)
                 command.installation = recipe.installation
                 if creation_date is not None:
-                    command.created = command.updated = creation_date
+                    command.queue_time = creation_date
                 system.command_queue.append(command)
                 return recipe.tasks[0], command
             # Normal command for the current LC
@@ -658,8 +658,8 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
         queued = self.server.labcontrollers.get_queued_command_details()
         self.assertEquals(len(queued), 0, queued)
         with session.begin():
-            completed = list(CommandActivity.query
-                             .join(CommandActivity.system)
+            completed = list(Command.query
+                             .join(Command.system)
                              .filter(System.fqdn == fqdn))
             self.assertEquals(len(completed), 1, completed)
             self.assertEquals(completed[0].action, expected)

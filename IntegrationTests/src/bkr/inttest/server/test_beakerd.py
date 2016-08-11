@@ -17,7 +17,7 @@ from bkr.server.model import TaskStatus, Job, System, User, \
         Group, SystemStatus, SystemActivity, Recipe, Cpu, LabController, \
         Provision, TaskPriority, RecipeSet, RecipeTaskResult, Task, SystemPermission,\
         MachineRecipe, GuestRecipe, LabControllerDistroTree, DistroTree, \
-        TaskResult, CommandActivity, CommandStatus, GroupMembershipType
+        TaskResult, Command, CommandStatus, GroupMembershipType
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import not_
 from turbogears.database import session, get_engine
@@ -1800,7 +1800,7 @@ class TestBeakerdMetrics(DatabaseTestCase):
             systems = System.query.filter(System.status != SystemStatus.removed)
             for system in systems:
                 system.status = SystemStatus.removed
-            commands = CommandActivity.query.filter(not_(CommandActivity.finished))
+            commands = Command.query.filter(not_(Command.finished))
             for command in commands:
                 command.change_status(CommandStatus.aborted)
             running = Recipe.query.filter(not_(Recipe.status.in_(
