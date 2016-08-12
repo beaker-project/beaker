@@ -12,11 +12,20 @@
 //TODO I should move a lot of this out to a seperate JS file
  pri_manager = new PriorityManager()
  pri_manager.initialize()
+ ackpanel  = new AckPanel()
       
  PARENT_ = 1
  NOT_PARENT = 0
 
  $(document).ready(function() {
+    $('.ackpanel input').change(function () {
+        var response_id = $(this).val()
+        var parent_span = $(this).parents('span:first')
+        var span_id = parent_span.attr('id') 
+        var rs_id = span_id.replace(/^response_(\d{1,})$/,"$1") 
+        ackpanel.update(rs_id,response_id) 
+    })
+
     $("select[id^='priority']").change(function() {
 
         var callback = {'function' : ShowPriorityResults }

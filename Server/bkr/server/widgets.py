@@ -463,6 +463,42 @@ class JobQuickSearch(CompoundWidget):
 
         self.status_queued = Button(default="Status is Queued", name='status_queued')
 
+class AckPanel(RadioButtonList):
+
+    javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui-1.9.2.min.js', order=3),
+                  LocalJSLink('bkr','/static/javascript/loader_v2.js'),
+                  LocalJSLink('bkr','/static/javascript/response_v6.js')]
+
+    css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
+    params = ['widget_name']
+    template = """
+    <div xmlns:py="http://purl.org/kid/ns#"
+        class="${field_class}"
+        id="${field_id}"
+    >
+        <label py:for="value, desc, attrs in options" class="radio">
+            <input type="radio" name="${widget_name}" id="${field_id}_${value}" value="${value}" py:attrs="attrs" />
+            ${desc}
+        </label>
+    </div>
+    """
+
+    def __init__(self, *args, **kw):
+        self.validator = validators.NotEmpty()
+        super(AckPanel, self).__init__(*args, **kw)
+
+    def display(self, value=None, *args, **params):
+        rs_id = value
+        rs = model.RecipeSet.by_id(rs_id)
+        if not rs.is_finished():
+            return
+        if not rs.waived:
+            the_opts = [('1', 'Ack', {'checked': 1}), ('2', 'Nak', {})]
+        else:
+            the_opts = [('1', 'Ack', {}), ('2', 'Nak', {'checked': 1})]
+        params['widget_name'] = 'response_box_%s' % rs_id
+        params['options'] = the_opts
+        return super(AckPanel, self).display(value, *args, **params)
 
 class JobMatrixReport(Form):     
     javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui-1.9.2.min.js', order=3),
@@ -948,11 +984,12 @@ class RecipeSetWidget(CompoundWidget):
     javascript = []
     css = []
     template = "bkr.server.templates.recipe_set"
-    params = ['recipeset','show_priority','action','priorities_list']
-    member_widgets = ['priority_widget','retentiontag_widget', 'product_widget', 'action_widget']
+    params = ['recipeset','show_priority','action','priorities_list', 'can_ack_nak']
+    member_widgets = ['priority_widget','retentiontag_widget', 'ack_panel_widget', 'product_widget', 'action_widget']
     def __init__(self, priorities_list=None, *args, **kw):
         self.action_widget = RecipeTaskActionWidget()
         self.priorities_list = priorities_list
+        self.ack_panel_widget = AckPanel()
         self.priority_widget = PriorityWidget()
         self.retentiontag_widget = RetentionTagWidget()
         if 'recipeset' in kw:
@@ -965,6 +1002,12 @@ class RecipeSetWidget(CompoundWidget):
         recipeset = d['recipeset']
         owner_groups = [g.group_name for g in recipeset.job.owner.groups]
         user = identity.current.user
+        if recipeset.can_waive(user):
+            can_ack_nak = True
+        else:
+            #Can't ack if we don't fulfil these requirements
+            can_ack_nak = False
+        d['can_ack_nak'] = can_ack_nak
 
 
 class RecipeTaskActionWidget(RPC):

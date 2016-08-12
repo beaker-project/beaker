@@ -673,6 +673,18 @@ class Jobs(RPCRoot):
             raise BX(_('No Tasks! You can not have a recipe with no tasks!'))
         return recipe
 
+    @expose('json')
+    def update_recipe_set_response(self, recipe_set_id, response_id):
+        rs = RecipeSet.by_id(recipe_set_id)
+        response = {'1': 'ack', '2': 'nak'}[response_id]
+        old_response = {False: 'ack', True: 'nak'}[rs.waived]
+        if old_response != response:
+            rs.waived = {'ack': False, 'nak': True}[response]
+            rs.record_activity(user=identity.current.user, service=u'WEBUI',
+                               field=u'Ack/Nak', action=u'Changed', old=old_response,
+                               new=response)
+        return {'success': 1, 'rs_id': recipe_set_id}
+
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def set_retention_product(self, job_t_id, retention_tag_name, product_name):
