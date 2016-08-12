@@ -576,13 +576,13 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
             self.lc = data_setup.create_labcontroller()
             self.lc.user.password = u'logmein'
         self.server = self.get_server()
+        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
 
     def test_obeys_max_running_commands_limit(self):
         with session.begin():
             for _ in xrange(15):
                 system = data_setup.create_system(lab_controller=self.lc)
                 system.action_power(action=u'on', service=u'testdata')
-        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         commands = self.server.labcontrollers.get_queued_command_details()
         # 10 is the configured limit in server-test.cfg
         self.assertEquals(len(commands), 10, commands)
@@ -599,7 +599,6 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
                     user=None, service=u'testdata', action=u'on',
                     status=CommandStatus.running)
             other_system.command_queue.append(other_command)
-        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         self.server.labcontrollers.clear_running_commands(u'Staleness')
         with session.begin():
             session.refresh(command)
@@ -631,7 +630,6 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
             backdated -= datetime.timedelta(days=1, minutes=1)
             old_task, old_command = _make_command(lc=other_lc, creation_date=backdated)
 
-        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         self.server.labcontrollers.clear_running_commands(u'Staleness')
         with session.begin():
             session.expire_all()
@@ -646,7 +644,6 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
         with session.begin():
             system = data_setup.create_system(lab_controller=self.lc)
             fqdn = system.fqdn
-        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         queued = self.server.labcontrollers.get_queued_command_details()
         self.assertEquals(len(queued), 0, queued)
         expected = u'Arbitrary command!'
@@ -660,26 +657,10 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
             self.assertEquals(len(completed), 1, completed)
             self.assertEquals(completed[0].action, expected)
 
-
-
-class TestPowerFailures(XmlRpcTestCase):
-
-    def setUp(self):
-        with session.begin():
-            self.lab_controller = data_setup.create_labcontroller()
-            self.lab_controller.user.password = u'logmein'
-        self.server = self.get_server()
-        self.server.auth.login_password(self.lab_controller.user.user_name,
-                u'logmein')
-
-    @classmethod
-    def tearDownClass(cls):
-        fix_beakerd_repodata_perms()
-
-    def test_automated_system_marked_broken(self):
+    def test_automated_system_marked_broken_on_power_failure(self):
         with session.begin():
             automated_system = data_setup.create_system(fqdn=u'broken1.example.org',
-                                                        lab_controller=self.lab_controller,
+                                                        lab_controller=self.lc,
                                                         status = SystemStatus.automated)
             automated_system.action_power(u'on')
             command = automated_system.command_queue[0]
@@ -698,7 +679,7 @@ class TestPowerFailures(XmlRpcTestCase):
         """The recipe is not aborted if the action command is interrupt which is
         only supported by ipmilan power types."""
         with session.begin():
-            system = data_setup.create_system(lab_controller=self.lab_controller,
+            system = data_setup.create_system(lab_controller=self.lc,
                                               status=SystemStatus.automated)
             system.action_power(u'interrupt')
             command = system.command_queue[0]
@@ -711,10 +692,10 @@ class TestPowerFailures(XmlRpcTestCase):
             self.assertNotEqual(SystemStatus.broken, system.status)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=720672
-    def test_manual_system_status_not_changed(self):
+    def test_manual_system_status_not_changed_on_power_failure(self):
         with session.begin():
             manual_system = data_setup.create_system(fqdn = u'broken2.example.org',
-                                                     lab_controller = self.lab_controller,
+                                                     lab_controller=self.lc,
                                                      status = SystemStatus.manual)
             manual_system.action_power(u'on')
             command = manual_system.command_queue[0]
@@ -732,96 +713,53 @@ class TestPowerFailures(XmlRpcTestCase):
         # Start a recipe, let it be provisioned, mark the power command as failed,
         # and the recipe should be aborted.
         with session.begin():
-            system = data_setup.create_system(fqdn = u'broken.dreams.example.org',
-                                              lab_controller = self.lab_controller,
-                                              status = SystemStatus.automated,
-                                              shared = True)
-            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20')
-            job = data_setup.create_job(distro_tree=distro_tree)
-            job.recipesets[0].recipes[0]._host_requires = (u"""
-                <hostRequires>
-                    <hostname op="=" value="%s" />
-                </hostRequires>
-                """ % system.fqdn)
-
-        beakerd.process_new_recipes()
-        beakerd.update_dirty_jobs()
-        beakerd.queue_processed_recipesets()
-        beakerd.update_dirty_jobs()
-        beakerd.schedule_queued_recipes()
-        beakerd.update_dirty_jobs()
-        beakerd.provision_scheduled_recipesets()
-        beakerd.update_dirty_jobs()
-
-        with session.begin():
-            job = Job.query.get(job.id)
-            self.assertEqual(job.status, TaskStatus.waiting)
-            system = System.query.get(system.id)
+            job = data_setup.create_job()
+            recipe = job.recipesets[0].recipes[0]
+            data_setup.mark_recipe_scheduled(recipe, lab_controller=self.lc)
+            recipe.provision()
+            recipe.waiting()
+            system = recipe.resource.system
             command = system.command_queue[0]
             self.assertEquals(command.action, 'on')
-        session.close()
 
         self.server.labcontrollers.mark_command_running(command.id)
         self.server.labcontrollers.mark_command_failed(command.id,
                 u'needs moar powa')
-        beakerd.update_dirty_jobs()
 
         with session.begin():
-            job = Job.query.get(job.id)
-            self.assertEqual(job.recipesets[0].recipes[0].status,
-                             TaskStatus.aborted)
+            session.expire_all()
+            job.update_status()
+            self.assertEqual(recipe.status, TaskStatus.aborted)
 
     def test_failure_in_configure_netboot_aborts_recipe(self):
         with session.begin():
-            system = data_setup.create_system(
-                    lab_controller=self.lab_controller,
-                    status=SystemStatus.automated, shared=True)
-            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20')
-            job = data_setup.create_job(distro_tree=distro_tree)
-            job.recipesets[0].recipes[0]._host_requires = (u"""
-                <hostRequires>
-                    <hostname op="=" value="%s" />
-                </hostRequires>
-                """ % system.fqdn)
-
-        beakerd.process_new_recipes()
-        beakerd.update_dirty_jobs()
-        beakerd.queue_processed_recipesets()
-        beakerd.update_dirty_jobs()
-        beakerd.schedule_queued_recipes()
-        beakerd.update_dirty_jobs()
-        beakerd.provision_scheduled_recipesets()
-        beakerd.update_dirty_jobs()
-
-        with session.begin():
-            job = Job.query.get(job.id)
-            self.assertEqual(job.status, TaskStatus.waiting)
-            system = System.query.get(system.id)
+            job = data_setup.create_job()
+            recipe = job.recipesets[0].recipes[0]
+            data_setup.mark_recipe_scheduled(recipe, lab_controller=self.lc)
+            recipe.provision()
+            recipe.waiting()
+            system = recipe.resource.system
             command = system.command_queue[2]
             self.assertEquals(command.action, 'configure_netboot')
-        session.close()
 
         self.server.labcontrollers.mark_command_running(command.id)
         self.server.labcontrollers.mark_command_failed(command.id,
                 u'oops it borked')
-        beakerd.update_dirty_jobs()
 
         with session.begin():
-            job = Job.query.get(job.id)
-            self.assertEqual(job.recipesets[0].recipes[0].status,
-                             TaskStatus.aborted)
+            session.expire_all()
+            job.update_status()
+            self.assertEqual(recipe.status, TaskStatus.aborted)
 
     def test_netboot_config_arch(self):
         with session.begin():
             system = data_setup.create_system(arch=[u'i386', u'x86_64'],
-                                              lab_controller=self.lab_controller,
+                                              lab_controller=self.lc,
                                               status=SystemStatus.automated, shared=True)
             distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20')
             installation = Installation(distro_tree=distro_tree, system=system,
                     kernel_options=u'')
             system.configure_netboot(installation=installation, service=u'testdata')
-        self.server.auth.login_password(self.lab_controller.user.user_name,
-                                        u'logmein')
         queued_commands = self.server.labcontrollers.get_queued_command_details()
         self.assertEquals(queued_commands[1]['action'], 'configure_netboot')
         self.assertEquals(queued_commands[1]['fqdn'], system.fqdn)
@@ -832,10 +770,9 @@ class TestPowerFailures(XmlRpcTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1348018
     def test_after_reboot_watchdog_killtime_extended(self):
         with session.begin():
-            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20')
-            job = data_setup.create_job(distro_tree=distro_tree)
+            job = data_setup.create_job()
             recipe = job.recipesets[0].recipes[0]
-            system = data_setup.create_system(lab_controller=self.lab_controller)
+            system = data_setup.create_system(lab_controller=self.lc)
             data_setup.mark_recipe_scheduled(recipe, system=system)
             recipe.provision()
             recipe.waiting()
@@ -876,7 +813,7 @@ class TestPowerFailures(XmlRpcTestCase):
             long_task = data_setup.create_task(avg_time=604800)
             recipe = data_setup.create_recipe(task_list=[long_task])
             data_setup.create_job_for_recipes([recipe])
-            data_setup.mark_recipe_scheduled(recipe, lab_controller=self.lab_controller)
+            data_setup.mark_recipe_scheduled(recipe, lab_controller=self.lc)
             system = recipe.resource.system
             recipe.provision()
             recipe.waiting()
