@@ -380,7 +380,7 @@ def create_system_status_history(system, statuses):
 
 def create_task(name=None, exclude_arch=None, exclude_osmajor=None, version=u'1.0-1',
         uploader=None, owner=None, priority=u'Manual', valid=None, path=None, 
-        description=None, requires=None, runfor=None, type=None):
+        description=None, requires=None, runfor=None, type=None, avg_time=1200):
     if name is None:
         name = unique_name(u'/distribution/test_task_%s')
     if path is None:
@@ -404,7 +404,7 @@ def create_task(name=None, exclude_arch=None, exclude_osmajor=None, version=u'1.
     task.valid = valid
     task.path = path
     task.description = description
-    task.avg_time = 1200
+    task.avg_time = avg_time
     if type:
         for t in type:
             task.types.append(TaskType.lazy_create(type=t))
