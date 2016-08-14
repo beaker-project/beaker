@@ -693,7 +693,7 @@ class TestRecipeViewReservationTab(WebDriverTestCase):
         modal.find_element_by_xpath('.//button[text()="OK"]').click()
         b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
         # The `Return the reservtion` button should be gone.
-        tab.find_element_by_xpath('//div[not(.//button[normalize-space(string(.))='
+        tab.find_element_by_xpath('//body[not(.//button[normalize-space(string(.))='
                 '"Return the reservation"])]')
         with session.begin():
             session.expire_all()
