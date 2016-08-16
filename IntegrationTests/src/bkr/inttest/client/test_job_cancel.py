@@ -92,3 +92,18 @@ class JobCancelTest(ClientTestCase):
             session.expire_all()
             # check if no rows in system_recipe_map
             self.assertEqual(len(job.recipesets[0].recipes[0].systems), 0)
+
+    def test_add_msg_when_cancelling_running_job_successful(self):
+        with session.begin():
+            job_owner = data_setup.create_user(password=u'owner')
+            job = data_setup.create_running_job(owner=job_owner)
+
+        run_client(['bkr', 'job-cancel', job.t_id,
+                    '--username', job_owner.user_name,
+                    '--password', 'owner',
+                    '--msg=test adding cancel message'])
+        with session.begin():
+            session.refresh(job)
+            self.assertEquals(job.activity[0].action, u'Cancelled')
+            self.assertEquals(job.recipesets[0].recipes[0].tasks[0].results[0].log,
+                    'test adding cancel message')
