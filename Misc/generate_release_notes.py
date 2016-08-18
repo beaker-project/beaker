@@ -29,14 +29,11 @@ from checkbugs import get_bugs
 # Super lame.  At least python-bugzilla (and probably the Bugzilla API) does
 # not return the name of the bug assignee, just their email.
 _email_to_name = {
-    'asaha@redhat.com': 'Amit Saha',
-    'ncoghlan@redhat.com': 'Nick Coghlan',
     'dcallagh@redhat.com': 'Dan Callaghan',
-    'rmancy@redhat.com': 'Raymond Mancy',
     'mjia@redhat.com': 'Matt Jia',
     'rjoost@redhat.com': u'Róman Joost',
-    'hyu@redhat.com': 'Hao Chang Yu',
     'bmcivor@redhat.com': 'Blake McIvor',
+    'jorris@redhat.com': 'Jon Orris',
 }
 
 def main():
