@@ -31,3 +31,11 @@ class SystemReleaseTest(ClientTestCase):
         with session.begin():
             session.refresh(system)
             self.assertEqual(system.user, None)
+
+    def test_releasing_a_nonexistent_system_fails(self):
+        try:
+            run_client(['bkr', 'system-release', 'test.invalid.nonexistent.com'])
+            self.fail('Should raise')
+        except ClientError, e:
+            self.assertEqual(e.status, 1)
+            self.assertIn('System not found', e.stderr_output)
