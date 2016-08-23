@@ -225,6 +225,21 @@ class SystemPoolEditTest(WebDriverTestCase):
             session.refresh(self.pool)
             self.assertTrue(self.pool.name)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1364311
+    def test_link_to_system_page_works(self):
+        with session.begin():
+            system = data_setup.create_system()
+            pool = data_setup.create_system_pool()
+            system.pools.append(pool)
+        b = self.browser
+        login(b)
+        self.go_to_pool_edit(system_pool=pool, tab='Systems')
+        link = b.find_element_by_xpath('//div[@id="systems"]'
+                                       '/div/ul[@class="list-group pool-systems-list"]'
+                                       '/li/a')
+        link.click()
+        b.find_element_by_xpath('//h1[text()="%s"]' % system.fqdn)
+
     def test_add_system(self):
         with session.begin():
             system = data_setup.create_system()

@@ -11,7 +11,7 @@ The following systems are members of this pool:
       <% if (system == '<restricted>') { %>
           <em>(system with restricted visibility)</em>
       <% } else { %>
-          <a href="/view/<%- encodeURIComponent(system) %>"><%- system %></a>
+          <a href="<%- beaker_url_prefix %>view/<%- encodeURIComponent(system) %>"><%- system %></a>
       <% } %>
       <% if (can_edit) { %>
           <button type="button" class="btn system-remove" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Removing&hellip;" data-system-remove="<%- system %>"><i class="fa fa-times"></i> Remove</button>

@@ -7,7 +7,7 @@ The system is in the following pools:
 <% } %>
 <ul class="list-group system-pools-list">
     <% _.each(pools, function (pool) { %>
-    <li><a href="/pools/<%- encodeURIComponent(pool) %>"><%- pool %></a>
+    <li><a href="<%- beaker_url_prefix %>pools/<%- encodeURIComponent(pool) %>"><%- pool %></a>
       <% if (can_remove_from_pool[pool]) { %>
       <button type="button" class="btn pool-remove" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Removing&hellip;" data-pool-remove="<%- pool %>"><i class="fa fa-times"></i> Remove</button>
       <% }%>
