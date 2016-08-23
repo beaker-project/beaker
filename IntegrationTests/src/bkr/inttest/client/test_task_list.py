@@ -78,3 +78,19 @@ class TaskListTest(ClientTestCase):
             self.fail('should raise')
         except ClientError as e:
             self.assertIn('No such distro: notexist', e.stderr_output)
+
+    def test_task_list_by_type(self):
+        with session.begin():
+            task1 = data_setup.create_task(type=[u'Regression'])
+            task2 = data_setup.create_task()
+        out = run_client(['bkr', 'task-list', "--type=Regression"])
+        self.assertIn(task1.name, out)
+        self.assertNotIn(task2.name, out)
+
+    def test_task_list_with_xml_params(self):
+        with session.begin():
+            task = data_setup.create_task()
+        out = run_client(['bkr', 'task-list', '--xml', '--params', 'key=value'])
+        self.assertIn('<task name="%s">'
+                     '\n\t<params>\n\t\t<param name="key" value="value"/>\n\t</params>'
+                     '\n</task>\n' % task.name, out)
