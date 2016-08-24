@@ -71,3 +71,24 @@ class CreateSystem(ClientTestCase):
             self.assertEquals(system.power.power_quiescent_period, 5)
             self.assertEquals(system.release_action, ReleaseAction.leave_on)
             self.assertEquals(system.reprovision_distro_tree, distro_tree)
+
+    def test_create_system_set_host_hypervisor(self):
+        fqdn = data_setup.unique_name(u'mysystem%s')
+        run_client(['bkr', 'system-create', fqdn,
+                    '--host-hypervisor=KVM'])
+        with session.begin():
+            system = System.by_fqdn(fqdn, User.by_user_name(u'admin'))
+            self.assertEquals(str(system.hypervisor), u'KVM')
+            self.assertEquals(system.activity[0].new_value, u'KVM')
+
+    def test_create_system_set_condition(self):
+        fqdn = data_setup.unique_name(u'mysystem%s')
+        with session.begin():
+            lc = data_setup.create_labcontroller()
+        run_client(['bkr', 'system-create', fqdn,
+                    '--lab-controller', str(lc.fqdn),
+                    '--condition=Automated'])
+        with session.begin():
+            system = System.by_fqdn(fqdn, User.by_user_name(u'admin'))
+            self.assertTrue(system.lab_controller, lc)
+            self.assertEquals(str(system.status), u'Automated')
