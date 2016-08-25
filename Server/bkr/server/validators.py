@@ -9,7 +9,7 @@ from turbogears.validators import FormValidator, Invalid, TgFancyValidator, \
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server import identity
 from bkr.server.model import System, Recipe, User, LabController, RetentionTag
-
+from bkr.server.bexceptions import DatabaseLookupError
 
 class CheckRecipeValid(TgFancyValidator):
 
@@ -26,7 +26,7 @@ class CheckSystemValid(TgFancyValidator):
     def _to_python(self, value, state):
         try:
             system = System.by_fqdn(value, identity.current.user)
-        except NoResultFound:
+        except DatabaseLookupError:
             raise Invalid('Invalid system', value, state)
         return system
 

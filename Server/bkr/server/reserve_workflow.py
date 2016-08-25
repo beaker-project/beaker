@@ -15,6 +15,7 @@ from bkr.server.model import (Distro, Job, System, Arch, OSMajor, DistroTag,
         SystemType, OSVersion, DistroTree, LabController, MachineRecipe)
 from bkr.server.bexceptions import DatabaseLookupError
 from bkr.server.util import absolute_url
+from bkr.server.bexceptions import DatabaseLookupError
 
 import logging
 log = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ def doit():
         try:
             job_details['system'] = System.by_fqdn(request.form.get('system'),
                     identity.current.user)
-        except NoResultFound:
+        except DatabaseLookupError:
             raise BadRequest400('System %s not found' % request.form.get('system'))
     elif job_details['pick'] == 'lab':
         try:
@@ -112,7 +113,7 @@ class ReserveWorkflow:
         if system:
             try:
                 system = System.by_fqdn(system, identity.current.user)
-            except NoResultFound:
+            except DatabaseLookupError:
                 return []
             distros = system.distros(query=distros)
         return [name for name, in distros.values(Distro.name)]
@@ -137,7 +138,7 @@ class ReserveWorkflow:
         if system:
             try:
                 system = System.by_fqdn(system, identity.current.user)
-            except NoResultFound:
+            except DatabaseLookupError:
                 return []
             trees = system.distro_trees(query=trees)
         return [(tree.id, unicode(tree)) for tree in trees]

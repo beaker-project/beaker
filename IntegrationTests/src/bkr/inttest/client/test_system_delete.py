@@ -59,3 +59,12 @@ class SystemDeleteTest(ClientTestCase):
         except ClientError, e:
             self.assertEqual(e.status, 1)
             self.assert_(e.stderr_output.find('with reservations') != -1)
+
+    def test_cannot_delete_nonexistent_system(self):
+        fqdn = data_setup.unique_name(u'mysystem%s')
+        try:
+            run_client(['bkr', 'system-delete', fqdn])
+            self.fail('should raise')
+        except ClientError, e:
+            self.assertEqual(e.status, 1)
+            self.assertIn("System %s does not exist" % fqdn, e.stderr_output)

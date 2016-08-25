@@ -14,6 +14,7 @@ from bkr.server.model import DistroTree, System, User, Recipe
 from bkr.server.util import load_config_or_exit
 from bkr.server.installopts import InstallOptions, global_install_options
 from bkr.server.kickstart import generate_kickstart, template_env, add_to_template_searchpath
+from bkr.server.bexceptions import DatabaseLookupError
 
 __description__ = 'Creates an Anaconda kickstart file'
 
@@ -68,7 +69,7 @@ def main(*args):
             fqdn = options.system
             try:
                 system = System.by_fqdn(fqdn, user)
-            except NoResultFound:
+            except DatabaseLookupError:
                 raise RuntimeError("System '%s' does not exist" % fqdn)
 
             if distro_tree and not options.recipe_id:

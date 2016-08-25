@@ -34,6 +34,7 @@ from bkr.server.util import absolute_url
 from turbogears.database import session
 import cherrypy
 from bkr.server.cherrypy_util import PlainTextHTTPException
+from bkr.server.bexceptions import DatabaseLookupError
 
 log = logging.getLogger(__name__)
 
@@ -316,7 +317,7 @@ def _get_system_by_FQDN(fqdn):
     """Get system by FQDN, reporting HTTP 404 if the system is not found"""
     try:
         return System.by_fqdn(fqdn, identity.current.user)
-    except NoResultFound:
+    except DatabaseLookupError:
         raise NotFound404('System not found')
 
 def _update_system(system, data={}):

@@ -75,6 +75,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.exc import InvalidRequestError
 import time
 from datetime import datetime
+from bkr.server.bexceptions import DatabaseLookupError
 
 import logging
 log = logging.getLogger("bkr.server.controllers")
@@ -628,7 +629,7 @@ class Root(RPCRoot):
         if fqdn: 
             try:
                 system = System.by_fqdn(fqdn,identity.current.user)
-            except InvalidRequestError:
+            except DatabaseLookupError:
                 flash( _(u"Unable to find %s" % fqdn) )
                 redirect("/")
         elif kw.get('id'):
@@ -724,7 +725,7 @@ class Root(RPCRoot):
     def _view_system_as_rdf(self, fqdn, **kwargs):
         try:
             system = System.by_fqdn(fqdn, identity.current.user)
-        except InvalidRequestError:
+        except DatabaseLookupError:
             raise cherrypy.NotFound(fqdn)
         graph = rdflib.graph.Graph()
         bkr.server.rdf.describe_system(system, graph)

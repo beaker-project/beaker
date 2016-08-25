@@ -21,6 +21,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from turbogears.database import session
 from bkr.server.systems import _get_system_by_FQDN, _edit_access_policy_rules
 import datetime
+from bkr.server.bexceptions import DatabaseLookupError
 
 @app.route('/pools/', methods=['GET'])
 def get_pools():
@@ -248,7 +249,7 @@ def add_system_to_pool(pool_name):
         raise BadRequest400('System FQDN not specified')
     try:
         system = System.by_fqdn(data['fqdn'], u)
-    except NoResultFound:
+    except DatabaseLookupError:
         raise BadRequest400("System '%s' does not exist" % data['fqdn'])
     if not pool in system.pools:
         if pool.can_edit(u) and system.can_edit(u):

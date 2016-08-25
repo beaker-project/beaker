@@ -36,7 +36,7 @@ from bkr.server.bexceptions import (BX, InsufficientSystemPermissions,
 from bkr.server.helpers import make_link
 from bkr.server.hybrid import hybrid_property, hybrid_method
 from bkr.server.installopts import InstallOptions, global_install_options
-from bkr.server.util import is_valid_fqdn
+from bkr.server.util import is_valid_fqdn, convert_db_lookup_error
 from .base import DeclarativeMappedObject
 from .types import (SystemType, SystemStatus, ReleaseAction, CommandStatus,
         SystemPermission, TaskStatus)
@@ -737,7 +737,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
         A class method that can be used to search systems
         based on the fqdn since it is unique.
         """
-        return System.all(user).filter(System.fqdn == fqdn).one()
+        with convert_db_lookup_error("System %s does not exist" % fqdn):
+            return System.all(user).filter(System.fqdn == fqdn).one()
 
     @classmethod
     def list_by_fqdn(cls, fqdn, user):

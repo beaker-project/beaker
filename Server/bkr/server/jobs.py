@@ -48,7 +48,7 @@ from flask import request, jsonify, make_response
 from bkr.server.util import parse_untrusted_xml
 import cgi
 from bkr.server.job_utilities import Utility
-
+from bkr.server.bexceptions import DatabaseLookupError
 
 log = logging.getLogger(__name__)
 
@@ -1217,7 +1217,7 @@ def submit_inventory_job():
         dryrun = False
     try:
         system = System.by_fqdn(fqdn, identity.current.user)
-    except NoResultFound:
+    except DatabaseLookupError:
         raise BadRequest400('System not found: %s' % fqdn)
     if system.find_current_hardware_scan_recipe():
         raise Conflict409('Hardware scanning already in progress')
