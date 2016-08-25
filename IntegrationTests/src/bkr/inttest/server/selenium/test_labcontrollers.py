@@ -870,6 +870,29 @@ class TestPowerFailures(XmlRpcTestCase):
                 tolerance=datetime.timedelta(seconds=10),
                 reference=datetime.datetime.utcnow() + datetime.timedelta(seconds=3000))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1366442
+    def test_initial_watchdog_killtime_based_on_first_task(self):
+        with session.begin():
+            long_task = data_setup.create_task(avg_time=604800)
+            recipe = data_setup.create_recipe(task_list=[long_task])
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_scheduled(recipe, lab_controller=self.lab_controller)
+            system = recipe.resource.system
+            recipe.provision()
+            recipe.waiting()
+        cmd = system.command_queue[0]
+        self.assertEquals(cmd.action, u'on')
+        self.server.labcontrollers.mark_command_running(cmd.id)
+        self.server.labcontrollers.mark_command_completed(cmd.id)
+        with session.begin():
+            session.refresh(recipe.watchdog)
+            self.assertIsNotNone(recipe.watchdog.kill_time)
+            assert_datetime_within(
+                    recipe.watchdog.kill_time,
+                    tolerance=datetime.timedelta(seconds=10),
+                    reference=datetime.datetime.utcnow()
+                              + datetime.timedelta(seconds=604800 + 1800))
+
 
 class LabControllerHTTPTest(DatabaseTestCase):
 

@@ -15,7 +15,8 @@ import uuid
 import lxml.etree
 from turbogears.database import session
 from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver.support.ui import Select
+from selenium.webdriver.support.ui import Select, WebDriverWait
+from selenium.webdriver.support.expected_conditions import staleness_of
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction, \
         DummyVirtManager, DatabaseTestCase
@@ -51,13 +52,15 @@ class TestSystemsGrid(WebDriverTestCase):
         b.find_element_by_link_text('Toggle Result Columns').click()
         b.find_element_by_link_text('Select All').click()
         b.find_element_by_id('searchform').submit()
+        # Wait for the new page to load (the row header changes from Name to
+        # System-Name when all columns are shown)
+        b.find_element_by_xpath('//table[@id="widget"]/thead/tr/th/a[text()="System-Name"]')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=704082
     def test_show_all_columns_works(self):
         self.show_all_columns()
 
         b = self.browser
-        b.find_element_by_xpath('//title[text()="Systems"]')
         # check number of columns in the table
         ths = b.find_elements_by_xpath('//table[@id="widget"]//th')
         self.assertEquals(len(ths), 32)
@@ -67,11 +70,15 @@ class TestSystemsGrid(WebDriverTestCase):
         self.show_all_columns()
 
         b = self.browser
-        b.find_element_by_xpath('//title[text()="Systems"]')
         # headings should stay sorted after a reload
         headings = [th.text for th in
                 b.find_elements_by_xpath('//table[@id="widget"]/thead//th')]
-        b.find_element_by_link_text('System-Name').click()
+        header_link = b.find_element_by_link_text('System-Name')
+        header_link.click()
+        # Nothing changes on the page when sorting, so we have to use this 
+        # trick to detect when the new page is loaded. This doesn't apply to 
+        # Backgrids (they have sort indicators).
+        WebDriverWait(b, 10).until(staleness_of(header_link))
 
         new_headings = [th.text for th in
                         b.find_elements_by_xpath('//table[@id="widget"]/thead//th')]
@@ -82,7 +89,6 @@ class TestSystemsGrid(WebDriverTestCase):
         self.show_all_columns()
 
         b = self.browser
-        b.find_element_by_xpath('//title[text()="Systems"]')
         headings = [th.text for th in
                 b.find_elements_by_xpath('//table[@id="widget"]/thead//th')]
 
@@ -90,7 +96,12 @@ class TestSystemsGrid(WebDriverTestCase):
         self.assertEqual(expected_headings, headings[:4])
 
         # they stay fixed even after a reload
-        b.find_element_by_link_text('System-Name').click()
+        header_link = b.find_element_by_link_text('System-Name')
+        header_link.click()
+        # Nothing changes on the page when sorting, so we have to use this 
+        # trick to detect when the new page is loaded. This doesn't apply to 
+        # Backgrids (they have sort indicators).
+        WebDriverWait(b, 10).until(staleness_of(header_link))
         headings = [th.text for th in
                 b.find_elements_by_xpath('//table[@id="widget"]/thead//th')]
         self.assertEqual(expected_headings, headings[:4])

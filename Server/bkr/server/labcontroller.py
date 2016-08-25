@@ -527,7 +527,11 @@ class LabControllers(RPCRoot):
             cmd.installation.rebooted = datetime.utcnow()
             recipe = cmd.installation.recipe
             if recipe:
-                recipe.extend(50 * 60)
+                if recipe.first_task.task:
+                    initial_watchdog = recipe.first_task.task.avg_time + 1800
+                else:
+                    initial_watchdog = 1800
+                recipe.extend(initial_watchdog)
         cmd.log_to_system_history()
         return True
 
