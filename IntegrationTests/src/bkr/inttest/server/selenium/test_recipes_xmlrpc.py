@@ -18,6 +18,7 @@ class RecipesXmlRpcTest(XmlRpcTestCase):
             self.lc = data_setup.create_labcontroller()
             self.lc.user.password = u'logmein'
         self.server = self.get_server()
+        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=817518
     def test_by_log_server_only_returns_completed_recipesets(self):
@@ -32,7 +33,6 @@ class RecipesXmlRpcTest(XmlRpcTestCase):
                     system=data_setup.create_system(lab_controller=self.lc))
             data_setup.mark_recipe_complete(completed_recipe,
                     system=data_setup.create_system(lab_controller=self.lc))
-        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         result = self.server.recipes.by_log_server(self.lc.fqdn)
         self.assertEqual(result, [])
 
@@ -44,7 +44,6 @@ class RecipesXmlRpcTest(XmlRpcTestCase):
             completed_yesterday = data_setup.create_completed_job(
                     lab_controller=self.lc, finish_time=datetime.datetime.utcnow()
                     - datetime.timedelta(days=1))
-        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         result = self.server.recipes.by_log_server(self.lc.fqdn)
         self.assertEqual(result, [completed_yesterday.recipesets[0].recipes[0].id])
 
@@ -54,7 +53,6 @@ class RecipesXmlRpcTest(XmlRpcTestCase):
             job = data_setup.create_completed_job(lab_controller=self.lc,
                     finish_time=datetime.datetime.utcnow() - datetime.timedelta(minutes=2))
             job.soft_delete()
-        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         result = self.server.recipes.by_log_server(self.lc.fqdn)
         self.assertEqual(result, [])
 
@@ -67,7 +65,6 @@ class RecipesXmlRpcTest(XmlRpcTestCase):
             data_setup.create_job_for_recipes([recipe, guestrecipe])
             data_setup.mark_recipe_running(recipe)
             data_setup.mark_recipe_waiting(guestrecipe)
-        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         fqdn = 'theguestname'
         result = self.server.recipes.install_done(guestrecipe.id, fqdn)
         self.assertEqual(result, fqdn)
@@ -85,7 +82,6 @@ class RecipesXmlRpcTest(XmlRpcTestCase):
             data_setup.create_job_for_recipes([recipe])
             data_setup.mark_recipe_waiting(recipe, system=system)
             self.assertEqual(recipe.resource.fqdn, initial_fqdn)
-        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         result = self.server.recipes.install_done(recipe.id, 'somename')
         self.assertEqual(result, initial_fqdn)
         with session.begin():
@@ -98,7 +94,6 @@ class RecipesXmlRpcTest(XmlRpcTestCase):
             recipe = data_setup.create_recipe()
             data_setup.create_job_for_recipes([recipe])
             data_setup.mark_recipe_waiting(recipe, system=system)
-        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         self.server.recipes.install_start(recipe.id)
         with session.begin():
             session.expire_all()
@@ -113,7 +108,6 @@ class RecipesXmlRpcTest(XmlRpcTestCase):
         with session.begin():
             job = data_setup.create_completed_job()
             recipe = job.recipesets[0].recipes[0]
-        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         # beaker-transfer calls something like this, after it finishes copying 
         # the logs from the LC cache to the archive server
         self.server.recipes.change_files(recipe.id,
@@ -134,7 +128,22 @@ class RecipesXmlRpcTest(XmlRpcTestCase):
             recipe = data_setup.create_recipe()
             recipe.logs.append(LogRecipe(filename=u'test.log'))
             data_setup.create_job_for_recipes([recipe])
-        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         logs = self.server.recipes.files(recipe.id)
         self.assertEqual(len(logs), 1)
         self.assertEqual(logs[0]['filename'], u'test.log')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=963492
+    def test_duplicate_logs_are_filtered_out(self):
+        # Even if the db contains multiple rows referencing the same filename 
+        # (which it shouldn't) we want recipe.files() to filter those out 
+        # before returning them, to avoid breaking beaker-transfer.
+        with session.begin():
+            job = data_setup.create_running_job()
+            recipe = job.recipesets[0].recipes[0]
+            recipe.logs.extend([
+                LogRecipe(path=u'/', filename=u'imadupe.log'),
+                LogRecipe(path=u'/', filename=u'imadupe.log'),
+            ])
+        logs = self.server.recipes.files(recipe.id)
+        self.assertEqual(len(logs), 1)
+        self.assertEqual(logs[0]['filename'], u'imadupe.log')

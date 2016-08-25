@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import os
 from datetime import datetime
 from lxml import etree
 from turbogears.database import session
@@ -40,7 +41,7 @@ from bkr.server.bexceptions import BeakerException
 
 import logging
 import lxml.etree
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 class Recipes(RPCRoot):
     # For XMLRPC methods in this class.
@@ -126,7 +127,24 @@ class Recipes(RPCRoot):
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
-        return [log.dict for log in recipe.all_logs()]
+        # Build a list of logs excluding duplicate paths, to mitigate:
+        # https://bugzilla.redhat.com/show_bug.cgi?id=963492
+        logdicts = []
+        seen_paths = set()
+        for log in recipe.all_logs():
+            logdict = log.dict
+            # The path we care about here is the path which beaker-transfer 
+            # will move the file to.
+            # Don't be tempted to use os.path.join() here since log['path'] 
+            # is often '/' which does not give the result you would expect.
+            path = os.path.normpath('%s/%s/%s' % (logdict['filepath'],
+                    logdict['path'], logdict['filename']))
+            if path in seen_paths:
+                logger.warn('%s contains duplicate log %s', log.parent.t_id, path)
+            else:
+                seen_paths.add(path)
+                logdicts.append(logdict)
+        return logdicts
 
     @cherrypy.expose
     @identity.require(identity.in_group('lab_controller'))
@@ -212,11 +230,11 @@ class Recipes(RPCRoot):
             installation.install_started = datetime.utcnow()
             # extend watchdog by 3 hours 60 * 60 * 3
             kill_time = 10800
-            log.debug('Extending watchdog for %s', recipe.t_id)
+            logger.debug('Extending watchdog for %s', recipe.t_id)
             recipe.extend(kill_time)
             return True
         else:
-            log.debug('Already recorded install_started for %s', recipe.t_id)
+            logger.debug('Already recorded install_started for %s', recipe.t_id)
             return False
 
     @cherrypy.expose
@@ -261,7 +279,7 @@ class Recipes(RPCRoot):
             recipe.resource.fqdn = configured = fqdn
         elif configured != fqdn:
             # We use eager formatting here to make this easier to test
-            log.info("Configured FQDN (%s) != reported FQDN (%s) in R:%s" %
+            logger.info("Configured FQDN (%s) != reported FQDN (%s) in R:%s" %
                      (configured, fqdn, recipe_id))
         return configured
 
@@ -336,7 +354,7 @@ class Recipes(RPCRoot):
             try:
                 recipe_search.append_results(search['value'],col,search['operation'],**kw)
             except KeyError,e:
-                log.error(e)
+                logger.error(e)
                 return recipe_search.return_results()
 
         return recipe_search.return_results()
