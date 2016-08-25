@@ -3,13 +3,14 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import collections
 import datetime
 import unittest2 as unittest
 import pkg_resources
 import sqlalchemy
 from turbogears import config
 from turbogears.database import metadata
-from bkr.server.tools.init import upgrade_db, downgrade_db, check_db
+from bkr.server.tools.init import upgrade_db, downgrade_db, check_db, doit
 from sqlalchemy.orm import create_session
 from sqlalchemy.sql import func
 from alembic.environment import MigrationContext
@@ -65,6 +66,24 @@ class MigrationTest(unittest.TestCase):
         self.assertFalse(check_db(self.migration_metadata, 'head'))
         upgrade_db(self.migration_metadata)
         self.assertTrue(check_db(self.migration_metadata, 'head'))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1350302
+    def test_empty_check_and_create(self):
+        EmptyOpt = collections.namedtuple('EmtpyOpt',
+                                          ['user_name',
+                                          'password',
+                                          'display_name',
+                                          'email_address',
+                                          'check',
+                                          'downgrade'])
+
+        opts = EmptyOpt._make(['empty', 'empty', 'Empty DB Test', 'empty@example.com', True, False])
+        doit(opts, self.migration_metadata)
+        try:
+            doit(opts._replace(check=False), self.migration_metadata)
+        except sqlalchemy.exc.NoSuchTableError:
+            # Without the fix in doit() for bug 1350302, an exception will be thrown
+            self.fail("doit() raised NoSuchTableError, tried to update a non-existent database schema")
 
     def test_can_pass_beaker_version_to_downgrade(self):
         # We should be able to give it arbitrary Beaker versions and have it 
