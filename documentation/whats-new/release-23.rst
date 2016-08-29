@@ -453,3 +453,57 @@ version 1.2-8 of the ``/distribution/inventory`` task have also been released:
 * :issue:`1343347`: The ``kvm_hv`` kernel module is now detected on PowerNV
   systems as indicating support for hardware virtualization. (Contributed by 
   Dan Callaghan)
+
+
+Beaker 23.2
+~~~~~~~~~~~
+
+* :issue:`1366442`: The initial watchdog time for a recipe (after the system is
+  first rebooted) is now set to the running time of the first task in the 
+  recipe plus 30 minutes. This restores the pre-23.0 behaviour, which was 
+  unintentionally changed. (Contributed by Dan Callaghan)
+* :issue:`1368509`: The :program:`beaker-transfer` and
+  :program:`beaker-watchdog` daemons now re-authenticate to the server only if 
+  their session expires. In Beaker 23.0 they were unintentionally 
+  re-authenticating every 20 seconds. (Contributed by Dan Callaghan)
+* :issue:`1369305`: The :program:`beaker-provision` daemon now correctly
+  re-authenticates to the server if its session expires. The fix for 
+  :issue:`1087225` in Beaker 23.0 was incomplete. (Contributed by Dan 
+  Callaghan)
+* :issue:`1362599`: The :guilabel:`Ack` and :guilabel:`Nak` radio buttons on
+  the legacy job page have been restored. These were originally removed in 
+  Beaker 23.0 as part of the waiving/commenting overhaul. (Contributed by Dan 
+  Callaghan)
+* :issue:`1368352`: Beaker's Anaconda monitoring script now uploads
+  :file:`/tmp/packaging.log` as soon as it is available. Previously under some 
+  error conditions the log would not be uploaded back to Beaker. (Contributed 
+  by Dan Callaghan)
+* :issue:`1358557`: Fixed an issue with the arrow icons on the recipe page
+  being out of sync with the expanded/collapsed state of the tasks in some 
+  circumstances. (Contributed by Matt Jia)
+* :issue:`1197608`: The :program:`bkr` workflow commands now accept a new
+  option :option:`--taskfile <bkr --taskfile>` for specifying tasks to be run. 
+  Each line in the given file beginning with ``/`` is treated as a task name. 
+  (Contributed by Jan Stancek and Róman Joost)
+* :issue:`1350959`: The :program:`bkr` client now prints a more helpful error
+  message in case the ``CA_CERT`` configuration option refers to a non-existent 
+  file. (Contributed by Róman Joost)
+
+Version 4.71 of the ``rhts`` test development and execution library has also 
+been released:
+
+* :issue:`1342406`: The ``URL`` field of the RPM metadata is now populated with
+  the SCM location of the task's source code. (Contributed by Dan Callaghan)
+
+Version 0.7.10 of the Beah test harness has also been released:
+
+* :issue:`1365853`: The harness no longer considers the Installing status to
+  indicate a finished recipe. This fixes a problem where the harness would 
+  occasionally skip all tasks in the recipe. (Contributed by Dan Callaghan)
+
+Version 4.0-92 of the ``/distribution/virt/install`` task has also been 
+released:
+
+* :issue:`1351666`: The new ``virtlogd`` log rotation functionality in libvirt
+  is disabled for Beaker guests, because it prevents the guest console log from 
+  being captured. (Contributed by Jan Stancek)
