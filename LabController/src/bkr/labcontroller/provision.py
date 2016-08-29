@@ -37,7 +37,15 @@ class CommandQueuePoller(ProxyHelper):
         self.last_command_datetime = {} # Last time a command was run against a system.
 
     def get_queued_commands(self):
-        commands = self.hub.labcontrollers.get_queued_command_details()
+        try:
+            commands = self.hub.labcontrollers.get_queued_command_details()
+        except xmlrpclib.Fault as fault:
+            if 'Anonymous access denied' in fault.faultString:
+                logger.debug('Session expired, re-authenticating')
+                self.hub._login()
+                commands = self.hub.labcontrollers.get_queued_command_details()
+            else:
+                raise
         for command in commands:
             # The 'is not None' check is important as we do not want to
             # stringify the None type
@@ -247,14 +255,6 @@ def main_loop(poller=None, conf=None):
     while True:
         try:
             poller.poll()
-        except xmlrpclib.Fault, fault:
-            if 'Anonymous access denied' in fault.faultString:
-                # Trigger a reauthentication if the server is down longer than visit.timeout
-                # which defaults to 2 weeks. Then beaker-provision will recover
-                # once the server is back.
-                poller.hub.auth.renew_session()
-            else:
-                raise
         except:
             logger.exception('Failed to poll for queued commands')
         if shutting_down.wait(timeout=conf.get('SLEEP_TIME', 20)):
