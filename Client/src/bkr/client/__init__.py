@@ -15,24 +15,34 @@ from bkr.common.pyconfig import PyConfigParser
 import glob
 import pkg_resources
 
-config_file = os.environ.get("BEAKER_CLIENT_CONF", None)
-if not config_file:
+user_config_file = os.environ.get("BEAKER_CLIENT_CONF", None)
+if not user_config_file:
     user_conf = os.path.expanduser('~/.beaker_client/config')
     old_conf = os.path.expanduser('~/.beaker')
     if os.path.exists(user_conf):
-        config_file = user_conf
+        user_config_file = user_conf
     elif os.path.exists(old_conf):
-        config_file = old_conf
+        user_config_file = old_conf
         sys.stderr.write("%s is deprecated for config, please use %s instead\n" % (old_conf, user_conf))
-    elif os.path.exists('/etc/beaker/client.conf'):
-        config_file = "/etc/beaker/client.conf"
     else:
         pass
 
-conf = PyConfigParser()
-if config_file:
-    conf.load_from_file(config_file)
+etc_config_file = None
+if os.path.exists('/etc/beaker/client.conf'):
+    etc_config_file = "/etc/beaker/client.conf"
 
+if not (user_config_file or etc_config_file):
+    sys.stderr.write("No config file to read.\n")
+
+conf = PyConfigParser()
+if etc_config_file:
+    conf.load_from_file(etc_config_file)
+
+if user_config_file:
+    user_conf = PyConfigParser()
+    user_conf.load_from_file(user_config_file)
+    for key in user_conf.keys():
+        conf[key] = user_conf[key]
 
 _host_filter_presets = None
 def host_filter_presets():
@@ -115,8 +125,8 @@ class BeakerCommand(Command):
                       J = 'Job')
 
     def check_taskspec_args(self, args, permitted_types=None):
-        # The server is the one that actually parses these, but we can check 
-        # a few things on the client side first to catch errors early and give 
+        # The server is the one that actually parses these, but we can check
+        # a few things on the client side first to catch errors early and give
         # the user better error messages.
         for task in args:
             if ':' not in task:
@@ -180,7 +190,7 @@ class BeakerWorkflow(BeakerCommand):
         )
         self.parser.add_option(
             "--pretty-xml", "--prettyxml",
-            action="callback", 
+            action="callback",
             callback=prettyxml,
             default=False,
             help="Pretty-print generated job XML with indentation",
@@ -456,7 +466,7 @@ class BeakerWorkflow(BeakerCommand):
 
     def getArches(self, *args, **kwargs):
         """
-        Get all arches that apply to either this distro, or the distro which 
+        Get all arches that apply to either this distro, or the distro which
         will be selected by the given family and tag.
         """
 
@@ -473,7 +483,7 @@ class BeakerWorkflow(BeakerCommand):
             return self.hub.distros.get_arch(dict(osmajor=family, tags=tags))
 
     def getOsMajors(self, *args, **kwargs):
-        """ Get all OsMajors, optionally filter by tag """ 
+        """ Get all OsMajors, optionally filter by tag """
         tags = kwargs.get("tag", [])
         if not hasattr(self,'hub'):
             self.set_hub(**kwargs)
@@ -498,7 +508,7 @@ class BeakerWorkflow(BeakerCommand):
         if not hasattr(self,'hub'):
             self.set_hub(**kwargs)
         return self.hub.distros.get_osmajor(distro)
-    
+
     def getTasks(self, *args, **kwargs):
         """ get all requested tasks """
 
@@ -617,7 +627,7 @@ class BeakerWorkflow(BeakerCommand):
 
 class BeakerJobTemplateError(ValueError):
     """
-    Raised to indicate that something invalid or impossible has been requested 
+    Raised to indicate that something invalid or impossible has been requested
     while a BeakerJob template was being used to generate a job definition.
     """
     pass
@@ -726,7 +736,7 @@ class BeakerRecipeBase(BeakerBase):
         if machine:
             # if machine is specified, emit a warning message that any
             # other host selection criteria is ignored
-            for opt in ['hostrequire', 'keyvalue', 'random', 'systype', 
+            for opt in ['hostrequire', 'keyvalue', 'random', 'systype',
                         'host_filter']:
                 if kwargs.get(opt, None):
                     sys.stderr.write('Warning: Ignoring --%s'
