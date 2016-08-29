@@ -41,10 +41,8 @@ def main_loop(watchdog, conf):
             # Poll for watchdogs
             if now - time_of_last_check > conf.get('SLEEP_TIME', 60):
                 time_of_last_check = now
-                watchdog.hub._login()
-
                 try:
-                    expired_watchdogs = watchdog.hub.recipes.tasks.watchdogs('expired')
+                    expired_watchdogs = watchdog.get_expired_watchdogs()
                 except xmlrpclib.Fault:
                     # catch any xmlrpc errors
                     expired_watchdogs = []
@@ -57,7 +55,7 @@ def main_loop(watchdog, conf):
                 # we may have extended the watchdog and its therefore
                 # no longer expired!
                 try:
-                    active_watchdogs = watchdog.hub.recipes.tasks.watchdogs('active')
+                    active_watchdogs = watchdog.get_active_watchdogs()
                 except xmlrpclib.Fault:
                     # catch any xmlrpc errors
                     traceback = Traceback()
