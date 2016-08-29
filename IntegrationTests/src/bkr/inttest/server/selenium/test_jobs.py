@@ -389,6 +389,23 @@ class TestViewJob(WebDriverTestCase):
         self.go_to_job_page(job)
         b.find_element_by_xpath('//button[normalize-space(string(.))="Edit"]')
 
+    def test_view_job_containing_guest_recipe(self):
+        with session.begin():
+            job = data_setup.create_running_job(num_guestrecipes=1,
+                    whiteboard=u'contains a guest')
+        b = self.browser
+        login(b)
+        self.go_to_job_page(job)
+        b.find_element_by_xpath('//button[normalize-space(string(.))="Edit"]')
+        b.find_element_by_xpath(
+                '//div[@class="job-whiteboard"]/p[text()="contains a guest"]')
+        b.find_element_by_xpath(
+                '//a[@class="recipe-id" and normalize-space(string(.))="%s"]'
+                % job.recipesets[0].recipes[0].t_id)
+        b.find_element_by_xpath(
+                '//a[@class="recipe-id" and normalize-space(string(.))="%s"]'
+                % job.recipesets[0].recipes[0].guests[0].t_id)
+
     def test_export_xml(self):
         # Make sure the export link is present on the jobs page. We can't click 
         # it because WebDriver can't handle XML documents in the browser. 

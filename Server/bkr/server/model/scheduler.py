@@ -3040,7 +3040,8 @@ class MachineRecipe(Recipe):
         data = super(MachineRecipe, self).to_json(**kwargs)
         if include_guests:
             data['guest_recipes'] = [g.to_json(include_hostrecipe=False,
-                    include_recipeset=False, include_tasks=False)
+                    include_recipeset=False,
+                    include_tasks=kwargs.get('include_tasks', True))
                     for g in self.guests]
         return data
 
