@@ -411,12 +411,6 @@ class TestRecipeView(WebDriverTestCase):
                 % recipe.tasks[0].id)
         b.find_element_by_css_selector('#task%s .recipe-task-details.collapse.in'
                 % recipe.tasks[1].id)
-        task_icon = b.find_element_by_css_selector('#task%s .recipe-task-summary .icon'
-               % recipe.tasks[0].id)
-        self.assertNotIn('collapsed', task_icon.get_attribute('class'))
-        task_icon = b.find_element_by_css_selector('#task%s .recipe-task-summary .task-icon .icon'
-                % recipe.tasks[1].id)
-        self.assertNotIn('collapsed', task_icon.get_attribute('class'))
 
     def test_unrecognised_anchor_is_replaced_with_default(self):
         with session.begin():

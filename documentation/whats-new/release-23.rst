@@ -478,9 +478,6 @@ Beaker 23.2
   :file:`/tmp/packaging.log` as soon as it is available. Previously under some 
   error conditions the log would not be uploaded back to Beaker. (Contributed 
   by Dan Callaghan)
-* :issue:`1358557`: Fixed an issue with the arrow icons on the recipe page
-  being out of sync with the expanded/collapsed state of the tasks in some 
-  circumstances. (Contributed by Matt Jia)
 * :issue:`1197608`: The :program:`bkr` workflow commands now accept a new
   option :option:`--taskfile <bkr --taskfile>` for specifying tasks to be run. 
   Each line in the given file beginning with ``/`` is treated as a task name. 
