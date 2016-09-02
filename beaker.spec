@@ -200,7 +200,7 @@ Requires:       python-decorator
 Requires:       python-flask
 Requires:       python-markdown
 Requires:       python-webassets
-Requires:       /usr/bin/lessc
+Requires:       nodejs-less >= 1.7
 Requires:       /usr/bin/cssmin
 Requires:       /usr/bin/uglifyjs
 Requires:       python-passlib

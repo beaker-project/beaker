@@ -84,7 +84,16 @@
         flex-grow: 0;
         flex-shrink: 0;
         flex-basis: @panel-body-padding + 1px;
-        cursor: pointer;
+        a:after {
+            content: @fa-var-caret-down;
+            .fa-icon();
+            .fa-lg;
+            color: @gray;
+            text-decoration: none;
+        }
+        a.collapsed:after {
+            content: @fa-var-caret-right;
+        }
     }
     .task-id, .task-result-id {
         flex-grow: 0;

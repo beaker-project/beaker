@@ -19,11 +19,17 @@ window.RecipeTasksView = Backbone.View.extend({
         this.$('.recipe-task')
             .has('.collapse.in')
             .filter(function () { return !_.contains(ids, this.dataset.taskId); })
+            .find('.task-icon a')
+            .addClass('collapsed')
+            .end()
             .find('.collapse')
             .removeClass('in')
             .height(0);
         this.$('.recipe-task')
             .filter(function () { return _.contains(ids, this.dataset.taskId); })
+            .find('.task-icon a')
+            .removeClass('collapsed')
+            .end()
             .find('.collapse')
             .addClass('in')
             .height('auto');
@@ -75,6 +81,9 @@ var RecipeTasksSummary = Backbone.View.extend({
 var RecipeTaskSummary = Backbone.View.extend({
     template: JST['recipe-task-summary'],
     className: 'recipe-task-summary',
+    events: {
+        'click .task-icon a': function (evt) { evt.preventDefault(); },
+    },
     initialize: function (options) {
         this.listenTo(this.model, 'change', this.render);
         this.listenTo(this.model.get('recipe'), 'change:start_time', this.render);
@@ -116,22 +125,7 @@ var RecipeTaskDetails = Backbone.View.extend({
        };
     },
     events: {
-        'hidden.bs.collapse': 'toggle_task_details',
-        'shown.bs.collapse': 'toggle_task_details',
         'click .toggle-results-settings button': 'toggle_results_settings'
-    },
-    toggle_task_details: function(e) {
-        var id = this.model.id;
-        switch (e.type) {
-            case 'shown':
-                $('#recipe-task-icon-' + id).find("i")
-                        .removeClass("fa-caret-right").addClass("fa-caret-down");
-                break;
-            case 'hidden':
-                $('#recipe-task-icon-' + id).find("i")
-                        .removeClass("fa-caret-down").addClass("fa-caret-right");
-                break;
-        }
     },
     toggle_results_settings: function (evt) {
         var selected_side;
