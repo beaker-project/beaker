@@ -429,11 +429,44 @@ class Watchdog(ProxyHelper):
 
     watchdogs = dict()
 
+    def get_active_watchdogs(self):
+        logger.debug('Polling for active watchdogs')
+        try:
+            return self.hub.recipes.tasks.watchdogs('active')
+        except xmlrpclib.Fault as fault:
+            if 'not currently logged in' in fault.faultString:
+                logger.debug('Session expired, re-authenticating')
+                self.hub._login()
+                return self.hub.recipes.tasks.watchdogs('active')
+            else:
+                raise
+
+    def get_expired_watchdogs(self):
+        logger.debug('Polling for expired watchdogs')
+        try:
+            return self.hub.recipes.tasks.watchdogs('expired')
+        except xmlrpclib.Fault as fault:
+            if 'not currently logged in' in fault.faultString:
+                logger.debug('Session expired, re-authenticating')
+                self.hub._login()
+                return self.hub.recipes.tasks.watchdogs('expired')
+            else:
+                raise
+
     def transfer_logs(self):
         transfered = False
         server = self.conf.get_url_domain()
         logger.debug('Polling for recipes to be transferred')
-        for recipe_id in self.hub.recipes.by_log_server(server):
+        try:
+            recipe_ids = self.hub.recipes.by_log_server(server)
+        except xmlrpclib.Fault as fault:
+            if 'Anonymous access denied' in fault.faultString:
+                logger.debug('Session expired, re-authenticating')
+                self.hub._login()
+                recipe_ids = self.hub.recipes.by_log_server(server)
+            else:
+                raise
+        for recipe_id in recipe_ids:
             transfered = True
             self.transfer_recipe_logs(recipe_id)
         return transfered

@@ -169,6 +169,7 @@ def anamon_loop():
         WatchedFile("/tmp/anacdump.txt", "anacdump.txt"),
         WatchedFile("/tmp/modprobe.conf", "modprobe.conf"),
         WatchedFile("/tmp/ifcfg.log", "ifcfg.log"),
+        WatchedFile("/tmp/packaging.log", "packaging.log"),
     ]
 
     # Setup '/mnt/sysimage' watcher
@@ -180,7 +181,6 @@ def anamon_loop():
     package_logs.append(WatchedFile("/mnt/sysimage/tmp/install.log", "tmp+install.log"))
     package_logs.append(WatchedFile("/mnt/sysimage/root/upgrade.log", "upgrade.log"))
     package_logs.append(WatchedFile("/mnt/sysimage/tmp/upgrade.log", "tmp+upgrade.log"))
-    package_logs.append(WatchedFile("/tmp/packaging.log", "packaging.log"))
 
     # Monitor for bootloader configuration changes
     bootloader_cfgs = list()

@@ -227,6 +227,11 @@ Options for selecting tasks:
 
    Include <task> in the job. This option may be specified multiple times.
 
+.. option:: --taskfile <filename>
+
+   Include tasks listed in <filename>, each line contains one task name. Lines
+   not starting with '/' are ignored.
+
 .. option:: --package <package>
 
    Include tests for <package> in the job. This option may be specified 
