@@ -89,3 +89,19 @@ class MachineTestTest(ClientTestCase):
                           '--family', distro_tree.distro.osversion.osmajor.osmajor])
         self.assertIn('<hostRequires force="%s"/>' % system.fqdn,
                       out)
+
+    def test_include_named_task(self):
+        with session.begin():
+            task = data_setup.create_task()
+        out = run_client(['bkr', 'machine-test', '--inventory',
+                          '--machine', self.system.fqdn,
+                          '--task', str(task.name)])
+        self.assertIn("Submitted:", out)
+        with session.begin():
+            new_job = Job.query.order_by(Job.id.desc()).first()
+            self.assertEqual(new_job.whiteboard, u'Test '+ self.system.fqdn)
+            tasks = new_job.recipesets[0].recipes[0].tasks
+            self.assertEqual(len(tasks), 3)
+            self.assertEqual(tasks[0].name, u'/distribution/install')
+            self.assertEqual(tasks[1].name, str(task.name))
+            self.assertEqual(tasks[2].name, u'/distribution/inventory')
