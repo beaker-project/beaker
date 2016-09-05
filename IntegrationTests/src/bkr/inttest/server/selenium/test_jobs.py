@@ -505,7 +505,7 @@ class TestViewJob(WebDriverTestCase):
         with session.begin():
             owner = data_setup.create_user(password=u'owner')
             job = data_setup.create_completed_job(owner=owner)
-        bad_comment = '<script>alert("xss")</script>'
+        bad_comment = "<script>alert('xss')</script>"
         b = self.browser
         login(b, user=owner.user_name, password='owner')
         self.go_to_job_page(job)
@@ -517,14 +517,14 @@ class TestViewJob(WebDriverTestCase):
         # showing the comment should not execute a script
         b.find_element_by_class_name('comments-link').click()
         comment_paragraph = b.find_element_by_xpath(
-                '//div[@class="comments"]//div[@class="comment"]/p[2]')
-        self.assertEqual(comment_paragraph.text, bad_comment)
+                '//div[@class="comments"]//div[@class="comment"]/p[text()="%s"]'
+                % bad_comment)
         # reload the page, showing the comment should not execute a script
         self.go_to_job_page(job)
         b.find_element_by_class_name('comments-link').click()
         comment_paragraph = b.find_element_by_xpath(
-                '//div[@class="comments"]//div[@class="comment"]/p[2]')
-        self.assertEqual(comment_paragraph.text, bad_comment)
+                '//div[@class="comments"]//div[@class="comment"]/p[text()="%s"]'
+                % bad_comment)
 
     def test_can_control_recipe_reviewed_state(self):
         with session.begin():
