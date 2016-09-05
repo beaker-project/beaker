@@ -545,6 +545,7 @@ class LabControllers(RPCRoot):
         system = System.by_fqdn(fqdn, user)
         cmd = Command(user=user, service=u"XMLRPC", action=action,
                 status=CommandStatus.completed)
+        cmd.start_time = cmd.finish_time = datetime.utcnow()
         system.command_queue.append(cmd)
         session.flush() # Populates cmd.system (needed for next call)
         cmd.log_to_system_history()

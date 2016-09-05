@@ -610,6 +610,8 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
         with session.begin():
             session.refresh(command)
             self.assertEquals(command.status, CommandStatus.aborted)
+            self.assertIsNone(command.start_time)
+            self.assertIsNone(command.finish_time)
             self.assertEquals(other_command.status, CommandStatus.running)
 
     def test_purge_stale_running_commands(self):
@@ -663,6 +665,12 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
                              .filter(System.fqdn == fqdn))
             self.assertEquals(len(completed), 1, completed)
             self.assertEquals(completed[0].action, expected)
+            assert_datetime_within(completed[0].start_time,
+                    tolerance=datetime.timedelta(seconds=10),
+                    reference=datetime.datetime.utcnow())
+            assert_datetime_within(completed[0].finish_time,
+                    tolerance=datetime.timedelta(seconds=10),
+                    reference=datetime.datetime.utcnow())
 
     def test_automated_system_marked_broken_on_power_failure(self):
         with session.begin():
@@ -836,6 +844,50 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
                     tolerance=datetime.timedelta(seconds=10),
                     reference=datetime.datetime.utcnow()
                               + datetime.timedelta(seconds=604800 + 1800))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1318524
+    def test_start_time_is_recorded(self):
+        with session.begin():
+            system = data_setup.create_system(lab_controller=self.lc)
+            system.action_power(u'on')
+            command = system.command_queue[0]
+        self.server.labcontrollers.mark_command_running(command.id)
+        with session.begin():
+            session.refresh(command)
+            self.assertEquals(command.status, CommandStatus.running)
+            assert_datetime_within(command.start_time,
+                    tolerance=datetime.timedelta(seconds=10),
+                    reference=datetime.datetime.utcnow())
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1318524
+    def test_finish_time_is_recorded(self):
+        with session.begin():
+            system = data_setup.create_system(lab_controller=self.lc)
+            system.action_power(u'on')
+            command = system.command_queue[0]
+        self.server.labcontrollers.mark_command_running(command.id)
+        self.server.labcontrollers.mark_command_completed(command.id)
+        with session.begin():
+            session.refresh(command)
+            self.assertEquals(command.status, CommandStatus.completed)
+            assert_datetime_within(command.finish_time,
+                    tolerance=datetime.timedelta(seconds=10),
+                    reference=datetime.datetime.utcnow())
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1318524
+    def test_finish_time_is_recorded_for_failures(self):
+        with session.begin():
+            system = data_setup.create_system(lab_controller=self.lc)
+            system.action_power(u'on')
+            command = system.command_queue[0]
+        self.server.labcontrollers.mark_command_running(command.id)
+        self.server.labcontrollers.mark_command_failed(command.id)
+        with session.begin():
+            session.refresh(command)
+            self.assertEquals(command.status, CommandStatus.failed)
+            assert_datetime_within(command.finish_time,
+                    tolerance=datetime.timedelta(seconds=10),
+                    reference=datetime.datetime.utcnow())
 
 
 class LabControllerHTTPTest(DatabaseTestCase):

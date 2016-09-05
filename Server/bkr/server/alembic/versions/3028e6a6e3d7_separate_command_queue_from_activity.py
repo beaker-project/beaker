@@ -5,6 +5,8 @@
 
 """Separate command_queue from activity
 
+Also add new start_time and finish_time columns while we're at it.
+
 Revision ID: 3028e6a6e3d7
 Revises: 38cfd9b8ce52
 Create Date: 2016-08-08 16:31:30.583860
@@ -34,6 +36,10 @@ def upgrade():
         ADD INDEX (service),
         ADD COLUMN queue_time DATETIME NOT NULL AFTER service,
         ADD INDEX (queue_time),
+        ADD COLUMN start_time DATETIME DEFAULT NULL AFTER queue_time,
+        ADD INDEX (start_time),
+        ADD COLUMN finish_time DATETIME DEFAULT NULL AFTER start_time,
+        ADD INDEX (finish_time),
         ADD COLUMN action VARCHAR(40) NOT NULL after system_id,
         ADD INDEX (action),
         ADD COLUMN error_message VARCHAR(4000) DEFAULT NULL AFTER quiescent_period
@@ -70,6 +76,8 @@ def downgrade():
         DROP COLUMN user_id,
         DROP COLUMN service,
         DROP COLUMN queue_time,
+        DROP COLUMN start_time,
+        DROP COLUMN finish_time,
         DROP COLUMN action,
         DROP COLUMN error_message,
         ADD COLUMN updated DATETIME,

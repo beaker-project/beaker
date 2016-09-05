@@ -87,6 +87,9 @@ class Command(DeclarativeMappedObject):
     user = relationship('User')
     service = Column(Unicode(100), nullable=False, index=True)
     queue_time = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    # Note that commands from < 24.0 will have NULL for start_time and finish_time
+    start_time = Column(DateTime, index=True)
+    finish_time = Column(DateTime, index=True)
     system_id = Column(Integer, ForeignKey('system.id',
             onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
     system = relationship('System', back_populates='command_queue')
@@ -144,6 +147,8 @@ class Command(DeclarativeMappedObject):
         return {
             'id': self.id,
             'submitted': self.queue_time,
+            'start_time': self.start_time,
+            'finish_time': self.finish_time,
             'user': self.user,
             'service': self.service,
             'action': self.action,
@@ -169,6 +174,11 @@ class Command(DeclarativeMappedObject):
                     'Status for command %s updated in another transaction'
                     % self.id)
         self.status = new_status
+        # update timestamps
+        if self.status == CommandStatus.running:
+            self.start_time = datetime.utcnow()
+        if self.status in [CommandStatus.completed, CommandStatus.failed]:
+            self.finish_time = datetime.utcnow()
         # update metrics counters if command has finished
         if self.status.finished:
             categories = ['all']
