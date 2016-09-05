@@ -65,7 +65,9 @@ class ModifySystemTest(ClientTestCase):
 
     def test_change_condition(self):
         with session.begin():
-            system = data_setup.create_system(status=SystemStatus.automated)
+            system = data_setup.create_system(
+                lab_controller=data_setup.create_labcontroller(),
+                status=SystemStatus.automated)
         run_client(['bkr', 'system-modify', '--condition=Manual', system.fqdn])
         with session.begin():
             session.expire_all()

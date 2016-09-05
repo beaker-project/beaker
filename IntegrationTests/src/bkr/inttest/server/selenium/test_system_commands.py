@@ -5,7 +5,7 @@
 # (at your option) any later version.
 
 import requests
-from bkr.server.model import session, SystemPermission
+from bkr.server.model import session, SystemPermission, SystemStatus
 from bkr.inttest import data_setup, get_server_base
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.requests_utils import login as requests_login, post_json
@@ -118,8 +118,9 @@ class SystemCommandsTest(WebDriverTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=740321
     def test_cannot_power_system_without_lc(self):
         with session.begin():
-            self.system.lab_controller = None
-        self.check_cannot_power(self.owner, 'owner', self.system,
+            system = data_setup.create_system(owner=self.owner)
+            self.assertEqual(system.status, SystemStatus.manual)
+        self.check_cannot_power(self.owner, 'owner', system,
                 'System is not attached to a lab controller')
 
     def test_power_on(self):

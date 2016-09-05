@@ -275,7 +275,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
     user_id = Column(Integer, ForeignKey('tg_user.user_id'))
     user = relationship(User, primaryjoin=user_id == User.user_id)
     type = Column(SystemType.db_type(), nullable=False)
-    status = Column(SystemStatus.db_type(), nullable=False, default=SystemStatus.broken)
+    status = Column(SystemStatus.db_type(), nullable=False)
     status_reason = Column(Unicode(4000))
     memory = Column(Integer)
     checksum = Column(String(32))
@@ -378,6 +378,9 @@ class System(DeclarativeMappedObject, ActivityMixin):
         self.fqdn = fqdn
 
         super(System, self).__init__()
+        # Ensure lab controller is set first to make the validator happy upon
+        # object construction
+        self.lab_controller = lab_controller
         self.status = status
         self.contact = contact
         self.location = location
@@ -386,7 +389,6 @@ class System(DeclarativeMappedObject, ActivityMixin):
         self.serial = serial
         self.vendor = vendor
         self.owner = owner
-        self.lab_controller = lab_controller
         self.lender = lender
         self.hypervisor = hypervisor
         self.loaned = loaned
@@ -414,6 +416,15 @@ class System(DeclarativeMappedObject, ActivityMixin):
         if len(value) > max_length:
             raise ValueError('System condition report is longer than '
                     '%s characters' % max_length)
+        return value
+
+    @validates('status', 'lab_controller', 'lab_controller_id')
+    def validate_status(self, key, value):
+        if key == 'status' and value == SystemStatus.automated and not self.lab_controller:
+            raise ValueError('System status cannot be Automated without an associated Lab Controller')
+        elif (key == 'lab_controller' and value is None and self.status == SystemStatus.automated or
+              key == 'lab_controller_id' and value is None and self.status == SystemStatus.automated):
+            raise ValueError('System cannot be removed from its Lab Controller when status is Automated')
         return value
 
     def to_xml(self, clone=False):

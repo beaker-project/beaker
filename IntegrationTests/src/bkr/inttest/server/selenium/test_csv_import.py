@@ -21,7 +21,8 @@ class CSVImportTest(WebDriverTestCase):
 
     def setUp(self):
         with session.begin():
-            self.system = data_setup.create_system()
+            self.system = data_setup.create_system(
+                lab_controller=data_setup.create_labcontroller())
             self.browser = self.get_browser()
 
     def import_csv(self, contents):

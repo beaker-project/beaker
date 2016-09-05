@@ -683,12 +683,9 @@ class TestBeakerd(DatabaseTestCase):
             lc1 = data_setup.create_labcontroller()
             lc2 = data_setup.create_labcontroller()
             lc3 = data_setup.create_labcontroller()
-            system1 = data_setup.create_system(arch=u'i386', shared=True)
-            system1.lab_controller = lc1
-            system2 = data_setup.create_system(arch=u'i386', shared=True)
-            system2.lab_controller = lc2
-            system3 = data_setup.create_system(arch=u'i386', shared=True)
-            system3.lab_controller = lc3
+            system1 = data_setup.create_system(arch=u'i386', shared=True, lab_controller=lc1)
+            system2 = data_setup.create_system(arch=u'i386', shared=True, lab_controller=lc2)
+            system3 = data_setup.create_system(arch=u'i386', shared=True, lab_controller=lc3)
             distro_tree = data_setup.create_distro_tree(lab_controllers=[lc1, lc2, lc3])
             job = data_setup.create_job(owner=user, distro_tree=distro_tree)
             job.recipesets[0].recipes[0]._host_requires = (u"""

@@ -57,6 +57,7 @@ class SystemReturnTestWD(WebDriverTestCase):
 
         # toggle status to Automated
         with session.begin():
+            system.lab_controller = data_setup.create_labcontroller()
             system.status = SystemStatus.automated
 
         # Attempt to return

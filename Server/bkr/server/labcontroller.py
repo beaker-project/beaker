@@ -62,19 +62,25 @@ def remove_labcontroller(labcontroller):
     Disables and marks a lab controller as removed.
     """
     labcontroller.removed = datetime.utcnow()
+    systems = System.query.filter(System.lab_controller == labcontroller)
+
+    # Record systems set to status=broken. Trigger any event listener listening
+    # for status changes.
+    for sys in systems:
+        sys.mark_broken('Lab controller de-associated')
 
     # de-associate systems
-    systems = System.query.filter(System.lab_controller == labcontroller)
     System.record_bulk_activity(systems, user=identity.current.user,
-                                service=u'HTTP', action=u'Changed', field=u'lab_controller',
+                                service=u'HTTP', action=u'Changed', field=u'Lab Controller',
                                 old=labcontroller.fqdn, new=None)
-    systems.update({'lab_controller_id': None}, synchronize_session=False)
+    systems.update({'lab_controller_id': None},
+                   synchronize_session=False)
 
     # cancel running recipes
     watchdogs = Watchdog.by_status(labcontroller=labcontroller,
                                    status='active')
     for w in watchdogs:
-        w.recipe.recipeset.job.cancel(msg='LabController %s has been deleted' % labcontroller.fqdn)
+        w.recipe.recipeset.job.cancel(msg='Lab controller %s has been deleted' % labcontroller.fqdn)
 
     # remove distro trees
     distro_tree_assocs = LabControllerDistroTree.query\

@@ -272,15 +272,18 @@ def get_test_name():
     return test_name
 
 
-def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.automated,
+def create_system(arch=u'i386', type=SystemType.machine, status=None,
         owner=None, fqdn=None, shared=True, exclude_osmajor=[],
         exclude_osversion=[], hypervisor=None, kernel_type=None,
-        date_added=None, return_existing=False, private=False, with_power=True, **kw):
+        date_added=None, return_existing=False, private=False, with_power=True,
+        lab_controller=None, **kw):
     if owner is None:
         owner = create_user()
     if fqdn is None:
         name = get_test_name()
         fqdn = unique_name(u'system%s.' + name.replace('_', '.'))
+    if status is None:
+        status = SystemStatus.automated if lab_controller is not None else SystemStatus.manual
 
     if System.query.filter(System.fqdn == fqdn).count():
         if return_existing:
@@ -290,8 +293,8 @@ def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.aut
         else:
             raise ValueError('Attempted to create duplicate system %s' % fqdn)
     else:
-        system = System(fqdn=fqdn,type=type, owner=owner,
-            status=status, **kw)
+        system = System(fqdn=fqdn,type=type, owner=owner, status=status,
+                        lab_controller=lab_controller, **kw)
         session.add(system)
 
     if date_added is not None:

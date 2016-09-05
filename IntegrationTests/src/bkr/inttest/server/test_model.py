@@ -110,6 +110,7 @@ class TestSystem(DatabaseTestCase):
                             location=u'Brisbane', model=u'Proliant', serial=u'4534534',
                             vendor=u'Dell', type=SystemType.machine,
                             status=SystemStatus.automated,
+                            lab_controller=data_setup.create_labcontroller(),
                             owner=owner)
         session.flush()
         self.assertEqual(new_system.fqdn, 'test-fqdn')
@@ -154,7 +155,8 @@ class TestSystem(DatabaseTestCase):
                      serial=None, netbootloader='pxelinux.0'))
 
     def test_mark_broken_updates_history(self):
-        system = data_setup.create_system(status = SystemStatus.automated)
+        system = data_setup.create_system(status = SystemStatus.automated,
+                                          lab_controller=data_setup.create_labcontroller())
         system.mark_broken(reason = "Attacked by cyborgs")
         session.flush()
         system_activity = system.dyn_activity.filter(SystemActivity.field_name == u'Status').first()
@@ -213,7 +215,8 @@ class TestSystem(DatabaseTestCase):
                     ' than or equal to zero', str(e))
 
     def test_cannot_set_status_reason_when_system_is_not_bad(self):
-        system = data_setup.create_system(status=SystemStatus.automated)
+        system = data_setup.create_system(status=SystemStatus.automated,
+                                          lab_controller=data_setup.create_labcontroller())
         try:
             system.status_reason = u'Currently is broken'
             self.fail('Must fail or die')

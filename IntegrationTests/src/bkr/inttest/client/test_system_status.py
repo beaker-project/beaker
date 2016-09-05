@@ -88,7 +88,9 @@ class SystemStatusTest(ClientTestCase):
 
     def test_unpopulated_status(self):
         with session.begin():
-            system = data_setup.create_system(status=SystemStatus.automated)
+            system = data_setup.create_system(
+                lab_controller=data_setup.create_labcontroller(),
+                status=SystemStatus.automated)
         json_out = run_client(['bkr', 'system-status', system.fqdn,
             '--format', 'json'])
         json_out = loads(json_out)
