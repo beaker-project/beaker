@@ -221,6 +221,21 @@ class PowerTest(LabControllerTestCase):
         self.assert_('Launching power script' in provision_output, provision_output)
         self.assert_(system.power.power_passwd not in provision_output, provision_output)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1358063
+    def test_power_passwords_are_not_reported_in_failure_message(self):
+        with session.begin():
+            system = data_setup.create_system(lab_controller=self.get_lc())
+            system.power.power_type = PowerType.lazy_create(name=u'testing-bz1358063')
+            system.power.power_passwd = u'dontleakmebro'
+            system.power.quiescent_period = 0
+            system.action_power(action=u'off', service=u'testdata')
+        timeout = (2 * get_conf().get('SLEEP_TIME') +
+                   get_conf().get('POWER_ATTEMPTS') * 2**get_conf().get('POWER_ATTEMPTS'))
+        wait_for_commands_to_finish(system, timeout=timeout)
+        self.assertEqual(system.command_queue[0].status, CommandStatus.failed)
+        self.assertIn(u'failed after 2 attempts with exit status 1:\npassword is ********',
+                system.command_queue[0].error_message)
+
 class ConfigureNetbootTest(LabControllerTestCase):
 
     @classmethod

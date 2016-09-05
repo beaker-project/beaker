@@ -131,13 +131,13 @@ class CommandQueuePoller(ProxyHelper):
         self.mark_command_running(command['id'])
         try:
             if command['action'] in (u'on', u'off', 'interrupt'):
-                handle_power(command)
+                handle_power(self.conf, command)
             elif command['action'] == u'reboot':
                 # For backwards compatibility only. The server now splits 
                 # reboots into 'off' followed by 'on'.
-                handle_power(dict(command.items() + [('action', u'off')]))
+                handle_power(self.conf, dict(command.items() + [('action', u'off')]))
                 time.sleep(5)
-                handle_power(dict(command.items() + [('action', u'on')]))
+                handle_power(self.conf, dict(command.items() + [('action', u'on')]))
             elif command['action'] == u'clear_logs':
                 handle_clear_logs(self.conf, command)
             elif command['action'] == u'configure_netboot':
@@ -197,13 +197,13 @@ def handle_configure_netboot(command):
 def handle_clear_netboot(command):
     netboot.clear_all(command['fqdn'])
 
-def handle_power(command):
+def handle_power(conf, command):
     from bkr.labcontroller.async import MonitoredSubprocess
     script = find_power_script(command['power']['type'])
     env = build_power_env(command)
     # We try the command up to 5 times, because some power commands
     # are flakey (apparently)...
-    for attempt in range(1, 6):
+    for attempt in range(1, conf['POWER_ATTEMPTS'] + 1):
         if attempt > 1:
             # After the first attempt fails we do a randomised exponential
             # backoff in the style of Ethernet.
@@ -219,17 +219,20 @@ def handle_power(command):
         # N.B. the timeout value used here affects daemon shutdown time,
         # make sure the init script is kept up to date!
         p = MonitoredSubprocess([script], env=env,
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 timeout=300)
         logger.debug('Waiting on power script pid %s', p.pid)
         p.dead.wait()
-        out = p.stdout_reader.get()
-        err = p.stderr_reader.get()
+        output = p.stdout_reader.get()
         if p.returncode == 0 or shutting_down.is_set():
             break
     if p.returncode != 0:
+        sanitised_output = output[:150].strip()
+        if command['power'].get('passwd'):
+            sanitised_output = sanitised_output.replace(
+                    command['power']['passwd'], '********')
         raise ValueError('Power script %s failed after %s attempts with exit status %s:\n%s'
-                % (script, attempt, p.returncode, err[:150]))
+                % (script, attempt, p.returncode, sanitised_output))
     # TODO submit complete stdout and stderr?
 
 def shutdown_handler(signum, frame):
