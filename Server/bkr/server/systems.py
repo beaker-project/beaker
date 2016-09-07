@@ -1198,7 +1198,14 @@ def get_system_command_queue(fqdn):
         Service through which the power command was submitted. Usually this is 
         ``XMLRPC``, ``HTTP``, or ``Scheduler``.
     ``submitted``
-        Timestamp at which the command was submitted.
+        Timestamp at which the command was submitted (enqueued).
+    ``start_time``
+        Timestamp at which the command started running. This is ``null`` for 
+        commands which are still queued.
+    ``finish_time``
+        Timestamp at which the command finished. This is ``null`` for commands 
+        which are still queued or which were aborted due to a problem with 
+        command processing.
     ``action``
         Power action to be performed: ``on``, ``off``, ``interrupt``, 
         ``clear_netboot``, ``configure_netboot``, ``truncate_logs``.
@@ -1222,6 +1229,8 @@ def get_system_command_queue(fqdn):
         'user.display_name': User.display_name,
         'service': Command.service,
         'submitted': Command.queue_time,
+        'start_time': Command.start_time,
+        'finish_time': Command.finish_time,
         'action': Command.action,
         'message': Command.error_message,
         'status': Command.status,

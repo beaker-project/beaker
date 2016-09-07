@@ -4,8 +4,10 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import datetime
 import requests
-from bkr.server.model import session, SystemPermission, SystemStatus
+from bkr.server.model import session, SystemPermission, SystemStatus, \
+        Command, CommandStatus
 from bkr.inttest import data_setup, get_server_base
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.requests_utils import login as requests_login, post_json
@@ -76,7 +78,7 @@ class SystemCommandsTest(WebDriverTestCase):
                 '"You are not the current user of the system. '
                 'This action may interfere with another user."]')
         modal.find_element_by_xpath('.//button[text()="OK"]').click()
-        pane.find_element_by_xpath('.//table/tbody/tr[1]/td[4][text()="on"]')
+        pane.find_element_by_xpath('.//table/tbody/tr[1]/td[6][text()="on"]')
         with session.begin():
             session.expire_all()
             self.assertEquals(system.command_queue[0].action, 'on')
@@ -93,7 +95,7 @@ class SystemCommandsTest(WebDriverTestCase):
                 '"You are not the current user of the system. '
                 'This action may interfere with another user."]')
         modal.find_element_by_xpath('.//button[text()="OK"]').click()
-        pane.find_element_by_xpath('.//table/tbody/tr[1]/td[4][text()="clear_netboot"]')
+        pane.find_element_by_xpath('.//table/tbody/tr[1]/td[6][text()="clear_netboot"]')
         with session.begin():
             session.expire_all()
             self.assertEquals(system.command_queue[0].action, 'clear_netboot')
@@ -142,3 +144,52 @@ class SystemCommandsTest(WebDriverTestCase):
     def test_can_clear_netboot_with_permission(self):
         login(self.browser, user=self.privileged.user_name, password='privileged')
         self.check_clear_netboot(self.system)
+
+    def test_can_filter_commands_by_start_time(self):
+        with session.begin():
+            self.system.command_queue.extend([
+                Command(action=u'interrupt', service=u'testdata',
+                    status=CommandStatus.queued),
+                Command(action=u'off', service=u'testdata',
+                    status=CommandStatus.completed,
+                    start_time=datetime.datetime(2016, 9, 7, 0, 0, 1),
+                    finish_time=datetime.datetime(2016, 9, 7, 0, 0, 2)),
+                Command(action=u'on', service=u'testdata',
+                    status=CommandStatus.completed,
+                    start_time=datetime.datetime(2016, 9, 6, 0, 0, 1),
+                    finish_time=datetime.datetime(2016, 9, 6, 0, 0, 2)),
+            ])
+        b = self.browser
+        self.go_to_commands_tab(self.system)
+        pane = b.find_element_by_id('power')
+        pane.find_element_by_xpath('.//input[@type="search"]')\
+            .send_keys('start_time:2016-09-06')
+        pane.find_element_by_xpath('.//table['
+                'not(tbody/tr/td[6]/text()="interrupt") and '
+                'not(tbody/tr/td[6]/text()="off") and '
+                'tbody/tr/td[6]/text()="on"]')
+
+    def test_can_filter_commands_by_finish_time(self):
+        with session.begin():
+            self.system.command_queue.extend([
+                Command(action=u'interrupt', service=u'testdata',
+                    status=CommandStatus.running,
+                    start_time=datetime.datetime(2015, 12, 7, 0, 0, 0)),
+                Command(action=u'off', service=u'testdata',
+                    status=CommandStatus.completed,
+                    start_time=datetime.datetime(2015, 12, 6, 0, 0, 2),
+                    finish_time=datetime.datetime(2015, 12, 7, 0, 0, 0)),
+                Command(action=u'on', service=u'testdata',
+                    status=CommandStatus.completed,
+                    start_time=datetime.datetime(2015, 12, 6, 0, 0, 1),
+                    finish_time=datetime.datetime(2015, 12, 6, 0, 0, 2)),
+            ])
+        b = self.browser
+        self.go_to_commands_tab(self.system)
+        pane = b.find_element_by_id('power')
+        pane.find_element_by_xpath('.//input[@type="search"]')\
+            .send_keys('finish_time:2015-12-06')
+        pane.find_element_by_xpath('.//table['
+                'not(tbody/tr/td[6]/text()="interrupt") and '
+                'not(tbody/tr/td[6]/text()="off") and '
+                'tbody/tr/td[6]/text()="on"]')

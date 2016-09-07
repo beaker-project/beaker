@@ -96,7 +96,7 @@ class Command(DeclarativeMappedObject):
     action = Column(Unicode(40), nullable=False, index=True)
     status = Column('status', CommandStatus.db_type(), nullable=False, index=True)
     delay_until = Column(DateTime, default=None)
-    quiescent_period = Column(Integer, default=None)
+    quiescent_period = Column(Integer, default=0)
     error_message = Column(Unicode(4000))
     # If this command was triggered as part of an installation, it will be 
     # referenced here. Note that commands can also be manually triggered by 
@@ -104,13 +104,6 @@ class Command(DeclarativeMappedObject):
     installation_id = Column(Integer, ForeignKey('installation.id',
             name='command_queue_installation_id_fk'))
     installation = relationship('Installation', back_populates='commands')
-
-    def __init__(self, user, service, action, status, quiescent_period=0):
-        self.user = user
-        self.service = service
-        self.action = action
-        self.status = status
-        self.quiescent_period = quiescent_period
 
     @classmethod
     def get_queue_stats(cls, query):

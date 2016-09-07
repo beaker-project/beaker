@@ -56,7 +56,10 @@ var SystemCommandQueueView = BeakerGrid.extend({
         options.columns = [
             {name: 'user', label: 'User', cell: BackgridUserCell, editable: false},
             {name: 'service', label: 'Service', cell: 'string', editable: false},
-            {name: 'submitted', label: 'Submitted', cell: BackgridDateTimeCell, editable: false},
+            // this is queue_time in Python land, but the JSON API has submitted for compatibility reasons:
+            {name: 'submitted', label: 'Queued', cell: BackgridDateTimeCell, editable: false},
+            {name: 'start_time', label: 'Started', cell: BackgridDateTimeCell, editable: false},
+            {name: 'finish_time', label: 'Finished', cell: BackgridDateTimeCell, editable: false},
             {name: 'action', label: 'Action', cell: 'string', editable: false},
             {name: 'status', label: 'Status', cell: 'string', editable: false},
             {name: 'message', label: 'Message', cell: 'string', editable: false},

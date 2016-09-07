@@ -60,6 +60,14 @@ window.Command = Backbone.Model.extend({
             var parsed = moment.utc(data['submitted']);
             data['submitted'] = parsed.isSame(this.get('submitted')) ? this.get('submitted') : parsed;
         }
+        if (data['start_time']) {
+            var parsed = moment.utc(data['start_time']);
+            data['start_time'] = parsed.isSame(this.get('start_time')) ? this.get('start_time') : parsed;
+        }
+        if (data['finish_time']) {
+            var parsed = moment.utc(data['finish_time']);
+            data['finish_time'] = parsed.isSame(this.get('finish_time')) ? this.get('finish_time') : parsed;
+        }
         return data;
     },
 });

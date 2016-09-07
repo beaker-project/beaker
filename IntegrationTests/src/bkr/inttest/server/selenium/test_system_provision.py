@@ -193,7 +193,7 @@ class SystemProvisionWebUITest(WebDriverTestCase):
                                    % len(system.command_queue))
         command_row = pane.find_element_by_xpath('.//table/tbody/tr[1]')
         command_row.find_element_by_xpath('./td[1]/a[text()="%s"]' % user.user_name)
-        command_row.find_element_by_xpath('./td[4][text()="%s"]' % system.command_queue[0].action)
+        command_row.find_element_by_xpath('./td[6][text()="%s"]' % system.command_queue[0].action)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1173446
     def test_link_to_reserve_workflow_appears_for_privileged_user(self):
