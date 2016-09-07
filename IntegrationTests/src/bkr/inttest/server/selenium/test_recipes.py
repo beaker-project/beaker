@@ -606,6 +606,25 @@ class TestRecipeViewInstallationTab(WebDriverTestCase):
                 './/div[@class="recipe-installation-progress" and '
                 'text()="No installation progress reported."]')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1318524
+    def test_configure_netboot_progress_shows_command_finish_time(self):
+        # We want to show the timestamp at which beaker-provision finished 
+        # actually running the configure_netboot command, not the time at which 
+        # we enqueued the command.
+        with session.begin():
+            data_setup.mark_recipe_installing(self.recipe,
+                    start_time=datetime.datetime(2016, 9, 7, 15, 5, 59))
+            configure_netboot_cmd = self.recipe.installation.commands[1]
+            self.assertEquals(configure_netboot_cmd.action, u'configure_netboot')
+            configure_netboot_cmd.finish_time = datetime.datetime(2016, 9, 7, 15, 5, 0)
+        b = self.browser
+        go_to_recipe_view(b, self.recipe, tab='Installation')
+        tab = b.find_element_by_id('installation')
+        netboot_configured_timestamp = tab.find_element_by_xpath(
+                './/div[@class="recipe-installation-progress"]/table'
+                '//td[contains(string(following-sibling::td), "Netboot configured")]').text
+        self.assertEqual(netboot_configured_timestamp, '-00:00:59')
+
 class TestRecipeViewReservationTab(WebDriverTestCase):
 
     def setUp(self):

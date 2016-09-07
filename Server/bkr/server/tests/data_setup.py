@@ -676,8 +676,10 @@ def mark_recipe_waiting(recipe, start_time=None, only=False, **kwargs):
         # newly created recipe which we don't want. To work around this, we hack 
         # the commands to be already completed so that beaker-provision skips them.
         # I would like to have a better solution here...
+        session.flush()
         for cmd in recipe.installation.commands:
-            cmd.status = CommandStatus.completed
+            cmd.change_status(CommandStatus.running)
+            cmd.change_status(CommandStatus.completed)
     else:
         # System without power control, there are no power commands. In the 
         # real world the recipe sits in Waiting with no watchdog kill time 

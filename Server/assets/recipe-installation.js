@@ -101,7 +101,7 @@ var RecipeInstallationProgress = Backbone.View.extend({
                     function (command) { return command.get('action') == 'configure_netboot'; });
             if (!_.isEmpty(configure_netboot_cmd) &&
                     configure_netboot_cmd.get('status') == 'Completed') {
-                netboot_configured = configure_netboot_cmd.get('submitted');
+                netboot_configured = configure_netboot_cmd.get('finish_time');
             }
             rebooted = installation.get('rebooted');
             install_started = installation.get('install_started');
