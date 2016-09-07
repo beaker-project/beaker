@@ -362,6 +362,21 @@ def _update_system(system, data={}):
             record_activity(u'Owner', system.owner, new_owner)
             system.owner = new_owner
             changed = True
+        if 'lab_controller_id' in data or 'lab_controller' in data:
+            if data.get('lab_controller_id'):
+                new_lc = LabController.by_id(data['lab_controller_id'])
+            elif data.get('lab_controller'):
+                if data['lab_controller'].get('fqdn'):
+                    new_lc = LabController.by_name(data['lab_controller'].get('fqdn'))
+            else:
+                new_lc = None
+            if new_lc != system.lab_controller:
+                if system.open_reservation is not None:
+                    raise Conflict409('Unable to change lab controller while system '
+                            'is in use (return the system first)')
+                record_activity(u'Lab Controller', system.lab_controller, new_lc)
+                system.lab_controller = new_lc
+                changed = True
         if 'status' in data:
             new_status = SystemStatus.from_string(data['status'])
             if new_status != system.status:
@@ -394,21 +409,6 @@ def _update_system(system, data={}):
                 for removed_arch in removed_arches:
                     record_activity(u'Arch', removed_arch, None, u'Removed')
                 system.arch[:] = new_arches
-                changed = True
-        if 'lab_controller_id' in data or 'lab_controller' in data:
-            if data.get('lab_controller_id'):
-                new_lc = LabController.by_id(data['lab_controller_id'])
-            elif data.get('lab_controller'):
-                if data['lab_controller'].get('fqdn'):
-                    new_lc = LabController.by_name(data['lab_controller'].get('fqdn'))
-            else:
-                new_lc = None
-            if new_lc != system.lab_controller:
-                if system.open_reservation is not None:
-                    raise Conflict409('Unable to change lab controller while system '
-                            'is in use (return the system first)')
-                record_activity(u'Lab Controller', system.lab_controller, new_lc)
-                system.lab_controller = new_lc
                 changed = True
         # If we're given any power-related keys, need to ensure system.power exists
         if not system.power and set(['power_type', 'power_address', 'power_user',
