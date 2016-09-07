@@ -87,20 +87,41 @@ var RecipeInstallationProgress = Backbone.View.extend({
         this.render();
     },
     render: function () {
-        var installation = this.model.get('installation');
+        var netboot_configured = null;
+        var rebooted = null;
+        var install_started = null;
+        var install_finished = null;
+        var postinstall_finished = null;
         // If the recipe is still queued there will be no associated 
         // installation, so we have to handle the possibility that it's null 
         // here.
-        if (_.isEmpty(installation)) {
+        var installation = this.model.get('installation');
+        if (!_.isEmpty(installation)) {
+            var configure_netboot_cmd = _.find(installation.get('commands'),
+                    function (command) { return command.get('action') == 'configure_netboot'; });
+            if (!_.isEmpty(configure_netboot_cmd) &&
+                    configure_netboot_cmd.get('status') == 'Completed') {
+                netboot_configured = configure_netboot_cmd.get('submitted');
+            }
+            rebooted = installation.get('rebooted');
+            install_started = installation.get('install_started');
+            install_finished = installation.get('install_finished');
+            postinstall_finished = installation.get('postinstall_finished');
+        }
+        if (!_.any([netboot_configured, rebooted, install_started,
+                    install_finished, postinstall_finished])) {
             this.$el.text('No installation progress reported.');
         } else {
-            var configure_netboot = _.find(installation.get('commands'),
-                    function (command) { return command.get('action') == 'configure_netboot'; });
-            this.$el.html(this.template(_.extend({},
-                    installation.attributes,
-                    {configure_netboot: configure_netboot,
-                     start_time: this.model.get('start_time'),
-                     get_time_difference: get_time_difference})));
+            this.$el.html(this.template({
+                netboot_configured: netboot_configured,
+                rebooted: rebooted,
+                install_started: install_started,
+                install_finished: install_finished,
+                postinstall_finished: postinstall_finished,
+                start_time: this.model.get('start_time'),
+                get_time_difference: get_time_difference,
+                kernel_options: installation.get('kernel_options'),
+            }));
             this.linkify_ks();
         }
         return this;

@@ -1,14 +1,10 @@
 <table class="table">
-    <% if (configure_netboot) { %>
+    <% if (netboot_configured) { %>
         <tr>
             <td>
-                <%
-                // In future it should be changed to configure_netboot.update when
-                // https://bugzilla.redhat.com/show_bug.cgi?id=1318524 is fixed.
-                %>
-                <time datetime="<%- configure_netboot.get('submitted').toISOString() %>"
-                      title="<%- configure_netboot.get('submitted').local().format('YYYY-MM-DD HH:mm:ss Z') %>">
-                     <%= get_time_difference(configure_netboot.get('submitted'), start_time) %>
+                <time datetime="<%- netboot_configured.toISOString() %>"
+                      title="<%- netboot_configured.local().format('YYYY-MM-DD HH:mm:ss Z') %>">
+                     <%= get_time_difference(netboot_configured, start_time) %>
                 </time>
              </td>
              <td>

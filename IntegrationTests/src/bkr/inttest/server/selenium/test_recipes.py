@@ -14,7 +14,8 @@ import lxml.etree
 from turbogears.database import session
 
 from bkr.server.model import TaskStatus, TaskResult, RecipeTaskResult, \
-    Task, RecipeTaskComment, RecipeTaskResultComment, RecipeTask
+    Task, RecipeTaskComment, RecipeTaskResultComment, RecipeTask, \
+    CommandStatus
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_text_present
 from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
@@ -559,15 +560,16 @@ class TestRecipeViewInstallationTab(WebDriverTestCase):
                     distro_name=u'PurpleUmbrellaLinux5.11-20160428',
                     variant=u'Server', arch=u'x86_64')
             data_setup.create_job_for_recipes([self.recipe])
-            data_setup.mark_recipe_installing(self.recipe)
         self.browser = self.get_browser()
-        go_to_recipe_view(self.browser, self.recipe, tab='Installation')
 
     def test_shows_installation_in_progress(self):
         # When the status is Installing, the Installation tab should say that 
         # it's installing. Sounds obvious, I know, but until Beaker 23 it was 
         # Running instead so it didn't actually work this way...
+        with session.begin():
+            data_setup.mark_recipe_installing(self.recipe)
         b = self.browser
+        go_to_recipe_view(b, self.recipe, tab='Installation')
         tab = b.find_element_by_id('installation')
         summary = tab.find_element_by_xpath(
                 './/div[@class="recipe-installation-summary"]/div[1]').text
@@ -578,12 +580,31 @@ class TestRecipeViewInstallationTab(WebDriverTestCase):
         self.assertEqual(status.strip(), 'Installing')
 
     def test_recipe_start_time_is_displayed_as_positive_zero(self):
+        with session.begin():
+            data_setup.mark_recipe_installing(self.recipe)
         b = self.browser
+        go_to_recipe_view(b, self.recipe, tab='Installation')
         tab = b.find_element_by_id('installation')
         rebooted_timestamp = tab.find_element_by_xpath(
                 './/div[@class="recipe-installation-progress"]/table'
                 '//td[contains(string(following-sibling::td), "System rebooted")]').text
         self.assertEqual(rebooted_timestamp, '+00:00:00')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1362370
+    def test_configure_netboot_progress_is_not_shown_unless_command_is_complete(self):
+        with session.begin():
+            data_setup.mark_recipe_scheduled(self.recipe,
+                    lab_controller=data_setup.create_labcontroller())
+            self.recipe.provision()
+            configure_netboot_cmd = self.recipe.installation.commands[1]
+            self.assertEquals(configure_netboot_cmd.action, u'configure_netboot')
+            self.assertEquals(configure_netboot_cmd.status, CommandStatus.queued)
+        b = self.browser
+        go_to_recipe_view(b, self.recipe, tab='Installation')
+        tab = b.find_element_by_id('installation')
+        tab.find_element_by_xpath(
+                './/div[@class="recipe-installation-progress" and '
+                'text()="No installation progress reported."]')
 
 class TestRecipeViewReservationTab(WebDriverTestCase):
 
