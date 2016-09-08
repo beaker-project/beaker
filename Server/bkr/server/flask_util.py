@@ -32,9 +32,8 @@ class PaginationRequiredException(HTTPException):
     def get_response(self, environ):
         return self.response
 
-def json_collection(query, columns=None, extra_sort_columns=None, min_page_size=20,
-                    max_page_size=500, default_page_size=20, force_paging_for_count=500,
-                    skip_count=False):
+def json_collection(query, columns=None, extra_sort_columns=None, max_page_size=500,
+                    default_page_size=20, force_paging_for_count=500,skip_count=False):
     """
     Helper function for Flask request handlers which want to return 
     a collection of resources as JSON.
@@ -82,7 +81,7 @@ def json_collection(query, columns=None, extra_sort_columns=None, min_page_size=
     with convert_internal_errors():
         if 'page_size' in request.args:
             page_size = int(request.args['page_size'])
-            page_size = min(max(page_size, min_page_size), max_page_size)
+            page_size = min(page_size, max_page_size)
         elif not request_wants_json():
             # For the web UI, we always do paging even if the query params 
             # didn't request it.
