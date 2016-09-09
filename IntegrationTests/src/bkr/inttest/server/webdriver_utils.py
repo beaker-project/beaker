@@ -145,11 +145,11 @@ def check_distro_search_results(browser, present=[], absent=[]):
 
 def check_task_search_results(browser, present=[], absent=[]):
     for task in absent:
-        browser.find_element_by_xpath('//table[@id="widget" and '
-                    'not(.//td[1]/a/text()="%s")]' % task.name)
+        browser.find_element_by_xpath('//table[contains(@class, "table")]/tbody'
+                    '[not(tr/td[1]/a/text()="%s")]' % task.name)
     for task in present:
-        browser.find_element_by_xpath('//table[@id="widget" and '
-                    './/td[1]/a/text()="%s"]' % task.name)
+        browser.find_element_by_xpath('//table[contains(@class, "table")]/tbody'
+                    '[tr/td[1]/a/text()="%s"]' % task.name)
 
 def check_user_search_results(browser, present=[], absent=[]):
     for user in absent:

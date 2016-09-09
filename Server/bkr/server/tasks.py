@@ -6,22 +6,21 @@
 
 from turbogears.database import session
 from turbogears import expose, flash, widgets, validate, redirect, paginate, url
+from flask import jsonify, request
 from bkr.server import search_utility, identity
-from bkr.server.widgets import myPaginateDataGrid, TasksWidget, TaskSearchForm, \
-        SearchBar, TaskActionWidget, HorizontalForm
+from bkr.server.widgets import TasksWidget, TaskSearchForm, \
+        TaskActionWidget, HorizontalForm
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import make_link
 from bkr.server.bexceptions import DatabaseLookupError
+from bkr.server.app import app
 from bkr.common.helpers import siphon
 from bkr.common.bexceptions import BX
 from sqlalchemy import or_, and_
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import joinedload, joinedload_all
 from bkr.server.flask_util import NotFound404, request_wants_json, \
-    render_tg_template, admin_auth_required, auth_required, read_json_request, \
-    convert_internal_errors, BadRequest400
-from bkr.server.app import app
-from flask import jsonify, redirect as flask_redirect, request
+    render_tg_template, admin_auth_required, read_json_request, \
+    convert_internal_errors, json_collection
 
 import os
 
@@ -334,48 +333,6 @@ class Tasks(RPCRoot):
         task = Task.by_id(t_id)
         return task.disable()
 
-    @expose(template='bkr.server.templates.grid')
-    @paginate('list',default_order='name', limit=30)
-    def index(self, *args, **kw):
-        tasks = Task.query
-        # FIXME What we really want is some default search options
-        # For now we won't show deleted/invalid tasks in the grid
-        # but for data integrity reasons we will allow you to view
-        # the task directly.  Ideally we would have a default search
-        # option of valid=True which the user could change to false
-        # to see all "deleted" tasks
-        tasks = tasks.filter(Task.valid==True)
-
-        tasks_return = self._tasks(tasks,**kw)
-        searchvalue = None
-        search_options = {}
-        if tasks_return:
-            if 'tasks_found' in tasks_return:
-                tasks = tasks_return['tasks_found']
-            if 'searchvalue' in tasks_return:
-                searchvalue = tasks_return['searchvalue']
-            if 'simplesearch' in tasks_return:
-                search_options['simplesearch'] = tasks_return['simplesearch']
-
-        tasks_grid = myPaginateDataGrid(fields=[
-		     widgets.PaginateDataGrid.Column(name='name', getter=lambda x: make_link("./%s" % x.id, x.name), title='Name', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='description', getter=lambda x:x.description, title='Description', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='version', getter=lambda x:x.version, title='Version', options=dict(sortable=True)),
-                    ])
-
-        search_bar = SearchBar(name='tasksearch',
-                           label=_(u'Task Search'),
-                           table = search_utility.Task.search.create_complete_search_table(),
-                           search_controller=url("/get_search_options_task"),
-                           )
-        return dict(title="Task Library",
-                    grid=tasks_grid,
-                    list=tasks,
-                    search_bar=search_bar,
-                    action='.',
-                    options=search_options,
-                    searchvalue=searchvalue)
-
     @expose(template='bkr.server.templates.task')
     def default(self, *args, **kw):
         # to handle the case one of the flask methods
@@ -464,6 +421,54 @@ class Tasks(RPCRoot):
             recipe = Recipe.by_id(kw['recipe_id'])
             return recipe.all_tasks
 
+@app.route('/tasks', methods=['GET'])
+def get_tasks():
+    """
+    Returns a pageable JSON collection of the task library in Beaker.
+    Refer to :ref:`pageable-json-collections`.
+
+    The following fields are supported for filtering and sorting:
+
+    ``name``
+        Name of the task.
+    ``description``
+        The description of the task provided in the loaded RPM.
+    ``version``
+        Version of the task provided in the loaded RPM.
+    ``type``
+        Type of the task, derived from the ``Type`` field in the task metadata.
+    ``excluded_arch``
+        Arch for which the task is excluded from. Tasks
+        are applicable to all arches by default, unless specified
+        otherwise in the ``Architectures`` field of the task metadata.
+    ``excluded_osmajor``
+        OS major version for which the task is excluded from.
+        Tasks are applicable to all OS major versions by default,
+        unless otherwise specified in the ``Releases`` field of
+        the task metadata.
+    """
+    query = Task.query.filter(Task.valid == True).order_by(Task.name)
+    json_result = json_collection(query, columns={
+        'id': Task.id,
+        'name': Task.name,
+        'description': Task.description,
+        'version': Task.version,
+        'type': (Task.types, TaskType.type),
+        'excluded_arch': (Task._excluded_arches, Arch.arch),
+        'excluded_osmajor': (Task._excluded_osmajors, OSMajor.osmajor),
+    })
+
+    if request_wants_json():
+        return jsonify(json_result)
+
+    result = render_tg_template('bkr.server.templates.backgrid', {
+        'title': 'Tasks Library',
+        'grid_collection_type': 'TaskLibrary',
+        'grid_collection_data': json_result,
+        'grid_collection_url': request.base_url,
+        'grid_view_type': 'TasksView',
+    })
+    return result
 
 @app.route('/tasks/<int:task_id>', methods=['GET'])
 def get_task(task_id):

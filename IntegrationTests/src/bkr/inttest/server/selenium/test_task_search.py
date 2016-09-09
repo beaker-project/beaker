@@ -10,7 +10,7 @@ from bkr.inttest.server.webdriver_utils import check_task_search_results, \
         wait_for_animation
 from bkr.inttest import data_setup, get_server_base
 from turbogears.database import session
-from bkr.server.model import OSMajor
+from bkr.server.model import OSMajor, Task
 
 
 class ExecutedTasksTest(WebDriverTestCase):
@@ -144,58 +144,40 @@ class Search(WebDriverTestCase):
             self.task_three = data_setup.create_task(name=u'/a/a/c', exclude_osmajor=[self.osmajor_one])
         self.browser = self.get_browser()
 
-    def test_arch_is(self):
-        b = self.browser
-        b.get(get_server_base() + 'tasks')
-        b.find_element_by_link_text('Show Search Options').click()
-        wait_for_animation(b, '#searchform')
-        Select(b.find_element_by_id('tasksearch_0_table'))\
-            .select_by_visible_text('Arch')
-        Select(b.find_element_by_id('tasksearch_0_operation'))\
-            .select_by_visible_text('is')
-        b.find_element_by_id('tasksearch_0_value').send_keys(self.arch_one)
-        b.find_element_by_id('searchform').submit()
-        check_task_search_results(b, present=[self.task_three],
-                absent=[self.task_one, self.task_two])
+    def tearDown(self):
+        with session.begin():
+            session.delete(self.task_one)
+            session.delete(self.task_two)
+            session.delete(self.task_three)
 
-    def test_arch_is_not(self):
+    def test_excluded_arch_is(self):
         b = self.browser
         b.get(get_server_base() + 'tasks')
-        b.find_element_by_link_text('Show Search Options').click()
-        wait_for_animation(b, '#searchform')
-        Select(b.find_element_by_id('tasksearch_0_table'))\
-            .select_by_visible_text('Arch')
-        Select(b.find_element_by_id('tasksearch_0_operation'))\
-            .select_by_visible_text('is not')
-        b.find_element_by_id('tasksearch_0_value').send_keys(self.arch_one)
-        b.find_element_by_id('searchform').submit()
-        check_task_search_results(b, present=[self.task_one, self.task_two],
-                absent=[self.task_three])
+        b.find_element_by_class_name('search-query').send_keys('excluded_arch:%s' % self.arch_one)
+        b.find_element_by_class_name('grid-filter').submit()
+        check_task_search_results(b, absent=[self.task_three],
+                present=[self.task_one, self.task_two])
 
-    def test_osmajor_is(self):
+    def test_excluded_arch_is_not(self):
         b = self.browser
         b.get(get_server_base() + 'tasks')
-        b.find_element_by_link_text('Show Search Options').click()
-        wait_for_animation(b, '#searchform')
-        Select(b.find_element_by_id('tasksearch_0_table'))\
-            .select_by_visible_text('OSMajor')
-        Select(b.find_element_by_id('tasksearch_0_operation'))\
-            .select_by_visible_text('is')
-        b.find_element_by_id('tasksearch_0_value').send_keys(self.osmajor_one)
-        b.find_element_by_id('searchform').submit()
-        check_task_search_results(b, present=[self.task_one, self.task_two],
-                absent=[self.task_three])
+        b.find_element_by_class_name('search-query').send_keys('-excluded_arch:%s' % self.arch_one)
+        b.find_element_by_class_name('grid-filter').submit()
+        check_task_search_results(b, absent=[self.task_one, self.task_two],
+                present=[self.task_three])
 
-    def test_osmajor_is_not(self):
+    def test_osmajor_excluded_is(self):
         b = self.browser
         b.get(get_server_base() + 'tasks')
-        b.find_element_by_link_text('Show Search Options').click()
-        wait_for_animation(b, '#searchform')
-        Select(b.find_element_by_id('tasksearch_0_table'))\
-            .select_by_visible_text('OSMajor')
-        Select(b.find_element_by_id('tasksearch_0_operation'))\
-            .select_by_visible_text('is not')
-        b.find_element_by_id('tasksearch_0_value').send_keys(self.osmajor_one)
-        b.find_element_by_id('searchform').submit()
-        check_task_search_results(b, present=[self.task_three],
-                absent=[self.task_one, self.task_two])
+        b.find_element_by_class_name('search-query').send_keys('excluded_osmajor:%s' % self.osmajor_one)
+        b.find_element_by_class_name('grid-filter').submit()
+        check_task_search_results(b, absent=[self.task_one, self.task_two],
+                present=[self.task_three])
+
+    def test_osmajor_excluded_is_not(self):
+        b = self.browser
+        b.get(get_server_base() + 'tasks')
+        b.find_element_by_class_name('search-query').send_keys('-excluded_osmajor:%s' % self.osmajor_one)
+        b.find_element_by_class_name('grid-filter').submit()
+        check_task_search_results(b, absent=[self.task_three],
+                present=[self.task_one, self.task_two])

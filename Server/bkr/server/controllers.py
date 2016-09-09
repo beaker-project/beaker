@@ -196,10 +196,6 @@ class Root(RPCRoot):
         return su.Job.search.get_search_options(table_field, *args, **kw)
 
     @expose(format='json')
-    def get_search_options_task(self,table_field, *args, **kw):
-        return su.Task.search.get_search_options(table_field, *args, **kw)
-
-    @expose(format='json')
     def get_operators_keyvalue(self,keyvalue_field,*args,**kw):
         return su.Key.search.get_search_options(keyvalue_field, *args, **kw)
 

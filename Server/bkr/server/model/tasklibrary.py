@@ -327,7 +327,9 @@ class Task(DeclarativeMappedObject):
     valid = Column(Boolean, default=True, nullable=False)
     types = relationship('TaskType', secondary=task_type_map, back_populates='tasks')
     excluded_osmajor = relationship('TaskExcludeOSMajor', back_populates='task')
+    _excluded_osmajors = relationship('OSMajor', secondary='task_exclude_osmajor', viewonly=True)
     excluded_arch = relationship('TaskExcludeArch', back_populates='task')
+    _excluded_arches = relationship('Arch', secondary='task_exclude_arch', viewonly=True)
     runfor = relationship(TaskPackage, secondary=task_packages_runfor_map,
             back_populates='tasks')
     required = relationship(TaskPackage, secondary=task_packages_required_map,

@@ -35,5 +35,26 @@ window.TaskView = Backbone.View.extend({
     },
 });
 
+var TaskNameCell = Backgrid.StringCell.extend({
+    className: 'task-name-cell',
+    render: function() {
+        this.$el.empty();
+        this.$el.html(this.model.toHTML());
+        return this;
+    },
+});
+
+window.TasksView = BeakerGrid.extend({
+    initialize: function(options) {
+        options.collection = this.model;
+        options.name = 'tasks';
+        options.columns = [
+            {name: 'name', label: 'Name', cell: TaskNameCell, editable: false},
+            {name: 'description', label: 'Description', cell: 'string', editable: false},
+            {name: 'version', label: 'Version', cell: 'string', editable: false},
+        ];
+        BeakerGrid.prototype.initialize.apply(this, arguments);
+    },
+});
 
 })();
