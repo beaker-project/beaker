@@ -186,6 +186,23 @@ class TestSubmitTask(WebDriverTestCase):
         self.assertEquals(b.find_element_by_class_name('flash').text,
                 "Failed to import task: Task name must not end with slash")
 
+    def test_upload_duplicate_task_version_is_rejected(self):
+        b = self.browser
+        b.get(get_server_base() + 'tasks/new')
+        rpm1_path = pkg_resources.resource_filename('bkr.inttest.server',
+                'task-rpms/tmp-test-cannot-add-same-version-WebUI-tasks-1.1.4-0.noarch.rpm')
+        same_version_rpm = pkg_resources.resource_filename('bkr.inttest.server',
+                'task-rpms/tmp-test-cannot-add-same-version-WebUI-1-tasks-1.1.4-0.noarch.rpm')
+        b.find_element_by_id('task_task_rpm').send_keys(rpm1_path)
+        b.find_element_by_xpath('//button[text()="Upload"]').click()
+        self.assert_task_upload_task_header('/CoreOS/tmp/Sanity/a-few-descriptive-words')
+        b.get(get_server_base() + 'tasks/new')
+        # Upload same version of rpm package should show warning message.
+        b.find_element_by_id('task_task_rpm').send_keys(same_version_rpm)
+        b.find_element_by_xpath('//button[text()="Upload"]').click()
+        self.assertEqual(b.find_element_by_css_selector('.alert.flash').text,
+                 'Failed to import task: Failed to import, 1.1.4-0 is the same version we already have')
+
     #https://bugzilla.redhat.com/show_bug.cgi?id=972407
     def test_submit_no_task(self):
         b = self.browser
