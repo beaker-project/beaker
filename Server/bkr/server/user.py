@@ -443,10 +443,10 @@ def add_submission_delegate(username):
 @auth_required
 def delete_submission_delegate(username):
     """
-    Deletes a public SSH public key belonging to the given user account.
+    Deletes a submission delegate for a user account.
 
     :param username: The user's username.
-    :param id: Database id of the SSH public key to be deleted.
+    :query string user_name: The submission delegate's username.
     """
     user = User.by_user_name(username) #XXX lockmode='update'
     if user is None:
