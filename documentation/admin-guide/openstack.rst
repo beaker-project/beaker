@@ -21,6 +21,21 @@ pool for that recipe. Recipes with hardware requirements in
 ``<hostRequires/>`` which cannot be satisfied by a virtual machine are
 excluded from this process.
 
+Package prerequisites 
+---------------------
+
+- python-keystoneclient >= 0.11.0
+- python-novaclient >= 2.20.0
+- python-glanceclient >= 0.15.0
+
+As RHEL 6 may not provide the required version of those packages, you can use
+Juno EL6 repositories provided by CentOS in this case. See
+`JunoEL6QuickStart <https://wiki.centos.org/Cloud/OpenStack/JunoEL6QuickStart>`_
+for more details.
+
+Configuring OpenStack integration 
+---------------------------------
+
 To enable OpenStack integration, configure the Identity API (Keystone) endpoint
 and dashboard (Horizon) URL in :file:`/etc/beaker/server.cfg`::
 
@@ -35,6 +50,9 @@ manually::
 
     INSERT INTO openstack_region (lab_controller_id)
     SELECT id FROM lab_controller WHERE fqdn = 'lab.example.com';
+
+Uploading iPXE image to Glance
+------------------------------
 
 In order to boot distro installers on OpenStack instances, Beaker relies on 
 a special image containing the iPXE network boot loader, which then loads its 

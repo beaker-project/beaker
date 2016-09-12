@@ -96,9 +96,6 @@ BuildRequires:  python-TurboMail >= 3.0
 BuildRequires:  cracklib-python
 BuildRequires:  rpm-python
 BuildRequires:  python-netaddr
-BuildRequires:  python-keystoneclient
-BuildRequires:  python-novaclient
-BuildRequires:  python-glanceclient
 BuildRequires:  ipxe-bootimgs
 BuildRequires:  syslinux
 BuildRequires:  mtools
@@ -189,9 +186,6 @@ Requires:       python-jinja2
 Requires:       python-netaddr
 Requires:       python-requests >= 1.0
 Requires:       python-requests-kerberos
-Requires:       python-keystoneclient
-Requires:       python-novaclient
-Requires:       python-glanceclient
 Requires:       ipxe-bootimgs
 Requires:       syslinux
 Requires:       mtools

@@ -21,8 +21,16 @@ import socket
 import tempfile
 import subprocess
 import datetime
-import keystoneclient.v2_0.client
-import glanceclient
+try:
+    import keystoneclient.v2_0.client
+    has_keystoneclient = True
+except ImportError:
+    has_keystoneclient = False
+try:
+    import glanceclient
+    has_glanceclient = True
+except ImportError:
+    has_glanceclient = False
 from turbogears import config
 from bkr.log import log_to_stream
 from bkr.server.util import load_config_or_exit, absolute_url
@@ -92,6 +100,10 @@ def main():
     log_to_stream(sys.stderr, level=logging.DEBUG if options.debug else logging.WARNING)
 
     if options.upload:
+        if not has_keystoneclient:
+            raise RuntimeError('python-keystoneclient is not installed')
+        if not has_glanceclient:
+            raise RuntimeError('python-glanceclient is not installed')
         # Get a Glance client. This seems more difficult than it should be...
         username = options.os_username or os.environ.get('OS_USERNAME')
         if not username:

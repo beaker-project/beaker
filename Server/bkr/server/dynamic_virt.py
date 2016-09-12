@@ -12,7 +12,11 @@ import uuid
 import tempfile
 import subprocess
 from turbogears import config
-import novaclient.client
+try:
+    import novaclient.client
+    has_novaclient = True
+except ImportError:
+    has_novaclient = False
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server.util import absolute_url
 from bkr.server.model.types import ImageType
@@ -34,6 +38,9 @@ class VirtManager(object):
         if not self.region:
             raise RuntimeError('No region defined in openstack_region table')
         self.lab_controller = self.region.lab_controller
+        if not has_novaclient:
+            raise RuntimeError('Openstack was configured, but python-novaclient '
+                    'is not installed')
         self.nova = novaclient.client.Client('2',
                 user.openstack_username,
                 user.openstack_password,
