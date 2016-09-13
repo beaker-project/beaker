@@ -123,6 +123,22 @@ class DistroTreeViewTest(WebDriverTestCase):
         self.assert_('text/plain' in response.headers['Content-Type'])
         self.assert_('baseurl=' in response.text, response.text)
 
+    # Test images tab
+    def test_images(self):
+        b = self.browser
+        login(b)
+        go_to_distro_tree_view(b, self.distro_tree)
+        b.find_element_by_link_text('Images').click()
+        b.find_element_by_xpath("//div[@id='images']//th[text()='Image Type']")
+        b.find_element_by_xpath("//div[@id='images']//th[text()='Kernel Type']")
+        b.find_element_by_xpath("//div[@id='images']//th[text()='Path']")
+        b.find_element_by_xpath("//div[@id='images']//td[text()='kernel']")
+        b.find_element_by_xpath("//div[@id='images']//tr[1]//td[text()='default']")
+        b.find_element_by_xpath("//div[@id='images']//td[text()='pxeboot/vmlinuz']")
+        b.find_element_by_xpath("//div[@id='images']//td[text()='initrd']")
+        b.find_element_by_xpath("//div[@id='images']//tr[2]//td[text()='default']")
+        b.find_element_by_xpath("//div[@id='images']//td[text()='pxeboot/initrd']")
+
 class DistroTreesFilterXmlRpcTest(XmlRpcTestCase):
 
     def setUp(self):
