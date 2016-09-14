@@ -24,10 +24,9 @@ class TestSubmitTask(WebDriverTestCase):
         self.browser = self.get_browser()
         login(self.browser, user=self.uploader.user_name, password=u'upload')
 
-    def assert_task_upload_flash_OK(self, name):
-        expected = '%s Added/Updated' % name
-        actual = self.browser.find_element_by_class_name('flash').text
-        self.assertIn(expected, actual)
+    def assert_task_upload_task_header(self, name):
+        expected = 'Task %s' % name
+        self.browser.find_element_by_xpath('//h1[text()="%s"]' % expected)
 
     def test_submit_task(self):
         test_package_name = '/distribution/beaker/task_test'
@@ -42,11 +41,7 @@ class TestSubmitTask(WebDriverTestCase):
         self.addCleanup(unlink_ignore,
                 os.path.join(turbogears.config.get('basepath.rpms'),
                 'tmp-distribution-beaker-task_test-1.1-0.noarch.rpm'))
-        self.assert_task_upload_flash_OK(test_package_name)
-        # ...and make sure it worked...
-        b.find_element_by_name('simplesearch').send_keys(test_package_name)
-        b.find_element_by_id('simpleform').submit()
-        b.find_element_by_link_text(test_package_name).click()
+        self.assert_task_upload_task_header(test_package_name)
         self.assert_task_correct_v1_1()
         self.assertEqual(self.get_task_info_field('Uploader'), self.uploader.user_name)
         self.assertEqual(self.get_task_info_field_href('Uploader'),
@@ -61,11 +56,8 @@ class TestSubmitTask(WebDriverTestCase):
         self.addCleanup(unlink_ignore,
                 os.path.join(turbogears.config.get('basepath.rpms'),
                 'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm'))
-        self.assert_task_upload_flash_OK(test_package_name)
+        self.assert_task_upload_task_header(test_package_name)
         # ...and make sure everything was updated
-        b.find_element_by_name('simplesearch').send_keys(test_package_name)
-        b.find_element_by_id('simpleform').submit()
-        b.find_element_by_link_text(test_package_name).click()
         self.assert_task_correct_v2_0()
 
     def assert_task_correct_v1_1(self):
@@ -133,10 +125,7 @@ class TestSubmitTask(WebDriverTestCase):
         self.addCleanup(unlink_ignore,
                 os.path.join(turbogears.config.get('basepath.rpms'),
                 'tmp-distribution-beaker-dummy_for_bz681143-1.0-1.noarch.rpm'))
-        self.assert_task_upload_flash_OK(test_package_name)
-        b.find_element_by_name('simplesearch').send_keys(test_package_name)
-        b.find_element_by_id('simpleform').submit()
-        b.find_element_by_link_text(test_package_name).click()
+        self.assert_task_upload_task_header(test_package_name)
         # Should have openCryptoki in correct case:
         self.assertEqual(self.get_task_info_field('Run For'), 'openCryptoki')
 
@@ -216,7 +205,7 @@ class TestSubmitTask(WebDriverTestCase):
         self.addCleanup(unlink_ignore,
                 os.path.join(turbogears.config.get('basepath.rpms'),
                 'tmp-distribution-beaker-arm-related-arches-1.0-0.noarch.rpm'))
-        self.assert_task_upload_flash_OK('/distribution/beaker/arm-related-arches')
+        self.assert_task_upload_task_header('/distribution/beaker/arm-related-arches')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1226443
     def test_unrecognised_fields_in_testinfo_are_ignored(self):
@@ -229,7 +218,7 @@ class TestSubmitTask(WebDriverTestCase):
         self.addCleanup(unlink_ignore,
                 os.path.join(turbogears.config.get('basepath.rpms'),
                 'tmp-distribution-beaker-dummy_for_bz1226443-1.0-1.noarch.rpm'))
-        self.assert_task_upload_flash_OK('/distribution/beaker/dummy_for_bz1226443')
+        self.assert_task_upload_task_header('/distribution/beaker/dummy_for_bz1226443')
 
 if __name__ == "__main__":
     unittest.main()

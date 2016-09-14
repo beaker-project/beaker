@@ -214,8 +214,7 @@ class Tasks(RPCRoot):
             log.exception('Failed to import %s', task_rpm.filename)
             flash(_(u'Failed to import task: %s' % err))
             redirect(url("./new"))
-        flash(_(u"%s Added/Updated at id:%s" % (task.name,task.id)))
-        redirect(".")
+        redirect("/tasks/%s" % task.id)
 
     @expose(template='bkr.server.templates.task_search')
     @validate(form=task_form)
