@@ -284,3 +284,9 @@ Lab Controllers
 
 .. autoflask:: bkr.server.wsgi:app
    :endpoints: get_labcontroller, update_labcontroller, create_labcontroller
+
+Tasks
+-----
+
+.. autoflask:: bkr.server.wsgi:app
+   :endpoints: update_task

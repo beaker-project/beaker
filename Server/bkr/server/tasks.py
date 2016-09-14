@@ -17,7 +17,11 @@ from bkr.common.bexceptions import BX
 from sqlalchemy import or_, and_
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import joinedload, joinedload_all
-from sqlalchemy.orm.exc import NoResultFound
+from bkr.server.flask_util import NotFound404, request_wants_json, \
+    render_tg_template, admin_auth_required, auth_required, read_json_request, \
+    convert_internal_errors, BadRequest400
+from bkr.server.app import app
+from flask import jsonify, redirect as flask_redirect, request
 
 import os
 
@@ -357,7 +361,6 @@ class Tasks(RPCRoot):
 		     widgets.PaginateDataGrid.Column(name='name', getter=lambda x: make_link("./%s" % x.id, x.name), title='Name', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='description', getter=lambda x:x.description, title='Description', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='version', getter=lambda x:x.version, title='Version', options=dict(sortable=True)),
-                     widgets.PaginateDataGrid.Column(name='action', getter=lambda x: self.task_list_action_widget.display(task=x, type_='tasklist', title='Action', options=dict(sortable=False))),
                     ])
 
         search_bar = SearchBar(name='tasksearch',
@@ -370,12 +373,16 @@ class Tasks(RPCRoot):
                     list=tasks,
                     search_bar=search_bar,
                     action='.',
-                    action_widget = self.task_list_action_widget,  #Hack,inserts JS for us.
                     options=search_options,
                     searchvalue=searchvalue)
 
     @expose(template='bkr.server.templates.task')
     def default(self, *args, **kw):
+        # to handle the case one of the flask methods
+        # have raised a 404 but the intention isn't to redirect
+        # back to cherrypy, but legitimately 404
+        if cherrypy.request.method != 'GET':
+            raise cherrypy.HTTPError(404)
         try:
             using_task_id = False
             if len(args) == 1:
@@ -395,7 +402,12 @@ class Tasks(RPCRoot):
             flash(unicode(e))
             redirect("/tasks")
 
-        return dict(task=task,
+        attributes = task.to_dict()
+        attributes['can_disable'] = bool(
+            identity.current.user and identity.current.user.is_admin())
+
+        return dict(attributes=attributes,
+                    url="/tasks/%s" % task.id,
                     form = self.task_form,
                     value = dict(task_id = task.id),
                     options = dict(hidden=dict(task = 1)),
@@ -451,6 +463,43 @@ class Tasks(RPCRoot):
         if 'recipe_id' in kw:
             recipe = Recipe.by_id(kw['recipe_id'])
             return recipe.all_tasks
+
+
+@app.route('/tasks/<int:task_id>', methods=['GET'])
+def get_task(task_id):
+    # Dummy handler to fall back to CherryPy
+    # so that other methods such as PATCH/DELETE work.
+    raise NotFound404('Fall back to CherryPy')
+
+@app.route('/tasks/<int:task_id>', methods=['PATCH'])
+@admin_auth_required
+def update_task(task_id):
+    """
+    Updates a task - only handles disabling at this time.
+
+    :param task_id: The task id to update/disable
+    :jsonparam bool disabled: Whether the task should be disabled.
+    :status 200: Task was successfully updated/disabled
+    :status 404: Task was not found (to be disabled)
+    """
+    try:
+        task = Task.by_id(task_id)
+    except DatabaseLookupError as e:
+        # This should be NotFound404 but due to still using cherrypy
+        # 404's are handled there which then will then do a GET /tasks/id
+        # which will resolve correctly, which isn't desired
+        raise NotFound404('Task %s does not exist' % task_id)
+
+    data = read_json_request(request)
+
+    if data:
+        with convert_internal_errors():
+            if data.get('disabled', False) and task.valid:
+                task.disable()
+
+    response = jsonify(task.to_dict())
+
+    return response
 
 # for sphinx
 tasks = Tasks

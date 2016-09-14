@@ -502,6 +502,7 @@ class Task(DeclarativeMappedObject):
                     update_date = '%s' % self.update_date,
                     owner = self.owner,
                     uploader = self.uploader and self.uploader.user_name,
+                    uploading_user = self.uploader and self.uploader.__json__(),
                     version = self.version,
                     license = self.license,
                     priority = self.priority,
@@ -512,6 +513,8 @@ class Task(DeclarativeMappedObject):
                     runfor = ['%s' % package for package in self.runfor],
                     required = ['%s' % package for package in self.required],
                     bugzillas = ['%s' % bug.bugzilla_id for bug in self.bugzillas],
+                    expected_time = self.expected_time(),
+                    needs = ['%s' % need.property for need in self.needs],
                    )
 
     def to_xml(self, pretty=False):
@@ -590,7 +593,7 @@ class Task(DeclarativeMappedObject):
             task.append(excluded)
         return lxml.etree.tostring(task, pretty_print=pretty, encoding='utf8')
 
-    def elapsed_time(self, suffixes=(' year',' week',' day',' hour',' minute',' second'), add_s=True, separator=', '):
+    def expected_time(self, suffixes=(' year',' week',' day',' hour',' minute',' second'), add_s=True, separator=', '):
         """
         Takes an amount of seconds and turns it into a human-readable amount of 
         time.

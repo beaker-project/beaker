@@ -78,6 +78,7 @@ import bkr.server.recipes
 import bkr.server.recipetasks
 import bkr.server.power
 import bkr.server.labcontroller
+import bkr.server.tasks
 
 
 @app.before_first_request

@@ -5,15 +5,19 @@
 # (at your option) any later version.
 
 import urlparse
+import requests
+import requests.exceptions
 from bkr.inttest.server.selenium import WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login
-from bkr.inttest import data_setup, get_server_base
+from bkr.inttest.server.webdriver_utils import login, check_task_search_results
+from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
+from bkr.inttest.server.requests_utils import login as requests_login, patch_json
 from bkr.common.helpers import unlink_ignore
 import unittest2 as unittest
 import time, re, os, shutil, turbogears
 import pkg_resources
 from turbogears.database import session
-from bkr.server.model import TaskPackage
+from bkr.server.model import TaskPackage, User, Task
+from sqlalchemy.sql import func
 import turbogears as tg
 
 class TestSubmitTask(WebDriverTestCase):
@@ -26,7 +30,7 @@ class TestSubmitTask(WebDriverTestCase):
 
     def assert_task_upload_task_header(self, name):
         expected = 'Task %s' % name
-        self.browser.find_element_by_xpath('//h1[text()="%s"]' % expected)
+        self.browser.find_element_by_xpath('//h1[text()[contains(., "%s")]]' % expected)
 
     def test_submit_task(self):
         test_package_name = '/distribution/beaker/task_test'
@@ -91,7 +95,7 @@ class TestSubmitTask(WebDriverTestCase):
                     '/rpms/tmp-distribution-beaker-task_test-2.0-5.noarch.rpm'))
         self.assertEqual(self.get_task_info_field('Run For'), 'beaker')
         self.assertEqual(self.get_task_info_field('Priority'), 'Low')
-        self.assertEqual(self.get_task_info_field('Destructive'), 'False')
+        self.assertEqual(self.get_task_info_field('Destructive'), 'false')
         self.assertEqual(self.get_task_info_field('Requires'),
                 '\n'.join(['beaker', 'coreutils', 'rpm']))
 
@@ -236,6 +240,73 @@ class TestSubmitTask(WebDriverTestCase):
                 os.path.join(turbogears.config.get('basepath.rpms'),
                 'tmp-distribution-beaker-dummy_for_bz1226443-1.0-1.noarch.rpm'))
         self.assert_task_upload_task_header('/distribution/beaker/dummy_for_bz1226443')
+
+
+class TaskDisable(WebDriverTestCase):
+
+    def setUp(self):
+        with session.begin():
+            self.my_task = data_setup.create_task()
+            self.normal_user = data_setup.create_user(password=u'secret')
+        self.browser = self.get_browser()
+
+    def test_task_disable_successful(self):
+        login(self.browser, user=data_setup.ADMIN_USER, password=data_setup.ADMIN_PASSWORD)
+        b = self.browser
+        b.get(get_server_base() + 'tasks/%s' % self.my_task.id)
+        b.find_element_by_xpath('//td[../th[text()="Valid"] and ./text()="true"]')
+        b.find_element_by_xpath('//button[contains(text(), "Disable") and not(@disabled)]').click()
+        b.find_element_by_xpath('//button[text()="OK"]').click()
+        b.find_element_by_xpath('//td[../th[text()="Valid"] and ./text()="false"]')
+        b.find_element_by_xpath('//button[contains(text(), "Disable") and @disabled]')
+
+    def test_task_disable_not_available_normal_user(self):
+        login(self.browser, user=self.normal_user.user_name, password=u'secret')
+        b = self.browser
+        b.get(get_server_base() + 'tasks/%s' % self.my_task.id)
+        b.find_element_by_xpath('//button[not(contains(text(), "Disable"))]')
+
+class TaskHTTPTest(DatabaseTestCase):
+
+    def setUp(self):
+        super(TaskHTTPTest, self).setUp()
+        with session.begin():
+            self.my_task = data_setup.create_task()
+            self.normal_user = data_setup.create_user(password=u'secret')
+
+    def test_task_update_disable_successful(self):
+        req_sess = requests.Session()
+        requests_login(req_sess, data_setup.ADMIN_USER, data_setup.ADMIN_PASSWORD)
+        self.assertEqual(self.my_task.valid, True)
+        response = patch_json(get_server_base() + 'tasks/%s' % self.my_task.id,
+                              session=req_sess, data={'disabled': True})
+        response.raise_for_status()
+        self.assertEqual(response.json()['valid'], False)
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(self.my_task.valid, False)
+
+    def test_task_update_disable_normal_user_fail(self):
+        req_sess = requests.Session()
+        requests_login(req_sess, self.normal_user.user_name, 'secret')
+        self.assertEqual(self.my_task.valid, True)
+        response = patch_json(get_server_base() + 'tasks/%s' % self.my_task.id,
+                              session=req_sess, data={'disabled': True})
+        self.assertEqual(response.status_code, 403)
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(self.my_task.valid, True)
+
+    def test_task_update_task_not_available_404(self):
+        req_sess = requests.Session()
+        with session.begin():
+            result = session.query(func.max(Task.id)).first()
+        fake_id = result[0] + 1
+        requests_login(req_sess, data_setup.ADMIN_USER, data_setup.ADMIN_PASSWORD)
+        response = patch_json(get_server_base() + 'tasks/%s' % fake_id,
+                              session=req_sess, data={'disabled': True})
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.text, 'Task %s does not exist' % fake_id)
 
 if __name__ == "__main__":
     unittest.main()

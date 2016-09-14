@@ -1,0 +1,155 @@
+<div class="page-header">
+    <h1>Task <%- name %>
+        <% if (can_disable) { %>
+        <div class="btn-group">
+            <button class="btn disable " data-loading-text="<i class='fa fa-spinner fa-spin'></i> Disabling&hellip;" <%- (!valid) ? 'disabled' : '' %> ><i class="fa fa-times"></i> Disable</button>
+        </div>
+        <% } %>
+    </h1>
+</div>
+
+<table class="table table-bordered">
+    <tbody>
+    <tr>
+        <th>Description</th>
+        <td><%- description %></td>
+    </tr>
+    <tr>
+        <th>Valid</th>
+        <td><%- valid %></td>
+    </tr>
+    <tr>
+        <th>Path</th>
+        <td><%- path %></td>
+    </tr>
+    <tr>
+        <th>Expected Time</th>
+        <td><%- expected_time %></td>
+    </tr>
+    <tr>
+        <th>Creation Date</th>
+        <td><span class="datetime"><%- creation_date %></span></td>
+    </tr>
+    <tr>
+        <th>Updated Date</th>
+        <td><span class="datetime"><%- update_date %></span></td>
+    </tr>
+    <tr>
+        <th>Owner</th>
+        <td><%- owner %></td>
+    </tr>
+    <% if (uploading_user) { %>
+    <tr>
+        <th>Uploader</th>
+        <td><%= uploading_user.toHTML() %></td>
+    </tr>
+    <% } %>
+    <tr>
+        <th>Version</th>
+        <td><%- version %></td>
+    </tr>
+    <tr>
+        <th>License</th>
+        <td><%- license %></td>
+    </tr>
+    <tr>
+        <th>RPM</th>
+        <td><a href="/rpms/<%- rpm %>"><%-rpm %></a></td>
+    </tr>
+    <% if (!_.isEmpty(needs)) { %>
+    <tr>
+        <th>Needs</th>
+        <td>
+            <ul class="unstyled">
+                <% _.each(needs, function(elem) { %>
+                <li><%- elem %></li>
+                <% }) %>
+            </ul>
+        </td>
+    </tr>
+    <% } %>
+    <% if (!_.isEmpty(bugzillas)) { %>
+    <tr>
+        <th>Bugzillas</th>
+        <td>
+            <ul class="unstyled">
+                <% _.each(bugzillas, function(elem) { %>
+                <li><a href="https://bugzilla.redhat.com/show_bug.cgi?id=<%- elem %>">
+                        <%- elem %>
+                    </a>
+                </li>
+                <% }) %>
+            </ul>
+        </td>
+    </tr>
+    <% } %>
+    <% if (!_.isEmpty(types)) { %>
+    <tr>
+        <th>Types</th>
+        <td>
+            <ul class="unstyled">
+                <% _.each(types, function(elem) { %>
+                <li><%- elem %></li>
+                <% }) %>
+            </ul>
+        </td>
+    </tr>
+    <% } %>
+    <% if (!_.isEmpty(runfor)) { %>
+    <tr>
+        <th>Run For</th>
+        <td>
+            <ul class="unstyled">
+                <% _.each(runfor, function(elem) { %>
+                <li><%- elem %></li>
+                <% }) %>
+            </ul>
+        </td>
+    </tr>
+    <% } %>
+    <tr>
+        <th>Priority</th>
+        <td><%- priority %></td>
+    </tr>
+    <tr>
+        <th>Destructive</th>
+        <td><%- destructive %></td>
+    </tr>
+    <% if (!_.isEmpty(required)) { %>
+    <tr>
+        <th>Requires</th>
+        <td>
+            <ul class="unstyled">
+                <% _.each(required, function(elem) { %>
+                <li><%- elem %></li>
+                <% }) %>
+            </ul>
+        </td>
+    </tr>
+    <% } %>
+    <% if (!_.isEmpty(excluded_osmajor)) { %>
+    <tr>
+        <th>Excluded OSMajors</th>
+        <td>
+            <ul class="unstyled">
+                <% _.each(excluded_osmajor, function(elem) { %>
+                <li><%- elem %></li>
+                <% }) %>
+            </ul>
+        </td>
+    </tr>
+    <% } %>
+    <% if (!_.isEmpty(excluded_arch)) { %>
+    <tr>
+        <th>Excluded Arches</th>
+        <td>
+            <ul class="unstyled">
+                <% _.each(excluded_arch, function(elem) { %>
+                <li><%- elem %></li>
+                <% }) %>
+            </ul>
+        </td>
+    </tr>
+    <% } %>
+    </tbody>
+</table>
