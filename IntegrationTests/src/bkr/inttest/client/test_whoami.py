@@ -4,8 +4,11 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import os
+import tempfile
+from unittest2 import SkipTest
 from bkr.server.model import session, Permission
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, get_server_base
 from bkr.inttest.client import run_client, create_client_config, ClientError, \
         ClientTestCase
 
@@ -59,3 +62,26 @@ class WhoAmITest(ClientTestCase):
         self.assertEqual(
             'CA_CERT configuration points to non-existing file: /does/not/exist\n',
             assertion.exception.stderr_output)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=844364
+    def test_config_is_read_from_user_config_and_system_config(self):
+        # We tell the client to use a config which lacks HUB_URL. The correct 
+        # HUB_URL setting will be inherited from the system-wide config instead 
+        # and so the command still succeeds.
+        if not os.path.exists('/etc/beaker/client.conf'):
+            raise SkipTest('System-wide client config does not exist')
+        required_setting = 'HUB_URL = "%s"' % get_server_base().rstrip('/')
+        if required_setting not in open('/etc/beaker/client.conf').read().splitlines():
+            raise SkipTest('System-wide client config is not pointing at the expected server')
+        with session.begin():
+            user = data_setup.create_user(password=u'password')
+        config = tempfile.NamedTemporaryFile(prefix='bkr-inttest-client-conf-')
+        config.write('\n'.join([
+            # omit HUB_URL
+            'AUTH_METHOD = "password"',
+            'USERNAME = "%s"' % user.user_name,
+            'PASSWORD = "password"',
+        ]))
+        config.flush()
+        out = run_client(['bkr', 'whoami'], config=config)
+        self.assertIn(user.user_name, out)

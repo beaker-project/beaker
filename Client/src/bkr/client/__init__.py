@@ -15,23 +15,27 @@ from bkr.common.pyconfig import PyConfigParser
 import glob
 import pkg_resources
 
-config_file = os.environ.get("BEAKER_CLIENT_CONF", None)
-if not config_file:
+user_config_file = os.environ.get("BEAKER_CLIENT_CONF", None)
+if not user_config_file:
     user_conf = os.path.expanduser('~/.beaker_client/config')
     old_conf = os.path.expanduser('~/.beaker')
     if os.path.exists(user_conf):
-        config_file = user_conf
+        user_config_file = user_conf
     elif os.path.exists(old_conf):
-        config_file = old_conf
+        user_config_file = old_conf
         sys.stderr.write("%s is deprecated for config, please use %s instead\n" % (old_conf, user_conf))
-    elif os.path.exists('/etc/beaker/client.conf'):
-        config_file = "/etc/beaker/client.conf"
     else:
         pass
 
+system_config_file = None
+if os.path.exists('/etc/beaker/client.conf'):
+    system_config_file = '/etc/beaker/client.conf'
+
 conf = PyConfigParser()
-if config_file:
-    conf.load_from_file(config_file)
+if system_config_file:
+    conf.load_from_file(system_config_file)
+if user_config_file:
+    conf.load_from_file(user_config_file)
 
 
 _host_filter_presets = None
