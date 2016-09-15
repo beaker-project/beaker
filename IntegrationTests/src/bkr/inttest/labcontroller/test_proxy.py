@@ -31,18 +31,11 @@ class GetRecipeGuestXML(LabControllerTestCase):
 
     def setUp(self):
         with session.begin():
-            dt = data_setup.create_distro_tree()
-            self.system = data_setup. \
-                create_system(lab_controller=self.get_lc())
-            self.system_recipe = data_setup.create_recipe()
-            self.guest_recipe = data_setup. \
-                create_guestrecipe(host=self.system_recipe)
-            self.job = data_setup.create_job_for_recipes([self.system_recipe,
-                self.guest_recipe])
-            data_setup.mark_job_running(self.job)
-
-    def tearDown(self):
-        pass
+            self.job = data_setup.create_running_job(num_recipes=1,
+                    num_guestrecipes=1,
+                    lab_controller=self.get_lc())
+            self.system_recipe = self.job.recipesets[0].recipes[0]
+            self.guest_recipe = self.job.recipesets[0].recipes[0].guests[0]
 
     def test_GET_guests_host(self):
         url = '%srecipes/%s/' % (self.get_proxy_url(), self.guest_recipe.id)
