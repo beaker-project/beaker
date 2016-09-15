@@ -2502,7 +2502,7 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             min_status = self._fix_zombie_tasks()
 
         if min_status.finished and min_status != TaskStatus.cancelled:
-            if self.status in [TaskStatus.installing, TaskStatus.running] and self.reservation_request:
+            if self.status in [TaskStatus.installing, TaskStatus.waiting, TaskStatus.running] and self.reservation_request:
                 min_status = TaskStatus.reserved
                 self.extend(self.reservation_request.duration)
                 mail.reservesys_notify(self)
