@@ -199,6 +199,10 @@ def user_full_json(user):
             attributes['ssh_public_keys'] = user.sshpubkeys
             attributes['submission_delegates'] = user.submission_delegates
             attributes['use_old_job_page'] = user.use_old_job_page
+            attributes['notify_job_completion'] = user.notify_job_completion
+            attributes['notify_broken_system'] = user.notify_broken_system
+            attributes['notify_group_membership'] = user.notify_group_membership
+            attributes['notify_reservesys'] = user.notify_reservesys
     else:
         attributes['can_edit'] = False
         attributes['can_change_password'] = False
@@ -285,8 +289,16 @@ def update_user(username):
       using external authentication for this account.
     :jsonparam string root_password: Root password to be set on systems 
       provisioned by Beaker.
-    :jsonparam boolean use_old_job_page: True if the user has opted to use the 
+    :jsonparam boolean use_old_job_page: True if the user has opted to use the
       old, deprecated pre-Beaker-23 job page.
+    :jsonparam boolean notify_job_completion: True if the user receives
+      notifications upon the completion of an owned job.
+    :jsonparam boolean notify_broken_system: True if the user receives
+      notifications upon a system being automatically marked broken.
+    :jsonparam boolean notify_group_membership: True if the user receives
+      notifications of modifications to the groups the user belongs to.
+    :jsonparam boolean notify_reservesys: True if the user receives
+      notifications upon reservesys being ready.
     :jsonparam boolean disabled: Whether the user should be temporarily 
       disabled. Disabled users cannot log in or submit jobs, and any running jobs 
       are cancelled when their account is disabled.
@@ -327,6 +339,14 @@ def update_user(username):
                     user.root_password = new_root_password
             if 'use_old_job_page' in data:
                 user.use_old_job_page = data['use_old_job_page']
+            if 'notify_job_completion' in data:
+                user.notify_job_completion = data['notify_job_completion']
+            if 'notify_broken_system' in data:
+                user.notify_broken_system = data['notify_broken_system']
+            if 'notify_group_membership' in data:
+                user.notify_group_membership = data['notify_group_membership']
+            if 'notify_reservesys' in data:
+                user.notify_reservesys = data['notify_reservesys']
             if 'disabled' in data:
                 user.disabled = data['disabled']
                 if user.disabled:

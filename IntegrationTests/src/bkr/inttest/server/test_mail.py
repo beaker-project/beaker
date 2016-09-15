@@ -24,7 +24,7 @@ class BrokenSystemNotificationTest(DatabaseTestCase):
         self.mail_capture.start()
         self.addCleanup(self.mail_capture.stop)
 
-    def test_broken_system_notification(self):
+    def test_broken_system_notification_on(self):
         with session.begin():
             owner = data_setup.create_user(email_address=u'ackbar@calamari.gov')
             lc = data_setup.create_labcontroller()
@@ -63,6 +63,26 @@ class BrokenSystemNotificationTest(DatabaseTestCase):
                 'Power id: 42'
                 % get_server_base())
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1136748
+    def test_broken_system_notification_off(self):
+        with session.begin():
+            owner = data_setup.create_user(email_address=u'derp@derpmail.com',
+                                           notify_broken=False)
+            lc = data_setup.create_labcontroller()
+            system = data_setup.create_system(fqdn=u'home-two', owner=owner,
+                                              lender=u"Aunty Jane's Dodgy Shop",
+                                              location=u'shed out the front',
+                                              lab_controller=lc,
+                                              vendor=u'Acorn', arch=u'i386')
+            system.arch.append(Arch.by_name(u'x86_64'))
+            data_setup.configure_system_power(system, power_type=u'drac',
+                                              address=u'pdu3.home-one',
+                                              power_id=u'42')
+        with session.begin():
+            bkr.server.mail.broken_system_notify(system, reason="It's not a tarp!")
+            self.assertEqual(len(self.mail_capture.captured_mails), 0)
+
+
 class SystemReservationNotificationTest(DatabaseTestCase):
 
     maxDiff = None
@@ -72,7 +92,7 @@ class SystemReservationNotificationTest(DatabaseTestCase):
         self.mail_capture.start()
         self.addCleanup(self.mail_capture.stop)
 
-    def test_system_reserved_notification(self):
+    def test_system_reserved_notification_on(self):
         with session.begin():
             owner = data_setup.create_user(
                     email_address=u'lizlemon@kabletown.com')
@@ -183,6 +203,25 @@ class SystemReservationNotificationTest(DatabaseTestCase):
         actual_mail_body = msg.get_payload(decode=True)
         self.assertMultiLineEqual(actual_mail_body, expected_mail_body)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1136748
+    def test_system_reserved_notification_off(self):
+        with session.begin():
+            owner = data_setup.create_user(email_address=u'derp@derptown.com',
+                                           notify_reserve=False)
+            system = data_setup.create_system(fqdn=u'funcooker.ge.valid',
+                    lab_controller=data_setup.create_labcontroller())
+            distro_tree = data_setup.create_distro_tree(distro_name=u'MicrowaveOS',
+                    variant=u'ThreeHeats', arch=u'x86_64')
+            job = data_setup.create_running_job(owner=owner, system=system,
+                    distro_tree=distro_tree,
+                    whiteboard=u'This is a whiteboard',
+                    recipe_whiteboard=u'This is another whiteboard')
+
+        with session.begin():
+            bkr.server.mail.reservesys_notify(job.recipesets[0].recipes[0])
+            self.assertEqual(len(self.mail_capture.captured_mails), 0)
+
+
 class JobCompletionNotificationTest(DatabaseTestCase):
 
     def setUp(self):
@@ -285,6 +324,17 @@ class JobCompletionNotificationTest(DatabaseTestCase):
         msg = email.message_from_string(raw_msg)
         self.assertNotIn('Distro(', msg.get_payload(decode=True))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1136748
+    def test_job_completion_notification_off(self):
+        with session.begin():
+            job_owner = data_setup.create_user(notify_job=False)
+            job = data_setup.create_job(owner=job_owner)
+            session.flush()
+            data_setup.mark_job_complete(job)
+
+        self.assertEqual(len(self.mail_capture.captured_mails), 0)
+
+
 class GroupMembershipNotificationTest(DatabaseTestCase):
 
     def setUp(self):
@@ -316,6 +366,19 @@ class GroupMembershipNotificationTest(DatabaseTestCase):
             self.fail('Must fail or die')
         except ValueError, e:
             self.assert_('Unknown action' in str(e))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1136748
+    def test_group_membership_notification_off(self):
+        with session.begin():
+            owner = data_setup.create_user(notify_group=False)
+            member = data_setup.create_user(notify_group=False)
+
+            # group data_setup has not been changed, mail may sneak thru
+            group = data_setup.create_group(owner=owner)
+            group.add_member(member)
+
+        bkr.server.mail.group_membership_notify(member, group, owner, 'Added')
+        self.assertEqual(len(self.mail_capture.captured_mails), 0)
 
 
 class UsageReminderTest(DatabaseTestCase):

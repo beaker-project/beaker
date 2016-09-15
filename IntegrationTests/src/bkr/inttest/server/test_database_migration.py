@@ -987,3 +987,26 @@ class MigrationTest(unittest.TestCase):
             self.assertEquals(command_rows[1].updated,
                     datetime.datetime(2016, 9, 19, 11, 54, 7))
             self.assertEquals(command_rows[1].installation_id, None)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1136748
+    def test_email_prefs_set_for_current_users(self):
+        with self.migration_metadata.bind.connect() as connection:
+            # create the DB schema for beaker 23
+            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/23.sql'))
+
+            # insert synthetic data into tg_user
+            connection.execute(
+                "INSERT INTO tg_user (user_id, user_name, display_name, email_address, disabled, removed) "
+                "VALUES (2, 'bob', 'Bob', 'bob@example.com', 1, '2016-01-01 01:01:01')")
+
+        # run migration
+        upgrade_db(self.migration_metadata)
+        # check notifications have been set for bob
+        user = self.migration_session.query(User).all()
+
+        self.assertEquals(user[1].user_name, u'bob')
+
+        self.assertEquals(user[1].notify_job_completion, True)
+        self.assertEquals(user[1].notify_broken_system, True)
+        self.assertEquals(user[1].notify_group_membership, True)
+        self.assertEquals(user[1].notify_reservesys, True)

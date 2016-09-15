@@ -103,7 +103,8 @@ def create_labcontroller(fqdn=None, user=None):
     return lc
 
 def create_user(user_name=None, password=None, display_name=None,
-        email_address=None):
+        email_address=None, notify_job=True, notify_broken=True,
+        notify_group=True, notify_reserve=True):
     if user_name is None:
         user_name = unique_name(u'user%s')
     if display_name is None:
@@ -118,6 +119,10 @@ def create_user(user_name=None, password=None, display_name=None,
     user.openstack_username = user_name
     user.openstack_password = u'dummy_openstack_password_for_%s' % user_name
     user.openstack_tenant_name = u'Dummy Tenant for %s' % user_name
+    user.notify_job_completion = notify_job
+    user.notify_broken_system = notify_broken
+    user.notify_group_membership = notify_group
+    user.notify_reservesys = notify_reserve
     log.debug('Created user %r', user)
     return user
 

@@ -186,8 +186,98 @@ class UserPrefs(WebDriverTestCase):
         checkbox.click()
         pane.find_element_by_tag_name('form').submit()
         # When the button changes back to Save Changes it means it's finished saving
-        save_btn = pane.find_element_by_xpath('//button[text()="Save Changes"]')
-        self.assertFalse(save_btn.is_enabled())
+        pane.find_element_by_xpath('.//button[normalize-space(string(.))'
+                                   '="Save Changes" and @disabled=""]')
         with session.begin():
             session.refresh(self.user)
             self.assertEqual(self.user.use_old_job_page, False)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1136748
+    def test_set_job_completion_notify_off(self):
+        with session.begin():
+            self.user.notify_job_completion = True
+        b = self.browser
+        pane = self.go_to_prefs_tab('Notifications')
+        checkbox = pane.find_element_by_name('notify_job_completion')
+        self.assertTrue(checkbox.is_selected())
+        checkbox.click()
+        pane.find_element_by_tag_name('form').submit()
+        # When the button changes back to Save Changes it means it's finished saving
+        pane.find_element_by_xpath('.//button[normalize-space(string(.))'
+                                   '="Save Changes" and @disabled=""]')
+        with session.begin():
+            session.refresh(self.user)
+            self.assertEqual(self.user.notify_job_completion, False)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1136748
+    def test_set_broken_system_notify_off(self):
+        with session.begin():
+            self.user.notify_broken_system = True
+        b = self.browser
+        pane = self.go_to_prefs_tab('Notifications')
+        checkbox = pane.find_element_by_name('notify_broken_system')
+        self.assertTrue(checkbox.is_selected())
+        checkbox.click()
+        pane.find_element_by_tag_name('form').submit()
+        # When the button changes back to Save Changes it means it's finished saving
+        pane.find_element_by_xpath('.//button[normalize-space(string(.))'
+                                   '="Save Changes" and @disabled=""]')
+        with session.begin():
+            session.refresh(self.user)
+            self.assertEqual(self.user.notify_broken_system, False)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1136748
+    def test_set_group_modify_notify_off(self):
+        with session.begin():
+            self.user.notify_group_membership = True
+        b = self.browser
+        pane = self.go_to_prefs_tab('Notifications')
+        checkbox = pane.find_element_by_name('notify_group_membership')
+        self.assertTrue(checkbox.is_selected())
+        checkbox.click()
+        pane.find_element_by_tag_name('form').submit()
+        # When the button changes back to Save Changes it means it's finished saving
+        pane.find_element_by_xpath('.//button[normalize-space(string(.))'
+                                   '="Save Changes" and @disabled=""]')
+        with session.begin():
+            session.refresh(self.user)
+            self.assertEqual(self.user.notify_group_membership, False)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1136748
+    def test_set_system_reserved_notify_off(self):
+        with session.begin():
+            self.user.notify_reservesys = True
+        b = self.browser
+        pane = self.go_to_prefs_tab('Notifications')
+        checkbox = pane.find_element_by_name('notify_reservesys')
+        self.assertTrue(checkbox.is_selected())
+        checkbox.click()
+        pane.find_element_by_tag_name('form').submit()
+        # When the button changes back to Save Changes it means it's finished saving
+        pane.find_element_by_xpath('.//button[normalize-space(string(.))'
+                                   '="Save Changes" and @disabled=""]')
+        with session.begin():
+            session.refresh(self.user)
+            self.assertEqual(self.user.notify_reservesys, False)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1136748
+    def test_revert_notification_preferences(self):
+        with session.begin():
+            self.user.notify_job_completion = True
+            self.user.notify_broken_system = True
+            self.user.notify_group_membership = False
+            self.user.notify_reservesys = False
+        b = self.browser
+        pane = self.go_to_prefs_tab('Notifications')
+        checkbox_notify_job = pane.find_element_by_name('notify_job_completion')
+        self.assertTrue(checkbox_notify_job.is_selected())
+        checkbox_notify_job.click()
+        revert_btn = pane.find_element_by_xpath('.//button[normalize-space'
+                                                '(string(.))="Revert"]')
+        revert_btn.click()
+        with session.begin():
+            session.refresh(self.user)
+            self.assertEqual(self.user.notify_job_completion, True)
+            self.assertEqual(self.user.notify_broken_system, True)
+            self.assertEqual(self.user.notify_group_membership, False)
+            self.assertEqual(self.user.notify_reservesys, False)

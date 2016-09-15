@@ -2,8 +2,8 @@ User preferences
 ----------------
 
 The preferences page allows the user to configure their email address,
-submission delegates, SSH public keys, and root password for provisioned
-systems.
+notifications, user interface, submission delegates, SSH public keys,
+and root password for provisioned systems.
 
 Either a hashed password (in crypt format) or a cleartext password may
 be entered as a root password. If a plaintext password is entered, it

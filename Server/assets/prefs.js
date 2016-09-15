@@ -181,4 +181,63 @@ window.UserUIPreferencesView = Backbone.View.extend({
     },
 });
 
+window.UserNotificationsView = Backbone.View.extend({
+    template: JST['user-notifications'],
+    events: {
+        'click input': 'changed',
+        'submit form': 'submit',
+        'reset form': 'reset',
+    },
+    initialize: function() {
+        this.render();
+        this.listenTo(this.model, 'change', this.render);
+    },
+    render: function() {
+        this.$el.html(this.template(this.model.attributes));
+        var model = this.model;
+        this.$('input:checkbox').each(function (i, elem) {
+            $(elem).prop('checked', model.get(elem.name));
+        });
+        this.$('.form-actions button').prop('disabled', true);
+    },
+    changed: function() {
+        this.$('.form-actions button').prop('disabled', false);
+    },
+    submit: function(evt) {
+        evt.preventDefault();
+        this.$('.alert-error').remove();
+        this.$('.form-actions button').button('loading');
+        var $el = this.$el;
+        var attributes = {
+            'notify_job_completion': this.$(
+                'input[name=notify_job_completion]').is(':checked'),
+            'notify_broken_system': this.$(
+                'input[name=notify_broken_system]').is(':checked'),
+            'notify_group_membership': this.$(
+                'input[name=notify_group_membership]').is(':checked'),
+            'notify_reservesys': this.$(
+                'input[name=notify_reservesys]').is(':checked'),
+        };
+        this.model.save(attributes, {patch: true, wait: true})
+            .always(function () {
+                $el.find('.form-actions button').button('reset');
+            })
+            .fail(function (xhr) {
+                $el.append(alert_for_xhr(xhr));
+            })
+            .done(function (xhr) {
+                // Bootstrap's button reset happens in setTimeout for...
+                // questionable reasons, so we have to do the same here.
+                // https://github.com/twbs/bootstrap/issues/6242
+                setTimeout(function () {
+                    $el.find('.form-actions button').prop('disabled', true);
+                }, 0);
+            });
+    },
+    reset: function (evt) {
+        evt.preventDefault();
+        this.render();
+    },
+});
+
 })();

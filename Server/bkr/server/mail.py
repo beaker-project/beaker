@@ -51,17 +51,18 @@ def failed_recipes(job):
 
 def job_notify(job, sender=None):
     """ Send a completion notification to job owner, and to job CC list if any. """
-    if not sender:
-        sender = config.get('beaker_email')
-    if not sender:
-        log.warning("beaker_email not defined in app.cfg; unable to send mail")
-        return
-    send_mail(sender=sender, to=job.owner.email_address, cc=job.cc,
-              subject='[Beaker Job Completion] [%s/%s] %s%s%s' % (job.status,
-                    job.result, job.id, job.whiteboard and u': ' or u'', job.whiteboard or u''),
-              body=failed_recipes(job),
-              headers=[('X-Beaker-Notification', 'job-completion'),
-                       ('X-Beaker-Job-ID', job.id)])
+    if job.owner.notify_job_completion:
+        if not sender:
+            sender = config.get('beaker_email')
+        if not sender:
+            log.warning("beaker_email not defined in app.cfg; unable to send mail")
+            return
+        send_mail(sender=sender, to=job.owner.email_address, cc=job.cc,
+                  subject='[Beaker Job Completion] [%s/%s] %s%s%s' % (job.status,
+                        job.result, job.id, job.whiteboard and u': ' or u'', job.whiteboard or u''),
+                  body=failed_recipes(job),
+                  headers=[('X-Beaker-Notification', 'job-completion'),
+                           ('X-Beaker-Job-ID', job.id)])
 
 def _sender_details(user):
     return u'%s (via Beaker) <%s>' % (user.display_name, user.email_address)
@@ -124,81 +125,82 @@ def system_problem_report(system, description, recipe=None, reporter=None):
             cc=cc, headers=headers)
 
 def broken_system_notify(system, reason, recipe=None):
-    sender = config.get('beaker_email')
-    if not sender:
-        log.warning("beaker_email not defined in app.cfg; unable to send mail")
-        return
-    body = [_(u'Beaker has automatically marked system \n%s <%s> \nas broken, due to:')
-            % (system.fqdn, absolute_url('/view/%s' % system.fqdn)), '', reason, '',
-            unicode(_(u'Please investigate this error and take appropriate action.')), '']
-    if recipe:
-        body.extend([_(u'Failure occurred in %s <%s>') % (recipe.t_id,
-                absolute_url('/recipes/%s' % recipe.id)), ''])
-    if system.power:
-        body.extend([_(u'Power type: %s') % system.power.power_type.name,
-                     _(u'Power address: %s') % system.power.power_address,
-                     _(u'Power id: %s') % system.power.power_id])
-    send_mail(sender, system.owner.email_address,
-            _(u'System %s automatically marked broken') % system.fqdn,
-            '\n'.join(body),
-            cc=system.cc,
-            headers=[('X-Beaker-Notification', 'system-broken'),
-                     ('X-Beaker-System', system.fqdn),
-                     ('X-Lender', system.lender or ''),
-                     ('X-Owner', system.owner),
-                     ('X-Location', system.location or ''),
-                     ('X-Lab-Controller', system.lab_controller or ''),
-                     ('X-Vendor', system.vendor or ''),
-                     ('X-Type', system.type)] +
-                    [('X-Arch', arch) for arch in system.arch])
+    if system.owner.notify_broken_system:
+        sender = config.get('beaker_email')
+        if not sender:
+            log.warning("beaker_email not defined in app.cfg; unable to send mail")
+            return
+        body = [_(u'Beaker has automatically marked system \n%s <%s> \nas broken, due to:')
+                % (system.fqdn, absolute_url('/view/%s' % system.fqdn)), '', reason, '',
+                unicode(_(u'Please investigate this error and take appropriate action.')), '']
+        if recipe:
+            body.extend([_(u'Failure occurred in %s <%s>') % (recipe.t_id,
+                    absolute_url('/recipes/%s' % recipe.id)), ''])
+        if system.power:
+            body.extend([_(u'Power type: %s') % system.power.power_type.name,
+                         _(u'Power address: %s') % system.power.power_address,
+                         _(u'Power id: %s') % system.power.power_id])
+        send_mail(sender, system.owner.email_address,
+                _(u'System %s automatically marked broken') % system.fqdn,
+                '\n'.join(body),
+                cc=system.cc,
+                headers=[('X-Beaker-Notification', 'system-broken'),
+                         ('X-Beaker-System', system.fqdn),
+                         ('X-Lender', system.lender or ''),
+                         ('X-Owner', system.owner),
+                         ('X-Location', system.location or ''),
+                         ('X-Lab-Controller', system.lab_controller or ''),
+                         ('X-Vendor', system.vendor or ''),
+                         ('X-Type', system.type)] +
+                        [('X-Arch', arch) for arch in system.arch])
 
 
 def group_membership_notify(user, group, agent, action):
     """ Send a group membership change notification to the user """
+    if user.notify_group_membership:
+        sender = config.get('beaker_email')
+        if not sender:
+            log.warning("beaker_email not defined in app.cfg; unable to send mail")
+            return
 
-    sender = config.get('beaker_email')
-    if not sender:
-        log.warning("beaker_email not defined in app.cfg; unable to send mail")
-        return
-
-    email_data = {'Added': {'Subject':'Added to Beaker group %s' % group.group_name,
-                            'Body': 'You have been %s to %s group by %s <%s>.'
-                            % (action.lower(), group.group_name, agent.user_name, agent.email_address)
-                            },
-                  'Removed': {'Subject':'Removed from Beaker group %s' % group.group_name,
-                              'Body': 'You have been %s from %s group by %s <%s>.'
-                              % (action.lower(), group.group_name, agent.user_name, agent.email_address)
-                              }}
-    try:
-        subject = email_data[action]['Subject']
-        body = email_data[action]['Body']
-    except KeyError:
-        raise ValueError('Unknown action: %s. (Expected one of %r)' %
-                         (action, email_data.keys()))
-    else:
-        send_mail(sender=sender, to=user.email_address,
-                  subject='[Group Membership] %s' % subject,
-                  body=body,
-                  headers=[('X-Beaker-Notification', 'group-membership'),
-                           ('X-Beaker-Group', group.group_name),
-                           ('X-Beaker-Group-Action',action)])
+        email_data = {'Added': {'Subject':'Added to Beaker group %s' % group.group_name,
+                                'Body': 'You have been %s to %s group by %s <%s>.'
+                                % (action.lower(), group.group_name, agent.user_name, agent.email_address)
+                                },
+                      'Removed': {'Subject':'Removed from Beaker group %s' % group.group_name,
+                                  'Body': 'You have been %s from %s group by %s <%s>.'
+                                  % (action.lower(), group.group_name, agent.user_name, agent.email_address)
+                                  }}
+        try:
+            subject = email_data[action]['Subject']
+            body = email_data[action]['Body']
+        except KeyError:
+            raise ValueError('Unknown action: %s. (Expected one of %r)' %
+                             (action, email_data.keys()))
+        else:
+            send_mail(sender=sender, to=user.email_address,
+                      subject='[Group Membership] %s' % subject,
+                      body=body,
+                      headers=[('X-Beaker-Notification', 'group-membership'),
+                               ('X-Beaker-Group', group.group_name),
+                               ('X-Beaker-Group-Action',action)])
 
 def reservesys_notify(recipe):
     """ Send a system reservation notification to 
     job owner, and to job CC list if any. """
-
     job = recipe.recipeset.job
-    owner = job.owner.email_address
-    sender = config.get('beaker_email')
-    if not sender:
-        log.warning("beaker_email not defined in app.cfg; unable to send mail")
-        return
-    subject = '[Beaker System Reserved] %s' % recipe.resource.fqdn
-    template = template_env.get_template('reservesys.txt')
-    body = template.render(recipe=recipe, job=job, absolute_url=absolute_url)
-    send_mail(sender=sender, to=owner, cc=job.cc, subject=subject, body=body,
-              headers=[('X-Beaker-Notification', 'system-reservation'),
-                       ('X-Beaker-Job-ID', job.id)])
+    if job.owner.notify_reservesys:
+        owner = job.owner.email_address
+        sender = config.get('beaker_email')
+        if not sender:
+            log.warning("beaker_email not defined in app.cfg; unable to send mail")
+            return
+        subject = '[Beaker System Reserved] %s' % recipe.resource.fqdn
+        template = template_env.get_template('reservesys.txt')
+        body = template.render(recipe=recipe, job=job, absolute_url=absolute_url)
+        send_mail(sender=sender, to=owner, cc=job.cc, subject=subject, body=body,
+                  headers=[('X-Beaker-Notification', 'system-reservation'),
+                           ('X-Beaker-Job-ID', job.id)])
 
 def send_usage_reminder(user, data={}, testing=False):
     sender = config.get('beaker_email')
