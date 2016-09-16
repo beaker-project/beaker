@@ -60,6 +60,7 @@ class PowerTest(LabControllerTestCase):
         quiescent_period = get_conf().get('SLEEP_TIME') * 3
         with session.begin():
             system = data_setup.create_system(lab_controller=self.get_lc())
+            self.addCleanup(self.cleanup_system, system)
             system.power.power_type = PowerType.lazy_create(name=u'dummy')
             system.power.power_quiescent_period = quiescent_period
             system.power.power_id = u'' # make power script not sleep
@@ -73,6 +74,7 @@ class PowerTest(LabControllerTestCase):
         quiescent_period = 3
         with session.begin():
             system = data_setup.create_system(lab_controller=self.get_lc())
+            self.addCleanup(self.cleanup_system, system)
             system.power.power_type = PowerType.lazy_create(name=u'dummy')
             system.power.power_quiescent_period = quiescent_period
             system.power.power_id = u'' # make power script not sleep
@@ -96,6 +98,7 @@ class PowerTest(LabControllerTestCase):
             provision_process.start_output_capture()
             with session.begin():
                 system = data_setup.create_system(lab_controller=self.get_lc())
+                self.addCleanup(self.cleanup_system, system)
                 system.power.power_type = PowerType.lazy_create(name=u'dummy')
                 system.power.power_quiescent_period = 1
                 system.power.power_id = u'' # make power script not sleep
@@ -129,6 +132,7 @@ class PowerTest(LabControllerTestCase):
             provision_process.start_output_capture()
             with session.begin():
                 system = data_setup.create_system(lab_controller=self.get_lc())
+                self.addCleanup(self.cleanup_system, system)
                 system.power.power_type = PowerType.lazy_create(name=u'dummy')
                 system.power.power_quiescent_period = 1
                 system.power.power_id = u'' # make power script not sleep
@@ -164,6 +168,7 @@ class PowerTest(LabControllerTestCase):
         assert 2 * power_sleep > get_conf().get('SLEEP_TIME')
         with session.begin():
             system = data_setup.create_system(lab_controller=self.get_lc())
+            self.addCleanup(self.cleanup_system, system)
             system.power.power_type = PowerType.lazy_create(name=u'dummy')
             system.power.power_id = power_sleep # make power script sleep
             system.action_power(action=u'off', service=u'testdata')
@@ -189,6 +194,7 @@ class PowerTest(LabControllerTestCase):
             provision_process.start_output_capture()
             with session.begin():
                 system = data_setup.create_system(lab_controller=self.get_lc())
+                self.addCleanup(self.cleanup_system, system)
                 system.power.address = None
                 system.power.power_type = PowerType.lazy_create(name=u'dummy')
                 system.power.power_id = u'' # make power script not sleep
@@ -210,6 +216,7 @@ class PowerTest(LabControllerTestCase):
             provision_process.start_output_capture()
             with session.begin():
                 system = data_setup.create_system(lab_controller=self.get_lc())
+                self.addCleanup(self.cleanup_system, system)
                 system.power.power_type = PowerType.lazy_create(name=u'dummy')
                 system.power.power_id = u'' # make power script not sleep
                 system.power.power_passwd = u'dontleakmebro'
@@ -225,6 +232,7 @@ class PowerTest(LabControllerTestCase):
     def test_power_passwords_are_not_reported_in_failure_message(self):
         with session.begin():
             system = data_setup.create_system(lab_controller=self.get_lc())
+            self.addCleanup(self.cleanup_system, system)
             system.power.power_type = PowerType.lazy_create(name=u'testing-bz1358063')
             system.power.power_passwd = u'dontleakmebro'
             system.power.quiescent_period = 0
@@ -255,6 +263,7 @@ class ConfigureNetbootTest(LabControllerTestCase):
         with session.begin():
             lc = self.get_lc()
             system = data_setup.create_system(arch=u'x86_64', lab_controller=lc)
+            self.addCleanup(self.cleanup_system, system)
             distro_tree = data_setup.create_distro_tree(arch=u'x86_64',
                     lab_controllers=[lc],
                     # /slow/600 means the response will be delayed 10 minutes

@@ -49,7 +49,8 @@ class WatchdogConsoleLogTest(TestHelper):
         with session.begin():
             self.system = data_setup.create_system(lab_controller=self.get_lc())
             self.recipe = data_setup.create_recipe()
-            data_setup.create_job_for_recipes([self.recipe])
+            job = data_setup.create_job_for_recipes([self.recipe])
+            self.addCleanup(self.cleanup_job, job)
             data_setup.mark_recipe_installing(self.recipe, system=self.system)
         self.console_log = os.path.join(get_conf().get('CONSOLE_LOGS'), self.system.fqdn)
         self.cached_console_log = os.path.join(get_conf().get('CACHEPATH'), 'recipes',
@@ -220,7 +221,8 @@ class WatchdogVirtConsoleLogTest(TestHelper):
         with session.begin():
             self.watchdog = Watchdog()
             self.recipe = data_setup.create_recipe()
-            data_setup.create_job_for_recipes([self.recipe])
+            job = data_setup.create_job_for_recipes([self.recipe])
+            self.addCleanup(self.cleanup_job, job)
             data_setup.mark_recipe_running(self.recipe, virt=True, lab_controller=self.get_lc())
             self.cached_console_log = os.path.join(get_conf().get('CACHEPATH'),
                                                    'recipes',

@@ -248,8 +248,8 @@ class Watchdog(DeclarativeMappedObject):
         return watchdog_query
 
     def __repr__(self):
-        return '%s(id=%r, kill_time=%r)' % (self.__class__.__name__,
-                self.id, self.kill_time)
+        return '%s(id=%r, recipe_id=%r, kill_time=%r)' % (self.__class__.__name__,
+                self.id, self.recipe_id, self.kill_time)
 
 
 class Log(object):

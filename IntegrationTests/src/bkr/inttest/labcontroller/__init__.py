@@ -12,7 +12,8 @@ from socket import gethostname
 from urlparse import urlparse, urlunparse
 from bkr.labcontroller.config import load_conf, get_conf
 from turbogears.database import session
-from bkr.server.model import LabController
+from bkr.server.model import LabController, Watchdog, Recipe, RecipeSet, \
+        System, SystemStatus
 from bkr.inttest import data_setup, Process, DatabaseTestCase
 log = logging.getLogger(__name__)
 
@@ -32,9 +33,9 @@ def daemons_running_externally():
 
 class LabControllerTestCase(DatabaseTestCase):
 
-    @staticmethod
-    def get_lc_fqdn():
-        return lc_fqdn
+    def __init__(self, *args, **kwargs):
+        super(LabControllerTestCase, self).__init__(*args, **kwargs)
+        self.addCleanup(self._check_lc_leaks)
 
     @staticmethod
     def get_lc():
@@ -49,6 +50,50 @@ class LabControllerTestCase(DatabaseTestCase):
         protocol = get_conf().get('URL_SCHEME', 'http')
         server_name = get_conf().get_url_domain()
         return '%s://%s' % (protocol, server_name)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1336272
+    def _check_lc_leaks(self):
+        with session.begin():
+            lc = LabController.by_name(lc_fqdn)
+            # check for outstanding watchdogs
+            watchdogs = Watchdog.query\
+                .join(Watchdog.recipe).join(Recipe.recipeset)\
+                .filter(RecipeSet.lab_controller == lc)
+            if watchdogs.count():
+                # If your test case hits this error, you need to fix it so that 
+                # any running recipes are cancelled otherwise beaker-watchdog 
+                # will eventually pick them up and abort them, interfering with 
+                # some later test.
+                raise AssertionError('Leaked watchdogs for %s: %s'
+                        % (lc_fqdn, watchdogs.all()))
+            # check for systems left associated to the LC
+            systems = System.query.filter(System.lab_controller == lc)
+            if systems.count():
+                # If your test case hits this error, you need to fix it so that 
+                # any systems which were associated to the LC are 
+                # de-associated, otherwise subsequent tests which invoke the 
+                # scheduler will try to schedule recipes onto the system and 
+                # then beaker-provision will start trying to run the 
+                # provisioning commands.
+                raise AssertionError('Leaked systems for %s: %s'
+                        % (lc_fqdn, systems.all()))
+
+    # Helper methods for ensuring the above conditions are met:
+
+    def cleanup_system(self, system):
+        with session.begin():
+            system.status = SystemStatus.removed
+            system.lab_controller = None
+
+    def cleanup_job(self, job):
+        with session.begin():
+            job.cancel(msg=u'Cancelled by cleanup_job in tests')
+            job.update_status()
+            session.flush()
+            for recipe in job.all_recipes:
+                if hasattr(recipe.resource, 'system'):
+                    recipe.resource.system.status = SystemStatus.removed
+                    recipe.resource.system.lab_controller = None
 
 def setup_package():
     global lc_fqdn, _daemons_running_externally

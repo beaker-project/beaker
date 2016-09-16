@@ -34,6 +34,7 @@ class GetRecipeGuestXML(LabControllerTestCase):
             self.job = data_setup.create_running_job(num_recipes=1,
                     num_guestrecipes=1,
                     lab_controller=self.get_lc())
+            self.addCleanup(self.cleanup_job, self.job)
             self.system_recipe = self.job.recipesets[0].recipes[0]
             self.guest_recipe = self.job.recipesets[0].recipes[0].guests[0]
 
@@ -642,7 +643,8 @@ class PostrebootTest(LabControllerTestCase):
         with session.begin():
             self.system = data_setup.create_system(lab_controller=self.get_lc())
             self.recipe = data_setup.create_recipe()
-            data_setup.create_job_for_recipes([self.recipe])
+            job = data_setup.create_job_for_recipes([self.recipe])
+            self.addCleanup(self.cleanup_job, job)
             data_setup.mark_recipe_running(self.recipe, system=self.system)
 
     def test_postreboot(self):
