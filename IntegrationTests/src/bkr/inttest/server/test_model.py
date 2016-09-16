@@ -1949,6 +1949,8 @@ class CheckDynamicVirtTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
+        self.user = data_setup.create_user()
+        self.user.openstack_trust_id = u'dummpy_openstack_trust_id_%s' % self.user
 
     def tearDown(self):
         session.commit()
@@ -1965,7 +1967,8 @@ class CheckDynamicVirtTest(DatabaseTestCase):
     def test_virt_precluded_guest_recipes(self):
         for arch in [u"i386", u"x86_64"]:
             dt = data_setup.create_distro_tree(arch=arch)
-            job = data_setup.create_job(num_guestrecipes=1, distro_tree=dt)
+            job = data_setup.create_job(num_guestrecipes=1, distro_tree=dt,
+                    owner=self.user)
             recipe = job.recipesets[0].recipes[0]
             self.assertVirtPrecluded(recipe, "Guest recipe did not preclude virt")
 
@@ -1974,7 +1977,7 @@ class CheckDynamicVirtTest(DatabaseTestCase):
             dt = data_setup.create_distro_tree(arch=arch)
             recipe1 = data_setup.create_recipe(dt)
             recipe2 = data_setup.create_recipe(dt)
-            data_setup.create_job_for_recipes([recipe1, recipe2])
+            data_setup.create_job_for_recipes([recipe1, recipe2], owner=self.user)
             self.assertVirtPrecluded(recipe1,
                                     "Multihost recipeset did not preclude virt")
             self.assertVirtPrecluded(recipe2,
@@ -1989,7 +1992,7 @@ class CheckDynamicVirtTest(DatabaseTestCase):
                     <system_type op="=" value="Prototype" />
                 </hostRequires>
             """
-            data_setup.create_job_for_recipes([recipe])
+            data_setup.create_job_for_recipes([recipe], owner=self.user)
             self.assertVirtPrecluded(recipe, "Host requires did not preclude virt")
 
     def test_hypervisor_hostrequires_precludes_virt(self):
@@ -1999,7 +2002,7 @@ class CheckDynamicVirtTest(DatabaseTestCase):
                 <hypervisor value="" />
             </hostRequires>
         """
-        data_setup.create_job_for_recipes([recipe])
+        data_setup.create_job_for_recipes([recipe], owner=self.user)
         self.assertVirtPrecluded(recipe, "<hypervisor/> did not preclude virt")
 
     # Additional virt check due to https://bugzilla.redhat.com/show_bug.cgi?id=907307
@@ -2007,14 +2010,14 @@ class CheckDynamicVirtTest(DatabaseTestCase):
         for arch in [u"i386", u"x86_64"]:
             dt = data_setup.create_distro_tree(arch=arch)
             recipe = data_setup.create_recipe(dt)
-            data_setup.create_job_for_recipes([recipe])
+            data_setup.create_job_for_recipes([recipe], owner=self.user)
             self.assertVirtPossible(recipe, "virt precluded for %s" % arch)
 
     def test_virt_precluded_unsupported_arch(self):
         for arch in [u"ppc", u"ppc64", u"s390", u"s390x"]:
             dt = data_setup.create_distro_tree(arch=arch)
             recipe = data_setup.create_recipe(dt)
-            data_setup.create_job_for_recipes([recipe])
+            data_setup.create_job_for_recipes([recipe], owner=self.user)
             msg = "%s did not preclude virt" % arch
             self.assertVirtPrecluded(recipe, msg)
 
@@ -2022,7 +2025,7 @@ class CheckDynamicVirtTest(DatabaseTestCase):
     def test_hostRequires_force_precludes_virt(self):
         recipe = data_setup.create_recipe()
         recipe.host_requires = u'<hostRequires force="somesystem.example.invalid"/>'
-        data_setup.create_job_for_recipes([recipe])
+        data_setup.create_job_for_recipes([recipe], owner=self.user)
         self.assertVirtPrecluded(recipe, 'force="" should preclude virt')
 
 

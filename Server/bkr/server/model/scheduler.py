@@ -3095,10 +3095,8 @@ class MachineRecipe(Recipe):
         """
         Decide whether this recipe can be run as a virt guest
         """
-        # The job owner needs to have supplied their OpenStack credentials
-        if (not self.recipeset.job.owner.openstack_username
-                or not self.recipeset.job.owner.openstack_password
-                or not self.recipeset.job.owner.openstack_tenant_name):
+        # The job owner needs to create a Keystone trust
+        if not self.recipeset.job.owner.openstack_trust_id:
             return RecipeVirtStatus.skipped
         # OpenStack is i386/x86_64 only
         if self.distro_tree.arch.arch not in [u'i386', u'x86_64']:

@@ -7,13 +7,15 @@
 import sys
 import logging
 import time
-import os.path
 import uuid
-import tempfile
-import subprocess
 from turbogears import config
 try:
-    import novaclient.client
+    import keystoneclient
+    has_keystoneclient = True
+except ImportError:
+    has_keystoneclient = False
+try:
+    from novaclient import client as nova_client
     has_novaclient = True
 except ImportError:
     has_novaclient = False
@@ -22,13 +24,7 @@ try:
     has_neutronclient = True
 except ImportError:
     has_neutronclient = False
-from sqlalchemy.orm.exc import NoResultFound
-from bkr.server.util import absolute_url
-from bkr.server.model.types import ImageType
-from bkr.server.model.distrolibrary import KernelType
-from bkr.server.model.lab import LabController
-from bkr.server.model.openstack import OpenStackRegion
-from bkr.server.model import ConfigItem, VirtResource
+from bkr.server.model import ConfigItem, VirtResource, OpenStackRegion
 
 
 log = logging.getLogger(__name__)
@@ -36,41 +32,65 @@ log = logging.getLogger(__name__)
 class VirtManager(object):
 
     def __init__(self, user):
-        auth_url = config.get('openstack.identity_api_url')
-        if not auth_url:
-            raise RuntimeError('OpenStack Identity API URL '
-                    'was not configured in openstack.identity_api_url setting')
+        self.user = user
+        self.auth_url = config.get('openstack.identity_api_url')
+        self.beaker_os_username = config.get('openstack.username')
+        self.beaker_os_password = config.get('openstack.password')
         # For now we just support a single region, in future this could be expanded.
         self.region = OpenStackRegion.query.first()
-        if not self.region:
-            raise RuntimeError('No region defined in openstack_region table')
+        self._do_sanity_check()
         self.lab_controller = self.region.lab_controller
+        keystone_session = self._create_keystone_session()
+        self.keystoneclient = keystoneclient.v3.client.Client(session=keystone_session)
+        self.novaclient = nova_client.Client('2', session=keystone_session)
+        self.neutronclient = neutron_client.Client(session=keystone_session)
+
+    def _do_sanity_check(self):
+        if not self.auth_url:
+            raise RuntimeError('OpenStack Identity API URL '
+                    'was not configured in openstack.identity_api_url setting')
         if not has_novaclient:
             raise RuntimeError('Openstack was configured, but python-novaclient '
                     'is not installed')
-        self.nova = novaclient.client.Client('2',
-                user.openstack_username,
-                user.openstack_password,
-                user.openstack_tenant_name,
-                auth_url)
         if not has_neutronclient:
             raise RuntimeError('Openstack was configured, but python-neutronclient '
                     'is not installed')
-        self.neutron = neutron_client.Client(
-                username=user.openstack_username,
-                password=user.openstack_password,
-                tenant_name=user.openstack_tenant_name,
-                auth_url=auth_url)
+        if not has_novaclient:
+            raise RuntimeError('Openstack was configured, but python-novaclient '
+                    'is not installed')
+        if not has_keystoneclient:
+            raise RuntimeError('Openstack was configured, but python-keystoneclient '
+                    'is not installed')
+        if not self.beaker_os_username and not self.beaker_os_password:
+            raise RuntimeError('Openstack was configured, but Beaker\'s OpenStack '
+                    'account was not configured')
+        if not self.region:
+            raise RuntimeError('No region defined in openstack_region table')
+
+        if not self.user.openstack_trust_id:
+            raise RuntimeError('No Keystone trust created by %s' % self.user)
+
+    def _create_keystone_session(self):
+        auth = keystoneclient.auth.identity.v3.Password(
+                   username=self.beaker_os_username,
+                   password=self.beaker_os_password,
+                   user_domain_id=u'default',
+                   auth_url=self.auth_url,
+                   trust_id=self.user.openstack_trust_id)
+        session = keystoneclient.session.Session(auth=auth)
+        # ensure this session is valid by getting a token
+        auth.get_token(session)
+        return session
 
     def available_flavors(self):
-        return self.nova.flavors.list()
+        return self.novaclient.flavors.list()
 
     def create_vm(self, name, flavor):
         image_id = self.region.ipxe_image_id
         if not image_id:
             raise RuntimeError('iPXE image has not been uploaded')
-        with VirtNetwork(self.neutron, name) as net:
-            instance = self.nova.servers.create(name, image_id, flavor,
+        with VirtNetwork(self.neutronclient, name) as net:
+            instance = self.novaclient.servers.create(name, image_id, flavor,
                     nics=[{'net-id': net.network_id}])
             log.info('Created %r', instance)
             try:
@@ -114,18 +134,36 @@ class VirtManager(object):
                     % (instance, instance.status))
 
     def start_vm(self, instance_id):
-        self.nova.servers.start(instance_id)
+        self.novaclient.servers.start(instance_id)
 
     def destroy_vm(self, vm):
-        self.nova.servers.delete(vm.instance_id)
-        self.neutron.remove_interface_router(str(vm.router_id),
+        self.novaclient.servers.delete(vm.instance_id)
+        self.neutronclient.remove_interface_router(str(vm.router_id),
                 {'subnet_id': str(vm.subnet_id)})
-        self.neutron.delete_router(str(vm.router_id))
-        self.neutron.delete_network(str(vm.network_id))
+        self.neutronclient.delete_router(str(vm.router_id))
+        self.neutronclient.delete_network(str(vm.network_id))
 
     def get_console_output(self, instance_id, length):
-        return self.nova.servers.get_console_output(instance_id, length)
+        return self.novaclient.servers.get_console_output(instance_id,
+                length)
 
+    def delete_keystone_trust(self):
+        self.keystoneclient.trusts.delete(self.user.openstack_trust_id)
+
+def create_keystone_trust(username, password, project_name):
+    auth_url = config.get('openstack.identity_api_url')
+    trustor = keystoneclient.v3.client.Client(username=username,
+            password=password, project_name=project_name, auth_url=auth_url)
+    trustee = keystoneclient.v3.client.Client(
+            username=config.get('openstack.username'),
+            password=config.get('openstack.password'),
+            auth_url=auth_url)
+    trust = trustor.trusts.create(trustor_user=trustor.user_id,
+                                  trustee_user=trustee.user_id,
+                                  role_names=trustor.auth_ref.role_names,
+                                  impersonation=True,
+                                  project=trustor.project_id)
+    return trust.id
 
 class VirtNetwork(object):
     """

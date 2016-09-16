@@ -116,9 +116,6 @@ def create_user(user_name=None, password=None, display_name=None,
     user.email_address = email_address
     if password:
         user.password = password
-    user.openstack_username = user_name
-    user.openstack_password = u'dummy_openstack_password_for_%s' % user_name
-    user.openstack_tenant_name = u'Dummy Tenant for %s' % user_name
     user.notify_job_completion = notify_job_completion
     user.notify_broken_system = notify_broken_system
     user.notify_group_membership = notify_group_membership

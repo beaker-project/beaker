@@ -1909,7 +1909,9 @@ class TestBeakerdMetrics(DatabaseTestCase):
             data_setup.create_system(arch=arch, lab_controller=lc, shared=True)
             dt = data_setup.create_distro_tree(arch=arch)
             recipe = data_setup.create_recipe(distro_tree=dt)
-            data_setup.create_job_for_recipes([recipe])
+            user = data_setup.create_user()
+            user.openstack_trust_id = u'dummpy_openstack_trust_id_%s' % user
+            data_setup.create_job_for_recipes([recipe], owner=user)
             recipes.append(recipe)
             expected['gauges.recipes_new.all'] += 1
             expected['gauges.recipes_new.dynamic_virt_possible'] += 1
