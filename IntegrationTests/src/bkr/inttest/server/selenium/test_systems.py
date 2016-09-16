@@ -50,7 +50,10 @@ class TestSystemsGrid(WebDriverTestCase):
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('System/Name')
         b.find_element_by_link_text('Toggle Result Columns').click()
+        wait_for_animation(b, '#selectablecolumns')
         b.find_element_by_link_text('Select All').click()
+        # Wait for checkboxes to be checked
+        b.find_element_by_css_selector('#selectablecolumns input:checked')
         b.find_element_by_id('searchform').submit()
         # Wait for the new page to load (the row header changes from Name to
         # System-Name when all columns are shown)
@@ -243,6 +246,7 @@ class TestSystemsGridSorting(WebDriverTestCase):
         self.go_to_search_results()
         b = self.browser
         b.find_element_by_link_text('Toggle Result Columns').click()
+        wait_for_animation(b, '#selectablecolumns')
         b.find_element_by_name('systemsearch_column_System/Reserved').click()
         b.find_element_by_id('searchform').submit()
         self.check_column_sort('Reserved')

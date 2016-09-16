@@ -355,6 +355,26 @@ class TestUpdateStatusReserved(DatabaseTestCase):
         self.assertEqual(job.recipesets[0].recipes[0].status,
                          TaskStatus.aborted)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1375035
+    def test_reserves_system_when_recipe_waiting(self):
+        recipe = data_setup.create_recipe(
+            task_list=[Task.by_name(u'/distribution/utils/dummy')],
+            reservesys=True)
+        job = data_setup.create_job_for_recipes([recipe])
+        # Anaconda installs the OS (Status: Installing) and reboots
+        # beakerd comes along and calls update_dirty_jobs which sets the recipe to: Waiting
+        data_setup.mark_recipe_waiting(recipe)
+        # In the meantime however our task has finished really quickly, which
+        # means the min_status is TaskStatus.completed and therefore finished
+        data_setup.mark_recipe_tasks_finished(recipe, only=True)
+        # beakerd hasn't come along and updated our recipe yet, so it's still
+        # in waiting
+        self.assertEqual(job.recipesets[0].recipes[0].status, TaskStatus.waiting)
+        # Now beakerd updates it and should reserve our system
+        job.update_status()
+        self.assertEqual(job.recipesets[0].recipes[0].status, TaskStatus.reserved)
+
+
 class ConcurrentUpdateTest(DatabaseTestCase):
 
     @classmethod

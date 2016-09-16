@@ -513,7 +513,7 @@ class JobMatrixReport(Form):
     def __init__(self,*args,**kw):
         super(JobMatrixReport,self).__init__(*args, **kw)
         self.class_name = self.__class__.__name__
-        self.nack_list = CheckBoxList("Hide naks",validator=self.default_validator)
+        self.nack_list = CheckBoxList("Hide waived",validator=self.default_validator)
         self.whiteboard = MultipleSelectField('whiteboard', label='Whiteboard', attrs={'size':5, 'class':'whiteboard'}, validator=self.default_validator)
         self.job_ids = TextArea('job_ids',label='Job ID', rows=7,cols=7, validator=self.default_validator)
         self.whiteboard_filter = TextField('whiteboard_filter', label='Filter by')

@@ -25,7 +25,7 @@ window.Job = Backbone.Model.extend({
         });
     },
     toHTML: function () {
-        return JST['job-toHTML'](this.attributes);
+        return JST['job-toHTML'](this.attributes).trim();
     },
     parse: function (data) {
         var job = this;
@@ -287,7 +287,7 @@ window.Recipe = Backbone.Model.extend({
         return data;
     },
     toHTML: function () {
-        return JST['recipe-toHTML'](this.attributes);
+        return JST['recipe-toHTML'](this.attributes).trim();
     },
     update_reservation: function (kill_time) {
         var model = this;

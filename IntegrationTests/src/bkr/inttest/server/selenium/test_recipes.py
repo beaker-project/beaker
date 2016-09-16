@@ -239,7 +239,7 @@ class TestRecipeView(WebDriverTestCase):
         go_to_recipe_view(b, guest, tab='Installation')
         summary = b.find_element_by_xpath('//div[@class="recipe-summary"]/p[2]').text
         b.find_element_by_xpath('//div[@id="installation"]//button[text()="Settings"]').click()
-        self.assertIn('Guest recipe hosted by %s' % guest.hostrecipe.t_id, summary)
+        self.assertIn('Guest recipe hosted by %s.' % guest.hostrecipe.t_id, summary)
         self.assertEqual(
                 b.find_element_by_xpath('//div[@class="recipe-installation-settings"]'
                     '/div[preceding-sibling::h4/text()="Guest Name"]/code').text,
