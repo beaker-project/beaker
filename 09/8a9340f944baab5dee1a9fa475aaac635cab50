@@ -1,0 +1,9 @@
+Ready-for-Checks+1: dong wang <dowang@redhat.com>
+Code-Review+1: Dan Callaghan <dcallagh@redhat.com>
+Code-Review+2: Matt Jia <mjia@redhat.com>
+Verified+1: dong wang <dowang@redhat.com>
+Submitted-by: dong wang <dowang@redhat.com>
+Submitted-at: Sun, 18 Sep 2016 01:39:52 +0000
+Reviewed-on: http://gerrit.beaker-project.org/5189
+Project: beaker
+Branch: refs/heads/develop
