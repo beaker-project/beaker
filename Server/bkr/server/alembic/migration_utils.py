@@ -54,11 +54,22 @@ def find_index(table, columns):
         if info['column_names'] == columns:
             return info['name']
 
+def drop_index(table, columns):
+    index_name = find_index(table, columns)
+    if index_name is None:
+        raise RuntimeError('Index on table %s columns %s does not exist'
+                % (table, columns))
+    op.drop_index(index_name, table)
+
 def drop_fk(table,columns):
     """
     Find and drop the forign key constraint which applies to the given columns.
     """
-    op.drop_constraint(find_fk(table, columns), table, type_='foreignkey')
+    constraint_name = find_fk(table, columns)
+    if constraint_name is None:
+        raise RuntimeError('Foreign key on table %s columns %s does not exist'
+                % (table, columns))
+    op.drop_constraint(constraint_name, table, type_='foreignkey')
 
 # When altering a MySQL ENUM column to add a new value, we can only add it at 
 # the end. Similarly values can only be removed from the end. The enum values 

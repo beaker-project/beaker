@@ -16,6 +16,7 @@ down_revision = '3c5510511fd9'
 
 from alembic import op
 from sqlalchemy import Column, Integer, Unicode, UnicodeText, DateTime, ForeignKey
+from bkr.server.alembic.migration_utils import drop_fk
 
 def upgrade():
     op.create_table('installation',
@@ -163,9 +164,6 @@ def downgrade():
         SET virt_resource.kernel_options = installation.kernel_options
         """)
 
-    op.execute("""
-        ALTER TABLE command_queue
-        DROP FOREIGN KEY command_queue_installation_id_fk,
-        DROP COLUMN installation_id
-        """)
+    drop_fk('command_queue', ['installation_id'])
+    op.drop_column('command_queue', 'installation_id')
     op.drop_table('installation')

@@ -887,6 +887,14 @@ class MigrationTest(unittest.TestCase):
             connection.execute(
                     "INSERT INTO command_queue (id, system_id, status, updated, quiescent_period) "
                     "VALUES (1, 1, 'Failed', '2016-08-11 16:47:56', 5)")
+            # add an unrelated system activity (id 2 will conflict with the new command below)
+            connection.execute(
+                    "INSERT INTO activity (id, user_id, created, type, field_name, "
+                    "   service, action, old_value, new_value) "
+                    "VALUES (2, 1, '2016-08-31 00:00:00', 'system_activity', 'Loaned', "
+                    "   'HTTP', 'Changed', 'bob', 'fred')")
+            connection.execute(
+                    "INSERT INTO system_activity (id, system_id) VALUES (2, 1)")
         # run migration
         upgrade_db(self.migration_metadata)
         # command should be correctly populated
@@ -903,17 +911,60 @@ class MigrationTest(unittest.TestCase):
                 u'ValueError: Power script /usr/lib/python2.6/site-packages/bk')
         # old activity row should be gone
         self.assertIsNone(self.migration_session.query(Activity).filter_by(id=1).first())
+        # insert a new command after upgrade, as if Beaker has been running for a while
+        # (the downgrade has to cope with this properly:
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1376650)
+        with self.migration_session.begin():
+            new_command = Command(user_id=1, service=u'testdata', system_id=1,
+                    action=u'off', status=CommandStatus.running,
+                    quiescent_period=3,
+                    queue_time=datetime.datetime(2016, 9, 19, 11, 54, 7),
+                    start_time=datetime.datetime(2016, 9, 19, 11, 54, 27))
+            self.migration_session.add(new_command)
+            self.migration_session.flush()
+            self.assertEquals(new_command.id, 2)
         # downgrade back to 23
         downgrade_db(self.migration_metadata, '23')
-        # old activity should be correctly populated
+        # old activity and command_queue should be correctly populated
         with self.migration_metadata.bind.connect() as connection:
-            activity_row, = connection.execute('SELECT * FROM activity WHERE id = 1')
-            self.assertEquals(activity_row.user_id, 1)
-            self.assertEquals(activity_row.created,
+            activity_rows = connection.execute('SELECT * FROM activity ORDER BY id').fetchall()
+            self.assertEquals(len(activity_rows), 3)
+            self.assertEquals(activity_rows[0].id, 1)
+            self.assertEquals(activity_rows[0].user_id, 1)
+            self.assertEquals(activity_rows[0].created,
                     datetime.datetime(2016, 8, 11, 16, 47, 56))
-            self.assertEquals(activity_row.type, u'command_activity')
-            self.assertEquals(activity_row.field_name, u'Command')
-            self.assertEquals(activity_row.service, u'Scheduler')
-            self.assertEquals(activity_row.old_value, u'')
-            self.assertEquals(activity_row.new_value,
+            self.assertEquals(activity_rows[0].type, u'command_activity')
+            self.assertEquals(activity_rows[0].field_name, u'Command')
+            self.assertEquals(activity_rows[0].service, u'Scheduler')
+            self.assertEquals(activity_rows[0].action, u'on')
+            self.assertEquals(activity_rows[0].old_value, u'')
+            self.assertEquals(activity_rows[0].new_value,
                     u'ValueError: Power script /usr/lib/python2.6/site-packages/bk')
+            self.assertEquals(activity_rows[2].id, 3)
+            self.assertEquals(activity_rows[2].user_id, 1)
+            self.assertEquals(activity_rows[2].created,
+                    datetime.datetime(2016, 9, 19, 11, 54, 7))
+            self.assertEquals(activity_rows[2].type, u'command_activity')
+            self.assertEquals(activity_rows[2].field_name, u'Command')
+            self.assertEquals(activity_rows[2].service, u'testdata')
+            self.assertEquals(activity_rows[2].action, u'off')
+            self.assertEquals(activity_rows[2].old_value, u'')
+            self.assertEquals(activity_rows[2].new_value, u'')
+            command_rows = connection.execute('SELECT * FROM command_queue ORDER BY id').fetchall()
+            self.assertEquals(len(command_rows), 2)
+            self.assertEquals(command_rows[0].id, 1)
+            self.assertEquals(command_rows[0].system_id, 1)
+            self.assertEquals(command_rows[0].status, u'Failed')
+            self.assertEquals(command_rows[0].delay_until, None)
+            self.assertEquals(command_rows[0].quiescent_period, 5)
+            self.assertEquals(command_rows[0].updated,
+                    datetime.datetime(2016, 8, 11, 16, 47, 56))
+            self.assertEquals(command_rows[0].installation_id, None)
+            self.assertEquals(command_rows[1].id, 3) # not 2, due to renumbering
+            self.assertEquals(command_rows[1].system_id, 1)
+            self.assertEquals(command_rows[1].status, u'Running')
+            self.assertEquals(command_rows[1].delay_until, None)
+            self.assertEquals(command_rows[1].quiescent_period, 3)
+            self.assertEquals(command_rows[1].updated,
+                    datetime.datetime(2016, 9, 19, 11, 54, 7))
+            self.assertEquals(command_rows[1].installation_id, None)

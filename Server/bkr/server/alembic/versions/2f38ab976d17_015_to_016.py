@@ -18,7 +18,7 @@ down_revision = '49a4a1e3779a'
 from alembic import op
 import sqlalchemy as sa
 from bkr.server.alembic.migration_utils import add_enum_value, drop_enum_value, \
-    drop_fk
+    drop_fk, drop_index
 
 def upgrade():
     op.execute("""
@@ -83,7 +83,7 @@ def downgrade():
     op.execute("DELETE FROM system_access_policy_rule WHERE permission = 'view'")
     drop_enum_value('system_access_policy_rule', 'permission', 'view', nullable=False)
     op.drop_column('command_queue', 'quiescent_period')
-    op.drop_index('status', 'command_queue')
+    drop_index('command_queue', ['status'])
     op.drop_column('power', 'power_quiescent_period')
     op.alter_column('tg_user', 'password', type_=sa.Unicode(40))
     op.execute("ALTER TABLE beaker_tag DROP PRIMARY KEY, ADD PRIMARY KEY (id, tag)")
