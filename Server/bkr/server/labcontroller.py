@@ -559,7 +559,7 @@ class LabControllers(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.in_group('lab_controller'))
-    def mark_command_failed(self, command_id, message=None):
+    def mark_command_failed(self, command_id, message=None, system_broken=True):
         lab_controller = identity.current.user.lab_controller
         cmd = CommandActivity.query.get(command_id)
         if cmd.system.lab_controller != lab_controller:
@@ -571,7 +571,7 @@ class LabControllers(RPCRoot):
         cmd.new_value = message
         # Ignore failures for 'interrupt' commands because most power types
         # don't support it and will report a "failure" in that case.
-        if cmd.action != 'interrupt' and cmd.system.status == SystemStatus.automated:
+        if system_broken and cmd.action != 'interrupt' and cmd.system.status == SystemStatus.automated:
             cmd.system.mark_broken(reason=u'Power command failed: %s' % message)
         if cmd.installation and cmd.installation.recipe:
             cmd.installation.recipe.abort('Command %s failed' % cmd.id)
