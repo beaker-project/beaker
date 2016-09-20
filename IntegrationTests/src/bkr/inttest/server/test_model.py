@@ -11,6 +11,7 @@ import datetime
 import unittest2 as unittest
 import pkg_resources
 import shutil
+import urlparse
 import lxml.etree
 import email
 from mock import patch
@@ -30,13 +31,14 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         Group, User, ActivityMixin, SystemAccessPolicy, SystemPermission, \
         RecipeTask, RecipeTaskResult, DeclarativeMappedObject, OSVersion, \
         RecipeReservationRequest, ReleaseAction, SystemPool, CommandStatus, \
-        GroupMembershipType, RecipeSetComment, Power
+        GroupMembershipType, RecipeSetComment, Power, LogRecipeTask, \
+        LogRecipeTaskResult
 
 from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
 from sqlalchemy.exc import OperationalError
 import netaddr
-from bkr.inttest import data_setup, DatabaseTestCase
+from bkr.inttest import data_setup, DatabaseTestCase, get_server_base
 from bkr.inttest.assertions import assert_datetime_within
 import turbogears
 import os
@@ -1931,6 +1933,17 @@ class RecipeTest(DatabaseTestCase):
             tolerance=datetime.timedelta(seconds=10),
             reference=datetime.datetime.utcnow() + datetime.timedelta(seconds=3000))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=915319
+    def test_logs_appear_in_results_xml(self):
+        recipe = data_setup.create_recipe()
+        data_setup.create_job_for_recipes([recipe])
+        recipe.logs = [LogRecipe(path=u'asdf', filename='log.txt')]
+        root = recipe.to_xml(clone=False)
+        logs = root.findall('recipeSet/recipe/logs/log')
+        self.assertEqual(logs[0].get('name'), 'asdf/log.txt')
+        self.assertEqual(
+                urlparse.urljoin(logs[0].base, logs[0].get('href')),
+                get_server_base() + 'recipes/%s/logs/asdf/log.txt' % recipe.id)
 
 class CheckDynamicVirtTest(DatabaseTestCase):
 
@@ -2481,10 +2494,25 @@ class RecipeTaskTest(DatabaseTestCase):
         self.assertEqual(results[1].get('result'), u'Fail')
         self.assertEqual(results[1].text, u'(Fail)')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=915319
+    def test_logs_appear_in_results_xml(self):
+        self.recipetask.logs.append(LogRecipeTask(path=u'asdf', filename=u'log.txt'))
+        root = self.recipetask.to_xml(clone=False)
+        logs = root.find('logs').findall('log')
+        self.assertEqual(logs[0].get('name'), 'asdf/log.txt')
+        self.assertEqual(
+                urlparse.urljoin(logs[0].base, logs[0].get('href')),
+                get_server_base() + 'recipes/%s/tasks/%s/logs/asdf/log.txt'
+                    % (self.recipetask.recipe.id, self.recipetask.id))
+
 class RecipeTaskResultTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
+        self.job = data_setup.create_completed_job()
+        self.recipe = self.job.recipesets[0].recipes[0]
+        self.recipe_task = self.recipe.tasks[0]
+        self.rtr = self.recipe_task.results[0]
 
     def tearDown(self):
         session.rollback()
@@ -2512,6 +2540,17 @@ class RecipeTaskResultTest(DatabaseTestCase):
         self.assertEquals(rtr.display_label, u'Cancelled it')
         rtr = RecipeTaskResult(recipetask=rt, path=u'/', log='Cancelled it')
         self.assertEquals(rtr.display_label, u'Cancelled it')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=915319
+    def test_logs_appear_in_results_xml(self):
+        self.rtr.logs = [LogRecipeTaskResult(path=u'asdf', filename=u'log.txt')]
+        root = self.rtr.to_xml(clone=False)
+        logs = root.find('logs').findall('log')
+        self.assertEqual(logs[0].get('name'), 'asdf/log.txt')
+        self.assertEqual(
+                urlparse.urljoin(logs[0].base, logs[0].get('href')),
+                get_server_base() + 'recipes/%s/tasks/%s/results/%s/logs/asdf/log.txt'
+                    % (self.rtr.recipetask.recipe.id, self.rtr.recipetask.id, self.rtr.id))
 
 
 class TestSystemInventoryDistro(DatabaseTestCase):

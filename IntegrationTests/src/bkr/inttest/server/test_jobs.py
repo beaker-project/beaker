@@ -11,7 +11,7 @@ import pkg_resources
 from turbogears import testutil
 from turbogears.database import session
 from bkr.server.bexceptions import BX
-from bkr.inttest import data_setup, with_transaction, DatabaseTestCase
+from bkr.inttest import data_setup, with_transaction, DatabaseTestCase, get_server_base
 from bkr.server.model import TaskPackage
 
 
@@ -117,6 +117,8 @@ class TestJobsController(DatabaseTestCase):
         recipe.tasks[1].results[0].id = 3
 
         expected_results_xml = pkg_resources.resource_string('bkr.inttest', 'complete-job-results.xml')
+        expected_results_xml = expected_results_xml.replace(
+                '${BEAKER_SERVER_BASE_URL}', get_server_base())
         actual_results_xml = lxml.etree.tostring(job.to_xml(clone=False),
                 pretty_print=True, encoding='utf8')
         self.assertMultiLineEqual(expected_results_xml, actual_results_xml)

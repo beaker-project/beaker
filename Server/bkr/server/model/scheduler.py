@@ -368,6 +368,9 @@ class Log(object):
                     url      = self.absolute_url,
                    )
 
+    def to_xml(self):
+        return E.log(name=self.combined_path, href=absolute_url(self.href))
+
     @classmethod
     def by_id(cls,id):
         return cls.query.filter_by(id=id).one()
@@ -2239,6 +2242,10 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         recipe.append(drs)
         recipe.append(hrs)
         recipe.append(prs)
+        if not clone:
+            logs = etree.Element('logs')
+            logs.extend([log.to_xml() for log in self.logs])
+            recipe.append(logs)
         for t in self.tasks:
             recipe.append(t.to_xml(clone))
         if self.reservation_request:
@@ -3346,6 +3353,10 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
             for p in self.params:
                 params.append(p.to_xml())
             task.append(params)
+        if not clone:
+            logs = etree.Element('logs')
+            logs.extend([log.to_xml() for log in self.logs])
+            task.append(logs)
         if self.results and not clone:
             results = etree.Element("results")
             for result in self.results:
@@ -3779,8 +3790,7 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
         """
         Return result in xml
         """
-        #FIXME Append any binary logs as URI's
-        return E.result(
+        result = E.result(
             unicode(self.log),
             id=unicode(self.id),
             path=unicode(self.path),
@@ -3788,6 +3798,11 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
             score=unicode(self.score),
             start_time=unicode(self.start_time),
         )
+        if self.logs:
+            logs = E.logs()
+            logs.extend([log.to_xml() for log in self.logs])
+            result.append(logs)
+        return result
 
     def all_logs(self):
         """
