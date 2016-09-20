@@ -28,7 +28,7 @@ Options
    Display results in the given format. ``list`` lists one user per
    line and is useful to be fed as input to other command line
    utilities. The default format is ``json``, which returns the users
-   as a JSON string.
+   as a JSON array.
 
 Common :program:`bkr` options are described in the :ref:`Options
 <common-options>` section of :manpage:`bkr(1)`.
