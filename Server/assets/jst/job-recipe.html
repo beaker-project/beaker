@@ -15,7 +15,7 @@
     <%- distro_tree && distro_tree.toString() %>
   </span>
   <span class="recipe-resource">
-    <%- resource && resource.fqdn %>
+    <%- resource && resource.get('fqdn') %>
   </span>
 </td>
 <td class="recipe-comments">
