@@ -142,15 +142,11 @@ class Job_Clone(BeakerCommand):
         submitted_jobs = []
         failed = False
         clone = True
+        exclude_enclosing_job = False
         self.set_hub(**kwargs)
         for task in args:
             try:
-                task_type, task_id = task.split(":")
-                if task_type.upper() == 'RS':
-                    from_job = False
-                else:
-                    from_job = True
-                jobxml = self.hub.taskactions.to_xml(task, clone, from_job)
+                jobxml = self.hub.taskactions.to_xml(task, clone, exclude_enclosing_job)
                 # XML is really bytes, the fact that the server is sending the bytes as an
                 # XML-RPC Unicode string is just a mistake in Beaker's API
                 jobxml = jobxml.encode('utf8')

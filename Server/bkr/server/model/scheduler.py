@@ -1230,7 +1230,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         span.append(content)
         return span
 
-    def _create_job_elem(self, clone=False, *args, **kw):
+    def _create_job_elem(self, clone=False):
         job = etree.Element("job")
         if not clone:
             job.set("id", "%s" % self.id)
@@ -1252,10 +1252,10 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
             job.extend(etree.fromstring(u'<dummy>%s</dummy>' % self.extra_xml).getchildren())
         return job
 
-    def to_xml(self, clone=False, *args, **kw):
+    def to_xml(self, clone=False, include_enclosing_job=True, **kwargs):
         job = self._create_job_elem(clone)
         for rs in self.recipesets:
-            job.append(rs.to_xml(clone))
+            job.append(rs.to_xml(clone=clone, include_enclosing_job=False, **kwargs))
         return job
 
     def cancel(self, msg=None):
@@ -1745,7 +1745,7 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
         return self.job.owner
     owner = property(owner)
 
-    def to_xml(self, clone=False, from_job=True, *args, **kw):
+    def to_xml(self, clone=False, include_enclosing_job=False, **kwargs):
         recipeSet = etree.Element("recipeSet")
         recipeSet.set('priority', unicode(self.priority))
         return_node = recipeSet
@@ -1762,7 +1762,7 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
             recipeSet.set("id", "%s" % self.id)
 
         for r in self.machine_recipes:
-            recipeSet.append(r.to_xml(clone, from_recipeset=True))
+            recipeSet.append(r.to_xml(clone, include_enclosing_job=False, **kwargs))
 
         if not clone:
             if self.comments:
@@ -1772,7 +1772,7 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
                             created=c.created.strftime('%Y-%m-%d %H:%M:%S')))
                 recipeSet.append(comments)
 
-        if not from_job:
+        if include_enclosing_job:
             job = self.job._create_job_elem(clone)
             job.append(recipeSet)
             return_node = job
@@ -2162,7 +2162,7 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
 
         return InstallOptions(ks_meta, {}, {})
 
-    def to_xml(self, clone=False, from_recipeset=False, from_machine=False):
+    def to_xml(self, clone=False, include_enclosing_job=True, **kwargs):
         recipe = etree.Element(self.xml_element_name)
         if not clone:
             recipe.set("id", "%s" % self.id)
@@ -2248,12 +2248,12 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             logs.extend([log.to_xml() for log in self.logs])
             recipe.append(logs)
         for t in self.tasks:
-            recipe.append(t.to_xml(clone))
+            recipe.append(t.to_xml(clone=clone, **kwargs))
         if self.reservation_request:
             reservesys = etree.Element("reservesys")
             reservesys.set('duration', unicode(self.reservation_request.duration))
             recipe.append(reservesys)
-        if not from_recipeset and not from_machine:
+        if include_enclosing_job:
             recipe = self._add_to_job_element(recipe, clone)
         return recipe
 
@@ -2985,9 +2985,8 @@ class GuestRecipe(Recipe):
                     include_tasks=False, include_recipeset=False)
         return data
 
-    def to_xml(self, clone=False, from_recipeset=False, from_machine=False):
-        recipe = super(GuestRecipe, self).to_xml(clone=clone,
-                from_recipeset=from_recipeset, from_machine=from_machine)
+    def to_xml(self, clone=False, **kwargs):
+        recipe = super(GuestRecipe, self).to_xml(clone=clone, **kwargs)
         recipe.set("guestname", "%s" % (self.guestname or ""))
         recipe.set("guestargs", "%s" % self.guestargs)
         if self.resource and self.resource.mac_address and not clone:
@@ -3055,11 +3054,12 @@ class MachineRecipe(Recipe):
                     for g in self.guests]
         return data
 
-    def to_xml(self, clone=False, from_recipeset=False):
+    def to_xml(self, clone=False, include_enclosing_job=True, **kwargs):
         recipe = super(MachineRecipe, self).to_xml(clone=clone,
-                from_recipeset=from_recipeset)
+                include_enclosing_job=include_enclosing_job, **kwargs)
         # insert <guestrecipe>s at the top above other child elements
-        recipe[0:0] = [guest.to_xml(clone, from_machine=True) for guest in self.guests]
+        recipe[0:0] = [guest.to_xml(clone, include_enclosing_job=False, **kwargs)
+                for guest in self.guests]
         return recipe
 
     def check_virtualisability(self):
@@ -3318,7 +3318,7 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
                 recipe.id, self.id)
     filepath = property(filepath)
 
-    def to_xml(self, clone=False, *args, **kw):
+    def to_xml(self, clone=False, **kwargs):
         task = etree.Element("task")
         task.set("name", "%s" % self.name)
         task.set("role", "%s" % self.role and self.role or 'STANDALONE')
@@ -3364,7 +3364,7 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
         if self.results and not clone:
             results = etree.Element("results")
             for result in self.results:
-                results.append(result.to_xml())
+                results.append(result.to_xml(**kwargs))
             task.append(results)
         return task
 
@@ -3790,7 +3790,7 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
                 recipe.id, task_id, self.id)
     filepath = property(filepath)
 
-    def to_xml(self, *args, **kw):
+    def to_xml(self, **kwargs):
         """
         Return result in xml
         """

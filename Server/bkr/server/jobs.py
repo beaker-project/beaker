@@ -370,8 +370,9 @@ class Jobs(RPCRoot):
             except InvalidRequestError:
                 flash(_(u"Invalid recipeset id %s" % recipeset_id))
                 redirect(".")
-            textxml = lxml.etree.tostring(recipeset.to_xml(clone=True,from_job=False),
-                                          pretty_print=True, encoding=unicode)
+            textxml = lxml.etree.tostring(
+                    recipeset.to_xml(clone=True, include_enclosing_job=True),
+                    pretty_print=True, encoding=unicode)
         elif isinstance(filexml, cgi.FieldStorage):
             # Clone from file
             try:

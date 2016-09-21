@@ -57,13 +57,20 @@ class TaskActions(RPCRoot):
         return TaskBase.get_by_t_id(taskid).task_info()
 
     @cherrypy.expose
-    def to_xml(self, taskid,clone=False,from_job=True):
+    def to_xml(self, taskid, clone=False, exclude_enclosing_job=True):
         """
         Returns an XML representation of the given job component, including its 
         current state.
 
         :param taskid: see above
         :type taskid: string
+        :param clone: If True, returns XML suitable for submitting back to 
+            Beaker. Otherwise, the XML includes results.
+        :type clone: bool
+        :param exclude_enclosing_job: If False, returns <job> as the root 
+            element even when requesting a recipe set or recipe. This is useful 
+            when cloning, in order to always produce a complete job definition.
+        :type exclude_enclosing_job: bool
         """
         task_type, task_id = taskid.split(":")
         if task_type.upper() in self.task_types.keys():
@@ -71,7 +78,9 @@ class TaskActions(RPCRoot):
                 task = self.task_types[task_type.upper()].by_id(task_id)
             except InvalidRequestError:
                 raise BX(_("Invalid %s %s" % (task_type, task_id)))
-        return lxml.etree.tostring(task.to_xml(clone, from_job), xml_declaration=False, encoding='UTF-8')
+        return lxml.etree.tostring(
+                task.to_xml(clone=clone, include_enclosing_job=not exclude_enclosing_job),
+                xml_declaration=False, encoding='UTF-8')
 
     @cherrypy.expose
     def files(self, taskid):
