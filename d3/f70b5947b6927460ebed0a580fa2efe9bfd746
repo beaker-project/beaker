@@ -1,0 +1,9 @@
+Ready-for-Checks+1: Dan Callaghan <dcallagh@redhat.com>
+Verified+1: Dan Callaghan <dcallagh@redhat.com>
+Code-Review+1: Matt Jia <mjia@redhat.com>
+Code-Review+2: Roman Joost <rjoost@redhat.com>
+Submitted-by: Dan Callaghan <dcallagh@redhat.com>
+Submitted-at: Wed, 21 Sep 2016 05:36:31 +0000
+Reviewed-on: http://gerrit.beaker-project.org/5233
+Project: beaker
+Branch: refs/heads/develop
