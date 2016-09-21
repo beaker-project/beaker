@@ -2162,7 +2162,8 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
 
         return InstallOptions(ks_meta, {}, {})
 
-    def to_xml(self, recipe, clone=False, from_recipeset=False, from_machine=False):
+    def to_xml(self, clone=False, from_recipeset=False, from_machine=False):
+        recipe = etree.Element(self.xml_element_name)
         if not clone:
             recipe.set("id", "%s" % self.id)
             recipe.set("job_id", "%s" % self.recipeset.job.id)
@@ -2972,6 +2973,7 @@ class GuestRecipe(Recipe):
     hostrecipe = relationship('MachineRecipe', secondary=machine_guest_map,
             uselist=False, back_populates='guests')
 
+    xml_element_name = 'guestrecipe'
     systemtype = 'Virtual'
 
     def to_json(self, include_hostrecipe=True, **kwargs):
@@ -2984,7 +2986,8 @@ class GuestRecipe(Recipe):
         return data
 
     def to_xml(self, clone=False, from_recipeset=False, from_machine=False):
-        recipe = etree.Element("guestrecipe")
+        recipe = super(GuestRecipe, self).to_xml(clone=clone,
+                from_recipeset=from_recipeset, from_machine=from_machine)
         recipe.set("guestname", "%s" % (self.guestname or ""))
         recipe.set("guestargs", "%s" % self.guestargs)
         if self.resource and self.resource.mac_address and not clone:
@@ -3001,8 +3004,7 @@ class GuestRecipe(Recipe):
             for scheme, location in sorted(scheme_locations.iteritems()):
                 attr = '%s_location' % re.sub(r'[^a-z0-9]+', '_', scheme.lower())
                 recipe.set(attr, location)
-
-        return Recipe.to_xml(self, recipe, clone, from_recipeset, from_machine)
+        return recipe
 
     def _add_to_job_element(self, guestrecipe, clone):
         recipe = etree.Element('recipe')
@@ -3041,6 +3043,7 @@ class MachineRecipe(Recipe):
     guests = relationship(GuestRecipe, secondary=machine_guest_map,
             back_populates='hostrecipe')
 
+    xml_element_name = 'recipe'
     systemtype = 'Machine'
 
     def to_json(self, include_guests=True, **kwargs):
@@ -3053,10 +3056,11 @@ class MachineRecipe(Recipe):
         return data
 
     def to_xml(self, clone=False, from_recipeset=False):
-        recipe = etree.Element("recipe")
-        for guest in self.guests:
-            recipe.append(guest.to_xml(clone, from_machine=True))
-        return Recipe.to_xml(self, recipe, clone, from_recipeset)
+        recipe = super(MachineRecipe, self).to_xml(clone=clone,
+                from_recipeset=from_recipeset)
+        # insert <guestrecipe>s at the top above other child elements
+        recipe[0:0] = [guest.to_xml(clone, from_machine=True) for guest in self.guests]
+        return recipe
 
     def check_virtualisability(self):
         """

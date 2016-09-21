@@ -8,7 +8,7 @@
   <f:test xmlns:f="http://example.com/foo">unicode text: heißer Шис</f:test>
   <recipeSet priority="Normal">
     <recipe whiteboard="" role="None" ks_meta="" kernel_options="" kernel_options_post="">
-      <guestrecipe guestname="" guestargs="" whiteboard="" role="None" ks_meta="" kernel_options="" kernel_options_post="">
+      <guestrecipe whiteboard="" role="None" ks_meta="" kernel_options="" kernel_options_post="" guestname="" guestargs="">
         <autopick random="true"/>
         <watchdog panic="None"/>
         <packages/>
