@@ -314,6 +314,12 @@ class User(DeclarativeMappedObject, ActivityMixin):
         # Users are not allowed to change their own usernames.
         return False
 
+    def can_edit_keystone_trust(self, user):
+        """
+        Is the given user permitted to change this user's OpenStack Keystone trust?
+        """
+        return bool(get('openstack.identity_api_url')) and self.can_edit(user)
+
     _password_context = passlib.context.CryptContext(
         schemes=['pbkdf2_sha512', 'hex_sha1'],
         # unsalted SHA1 was the scheme inherited from TurboGears 1.0,

@@ -10,11 +10,14 @@ import datetime
 import requests
 from bkr.server.model import session, SystemPermission, TaskStatus, User, \
         SSHPubKey
+from bkr.server import dynamic_virt
 from bkr.inttest import data_setup, DatabaseTestCase, get_server_base
 from bkr.inttest.server.requests_utils import login as requests_login, \
-        patch_json, post_json, xmlrpc as requests_xmlrpc
+        patch_json, post_json, put_json, xmlrpc as requests_xmlrpc
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, check_user_search_results
+from mock import patch
+from turbogears import config
 
 class UsersGridTest(WebDriverTestCase):
 
@@ -586,3 +589,14 @@ class UserHTTPTest(DatabaseTestCase):
             session.expire_all()
             self.assertIsNone(user.removed)
             self.assertFalse(user.disabled)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1100519
+    def test_cannot_create_keystone_trust_if_openstack_is_disabled(self):
+        with session.begin():
+            user = data_setup.create_user()
+        s = requests.Session()
+        requests_login(s)
+        response = put_json(get_server_base() + 'users/%s/keystone-trust' % user.user_name,
+                session=s, data={'openstack_username': u'dummyuser'})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('OpenStack Integration is not enabled', response.text)

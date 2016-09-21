@@ -9,7 +9,7 @@ from sqlalchemy import and_, or_, not_
 from sqlalchemy.exc import InvalidRequestError
 from bkr.common.bexceptions import BX
 from flask import request, jsonify, redirect as flask_redirect
-from bkr.server import identity
+from bkr.server import identity, dynamic_virt
 from bkr.server.flask_util import request_wants_json, auth_required, \
         admin_auth_required, read_json_request, convert_internal_errors, \
         json_collection, Forbidden403, NotFound404, Conflict409, \
@@ -21,11 +21,11 @@ from bkr.server.app import app
 from bkr.server.bexceptions import NoChangeException
 import cherrypy
 from datetime import datetime
+from turbogears import config
 
 from bkr.server.model import User, Job, System, SystemActivity, TaskStatus, \
     SystemAccessPolicyRule, GroupMembershipType, SystemStatus, ConfigItem, \
     SSHPubKey
-
 
 class Users(RPCRoot):
     # For XMLRPC methods in this class.
@@ -252,6 +252,12 @@ def get_self():
         attributes['proxied_by_user'] = user_full_json(identity.current.proxied_by_user)
     return jsonify(attributes)
 
+def _get_user(username):
+    user = User.by_user_name(username)
+    if user is None:
+        raise NotFound404('User %s does not exist' % username)
+    return user
+
 # Note that usernames can contain /, for example Kerberos service principals,
 # so we have to use a path match in our route patterns
 @app.route('/users/<path:username>', methods=['GET'])
@@ -262,9 +268,7 @@ def get_user(username):
 
     :param username: The user's username.
     """
-    user = User.by_user_name(username)
-    if user is None:
-        raise NotFound404('User %s does not exist' % username)
+    user = _get_user(username)
     attributes = user_full_json(user)
     if request_wants_json():
         return jsonify(attributes)
@@ -305,9 +309,7 @@ def update_user(username):
     :jsonparam string removed: Pass the string 'now' to remove a user account. 
       Pass null to un-remove a removed user account.
     """
-    user = User.by_user_name(username)
-    if user is None:
-        raise NotFound404('User %s does not exist' % username)
+    user = _get_user(username)
     data = read_json_request(request)
     renamed = False
     if data.get('password') is not None:
@@ -392,9 +394,7 @@ def add_ssh_public_key(username):
 
     :param username: The user's username.
     """
-    user = User.by_user_name(username)
-    if user is None:
-        raise NotFound404('User %s does not exist' % username)
+    user = _get_user(username)
     if not user.can_edit(identity.current.user):
         raise Forbidden403('Cannot edit user %s' % user)
     if request.mimetype != 'text/plain':
@@ -420,9 +420,7 @@ def delete_ssh_public_key(username, id):
     :param username: The user's username.
     :param id: Database id of the SSH public key to be deleted.
     """
-    user = User.by_user_name(username)
-    if user is None:
-        raise NotFound404('User %s does not exist' % username)
+    user = _get_user(username)
     if not user.can_edit(identity.current.user):
         raise Forbidden403('Cannot edit user %s' % user)
     matching_keys = [k for k in user.sshpubkeys if k.id == id]
@@ -442,9 +440,7 @@ def add_submission_delegate(username):
     :param username: The user's username.
     :jsonparam string user_name: The submission delegate's username.
     """
-    user = User.by_user_name(username)
-    if user is None:
-        raise NotFound404('User %s does not exist' % username)
+    user = _get_user(username)
     if not user.can_edit(identity.current.user):
         raise Forbidden403('Cannot edit user %s' % user)
     data = read_json_request(request)
@@ -468,9 +464,7 @@ def delete_submission_delegate(username):
     :param username: The user's username.
     :query string user_name: The submission delegate's username.
     """
-    user = User.by_user_name(username) #XXX lockmode='update'
-    if user is None:
-        raise NotFound404('User %s does not exist' % username)
+    user = _get_user(username)
     if not user.can_edit(identity.current.user):
         raise Forbidden403('Cannot edit user %s' % user)
     if 'user_name' not in request.args:
@@ -482,6 +476,62 @@ def delete_submission_delegate(username):
         raise Conflict409('User %s is not a submission delegate for %s'
                 % (submission_delegate, user))
     user.remove_submission_delegate(submission_delegate)
+    return '', 204
+
+@app.route('/users/<path:username>/keystone-trust', methods=['PUT'])
+@auth_required
+def create_keystone_trust(username):
+    """
+    Creats a Keystone trust between the Beaker Keystone account and this user.
+    This allows the Beaker Keystone account to represent the delegated
+    authority of this user when creating virtual machines on OpenStack.
+
+    :param username: The user's username.
+    :jsonparam string openstack_username: OpenStack username.
+    :jsonparam string openstack_password: OpenStack password.
+    :jsonparam string openstack_project_name: OpenStack project name.
+    """
+    user = _get_user(username)
+    if not config.get('openstack.identity_api_url'):
+        raise BadRequest400("OpenStack Integration is not enabled")
+    if not user.can_edit_keystone_trust(identity.current.user):
+        raise Forbidden403('Cannot edit Keystone trust of user %s' % username)
+    data = read_json_request(request)
+    if 'openstack_username' not in data:
+        raise BadRequest400('No OpenStack username specified')
+    if 'openstack_password' not in data:
+        raise BadRequest400('No OpenStack password specified')
+    if 'openstack_project_name' not in data:
+        raise BadRequest400('No OpenStack project name specified')
+    trust_id = dynamic_virt.create_keystone_trust(data['openstack_username'],
+            data['openstack_password'], data['openstack_project_name'])
+    user.openstack_trust_id = trust_id
+    user.record_activity(user=identity.current.user, service=u'HTTP',
+            field=u'OpenStack Trust ID', action=u'Changed')
+    return jsonify({'openstack_trust_id': trust_id})
+
+@app.route('/users/<path:username>/keystone-trust', methods=['DELETE'])
+@auth_required
+def delete_keystone_trust(username):
+    """
+    Deletes the Keystone trust for a user account.
+
+    :param username: The user's username.
+    """
+    user = _get_user(username)
+    if not config.get('openstack.identity_api_url'):
+        raise BadRequest400("OpenStack Integration is not enabled")
+    if not user.can_edit_keystone_trust(identity.current.user):
+        raise Forbidden403('Cannot edit Keystone trust of user %s' % username)
+    if not user.openstack_trust_id:
+        raise BadRequest400('No Keystone trust created by %s' % user)
+    manager = dynamic_virt.VirtManager(user)
+    manager.delete_keystone_trust()
+    old_trust_id = user.openstack_trust_id
+    user.openstack_trust_id = None
+    user.record_activity(user=identity.current.user, service=u'HTTP',
+            field=u'OpenStack Trust ID', action=u'Deleted',
+            old=old_trust_id)
     return '', 204
 
 # for sphinx
