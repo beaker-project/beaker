@@ -43,6 +43,15 @@ Options
    suitable for human consumption).
    JUnit XML is always pretty-printed regardless of this option.
 
+.. option:: --no-logs
+
+   Since Beaker 24.0, the results include links to all logs when using the 
+   ``beaker-results-xml`` format. This can substantially increase the size of 
+   the XML. Use this option to omit the logs (matching the behaviour of 
+   previous Beaker versions).
+
+   JUnit XML always includes logs regardless of this option.
+
 Common :program:`bkr` options are described in the :ref:`Options 
 <common-options>` section of :manpage:`bkr(1)`.
 
@@ -91,6 +100,11 @@ class Job_Results(BeakerCommand):
             action="store_true",
             help="Pretty print the xml",
         )
+        self.parser.add_option(
+            '--no-logs',
+            dest='include_logs', action='store_false', default=True,
+            help='Omit logs from results XML',
+        )
 
 
     def run(self, *args, **kwargs):
@@ -98,12 +112,13 @@ class Job_Results(BeakerCommand):
 
         format      = kwargs.pop("format")
         prettyxml   = kwargs.pop("prettyxml", None)
+        include_logs = kwargs.pop('include_logs')
 
         self.set_hub(**kwargs)
         requests_session = self.requests_session()
         for task in args:
             if format == 'beaker-results-xml':
-                myxml = self.hub.taskactions.to_xml(task)
+                myxml = self.hub.taskactions.to_xml(task, False, True, include_logs)
                 # XML is really bytes, the fact that the server is sending the bytes as an
                 # XML-RPC Unicode string is just a mistake in Beaker's API
                 myxml = myxml.encode('utf8')

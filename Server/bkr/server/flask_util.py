@@ -234,3 +234,18 @@ def read_json_request(request):
     if not data:
         raise UnsupportedMediaType415("No JSON payload in request")
     return data
+
+_stringbool_true_values = frozenset(['true', 't', 'yes', 'y', 'on', '1'])
+_stringbool_false_values = frozenset(['false', 'f', 'no', 'n', 'off', '0'])
+def stringbool(value):
+    """
+    Conversion function for mapping strings like 'true' and 'false' to Python 
+    bools. Use this with request.args.get(). Conversion rules match the same 
+    ones used by the TG/FormEncode StringBool validator.
+    """
+    if value.lower() in _stringbool_true_values:
+        return True
+    elif value.lower() in _stringbool_false_values:
+        return False
+    else:
+        raise ValueError('Value %r is not a valid boolean value' % value)

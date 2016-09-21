@@ -57,7 +57,7 @@ class TaskActions(RPCRoot):
         return TaskBase.get_by_t_id(taskid).task_info()
 
     @cherrypy.expose
-    def to_xml(self, taskid, clone=False, exclude_enclosing_job=True):
+    def to_xml(self, taskid, clone=False, exclude_enclosing_job=True, include_logs=True):
         """
         Returns an XML representation of the given job component, including its 
         current state.
@@ -71,6 +71,9 @@ class TaskActions(RPCRoot):
             element even when requesting a recipe set or recipe. This is useful 
             when cloning, in order to always produce a complete job definition.
         :type exclude_enclosing_job: bool
+        :param include_logs: If True (the default), the results XML includes 
+            links to all logs. This can make the results XML substantially larger.
+        :type include_logs: bool
         """
         task_type, task_id = taskid.split(":")
         if task_type.upper() in self.task_types.keys():
@@ -79,7 +82,9 @@ class TaskActions(RPCRoot):
             except InvalidRequestError:
                 raise BX(_("Invalid %s %s" % (task_type, task_id)))
         return lxml.etree.tostring(
-                task.to_xml(clone=clone, include_enclosing_job=not exclude_enclosing_job),
+                task.to_xml(clone=clone,
+                            include_enclosing_job=not exclude_enclosing_job,
+                            include_logs=include_logs),
                 xml_declaration=False, encoding='UTF-8')
 
     @cherrypy.expose

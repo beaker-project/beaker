@@ -35,7 +35,7 @@ from bkr.server.model import (Recipe, RecipeSet, TaskStatus, Job, System,
 from bkr.server.app import app
 from bkr.server.flask_util import BadRequest400, NotFound404, \
     Forbidden403, auth_required, read_json_request, convert_internal_errors, \
-    request_wants_json, render_tg_template
+    request_wants_json, render_tg_template, stringbool
 from flask import request, jsonify, redirect as flask_redirect, make_response
 from bkr.server.bexceptions import BeakerException
 
@@ -534,7 +534,10 @@ def recipe_xml(id):
     :status 200: The recipe xml file was successfully generated.
     """
     recipe = _get_recipe_by_id(id)
-    xmlstr = lxml.etree.tostring(recipe.to_xml(), pretty_print=True, encoding='utf8')
+    include_logs = request.args.get('include_logs', type=stringbool, default=True)
+    xmlstr = lxml.etree.tostring(
+            recipe.to_xml(clone=False, include_logs=include_logs),
+            pretty_print=True, encoding='utf8')
     response = make_response(xmlstr)
     response.status_code = 200
     response.headers.add('Content-Type', 'text/xml; charset=utf-8')

@@ -884,6 +884,12 @@ class RecipeHTTPTest(DatabaseTestCase):
                 lxml.etree.tostring(self.recipe.to_xml(), pretty_print=True, encoding='utf8'),
                 response.content)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=915319#c6
+    def test_get_recipe_xml_without_logs(self):
+        response = requests.get(get_server_base() + 'recipes/%s.xml?include_logs=false' % self.recipe.id)
+        response.raise_for_status()
+        self.assertNotIn('<log', response.content)
+
     def test_get_junit_xml(self):
         with session.begin():
             data_setup.mark_job_complete(self.job)

@@ -56,3 +56,10 @@ class JobResultsTest(ClientTestCase):
     def test_junit_xml(self):
         out = run_client(['bkr', 'job-results', '--format=junit-xml', self.job.t_id])
         self.assertIn('<testsuites>', out)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=915319#c6
+    def test_can_exclude_logs(self):
+        out = run_client(['bkr', 'job-results', self.job.t_id])
+        self.assertIn('<log', out)
+        out = run_client(['bkr', 'job-results', '--no-logs', self.job.t_id])
+        self.assertNotIn('<log', out)

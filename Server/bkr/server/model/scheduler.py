@@ -2162,7 +2162,8 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
 
         return InstallOptions(ks_meta, {}, {})
 
-    def to_xml(self, clone=False, include_enclosing_job=True, **kwargs):
+    def to_xml(self, clone=False, include_enclosing_job=True,
+            include_logs=True, **kwargs):
         recipe = etree.Element(self.xml_element_name)
         if not clone:
             recipe.set("id", "%s" % self.id)
@@ -2243,12 +2244,12 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         recipe.append(drs)
         recipe.append(hrs)
         recipe.append(prs)
-        if not clone:
+        if not clone and include_logs:
             logs = etree.Element('logs')
             logs.extend([log.to_xml() for log in self.logs])
             recipe.append(logs)
         for t in self.tasks:
-            recipe.append(t.to_xml(clone=clone, **kwargs))
+            recipe.append(t.to_xml(clone=clone, include_logs=include_logs, **kwargs))
         if self.reservation_request:
             reservesys = etree.Element("reservesys")
             reservesys.set('duration', unicode(self.reservation_request.duration))
@@ -3318,7 +3319,7 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
                 recipe.id, self.id)
     filepath = property(filepath)
 
-    def to_xml(self, clone=False, **kwargs):
+    def to_xml(self, clone=False, include_logs=True, **kwargs):
         task = etree.Element("task")
         task.set("name", "%s" % self.name)
         task.set("role", "%s" % self.role and self.role or 'STANDALONE')
@@ -3357,14 +3358,14 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
             for p in self.params:
                 params.append(p.to_xml())
             task.append(params)
-        if not clone:
+        if not clone and include_logs:
             logs = etree.Element('logs')
             logs.extend([log.to_xml() for log in self.logs])
             task.append(logs)
         if self.results and not clone:
             results = etree.Element("results")
             for result in self.results:
-                results.append(result.to_xml(**kwargs))
+                results.append(result.to_xml(include_logs=include_logs, **kwargs))
             task.append(results)
         return task
 
@@ -3790,7 +3791,7 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
                 recipe.id, task_id, self.id)
     filepath = property(filepath)
 
-    def to_xml(self, **kwargs):
+    def to_xml(self, include_logs=True, **kwargs):
         """
         Return result in xml
         """
@@ -3802,7 +3803,7 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
             score=unicode(self.score),
             start_time=unicode(self.start_time),
         )
-        if self.logs:
+        if include_logs and self.logs:
             logs = E.logs()
             logs.extend([log.to_xml() for log in self.logs])
             result.append(logs)

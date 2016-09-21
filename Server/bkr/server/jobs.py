@@ -43,7 +43,7 @@ from bkr.server.model import (Job, RecipeSet, RetentionTag, TaskBase,
 from bkr.common.bexceptions import BeakerException, BX
 from bkr.server.flask_util import auth_required, convert_internal_errors, \
     BadRequest400, NotFound404, Forbidden403, Conflict409, request_wants_json, \
-    read_json_request, render_tg_template
+    read_json_request, render_tg_template, stringbool
 from flask import request, jsonify, make_response
 from bkr.server.util import parse_untrusted_xml
 import cgi
@@ -1046,7 +1046,10 @@ def job_xml(id):
     :status 200: The job xml file was successfully generated.
     """
     job = _get_job_by_id(id)
-    xmlstr = lxml.etree.tostring(job.to_xml(), pretty_print=True, encoding='utf8')
+    include_logs = request.args.get('include_logs', type=stringbool, default=True)
+    xmlstr = lxml.etree.tostring(
+            job.to_xml(clone=False, include_logs=include_logs),
+            pretty_print=True, encoding='utf8')
     response = make_response(xmlstr)
     response.status_code = 200
     response.headers.add('Content-Type', 'text/xml; charset=utf-8')
