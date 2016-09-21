@@ -1707,7 +1707,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
     cc = association_proxy('_system_ccs', 'email_address')
 
 @event.listens_for(System.status, 'set', active_history=True, retval=True)
-def validate_status(system, child, oldchild, initiator):
+def add_system_status_duration(system, child, oldchild, initiator):
     log.debug('%r status changed from %r to %r', system, oldchild, child)
     if child == oldchild:
         return child

@@ -10,13 +10,13 @@ import logging
 import pkg_resources
 from turbogears.database import session
 from unittest2 import SkipTest
-from bkr.server.model import LabController, PowerType, CommandStatus
+from bkr.server.model import LabController, PowerType, CommandStatus, \
+        System, User, Installation, SystemStatus
 from bkr.labcontroller.config import get_conf
 from bkr.inttest import data_setup, Process
 from bkr.inttest.assertions import wait_for_condition
 from bkr.inttest.labcontroller import LabControllerTestCase, processes, \
         daemons_running_externally
-from bkr.server.model import System, User, Installation
 
 log = logging.getLogger(__name__)
 
@@ -276,3 +276,21 @@ class ConfigureNetbootTest(LabControllerTestCase):
         self.assertEquals(system.command_queue[0].action, u'configure_netboot')
         self.assertEquals(system.command_queue[0].status, CommandStatus.failed)
         self.assertIn(u'timed out', system.command_queue[0].error_message)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=874387
+    def test_system_not_marked_broken_for_missing_distro_tree_images(self):
+        with session.begin():
+            lc = self.get_lc()
+            system = data_setup.create_system(arch=u'x86_64', lab_controller=lc,
+                    status=SystemStatus.automated)
+            self.addCleanup(self.cleanup_system, system)
+            distro_tree = data_setup.create_distro_tree(arch=u'x86_64',
+                    lab_controllers=[lc],
+                    urls=['http://localhost:19998/error/404/'])
+            installation = Installation(distro_tree=distro_tree, system=system,
+                    kernel_options=u'')
+            system.configure_netboot(installation=installation, service=u'testdata')
+        wait_for_commands_to_finish(system, timeout=(2 * get_conf().get('SLEEP_TIME')))
+        self.assertEquals(system.command_queue[0].action, u'configure_netboot')
+        self.assertEquals(system.command_queue[0].status, CommandStatus.failed)
+        self.assertEquals(system.status, SystemStatus.automated)

@@ -60,8 +60,8 @@ class CommandQueuePoller(ProxyHelper):
     def mark_command_completed(self, id):
         self.hub.labcontrollers.mark_command_completed(id)
 
-    def mark_command_failed(self, id, message):
-        self.hub.labcontrollers.mark_command_failed(id, message)
+    def mark_command_failed(self, id, message, system_broken):
+        self.hub.labcontrollers.mark_command_failed(id, message, system_broken)
 
     def clear_running_commands(self, message):
         self.hub.labcontrollers.clear_running_commands(message)
@@ -147,14 +147,18 @@ class CommandQueuePoller(ProxyHelper):
             else:
                 raise ValueError('Unrecognised action %s' % command['action'])
                 # XXX or should we just ignore it and leave it queued?
+        except netboot.ImageFetchingError as e:
+            logger.exception('Error processing command %s', command['id'])
+            # It's not the system's fault so don't mark it as broken
+            self.mark_command_failed(command['id'], unicode(e), False)
         except Exception, e:
             logger.exception('Error processing command %s', command['id'])
-            self.last_command_datetime[command['fqdn']] = datetime.datetime.utcnow()
             self.mark_command_failed(command['id'],
-                    '%s: %s' % (e.__class__.__name__, e))
+                    '%s: %s' % (e.__class__.__name__, e), True)
         else:
-            self.last_command_datetime[command['fqdn']] = datetime.datetime.utcnow()
             self.mark_command_completed(command['id'])
+        finally:
+            self.last_command_datetime[command['fqdn']] = datetime.datetime.utcnow()
         logger.debug('Finished handling command %s', command['id'])
 
 def find_power_script(power_type):

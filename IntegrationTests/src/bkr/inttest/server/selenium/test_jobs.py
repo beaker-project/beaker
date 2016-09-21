@@ -39,6 +39,32 @@ class TestViewJob(WebDriverTestCase):
             url += '#set%s' % recipeset.id
         self.browser.get(url)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1362596
+    def test_recipe_summary(self):
+        with session.begin():
+            job = data_setup.create_completed_job(
+                    recipe_whiteboard=u'thewhiteboard', role=u'SERVERS',
+                    distro_name=u'RHEL-6.8', variant=u'ComputeNode', arch=u'x86_64',
+                    fqdn=u'test-recipe-summary.example.invalid')
+            recipe = job.recipesets[0].recipes[0]
+        b = self.browser
+        self.go_to_job_page(job)
+        recipe_row = b.find_element_by_xpath(
+                '//table[contains(@class, "job-recipes")]/tbody'
+                '/tr[td/a[@class="recipe-id" and string(.)="R:%s"]]' % recipe.id)
+        self.assertEqual(
+                recipe_row.find_element_by_xpath('.//span[@class="recipe-whiteboard"]').text,
+                u'thewhiteboard')
+        self.assertEqual(
+                recipe_row.find_element_by_xpath('.//span[@class="recipe-role"]').text,
+                u'Role: SERVERS')
+        self.assertEqual(
+                recipe_row.find_element_by_xpath('.//span[@class="recipe-distro"]').text,
+                u'RHEL-6.8 ComputeNode x86_64')
+        self.assertEqual(
+                recipe_row.find_element_by_xpath('.//span[@class="recipe-resource"]').text,
+                u'test-recipe-summary.example.invalid')
+
     def test_group_job(self):
         with session.begin():
             user = data_setup.create_user()

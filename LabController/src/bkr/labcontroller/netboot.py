@@ -21,6 +21,15 @@ from bkr.common.helpers import (atomically_replaced_file, makedirs_ignore,
 
 logger = logging.getLogger(__name__)
 
+class ImageFetchingError(Exception):
+    """
+    Raised when an error occurs while fetching netboot images from the network.
+    """
+    def __init__(self, url, distro_tree_id, cause):
+        super(ImageFetchingError, self).__init__(
+                'Error fetching image %s for distro tree %s: %s'
+                % (url, distro_tree_id, cause))
+
 def get_tftp_root():
     return get_conf().get('TFTP_ROOT', '/var/lib/tftpboot')
 
@@ -113,10 +122,16 @@ def fetch_images(distro_tree_id, kernel_url, initrd_url, fqdn):
     timeout = get_conf().get('IMAGE_FETCH_TIMEOUT')
     logger.debug('Fetching kernel %s for %s', kernel_url, fqdn)
     with atomically_replaced_file(os.path.join(images_dir, 'kernel')) as dest:
-        siphon(urllib2.urlopen(kernel_url, timeout=timeout), dest)
+        try:
+            siphon(urllib2.urlopen(kernel_url, timeout=timeout), dest)
+        except Exception as e:
+            raise ImageFetchingError(kernel_url, distro_tree_id, e)
     logger.debug('Fetching initrd %s for %s', initrd_url, fqdn)
     with atomically_replaced_file(os.path.join(images_dir, 'initrd')) as dest:
-        siphon(urllib2.urlopen(initrd_url, timeout=timeout), dest)
+        try:
+            siphon(urllib2.urlopen(initrd_url, timeout=timeout), dest)
+        except Exception as e:
+            raise ImageFetchingError(initrd_url, distro_tree_id, e)
 
 def have_images(fqdn):
     return os.path.exists(os.path.join(get_tftp_root(), 'images', fqdn))

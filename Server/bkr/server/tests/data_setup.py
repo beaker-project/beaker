@@ -515,7 +515,7 @@ def create_recipeset_for_recipes(recipes, priority=None, queue_time=None, **kwar
 def create_job(num_recipesets=1, num_recipes=1, num_guestrecipes=0, whiteboard=None,
         recipe_whiteboard=None, **kwargs):
     if kwargs.get('distro_tree', None) is None:
-        kwargs['distro_tree'] = create_distro_tree()
+        kwargs['distro_tree'] = create_distro_tree(**kwargs)
     recipesets = []
     for _ in range(num_recipesets):
         recipes = [create_recipe(whiteboard=recipe_whiteboard, **kwargs)
