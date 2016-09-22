@@ -185,6 +185,36 @@ class User(DeclarativeMappedObject, ActivityMixin):
             'removed': self.removed,
         }
 
+    def to_json(self):
+        """
+        Get a full list of JSON representation data.
+        """
+        data = self.__json__()
+        data['id'] = self.user_id
+        if identity.current.user:
+            data['can_edit'] = self.can_edit(identity.current.user)
+            if data['can_edit']:
+                data['root_password'] = self._root_password
+                data['root_password_changed'] = self.rootpw_changed
+                data['root_password_expiry'] = self.rootpw_expiry
+                data['ssh_public_keys'] = self.sshpubkeys
+                data['submission_delegates'] = self.submission_delegates
+                data['use_old_job_page'] = self.use_old_job_page
+                data['notify_job_completion'] = self.notify_job_completion
+                data['notify_broken_system'] = self.notify_broken_system
+                data['notify_group_membership'] = self.notify_group_membership
+                data['notify_reservesys'] = self.notify_reservesys
+                data['openstack_trust_id'] = self.openstack_trust_id
+            data['can_change_password'] = \
+                self.can_change_password(identity.current.user)
+            data['can_edit_keystone_trust'] = self.can_edit_keystone_trust(
+                    identity.current.user)
+        else:
+            data['can_edit'] = False
+            data['can_change_password'] = False
+            data['can_edit_keystone_trust'] = False
+        return data
+
     def permissions(self):
         perms = set()
         for g in self.groups:

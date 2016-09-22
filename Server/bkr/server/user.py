@@ -174,8 +174,7 @@ def user_full_json(user):
     # Users have a minimal JSON representation which is embedded in many other 
     # objects (system owner, system user, etc) but we need more info here on 
     # the user page.
-    attributes = user.__json__()
-    attributes['id'] = user.user_id
+    attributes = user.to_json()
     attributes['job_count'] = Job.query.filter(not_(Job.is_finished()))\
             .filter(Job.owner == user).count()
     attributes['reservation_count'] = System.query.filter(System.user == user).count()
@@ -188,24 +187,6 @@ def user_full_json(user):
     # Intentionally not counting membership in inverted groups because everyone 
     # is always in those
     attributes['group_membership_count'] = len(user.group_user_assocs)
-    if identity.current.user:
-        attributes['can_edit'] = user.can_edit(identity.current.user)
-        attributes['can_change_password'] = \
-            user.can_change_password(identity.current.user)
-        if user.can_edit(identity.current.user):
-            attributes['root_password'] = user._root_password
-            attributes['root_password_changed'] = user.rootpw_changed
-            attributes['root_password_expiry'] = user.rootpw_expiry
-            attributes['ssh_public_keys'] = user.sshpubkeys
-            attributes['submission_delegates'] = user.submission_delegates
-            attributes['use_old_job_page'] = user.use_old_job_page
-            attributes['notify_job_completion'] = user.notify_job_completion
-            attributes['notify_broken_system'] = user.notify_broken_system
-            attributes['notify_group_membership'] = user.notify_group_membership
-            attributes['notify_reservesys'] = user.notify_reservesys
-    else:
-        attributes['can_edit'] = False
-        attributes['can_change_password'] = False
     return attributes
 
 @app.route('/users/', methods=['POST'])

@@ -1,0 +1,34 @@
+<% if (!can_edit_keystone_trust) { %>
+    <p>OpenStack Integration is not enabled.</p>
+<% } else if (openstack_trust_id) { %>
+<p>
+    You have created a Keystone Trust for Beaker.
+    The trust id is: <code><%- openstack_trust_id %></code>
+    <button class="btn btn-danger delete" data-loading-text="<i class='fa fa-trash-o fa-spin'></i> Deleting&hellip;"><i class="fa fa-trash-o"></i> Delete</button>
+</p>
+<% } %>
+<form>
+    <p>To create a new Keystone trust, supply your OpenStack account credentials:</p>
+    <div class="control-group">
+        <label class="control-label" for="openstack_username">User name</label>
+        <div class="controls">
+            <input type="text" id="openstack_username" name="openstack_username" required <% if (!can_edit_keystone_trust) { %>disabled<% } %>/>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label" for="openstack_password">Password</label>
+        <div class="controls">
+            <input type="password" id="openstack_password" name="openstack_password" required <% if (!can_edit_keystone_trust) { %>disabled<% } %>/>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label" for="openstack_project_name">Project name</label>
+        <div class="controls">
+            <input type="text" id="openstack_project_name" name="openstack_project_name" required <% if (!can_edit_keystone_trust) { %>disabled<% } %>/>
+        </div>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Saving&hellip;">Save Changes</button>
+      <button type="reset" class="btn" data-loading-text="Revert">Revert</button>
+    </div>
+</form>

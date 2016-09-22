@@ -19,6 +19,7 @@
   <li><a data-toggle="tab" href="#submission-delegates">Submission Delegates</a></li>
   <li><a data-toggle="tab" href="#ui">User Interface</a></li>
   <li><a data-toggle="tab" href="#user-notifications">Notifications</a></li>
+  <li><a data-toggle="tab" href="#keystone-trust">OpenStack Keystone Trust</a></li>
 </ul>
 
 <div class="tab-content prefs-tabs">
@@ -27,6 +28,7 @@
   <div class="tab-pane" id="submission-delegates"></div>
   <div class="tab-pane" id="ui"></div>
   <div class="tab-pane" id="user-notifications"></div>
+  <div class="tab-pane keystone-trust" id="keystone-trust"></div>
 </div>
 
 <script type="text/javascript">
@@ -42,6 +44,7 @@
       new UserSubmissionDelegatesView({model:user, el: $('#submission-delegates')});
       new UserUIPreferencesView({model: user, el: $('#ui')});
       new UserNotificationsView({model:user, el: $('#user-notifications')});
+      new UserKeystoneTrustView({model: user, el: $('#keystone-trust')});
       link_tabs_to_anchor('beaker_prefs_tabs', '.nav-tabs');
   });
 </script>

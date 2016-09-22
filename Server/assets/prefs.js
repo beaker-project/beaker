@@ -240,4 +240,75 @@ window.UserNotificationsView = Backbone.View.extend({
     },
 });
 
+window.UserKeystoneTrustView = Backbone.View.extend({
+    template: JST['user-keystone-trust'],
+    events: {
+        'click input': 'changed',
+        'click .delete': 'delete',
+        'submit form': 'submit',
+        'reset form': 'reset',
+    },
+    initialize: function () {
+        this.listenTo(this.model, 'change:openstack_trust_id', this.render);
+        this.render();
+    },
+    changed: function () {
+        this.$('.form-actions button').prop('disabled', false);
+    },
+    render: function () {
+        this.$el.html(this.template(this.model.attributes));
+        this.$('.form-actions button').prop('disabled', true);
+    },
+    delete: function () {
+        var model = this.model, $del_btn = this.$('button.delete');
+        $del_btn.button('loading');
+        bootbox.confirm_as_promise('<p>Are you sure you want to delete this trust?</p>')
+            .fail(function () { $del_btn.button('reset'); })
+            .then(function () { return model.delete_keystone_trust(); })
+            .fail(_.bind(this.delete_error, this))
+            .done(function () {
+                $.bootstrapGrowl('<h4>Keystone trust has been deleted</h4>' +
+                        'Your keystone trust has been successfully deleted.',
+                        {type: 'success'});
+            });
+    },
+    delete_error: function(xhr) {
+        if (!_.isEmpty(xhr)) {
+            growl_for_xhr(xhr, 'Failed to delete');
+            this.$('button.delete').button('reset');
+        }
+    },
+    submit: function (evt) {
+        evt.preventDefault();
+        this.$('.alert-error').remove();
+        this.$('.form-actions button').button('loading');
+        var $el = this.$el;
+        var attributes = {
+            openstack_username: this.$('[name=openstack_username]').val(),
+            openstack_password: this.$('[name=openstack_password]').val(),
+            openstack_project_name: this.$('[name=openstack_project_name]').val(),
+        };
+        this.model.create_keystone_trust(attributes)
+            .always(function () {
+                $el.find('.form-actions button').button('reset');
+            })
+            .fail(function (xhr) {
+                $el.append(alert_for_xhr(xhr));
+            })
+            .done(function (xhr) {
+                // Bootstrap's button reset happens in setTimeout for... 
+                // questionable reasons, so we have to do the same here.
+                setTimeout(function () {
+                    $el.find('.form-actions button').prop('disabled', true);
+                }, 0);
+            });
+    },
+    reset: function (evt) {
+        evt.preventDefault();
+        this.$('input').each(function (i, elem) {
+            $(elem).val('');
+        });
+    },
+});
+
 })();

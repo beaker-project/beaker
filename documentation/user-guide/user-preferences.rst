@@ -3,7 +3,8 @@ User preferences
 
 The preferences page allows the user to configure their email address,
 notifications, user interface, submission delegates, SSH public keys,
-and root password for provisioned systems.
+root password for provisioned systems and OpenStack keystone trust for
+running recipes on OpenStack.
 
 Either a hashed password (in crypt format) or a cleartext password may
 be entered as a root password. If a plaintext password is entered, it
@@ -32,4 +33,9 @@ without needing access to those users' credentials, and without granting them
 the ability to perform other activities as that user (like managing systems
 or user groups).
 
+.. _openstack-keystone-trust:
 
+
+If you want to use OpenStack instances to run your recipes, you must create a Keystone
+trust to delegate your roles to Beaker's OpenStack account. Beaker will then use
+this trust to create OpenStack instances on your behalf.

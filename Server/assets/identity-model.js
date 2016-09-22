@@ -60,6 +60,27 @@ window.User = Backbone.Model.extend({
             return model.fetch(); // refresh submission_delegates attribute
         });
     },
+    create_keystone_trust: function (data) {
+        var model = this;
+        return $.ajax({
+            url: this.url + '/keystone-trust',
+            type: 'PUT',
+            dataType: 'json',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+        }).then(function () {
+            return model.fetch(); // refresh openstack_trust_id attribute
+        });
+    },
+    delete_keystone_trust: function () {
+        var model = this;
+        return $.ajax({
+            url: this.url + '/keystone-trust',
+            type: 'DELETE',
+        }).then(function () {
+            return model.fetch(); // refresh openstack_trust_id attribute
+        });
+    },
 });
 
 var SSHPublicKey = Backbone.Model.extend({
