@@ -1704,7 +1704,26 @@ class System(DeclarativeMappedObject, ActivityMixin):
                              old='', new=text)
         self.date_modified = datetime.utcnow()
 
+    def abort_queued_commands(self, msg):
+        """
+        Selects all items in the command_queue in queued status and changes them to aborted
+        :param msg: Explanation for why commands are aborted
+        """
+        queued_commands = self.dyn_command_queue.filter_by(status=CommandStatus.queued)
+        for c in queued_commands:
+            c.abort(msg)
+
     cc = association_proxy('_system_ccs', 'email_address')
+
+@event.listens_for(System.status, 'set')
+def set_removed_status(system, new_status, oldstatus, dontcare):
+    """
+    Aborts any queued commands if the system is marked as Removed
+    """
+    if oldstatus is None or oldstatus is NEVER_SET:
+        return
+    if new_status == SystemStatus.removed:
+        system.abort_queued_commands("System marked as removed")
 
 @event.listens_for(System.status, 'set', active_history=True, retval=True)
 def add_system_status_duration(system, child, oldchild, initiator):

@@ -67,7 +67,7 @@ def remove_labcontroller(labcontroller):
     # for status changes.
     for sys in systems:
         sys.mark_broken('Lab controller de-associated')
-
+        sys.abort_queued_commands("System disassociated from lab controller")
     # de-associate systems
     System.record_bulk_activity(systems, user=identity.current.user,
                                 service=u'HTTP', action=u'Changed', field=u'Lab Controller',
@@ -596,8 +596,13 @@ class LabControllers(RPCRoot):
         # don't support it and will report a "failure" in that case.
         if system_broken and cmd.action != 'interrupt' and cmd.system.status == SystemStatus.automated:
             cmd.system.mark_broken(reason=u'Power command failed: %s' % message)
-        if cmd.installation and cmd.installation.recipe:
-            cmd.installation.recipe.abort('Command %s failed' % cmd.id)
+        if cmd.installation:
+            if cmd.installation.recipe:
+                cmd.installation.recipe.abort('Command %s failed' % cmd.id)
+            queued_commands = [c for c in cmd.installation.commands if c.status == CommandStatus.queued]
+            for q in queued_commands:
+                q.abort('Command %s failed' % cmd.id)
+
         cmd.log_to_system_history()
         return True
 

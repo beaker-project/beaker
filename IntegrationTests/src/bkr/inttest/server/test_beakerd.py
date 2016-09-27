@@ -1907,6 +1907,8 @@ class TestBeakerdMetrics(DatabaseTestCase):
             systems = System.query.filter(System.status != SystemStatus.removed)
             for system in systems:
                 system.status = SystemStatus.removed
+
+            session.flush()
             commands = Command.query.filter(not_(Command.finished))
             for command in commands:
                 command.change_status(CommandStatus.aborted)
@@ -2037,6 +2039,12 @@ class TestBeakerdMetrics(DatabaseTestCase):
             mock_metrics.measure.assert_any_call(name, value)
 
     def test_dirty_job_metrics(self, mock_metrics):
+        # Ensure that any dirty jobs left behind by
+        # an unrelated test are marked clean to avoid
+        # contaminating the metrics test
+        for dirty in Job.query.filter(Job.is_dirty):
+            dirty._mark_clean()
+
         job = data_setup.create_running_job()
         self.assertFalse(job.is_dirty)
         session.flush()

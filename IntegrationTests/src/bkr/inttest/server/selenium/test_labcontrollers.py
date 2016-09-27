@@ -152,8 +152,13 @@ class LabControllerViewTest(WebDriverTestCase):
             # associations. So this test creates a system, job, and distro tree
             # in the lab to cover all those cases.
             sys = data_setup.create_system(lab_controller=self.lc)
+            sys.action_power(action='clear_logs')
+            sys.action_power(action='configure_netboot')
+            sys.action_power(action='reboot')
+
             job = data_setup.create_running_job(lab_controller=self.lc)
             distro_tree = data_setup.create_distro_tree(lab_controllers=[self.lc])
+
         b.get(get_server_base() + 'labcontrollers')
         b.find_element_by_xpath('//li[contains(., "%s")]//button[contains(., "Remove")]' % self.lc.fqdn).click()
         b.find_element_by_xpath('//button[@type="button" and .//text()="OK"]').click()
@@ -163,6 +168,7 @@ class LabControllerViewTest(WebDriverTestCase):
             session.expire_all()
             # system set to broken?
             self.assertEquals(sys.status, SystemStatus.broken)
+
             # check lc activity
             self.assertEquals(self.lc.activity[0].field_name, u'Removed')
             self.assertEquals(self.lc.activity[0].action, u'Changed')
@@ -170,13 +176,34 @@ class LabControllerViewTest(WebDriverTestCase):
             self.assertEquals(self.lc.activity[1].field_name, u'Disabled')
             self.assertEquals(self.lc.activity[1].action, u'Changed')
             self.assertEquals(self.lc.activity[1].new_value, u'True')
+
             # check system activity
             self.assertEquals(sys.activity[0].field_name, u'Lab Controller')
             self.assertEquals(sys.activity[0].action, u'Changed')
             self.assertEquals(sys.activity[0].new_value, None)
-            self.assertEquals(sys.activity[1].field_name, u'Status')
-            self.assertEquals(sys.activity[1].action, u'Changed')
-            self.assertEquals(sys.activity[1].new_value, 'Broken')
+
+            # Check that queued commands are aborted when lab controller removed
+            # https://bugzilla.redhat.com/show_bug.cgi?id=1362371
+            self.assertEquals(sys.activity[1].field_name, u'Power')
+            self.assertEquals(sys.activity[1].action, u'clear_logs')
+            self.assertEquals(sys.activity[1].new_value, u'Aborted: System disassociated from lab controller')
+
+            self.assertEquals(sys.activity[2].field_name, u'Power')
+            self.assertEquals(sys.activity[2].action, u'configure_netboot')
+            self.assertEquals(sys.activity[2].new_value, u'Aborted: System disassociated from lab controller')
+
+            self.assertEquals(sys.activity[3].field_name, u'Power')
+            self.assertEquals(sys.activity[3].action, u'off')
+            self.assertEquals(sys.activity[3].new_value, u'Aborted: System disassociated from lab controller')
+
+            self.assertEquals(sys.activity[4].field_name, u'Power')
+            self.assertEquals(sys.activity[4].action, u'on')
+            self.assertEquals(sys.activity[4].new_value, u'Aborted: System disassociated from lab controller')
+
+            self.assertEquals(sys.activity[5].field_name, u'Status')
+            self.assertEquals(sys.activity[5].action, u'Changed')
+            self.assertEquals(sys.activity[5].new_value, 'Broken')
+
             # check that the status duration reflects the new system status
             self.assertEquals(sys.status_durations[0].status, SystemStatus.broken)
             # check job status
@@ -585,6 +612,20 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
         self.server = self.get_server()
         self.server.auth.login_password(self.lc.user.user_name, u'logmein')
 
+    def setup_system_with_queued_commands(self):
+        with session.begin():
+            system = data_setup.create_system(arch=[u'i386', u'x86_64'],
+                                              lab_controller=self.lc,
+                                              status=SystemStatus.automated, shared=True)
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20')
+            installation = Installation(distro_tree=distro_tree, system=system,
+                    kernel_options=u'')
+            system.configure_netboot(installation=installation, service=u'testdata')
+            system.action_power(action='reboot', installation=installation, service=u'testdata')
+
+        self.assertEqual(4, len(system.command_queue))
+        return system
+
     def test_obeys_max_running_commands_limit(self):
         with session.begin():
             for _ in xrange(15):
@@ -910,6 +951,35 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
             assert_datetime_within(command.finish_time,
                     tolerance=datetime.timedelta(seconds=10),
                     reference=datetime.datetime.utcnow())
+
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1318524
+    def test_off_and_on_commands_abort_if_configure_netboot_fails(self):
+        system = self.setup_system_with_queued_commands()
+        clear_logs = system.command_queue[3]
+        configure_netboot = system.command_queue[2]
+        off = system.command_queue[1]
+        on = system.command_queue[0]
+        self.assertEqual('clear_logs', clear_logs.action)
+        self.assertEqual('configure_netboot', configure_netboot.action)
+        self.assertEqual('off', off.action)
+        self.assertEqual('on', on.action)
+
+        self.server.labcontrollers.mark_command_running(clear_logs.id)
+        self.server.labcontrollers.mark_command_completed(clear_logs.id)
+        self.server.labcontrollers.mark_command_running(configure_netboot.id)
+        self.server.labcontrollers.mark_command_failed(configure_netboot.id)
+
+        with session.begin():
+            session.expire_all()
+
+            # Check that on and off are marked as aborted
+            self.assertEqual(CommandStatus.aborted, off.status)
+            self.assertEqual(CommandStatus.aborted, on.status)
+
+            # verify that other commands do not change to aborted
+            self.assertEqual(CommandStatus.completed, clear_logs.status)
+            self.assertEqual(CommandStatus.failed, configure_netboot.status)
 
 
 class LabControllerHTTPTest(DatabaseTestCase):

@@ -1058,6 +1058,7 @@ class MigrationTest(unittest.TestCase):
                     connection.scalar('SELECT `when` FROM recipe_reservation WHERE id = 1'),
                     u'always')
 
+
     def test_remove_task_arch_and_osmajor_exclude_orphans_duplicates(self):
         with self.migration_metadata.bind.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/23.sql'))
@@ -1082,3 +1083,32 @@ class MigrationTest(unittest.TestCase):
                 'SELECT count(*) FROM task_exclude_osmajor'), 1)
             self.assertEqual(connection.scalar(
                 'SELECT count(*) FROM task_exclude_arch'), 1)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1362371
+    def test_abort_commands_without_lab_controller(self):
+        with self.migration_metadata.bind.connect() as connection:
+            # populate empty database
+            connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                                                             'database-dumps/23.sql'))
+            connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                                                             'bz1362371-migration-setup.sql'))
+
+        upgrade_db(self.migration_metadata)
+
+        self.assertEquals(
+            self.migration_session.query(Command).filter_by(system_id=1).count(),
+            4)
+
+        # Failed Command left in place
+        self.assertEquals(
+            self.migration_session.query(Command).filter_by(status = CommandStatus.aborted, system_id=2).count(),
+            4)
+
+        # Failed Command left in place
+        self.assertEquals(
+            self.migration_session.query(Command).filter_by(status = CommandStatus.failed, system_id=2).count(),
+            1)
+
+        cmd = self.migration_session.query(Command).get(9)
+        self.assertEquals(cmd.status, CommandStatus.failed)
+

@@ -7,18 +7,42 @@
 import logging
 from threading import Thread, Event
 from turbogears.database import session
-from bkr.server.model import System, SystemStatus
+from bkr.server.model import System, SystemStatus, CommandStatus
 from bkr.inttest import data_setup, DatabaseTestCase
 
 log = logging.getLogger(__name__)
 
 class SystemStatusTest(DatabaseTestCase):
 
+    def assert_commands_in_same_state(self, system, required_status):
+        """
+        Asserts that all commands in the system's command
+        queue are in the same state
+        :param system: System to to check
+        :param required_status: Status to assert
+        """
+        states = set([c.status for c in system.command_queue])
+        self.assertEqual(1, len(states), "Commands in more than one state")
+        self.assertIn(required_status, states)
+
     def check_status_durations(self, system):
-        # The crucial invariant is that there is exactly one row with NULL 
+        # The crucial invariant is that there is exactly one row with NULL
         # finish_time.
         self.assert_(len([sd for sd in system.status_durations if sd.finish_time is None])
                 == 1, system.status_durations)
+
+    def setup_system_with_queued_commands(self):
+        with session.begin():
+            system = data_setup.create_system(status=u'Automated',
+                                              lab_controller=data_setup.create_labcontroller())
+            system.action_power(action='clear_logs')
+            system.action_power(action='configure_netboot')
+            system.action_power(action='reboot')
+        session.flush()
+
+        self.assertEqual(4, len(system.command_queue))
+        self.assert_commands_in_same_state(system, CommandStatus.queued)
+        return system
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=903902
     def test_concurrent_updates(self):
@@ -66,3 +90,9 @@ class SystemStatusTest(DatabaseTestCase):
             session.expire_all()
             self.assertEquals(system.status, SystemStatus.broken)
             self.check_status_durations(system)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1362371
+    def test_queued_commands_aborted_when_system_removed(self):
+        system = self.setup_system_with_queued_commands()
+        system.status = SystemStatus.removed
+        self.assert_commands_in_same_state(system, CommandStatus.aborted)
