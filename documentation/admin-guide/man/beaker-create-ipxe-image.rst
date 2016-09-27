@@ -16,7 +16,8 @@ a configuration pointing at this Beaker instance.
 
 Beaker uses this image as part of the support for provisioning dynamic VMs in 
 OpenStack. The image needs to be created once when OpenStack integration is 
-enabled.
+enabled. The credentials given here need to have the permission to create a public
+image in OpenStack.
 
 This command requires read access to the Beaker server configuration. Run it as 
 root or as another user with read access to the configuration file.

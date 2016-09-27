@@ -15,14 +15,14 @@ __description__ = 'Generate and upload an image for iPXE booting to OpenStack Gl
 
 import sys
 import os
-from optparse import OptionParser
+from optparse import OptionParser, SUPPRESS_HELP
 import logging
 import socket
 import tempfile
 import subprocess
 import datetime
 try:
-    import keystoneclient.v2_0.client
+    import keystoneclient.v3.client
     has_keystoneclient = True
 except ImportError:
     has_keystoneclient = False
@@ -66,10 +66,10 @@ APPEND dhcp && chain %s
                 % mcopy.returncode)
     return f
 
-def upload_image(username, password, tenant_name, auth_url):
+def upload_image(username, password, project_name, auth_url):
     log.debug('Authenticating to Keystone')
-    keystone = keystoneclient.v2_0.client.Client(username=username, password=password,
-            tenant_name=tenant_name, auth_url=auth_url)
+    keystone = keystoneclient.v3.client.Client(username=username, password=password,
+            project_name=project_name, auth_url=auth_url)
     log.debug('Looking up Glance URL in service catalog')
     glance_url = keystone.service_catalog.url_for(
             service_type='image', endpoint_type='publicURL')
@@ -101,7 +101,8 @@ def main():
             help='Skip uploading to Glance, leave image temp file on disk')
     parser.add_option('--os-username', help='OpenStack username')
     parser.add_option('--os-password', help='OpenStack password')
-    parser.add_option('--os-tenant-name', help='OpenStack tenant name')
+    parser.add_option('--os-tenant-name', help=SUPPRESS_HELP)
+    parser.add_option('--os-project-name', help='OpenStack project name')
     parser.set_defaults(debug=False, upload=True)
     options, args = parser.parse_args()
     load_config_or_exit(options.config_file)
@@ -119,15 +120,18 @@ def main():
         password = options.os_password or os.environ.get('OS_PASSWORD')
         if not password:
             parser.error('Specify password with --os-password or env[OS_PASSWORD]')
-        tenant_name = options.os_tenant_name or os.environ.get('OS_TENANT_NAME')
-        if not tenant_name:
-            parser.error('Specify tenant with --os-tenant-name or env[OS_TENANT_NAME]')
+        project_name = options.os_project_name or os.environ.get('OS_PROJECT_NAME')
+        # for backwards compat
+        if not project_name:
+            project_name = options.os_tenant_name or os.environ.get('OS_TENANT_NAME')
+        if not project_name:
+            parser.error('Specify project with --os-project-name or env[OS_PROJECT_NAME]')
         auth_url = config.get('openstack.identity_api_url')
         if not auth_url:
             parser.error('OpenStack Identity API URL is not set in the configuration')
         # Generate and upload the image.
         with session.begin():
-            upload_image(username, password, tenant_name, auth_url)
+            upload_image(username, password, project_name, auth_url)
     else:
         print generate_image().name
 
