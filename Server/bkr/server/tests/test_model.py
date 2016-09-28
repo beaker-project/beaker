@@ -114,7 +114,7 @@ class TaskLibraryTest(unittest.TestCase):
 
     def tearDown(self):
         # Make sure sane value is left after test run
-        update({'beaker.createrepo_command': 'createrepo'})
+        update({'beaker.createrepo_command': 'createrepo_c'})
 
     def _hash_repodata_file(self, content, total=0):
         """Returns an int type representation of the XML contents.

@@ -186,7 +186,7 @@ def log_traceback(logger):
     return decorator
 
 def run_createrepo(cwd=None, update=False):
-    createrepo_command = config.get('beaker.createrepo_command', 'createrepo')
+    createrepo_command = config.get('beaker.createrepo_command', 'createrepo_c')
     args = [createrepo_command, '-q', '--no-database', '--checksum', 'sha']
     if update:
         args.append('--update')

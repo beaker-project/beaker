@@ -179,7 +179,7 @@ Requires:       httpd
 Requires:       python-krbV
 Requires:       %{name}-common = %{version}-%{release}
 Requires:       python-TurboMail >= 3.0
-Requires:       createrepo
+Requires:       createrepo_c
 Requires:       yum-utils
 Requires:       cracklib-python
 Requires:       python-jinja2
