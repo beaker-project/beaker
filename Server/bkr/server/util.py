@@ -121,12 +121,21 @@ def absolute_url(tgpath, tgparams=None, scheme=None,
     in server.cfg.  This is to support multi-home systems which have
     different external vs internal names.
     """
-    order = []
-    if labdomain:
-        order.append(config.get('tg.lab_domain'))
-    order.extend([config.get('tg.url_domain'),
-                  config.get('servername'),
-                  socket.getfqdn()])
+    if labdomain and config.get('tg.lab_domain'):
+        host_port = config.get('tg.lab_domain')
+    elif config.get('tg.url_domain'):
+        host_port = config.get('tg.url_domain')
+    elif config.get('servername'): # deprecated
+        host_port = config.get('servername')
+    else:
+        # System hostname is cheap to look up (no DNS calls) but there is no 
+        # requirement that it be fully qualified.
+        kernel_hostname = socket.gethostname()
+        if '.' in kernel_hostname:
+            host_port = kernel_hostname
+        else:
+            # Last resort, let glibc do a DNS lookup through search domains etc.
+            host_port = socket.getfqdn()
 
     # TODO support relative paths
     if webpath:
@@ -135,7 +144,6 @@ def absolute_url(tgpath, tgparams=None, scheme=None,
         theurl = url_no_webpath(tgpath, tgparams, **kw)
     assert theurl.startswith('/')
     scheme = scheme or config.get('tg.url_scheme', 'http')
-    host_port = filter(None, order)[0]
     return '%s://%s%s' % (scheme, host_port, theurl)
 
 # http://stackoverflow.com/questions/1809531/_/1820949#1820949
