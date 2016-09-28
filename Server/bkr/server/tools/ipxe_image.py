@@ -66,15 +66,7 @@ APPEND dhcp && chain %s
                 % mcopy.returncode)
     return f
 
-def upload_image(username, password, project_name, auth_url):
-    log.debug('Authenticating to Keystone')
-    keystone = keystoneclient.v3.client.Client(username=username, password=password,
-            project_name=project_name, auth_url=auth_url)
-    log.debug('Looking up Glance URL in service catalog')
-    glance_url = keystone.service_catalog.url_for(
-            service_type='image', endpoint_type='publicURL')
-    log.debug('Using Glance URL %s', glance_url)
-    glance = glanceclient.Client('1', endpoint=glance_url, token=keystone.auth_token)
+def upload_image(glance, public=True):
     # For now we are just assuming there is always one region.
     region = OpenStackRegion.query.first()
     if not region:
@@ -84,7 +76,7 @@ def upload_image(username, password, project_name, auth_url):
     image_name = _image_name()
     log.debug('Creating Glance image %s', image_name)
     image = glance.images.create(name=image_name,
-            disk_format='raw', container_format='bare', is_public=True)
+            disk_format='raw', container_format='bare', is_public=public)
     log.debug('Uploading image %s to Glance', f.name)
     image.update(data=f)
     region.ipxe_image_id = image.id
@@ -126,9 +118,17 @@ def main():
         auth_url = config.get('openstack.identity_api_url')
         if not auth_url:
             parser.error('OpenStack Identity API URL is not set in the configuration')
+        log.debug('Authenticating to Keystone')
+        keystone = keystoneclient.v3.client.Client(username=username, password=password,
+                project_name=project_name, auth_url=auth_url)
+        log.debug('Looking up Glance URL in service catalog')
+        glance_url = keystone.service_catalog.url_for(
+                service_type='image', endpoint_type='publicURL')
+        log.debug('Using Glance URL %s', glance_url)
+        glance = glanceclient.Client('1', endpoint=glance_url, token=keystone.auth_token)
         # Generate and upload the image.
         with session.begin():
-            upload_image(username, password, project_name, auth_url)
+            upload_image(glance)
     else:
         print generate_image(delete=False).name
 

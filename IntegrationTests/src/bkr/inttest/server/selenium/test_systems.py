@@ -19,7 +19,7 @@ from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium.webdriver.support.expected_conditions import staleness_of
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction, \
-        DummyVirtManager, DatabaseTestCase
+        DatabaseTestCase
 from bkr.inttest.assertions import assert_sorted
 from bkr.server.model import Cpu, Key, Key_Value_String, System, \
     SystemStatus, SystemPermission, Job, Disk

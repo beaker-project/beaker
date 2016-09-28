@@ -17,17 +17,21 @@ from bkr.server.model import TaskStatus, Job, System, User, \
         Group, SystemStatus, SystemActivity, Recipe, Cpu, LabController, \
         Provision, TaskPriority, RecipeSet, RecipeTaskResult, Task, SystemPermission,\
         MachineRecipe, GuestRecipe, LabControllerDistroTree, DistroTree, \
-        TaskResult, Command, CommandStatus, GroupMembershipType
+        TaskResult, Command, CommandStatus, GroupMembershipType, \
+        RecipeVirtStatus
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import not_
+from turbogears import config
 from turbogears.database import session, get_engine
 import lxml.etree
 from bkr.inttest import data_setup, fix_beakerd_repodata_perms, DatabaseTestCase
 from bkr.inttest.assertions import assert_datetime_within, \
-        assert_durations_not_overlapping
+        assert_durations_not_overlapping, wait_for_condition
 from bkr.server.tools import beakerd
 from bkr.server.jobs import Jobs
+from bkr.server import dynamic_virt
 from bkr.inttest.assertions import assert_datetime_within
+from unittest2 import SkipTest
 
 # We capture the sent mail to avoid error spam in the logs rather than to
 # check anything in particular
@@ -270,6 +274,7 @@ class TestBeakerd(DatabaseTestCase):
             j2 = data_setup.create_job_for_recipes([r2])
 
             data_setup.mark_job_queued(j1)
+            r1.virt_status = RecipeVirtStatus.precluded
             r1.systems[:] = [system]
             data_setup.mark_job_running(j2, system=system)
 
@@ -1812,6 +1817,55 @@ class TestBeakerd(DatabaseTestCase):
             self.assertEquals(activity_entry.field_name, u'Priority')
             self.assertEquals(activity_entry.old_value, u'Low')
             self.assertEquals(activity_entry.new_value, u'Medium')
+
+class TestProvisionVirtRecipes(DatabaseTestCase):
+
+    def setUp(self):
+        if not config.get('openstack.identity_api_url'):
+            raise SkipTest('OpenStack Integration is not enabled')
+        with session.begin():
+            self.user = data_setup.create_user()
+            data_setup.create_keystone_trust(self.user)
+            self.virt_manager = dynamic_virt.VirtManager(self.user)
+            self.recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([self.recipe], owner=self.user)
+
+    def tearDown(self):
+        with session.begin():
+            recipe = Recipe.query.get(self.recipe.id)
+            if recipe.resource:
+                self.virt_manager.destroy_vm(recipe.resource)
+
+    def test_openstack_instance_created(self):
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        beakerd.provision_virt_recipes()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            recipe = Recipe.query.get(self.recipe.id)
+            self.assertEquals(recipe.status, TaskStatus.installing)
+            instance = self.virt_manager.novaclient.servers.get(recipe.resource.instance_id)
+            self.assertTrue(instance.status, u'ACTIVE')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1361936
+    def test_after_reboot_watchdog_killtime_extended_on_virt_recipes(self):
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        beakerd.provision_virt_recipes()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            recipe = Recipe.query.get(self.recipe.id)
+            self.assertEquals(recipe.status, TaskStatus.installing)
+            self.assertIsNotNone(recipe.installation.rebooted)
+            self.assertIsNotNone(recipe.watchdog.kill_time)
+            assert_datetime_within(
+                    recipe.watchdog.kill_time,
+                    tolerance=datetime.timedelta(seconds=10),
+                    reference=datetime.datetime.utcnow() + datetime.timedelta(seconds=3000))
 
 @patch('bkr.server.tools.beakerd.metrics')
 class TestBeakerdMetrics(DatabaseTestCase):

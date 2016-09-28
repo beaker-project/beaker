@@ -7,6 +7,7 @@
 # (at your option) any later version.
 
 import datetime
+from unittest2 import SkipTest
 import requests
 from bkr.server.model import session, SystemPermission, TaskStatus, User, \
         SSHPubKey
@@ -592,6 +593,8 @@ class UserHTTPTest(DatabaseTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1100519
     def test_cannot_create_keystone_trust_if_openstack_is_disabled(self):
+        if config.get('openstack.identity_api_url'):
+            raise SkipTest('OpenStack integration is enabled')
         with session.begin():
             user = data_setup.create_user()
         s = requests.Session()

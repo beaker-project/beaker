@@ -15,6 +15,7 @@ import netaddr
 import lxml.etree
 import inspect
 import unittest
+import mock
 from sqlalchemy.orm.exc import NoResultFound
 import turbogears.config, turbogears.database
 from turbogears.database import session, metadata
@@ -32,8 +33,9 @@ from bkr.server.model import LabController, User, Group, UserGroup, \
         GuestResource, VirtResource, SystemStatusDuration, SystemAccessPolicy, \
         SystemPermission, DistroTreeImage, ImageType, KernelType, \
         RecipeReservationRequest, OSMajorInstallOptions, SystemPool, \
-        GroupMembershipType, Installation, CommandStatus
+        GroupMembershipType, Installation, CommandStatus, OpenStackRegion
 from bkr.server.model.types import mac_unix_padded_dialect
+from bkr.server import dynamic_virt
 
 log = logging.getLogger(__name__)
 
@@ -560,6 +562,8 @@ def mark_recipe_complete(recipe, result=TaskResult.pass_,
     if recipe.reservation_request:
         recipe.extend(0)
         recipe.recipeset.job.update_status()
+    if isinstance(recipe.resource, VirtResource):
+        recipe.resource.instance_deleted = datetime.datetime.utcnow()
     log.debug('Marked %s as complete with result %s', recipe.t_id, result)
 
 def mark_recipe_tasks_finished(recipe, result=TaskResult.pass_,
@@ -681,7 +685,8 @@ def mark_recipe_waiting(recipe, start_time=None, only=False, **kwargs):
     if not only:
         mark_recipe_scheduled(recipe, start_time=start_time, **kwargs)
     recipe.start_time = start_time
-    recipe.provision()
+    with mock.patch('bkr.server.dynamic_virt.VirtManager', autospec=True):
+        recipe.provision()
     if recipe.installation.commands:
         # Because we run a real beaker-provision in the dogfood tests, it will pick 
         # up the freshly created configure_netboot commands and try pulling down 
@@ -866,3 +871,16 @@ def create_recipe_reservation(user, task_name=u'/distribution/reservesys', kill_
     mark_recipe_running(recipe)
     recipe.extend(kill_time)
     return recipe
+
+def create_openstack_region():
+    # For now we are just assuming there is always one region.
+    region = OpenStackRegion.query.first()
+    if not region:
+        region = OpenStackRegion()
+        region.lab_controller = LabController.query.first()
+
+def create_keystone_trust(user):
+    trust_id = dynamic_virt.create_keystone_trust(os.environ['OPENSTACK_DUMMY_USERNAME'],
+            os.environ['OPENSTACK_DUMMY_PASSWORD'],
+            os.environ['OPENSTACK_DUMMY_PROJECT_NAME'])
+    user.openstack_trust_id = trust_id

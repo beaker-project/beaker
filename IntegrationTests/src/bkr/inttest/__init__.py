@@ -10,7 +10,9 @@ pkg_resources.require('TurboGears >= 1.1')
 
 import sys
 import os
+import datetime
 import time
+import socket
 import threading
 import subprocess
 import shutil
@@ -23,11 +25,22 @@ import signal
 import unittest2 as unittest
 import cherrypy
 import turbogears
+try:
+    import keystoneclient.v3.client
+    has_keystoneclient = True
+except ImportError:
+    has_keystoneclient = False
+try:
+    import glanceclient
+    has_glanceclient = True
+except ImportError:
+    has_glanceclient = False
 from turbogears.database import session
-import bkr.server.model
 from bkr.server import dynamic_virt
 from bkr.server.controllers import Root
+from bkr.server.model import OpenStackRegion, ConfigItem, User
 from bkr.server.util import load_config
+from bkr.server.tools import ipxe_image
 from bkr.server.tests import data_setup
 from bkr.log import log_to_stream
 
@@ -88,18 +101,6 @@ def with_transaction(func):
         with session.begin():
             func(*args, **kwargs)
     return _decorated
-
-class DummyVirtManager(object):
-    def __init__(self, user):
-        pass
-    def available_flavors(self):
-        return []
-    def create_vm(self, name, flavor):
-        pass
-    def start_vm(self, instance_id):
-        pass
-    def destroy_vm(self, vm):
-        pass
 
 def fix_beakerd_repodata_perms():
     # This is ugly, but I can't come up with anything better...
@@ -274,6 +275,42 @@ def cleanup_slapd():
     shutil.rmtree(slapd_data_dir, ignore_errors=True)
     shutil.rmtree(slapd_config_dir, ignore_errors=True)
 
+def _glance():
+    if not has_keystoneclient:
+        raise RuntimeError('python-keystoneclient is not installed')
+    if not has_glanceclient:
+        raise RuntimeError('python-glanceclient is not installed')
+    # We upload the ipxe image to Glance using the same dummy credentials and 
+    # tenant on whose behalf we will be creating VMs later.
+    username = os.environ['OPENSTACK_DUMMY_USERNAME']
+    password = os.environ['OPENSTACK_DUMMY_PASSWORD']
+    project_name = os.environ['OPENSTACK_DUMMY_PROJECT_NAME']
+    auth_url = turbogears.config.get('openstack.identity_api_url')
+    keystone = keystoneclient.v3.client.Client(username=username, password=password,
+            project_name=project_name, auth_url=auth_url)
+    glance_url = keystone.service_catalog.url_for(
+            service_type='image', endpoint_type='publicURL')
+    return glanceclient.Client('1', endpoint=glance_url, token=keystone.auth_token)
+
+def setup_openstack():
+    with session.begin():
+        data_setup.create_openstack_region()
+        session.flush()
+        # Use a distinctive guest name prefix to give us a greater chance of 
+        # tracking instances back to the test run which created them.
+        admin_user = User.by_user_name(data_setup.ADMIN_USER)
+        guest_name_prefix = u'beaker-testsuite-%s-%s-' % (
+                datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S'),
+                socket.gethostname())
+        ConfigItem.by_name(u'guest_name_prefix').set(guest_name_prefix, user=admin_user)
+        ipxe_image.upload_image(_glance(), public=False)
+
+def cleanup_openstack():
+    with session.begin():
+        region = OpenStackRegion.query.one()
+        log.info('Cleaning up Glance image %s', region.ipxe_image_id)
+        _glance().images.delete(region.ipxe_image_id)
+
 processes = None
 
 def edit_file(file, old_text, new_text):
@@ -330,12 +367,11 @@ def setup_package():
 
     setup_slapd()
 
+    if turbogears.config.get('openstack.identity_api_url'):
+        setup_openstack()
+
     turbogears.testutil.make_app(Root)
     turbogears.testutil.start_server()
-
-    global orig_VirtManager
-    orig_VirtManager = dynamic_virt.VirtManager
-    dynamic_virt.VirtManager = DummyVirtManager
 
     global processes
     processes = []
@@ -370,8 +406,9 @@ def teardown_package():
     for process in processes:
         process.stop()
 
-    dynamic_virt.VirtManager = orig_VirtManager
-
     turbogears.testutil.stop_server()
+
+    if turbogears.config.get('openstack.identity_api_url'):
+        cleanup_openstack()
 
     cleanup_slapd()
