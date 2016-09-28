@@ -35,6 +35,19 @@ class TestSystemPoolAdd(ClientTestCase):
             self.assertIn('System pool %s does not exist' % pool_name,
                           e.stderr_output)
 
+    def test_add_nonexistent_system_to_pool(self):
+        system_fqdn = data_setup.unique_name(u'mysystem%s')
+        pool_name = data_setup.unique_name(u'mypool%s')
+        with session.begin():
+            pool = data_setup.create_system_pool(name=pool_name)
+        try:
+            run_client(['bkr', 'pool-add', '--pool', pool_name,
+                        '--system', system_fqdn])
+            self.fail('Must fail')
+        except ClientError as e:
+            self.assertIn('System \'%s\' does not exist' %system_fqdn,
+                          e.stderr_output)
+
     def test_add_systems_pool_privileges(self):
         pool_name = data_setup.unique_name(u'mypool%s')
         with session.begin():
