@@ -6,15 +6,15 @@
 # (at your option) any later version.
 
 """
-bkr list-labcontrollers: List Beaker lab controllers
-====================================================
+bkr labcontroller-list: List Beaker lab controllers
+===================================================
 
-.. program:: bkr list-labcontrollers
+.. program:: bkr labcontroller-list
 
 Synopsis
 --------
 
-:program:`bkr list-labcontrollers` [*options*]
+:program:`bkr labcontroller-list` [*options*]
 
 Description
 -----------
@@ -43,7 +43,7 @@ See also
 from bkr.client import BeakerCommand
 
 
-class List_LabControllers(BeakerCommand):
+class LabController_List(BeakerCommand):
     """list labcontrollers"""
     enabled = True
     requires_login = False
@@ -56,3 +56,7 @@ class List_LabControllers(BeakerCommand):
         self.set_hub(**kwargs)
         for lab_controller in self.hub.lab_controllers():
             print lab_controller
+
+class List_LabControllers(LabController_List):
+    """To provide backwards compatibility"""
+    hidden = True

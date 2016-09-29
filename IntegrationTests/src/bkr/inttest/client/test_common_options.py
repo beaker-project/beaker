@@ -18,7 +18,7 @@ class CommonOptionsTest(ClientTestCase):
         # wrong hub in config, correct one passed on the command line
         config = create_client_config(hub_url='http://notexist.invalid')
         run_client(['bkr', '--hub', get_server_base().rstrip('/'),
-                'list-labcontrollers'], config=config)
+                'labcontroller-list'], config=config)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=862146
     def test_version(self):

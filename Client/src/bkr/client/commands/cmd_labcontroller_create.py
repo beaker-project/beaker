@@ -71,7 +71,7 @@ Create a Lab controller lab1.fqdn.name::
 See also
 --------
 
-:manpage:`bkr list-labcontrollers(1)`
+:manpage:`bkr labcontroller-list(1)`
 
 """
 

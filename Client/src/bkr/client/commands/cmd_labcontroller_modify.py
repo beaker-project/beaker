@@ -85,7 +85,7 @@ Change the lab controller 'lab1.fqdn.name' with new user account details::
 See also
 --------
 
-:manpage:`bkr list-labcontrollers(1)`
+:manpage:`bkr labcontroller-list(1)`
 
 """
 
