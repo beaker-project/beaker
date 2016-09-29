@@ -140,7 +140,7 @@ class TestRecipeView(WebDriverTestCase):
                     result=TaskResult.pass_,
                     start_time=start_time, finish_time=finish_time)
         # Wait for the page to re-fetch the recipe JSON.
-        time.sleep(30)
+        time.sleep(40)
         # Check that everything has updated itself.
         self.assertEqual(
                 b.find_element_by_xpath('//div[@class="recipe-summary"]/p[1]').text,
