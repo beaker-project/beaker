@@ -44,7 +44,7 @@ Export RDF/XML for a particular system::
 See also
 --------
 
-:manpage:`bkr-list-systems(1)`, :manpage:`bkr(1)`
+:manpage:`bkr-system-list(1)`, :manpage:`bkr(1)`
 """
 
 import sys

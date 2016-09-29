@@ -5,15 +5,15 @@
 # (at your option) any later version.
 
 """
-bkr list-systems: List Beaker systems
-=====================================
+bkr system-list: List Beaker systems
+====================================
 
-.. program:: bkr list-systems
+.. program:: bkr system-list
 
 Synopsis
 --------
 
-| :program:`bkr list-systems` [*options*]
+| :program:`bkr system-list` [*options*]
 |       [:option:`--available` | :option:`--free` | :option:`--mine`]
 |       [:option:`--type` <type>] [:option:`--status` <status>] [:option:`--pool` <pool>]
 |       [:option:`--arch` <arch>] [:option:`--dev-vendor-id` <vendorid>]
@@ -127,7 +127,7 @@ Examples
 List automated systems which are in the kernel-hw pool and are not currently in 
 use::
 
-    bkr list-systems --free --type=Machine --status=Automated --pool=kernel-hw
+    bkr system-list --free --type=Machine --status=Automated --pool=kernel-hw
 
 See also
 --------
@@ -142,7 +142,7 @@ import urllib2
 import lxml.etree
 from bkr.client import BeakerCommand, host_filter_presets
 
-class List_Systems(BeakerCommand):
+class System_List(BeakerCommand):
     """List systems"""
     enabled = True
     search = dict()
@@ -250,3 +250,7 @@ class List_Systems(BeakerCommand):
             sys.exit(1)
         for title in titles:
             print title.text.strip()
+
+class List_Systems(System_List):
+    """To provide backwards compatibility"""
+    hidden = True

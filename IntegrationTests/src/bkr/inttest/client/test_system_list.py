@@ -10,7 +10,7 @@ from bkr.inttest.client import run_client, ClientError, ClientTestCase
 from bkr.server.model import System, Key, Key_Value_String, SystemStatus, Cpu
 import datetime
 
-class ListSystemsTest(ClientTestCase):
+class SystemListTest(ClientTestCase):
 
     def check_systems(self, present=None, absent=None):
         for system in present:
@@ -23,7 +23,7 @@ class ListSystemsTest(ClientTestCase):
         with session.begin():
             data_setup.create_system() # so that we have at least one
             system1 = data_setup.create_system(status=SystemStatus.removed)
-        out = run_client(['bkr', 'list-systems'])
+        out = run_client(['bkr', 'system-list'])
         self.assertNotIn(system1.fqdn, out.splitlines())
         self.assertEqual(len(out.splitlines()),
                          System.query.filter(System.status!=SystemStatus.removed).count())
@@ -32,7 +32,7 @@ class ListSystemsTest(ClientTestCase):
         with session.begin():
             system1 = data_setup.create_system() 
             system2 = data_setup.create_system(status=SystemStatus.removed)
-        out = run_client(['bkr', 'list-systems', '--removed'])
+        out = run_client(['bkr', 'system-list', '--removed'])
         self.assertIn(system2.fqdn, out.splitlines())
         self.assertEqual(len(out.splitlines()),
                          System.query.filter(System.status==SystemStatus.removed).count())
@@ -50,17 +50,17 @@ class ListSystemsTest(ClientTestCase):
             # set lc2 to disabled
             lc2.disabled = True
 
-        out = run_client(['bkr', 'list-systems'])
+        out = run_client(['bkr', 'system-list'])
         systems = out.splitlines()
         self.assertIn(system1.fqdn, systems)
         self.assertIn(system2.fqdn, systems)
 
-        out = run_client(['bkr', 'list-systems', '--free'])
+        out = run_client(['bkr', 'system-list', '--free'])
         systems = out.splitlines()
         self.assertIn(system1.fqdn, systems)
         self.assertNotIn(system2.fqdn, systems)
 
-        out = run_client(['bkr', 'list-systems', '--available'])
+        out = run_client(['bkr', 'system-list', '--available'])
         systems = out.splitlines()
         self.assertIn(system1.fqdn, systems)
         self.assertIn(system2.fqdn, systems)
@@ -74,7 +74,7 @@ class ListSystemsTest(ClientTestCase):
                     Key_Value_String(module_key, u'cciss'),
                     Key_Value_String(module_key, u'kvm')])
             without_module = data_setup.create_system()
-        out = run_client(['bkr', 'list-systems',
+        out = run_client(['bkr', 'system-list',
                 '--xml-filter', '<key_value key="MODULE" />'])
         returned_systems = out.splitlines()
         self.assert_(with_module.fqdn in returned_systems, returned_systems)
@@ -84,7 +84,7 @@ class ListSystemsTest(ClientTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1167164
     def test_handles_xml_syntax_error(self):
         try:
-            run_client(['bkr', 'list-systems', '--xml-filter', '<error'])
+            run_client(['bkr', 'system-list', '--xml-filter', '<error'])
             sel.fail('should be an error')
         except ClientError, e:
             self.assertIn('Invalid XML syntax for host filter', e.stderr_output)
@@ -95,7 +95,7 @@ class ListSystemsTest(ClientTestCase):
             matching = data_setup.create_system()
             matching.cpu = Cpu(family=6, model=47, model_name=u'Intel')
             nonmatching = data_setup.create_system()
-        out = run_client(['bkr', 'list-systems',
+        out = run_client(['bkr', 'system-list',
                 '--host-filter', 'INTEL__WESTMERE'])
         returned_systems = out.splitlines()
         self.assertIn(matching.fqdn, returned_systems)
@@ -109,7 +109,7 @@ class ListSystemsTest(ClientTestCase):
             matching.key_values_string.append(
                     Key_Value_String(module_key, u'cciss'))
             nonmatching = data_setup.create_system()
-        out = run_client(['bkr', 'list-systems',
+        out = run_client(['bkr', 'system-list',
                 '--xml-filter', '<not><lender value="shark"/></not>',
                 '--xml-filter', '<key_value key="MODULE" value="cciss"/>',
                 '--host-filter', 'INTEL__WESTMERE'])
@@ -143,7 +143,7 @@ class ListSystemsTest(ClientTestCase):
             inv3.date_lastcheckin = time_tomorrow
 
         # uninventoried
-        out = run_client(['bkr', 'list-systems',
+        out = run_client(['bkr', 'system-list',
                           '--xml-filter',
                           '<system>'
                           '<last_inventoried op="=" value="" />'
@@ -153,7 +153,7 @@ class ListSystemsTest(ClientTestCase):
         self.check_systems(present=[not_inv], absent=[inv1, inv2, inv3])
 
         # Return all inventoried systems
-        out = run_client(['bkr', 'list-systems',
+        out = run_client(['bkr', 'system-list',
                           '--xml-filter',
                           '<system>'
                           '<last_inventoried op="!=" value="" />'
@@ -163,7 +163,7 @@ class ListSystemsTest(ClientTestCase):
         self.check_systems(present=[inv1, inv2, inv2], absent=[not_inv])
 
         # inventoried on a certain date
-        out = run_client(['bkr', 'list-systems',
+        out = run_client(['bkr', 'system-list',
                           '--xml-filter',
                           '<system>'
                           '<last_inventoried op="=" value="%s" />'
@@ -173,7 +173,7 @@ class ListSystemsTest(ClientTestCase):
         self.check_systems(present=[inv1, inv2], absent=[not_inv, inv3])
 
         # not inventoried on a certain date
-        out = run_client(['bkr', 'list-systems',
+        out = run_client(['bkr', 'system-list',
                           '--xml-filter',
                           '<system>'
                           '<last_inventoried op="!=" value="%s" />'
@@ -184,7 +184,7 @@ class ListSystemsTest(ClientTestCase):
 
 
         # Before a certain date
-        out = run_client(['bkr', 'list-systems',
+        out = run_client(['bkr', 'system-list',
                           '--xml-filter',
                           '<system>'
                           '<last_inventoried op="&lt;" value="%s" />'
@@ -194,7 +194,7 @@ class ListSystemsTest(ClientTestCase):
         self.check_systems(present=[inv1, inv2], absent=[not_inv, inv3])
 
         # On or before a certain date
-        out = run_client(['bkr', 'list-systems',
+        out = run_client(['bkr', 'system-list',
                           '--xml-filter',
                           '<system>'
                           '<last_inventoried op="&lt;=" value="%s" />'
@@ -205,7 +205,7 @@ class ListSystemsTest(ClientTestCase):
 
         # Only date is valid, not date time
         try:
-            out = run_client(['bkr', 'list-systems',
+            out = run_client(['bkr', 'system-list',
                               '--xml-filter',
                               '<system>'
                               '<last_inventoried op="&gt;" value="%s 00:00:00" />'
@@ -240,7 +240,7 @@ class ListSystemsTest(ClientTestCase):
                                             date_added=time_tomorrow)
 
         # on a date
-        out = run_client(['bkr', 'list-systems',
+        out = run_client(['bkr', 'system-list',
                           '--xml-filter',
                           '<system>'
                           '<added op="=" value="%s" />'
@@ -253,7 +253,7 @@ class ListSystemsTest(ClientTestCase):
 
         # on a datetime
         try:
-            out = run_client(['bkr', 'list-systems',
+            out = run_client(['bkr', 'system-list',
                               '--xml-filter',
                               '<system>'
                               '<added op="=" value="%s" />'
@@ -265,7 +265,7 @@ class ListSystemsTest(ClientTestCase):
 
         # date as  " "
         try:
-            out = run_client(['bkr', 'list-systems',
+            out = run_client(['bkr', 'system-list',
                               '--xml-filter',
                               '<system>'
                               '<added op="=" value=" " />'
@@ -282,9 +282,18 @@ class ListSystemsTest(ClientTestCase):
             inpool = data_setup.create_system()
             pool.systems.append(inpool)
             nopool = data_setup.create_system()
-        out = run_client(['bkr', 'list-systems', '--pool', pool.name])
+        out = run_client(['bkr', 'system-list', '--pool', pool.name])
         self.assertEquals([inpool.fqdn], out.splitlines())
 
         # --group is a hidden compatibility alias for --pool
-        out = run_client(['bkr', 'list-systems', '--group', pool.name])
+        out = run_client(['bkr', 'system-list', '--group', pool.name])
         self.assertEquals([inpool.fqdn], out.splitlines())
+
+    def test_old_command_list_systems_still_works(self):
+        with session.begin():
+            data_setup.create_system() # so that we have at least one
+            system1 = data_setup.create_system(status=SystemStatus.removed)
+        out = run_client(['bkr', 'list-systems'])
+        self.assertNotIn(system1.fqdn, out.splitlines())
+        self.assertEqual(len(out.splitlines()),
+                         System.query.filter(System.status!=SystemStatus.removed).count())
