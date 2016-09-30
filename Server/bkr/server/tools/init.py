@@ -389,17 +389,25 @@ def main():
             return doit(opts)
 
 @log_traceback(logger)
-def doit(opts):
-    from turbogears.database import metadata, bind_metadata
-    bind_metadata()
+def doit(opts, metadata = None):
+    if not metadata:
+        from turbogears.database import metadata, bind_metadata
+        bind_metadata()
+
     if opts.check:
         version = opts.downgrade or 'head'
         return 0 if check_db(metadata, version) else 1
     elif opts.downgrade:
         downgrade_db(metadata, opts.downgrade)
     else:
+        table_names = metadata.bind.table_names()
         # if database is empty then initialize it
-        if not metadata.bind.table_names():
+        # python-alembic-0.6.5-3 will autocreate the alembic_version table
+        # when checking an empty database. This is fixed in newer alembic
+        # versions; 0.8.3-4 does not have this issue
+        database_is_empty = len(table_names) == 0
+        only_has_alembic_version_table = (len(table_names) == 1 and table_names[0] == 'alembic_version')
+        if database_is_empty or only_has_alembic_version_table:
             if not opts.user_name:
                 logger.error('Database is empty, you must pass --user to create an admin user')
                 return 1
