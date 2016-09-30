@@ -38,7 +38,8 @@ class LoginTest(WebDriverTestCase):
                          'Not member of group: admin')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=660527
-    def test_referer_redirect(self):
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1380600
+    def test_logging_in_takes_you_back_to_where_you_started(self):
         with session.begin():
             system = data_setup.create_system()
 
