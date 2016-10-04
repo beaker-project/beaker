@@ -9,12 +9,14 @@
 import os
 import sys
 import pkg_resources
+import logging
 from optparse import Option, IndentedHelpFormatter, SUPPRESS_HELP
 import xmlrpclib
 import cgi
 import krbV
 from bkr.client.command import CommandOptionParser, ClientCommandContainer, BeakerClientConfigurationError
 from bkr.common import __version__
+from bkr.log import log_to_stream
 
 
 __all__ = (
@@ -69,6 +71,8 @@ def warn_on_version_mismatch(response):
                     % (__version__, server_version))
 
 def main():
+    log_to_stream(sys.stderr, level=logging.WARNING)
+
     global conf
     command_container = BeakerCommandContainer(conf=conf)
     formatter = IndentedHelpFormatter(max_help_position=60, width=120)
