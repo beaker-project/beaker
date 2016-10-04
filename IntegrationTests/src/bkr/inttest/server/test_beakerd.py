@@ -1781,6 +1781,15 @@ class TestBeakerd(DatabaseTestCase):
             job = Job.query.get(job.id)
             self.assertEqual(job.status, TaskStatus.processed)
             self.assertEqual(job.recipesets[0].priority, TaskPriority.medium)
+            # https://bugzilla.redhat.com/show_bug.cgi?id=1369599
+            self.assertEquals(len(job.recipesets[0].activity), 1)
+            activity_entry = job.recipesets[0].activity[0]
+            self.assertEquals(activity_entry.user, None)
+            self.assertEquals(activity_entry.service, u'Scheduler')
+            self.assertEquals(activity_entry.action, u'Changed')
+            self.assertEquals(activity_entry.field_name, u'Priority')
+            self.assertEquals(activity_entry.old_value, u'Low')
+            self.assertEquals(activity_entry.new_value, u'Medium')
 
 @patch('bkr.server.tools.beakerd.metrics')
 class TestBeakerdMetrics(DatabaseTestCase):

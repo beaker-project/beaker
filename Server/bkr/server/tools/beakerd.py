@@ -152,13 +152,18 @@ def process_new_recipe(recipe_id):
 
     # If the recipe only matches one system then bump its priority.
     if config.get('beaker.priority_bumping_enabled', True) and len(recipe.systems) == 1:
+        old_prio = recipe.recipeset.priority
         try:
-            log.info("recipe ID %s matches one system, bumping priority" % recipe.id)
-            recipe.recipeset.priority = TaskPriority.by_index(
-                    TaskPriority.index(recipe.recipeset.priority) + 1)
+            new_prio = TaskPriority.by_index(TaskPriority.index(old_prio) + 1)
         except IndexError:
             # We may already be at the highest priority
             pass
+        else:
+            log.info("recipe ID %s matches one system, bumping priority" % recipe.id)
+            recipe.recipeset.record_activity(user=None, service=u'Scheduler',
+                    action=u'Changed', field=u'Priority',
+                    old=unicode(old_prio), new=unicode(new_prio))
+            recipe.recipeset.priority = new_prio
     recipe.virt_status = recipe.check_virtualisability()
     if not recipe.systems and not _virt_possible(recipe):
         log.info("recipe ID %s moved from New to Aborted" % recipe.id)
