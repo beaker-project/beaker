@@ -64,12 +64,12 @@ class System_Details(BeakerCommand):
             self.parser.error('Exactly one system fqdn must be given')
         fqdn = args[0]
 
-        system_url = '/view/%s?tg_format=rdfxml' % urllib.quote(fqdn, '')
+        system_url = 'view/%s?tg_format=rdfxml' % urllib.quote(fqdn, '')
 
         # This will log us in using XML-RPC
         self.set_hub(**kwargs)
 
-        # Now we can steal the cookie jar to make our own HTTP requests
-        urlopener = urllib2.build_opener(urllib2.HTTPCookieProcessor(
-                self.hub._transport.cookiejar))
-        print urlopener.open(self.hub._hub_url + system_url).read()
+        session = self.requests_session()
+        response = session.get(system_url)
+        response.raise_for_status()
+        print response.text
