@@ -148,7 +148,7 @@ from bkr.server.reports import Reports
             <li py:if="not tg.identity.anonymous" class="navbar-wide-viewport-only">
               <a href="${tg.url('/jobs/mine')}">My Jobs</a>
             </li>
-            <li py:if="tg.identity.anonymous"><a href="${tg.url('/login')}">Log in</a>
+            <li py:if="tg.identity.anonymous"><a href="${tg.login_url()}">Log in</a>
             </li>
             <li class="dropdown">
               <a href="#" class="dropdown-toggle" data-toggle="dropdown">

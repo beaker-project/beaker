@@ -346,3 +346,15 @@ class TestRecipeView(WebDriverTestCase):
         b.find_element_by_xpath('//h1[normalize-space(string(.))="Job: %s"]' % self.job.t_id)
         with session.begin():
             self.assertEqual(recipe.get_reviewed_state(self.user), True)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1376645
+    def test_opening_running_recipe_does_not_mark_it_reviewed(self):
+        with session.begin():
+            job = data_setup.create_running_job(owner=self.user)
+            recipe = job.recipesets[0].recipes[0]
+            self.assertEqual(recipe.get_reviewed_state(self.user), False)
+        b = self.browser
+        self.go_to_recipe_view(recipe)
+        b.find_element_by_xpath('//h1[normalize-space(string(.))="Job: %s"]' % job.t_id)
+        with session.begin():
+            self.assertEqual(recipe.get_reviewed_state(self.user), False)

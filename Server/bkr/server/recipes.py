@@ -495,7 +495,8 @@ class Recipes(RPCRoot):
         if recipe.is_deleted:
             flash(_(u"Invalid %s, has been deleted" % recipe.t_id))
             redirect(".")
-        recipe.set_reviewed_state(identity.current.user, True)
+        if recipe.is_finished() or recipe.status == TaskStatus.reserved:
+            recipe.set_reviewed_state(identity.current.user, True)
         return dict(title   = 'Recipe',
                     recipe_widget        = self.recipe_widget,
                     recipe               = recipe)
@@ -519,7 +520,8 @@ def get_recipe(id):
         return jsonify(recipe.to_json(include_recipeset=True))
     if identity.current.user and identity.current.user.use_old_job_page:
         return NotFound404('Fall back to old recipe page')
-    if identity.current.user:
+    if identity.current.user and (recipe.is_finished()
+            or recipe.status == TaskStatus.reserved):
         recipe.set_reviewed_state(identity.current.user, True)
     return render_tg_template('bkr.server.templates.recipe', {
         'title': recipe.t_id,

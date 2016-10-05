@@ -6,6 +6,7 @@
 
 import turbogears
 from turbojson import jsonify
+from flask import request
 import bkr.common
 from bkr.server import identity
 
@@ -25,11 +26,18 @@ def beaker_version():
    except AttributeError, (e): 
         return 'devel-version'   
 
+def login_url():
+    forward_url = request.path
+    if request.query_string:
+        forward_url += '?%s' % request.query_string
+    return turbogears.url('/login', forward_url=forward_url)
+
 def add_custom_stdvars(vars):
     return vars.update({
         "beaker_version": beaker_version,
         "identity": identity.current, # well that's just confusing
         "to_json": jsonify_for_html,
+        "login_url": login_url,
     })
 
 turbogears.view.variable_providers.append(add_custom_stdvars)
