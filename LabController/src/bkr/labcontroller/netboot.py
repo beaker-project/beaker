@@ -358,7 +358,7 @@ def clear_efigrub(fqdn, basedir):
 
 ### Bootloader config: ZPXE (IBM zSeries)
 
-def configure_zpxe(fqdn, kernel_options, basedir):
+def configure_zpxe(fqdn, kernel_url, initrd_url, kernel_options, basedir):
     """
     Creates bootloader files for ZPXE
 
@@ -375,7 +375,12 @@ def configure_zpxe(fqdn, kernel_options, basedir):
     # XXX I don't think multiple initrds are supported?
     logger.debug('Writing zpxe index file for %s', fqdn)
     with atomically_replaced_file(os.path.join(zpxe_dir, 's_%s' % fqdn)) as f:
-        f.write('/images/%s/kernel\n/images/%s/initrd\n\n' % (fqdn, fqdn))
+        if get_conf().get('ZPXE_USE_FTP', True):
+            if not kernel_url.startswith('ftp://') or not initrd_url.startswith('ftp://'):
+                raise ValueError('zPXE only supports FTP for downloading images')
+            f.write('%s\n%s\n\n' % (kernel_url, initrd_url))
+        else:
+            f.write('/images/%s/kernel\n/images/%s/initrd\n\n' % (fqdn, fqdn))
     logger.debug('Writing zpxe parm file for %s', fqdn)
     with atomically_replaced_file(os.path.join(zpxe_dir, 's_%s_parm' % fqdn)) as f:
         # must be wrapped at 80 columns
@@ -619,7 +624,7 @@ add_bootloader("grub2", configure_ppc64, clear_ppc64,
 add_bootloader("elilo", configure_elilo, clear_elilo)
 add_bootloader("armlinux", configure_armlinux, clear_armlinux)
 add_bootloader("aarch64", configure_aarch64, clear_aarch64, set(["aarch64"]))
-add_bootloader("zpxe", configure_zpxe, clear_zpxe, set(["s390", "s390x"]))
+# configure_zpxe and clear_zpxe are called explicitly because their arguments differ
 add_bootloader("petitboot", configure_petitboot, clear_petitboot)
 
 # Custom bootloader stuff
@@ -661,6 +666,8 @@ def configure_all(fqdn, arch, distro_tree_id,
             # Arch constrained bootloader and this system doesn't match
             continue
         bootloader.configure(fqdn, kernel_options, basedir)
+    if arch == 's390' or arch == 's390x':
+        configure_zpxe(fqdn, kernel_url, initrd_url, kernel_options, basedir)
     configure_netbootloader_directory(fqdn, kernel_options, netbootloader)
 
 def clear_all(fqdn, basedir=None):
@@ -670,4 +677,5 @@ def clear_all(fqdn, basedir=None):
         basedir = get_tftp_root()
     for bootloader in BOOTLOADERS.values():
         bootloader.clear(fqdn, basedir)
+    clear_zpxe(fqdn, basedir)
     clear_netbootloader_directory(fqdn)

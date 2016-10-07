@@ -450,8 +450,13 @@ class LabControllers(RPCRoot):
             elif cmd.action == u'configure_netboot':
                 installation = cmd.installation
                 distro_tree = cmd.installation.distro_tree
-                distro_tree_url = distro_tree.url_in_lab(lab_controller,
-                        scheme=['http', 'ftp'])
+                schemes = ['http', 'ftp']
+                if distro_tree.arch.arch == 's390' or distro_tree.arch.arch == 's390x':
+                    # zPXE needs FTP URLs for the images, it has no HTTP client.
+                    # It would be nicer if we could leave this decision up to 
+                    # beaker-provision, but the API doesn't work like that...
+                    schemes = ['ftp']
+                distro_tree_url = distro_tree.url_in_lab(lab_controller, scheme=schemes)
                 if not distro_tree_url:
                     cmd.abort(u'No usable URL found for distro tree %s in lab %s'
                             % (distro_tree.id, lab_controller.fqdn))

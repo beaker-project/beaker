@@ -845,6 +845,27 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
         self.assertEquals(queued_commands[1]['netboot']['distro_tree_id'],
                           distro_tree.id)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1322235
+    def test_s390_configure_netboot_commands_use_ftp_urls(self):
+        with session.begin():
+            system = data_setup.create_system(arch=u's390x', lab_controller=self.lc)
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora23', arch=u's390x',
+                    lab_controllers=[self.lc], urls=[
+                        u'http://mylabmirror.example.invalid/Fedora23/s390x/',
+                        u'ftp://mylabmirror.example.invalid/Fedora23/s390x/',
+                    ])
+            installation = Installation(distro_tree=distro_tree, system=system,
+                    kernel_options=u'')
+            system.configure_netboot(installation=installation, service=u'testdata')
+        queued_commands = self.server.labcontrollers.get_queued_command_details()
+        self.assertEquals(queued_commands[1]['action'], 'configure_netboot')
+        self.assertEquals(queued_commands[1]['fqdn'], system.fqdn)
+        self.assertEquals(queued_commands[1]['netboot']['arch'], 's390x')
+        self.assertEquals(queued_commands[1]['netboot']['kernel_url'],
+                u'ftp://mylabmirror.example.invalid/Fedora23/s390x/pxeboot/vmlinuz')
+        self.assertEquals(queued_commands[1]['netboot']['initrd_url'],
+                u'ftp://mylabmirror.example.invalid/Fedora23/s390x/pxeboot/initrd')
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1348018
     def test_after_reboot_watchdog_killtime_extended(self):
         with session.begin():

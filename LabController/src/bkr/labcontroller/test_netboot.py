@@ -170,10 +170,6 @@ class ImagesTest(ImagesBaseTestCase):
 class ArchBasedConfigTest(ImagesBaseTestCase):
     common_categories = ("images", "armlinux", "efigrub",
                          "elilo", "yaboot", "pxelinux")
-    extra_categories = {
-      "s390x": ("zpxe",),
-      "s390": ("zpxe",),
-    }
 
     def configure(self, arch):
         netboot.configure_all(TEST_FQDN, arch, 1234,
@@ -181,7 +177,7 @@ class ArchBasedConfigTest(ImagesBaseTestCase):
             'file://%s' % self.initrd.name, "", self.tftp_root)
 
     def get_categories(self, arch):
-        this = self.common_categories + self.extra_categories.get(arch, ())
+        this = self.common_categories
         other = tuple(set(CONFIGURED_PATHS.keys()) - set(this))
         return this, other
 
@@ -208,13 +204,6 @@ class ArchBasedConfigTest(ImagesBaseTestCase):
         self.check_configured(arch)
         self.clear()
         self.check_cleared(arch)
-
-    def test_configure_then_clear_special(self):
-        for arch in self.extra_categories.keys():
-            self.configure(arch)
-            self.check_configured(arch)
-            self.clear()
-            self.check_cleared(arch)
 
 
 class PxelinuxTest(NetBootTestCase):
@@ -332,6 +321,8 @@ class ZpxeTest(NetBootTestCase):
 
     def test_configure_then_clear(self):
         netboot.configure_zpxe(TEST_FQDN,
+                'ftp://lab.example.invalid/kernel.img',
+                'ftp://lab.example.invalid/initrd.img',
                 # lots of options to test the 80-char wrapping
                 'LAYER2=1 NETTYPE=qeth PORTNO=0 IPADDR=10.16.66.192 '
                 'SUBCHANNELS=0.0.8000,0.0.8001,0.0.8002 MTU=1500 '
@@ -341,8 +332,8 @@ class ZpxeTest(NetBootTestCase):
                 'MACADDR=02:DE:AD:BE:EF:01 ks=http://lol/', self.tftp_root)
         self.assertEquals(open(os.path.join(self.tftp_root, 's390x',
                 's_fqdn.example.invalid')).read(),
-                '''/images/fqdn.example.invalid/kernel
-/images/fqdn.example.invalid/initrd
+                '''ftp://lab.example.invalid/kernel.img
+ftp://lab.example.invalid/initrd.img
 
 ''')
         self.assertEquals(open(os.path.join(self.tftp_root, 's390x',
