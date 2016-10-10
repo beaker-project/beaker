@@ -107,6 +107,7 @@ BuildRequires:  python-markdown
 BuildRequires:  python-passlib
 BuildRequires:  python-alembic
 BuildRequires:  python-daemon
+BuildRequires:  python-futures
 %if %{with_systemd}
 BuildRequires:  systemd
 %endif
@@ -199,6 +200,7 @@ Requires:       /usr/bin/cssmin
 Requires:       /usr/bin/uglifyjs
 Requires:       python-passlib
 Requires:       python-alembic
+Requires:       python-futures
 %if %{with_systemd}
 Requires:       systemd-units
 Requires(post): systemd

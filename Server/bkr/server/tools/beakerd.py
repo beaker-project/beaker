@@ -50,12 +50,13 @@ from lockfile import pidlockfile
 from daemon import pidfile
 import threading
 import os
-
+import concurrent.futures
 import logging
 
 log = logging.getLogger(__name__)
 running = True
 event = threading.Event()
+_threadpool_executor = None
 
 from optparse import OptionParser
 
@@ -79,6 +80,12 @@ def _virt_enabled():
 
 def _virt_possible(recipe):
     return _virt_enabled() and recipe.virt_status == RecipeVirtStatus.possible
+
+def get_virt_executor():
+    global _threadpool_executor
+    if _threadpool_executor is None:
+       _threadpool_executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+    return _threadpool_executor
 
 def update_dirty_jobs():
     dirty_jobs = Job.query.filter(Job.dirty_version != Job.clean_version)
@@ -599,69 +606,70 @@ def provision_virt_recipes(*args):
     if not recipes.count():
         return False
     log.debug("Entering provision_virt_recipes")
-    for recipe_id, in recipes.values(Recipe.id.distinct()):
-        session.begin()
-        try:
-            provision_virt_recipe(recipe_id)
-            session.commit()
-        except Exception, e:
-            log.exception('Error in provision_virt_recipe(%s)', recipe_id)
-            session.rollback()
-            # As an added precaution, let's try and avoid this recipe in future
-            with session.begin():
-                recipe = Recipe.by_id(recipe_id)
-                recipe.virt_status = RecipeVirtStatus.failed
-        finally:
-            session.close()
+    futures = [get_virt_executor().submit(provision_virt_recipe, recipe_id)
+            for recipe_id, in recipes.values(Recipe.id.distinct())]
+    concurrent.futures.wait(futures)
     log.debug("Exiting provision_virt_recipes")
     return True
 
 def provision_virt_recipe(recipe_id):
-    recipe = Recipe.by_id(recipe_id)
-    manager = dynamic_virt.VirtManager(recipe.recipeset.job.owner)
-    available_flavors = manager.available_flavors()
-    # We want them in order of smallest to largest, so that we can pick the
-    # smallest flavor that satisfies the recipe's requirements. Sorting by RAM
-    # is a decent approximation.
-    available_flavors = sorted(available_flavors, key=lambda flavor: flavor.ram)
-    possible_flavors = XmlHost.from_string(recipe.host_requires)\
-        .filter_openstack_flavors(available_flavors, manager.lab_controller)
-    if not possible_flavors:
-        log.debug('No OpenStack flavors matched recipe %s, marking precluded',
-                recipe.id)
-        recipe.virt_status = RecipeVirtStatus.precluded
-        return
-    flavor = possible_flavors[0]
-    vm_name = '%srecipe-%s' % (
-            ConfigItem.by_name(u'guest_name_prefix').current_value(u'beaker-'),
-            recipe.id)
-    # FIXME can we control use of virtio?
-    #virtio_possible = True
-    #if self.recipe.distro_tree.distro.osversion.osmajor.osmajor == "RedHatEnterpriseLinux3":
-    #    virtio_possible = False
-    vm = manager.create_vm(vm_name, flavor)
-    vm.instance_created = datetime.utcnow()
+    session.begin()
     try:
-        recipe.createRepo()
-        recipe.systems = []
-        recipe.watchdog = Watchdog()
-        recipe.resource = vm
-        recipe.recipeset.lab_controller = manager.lab_controller
-        recipe.virt_status = RecipeVirtStatus.succeeded
-        recipe.schedule()
-        log.info("recipe ID %s moved from Queued to Scheduled by provision_virt_recipe" % recipe.id)
-        recipe.waiting()
-        recipe.provision()
-        log.info("recipe ID %s moved from Scheduled to Waiting by provision_virt_recipe" % recipe.id)
-    except:
-        exc_type, exc_value, exc_tb = sys.exc_info()
+        recipe = Recipe.by_id(recipe_id)
+        manager = dynamic_virt.VirtManager(recipe.recipeset.job.owner)
+        available_flavors = manager.available_flavors()
+        # We want them in order of smallest to largest, so that we can pick the
+        # smallest flavor that satisfies the recipe's requirements. Sorting by RAM
+        # is a decent approximation.
+        available_flavors = sorted(available_flavors, key=lambda flavor: flavor.ram)
+        possible_flavors = XmlHost.from_string(recipe.host_requires)\
+            .filter_openstack_flavors(available_flavors, manager.lab_controller)
+        if not possible_flavors:
+            log.debug('No OpenStack flavors matched recipe %s, marking precluded',
+                    recipe.id)
+            recipe.virt_status = RecipeVirtStatus.precluded
+            return
+        flavor = possible_flavors[0]
+        vm_name = '%srecipe-%s' % (
+                ConfigItem.by_name(u'guest_name_prefix').current_value(u'beaker-'),
+                recipe.id)
+        # FIXME can we control use of virtio?
+        #virtio_possible = True
+        #if self.recipe.distro_tree.distro.osversion.osmajor.osmajor == "RedHatEnterpriseLinux3":
+        #    virtio_possible = False
+        vm = manager.create_vm(vm_name, flavor)
+
         try:
-            manager.destroy_vm(vm)
-        except Exception:
-            log.exception('Failed to clean up vm %s '
-                    'during provision_virt_recipe, leaked!', vm.instance_id)
-            # suppress this exception so the original one is not masked
-        raise exc_type, exc_value, exc_tb
+            recipe.createRepo()
+            recipe.systems = []
+            recipe.watchdog = Watchdog()
+            recipe.resource = vm
+            recipe.recipeset.lab_controller = manager.lab_controller
+            recipe.virt_status = RecipeVirtStatus.succeeded
+            recipe.schedule()
+            log.info("recipe ID %s moved from Queued to Scheduled by provision_virt_recipe" % recipe.id)
+            recipe.waiting()
+            recipe.provision()
+            log.info("recipe ID %s moved from Scheduled to Waiting by provision_virt_recipe" % recipe.id)
+        except:
+            exc_type, exc_value, exc_tb = sys.exc_info()
+            try:
+                manager.destroy_vm(vm)
+            except Exception:
+                log.exception('Failed to clean up vm %s '
+                        'during provision_virt_recipe, leaked!', vm.instance_id)
+                # suppress this exception so the original one is not masked
+            raise exc_type, exc_value, exc_tb
+        session.commit()
+    except Exception, e:
+        log.exception('Error in provision_virt_recipe(%s)', recipe_id)
+        session.rollback()
+        # As an added precaution, let's try and avoid this recipe in future
+        with session.begin():
+            recipe = Recipe.by_id(recipe_id)
+            recipe.virt_status = RecipeVirtStatus.failed
+    finally:
+        session.close()
 
 def provision_scheduled_recipesets(*args):
     """
@@ -888,6 +896,8 @@ def schedule():
        event.set()
        rc = 0
 
+    if _threadpool_executor:
+        _threadpool_executor.shutdown()
     interface.stop()
     main_recipes_thread.join(10)
 
