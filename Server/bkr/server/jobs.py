@@ -627,8 +627,9 @@ class Jobs(RPCRoot):
 
         reservesys = xmlrecipe.find('reservesys')
         if reservesys is not None:
-            duration = reservesys.get('duration', 86400)
-            recipe.reservation_request = RecipeReservationRequest(int(duration))
+            recipe.reservation_request = RecipeReservationRequest()
+            if 'duration' in reservesys.attrib:
+                recipe.reservation_request.duration = int(reservesys.attrib['duration'])
 
         custom_packages = set()
         for xmlpackage in xmlrecipe.xpath('packages/package'):

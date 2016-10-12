@@ -451,8 +451,9 @@ def create_recipe(distro_tree=None, task_list=None,
     recipe.distro_requires = lxml.etree.tostring(recipe.distro_tree.to_xml(), encoding=unicode)
 
     if kwargs.get('reservesys', False):
-        duration=kwargs.get('reservesys_duration', 86400)
-        recipe.reservation_request = RecipeReservationRequest(duration)
+        recipe.reservation_request = RecipeReservationRequest()
+        if kwargs.get('reservesys_duration'):
+            recipe.reservation_request.duration = kwargs['reservesys_duration']
 
     if num_tasks:
         task_list = [create_task() for i in range(0, num_tasks)]

@@ -636,7 +636,7 @@ def update_reservation_request(id):
                 _record_activity(recipe, u'Reservation Request', old_duration,
                         data['duration'])
             else:
-                reservation_request = RecipeReservationRequest(data['duration'])
+                reservation_request = RecipeReservationRequest(duration=data['duration'])
                 recipe.reservation_request = reservation_request
                 _record_activity(recipe, u'Reservation Request', None,
                         reservation_request.duration, 'Changed')

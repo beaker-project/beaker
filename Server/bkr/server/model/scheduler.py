@@ -1939,8 +1939,11 @@ class RecipeReservationRequest(DeclarativeMappedObject):
     recipe_id = Column(Integer, ForeignKey('recipe.id'), nullable=False)
     duration = Column(Integer, default=86400, nullable=False)
 
-    def __init__(self, duration=86400):
-        self.duration = duration
+    def __init__(self, **kwargs):
+        # http://stackoverflow.com/a/13791802/120202
+        if 'duration' not in kwargs:
+            kwargs['duration'] = self.__table__.c.duration.default.arg
+        super(RecipeReservationRequest, self).__init__(**kwargs)
 
     def __json__(self):
         return {
