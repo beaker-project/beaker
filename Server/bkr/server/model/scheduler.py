@@ -2524,7 +2524,8 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             min_status = self._fix_zombie_tasks()
 
         if min_status.finished and min_status != TaskStatus.cancelled:
-            if self.status in [TaskStatus.installing, TaskStatus.waiting, TaskStatus.running] and self.reservation_request:
+            if (self.status in [TaskStatus.installing, TaskStatus.waiting, TaskStatus.running]
+                    and self._should_reserve(min_status, max_result)):
                 min_status = TaskStatus.reserved
                 self.extend(self.reservation_request.duration)
                 mail.reservesys_notify(self)
@@ -2579,6 +2580,20 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             if task.status.severity < self.status.severity:
                 task._change_status(self.status)
         return self.status
+
+    def _should_reserve(self, status, result):
+        if not self.reservation_request:
+            return False
+        when = self.reservation_request.when
+        if when == RecipeReservationCondition.always:
+            return True
+        elif when == RecipeReservationCondition.onabort:
+            return (status == TaskStatus.aborted)
+        elif when == RecipeReservationCondition.onfail:
+            return (status == TaskStatus.aborted or result == TaskResult.fail)
+        elif when == RecipeReservationCondition.onwarn:
+            return (status == TaskStatus.aborted or result == TaskResult.fail
+                    or result == TaskResult.warn)
 
     def provision(self):
 

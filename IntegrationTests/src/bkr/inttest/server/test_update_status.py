@@ -12,7 +12,7 @@ from turbogears.database import session
 from bkr.server.bexceptions import StaleTaskStatusException
 from bkr.inttest import data_setup, fix_beakerd_repodata_perms, DatabaseTestCase
 from bkr.server.model import TaskStatus, TaskResult, Watchdog, RecipeSet, \
-    Job, Recipe, System, SystemResource, Task
+    Job, Recipe, System, SystemResource, Task, RecipeReservationCondition
 from bkr.server.tools import beakerd
 
 def watchdogs_for_job(job):
@@ -329,6 +329,60 @@ class TestUpdateStatusReserved(DatabaseTestCase):
         # Now beakerd updates it and should reserve our system
         self.job.update_status()
         self.assertEqual(self.recipe.status, TaskStatus.reserved)
+
+    def test_onabort_reserves_when_aborted(self):
+        self.recipe.reservation_request.when = RecipeReservationCondition.onabort
+        data_setup.mark_recipe_tasks_finished(self.recipe, task_status=TaskStatus.aborted)
+        self.job.update_status()
+        self.assertEquals(self.recipe.status, TaskStatus.reserved)
+
+    def test_onabort_does_not_reserve_when_completed(self):
+        self.recipe.reservation_request.when = RecipeReservationCondition.onabort
+        data_setup.mark_recipe_tasks_finished(self.recipe)
+        self.job.update_status()
+        self.assertEquals(self.recipe.status, TaskStatus.completed)
+
+    def test_onfail_reserves_when_aborted(self):
+        self.recipe.reservation_request.when = RecipeReservationCondition.onfail
+        data_setup.mark_recipe_tasks_finished(self.recipe, task_status=TaskStatus.aborted)
+        self.job.update_status()
+        self.assertEquals(self.recipe.status, TaskStatus.reserved)
+
+    def test_onfail_reserves_when_completed_with_failures(self):
+        self.recipe.reservation_request.when = RecipeReservationCondition.onfail
+        data_setup.mark_recipe_tasks_finished(self.recipe, result=TaskResult.fail)
+        self.job.update_status()
+        self.assertEquals(self.recipe.status, TaskStatus.reserved)
+
+    def test_onfail_does_not_reserve_when_completed_with_warnings(self):
+        self.recipe.reservation_request.when = RecipeReservationCondition.onfail
+        data_setup.mark_recipe_tasks_finished(self.recipe, result=TaskResult.warn)
+        self.job.update_status()
+        self.assertEquals(self.recipe.status, TaskStatus.completed)
+
+    def test_onwarn_reserves_when_aborted(self):
+        self.recipe.reservation_request.when = RecipeReservationCondition.onwarn
+        data_setup.mark_recipe_tasks_finished(self.recipe, task_status=TaskStatus.aborted)
+        self.job.update_status()
+        self.assertEquals(self.recipe.status, TaskStatus.reserved)
+
+    def test_onwarn_reserves_when_completed_with_failures(self):
+        self.recipe.reservation_request.when = RecipeReservationCondition.onwarn
+        data_setup.mark_recipe_tasks_finished(self.recipe, result=TaskResult.fail)
+        self.job.update_status()
+        self.assertEquals(self.recipe.status, TaskStatus.reserved)
+
+    def test_onwarn_reserves_when_completed_with_warnings(self):
+        self.recipe.reservation_request.when = RecipeReservationCondition.onwarn
+        data_setup.mark_recipe_tasks_finished(self.recipe, result=TaskResult.warn)
+        self.job.update_status()
+        self.assertEquals(self.recipe.status, TaskStatus.reserved)
+
+    def test_onwarn_does_not_reserve_when_all_passing(self):
+        self.recipe.reservation_request.when = RecipeReservationCondition.onwarn
+        data_setup.mark_recipe_tasks_finished(self.recipe, result=TaskResult.pass_)
+        self.job.update_status()
+        self.assertEquals(self.recipe.status, TaskStatus.completed)
 
 
 class ConcurrentUpdateTest(DatabaseTestCase):
