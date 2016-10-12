@@ -44,7 +44,8 @@ from bkr.server.hybrid import hybrid_method, hybrid_property
 from bkr.server.installopts import InstallOptions, global_install_options
 from bkr.server.util import absolute_url
 from .types import (UUID, MACAddress, TaskResult, TaskStatus, TaskPriority,
-                    ResourceType, RecipeVirtStatus, mac_unix_padded_dialect, SystemStatus)
+                    ResourceType, RecipeVirtStatus, mac_unix_padded_dialect, SystemStatus,
+                    RecipeReservationCondition)
 from .base import DeclarativeMappedObject
 from .activity import Activity, ActivityMixin
 from .identity import User, Group
@@ -1938,11 +1939,15 @@ class RecipeReservationRequest(DeclarativeMappedObject):
     id = Column(Integer, primary_key=True)
     recipe_id = Column(Integer, ForeignKey('recipe.id'), nullable=False)
     duration = Column(Integer, default=86400, nullable=False)
+    when = Column(RecipeReservationCondition.db_type(), nullable=False,
+            default=RecipeReservationCondition.always)
 
     def __init__(self, **kwargs):
         # http://stackoverflow.com/a/13791802/120202
         if 'duration' not in kwargs:
             kwargs['duration'] = self.__table__.c.duration.default.arg
+        if 'when' not in kwargs:
+            kwargs['when'] = self.__table__.c.when.default.arg
         super(RecipeReservationRequest, self).__init__(**kwargs)
 
     def __json__(self):
@@ -2256,6 +2261,7 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         if self.reservation_request:
             reservesys = etree.Element("reservesys")
             reservesys.set('duration', unicode(self.reservation_request.duration))
+            reservesys.set('when', unicode(self.reservation_request.when))
             recipe.append(reservesys)
         if include_enclosing_job:
             recipe = self._add_to_job_element(recipe, clone)

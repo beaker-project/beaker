@@ -1852,12 +1852,12 @@ class RecipeTest(DatabaseTestCase):
         xml = lxml.etree.tostring(job.recipesets[0].recipes[0].to_xml(clone=True), encoding=unicode)
         reservation_string = u'<task name="/distribution/install" role="STANDALONE"/>' +  \
                              u'<task name="/distribution/install" role="STANDALONE"/>' + \
-                             u'<reservesys duration="86400"/>'
+                             u'<reservesys duration="86400" when="always"/>'
         self.assertIn(reservation_string, xml)
         xml = lxml.etree.tostring(job.recipesets[0].recipes[1].to_xml(clone=True), encoding=unicode)
         reservation_string = u'<task name="/distribution/install" role="STANDALONE"/>' +  \
                              u'<task name="/distribution/install" role="STANDALONE"/>' + \
-                             u'<reservesys duration="3600"/>'
+                             u'<reservesys duration="3600" when="always"/>'
         self.assertIn(reservation_string, xml)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1122659

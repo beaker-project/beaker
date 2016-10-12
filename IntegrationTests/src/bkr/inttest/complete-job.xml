@@ -55,7 +55,7 @@
           <param name="RESERVE_IF_FAIL" value="1"/>
         </params>
       </task>
-      <reservesys duration="600"/>
+      <reservesys duration="600" when="always"/>
     </recipe>
   </recipeSet>
 </job>

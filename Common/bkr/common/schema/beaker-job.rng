@@ -272,6 +272,24 @@ the Free Software Foundation; either version 2 of the License, or
               </a:documentation>
             </attribute>
           </optional>
+          <optional>
+            <attribute name="when">
+              <a:documentation xml:lang="en">
+                Reserve the system only under certain conditions.
+
+                The default value "always" will reserve the system unconditionally.
+                The value "onwarn" will reserve the system if any task reported a Warn or Fail result, or if the recipe aborted.
+                The value "onfail" will reserve the system if any task reported a Fail result, or if the recipe aborted.
+                The value "onabort" will reserve the system if the recipe aborted.
+              </a:documentation>
+              <choice>
+                <value>always</value>
+                <value>onwarn</value>
+                <value>onfail</value>
+                <value>onabort</value>
+              </choice>
+            </attribute>
+          </optional>
         </element>
       </optional>
     </interleave>

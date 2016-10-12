@@ -38,7 +38,8 @@ from bkr.server.model import (Job, RecipeSet, RetentionTag, TaskBase,
                               RecipeTask, RecipeTaskParam,
                               StaleTaskStatusException,
                               RecipeSetActivity, System, RecipeReservationRequest,
-                              TaskStatus, RecipeSetComment)
+                              TaskStatus, RecipeSetComment,
+                              RecipeReservationCondition)
 
 from bkr.common.bexceptions import BeakerException, BX
 from bkr.server.flask_util import auth_required, convert_internal_errors, \
@@ -630,6 +631,9 @@ class Jobs(RPCRoot):
             recipe.reservation_request = RecipeReservationRequest()
             if 'duration' in reservesys.attrib:
                 recipe.reservation_request.duration = int(reservesys.attrib['duration'])
+            if 'when' in reservesys.attrib:
+                recipe.reservation_request.when = \
+                    RecipeReservationCondition.from_string(reservesys.attrib['when'])
 
         custom_packages = set()
         for xmlpackage in xmlrecipe.xpath('packages/package'):

@@ -157,6 +157,14 @@ class GroupMembershipType(DeclEnum):
         ('inverted', u'inverted', dict(label=_(u'Inverted'))),
     ]
 
+class RecipeReservationCondition(DeclEnum):
+    symbols = [
+        ('onabort', u'onabort', dict()),
+        ('onfail',  u'onfail',  dict()),
+        ('onwarn',  u'onwarn',  dict()),
+        ('always',  u'always',  dict()),
+    ]
+
 class UUID(TypeDecorator):
     """
     Database type for storing UUIDs as BINARY(16).

@@ -1010,3 +1010,29 @@ class MigrationTest(unittest.TestCase):
         self.assertEquals(user[1].notify_broken_system, True)
         self.assertEquals(user[1].notify_group_membership, True)
         self.assertEquals(user[1].notify_reservesys, True)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1100593
+    def test_reserve_condition_is_set_to_always_for_existing_rows(self):
+        with self.migration_metadata.bind.connect() as connection:
+            # create the DB schema for beaker 23
+            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/23.sql'))
+            # existing job with a reservation request
+            connection.execute(
+                    "INSERT INTO job (id, owner_id, retention_tag_id, dirty_version, clean_version) "
+                    "VALUES (1, 1, 1, '', '')")
+            connection.execute(
+                    "INSERT INTO recipe_set (id, job_id, queue_time, waived) "
+                    "VALUES (1, 1, '2016-10-19 01:09:36', FALSE)")
+            connection.execute(
+                    "INSERT INTO recipe (id, type, recipe_set_id, autopick_random) "
+                    "VALUES (1, 'machine_recipe', 1, FALSE)")
+            connection.execute(
+                    "INSERT INTO recipe_reservation (id, recipe_id, duration) "
+                    "VALUES (1, 1, 300)")
+        # run migration
+        upgrade_db(self.migration_metadata)
+        # condition should be set to 'always' by default
+        with self.migration_metadata.bind.connect() as connection:
+            self.assertEquals(
+                    connection.scalar('SELECT `when` FROM recipe_reservation WHERE id = 1'),
+                    u'always')

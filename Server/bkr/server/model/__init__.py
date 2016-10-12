@@ -43,7 +43,8 @@ from .scheduler import (Watchdog, TaskBase, Job, RecipeSet, Recipe,
         LogRecipe, LogRecipeTask, LogRecipeTaskResult, JobCc, RecipeResource,
         SystemResource, GuestResource, VirtResource, RetentionTag,
         Product, RecipeActivity, RecipeSetActivity, RecipeRepo,
-        RecipeKSAppend, RecipeTaskParam, JobActivity, RecipeReservationRequest)
+        RecipeKSAppend, RecipeTaskParam, JobActivity, RecipeReservationRequest,
+        RecipeReservationCondition)
 from .reviewing import RecipeSetComment, RecipeReviewedState, RecipeTaskComment,\
     RecipeTaskResultComment
 from .openstack import OpenStackRegion

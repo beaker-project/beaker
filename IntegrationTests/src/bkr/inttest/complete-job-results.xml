@@ -113,7 +113,7 @@
           <result path="/distribution/reservesys" start_time="2016-01-31 23:00:04" score="0" result="Pass" id="3">(Pass)<logs><log href="${BEAKER_SERVER_BASE_URL}recipes/1/tasks/2/results/3/logs/result.txt" name="result.txt"/></logs></result>
         </results>
       </task>
-      <reservesys duration="600"/>
+      <reservesys duration="600" when="always"/>
     </recipe>
   </recipeSet>
 </job>
