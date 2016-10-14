@@ -31,7 +31,8 @@ import cherrypy
 from bkr.server.model import (Recipe, RecipeSet, TaskStatus, Job, System,
                               MachineRecipe, SystemResource, VirtResource,
                               LogRecipe, LogRecipeTask, LogRecipeTaskResult,
-                              RecipeResource, TaskBase, RecipeReservationRequest)
+                              RecipeResource, TaskBase, RecipeReservationRequest,
+                              RecipeReservationCondition)
 from bkr.server.app import app
 from bkr.server.flask_util import BadRequest400, NotFound404, \
     Forbidden403, auth_required, read_json_request, convert_internal_errors, \
@@ -613,7 +614,18 @@ def update_reservation_request(id):
     :jsonparam boolean reserve: Whether the system will be reserved at the end
       of the recipe. If true, the system will be reserved. If false, the system
       will not be reserved.
-    :jsonparam int duration: Number of seconds to rerserve the system.
+    :jsonparam int duration: Number of seconds to reserve the system.
+    :jsonparam string when: Circumstances under which the system will be 
+      reserved. Valid values are:
+
+      onabort
+        If the recipe status is Aborted.
+      onfail
+        If the recipe status is Aborted, or the result is Fail.
+      onwarn
+        If the recipe status is Aborted, or the result is Fail or Warn.
+      always
+        Unconditionally.
     """
 
     recipe = _get_recipe_by_id(id)
@@ -625,21 +637,24 @@ def update_reservation_request(id):
         raise BadRequest400('No reserve specified')
     with convert_internal_errors():
         if data['reserve']:
-            if 'duration' not in data:
-                raise BadRequest400('No duration specified')
-            duration = data['duration']
-            if duration > MAX_SECONDS_PROVISION:
-                raise BadRequest400('Reservation time exceeds maximum time of %s hours' % MAX_HOURS_PROVISION)
-            if recipe.reservation_request:
+            if not recipe.reservation_request:
+                recipe.reservation_request = RecipeReservationRequest()
+            if 'duration' in data:
+                duration = int(data['duration'])
+                if duration > MAX_SECONDS_PROVISION:
+                    raise BadRequest400('Reservation time exceeds maximum time of %s hours'
+                            % MAX_HOURS_PROVISION)
                 old_duration = recipe.reservation_request.duration
-                recipe.reservation_request.duration = data['duration']
+                recipe.reservation_request.duration = duration
                 _record_activity(recipe, u'Reservation Request', old_duration,
-                        data['duration'])
-            else:
-                reservation_request = RecipeReservationRequest(duration=data['duration'])
-                recipe.reservation_request = reservation_request
-                _record_activity(recipe, u'Reservation Request', None,
-                        reservation_request.duration, 'Changed')
+                        duration)
+            if 'when' in data:
+                old_condition = recipe.reservation_request.when
+                new_condition = RecipeReservationCondition.from_string(data['when'])
+                recipe.reservation_request.when = new_condition
+                _record_activity(recipe, u'Reservation Condition',
+                        old_condition, new_condition)
+            session.flush() # to ensure the id is populated
             return jsonify(recipe.reservation_request.__json__())
         else:
             if recipe.reservation_request:

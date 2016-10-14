@@ -15,7 +15,7 @@ from turbogears.database import session
 
 from bkr.server.model import TaskStatus, TaskResult, RecipeTaskResult, \
     Task, RecipeTaskComment, RecipeTaskResultComment, RecipeTask, \
-    CommandStatus
+    CommandStatus, RecipeReservationCondition
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_text_present
 from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
@@ -993,33 +993,51 @@ class RecipeHTTPTest(DatabaseTestCase):
         requests_login(s, user=self.owner, password=u'theowner')
         response = patch_json(get_server_base() +
                 'recipes/%s/reservation-request' % self.recipe_with_reservation_request.id,
-                session=s, data={'reserve': True, 'duration': 300})
+                session=s, data={'reserve': True, 'duration': 300, 'when': 'onfail'})
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.recipe_with_reservation_request.reservation_request.duration,
-                    300)
+            self.assertEquals(self.recipe_with_reservation_request.reservation_request.when,
+                    RecipeReservationCondition.onfail)
             self.assertEquals(self.recipe_with_reservation_request.activity[0].field_name,
-                    u'Reservation Request')
+                    u'Reservation Condition')
             self.assertEquals(self.recipe_with_reservation_request.activity[0].action,
                     u'Changed')
             self.assertEquals(self.recipe_with_reservation_request.activity[0].new_value,
+                    u'onfail')
+            self.assertEquals(self.recipe_with_reservation_request.reservation_request.duration,
+                    300)
+            self.assertEquals(self.recipe_with_reservation_request.activity[1].field_name,
+                    u'Reservation Request')
+            self.assertEquals(self.recipe_with_reservation_request.activity[1].action,
+                    u'Changed')
+            self.assertEquals(self.recipe_with_reservation_request.activity[1].new_value,
                     u'300')
         # On a recipe without reservation request
         s = requests.Session()
         requests_login(s, user=self.owner, password=u'theowner')
         response = patch_json(get_server_base() +
                 'recipes/%s/reservation-request' % self.recipe_without_reservation_request.id,
-                session=s, data={'reserve': True, 'duration': 300})
+                session=s, data={'reserve': True, 'duration': 300, 'when': 'onfail'})
         response.raise_for_status()
         with session.begin():
             session.expire_all()
             self.assertTrue(self.recipe_without_reservation_request.reservation_request)
+            self.assertEquals(self.recipe_without_reservation_request.reservation_request.when,
+                    RecipeReservationCondition.onfail)
             self.assertEquals(self.recipe_without_reservation_request.activity[0].field_name,
-                    u'Reservation Request')
+                    u'Reservation Condition')
             self.assertEquals(self.recipe_without_reservation_request.activity[0].action,
                     u'Changed')
             self.assertEquals(self.recipe_without_reservation_request.activity[0].new_value,
+                    u'onfail')
+            self.assertEquals(self.recipe_without_reservation_request.reservation_request.duration,
+                    300)
+            self.assertEquals(self.recipe_without_reservation_request.activity[1].field_name,
+                    u'Reservation Request')
+            self.assertEquals(self.recipe_without_reservation_request.activity[1].action,
+                    u'Changed')
+            self.assertEquals(self.recipe_without_reservation_request.activity[1].new_value,
                     u'300')
 
     def test_can_update_reservation_request_to_not_reserve_the_system(self):
@@ -1041,6 +1059,17 @@ class RecipeHTTPTest(DatabaseTestCase):
                     u'Changed')
             self.assertEquals(self.recipe_with_reservation_request.activity[0].new_value,
                     None)
+
+    def test_rejects_unrecognised_reserve_conditions(self):
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = patch_json(get_server_base() +
+                'recipes/%s/reservation-request' % self.recipe_with_reservation_request.id,
+                session=s, data={'reserve': True, 'when': 'slartibartfast'})
+        self.assertEquals(response.status_code, 400)
+        self.assertEquals(response.text,
+                "Invalid value for RecipeReservationCondition: "
+                "u'slartibartfast' is not one of onabort, onfail, onwarn, always")
 
     def test_anonymous_has_no_reviewed_state(self):
         # Reviewed state is per-user so anonymous should get "reviewed": null 

@@ -71,7 +71,9 @@ class DeclEnum(object):
         try:
             return cls._symbols_by_value[value]
         except KeyError:
-            raise ValueError('Invalid value for %r: %r' % (cls.__name__, value))
+            raise ValueError(u'Invalid value for %s: %r is not one of %s'
+                    % (cls.__name__, value,
+                       ', '.join(value for value in cls.values())))
 
     @classmethod
     def values(cls):

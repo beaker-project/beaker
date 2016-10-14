@@ -1954,7 +1954,8 @@ class RecipeReservationRequest(DeclarativeMappedObject):
         return {
             'id': self.id,
             'recipe_id': self.recipe_id,
-            'duration': self.duration
+            'duration': self.duration,
+            'when': unicode(self.when),
         }
 
     @classmethod
@@ -1967,7 +1968,8 @@ class RecipeReservationRequest(DeclarativeMappedObject):
         return {
             'id': None,
             'recipe_id': None,
-            'duration': None
+            'duration': cls.__table__.c.duration.default.arg,
+            'when': cls.__table__.c.when.default.arg,
         }
 
 
