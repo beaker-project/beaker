@@ -727,13 +727,17 @@ class TestRecipeViewReservationTab(WebDriverTestCase):
         modal.find_element_by_xpath('.//button[text()="Yes"]').click()
         modal.find_element_by_name('reserve_duration').clear()
         modal.find_element_by_name('reserve_duration').send_keys('300')
+        modal.find_element_by_xpath('.//input[@name="when" and @value="onfail"]').click()
         modal.find_element_by_xpath('.//button[text()="Save changes"]').click()
         b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
-        self.assertIn('The system will be reserved for 00:05:00 at the end of the recipe',
-            tab.text)
+        self.assertEqual(tab.find_element_by_xpath('div/p').text,
+                'The system will be reserved for 00:05:00 at the end of the recipe '
+                'if the status is Aborted or the result is Fail.')
         with session.begin():
             session.expire_all()
             self.assertEqual(recipe.reservation_request.duration, 300)
+            self.assertEqual(recipe.reservation_request.when,
+                    RecipeReservationCondition.onfail)
 
     def test_authenticated_user_can_edit_reservation(self):
         b = self.browser

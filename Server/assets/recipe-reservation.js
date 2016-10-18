@@ -141,30 +141,32 @@ var EditRecipeReservationModal = Backbone.View.extend({
         'hidden': 'remove',
     },
     toggle_reservation: function (evt) {
-        if ($(evt.currentTarget).data('reserve')) {
-          this.reserve_input.$el.find(':input').prop('disabled', false);
-        } else {
-          this.reserve_input.$el.find(':input').prop('disabled', true);
-        }
+        var disable = !($(evt.currentTarget).data('reserve'));
+        this.reserve_input.$(':input').prop('disabled', disable);
+        this.$('[name=when]').prop('disabled', disable);
     },
     initialize: function () {
         this.reserve_input = new ReservationDurationSelection({});
         this.render();
         this.$el.modal();
+        this.$('.toggle-reservation-form button:first').focus();
     },
     render: function () {
         this.$el.html(this.template(this.model.attributes));
-        this.$('.modal-body').append(this.reserve_input.$el);
-        this.reserve_input.render();
+        this.reserve_input
+            .setElement(this.$('.reservation-duration-widget').get(0))
+            .render();
         var model = this.model;
         var reservation_request = this.model.get('reservation_request');
         if (reservation_request.get('reserve')) {
             this.$('button[data-reserve="true"]').addClass('active');
-            this.reserve_input.$(':input').val(reservation_request.get('duration'));
         } else {
             this.$('button[data-reserve="false"]').addClass('active');
-            this.reserve_input.$el.find(':input').prop('disabled', true);
+            this.reserve_input.$(':input').prop('disabled', true);
+            this.$('[name=when]').prop('disabled', true);
         }
+        this.reserve_input.$(':input').val(reservation_request.get('duration'));
+        this.$('[name=when]').val([reservation_request.get('when')]);
     },
     submit: function (evt) {
         evt.preventDefault();
@@ -176,6 +178,7 @@ var EditRecipeReservationModal = Backbone.View.extend({
         if (reserve) {
             attributes.reserve = true;
             attributes.duration = this.reserve_input.get_reservation_duration().asSeconds();
+            attributes.when = this.$('[name=when]:checked').val();
         } else {
             attributes.reserve = false;
         }

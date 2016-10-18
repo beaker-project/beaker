@@ -1,10 +1,21 @@
 <% if (reservation_request.get('reserve')) { %>
+  <p>
     The system will be reserved for
     <%- moment.duration(reservation_request.get('duration'), 'seconds').format(
-    "hh:mm:ss", {trim: false})%> at the end of the recipe.
+    "hh:mm:ss", {trim: false})%> at the end of the recipe<%
+    if (reservation_request.get('when') == 'onabort') { %>
+      if the status is <strong>Aborted</strong><%
+    } else if (reservation_request.get('when') == 'onfail') { %>
+      if the status is <strong>Aborted</strong>
+      or the result is <strong>Fail</strong><%
+    } else if (reservation_request.get('when') == 'onwarn') { %>
+      if the status is <strong>Aborted</strong>
+      or the result is <strong>Fail</strong>
+      or <strong>Warn</strong><% } %>.
+  </p>
 <% } else { %>
-    The system will not be reserved at the end of the recipe.
+  <p>The system will not be reserved at the end of the recipe.</p>
 <% } %>
 <% if (can_edit) { %>
-<button class="btn edit"><i class="fa fa-pencil-square-o"></i> Edit</button>
+  <p><button class="btn edit"><i class="fa fa-pencil-square-o"></i> Edit</button></p>
 <% } %>
