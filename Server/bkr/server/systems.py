@@ -322,6 +322,7 @@ def _get_system_by_FQDN(fqdn):
 
 def _update_system(system, data={}):
     changed = False
+    power_added = False
     # helper for recording activity below
     def record_activity(field, old, new, action=u'Changed'):
         system.record_activity(user=identity.current.user, service=u'HTTP',
@@ -415,9 +416,13 @@ def _update_system(system, data={}):
                 'power_password', 'power_id', 'power_quiescent_period'])\
                 .intersection(data.keys()):
             system.power = Power()
+            # If this is the first time power settings have been added, we will 
+            # record them all in activity (even if they match the pre-filled 
+            # defaults).
+            power_added = True
         if 'power_type' in data:
             new_power_type = PowerType.by_name(data['power_type'])
-            if new_power_type != system.power.power_type:
+            if new_power_type != system.power.power_type or power_added:
                 if not system.power.power_type:
                     old_power_type = ''
                 else:
@@ -427,32 +432,32 @@ def _update_system(system, data={}):
                 changed = True
         if 'power_address' in data:
             new_power_address = data['power_address']
-            if new_power_address != system.power.power_address:
+            if new_power_address != system.power.power_address or power_added:
                 record_activity(u'power_address', system.power.power_address,
                         data['power_address'])
                 system.power.power_address = new_power_address
                 changed = True
         if 'power_user' in data:
             new_power_user = data['power_user'] or u''
-            if new_power_user != (system.power.power_user or u''):
+            if new_power_user != (system.power.power_user or u'') or power_added:
                 record_activity(u'power_user', u'********', u'********')
                 system.power.power_user = new_power_user
                 changed = True
         if 'power_password' in data:
             new_power_password = data['power_password'] or u''
-            if new_power_password != (system.power.power_passwd or u''):
+            if new_power_password != (system.power.power_passwd or u'') or power_added:
                 record_activity(u'power_passwd', u'********', u'********')
                 system.power.power_passwd = new_power_password
                 changed = True
         if 'power_id' in data:
             new_power_id = data['power_id'] or u''
-            if new_power_id != (system.power.power_id or u''):
+            if new_power_id != (system.power.power_id or u'') or power_added:
                 record_activity(u'power_id', system.power.power_id, new_power_id)
                 system.power.power_id = new_power_id
                 changed = True
         if 'power_quiescent_period' in data:
             new_qp = int(data['power_quiescent_period'])
-            if new_qp != system.power.power_quiescent_period:
+            if new_qp != system.power.power_quiescent_period or power_added:
                 record_activity(u'power_quiescent_period',
                         system.power.power_quiescent_period, new_qp)
                 system.power.power_quiescent_period = new_qp

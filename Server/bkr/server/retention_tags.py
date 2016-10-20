@@ -67,8 +67,9 @@ class RetentionTag(AdminPage):
     @validate(form=tag_form, validators=TagFormSchema())
     @error_handler(new)
     def save(self, id=None, **kw):
-        retention_tag = Tag(kw['tag'], kw['default'], kw['needs_product'])
-        retention_tag.expire_in_days = kw['expire_in_days']
+        retention_tag = Tag(tag=kw['tag'], default=kw['default'],
+                needs_product=kw['needs_product'],
+                expire_in_days=kw['expire_in_days'])
         session.add(retention_tag)
         flash(_(u"OK"))
         redirect("./admin")

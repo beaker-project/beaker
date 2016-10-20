@@ -10,7 +10,7 @@ import time
 from turbogears.database import metadata, session
 from sqlalchemy.sql import and_
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.orm import class_mapper
+from sqlalchemy.orm import class_mapper, object_mapper, ColumnProperty
 from sqlalchemy.ext.declarative import declarative_base
 from .sql import ConditionalInsert
 
@@ -77,6 +77,21 @@ class MappedObject(object):
         return cls.query.with_lockmode('update').filter_by(**kwargs).one()
 
     def __init__(self, **kwargs):
+        for prop in object_mapper(self).iterate_properties:
+            if not isinstance(prop, ColumnProperty):
+                continue # not sure what to do with it
+            default = prop.columns[0].default
+            if default is None:
+                continue
+            if default.is_callable:
+                # We only use nullary default callables, which don't accept an 
+                # ExecutionContext instance, but SQLAlchemy wraps them all to 
+                # accept (and ignore) an ExecutionContext for consistency. We 
+                # can just pass None.
+                default_value = default.arg(None)
+            else:
+                default_value = default.arg
+            setattr(self, prop.key, default_value)
         for k, v in kwargs.iteritems():
             setattr(self, k, v)
 
@@ -96,4 +111,4 @@ class MappedObject(object):
     def by_id(cls, id):
         return cls.query.filter_by(id=id).one()
 
-DeclarativeMappedObject = declarative_base(cls=MappedObject, metadata=metadata)
+DeclarativeMappedObject = declarative_base(cls=MappedObject, metadata=metadata, constructor=None)

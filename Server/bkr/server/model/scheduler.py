@@ -1507,10 +1507,6 @@ class BeakerTag(DeclarativeMappedObject):
     type = Column(Unicode(40), nullable=False)
     __mapper_args__ = {'polymorphic_on': type, 'polymorphic_identity': u'tag'}
 
-    def __init__(self, tag, *args, **kw):
-        super(BeakerTag, self).__init__()
-        self.tag = tag
-
     def can_delete(self):
         raise NotImplementedError("Please implement 'can_delete'  on %s" % self.__class__.__name__)
 
@@ -1535,16 +1531,13 @@ class RetentionTag(BeakerTag):
             ondelete='CASCADE'), primary_key=True)
     is_default = Column('default_', Boolean)
     expire_in_days = Column(Integer, default=0, nullable=False)
-    needs_product = Column(Boolean, nullable=False)
+    needs_product = Column(Boolean, default=False, nullable=False)
     __mapper_args__ = {'polymorphic_identity': u'retention_tag'}
     jobs = relationship(Job, back_populates='retention_tag', cascade_backrefs=False)
 
-    def __init__(self, tag, is_default=False, needs_product=False, expire_in_days=None, *args, **kw):
-        self.needs_product = needs_product
-        self.expire_in_days = expire_in_days
+    def __init__(self, tag, is_default=False, **kwargs):
+        super(RetentionTag, self).__init__(tag=tag, **kwargs)
         self.set_default_val(is_default)
-        self.needs_product = needs_product
-        super(RetentionTag, self).__init__(tag, **kw)
 
     @classmethod
     def by_name(cls,tag):
@@ -1941,14 +1934,6 @@ class RecipeReservationRequest(DeclarativeMappedObject):
     duration = Column(Integer, default=86400, nullable=False)
     when = Column(RecipeReservationCondition.db_type(), nullable=False,
             default=RecipeReservationCondition.always)
-
-    def __init__(self, **kwargs):
-        # http://stackoverflow.com/a/13791802/120202
-        if 'duration' not in kwargs:
-            kwargs['duration'] = self.__table__.c.duration.default.arg
-        if 'when' not in kwargs:
-            kwargs['when'] = self.__table__.c.when.default.arg
-        super(RecipeReservationRequest, self).__init__(**kwargs)
 
     def __json__(self):
         return {

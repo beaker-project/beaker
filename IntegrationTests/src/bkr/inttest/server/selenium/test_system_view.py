@@ -682,11 +682,12 @@ class SystemViewTestWD(WebDriverTestCase):
         power_fields_changed = {'power_type': 'virsh',
                                 'power_address': 'qemu+ssh:10.10.10.10',
                                 'power_user': '********',
+                                'power_passwd': '********',
                                 'power_id': system.fqdn,
                                 'power_quiescent_period': '5'}
         with session.begin():
             session.refresh(system)
-            self.assertEquals(len(system.activity), 5)
+            self.assertEquals(len(system.activity), len(power_fields_changed.keys()))
             for activity in system.activity:
                 self.assertEquals(activity.new_value,
                                   power_fields_changed[activity.field_name])

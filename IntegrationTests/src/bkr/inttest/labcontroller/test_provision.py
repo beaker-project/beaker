@@ -169,6 +169,7 @@ class PowerTest(LabControllerTestCase):
         with session.begin():
             system = data_setup.create_system(lab_controller=self.get_lc())
             self.addCleanup(self.cleanup_system, system)
+            system.power.power_quiescent_period = 0
             system.power.power_type = PowerType.lazy_create(name=u'dummy')
             system.power.power_id = power_sleep # make power script sleep
             system.action_power(action=u'off', service=u'testdata')
