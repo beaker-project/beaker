@@ -70,7 +70,7 @@ unsupported_hardware
 {% endif %}
 
 {% if has_rpmostree is not defined %}
-%packages --ignoremissing
+%packages {{ pkgoptions|default('--ignoremissing') }}
 {%- if not recipe and packages is undefined %} --default
 {% else %}
 

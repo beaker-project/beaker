@@ -308,6 +308,12 @@ correspond to the similarly-named kickstart option.
     Root password to use. Must be encrypted in the conventional 
     :manpage:`crypt(3)` format.
 
+``pkgoptions=<options>``
+    Options to pass to the ``%packages`` section in the kickstart file.  If
+    this variable is set, it overrides the default option ``--ignoremissing``.
+    See the `kickstart documentation <http://pykickstart.readthedocs.io/en/latest/kickstart-docs.html#chapter-7-package-selection>`
+    for the available options to ``%packages``.
+
 ``remote_post=<url>``
     Specify a URL to a script to be executed post-install. The script must specify a
     interpreter using the ``#!`` line if not a bash script. This is especially useful

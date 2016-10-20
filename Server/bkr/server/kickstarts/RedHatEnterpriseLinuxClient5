@@ -59,7 +59,7 @@ install
 {% snippet 'RedHatEnterpriseLinuxClient5' %}
 {% snippet 'system' %}
 
-%packages --resolvedeps --ignoremissing
+%packages {{ pkgoptions|default('--resolvedeps --ignoremissing') }}
 {% if recipe or packages is defined %}
 {% snippet 'rhts_packages' %}
 {% else %}

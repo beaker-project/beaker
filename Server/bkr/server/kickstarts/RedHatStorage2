@@ -62,7 +62,7 @@ install
 unsupported_hardware
 {% endif %}
 
-%packages --ignoremissing
+%packages {{ pkgoptions|default('--ignoremissing') }}
 {% if recipe or packages is defined %}
 {% snippet 'rhts_packages' %}
 {% endif %}

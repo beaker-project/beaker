@@ -3419,3 +3419,24 @@ volgroup bootvg --pesize=32768 pv.01
         self.assertIn('systemctl enable beah-srv.service', k)
         self.assertIn('systemctl enable beah-beaker-backend.service', k)
         self.assertIn('systemctl enable beah-fwd-backend.service', k)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1387256
+    def test_pkgoptions(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="pkgoptions='--excludedocs --resolvedeps --instLangs=en_US'">
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-rawhide" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        ks = recipe.installation.rendered_kickstart.kickstart
+        self.assertIn('%packages --excludedocs --resolvedeps --instLangs=en_US', ks)

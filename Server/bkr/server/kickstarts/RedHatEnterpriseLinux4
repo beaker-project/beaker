@@ -51,7 +51,7 @@ install
 {% snippet 'RedHatEnterpriseLinux4' %}
 {% snippet 'system' %}
 
-%packages --resolvedeps --ignoremissing
+%packages {{ pkgoptions|default('--resolvedeps --ignoremissing') }}
 {% if recipe or packages is defined %}
 {% snippet 'rhts_packages' %}
 {% else %}
