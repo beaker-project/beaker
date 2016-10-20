@@ -725,3 +725,17 @@ class SystemHTTPTest(DatabaseTestCase):
             self.assertEquals(system.activity[-1].action, 'Changed')
             self.assertEquals(system.activity[-1].old_value, None)
             self.assertEquals(system.activity[-1].new_value, lc.fqdn)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1387109
+    def test_can_set_zero_quiescent_period(self):
+        with session.begin():
+            system = data_setup.create_system()
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': data_setup.ADMIN_USER,
+                'password': data_setup.ADMIN_PASSWORD}).raise_for_status()
+        response = patch_json(get_server_base() + 'systems/%s/' % system.fqdn,
+                session=s, data={'power_quiescent_period': 0})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(system.power.power_quiescent_period, 0)
