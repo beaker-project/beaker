@@ -28,6 +28,13 @@ def wait_for_commands_to_finish(system, timeout):
                     (CommandStatus.completed, CommandStatus.failed)
     wait_for_condition(_commands_finished, timeout=timeout)
 
+def wait_for_command_to_finish(command, timeout):
+    def _command_completed():
+        with session.begin():
+            session.refresh(command)
+            return command.status in (CommandStatus.completed, CommandStatus.failed)
+    wait_for_condition(_command_completed, timeout=timeout)
+
 def assert_command_is_delayed(command, min_delay, timeout):
     """
     Asserts that the given command is not run for at least *min_delay* seconds, 
@@ -150,6 +157,34 @@ class PowerTest(LabControllerTestCase):
         finally:
             provision_output = provision_process.finish_output_capture()
         self.assertNotIn('Entering queiscent period', provision_output)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1083648
+    def test_quiescent_period_only_applies_between_power_commands(self):
+        # The purpose of the quiescent period is for power supplies with 
+        # peculiar characteristics that need time to discharge or similar.
+        # But the quiescent period should not count any other commands like 
+        # clear_logs or configure_netboot, because those are not touching the 
+        # power supply.
+        quiescent_period = get_conf().get('SLEEP_TIME') * 2.0
+        with session.begin():
+            system = data_setup.create_system(lab_controller=self.get_lc())
+            system.power.power_type = PowerType.lazy_create(name=u'dummy')
+            system.power.power_quiescent_period = quiescent_period
+            system.power.power_id = u'' # make power script not sleep
+            system.action_power(action=u'off', service=u'testdata')
+            system.enqueue_command(action=u'clear_netboot', service=u'testdata')
+            commands = system.command_queue[:2]
+        assert_command_is_delayed(commands[1], quiescent_period - 0.5, timeout=quiescent_period / 2)
+        wait_for_command_to_finish(commands[0], timeout=quiescent_period / 2)
+        time.sleep(quiescent_period)
+        # Now there should be no delays because the quiescent period has 
+        # already elapsed since the 'off' command above.
+        with session.begin():
+            system.enqueue_command(action=u'clear_logs', service=u'testdata')
+            system.action_power(action=u'on', service=u'testdata')
+            commands = system.command_queue[:2]
+        wait_for_command_to_finish(commands[1], timeout=quiescent_period / 2)
+        wait_for_command_to_finish(commands[0], timeout=quiescent_period / 2)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=951309
     def test_power_commands_are_not_run_twice(self):

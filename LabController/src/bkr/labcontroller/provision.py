@@ -158,7 +158,8 @@ class CommandQueuePoller(ProxyHelper):
         else:
             self.mark_command_completed(command['id'])
         finally:
-            self.last_command_datetime[command['fqdn']] = datetime.datetime.utcnow()
+            if quiescent_period:
+                self.last_command_datetime[command['fqdn']] = datetime.datetime.utcnow()
         logger.debug('Finished handling command %s', command['id'])
 
 def find_power_script(power_type):
