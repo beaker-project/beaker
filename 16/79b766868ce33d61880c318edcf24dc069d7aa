@@ -1,0 +1,10 @@
+Ready-for-Checks+1: Hui Wang <huiwang@redhat.com>
+Code-Review+1: Tyrone Abdy <tabdy@redhat.com>
+Code-Review+1: Blake McIvor <bmcivor@redhat.com>
+Code-Review+2: Dan Callaghan <dcallagh@redhat.com>
+Verified+1: Hui Wang <huiwang@redhat.com>
+Submitted-by: Hui Wang <huiwang@redhat.com>
+Submitted-at: Thu, 20 Oct 2016 05:35:49 +0000
+Reviewed-on: http://gerrit.beaker-project.org/5330
+Project: beaker
+Branch: refs/heads/develop
