@@ -67,7 +67,7 @@ class BrokenSystemNotificationTest(DatabaseTestCase):
     def test_broken_system_notification_off(self):
         with session.begin():
             owner = data_setup.create_user(email_address=u'derp@derpmail.com',
-                                           notify_broken=False)
+                                           notify_broken_system=False)
             lc = data_setup.create_labcontroller()
             system = data_setup.create_system(fqdn=u'home-two', owner=owner,
                                               lender=u"Aunty Jane's Dodgy Shop",
@@ -207,7 +207,7 @@ class SystemReservationNotificationTest(DatabaseTestCase):
     def test_system_reserved_notification_off(self):
         with session.begin():
             owner = data_setup.create_user(email_address=u'derp@derptown.com',
-                                           notify_reserve=False)
+                                           notify_reservesys=False)
             system = data_setup.create_system(fqdn=u'funcooker.ge.valid',
                     lab_controller=data_setup.create_labcontroller())
             distro_tree = data_setup.create_distro_tree(distro_name=u'MicrowaveOS',
@@ -327,7 +327,7 @@ class JobCompletionNotificationTest(DatabaseTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1136748
     def test_job_completion_notification_off(self):
         with session.begin():
-            job_owner = data_setup.create_user(notify_job=False)
+            job_owner = data_setup.create_user(notify_job_completion=False)
             job = data_setup.create_job(owner=job_owner)
             session.flush()
             data_setup.mark_job_complete(job)
@@ -370,8 +370,8 @@ class GroupMembershipNotificationTest(DatabaseTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1136748
     def test_group_membership_notification_off(self):
         with session.begin():
-            owner = data_setup.create_user(notify_group=False)
-            member = data_setup.create_user(notify_group=False)
+            owner = data_setup.create_user(notify_group_membership=False)
+            member = data_setup.create_user(notify_group_membership=False)
 
             # group data_setup has not been changed, mail may sneak thru
             group = data_setup.create_group(owner=owner)
