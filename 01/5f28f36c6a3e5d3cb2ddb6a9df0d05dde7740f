@@ -1,0 +1,10 @@
+Ready-for-Checks+1: Tyrone Abdy <tabdy@redhat.com>
+Code-Review+1: Roman Joost <rjoost@redhat.com>
+Code-Review+1: Blake McIvor <bmcivor@redhat.com>
+Code-Review+2: Dan Callaghan <dcallagh@redhat.com>
+Verified+1: Tyrone Abdy <tabdy@redhat.com>
+Submitted-by: Tyrone Abdy <tabdy@redhat.com>
+Submitted-at: Fri, 21 Oct 2016 00:07:43 +0000
+Reviewed-on: http://gerrit.beaker-project.org/5215
+Project: beaker
+Branch: refs/heads/develop
