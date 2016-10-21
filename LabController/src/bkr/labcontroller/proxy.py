@@ -53,7 +53,7 @@ def replace_with_blanks(match):
 class ProxyHelper(object):
 
 
-    def __init__(self, conf=None, **kwargs):
+    def __init__(self, conf=None, hub=None, **kwargs):
         self.conf = get_conf()
 
         # update data from another config
@@ -68,8 +68,10 @@ class ProxyHelper(object):
         self.conf.load_from_dict(kwargs)
 
         # self.hub is created here
-        self.hub = HubProxy(logger=logging.getLogger('bkr.common.hub.HubProxy'), conf=self.conf,
-                **kwargs)
+        self.hub = hub
+        if self.hub is None:
+            self.hub = HubProxy(logger=logging.getLogger('bkr.common.hub.HubProxy'), conf=self.conf,
+                    **kwargs)
         self.log_storage = LogStorage(self.conf.get("CACHEPATH"),
                 "%s://%s/beaker/logs" % (self.conf.get('URL_SCHEME',
                 'http'), self.conf.get_url_domain()),

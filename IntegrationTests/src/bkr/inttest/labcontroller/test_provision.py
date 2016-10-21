@@ -9,14 +9,17 @@ import time
 import logging
 import pkg_resources
 from turbogears.database import session
-from unittest2 import SkipTest
+from unittest2 import SkipTest, TestCase
+from xmlrpclib import _Method
 from bkr.server.model import LabController, PowerType, CommandStatus, \
         System, User, Installation, SystemStatus
 from bkr.labcontroller.config import get_conf
+from bkr.labcontroller.provision import CommandQueuePoller
 from bkr.inttest import data_setup, Process
 from bkr.inttest.assertions import wait_for_condition
 from bkr.inttest.labcontroller import LabControllerTestCase, processes, \
         daemons_running_externally
+
 
 log = logging.getLogger(__name__)
 
@@ -331,3 +334,49 @@ class ConfigureNetbootTest(LabControllerTestCase):
         self.assertEquals(system.command_queue[0].action, u'configure_netboot')
         self.assertEquals(system.command_queue[0].status, CommandStatus.failed)
         self.assertEquals(system.status, SystemStatus.automated)
+
+class FakeHub(object):
+    """
+    Implements a fake xmlrpc hub for purposes
+    of stubbing out responses
+    """
+    def __init__(self, testcase):
+        self.testcase = testcase
+        self.aborted_commands = []
+
+    def assert_commands_aborted(self):
+        self.testcase.assertListEqual([3,4,5], self.aborted_commands)
+
+    def get_queued_command_details(self, args):
+        return [{'id':1},{'id':2}]
+
+    def get_running_command_ids(self, args):
+        return [1,2,3,4,5]
+
+    def mark_command_aborted(self, args):
+        command_id = args[0]
+        self.testcase.assertIn(command_id, [3,4,5])
+        self.aborted_commands.append(command_id)
+
+    def __request(self, method, params):
+        methodname = method.split(".").pop()
+        return getattr(self, methodname)(params)
+
+    def __getattr__(self, name):
+        return _Method(self.__request, name)
+
+
+class ProvisionXmlrpcTest(TestCase):
+    def test_clear_orphaned_commands(self):
+        testhub = FakeHub(self)
+        initial_commands = {1: {'id':1},
+                           2: {'id':2}}
+        poller = CommandQueuePoller(conf=None, hub=testhub)
+        poller.commands = initial_commands
+        poller.poll()
+        # Verify that the poller called abort on the three unknown commands
+        testhub.assert_commands_aborted()
+        # For completeness, assert poller state unchanged after poll()
+        self.assertDictEqual(initial_commands, poller.commands)
+        self.assertDictEqual({}, poller.greenlets)
+        self.assertDictEqual({}, poller.last_command_datetime)

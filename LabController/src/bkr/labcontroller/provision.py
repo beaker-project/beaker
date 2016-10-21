@@ -54,6 +54,18 @@ class CommandQueuePoller(ProxyHelper):
                 command['power']['passwd'] = SensitiveUnicode(command['power']['passwd'])
         return commands
 
+    def get_running_command_ids(self):
+        try:
+            ids = self.hub.labcontrollers.get_running_command_ids()
+        except xmlrpclib.Fault as fault:
+            if 'Anonymous access denied' in fault.faultString:
+                logger.debug('Session expired, re-authenticating')
+                self.hub._login()
+                ids = self.hub.labcontrollers.get_running_command_ids()
+            else:
+                raise
+        return ids
+
     def mark_command_running(self, id):
         self.hub.labcontrollers.mark_command_running(id)
 
@@ -63,10 +75,22 @@ class CommandQueuePoller(ProxyHelper):
     def mark_command_failed(self, id, message, system_broken):
         self.hub.labcontrollers.mark_command_failed(id, message, system_broken)
 
+    def mark_command_aborted(self, id, message):
+        self.hub.labcontrollers.mark_command_aborted(id, message)
+
     def clear_running_commands(self, message):
         self.hub.labcontrollers.clear_running_commands(message)
 
+    def clear_orphaned_commands(self):
+        running_command_ids = self.get_running_command_ids()
+        orphaned_command_ids = set(running_command_ids).difference(self.commands.keys())
+        for id in orphaned_command_ids:
+            self.mark_command_aborted(id, "Command orphaned, aborting")
+
     def poll(self):
+        logger.debug('Clearing orphaned commands')
+        self.clear_orphaned_commands()
+
         logger.debug('Polling for queued commands')
         for command in self.get_queued_commands():
             if command['id'] in self.commands:

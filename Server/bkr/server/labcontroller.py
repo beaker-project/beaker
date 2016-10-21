@@ -394,6 +394,17 @@ class LabControllers(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.in_group('lab_controller'))
+    def get_running_command_ids(self):
+        lab_controller = identity.current.user.lab_controller
+        running_commands = Command.query \
+            .join(Command.system) \
+            .filter(System.lab_controller == lab_controller) \
+            .filter(Command.status == CommandStatus.running) \
+            .values(Command.id)
+        return [id for id, in running_commands]
+
+    @cherrypy.expose
+    @identity.require(identity.in_group('lab_controller'))
     def get_queued_command_details(self):
         lab_controller = identity.current.user.lab_controller
         max_running_commands = config.get('beaker.max_running_commands')
@@ -550,6 +561,24 @@ class LabControllers(RPCRoot):
         session.flush() # Populates cmd.system (needed for next call)
         cmd.log_to_system_history()
         return True
+
+    @cherrypy.expose
+    @identity.require(identity.in_group('lab_controller'))
+    def mark_command_aborted(self, command_id, message=None):
+        lab_controller = identity.current.user.lab_controller
+        cmd = Command.query.get(command_id)
+        if cmd.system.lab_controller != lab_controller:
+            raise ValueError('%s cannot update command for %s in wrong lab'
+                    % (lab_controller, cmd.system))
+        if cmd.status != CommandStatus.running:
+            raise ValueError('Command %s not running' % command_id)
+        cmd.change_status(CommandStatus.aborted)
+        cmd.error_message = message
+        if cmd.installation and cmd.installation.recipe:
+            cmd.installation.recipe.abort('Command %s aborted' % cmd.id)
+        cmd.log_to_system_history()
+        return True
+
 
     @cherrypy.expose
     @identity.require(identity.in_group('lab_controller'))

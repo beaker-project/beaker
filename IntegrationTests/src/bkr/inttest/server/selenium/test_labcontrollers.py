@@ -746,6 +746,28 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
             job.update_status()
             self.assertEqual(recipe.status, TaskStatus.aborted)
 
+    def test_abort_commands(self):
+        with session.begin():
+            job = data_setup.create_job()
+            recipe = job.recipesets[0].recipes[0]
+            data_setup.mark_recipe_scheduled(recipe, lab_controller=self.lc)
+            recipe.provision()
+            system = recipe.resource.system
+            self.assertEqual(4, len(system.command_queue))
+
+        for command in system.command_queue:
+                self.server.labcontrollers.mark_command_running(command.id)
+        running_command_ids = self.server.labcontrollers.get_running_command_ids()
+        self.assertEqual(4, len(running_command_ids))
+        for id in running_command_ids:
+            self.server.labcontrollers.mark_command_aborted(id, "Command orphaned, aborting")
+        self.assertEqual(0, len(self.server.labcontrollers.get_running_command_ids()))
+
+        with session.begin():
+            session.expire_all()
+            for command in system.command_queue:
+                self.assertEqual(CommandStatus.aborted, command.status)
+
     def test_failure_in_configure_netboot_aborts_recipe(self):
         with session.begin():
             job = data_setup.create_job()
