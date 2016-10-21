@@ -55,6 +55,11 @@ Options
    Beaker's scheduler. Only permitted for recipe sets and jobs which are queued.
    Valid priorities are: Low, Medium, Normal, High, Urgent.
 
+.. option:: --whiteboard <whiteboard>
+
+   Sets the whiteboard of a job or recipe. The whiteboard is a free-form string 
+   to describe the job or recipe.
+
 Common :program:`bkr` options are described in the :ref:`Options 
 <common-options>` section of :manpage:`bkr(1)`.
 
@@ -101,8 +106,9 @@ See also
 """
 from bkr.client import BeakerCommand
 from xmlrpclib import Fault
+import requests
 import bkr.client.json_compat as json
-from sys import exit
+import sys
 
 class Job_Modify(BeakerCommand):
     """Modify certain job properties """
@@ -134,34 +140,55 @@ class Job_Modify(BeakerCommand):
             choices=['Low', 'Medium', 'Normal', 'High', 'Urgent'],
             help='Change job priority: Low, Medium, Normal, High, Urgent',
          )
+        self.parser.add_option(
+            '--whiteboard',
+            help='Set job or recipe whiteboard',
+        )
 
     def run(self, *args, **kwargs):
         response = kwargs.pop('response', None)
         retention_tag = kwargs.pop('retention_tag', None)
         product = kwargs.pop('product', None)
         priority = kwargs.pop('priority', None)
+        whiteboard = kwargs.pop('whiteboard', None)
 
         self.set_hub(**kwargs)
-        self.check_taskspec_args(args, permitted_types=['J', 'RS'])
+        if response or priority:
+            self.check_taskspec_args(args, permitted_types=['J', 'RS'])
+        if retention_tag or product is not None:
+            self.check_taskspec_args(args, permitted_types=['J'])
+        if whiteboard:
+            self.check_taskspec_args(args, permitted_types=['J', 'R'])
         modded = []
         error = False
-        for job in args:
+        requests_session = self.requests_session()
+        for taskspec in args:
             try:
                 if response:
-                    self.hub.jobs.set_response(job, response)
-                    modded.append(job)
+                    self.hub.jobs.set_response(taskspec, response)
+                    modded.append(taskspec)
                 if retention_tag or product is not None:
-                    self.hub.jobs.set_retention_product(job, retention_tag,
+                    self.hub.jobs.set_retention_product(taskspec, retention_tag,
                         product,)
-                    modded.append(job)
+                    modded.append(taskspec)
                 if priority:
-                    requests_session = self.requests_session()
                     res = requests_session.patch('recipesets/by-taskspec/%s'
-                            % job, json={'priority': priority.title()})
+                            % taskspec, json={'priority': priority.title()})
                     res.raise_for_status()
-                    modded.append(job)
-            except Fault, e:
-                print str(e)
+                    modded.append(taskspec)
+                if whiteboard:
+                    type, id = taskspec.split(':', 1)
+                    if type == 'J':
+                        res = requests_session.patch('jobs/%s' % id,
+                                json={'whiteboard': whiteboard})
+                        res.raise_for_status()
+                    elif type == 'R':
+                        res = requests_session.patch('recipes/%s' % id,
+                                json={'whiteboard': whiteboard})
+                        res.raise_for_status()
+                    modded.append(taskspec)
+            except (Fault, requests.HTTPError) as e:
+                sys.stderr.write('Failed to modify %s: %s\n' % (taskspec, e))
                 error = True
         if modded:
             modded = set(modded)
@@ -170,6 +197,6 @@ class Job_Modify(BeakerCommand):
             print 'No jobs modified'
 
         if error:
-            exit(1)
+            sys.exit(1)
         else:
-            exit(0)
+            sys.exit(0)

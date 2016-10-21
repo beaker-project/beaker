@@ -2457,7 +2457,7 @@ class Power(DeclarativeMappedObject):
 
     @validates('power_quiescent_period')
     def validate_quiescent_period(self, key, power_quiescent_period):
-        if not power_quiescent_period > 0:
+        if not power_quiescent_period >= 0:
             raise ValueError('Quiescent period for power control must be greater'
                     ' than or equal to zero')
         return power_quiescent_period

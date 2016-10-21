@@ -974,6 +974,8 @@ class Jobs(RPCRoot):
     def default(self, id):
         if cherrypy.request.path.endswith('/'):
             raise cherrypy.HTTPError(404)
+        if cherrypy.request.method not in ['GET', 'HEAD']:
+            raise cherrypy.HTTPError(404)
 
         try:
             job = Job.by_id(id)

@@ -7,7 +7,7 @@
 from turbogears.database import session
 from bkr.inttest import with_transaction, data_setup
 from bkr.inttest.client import run_client, create_client_config, ClientError, \
-        ClientTestCase
+        ClientTestCase, start_client
 from bkr.server.model import TaskBase
 
 class JobModifyTest(ClientTestCase):
@@ -153,3 +153,35 @@ class JobModifyTest(ClientTestCase):
             self.assertEquals(self.job.recipesets[0].activity[0].action, u'Changed')
             self.assertEquals(self.job.recipesets[0].activity[0].field_name, 'Priority')
             self.assertEquals(self.job.recipesets[0].activity[0].new_value, 'High')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1298055
+    def test_set_job_whiteboard(self):
+        out = run_client(['bkr', 'job-modify', self.job.t_id,
+                '--whiteboard', 'Gregor Samsa awoke'])
+        self.assertIn('Successfully modified jobs %s' % self.job.t_id, out)
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.job.whiteboard, u'Gregor Samsa awoke')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1298055
+    def test_set_recipe_whiteboard(self):
+        recipe = self.job.recipesets[0].recipes[0]
+        out = run_client(['bkr', 'job-modify', recipe.t_id,
+                '--whiteboard', 'found himself transformed'])
+        self.assertIn('Successfully modified jobs %s' % recipe.t_id, out)
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(recipe.whiteboard, u'found himself transformed')
+
+    def test_processes_all_arguments_even_if_one_fails(self):
+        # This behaviour is actually contrary to what the other subcommands do, 
+        # but it's what we have, so let's test it anyway...
+        p = start_client(['bkr', 'job-modify', 'J:thiswillfail', self.job.t_id,
+                    '--whiteboard', 'uneasy dreams'])
+        out, err = p.communicate()
+        self.assertEquals(p.returncode, 1)
+        self.assertIn('Failed to modify J:thiswillfail', err)
+        self.assertEquals(out, 'Successfully modified jobs %s\n' % self.job.t_id)
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.job.whiteboard, u'uneasy dreams')

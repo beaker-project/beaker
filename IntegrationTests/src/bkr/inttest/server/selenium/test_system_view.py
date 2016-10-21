@@ -163,6 +163,21 @@ class SystemViewTestWD(WebDriverTestCase):
         self.assertIn('Hardware scan in progress: R:%s (%s)' % (recipe_id, status),
                       tab.find_element_by_xpath('//div[contains(@class, "hardware-scan-status")]').text)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1364311
+    def test_scan_status_link_works(self):
+        b = self.browser
+        login(b)
+        self.go_to_system_view(tab='Details')
+        tab = b.find_element_by_id('details')
+        tab.find_element_by_xpath('.//button[normalize-space(string(.))="Scan"]').click()
+        tab.find_element_by_xpath('.//button[normalize-space(string(.))="Scan" and @disabled="disabled"]')
+        with session.begin():
+            session.refresh(self.system)
+            recipe_id = self.system.find_current_hardware_scan_recipe().id
+
+        tab.find_element_by_xpath('//div[contains(@class, "hardware-scan-status")]/a').click()
+        b.find_element_by_xpath('//title[contains(.,"R:%s")]' % recipe_id)
+
     def test_change_status(self):
         orig_date_modified = self.system.date_modified
         b = self.browser
@@ -380,6 +395,21 @@ class SystemViewTestWD(WebDriverTestCase):
         with session.begin():
             session.refresh(system)
             self.assert_(system.date_modified > orig_date_modified)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1364311
+    def test_link_to_pools_works(self):
+        with session.begin():
+            system = data_setup.create_system()
+            pool = data_setup.create_system_pool()
+            system.pools.append(pool)
+        # as admin, assign the system to our test pool
+        b = self.browser
+        login(b)
+        self.go_to_system_view(system=system, tab='Pools')
+        b.find_element_by_xpath('//div[@id="list-system-pools"]'
+                                '/ul[@class="list-group system-pools-list"]'
+                                '/li/a').click()
+        b.find_element_by_xpath('//title[normalize-space(text())="%s"]' % pool.name)
 
     def test_add_nonexistent_pool(self):
         b = self.browser

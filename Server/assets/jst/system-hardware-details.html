@@ -1,7 +1,7 @@
 <div class="alert alert-info hardware-scan-status">
   <% if (!_.isEmpty(in_progress_scan)) { %>
   Hardware scan in progress:
-  <a href="/recipes/<%- encodeURIComponent(in_progress_scan['recipe_id']) %>">R:<%- in_progress_scan['recipe_id'] %></a>
+  <a href="<%- beaker_url_prefix %>recipes/<%- encodeURIComponent(in_progress_scan['recipe_id']) %>">R:<%- in_progress_scan['recipe_id'] %></a>
   (<em><%- in_progress_scan['status'] %></em>).
 <% } else { %>
 <% if (hardware_scan_date) { %>
