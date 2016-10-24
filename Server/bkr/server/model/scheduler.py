@@ -2787,9 +2787,9 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         """ Does the given task apply to this recipe?
             ie: not excluded for this distro family or arch.
         """
-        if self.distro_tree.arch in [arch.arch for arch in task.excluded_arch]:
+        if self.distro_tree.arch in task.excluded_arches:
             return False
-        if self.distro_tree.distro.osversion.osmajor in [osmajor.osmajor for osmajor in task.excluded_osmajor]:
+        if self.distro_tree.distro.osversion.osmajor in task.excluded_osmajors:
             return False
         return True
 

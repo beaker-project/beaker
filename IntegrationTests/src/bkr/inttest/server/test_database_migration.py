@@ -1038,3 +1038,28 @@ class MigrationTest(unittest.TestCase):
             self.assertEquals(
                     connection.scalar('SELECT `when` FROM recipe_reservation WHERE id = 1'),
                     u'always')
+
+    def test_remove_task_arch_and_osmajor_exclude_orphans_duplicates(self):
+        with self.migration_metadata.bind.connect() as connection:
+            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/23.sql'))
+            # The idea to test all the combinations of orphans
+            # that either side of arch, task, osmajor is NULL hence orphaned.
+            # as well as duplicates.
+            # uses the arch for ppc64
+            connection.execute("INSERT INTO task(id, name, rpm, valid) VALUES (1, 'task1', 'rpm1', 1);")
+            connection.execute("INSERT INTO osmajor(id, osmajor) VALUES (1, 'redhat loonix');")
+            connection.execute("INSERT INTO task_exclude_arch(task_id, arch_id)"
+            "VALUES (1, 5), (NULL, 5), (1, NULL), (1, 5);")
+            connection.execute("INSERT INTO task_exclude_osmajor(task_id, osmajor_id)"
+            "VALUES (1, 1), (NULL, 1), (1, NULL), (1, 1);")
+
+
+        upgrade_db(self.migration_metadata)
+
+        with self.migration_metadata.bind.connect() as connection:
+            # we test the case of orphaned on both sides, non-orphaned preserved
+            # and duplicates removed
+            self.assertEqual(connection.scalar(
+                'SELECT count(*) FROM task_exclude_osmajor'), 1)
+            self.assertEqual(connection.scalar(
+                'SELECT count(*) FROM task_exclude_arch'), 1)

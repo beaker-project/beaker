@@ -24,7 +24,7 @@ from bkr.server.model import LabController, User, Group, UserGroup, \
         SystemActivity, Task, MachineRecipe, System, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
         Device, TaskResult, TaskStatus, Job, RecipeSet, TaskPriority, \
-        LabControllerDistroTree, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor, \
+        LabControllerDistroTree, Power, PowerType, \
         Permission, RetentionTag, Product, Watchdog, Reservation, LogRecipe, \
         LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor, DistroTag, \
         DeviceClass, DistroTreeRepo, TaskPackage, KernelType, \
@@ -385,7 +385,7 @@ def create_system_status_history(system, statuses):
     system.status_durations.append(SystemStatusDuration(status=system.status,
             start_time=ssd.finish_time))
 
-def create_task(name=None, exclude_arch=None, exclude_osmajor=None, version=u'1.0-1',
+def create_task(name=None, exclude_arches=None, exclude_osmajors=None, version=u'1.0-1',
         uploader=None, owner=None, priority=u'Manual', valid=None, path=None, 
         description=None, requires=None, runfor=None, type=None, avg_time=1200):
     if name is None:
@@ -415,12 +415,12 @@ def create_task(name=None, exclude_arch=None, exclude_osmajor=None, version=u'1.
     if type:
         for t in type:
             task.types.append(TaskType.lazy_create(type=t))
-    if exclude_arch:
-       for arch in exclude_arch:
-           task.excluded_arch.append(TaskExcludeArch(arch_id=Arch.by_name(arch).id))
-    if exclude_osmajor:
-        for osmajor in exclude_osmajor:
-            task.excluded_osmajor.append(TaskExcludeOSMajor(osmajor=OSMajor.lazy_create(osmajor=osmajor)))
+    if exclude_arches:
+       for arch in exclude_arches:
+           task.excluded_arches.append(Arch.by_name(arch))
+    if exclude_osmajors:
+        for osmajor in exclude_osmajors:
+            task.excluded_osmajors.append(OSMajor.lazy_create(osmajor=osmajor))
     if requires:
         for require in requires:
             tp = TaskPackage.lazy_create(package=require)

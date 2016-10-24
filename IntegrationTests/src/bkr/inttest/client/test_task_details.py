@@ -17,8 +17,8 @@ class TaskDetailsTest(ClientTestCase):
         with session.begin():
             task=data_setup.create_task(path=u'/testing/path',
                                         description=u'blah',
-                                        exclude_arch=[u'i386', u'ppc'],
-                                        exclude_osmajor=[u'MajorFoo', u'WunderFooBar'],
+                                        exclude_arches=[u'i386', u'ppc'],
+                                        exclude_osmajors=[u'MajorFoo', u'WunderFooBar'],
                                         requires=[u'2+2', u'Tofudebeast'],
                                         runfor=[u'philip', u'bradley'],
                                         type=[u'type3', u'type4'],

@@ -14,7 +14,7 @@ import lxml.etree
 import rpmUtils.miscutils
 from sqlalchemy import (Table, Column, ForeignKey, Integer, Unicode, Boolean,
                         DateTime)
-from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import relationship
 from turbogears.config import get
 from bkr.common.helpers import (AtomicFileReplacement, Flock,
@@ -326,10 +326,8 @@ class Task(DeclarativeMappedObject):
     priority = Column(Unicode(256))
     valid = Column(Boolean, default=True, nullable=False)
     types = relationship('TaskType', secondary=task_type_map, back_populates='tasks')
-    excluded_osmajor = relationship('TaskExcludeOSMajor', back_populates='task')
-    _excluded_osmajors = relationship('OSMajor', secondary='task_exclude_osmajor', viewonly=True)
-    excluded_arch = relationship('TaskExcludeArch', back_populates='task')
-    _excluded_arches = relationship('Arch', secondary='task_exclude_arch', viewonly=True)
+    excluded_osmajors = relationship('OSMajor', secondary='task_exclude_osmajor')
+    excluded_arches = relationship('Arch', secondary='task_exclude_arch')
     runfor = relationship(TaskPackage, secondary=task_packages_runfor_map,
             back_populates='tasks')
     required = relationship(TaskPackage, secondary=task_packages_required_map,
@@ -429,31 +427,32 @@ class Task(DeclarativeMappedObject):
         task.required = []
         task.runfor = []
         task.needs = []
-        task.excluded_osmajor = []
-        task.excluded_arch = []
+        task.excluded_osmajors = []
+        task.excluded_arches = []
         includeFamily=[]
         for family in tinfo.releases:
             if family.startswith('-'):
                 try:
-                    if family.lstrip('-') not in task.excluded_osmajor:
-                        task.excluded_osmajor.append(TaskExcludeOSMajor(osmajor=OSMajor.by_name_alias(family.lstrip('-'))))
-                except InvalidRequestError:
+                    osmajor = OSMajor.by_name_alias(family.lstrip('-'))
+                    if osmajor not in task.excluded_osmajors:
+                        task.excluded_osmajors.append(osmajor)
+                except NoResultFound:
                     pass
             else:
                 try:
                     includeFamily.append(OSMajor.by_name_alias(family).osmajor)
-                except InvalidRequestError:
+                except NoResultFound:
                     pass
         families = set([ '%s' % family.osmajor for family in OSMajor.query])
         if includeFamily:
             for family in families.difference(set(includeFamily)):
-                if family not in task.excluded_osmajor:
-                    task.excluded_osmajor.append(TaskExcludeOSMajor(osmajor=OSMajor.by_name_alias(family)))
+                if family not in task.excluded_osmajors:
+                    task.excluded_osmajors.append(osmajor=OSMajor.by_name_alias(family))
         if tinfo.test_archs:
             arches = set([ '%s' % arch.arch for arch in Arch.query])
             for arch in arches.difference(set(tinfo.test_archs)):
-                if arch not in task.excluded_arch:
-                    task.excluded_arch.append(TaskExcludeArch(arch=Arch.by_name(arch)))
+                if arch not in task.excluded_arches:
+                    task.excluded_arches.append(Arch.by_name(arch))
         task.avg_time = tinfo.avg_test_time
         for type in tinfo.types:
             ttype = TaskType.lazy_create(type=type)
@@ -510,8 +509,8 @@ class Task(DeclarativeMappedObject):
                     priority = self.priority,
                     valid = self.valid or False,
                     types = ['%s' % type.type for type in self.types],
-                    excluded_osmajor = ['%s' % osmajor.osmajor for osmajor in self.excluded_osmajor],
-                    excluded_arch = ['%s' % arch.arch for arch in self.excluded_arch],
+                    excluded_osmajor = ['%s' % osmajor for osmajor in self.excluded_osmajors],
+                    excluded_arch = ['%s' % arch for arch in self.excluded_arches],
                     runfor = ['%s' % package for package in self.runfor],
                     required = ['%s' % package for package in self.required],
                     bugzillas = ['%s' % bug.bugzilla_id for bug in self.bugzillas],
@@ -579,18 +578,18 @@ class Task(DeclarativeMappedObject):
                 type_elem.text = type.type
                 types.append(type_elem)
             task.append(types)
-        if self.excluded_osmajor:
+        if self.excluded_osmajors:
             excluded = lxml.etree.Element('excludedDistroFamilies')
-            for excluded_osmajor in self.excluded_osmajor:
+            for excluded_osmajor in self.excluded_osmajors:
                 osmajor_elem = lxml.etree.Element('distroFamily')
-                osmajor_elem.text = excluded_osmajor.osmajor.osmajor
+                osmajor_elem.text = excluded_osmajor.osmajor
                 excluded.append(osmajor_elem)
             task.append(excluded)
-        if self.excluded_arch:
+        if self.excluded_arches:
             excluded = lxml.etree.Element('excludedArches')
-            for excluded_arch in self.excluded_arch:
+            for excluded_arch in self.excluded_arches:
                 arch_elem = lxml.etree.Element('arch')
-                arch_elem.text=excluded_arch.arch.arch
+                arch_elem.text = excluded_arch.arch
                 excluded.append(arch_elem)
             task.append(excluded)
         return lxml.etree.tostring(task, pretty_print=pretty, encoding='utf8')
@@ -635,51 +634,27 @@ class Task(DeclarativeMappedObject):
         self.valid = False
         return
 
+task_exclude_osmajor = Table(
+    'task_exclude_osmajor', DeclarativeMappedObject.metadata,
+    Column('task_id', Integer,
+           ForeignKey('task.id', onupdate='CASCADE', ondelete='CASCADE'),
+           primary_key=True, nullable=False, index=True),
+    Column('osmajor_id', Integer,
+           ForeignKey('osmajor.id', onupdate='CASCADE', ondelete='CASCADE'),
+           primary_key=True, nullable=False, index=True),
+    mysql_engine='InnoDB',
+)
 
-class TaskExcludeOSMajor(DeclarativeMappedObject):
-    """
-    A task can be excluded by arch, osmajor, or osversion
-                        RedHatEnterpriseLinux3, RedHatEnterpriseLinux4
-    """
-
-    __tablename__ = 'task_exclude_osmajor'
-    __table_args__ = {'mysql_engine': 'InnoDB'}
-    id = Column(Integer, autoincrement=True, primary_key=True)
-    task_id = Column(Integer, ForeignKey('task.id'))
-    task = relationship(Task, back_populates='excluded_osmajor')
-    osmajor_id = Column(Integer, ForeignKey('osmajor.id'))
-    osmajor = relationship(OSMajor)
-
-    def __cmp__(self, other):
-        """ Used to compare excludes that are already stored.
-        """
-        if other == "%s" % self.osmajor.osmajor or \
-           other == "%s" % self.osmajor.alias:
-            return 0
-        else:
-            return 1
-
-class TaskExcludeArch(DeclarativeMappedObject):
-    """
-    A task can be excluded by arch
-                        i386, s390
-    """
-
-    __tablename__ = 'task_exclude_arch'
-    __table_args__ = {'mysql_engine': 'InnoDB'}
-    id = Column(Integer, autoincrement=True, primary_key=True)
-    task_id = Column(Integer, ForeignKey('task.id'))
-    task = relationship(Task, back_populates='excluded_arch')
-    arch_id = Column(Integer, ForeignKey('arch.id'))
-    arch = relationship(Arch)
-
-    def __cmp__(self, other):
-        """ Used to compare excludes that are already stored.
-        """
-        if other == "%s" % self.arch.arch:
-            return 0
-        else:
-            return 1
+task_exclude_arch = Table(
+    'task_exclude_arch', DeclarativeMappedObject.metadata,
+    Column('task_id', Integer,
+           ForeignKey('task.id', onupdate='CASCADE', ondelete='CASCADE'),
+           primary_key=True, nullable=False, index=True),
+    Column('arch_id', Integer,
+           ForeignKey('arch.id', onupdate='CASCADE', ondelete='CASCADE'),
+           primary_key=True, nullable=False, index=True),
+    mysql_engine='InnoDB',
+)
 
 class TaskType(DeclarativeMappedObject):
     """

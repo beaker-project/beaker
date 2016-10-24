@@ -478,7 +478,7 @@ install
     # https://bugzilla.redhat.com/show_bug.cgi?id=1197608
     def test_filters_task_by_arch_with_given_taskfile(self):
         with session.begin():
-            ignored_task = data_setup.create_task(exclude_arch=[self.distro_tree.arch.arch])
+            ignored_task = data_setup.create_task(exclude_arches=[self.distro_tree.arch.arch])
             included_task = data_setup.create_task()
 
         taskfile = NamedTemporaryFile()
@@ -497,7 +497,7 @@ install
     # https://bugzilla.redhat.com/show_bug.cgi?id=1197608
     def test_filters_task_by_osmajor_with_given_taskfile(self):
         with session.begin():
-            ignored_task = data_setup.create_task(exclude_osmajor=[self.distro.osversion.osmajor.osmajor])
+            ignored_task = data_setup.create_task(exclude_osmajors=[self.distro.osversion.osmajor.osmajor])
             included_task = data_setup.create_task()
 
         taskfile = NamedTemporaryFile()

@@ -988,7 +988,7 @@ class NewJobTest(WebDriverTestCase):
     def test_job_with_excluded_task(self):
         with session.begin():
             distro_tree = data_setup.create_distro_tree(arch=u'ia64')
-            excluded_task = data_setup.create_task(exclude_arch=[u'ia64'])
+            excluded_task = data_setup.create_task(exclude_arches=[u'ia64'])
         b = self.browser
         login(b)
         b.get(get_server_base())

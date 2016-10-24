@@ -65,7 +65,7 @@ class TaskListTest(ClientTestCase):
             distro = data_setup.create_distro(osmajor=u'RedHatEnterpriseLinux6')
             included = data_setup.create_task()
             excluded = data_setup.create_task(
-                    exclude_osmajor=[u'RedHatEnterpriseLinux6'])
+                    exclude_osmajors=[u'RedHatEnterpriseLinux6'])
         out = run_client(['bkr', 'task-list', '--distro', distro.name])
         task_names = out.splitlines()
         self.assertIn(included.name, task_names)

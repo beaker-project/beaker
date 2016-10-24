@@ -139,9 +139,9 @@ class Search(WebDriverTestCase):
         with session.begin():
             self.arch_one = u'i386'
             self.osmajor_one = u'testosmajor'
-            self.task_one = data_setup.create_task(name=u'/a/a/a', exclude_arch=[self.arch_one])
-            self.task_two = data_setup.create_task(name=u'/a/a/b', exclude_arch=[self.arch_one])
-            self.task_three = data_setup.create_task(name=u'/a/a/c', exclude_osmajor=[self.osmajor_one])
+            self.task_one = data_setup.create_task(name=u'/a/a/a', exclude_arches=[self.arch_one])
+            self.task_two = data_setup.create_task(name=u'/a/a/b', exclude_arches=[self.arch_one])
+            self.task_three = data_setup.create_task(name=u'/a/a/c', exclude_osmajors=[self.osmajor_one])
         self.browser = self.get_browser()
 
     def tearDown(self):

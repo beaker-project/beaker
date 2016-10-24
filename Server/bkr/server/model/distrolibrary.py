@@ -394,13 +394,12 @@ class OSMajor(DeclarativeMappedObject):
         List of tasks that support this OSMajor
         """
         # Delayed import to avoid circular dependency
-        from . import Task, TaskExcludeOSMajor
+        from . import Task, task_exclude_osmajor
         return Task.query.filter(
                 not_(
                      Task.id.in_(select([Task.id]).
-                 where(Task.id==TaskExcludeOSMajor.task_id).
-                 where(TaskExcludeOSMajor.osmajor_id==OSMajor.id).
-                 where(OSMajor.id==self.id)
+                    where(Task.id==task_exclude_osmajor.c.task_id).
+                    where(task_exclude_osmajor.c.osmajor_id==self.id)
                                 ),
                     )
         )
@@ -593,9 +592,8 @@ class Distro(DeclarativeMappedObject, ActivityMixin):
         Returns a query of Tasks which support this distro.
         """
         # Delayed import to avoid circular dependency
-        from . import Task, TaskExcludeOSMajor
-        return Task.query.filter(not_(Task.excluded_osmajor.any(
-                TaskExcludeOSMajor.osmajor == self.osversion.osmajor)))
+        from . import Task
+        return Task.query.filter(not_(Task.excluded_osmajors.any(OSMajor.id == self.osversion.osmajor.id)))
 
 class DistroTree(DeclarativeMappedObject, ActivityMixin):
 

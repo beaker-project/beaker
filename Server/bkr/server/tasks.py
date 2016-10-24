@@ -158,7 +158,7 @@ class Tasks(RPCRoot):
             tasks = tasks.filter(or_(*or_types))
 
         # Return all task names
-        return [dict(name = task.name, arches = [str(arch.arch) for arch in task.excluded_arch]) for task in tasks]
+        return [dict(name = task.name, arches = [str(arch.arch) for arch in task.excluded_arches]) for task in tasks]
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
@@ -454,8 +454,8 @@ def get_tasks():
         'description': Task.description,
         'version': Task.version,
         'type': (Task.types, TaskType.type),
-        'excluded_arch': (Task._excluded_arches, Arch.arch),
-        'excluded_osmajor': (Task._excluded_osmajors, OSMajor.osmajor),
+        'excluded_arch': (Task.excluded_arches, Arch.arch),
+        'excluded_osmajor': (Task.excluded_osmajors, OSMajor.osmajor),
     })
 
     if request_wants_json():
