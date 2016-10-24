@@ -57,11 +57,18 @@ class RepoSyncer(yum.YumBase):
     def __init__(self, repo_url, output_dir):
         super(RepoSyncer, self).__init__()
         self.doConfigSetup(init_plugins=False)
+        # This mess with repo_setopts is equivalent to just loading and then 
+        # disabling all repos, but it has the extra effect that it silences any 
+        # whingeing on stderr about being unable to access 
+        # # subscription-manager certs for RHEL repos (which we do not want or 
+        # need here).
+        self.repo_setopts['*'] = yum.misc.GenericHolder()
+        self.repo_setopts['*'].enabled = False
+        self.repo_setopts['*'].items = ['enabled']
         cachedir = yum.misc.getCacheDir()
         assert cachedir is not None # ugh
         self.repos.setCacheDir(cachedir)
         self.conf.cachedir = cachedir
-        self.repos.disableRepo('*')
         repo_id = repo_url.replace('/', '-')
         self.add_enable_repo(repo_id, baseurls=[repo_url])
         self.repo_url = repo_url
