@@ -251,7 +251,6 @@ setup(
             'beakerd = bkr.server.tools.beakerd:main',
             'beaker-usage-reminder = bkr.server.tools.usage_reminder:main',
             'beaker-log-delete = bkr.server.tools.log_delete:main',
-            'beaker-check = bkr.server.tools.check_beaker:main',
             'beaker-create-ipxe-image = bkr.server.tools.ipxe_image:main',
             'beaker-refresh-ldap = bkr.server.tools.refresh_ldap:main',
             'beaker-repo-update = bkr.server.tools.repo_update:main',
