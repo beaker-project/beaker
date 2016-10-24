@@ -6,9 +6,11 @@
 
 from datetime import datetime, timedelta
 from turbogears.database import session
+from bkr.common import __version__
 from bkr.inttest import data_setup, DatabaseTestCase
 from bkr.server.tools.usage_reminder import BeakerUsage
 from bkr.server.util import absolute_url
+from bkr.inttest.server.tools import run_command
 
 class TestUsageReminder(DatabaseTestCase):
     def setUp(self):
@@ -17,6 +19,10 @@ class TestUsageReminder(DatabaseTestCase):
         self.reservation_length = 3
         self.waiting_recipe_age = 1
         self.delayed_job_age = 14
+
+    def test_version(self):
+        out = run_command('usage_reminder.py', 'beaker-usage-reminder', ['--version'])
+        self.assertEquals(out.strip(), __version__)
 
     def test_expiring_reservation(self):
         with session.begin():

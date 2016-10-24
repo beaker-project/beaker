@@ -15,6 +15,7 @@ __requires__ = ['CherryPy < 3.0']
 import sys
 import os
 import random
+from bkr.common import __version__
 from bkr.log import log_to_stream, log_to_syslog
 from bkr.server import needpropertyxml, utilisation, metrics, dynamic_virt
 from bkr.server.bexceptions import BX, \
@@ -58,7 +59,6 @@ event = threading.Event()
 
 from optparse import OptionParser
 
-__version__ = '0.1'
 __description__ = 'Beaker Scheduler'
 
 

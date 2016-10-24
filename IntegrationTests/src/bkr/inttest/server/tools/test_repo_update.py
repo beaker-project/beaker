@@ -11,10 +11,12 @@ import shutil
 import time
 import pkg_resources
 import unittest2 as unittest
+from bkr.common import __version__
 from bkr.server.tests import data_setup
 from bkr.server.model import session, OSMajor
 from bkr.server.tools.repo_update import update_repos
 from bkr.inttest import DatabaseTestCase
+from bkr.inttest.server.tools import run_command
 
 class RepoUpdate(DatabaseTestCase):
     """Tests the repo_update.py script"""
@@ -30,6 +32,10 @@ class RepoUpdate(DatabaseTestCase):
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         _, err = p.communicate()
         self.assertEqual(p.returncode, 0, err)
+
+    def test_version(self):
+        out = run_command('repo_update.py', 'beaker-repo-update', ['--version'])
+        self.assertEquals(out.strip(), __version__)
 
     def test_update_harness_repos(self):
         """Test that the update_repo() call runs as expected.

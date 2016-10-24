@@ -15,10 +15,12 @@ import subprocess
 import sys
 import mock
 from sqlalchemy.orm.exc import NoResultFound
+from bkr.common import __version__
 from bkr.server.model import LogRecipe, TaskBase, Job, Recipe, \
     RenderedKickstart, TaskStatus, RecipeTask, RecipeTaskResult, \
     LogRecipeTask, LogRecipeTaskResult
 from bkr.inttest import data_setup, with_transaction, Process, DatabaseTestCase
+from bkr.inttest.server.tools import run_command
 from bkr.server.tools import log_delete
 from turbogears.database import session
 from turbogears import config
@@ -61,6 +63,10 @@ class LogDelete(DatabaseTestCase):
                     self.assert_(rt.logs == [])
                     for rtr in rt.results:
                         self.assert_(rtr.logs == [])
+
+    def test_version(self):
+        out = run_command('log_delete.py', 'beaker-log-delete', ['--version'])
+        self.assertEquals(out.strip(), __version__)
 
     def test_limit(self):
         limit = 10

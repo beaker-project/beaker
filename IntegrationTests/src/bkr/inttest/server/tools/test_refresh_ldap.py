@@ -6,9 +6,15 @@
 
 from turbogears.database import session
 from bkr.inttest import data_setup, DatabaseTestCase
+from bkr.inttest.server.tools import run_command
+from bkr.common import __version__
 from bkr.server.model import Group, GroupMembershipType, User
 
 class RefreshLdapTest(DatabaseTestCase):
+
+    def test_version(self):
+        out = run_command('refresh_ldap.py', 'beaker-refresh-ldap', ['--version'])
+        self.assertEquals(out.strip(), __version__)
 
     def test_refresh_ldap_group_membership(self):
         with session.begin():

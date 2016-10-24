@@ -19,6 +19,7 @@ import pkg_resources
 from sqlalchemy.inspection import inspect
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
+from bkr.common import __version__
 from bkr.log import log_to_stream, log_to_syslog
 from bkr.server.model import (User, Group, Permission, Hypervisor, KernelType,
         Arch, PowerType, Key, RetentionTag, ConfigItem, UserGroup)
@@ -32,7 +33,6 @@ import errno
 import daemon
 from daemon.pidfile import PIDLockFile
 
-__version__ = '0.1'
 __description__ = 'Command line tool for initializing Beaker DB'
 
 PIDFILE = '/var/run/beaker-init.pid'

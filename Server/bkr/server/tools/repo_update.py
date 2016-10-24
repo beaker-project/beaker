@@ -10,6 +10,7 @@
 # (Fedora/EPEL has python-cherrypy2 = 2.3 and python-cherrypy = 3)
 __requires__ = ['CherryPy < 3.0']
 
+from bkr.common import __version__
 from bkr.log import log_to_stream
 from bkr.server.model import OSMajor
 from bkr.server.util import load_config_or_exit, run_createrepo
@@ -23,7 +24,6 @@ import yum, yum.misc, yum.packages
 import urllib
 import logging
 
-__version__ = '0.1'
 __description__ = 'Script to update harness repos'
 
 USAGE_TEXT = """ Usage: repo_update """

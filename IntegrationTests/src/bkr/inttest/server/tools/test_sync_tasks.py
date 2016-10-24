@@ -9,9 +9,11 @@ import os
 import subprocess
 from bkr.inttest import Process
 from turbogears.database import session
+from bkr.common import __version__
 from bkr.server.tools.sync_tasks import TaskLibrarySync
 from bkr.server.model import Task
 from bkr.inttest import get_server_base, DatabaseTestCase
+from bkr.inttest.server.tools import run_command
 import pkg_resources
 
 _beaker_sync_tasks = pkg_resources.resource_filename('bkr.server.tools', 'sync_tasks.py')
@@ -61,6 +63,10 @@ class TestTaskLibrarySync(DatabaseTestCase):
                 return True
 
         return False
+
+    def test_version(self):
+        out = run_command('sync_tasks.py', 'beaker-sync-tasks', ['--version'])
+        self.assertEquals(out.strip(), __version__)
 
     def test_sync_two_tasks(self):
         task_sync = TaskLibrarySync()

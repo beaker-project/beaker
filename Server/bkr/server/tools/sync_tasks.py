@@ -80,12 +80,12 @@ from optparse import OptionParser
 import turbogears.config
 from turbogears.database import session
 
+from bkr.common import __version__
 from bkr.common.helpers import siphon
 from bkr.server.model import TaskLibrary, Task
 from bkr.server.util import load_config
 
 __description__ = 'Script to sync local task RPMs from a remote Beaker instance'
-__version__ = '0.1'
 
 
 # Helper function which doesn't need to be a class method

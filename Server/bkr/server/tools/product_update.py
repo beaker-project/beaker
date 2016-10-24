@@ -11,6 +11,7 @@
 __requires__ = ['CherryPy < 3.0']
 
 import sys
+from bkr.common import __version__
 from bkr.log import log_to_stream
 from bkr.server.model import Product
 from bkr.server.util import load_config_or_exit
@@ -19,7 +20,6 @@ from optparse import OptionParser
 from turbogears.database import session
 from sqlalchemy.orm.exc import NoResultFound
 
-__version__ = '0.1'
 __description__ = 'Script to update product table with cpe'
 
 USAGE_TEXT = """ Usage: product_update --file <product_xml_file> """

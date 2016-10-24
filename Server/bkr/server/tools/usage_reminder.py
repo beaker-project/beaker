@@ -13,6 +13,7 @@ __requires__ = ['CherryPy < 3.0']
 import sys
 from datetime import datetime, timedelta
 from sqlalchemy.sql import and_, or_, func
+from bkr.common import __version__
 from bkr.log import log_to_stream
 from bkr.server.model import User, System, Reservation, Recipe, \
     RecipeSet, Job, Watchdog, RecipeTask, Task, TaskStatus, RecipeResource
@@ -27,7 +28,6 @@ import logging
 
 log = logging.getLogger(__name__)
 
-__version__ = '0.1'
 __description__ = 'Beaker usage reminder system'
 
 
