@@ -3150,18 +3150,17 @@ class MachineRecipe(Recipe):
         Returns a query of systems which are candidates to run this recipe.
         """
         systems = System.all(self.recipeset.job.owner)
+        systems = systems.filter(System.can_reserve(self.recipeset.job.owner))
         # delayed import to avoid circular dependency
         from bkr.server.needpropertyxml import XmlHost
         host_filter = XmlHost.from_string(self.host_requires)
         if not host_filter.force:
             systems = host_filter.apply_filter(systems). \
                       filter(System.status == SystemStatus.automated)
+            systems = systems.filter(System.compatible_with_distro_tree(self.distro_tree))
         else:
             systems = systems.filter(System.fqdn == host_filter.force). \
                       filter(System.status != SystemStatus.removed)
-
-        systems = systems.filter(System.can_reserve(self.recipeset.job.owner))
-        systems = systems.filter(System.compatible_with_distro_tree(self.distro_tree))
         if only_in_lab:
             systems = systems.filter(System.in_lab_with_distro_tree(self.distro_tree))
         systems = System.scheduler_ordering(self.recipeset.job.owner, query=systems)
@@ -3175,18 +3174,18 @@ class MachineRecipe(Recipe):
         would its candidate systems be?
         """
         systems = System.all(user)
+        systems = systems.filter(System.can_reserve(user))
         # delayed import to avoid circular dependency
         from bkr.server.needpropertyxml import XmlHost
         systems = XmlHost.from_string('<hostRequires><system_type value="%s"/></hostRequires>' %
                                       cls.systemtype).apply_filter(systems)
-        systems = systems.filter(System.can_reserve(user))
         if not force:
             systems = systems.filter(System.status == SystemStatus.automated)
+            if distro_tree:
+                systems = systems.filter(System.compatible_with_distro_tree(distro_tree))
         else:
             systems = systems.filter(System.status != SystemStatus.removed)
-
         if distro_tree:
-            systems = systems.filter(System.compatible_with_distro_tree(distro_tree))
             systems = systems.filter(System.in_lab_with_distro_tree(distro_tree))
         if lab_controller:
             systems = systems.filter(System.lab_controller == lab_controller)

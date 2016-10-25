@@ -1672,6 +1672,28 @@ class TestBeakerd(DatabaseTestCase):
             job2 = Job.query.get(job2.id)
             self.assertEqual(job2.status, TaskStatus.queued)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1384527
+    def test_force_ignores_excluded_families(self):
+        with session.begin():
+            distro_tree = data_setup.create_distro_tree()
+            system = data_setup.create_system(shared=True,
+                    lab_controller=self.lab_controller,
+                    exclude_osmajor=[distro_tree.distro.osversion.osmajor])
+            self.assertFalse(system.compatible_with_distro_tree(distro_tree))
+            job = data_setup.create_job(distro_tree=distro_tree)
+            job.recipesets[0].recipes[0].host_requires = \
+                '<hostRequires force="%s"/>' % system.fqdn
+
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            job = Job.query.get(job.id)
+            self.assertEqual(job.status, TaskStatus.scheduled)
+
     def test_recipe_state_reserved(self):
         with session.begin():
             recipe = data_setup.create_recipe(

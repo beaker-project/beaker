@@ -70,7 +70,7 @@ import re
 import os
 import pkg_resources
 import rdflib.graph
-from sqlalchemy import and_, join
+from sqlalchemy import and_, join, or_
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.exc import InvalidRequestError
 import time
@@ -347,11 +347,16 @@ class Root(RPCRoot):
                 redirect(url('/reserveworkflow/', **kw))
         else:
             distro_tree = None
-        query = MachineRecipe.hypothetical_candidate_systems(
-                identity.current.user, distro_tree, force=True)\
-                .order_by(None)
-        # filter out broken systems for now
-        query = query.filter(System.status != SystemStatus.broken)
+        query = System.all(identity.current.user)\
+                .filter(System.can_reserve(identity.current.user))\
+                .filter(System.type == SystemType.machine)\
+                .filter(or_(
+                    System.status == SystemStatus.automated,
+                    System.status == SystemStatus.manual))
+        if distro_tree:
+            query = query\
+                    .filter(System.compatible_with_distro_tree(distro_tree))\
+                    .filter(System.in_lab_with_distro_tree(distro_tree))
         warn = None
         if query.count() < 1:
             warn = u'No Systems compatible with %s' % distro_tree
