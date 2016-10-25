@@ -349,7 +349,6 @@ class Root(RPCRoot):
             distro_tree = None
         query = System.all(identity.current.user)\
                 .filter(System.can_reserve(identity.current.user))\
-                .filter(System.type == SystemType.machine)\
                 .filter(or_(
                     System.status == SystemStatus.automated,
                     System.status == SystemStatus.manual))

@@ -370,6 +370,19 @@ class ReserveSystem(WebDriverTestCase):
         b.find_element_by_xpath('//tr[normalize-space(string(td[1]))="%s"]'
                 '/td/a[text()="Queue Reservation"]' % self.system.fqdn)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1099142
+    def test_prototype_systems_are_shown(self):
+        # The scheduler will *not* pick a Prototype normally, but Reserve 
+        # Workflow will show you them if you have access, and then 
+        # <hostRequires force=""/> will let you use it even if the scheduler 
+        # would have skipped it otherwise.
+        with session.begin():
+            self.system.type = SystemType.prototype
+        b = self.browser
+        login(b)
+        go_to_reserve_systems(b, self.distro_tree)
+        check_system_search_results(b, present=[self.system])
+
     def test_by_distro(self):
         login(self.browser)
         b = self.browser
