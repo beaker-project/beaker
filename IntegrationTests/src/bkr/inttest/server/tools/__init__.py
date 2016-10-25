@@ -16,7 +16,7 @@ class CommandError(Exception):
         self.status = status
         self.stderr_output = stderr_output
 
-def run_command(script_filename, executable_filename, args=None):
+def run_command(script_filename, executable_filename, args=None, ignore_stderr=False):
     # XXX maybe find a better condition than this?
     if os.environ.get('BEAKER_CLIENT_COMMAND') == 'bkr':
         # Running in dogfood, invoke the real executable
@@ -29,5 +29,6 @@ def run_command(script_filename, executable_filename, args=None):
     out, err = p.communicate()
     if p.returncode:
         raise CommandError(cmdline, p.returncode, err)
-    assert err == '', err
+    if not ignore_stderr:
+        assert err == '', err
     return out

@@ -16,7 +16,7 @@ from bkr.inttest import data_setup, DatabaseTestCase
 from bkr.inttest.kickstart_helpers import create_rhel62, create_rhel62_server_x86_64, \
     create_lab_controller, create_x86_64_automated, compare_expected, \
     jinja_choice_loader, create_user
-from bkr.inttest.server.tools import run_command
+from bkr.inttest.server.tools import run_command, CommandError
 from bkr.server.tools import create_kickstart
 from bkr.server.kickstart import template_env
 from bkr.server.model import Task, User, Recipe, Provision, Arch, OSMajorInstallOptions
@@ -60,25 +60,7 @@ class CreateKickstartTest(DatabaseTestCase):
         return i386_distro
 
     def _run_create_kickstart(self, args):
-        # This is code for when we are in a dogfood task
-        if 'BEAKER_LABCONTROLLER_HOSTNAME' in os.environ and \
-            os.path.exists('/usr/bin/beaker-create-kickstart'):
-            args.insert(0, '/usr/bin/beaker-create-kickstart')
-            p = subprocess.Popen(args, stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE)
-            output, error  = p.communicate()
-            if p.returncode != 0:
-                self.fail('Running: %s\nreturncode: %s\nstderr: %s' % (' '.join(args), p.returncode, error))
-        else:
-            # Running the test locally
-            orig_stdout = sys.stdout
-            try:
-                sys.stdout = my_out = StringIO()
-                create_kickstart.main(args)
-                output = my_out.getvalue()
-            finally:
-                sys.stdout = orig_stdout
-        return output
+        return run_command('create_kickstart.py', 'beaker-create-kickstart', args)
 
     def test_version(self):
         out = run_command('create_kickstart.py', 'beaker-create-kickstart', ['--version'])
@@ -89,10 +71,9 @@ class CreateKickstartTest(DatabaseTestCase):
             self._run_create_kickstart(['--recipe-id', '0'])
             self.fail('Should raise an exception when passed an invalid recipe'
                 ' id')
-        except RuntimeError, e:
-            self.assertIn("Recipe id '0' does not exist", str(e))
-        except AssertionError, e:
-            self.assertIn("RuntimeError: Recipe id '0' does not exist", str(e))
+        except CommandError as e:
+            self.assertIn("RuntimeError: Recipe id '0' does not exist",
+                    e.stderr_output)
 
     def test_nonexistent_system_fqdn(self):
         recipe = self._create_recipe()
@@ -101,12 +82,9 @@ class CreateKickstartTest(DatabaseTestCase):
                 '--system', 'dsaffds124143g'])
             self.fail('Should raise an exception when passed an invalid system'
                 ' fqdn')
-        except RuntimeError, e:
-            self.assertIn("System 'dsaffds124143g' does not exist",
-                str(e))
-        except AssertionError, e:
+        except CommandError as e:
             self.assertIn("RuntimeError: System 'dsaffds124143g' does not "
-                "exist", str(e))
+                "exist", e.stderr_output)
 
     def test_nonexistent_distro_tree_id(self):
         recipe = self._create_recipe()
@@ -117,11 +95,9 @@ class CreateKickstartTest(DatabaseTestCase):
                 '--system', system.fqdn, '--distro-tree-id', '0'])
             self.fail('Should raise an exception when passed an invalid distro'
                 ' tree id')
-        except RuntimeError, e:
-            self.assertIn("Distro tree id '0' does not exist", str(e))
-        except AssertionError, e:
+        except CommandError as e:
             self.assertIn("RuntimeError: Distro tree id '0' does not exist",
-                str(e))
+                e.stderr_output)
 
     def test_snippet_dir(self):
         recipe = self._create_recipe()

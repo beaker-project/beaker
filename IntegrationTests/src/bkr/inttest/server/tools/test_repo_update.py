@@ -62,7 +62,9 @@ class RepoUpdate(DatabaseTestCase):
                                 harness_dir=False,
                                 lab_controllers=[lab_controller])
         # I'm not testing the config here, so just use createrepo
-        update_repos('file://%s/' % base_path, faux_local_harness)
+        run_command('repo_update.py', 'beaker-repo-update',
+                ['-b', 'file://%s/' % base_path, '-d', faux_local_harness],
+                ignore_stderr=True)
         self.assertTrue(os.path.exists(os.path.join(faux_local_harness, 'foobangmajor')))
         self.assertTrue(os.path.exists(os.path.join(faux_local_harness, 'foobazmajor')))
 
@@ -80,12 +82,16 @@ class RepoUpdate(DatabaseTestCase):
         self.addCleanup(shutil.rmtree, local_harness_dir)
         self._create_remote_harness(remote_harness_dir, osmajor)
         # run it once, repo is built
-        update_repos('file://%s/' % remote_harness_dir, local_harness_dir)
+        run_command('repo_update.py', 'beaker-repo-update',
+                ['-b', 'file://%s/' % remote_harness_dir, '-d', local_harness_dir],
+                ignore_stderr=True)
         repodata_dir = os.path.join(local_harness_dir, osmajor, 'repodata')
         mtime = os.path.getmtime(repodata_dir)
         # run it again, repo should not be rebuilt
         time.sleep(0.001)
-        update_repos('file://%s/' % remote_harness_dir, local_harness_dir)
+        run_command('repo_update.py', 'beaker-repo-update',
+                ['-b', 'file://%s/' % remote_harness_dir, '-d', local_harness_dir],
+                ignore_stderr=True)
         self.assertEquals(os.path.getmtime(repodata_dir), mtime)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1213225
@@ -102,6 +108,8 @@ class RepoUpdate(DatabaseTestCase):
         local_harness_dir = tempfile.mkdtemp(suffix='local')
         self.addCleanup(shutil.rmtree, local_harness_dir)
         self._create_remote_harness(remote_harness_dir, osmajor.osmajor)
-        update_repos('file://%s/' % remote_harness_dir, local_harness_dir)
+        run_command('repo_update.py', 'beaker-repo-update',
+                ['-b', 'file://%s/' % remote_harness_dir, '-d', local_harness_dir],
+                ignore_stderr=True)
         self.assertTrue(os.path.exists(os.path.join(local_harness_dir, osmajor.osmajor)))
         self.assertFalse(os.path.exists(os.path.join(local_harness_dir, nonexistent_osmajor.osmajor)))

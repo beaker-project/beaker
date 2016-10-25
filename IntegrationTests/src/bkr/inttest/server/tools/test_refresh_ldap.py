@@ -12,6 +12,14 @@ from bkr.server.model import Group, GroupMembershipType, User
 
 class RefreshLdapTest(DatabaseTestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        # Clear out any LDAP groups left behind by previous tests,
+        # to avoid warning spew from beaker-refresh-ldap
+        # when it fails to look up the rubbish group names.
+        for group in Group.query.filter(Group.membership_type == GroupMembershipType.ldap):
+            session.delete(group)
+
     def test_version(self):
         out = run_command('refresh_ldap.py', 'beaker-refresh-ldap', ['--version'])
         self.assertEquals(out.strip(), __version__)
@@ -23,13 +31,12 @@ class RefreshLdapTest(DatabaseTestCase):
                     membership_type=GroupMembershipType.ldap)
             old_member = data_setup.create_user(user_name=u'krudd')
             group.add_member(old_member)
-        from bkr.server.tools.refresh_ldap import refresh_ldap
-        refresh_ldap()
+        run_command('refresh_ldap.py', 'beaker-refresh-ldap')
         with session.begin():
             session.expire_all()
             self.assertEquals(group.users, [User.by_user_name(u'jgillard')])
         # second time is a no-op
-        refresh_ldap()
+        run_command('refresh_ldap.py', 'beaker-refresh-ldap')
         with session.begin():
             session.expire_all()
             self.assertEquals(group.users, [User.by_user_name(u'jgillard')])

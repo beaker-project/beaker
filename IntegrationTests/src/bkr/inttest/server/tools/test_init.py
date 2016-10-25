@@ -32,10 +32,10 @@ class BeakerInitTest(DatabaseTestCase):
             admin_group = Group.by_name(u'admin')
             existing_user = data_setup.create_user()
             self.assertNotIn(admin_group, existing_user.groups)
-        populate_db(user_name=existing_user.user_name)
+        run_command('init.py', 'beaker-init', ['--user', existing_user.user_name])
         with session.begin():
             admin_group = Group.by_name(u'admin')
             existing_user = User.query.get(existing_user.user_id)
             self.assertIn(admin_group, existing_user.groups)
         # run the same thing again, should have no effect but should not break
-        populate_db(user_name=existing_user.user_name)
+        run_command('init.py', 'beaker-init', ['--user', existing_user.user_name])
