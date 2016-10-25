@@ -4047,6 +4047,8 @@ class VirtResource(RecipeResource):
     network_id = Column(UUID, nullable=True)
     subnet_id = Column(UUID, nullable=True)
     router_id = Column(UUID, nullable=True)
+    instance_created = Column(DateTime, nullable=True, default=None)
+    instance_deleted = Column(DateTime, nullable=True, default=None)
     lab_controller_id = Column(Integer, ForeignKey('lab_controller.id',
             name='virt_resource_lab_controller_id_fk'))
     lab_controller = relationship(LabController)
@@ -4100,6 +4102,8 @@ class VirtResource(RecipeResource):
     def __json__(self):
         data = super(VirtResource, self).__json__()
         data['instance_id'] = unicode(self.instance_id)
+        data['instance_created'] = self.instance_created
+        data['instance_deleted'] = self.instance_deleted
         data['href'] = self.href
         return data
 
@@ -4133,6 +4137,8 @@ class VirtResource(RecipeResource):
         yield InstallOptions.from_strings('hwclock_is_utc', u'console=tty0 console=ttyS0,115200n8', '')
 
     def release(self):
+        if self.instance_deleted:
+            return
         try:
             log.debug('Releasing vm %s for recipe %s',
                     self.instance_id, self.recipe.id)
@@ -4140,6 +4146,7 @@ class VirtResource(RecipeResource):
             from bkr.server import dynamic_virt
             manager = dynamic_virt.VirtManager(self.recipe.recipeset.job.owner)
             manager.destroy_vm(self)
+            self.instance_deleted = datetime.utcnow()
         except Exception:
             log.exception('Failed to destroy vm %s, leaked!',
                     self.instance_id)

@@ -645,6 +645,7 @@ def mark_recipe_scheduled(recipe, start_time=None, system=None, fqdn=None,
                     router_id = uuid.uuid4()
                 recipe.resource = VirtResource(instance_id, network_id,
                         subnet_id, router_id, lab_controller)
+                recipe.resource.instance_created = datetime.datetime.utcnow()
                 recipe.recipeset.lab_controller = lab_controller
             else:
                 if not system:

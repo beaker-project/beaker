@@ -645,6 +645,20 @@ class TestRecipeViewInstallationTab(WebDriverTestCase):
                 '//td[contains(string(following-sibling::td), "Netboot configured")]').text
         self.assertEqual(netboot_configured_timestamp, '-00:00:59')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1361961
+    def test_create_openstack_instance_progress_is_shown(self):
+        with session.begin():
+            recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_installing(recipe, virt=True)
+        b = self.browser
+        go_to_recipe_view(b, recipe, tab='Installation')
+        tab = b.find_element_by_id('installation')
+        openstack_instance_progress = tab.find_element_by_xpath(
+                './/div[@class="recipe-installation-progress"]/table'
+                '//td[contains(text(), "OpenStack instance created")]').text
+        self.assertIn(recipe.installation.kernel_options, openstack_instance_progress)
+
 class TestRecipeViewReservationTab(WebDriverTestCase):
 
     def setUp(self):

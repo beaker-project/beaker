@@ -13,6 +13,20 @@
              </td>
          </tr>
     <% } %>
+    <% if (openstack_instance_created) { %>
+        <tr>
+            <td>
+                <time datetime="<%- openstack_instance_created.toISOString() %>"
+                      title="<%- openstack_instance_created.local().format('YYYY-MM-DD HH:mm:ss Z') %>">
+                     <%= get_time_difference(openstack_instance_created, start_time) %>
+                </time>
+             </td>
+             <td>
+                 OpenStack instance created
+                 <div class="recipe-installation-kernel-options"><code><%- kernel_options %></code></div>
+             </td>
+         </tr>
+    <% } %>
     <% if (rebooted) { %>
         <tr>
             <td>

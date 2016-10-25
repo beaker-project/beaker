@@ -640,6 +640,7 @@ def provision_virt_recipe(recipe_id):
     #if self.recipe.distro_tree.distro.osversion.osmajor.osmajor == "RedHatEnterpriseLinux3":
     #    virtio_possible = False
     vm = manager.create_vm(vm_name, flavor)
+    vm.instance_created = datetime.utcnow()
     try:
         recipe.createRepo()
         recipe.systems = []

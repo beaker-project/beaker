@@ -88,6 +88,7 @@ var RecipeInstallationProgress = Backbone.View.extend({
     },
     render: function () {
         var netboot_configured = null;
+        var openstack_instance_created = null;
         var rebooted = null;
         var install_started = null;
         var install_finished = null;
@@ -103,17 +104,22 @@ var RecipeInstallationProgress = Backbone.View.extend({
                     configure_netboot_cmd.get('status') == 'Completed') {
                 netboot_configured = configure_netboot_cmd.get('finish_time');
             }
+            var resource = this.model.get('resource');
+            if(!_.isEmpty(resource.get('instance_id'))) {
+                openstack_instance_created = resource.get('instance_created');
+            }
             rebooted = installation.get('rebooted');
             install_started = installation.get('install_started');
             install_finished = installation.get('install_finished');
             postinstall_finished = installation.get('postinstall_finished');
         }
-        if (!_.any([netboot_configured, rebooted, install_started,
+        if (!_.any([netboot_configured, openstack_instance_created, rebooted, install_started,
                     install_finished, postinstall_finished])) {
             this.$el.text('No installation progress reported.');
         } else {
             this.$el.html(this.template({
                 netboot_configured: netboot_configured,
+                openstack_instance_created: openstack_instance_created,
                 rebooted: rebooted,
                 install_started: install_started,
                 install_finished: install_finished,

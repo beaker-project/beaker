@@ -395,6 +395,10 @@ window.RecipeTaskResult = Backbone.Model.extend({
 window.RecipeResource = Backbone.Model.extend({
     parse: function (data) {
         data['system'] = !_.isEmpty(data['system']) ? new System(data['system']) : null;
+        if (data['instance_created']) {
+            var parsed = moment.utc(data['instance_created']);
+            data['instance_created'] = parsed.isSame(this.get('instance_created')) ? this.get('instance_created') : parsed;
+        }
         return data;
     },
 });
