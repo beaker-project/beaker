@@ -38,13 +38,13 @@ def main(*args):
         help='Retrieve templates from DIR')
     parser.add_option('-f', '--system', metavar='FQDN',
         help='Generate kickstart for system identified by FQDN')
-    parser.add_option('-m', '--ks-meta', metavar='OPTIONS',
+    parser.add_option('-m', '--ks-meta', metavar='OPTIONS', default='',
         help='Kickstart meta data')
-    parser.add_option('-p', '--kernel-options-post', metavar='OPTIONS',
+    parser.add_option('-p', '--kernel-options-post', metavar='OPTIONS', default='',
         help='Kernel options post')
     options, args = parser.parse_args(*args)
-    ks_meta = options.ks_meta
-    koptions_post = options.kernel_options_post
+    ks_meta = options.ks_meta.decode(sys.getfilesystemencoding())
+    koptions_post = options.kernel_options_post.decode(sys.getfilesystemencoding())
     template_dir = options.template_dir
     if template_dir:
         add_to_template_searchpath(template_dir)
@@ -59,7 +59,7 @@ def main(*args):
 
     load_config_or_exit()
     with session.begin():
-        user = User.by_user_name(options.user)
+        user = User.by_user_name(options.user.decode(sys.getfilesystemencoding()))
         ks_appends = None
         recipe = None
         distro_tree = None
@@ -72,7 +72,7 @@ def main(*args):
             except NoResultFound:
                 raise RuntimeError("Distro tree id '%s' does not exist" % options.distro_tree_id)
         if options.system:
-            fqdn = options.system
+            fqdn = options.system.decode(sys.getfilesystemencoding())
             try:
                 system = System.by_fqdn(fqdn, user)
             except DatabaseLookupError:

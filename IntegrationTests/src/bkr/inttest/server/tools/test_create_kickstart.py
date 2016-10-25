@@ -36,27 +36,27 @@ class CreateKickstartTest(DatabaseTestCase):
 
     def _create_recipe(self, system=None):
         with session.begin():
-            install_task = Task.by_name('/distribution/install')
-            reserve_task = Task.by_name('/distribution/reservesys')
+            install_task = Task.by_name(u'/distribution/install')
+            reserve_task = Task.by_name(u'/distribution/reservesys')
             lc = create_lab_controller()
             rhel62 = create_rhel62()
             rhel62_server_x86_64 = create_rhel62_server_x86_64(lab_controller=lc, distro=rhel62)
             if not system:
                 system = create_x86_64_automated(lc)
             recipe = data_setup.create_recipe(distro_tree=rhel62_server_x86_64, task_list=[install_task, reserve_task])
-            data_setup.create_job_for_recipes([recipe], owner=create_user(), whiteboard='')
+            data_setup.create_job_for_recipes([recipe], owner=create_user(), whiteboard=u'')
             data_setup.mark_recipe_complete(recipe, system=system)
         self.recipe_id = recipe.id
         return recipe
 
     def _create_i386_distro(self, lc):
         i386_distro = data_setup.create_distro(
-            osmajor=u'RedHatEnterpriseLinux6', arches=[Arch.by_name('i386')])
+            osmajor=u'RedHatEnterpriseLinux6', arches=[Arch.by_name(u'i386')])
         i386_distro_tree = data_setup.create_distro_tree(distro=i386_distro,
             lab_controllers=[lc],
             urls=[u'http://lab.test-kickstart.example.com/distros/RHEL-6.3/'
-                'Workstation/i386/os/'],
-            variant='Workstation')
+                u'Workstation/i386/os/'],
+            variant=u'Workstation')
         return i386_distro
 
     def _run_create_kickstart(self, args):
