@@ -67,16 +67,10 @@ def load_config(configfile=None):
         raise RuntimeError('Config has already been loaded from %s' % \
             _config_loaded)
 
-    # In general, we want all messages from application code.
-    logging.getLogger().setLevel(logging.DEBUG)
-    # Well-behaved libraries will set their own log levels to something 
-    # suitable (sqlalchemy sets it to WARNING, for example) but a number of 
-    # libraries leave their level unset.
-    logging.getLogger('passlib').setLevel(logging.INFO)
-    logging.getLogger('turbomail').setLevel(logging.INFO)
-    logging.getLogger('turbogears').setLevel(logging.INFO)
-    logging.getLogger('turbokid').setLevel(logging.INFO)
-    logging.getLogger('turbogears.access').setLevel(logging.WARN)
+    # In general, we want all messages from application code, but no debugging 
+    # messages from the libraries we are using.
+    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger('bkr').setLevel(logging.DEBUG)
     # Note that the actual level of log output is controlled by the handlers, 
     # not the loggers (for example command line tools will typically log to 
     # stderr at WARNING level). The main entry point for the program should 
