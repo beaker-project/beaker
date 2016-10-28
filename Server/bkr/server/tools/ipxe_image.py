@@ -46,8 +46,8 @@ def _image_name():
             config.get('tg.url_domain', socket.getfqdn()),
             datetime.date.today().strftime('%Y%m%d'))
 
-def generate_image():
-    f = tempfile.NamedTemporaryFile(suffix='.beaker-ipxe-image')
+def generate_image(delete=True):
+    f = tempfile.NamedTemporaryFile(suffix='.beaker-ipxe-image', delete=delete)
     log.debug('Generating image in %s', f.name)
     subprocess.check_call(['mformat', '-i', f.name, '-C', '-t', '4', '-h', '64', '-n', '32', '::'])
     subprocess.check_call(['syslinux', '--install', f.name])
@@ -80,17 +80,14 @@ def upload_image(username, password, project_name, auth_url):
     if not region:
         raise RuntimeError('No region defined in openstack_region table')
     f = generate_image()
-    try:
-        f.seek(0)
-        image_name = _image_name()
-        log.debug('Creating Glance image %s', image_name)
-        image = glance.images.create(name=image_name,
-                disk_format='raw', container_format='bare', is_public=True)
-        log.debug('Uploading image %s to Glance', f.name)
-        image.update(data=f)
-        region.ipxe_image_id = image.id
-    finally:
-        os.unlink(f.name)
+    f.seek(0)
+    image_name = _image_name()
+    log.debug('Creating Glance image %s', image_name)
+    image = glance.images.create(name=image_name,
+            disk_format='raw', container_format='bare', is_public=True)
+    log.debug('Uploading image %s to Glance', f.name)
+    image.update(data=f)
+    region.ipxe_image_id = image.id
 
 def main():
     parser = OptionParser(description=__description__, version=__version__)
@@ -133,7 +130,7 @@ def main():
         with session.begin():
             upload_image(username, password, project_name, auth_url)
     else:
-        print generate_image().name
+        print generate_image(delete=False).name
 
 if __name__ == '__main__':
     main()
