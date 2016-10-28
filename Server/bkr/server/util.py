@@ -71,6 +71,8 @@ def load_config(configfile=None):
     # messages from the libraries we are using.
     logging.getLogger().setLevel(logging.INFO)
     logging.getLogger('bkr').setLevel(logging.DEBUG)
+    # We don't need access logs from TurboGears, we have the Apache logs.
+    logging.getLogger('turbogears.access').setLevel(logging.WARN)
     # Note that the actual level of log output is controlled by the handlers, 
     # not the loggers (for example command line tools will typically log to 
     # stderr at WARNING level). The main entry point for the program should 
