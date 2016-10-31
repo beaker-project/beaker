@@ -257,6 +257,8 @@ class MigrationTest(unittest.TestCase):
         # leave behind some structures to avoid destroying data in case the 
         # admin wants to downgrade later. So we have to account for those here.
         ignored_tables = [
+            # may be left over from 23
+            'external_reports',
             # may be left over from 22
             'response',
             'recipe_set_nacked',

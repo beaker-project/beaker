@@ -25,9 +25,8 @@ the metrics Beaker sends to Graphite. (Contributed by Dan Callaghan and Nick
 Coghlan in :issue:`584783`, :issue:`695986`, :issue:`839583`).
 
 If you are using an external reporting tool with your Beaker installation, you 
-can add links to the reports on the new External Reports page. See 
-:ref:`admin-external-reports` for instructions. (Contributed by Raymond Mancy 
-in :issue:`883606`.)
+can add links to the reports on the new External Reports page. (Contributed by 
+Raymond Mancy in :issue:`883606`.)
 
 Documentation improvements
 --------------------------

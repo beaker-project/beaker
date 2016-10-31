@@ -88,7 +88,6 @@ from bkr.server.reports import Reports
                     <li><a href="${tg.url('/matrix')}">Matrix</a></li>
                     <li><a href="${tg.url('/csv')}">CSV</a></li>
                     <li><a href="${tg.url('/tasks/executed')}">Executed</a></li>
-                    <li><a href="${tg.url('/reports/external')}">External</a></li>
                     <li py:for="controller in Reports.extension_controllers" py:replace="controller.menu_item" />
                 </ul>
             </li>

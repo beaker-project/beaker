@@ -49,19 +49,6 @@ from .reviewing import RecipeSetComment, RecipeReviewedState, RecipeTaskComment,
     RecipeTaskResultComment
 from .openstack import OpenStackRegion
 
-class ExternalReport(DeclarativeMappedObject):
-
-    __tablename__ = 'external_reports'
-    __table_args__ = {'mysql_engine':'InnoDB'}
-
-    id = Column(Integer, primary_key=True)
-    name = Column(Unicode(100), unique=True, nullable=False)
-    url = Column(Unicode(10000), nullable=False)
-    description = Column(Unicode(1000), default=None)
-
-    def __init__(self, *args, **kw):
-        super(ExternalReport, self).__init__(*args, **kw)
-
 # Delayed property definitions due to circular dependencies
 class_mapper(Group).add_properties({
     'dyn_owners': dynamic_loader(User, secondary=UserGroup.__table__, viewonly=True,

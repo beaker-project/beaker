@@ -11,7 +11,6 @@ from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.controller_utilities import SearchOptions
 from bkr.server.model import System
 from bkr.server import search_utility, identity
-from bkr.server.external_reports import ExternalReportsController
 
 import pkg_resources
 import logging
@@ -21,7 +20,6 @@ log = logging.getLogger(__name__)
 class Reports(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
-    external = ExternalReportsController()
 
     extension_controllers = []
     for entry_point in pkg_resources.iter_entry_points('bkr.controllers.reports'):

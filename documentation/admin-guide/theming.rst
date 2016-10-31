@@ -36,6 +36,8 @@ For example, to add a custom background image to Beaker's footer:
 For more information about Less language syntax, refer to the `Less language 
 documentation <http://lesscss.org/features/>`_.
 
+.. _theming-custom-markup:
+
 Injecting custom markup
 -----------------------
 
