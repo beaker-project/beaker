@@ -12,6 +12,7 @@ import time
 import pkg_resources
 import unittest2 as unittest
 from bkr.common import __version__
+from bkr.server.util import run_createrepo
 from bkr.server.tests import data_setup
 from bkr.server.model import session, OSMajor
 from bkr.server.tools.repo_update import update_repos
@@ -27,11 +28,8 @@ class RepoUpdate(DatabaseTestCase):
         rpm_file = pkg_resources.resource_filename('bkr.server.tests', \
             'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
         shutil.copy(rpm_file, tmp_dir)
-        p = subprocess.Popen(['createrepo', '-q',
-            '--checksum', 'sha', '.'], cwd=tmp_dir,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        _, err = p.communicate()
-        self.assertEqual(p.returncode, 0, err)
+        result = run_createrepo(cwd=tmp_dir)
+        self.assertEqual(result.returncode, 0, result.err)
 
     def test_version(self):
         out = run_command('repo_update.py', 'beaker-repo-update', ['--version'])
@@ -61,7 +59,6 @@ class RepoUpdate(DatabaseTestCase):
                                 osmajor=OSMajor.lazy_create(osmajor=u'foobazmajor'),
                                 harness_dir=False,
                                 lab_controllers=[lab_controller])
-        # I'm not testing the config here, so just use createrepo
         run_command('repo_update.py', 'beaker-repo-update',
                 ['-b', 'file://%s/' % base_path, '-d', faux_local_harness],
                 ignore_stderr=True)
