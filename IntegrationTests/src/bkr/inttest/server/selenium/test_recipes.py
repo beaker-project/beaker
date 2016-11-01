@@ -219,13 +219,24 @@ class TestRecipeView(WebDriverTestCase):
         with session.begin():
             recipe = data_setup.create_recipe(distro_tree=self.distro_tree)
             data_setup.create_job_for_recipes([recipe])
-            data_setup.mark_recipe_installing(recipe, fqdn=u'example.openstacklocal',
-                    virt=True)
+            data_setup.mark_recipe_installing(recipe, virt=True)
             recipe.resource.fqdn = u'example.openstacklocal'
         b = self.browser
         go_to_recipe_view(b, recipe)
         self.assertEqual('Using PurpleUmbrellaLinux5.11-20160428 Server x86_64\n'
             'on example.openstacklocal\n(OpenStack instance %s).' % recipe.resource.instance_id,
+            b.find_element_by_xpath('//div[@class="recipe-summary"]/p[2]').text)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1390409
+    def test_view_virt_recipe_when_the_hostname_is_not_known_yet(self):
+        with session.begin():
+            recipe = data_setup.create_recipe(distro_tree=self.distro_tree)
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_installing(recipe, virt=True)
+        b = self.browser
+        go_to_recipe_view(b, recipe)
+        self.assertEqual('Using PurpleUmbrellaLinux5.11-20160428 Server x86_64\n'
+            'on OpenStack instance %s.' % recipe.resource.instance_id,
             b.find_element_by_xpath('//div[@class="recipe-summary"]/p[2]').text)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=626529

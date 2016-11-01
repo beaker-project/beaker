@@ -33,15 +33,16 @@
     <br/>
   <% } %>
   Using <%= distro_tree.toHTML() %><%
-  if (!_.isEmpty(resource)) { %>
-      <br/>on <%
+  if (!_.isEmpty(resource)) { %><%
       if (!_.isEmpty(resource.get('system'))) {
-          %><%= resource.get('system').toHTML() %><%
-      } else { %>
-          <%- resource.get('fqdn') %>
-          <% if (!_.isEmpty(resource.get('instance_id'))) { %>
-              <br/>(OpenStack instance <a href="<%- resource.get('href') %>"><%- resource.get('instance_id') %></a>)<%
-          } %><%
+          %><br/>on <%= resource.get('system').toHTML() %><%
+      } else if (!_.isEmpty(resource.get('instance_id')) && !_.isEmpty(resource.get('fqdn'))) {
+          %><br/>on <%- resource.get('fqdn') %>
+          <br/>(OpenStack instance <a href="<%- resource.get('href') %>"><%- resource.get('instance_id') %></a>)<%
+      } else if (!_.isEmpty(resource.get('instance_id'))) {
+          %><br/>on OpenStack instance <a href="<%- resource.get('href') %>"><%- resource.get('instance_id') %></a><%
+      } else if (!_.isEmpty(resource.get('fqdn'))) {
+          %><br/>on <%- resource.get('fqdn') %><%
       } %><%
   } %><%
   if (status == 'Queued' && !_.isEmpty(possible_systems)) { %>
