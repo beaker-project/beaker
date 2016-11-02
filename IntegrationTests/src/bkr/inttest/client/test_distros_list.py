@@ -5,10 +5,11 @@
 # (at your option) any later version.
 
 import json
+import datetime
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client, ClientError, ClientTestCase
-from bkr.server.model import LabControllerDistroTree
+from bkr.server.model import LabControllerDistroTree, Distro
 
 class DistrosListTest(ClientTestCase):
 
@@ -44,3 +45,23 @@ class DistrosListTest(ClientTestCase):
         except ClientError, e:
             self.assertEqual(e.status, 1)
             self.assertEqual(e.stderr_output, 'Nothing Matches\n')
+
+    def test_output_is_ordered_by_date_created(self):
+        with session.begin():
+            # Insert them in reverse order (oldest last), just because the most 
+            # likely regression here is that we aren't sorting at all and thus 
+            # the output is in database insertion order. So this proves that's 
+            # not happening.
+            new_distro = data_setup.create_distro(date_created=datetime.datetime(2021, 1, 1, 0, 0))
+            data_setup.create_distro_tree(distro=new_distro)
+            old_distro = data_setup.create_distro(date_created=datetime.datetime(2004, 1, 1, 0, 0))
+            data_setup.create_distro_tree(distro=old_distro)
+        output = run_client(['bkr', 'distros-list', '--format=json'])
+        with session.begin():
+            session.expire_all()
+            returned_distros = [Distro.query.get(entry['distro_id'])
+                    for entry in json.loads(output)]
+            for i in range(1, len(returned_distros)):
+                self.assertGreaterEqual(
+                        returned_distros[i - 1].date_created,
+                        returned_distros[i].date_created)

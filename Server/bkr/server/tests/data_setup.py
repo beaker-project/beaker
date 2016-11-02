@@ -201,12 +201,14 @@ def create_distro(name=None, osmajor=u'DansAwesomeLinux6', osminor=u'9',
 def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux6',
         osminor=u'9', distro_tags=None, arch=u'i386', variant=u'Server',
         lab_controllers=None, urls=None,  harness_dir=True,
-        osmajor_installopts_arch=None, **kwargs):
+        osmajor_installopts_arch=None, date_created=None, **kwargs):
     if distro is None:
         distro = create_distro(name=distro_name, osmajor=osmajor, osminor=osminor,
-                tags=distro_tags, harness_dir=harness_dir)
+                tags=distro_tags, harness_dir=harness_dir, date_created=date_created)
     distro_tree = DistroTree.lazy_create(distro=distro,
             arch=Arch.lazy_create(arch=arch), variant=variant)
+    if date_created is not None:
+        distro_tree.date_created = date_created
     if distro_tree.arch not in distro.osversion.arches:
         distro.osversion.arches.append(distro_tree.arch)
     DistroTreeRepo.lazy_create(distro_tree=distro_tree,

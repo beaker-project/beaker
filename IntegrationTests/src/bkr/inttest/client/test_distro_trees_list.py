@@ -5,11 +5,12 @@
 # (at your option) any later version.
 
 import unittest
+import datetime
 import json
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction, DatabaseTestCase
 from bkr.inttest.client import run_client, ClientError
-from bkr.server.model import LabControllerDistroTree
+from bkr.server.model import LabControllerDistroTree, DistroTree
 
 class DistroTreesListTest(DatabaseTestCase):
 
@@ -94,3 +95,21 @@ class DistroTreesListTest(DatabaseTestCase):
         self.assertEquals(len(trees), 1)
         self.assertEquals(trees[0]['distro_tree_id'], self.distro_tree.id)
         self.assertEquals(trees[0]['distro_name'], self.distro_tree.distro.name)
+
+    def test_output_is_ordered_by_date_created(self):
+        with session.begin():
+            # Insert them in reverse order (oldest last), just because the most 
+            # likely regression here is that we aren't sorting at all and thus 
+            # the output is in database insertion order. So this proves that's 
+            # not happening.
+            data_setup.create_distro_tree(date_created=datetime.datetime(2021, 1, 1, 0, 0))
+            data_setup.create_distro_tree(date_created=datetime.datetime(2004, 1, 1, 0, 0))
+        output = run_client(['bkr', 'distro-trees-list', '--format=json'])
+        with session.begin():
+            session.expire_all()
+            returned_trees = [DistroTree.query.get(entry['distro_tree_id'])
+                    for entry in json.loads(output)]
+            for i in range(1, len(returned_trees)):
+                self.assertGreaterEqual(
+                        returned_trees[i - 1].date_created,
+                        returned_trees[i].date_created)
