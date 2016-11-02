@@ -132,11 +132,27 @@ class VirtManager(object):
             raise RuntimeError('%r failed to stop, status %s'
                     % (instance, instance.status))
 
+    def _wait_for_delete(self, instance):
+        is_deleted = False
+        for __ in range(20):
+            time.sleep(5)
+            log.debug('%r still deleting', instance)
+            try:
+                instance.get()
+            except:
+                is_deleted = True
+                break
+        if not is_deleted:
+            raise RuntimeError('%r failed to delete, status %s'
+                    % (instance, instance.status))
+
     def start_vm(self, instance_id):
         self.novaclient.servers.start(instance_id)
 
     def destroy_vm(self, vm):
-        self.novaclient.servers.delete(vm.instance_id)
+        instance = self.novaclient.servers.get(vm.instance_id)
+        self.novaclient.servers.delete(instance.id)
+        self._wait_for_delete(instance)
         self.neutronclient.remove_interface_router(str(vm.router_id),
                 {'subnet_id': str(vm.subnet_id)})
         self.neutronclient.delete_router(str(vm.router_id))
