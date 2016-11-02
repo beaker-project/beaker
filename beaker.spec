@@ -463,7 +463,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{python2_sitelib}/bkr/timeout_xmlrpclib.py*
 %{python2_sitelib}/bkr/common/
 %{python2_sitelib}/bkr/log.py*
-%{python2_sitelib}/bkr-*.egg-info/
+%{python2_sitelib}/beaker_common-*.egg-info/
 %doc COPYING
 
 %if %{with server}
@@ -472,8 +472,8 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %dir %{_sysconfdir}/%{name}
 %doc documentation/_build/text/whats-new/
 %{python2_sitelib}/bkr/server/
-%{python2_sitelib}/bkr.server-*-nspkg.pth
-%{python2_sitelib}/bkr.server-*.egg-info/
+%{python2_sitelib}/beaker_server-*-nspkg.pth
+%{python2_sitelib}/beaker_server-*.egg-info/
 %{_bindir}/beaker-init
 %{_bindir}/beaker-usage-reminder
 %{_bindir}/beaker-log-delete
@@ -529,8 +529,8 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %files integration-tests
 %defattr(-,root,root,-)
 %{python2_sitelib}/bkr/inttest/
-%{python2_sitelib}/bkr.inttest-*-nspkg.pth
-%{python2_sitelib}/bkr.inttest-*.egg-info/
+%{python2_sitelib}/beaker_integration_tests-*-nspkg.pth
+%{python2_sitelib}/beaker_integration_tests-*.egg-info/
 %{_datadir}/beaker-integration-tests
 %endif
 
@@ -539,8 +539,8 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %dir %{_sysconfdir}/%{name}
 %doc Client/client.conf.example
 %{python2_sitelib}/bkr/client/
-%{python2_sitelib}/bkr.client-*-nspkg.pth
-%{python2_sitelib}/bkr.client-*.egg-info/
+%{python2_sitelib}/beaker_client-*-nspkg.pth
+%{python2_sitelib}/beaker_client-*.egg-info/
 %{_bindir}/beaker-wizard
 %{_bindir}/bkr
 %{_mandir}/man1/beaker-wizard.1.gz
@@ -560,8 +560,8 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_sysconfdir}/%{name}/power-scripts/
 %{_sysconfdir}/%{name}/install-failure-patterns/
 %{python2_sitelib}/bkr/labcontroller/
-%{python2_sitelib}/bkr.labcontroller-*-nspkg.pth
-%{python2_sitelib}/bkr.labcontroller-*.egg-info/
+%{python2_sitelib}/beaker_lab_controller-*-nspkg.pth
+%{python2_sitelib}/beaker_lab_controller-*.egg-info/
 %{_bindir}/beaker-proxy
 %{_bindir}/beaker-watchdog
 %{_bindir}/beaker-transfer

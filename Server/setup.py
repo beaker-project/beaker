@@ -16,16 +16,6 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'Common'))
 sys.path.insert(1, os.path.dirname(__file__))
 
-description = (
-  "Beaker is a system for full stack software integration testing "
-  "(including hardware compatibility testing)."
-)
-author = "Red Hat, Inc."
-email = "beaker-devel@lists.fedorahosted.org"
-copyright = "2008-2013 Red Hat, Inc."
-url = "http://beaker-project.org/"
-license = "GPLv2+"
-
 poFiles = filter(os.path.isfile, glob.glob('po/*.po'))
 
 SUBSTFILES = ('bkr/server/config/app.cfg')
@@ -193,16 +183,16 @@ else:
         ('/var/run/beaker', []),
     ])
 setup(
-    name="bkr.server",
+    name='beaker-server',
     namespace_packages = ['bkr'],
     version='23.2',
-    # uncomment the following lines if you fill them out in release.py
-    description=description,
-    author=author,
-    author_email=email,
-    url=url,
-    #download_url=download_url,
-    license=license,
+    description='Beaker scheduler and web interface',
+    long_description=
+        'Beaker is a system for full stack software integration testing '
+        '(including hardware compatibility testing).',
+    author='Red Hat, Inc.',
+    author_email='beaker-devel@lists.fedorahosted.org',
+    url='https://beaker-project.org/',
     cmdclass = {
         'build': Build,
         'build_py': build_py_and_kid,

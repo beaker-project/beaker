@@ -1,0 +1,2 @@
+include client.conf.example
+include bash-completion/bkr

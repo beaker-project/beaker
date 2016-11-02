@@ -11,8 +11,12 @@ def get_compose_layout():
     return matches
 
 setup(
-    name='bkr.inttest',
+    name='beaker-integration-tests',
     version='23.2',
+    description='Integration tests for Beaker',
+    author='Red Hat, Inc.',
+    author_email='beaker-devel@lists.fedorahosted.org',
+    url='https://beaker-project.org/',
     packages=find_packages('src'),
     package_dir={'': 'src'},
     package_data={'': [
@@ -36,8 +40,8 @@ setup(
     ],
     namespace_packages=['bkr'],
     install_requires=[
-        'bkr.server',
-        'bkr.client',
+        'beaker-server',
+        'beaker-client',
         'selenium',
     ],
 )

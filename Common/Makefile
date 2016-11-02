@@ -17,7 +17,7 @@ install: build
 	# Workaround for https://bitbucket.org/pypa/setuptools/issue/2/
 	# See adjacent setup.py for more details
 	install -m0644 build/namespace_packages.txt \
-	  $(DESTDIR)/usr/lib/python*/site-packages/bkr-*.egg-info
+	  $(DESTDIR)/usr/lib/python*/site-packages/beaker_common-*.egg-info
 
 .PHONY: clean
 clean:

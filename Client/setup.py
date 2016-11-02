@@ -12,9 +12,20 @@ def bash_completion_dir():
     return output.strip()
 
 setup(
-    name = "bkr.client",
+    name='beaker-client',
     version='23.2',
-    license = "GPLv2+",
+    description='Command-line client for interacting with Beaker',
+    author='Red Hat, Inc.',
+    author_email='beaker-devel@lists.fedorahosted.org',
+    url='https://beaker-project.org/',
+
+    install_requires=[
+        'beaker-common',
+        'lxml',
+        'requests',
+        'PrettyTable',
+        'Jinja2',
+    ],
 
     packages=find_packages('src'),
     package_dir = {'':'src'},
@@ -32,8 +43,8 @@ setup(
     classifiers = [
         'Development Status :: 5 - Production/Stable',
         'Operating System :: POSIX :: Linux',
-        'Programming Language :: Python',
-        'License :: OSI Approved :: GNU General Public License (GPL)',
+        'Programming Language :: Python :: 2.6',
+        'License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)',
     ],
 
     entry_points = {

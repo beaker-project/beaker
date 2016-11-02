@@ -11,9 +11,12 @@ from setuptools import setup, find_packages
 # metadata to the installed .egg-info directory for the main beaker package.
 
 setup(
-    name = "bkr",
+    name='beaker-common',
     version='23.2',
-    license = "GPLv2+",
+    description='Common components for Beaker packages',
+    author='Red Hat, Inc.',
+    author_email='beaker-devel@lists.fedorahosted.org',
+    url='https://beaker-project.org/',
 
     packages=find_packages('.'),
     package_dir = {'':'.'},
@@ -22,7 +25,7 @@ setup(
     classifiers = [
         'Development Status :: 5 - Production/Stable',
         'Operating System :: POSIX :: Linux',
-        'Programming Language :: Python',
-        'License :: OSI Approved :: GNU General Public License (GPL)',
+        'Programming Language :: Python :: 2.6',
+        'License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)',
     ],
 )
