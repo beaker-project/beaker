@@ -11,7 +11,7 @@ import xml.dom.minidom
 import lxml.etree
 from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Integer,
         String, Unicode, DateTime, UnicodeText, Boolean)
-from sqlalchemy.sql import select, exists, and_, or_, not_
+from sqlalchemy.sql import select, exists, or_
 from sqlalchemy.orm import (relationship, backref, dynamic_loader, synonym,
                             validates)
 from sqlalchemy.orm.collections import attribute_mapped_collection
@@ -393,21 +393,6 @@ class OSMajor(DeclarativeMappedObject):
 
         return InstallOptions(ks_meta, {}, {})
 
-    def tasks(self):
-        """
-        List of tasks that support this OSMajor
-        """
-        # Delayed import to avoid circular dependency
-        from . import Task, task_exclude_osmajor
-        return Task.query.filter(
-                not_(
-                     Task.id.in_(select([Task.id]).
-                    where(Task.id==task_exclude_osmajor.c.task_id).
-                    where(task_exclude_osmajor.c.osmajor_id==self.id)
-                                ),
-                    )
-        )
-
     def __repr__(self):
         return '%s' % self.osmajor
 
@@ -590,14 +575,6 @@ class Distro(DeclarativeMappedObject, ActivityMixin):
                 distro_tag_map,
                 {distro_tag_map.c.distro_id: self.id,
                  distro_tag_map.c.distro_tag_id: tagobj.id}))
-
-    def tasks(self):
-        """
-        Returns a query of Tasks which support this distro.
-        """
-        # Delayed import to avoid circular dependency
-        from . import Task
-        return Task.query.filter(not_(Task.excluded_osmajors.any(OSMajor.id == self.osversion.osmajor.id)))
 
 class DistroTree(DeclarativeMappedObject, ActivityMixin):
 

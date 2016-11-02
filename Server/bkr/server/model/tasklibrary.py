@@ -14,6 +14,7 @@ import lxml.etree
 import rpmUtils.miscutils
 from sqlalchemy import (Table, Column, ForeignKey, Integer, Unicode, Boolean,
                         DateTime)
+from sqlalchemy.sql.expression import not_, true
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import relationship
 from turbogears.config import get
@@ -21,6 +22,7 @@ from bkr.common.helpers import (AtomicFileReplacement, Flock,
                                 makedirs_ignore, unlink_ignore)
 from bkr.server import identity, testinfo
 from bkr.server.bexceptions import BX
+from bkr.server.hybrid import hybrid_method
 from bkr.server.util import absolute_url, run_createrepo, convert_db_lookup_error
 from .base import DeclarativeMappedObject
 from .identity import User
@@ -372,6 +374,22 @@ class Task(DeclarativeMappedObject):
         if not query:
             query=cls.query
         return query.join('runfor').filter(TaskPackage.package==package)
+
+    @hybrid_method
+    def compatible_with(self, distro=None, osmajor=None):
+        if distro:
+            return (distro.osversion.osmajor not in self.excluded_osmajors)
+        if osmajor:
+            return (osmajor not in self.excluded_osmajors)
+        return True
+
+    @compatible_with.expression
+    def compatible_with(cls, distro=None, osmajor=None): #pylint: disable=E0213
+        if distro:
+            return not_(Task.excluded_osmajors.any(OSMajor.id == distro.osversion.osmajor.id))
+        if osmajor:
+            return not_(Task.excluded_osmajors.any(OSMajor.id == osmajor.id))
+        return true()
 
     @classmethod
     def get_rpm_path(cls, rpm_name):

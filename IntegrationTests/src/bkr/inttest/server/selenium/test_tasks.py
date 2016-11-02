@@ -7,7 +7,7 @@
 import urlparse
 import requests
 import requests.exceptions
-from bkr.inttest.server.selenium import WebDriverTestCase
+from bkr.inttest.server.selenium import WebDriverTestCase, XmlRpcTestCase
 from bkr.inttest.server.webdriver_utils import login, check_task_search_results
 from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
 from bkr.inttest.server.requests_utils import login as requests_login, patch_json
@@ -291,6 +291,21 @@ class TaskHTTPTest(DatabaseTestCase):
                               session=req_sess, data={'disabled': True})
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.text, 'Task %s does not exist' % fake_id)
+
+class TasksXmlRpcTest(XmlRpcTestCase):
+
+    def setUp(self):
+        self.server = self.get_server()
+
+    def test_filter_by_osmajor(self):
+        with session.begin():
+            included = data_setup.create_task()
+            excluded = data_setup.create_task(
+                    exclude_osmajors=[u'MagentaGloveLinux4'])
+        result = self.server.tasks.filter(dict(osmajor=u'MagentaGloveLinux4'))
+        task_names = [task['name'] for task in result]
+        self.assertIn(included.name, task_names)
+        self.assertNotIn(excluded.name, task_names)
 
 if __name__ == "__main__":
     unittest.main()

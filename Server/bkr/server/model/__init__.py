@@ -31,7 +31,7 @@ from .distrolibrary import (Arch, KernelType, OSMajor, OSVersion,
         DistroTreeRepo, DistroTag, DistroActivity, DistroTreeActivity,
         LabControllerDistroTree)
 from .tasklibrary import (Task, TaskLibrary, TaskPackage, TaskType,
-        TaskBugzilla, TaskPropertyNeeded, task_exclude_osmajor)
+        TaskBugzilla, TaskPropertyNeeded)
 from .inventory import (System, SystemStatusDuration, SystemCc, Hypervisor,
         Cpu, CpuFlag, Disk, Device, DeviceClass, Numa, Power, PowerType, Note,
         Key, Key_Value_String, Key_Value_Int, Provision, ProvisionFamily,
