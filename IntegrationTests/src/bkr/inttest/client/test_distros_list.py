@@ -35,8 +35,6 @@ class DistrosListTest(ClientTestCase):
         output = run_client(['bkr', 'distros-list', '--format=json', '--limit=1'])
         distros = json.loads(output)
         self.assertEquals(len(distros), 1)
-        self.assertEquals(distros[0]['distro_id'], self.distro.id)
-        self.assertEquals(distros[0]['distro_name'], self.distro.name)
 
     def test_exits_with_error_if_none_match(self):
         try:
