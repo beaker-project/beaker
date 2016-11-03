@@ -53,6 +53,12 @@ window.TasksView = BeakerGrid.extend({
             {name: 'description', label: 'Description', cell: 'string', editable: false},
             {name: 'version', label: 'Version', cell: 'string', editable: false},
         ];
+        options.query_builder_columns = options.columns.concat([
+            {name: 'excluded_osmajor', label: 'Excluded OSMajor'},
+            {name: 'excluded_arch', label: 'Excluded Arch'},
+            {name: 'type', label: 'Task Type'},
+
+        ]);
         BeakerGrid.prototype.initialize.apply(this, arguments);
     },
 });
