@@ -100,15 +100,11 @@ def to_unicode(obj, encoding='utf-8'):
             obj = unicode(obj, encoding, 'replace')
     return obj
 
-def url_no_webpath(tgpath, tgparams=None, **kw):
-    """
-    Like turbogears.url but without webpath pre-pended
-    """
+def strip_webpath(url):
     webpath = (config.get('server.webpath') or '').rstrip('/')
-    theurl = url(tgpath, tgparams=tgparams, **kw)
-    if webpath and theurl.startswith(webpath):
-        theurl = theurl[len(webpath):]
-    return theurl
+    if webpath and url.startswith(webpath):
+        return url[len(webpath):]
+    return url
 
 # TG1.1 has this: http://docs.turbogears.org/1.1/URLs#turbogears-absolute-url
 def absolute_url(tgpath, tgparams=None, scheme=None, 
@@ -138,10 +134,9 @@ def absolute_url(tgpath, tgparams=None, scheme=None,
             host_port = socket.getfqdn()
 
     # TODO support relative paths
-    if webpath:
-        theurl = url(tgpath, tgparams, **kw)
-    else:
-        theurl = url_no_webpath(tgpath, tgparams, **kw)
+    theurl = url(tgpath, tgparams, **kw)
+    if not webpath:
+        theurl = strip_webpath(theurl)
     assert theurl.startswith('/')
     scheme = scheme or config.get('tg.url_scheme', 'http')
     return '%s://%s%s' % (scheme, host_port, theurl)

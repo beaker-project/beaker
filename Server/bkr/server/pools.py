@@ -57,7 +57,7 @@ def get_pools():
         'title': u'Pools',
         'grid_collection_type': 'SystemPools',
         'grid_collection_data': json_result,
-        'grid_collection_url': request.base_url,
+        'grid_collection_url': request.path,
         'grid_view_type': 'PoolsView',
         'grid_add_label': 'Create',
         'grid_add_view_type': 'PoolCreateModal' if not identity.current.anonymous else 'null',

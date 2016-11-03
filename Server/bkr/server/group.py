@@ -369,7 +369,7 @@ def get_groups():
         'title': u'Groups',
         'grid_collection_type': 'Groups',
         'grid_collection_data': json_result,
-        'grid_collection_url': request.base_url,
+        'grid_collection_url': request.path,
         'grid_view_type': 'GroupsView',
         'grid_add_label': 'Create',
         'grid_add_view_type': grid_add_view_type,
