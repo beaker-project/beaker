@@ -11,7 +11,7 @@ import shutil
 import tempfile
 import pkg_resources
 from bkr.server.model import session, LogRecipe, LogRecipeTask, LogRecipeTaskResult
-from bkr.inttest import data_setup, Process
+from bkr.inttest import data_setup, Process, get_server_base
 from bkr.inttest.client import run_client, ClientError, ClientTestCase
 
 class JobLogsTest(ClientTestCase):
@@ -29,55 +29,68 @@ class JobLogsTest(ClientTestCase):
         # job for testing
         with session.begin():
             self.job = data_setup.create_completed_job()
-            recipe = self.job.recipesets[0].recipes[0]
+            self.recipe = self.job.recipesets[0].recipes[0]
             os.mkdir(os.path.join(self.logs_dir, 'R'))
             open(os.path.join(self.logs_dir, 'R', 'dummy.txt'), 'w').write('recipe\n')
-            recipe.logs[:] = [LogRecipe(server=self.log_server_url,
+            self.recipe.logs[:] = [LogRecipe(server=self.log_server_url,
                     path=u'R', filename=u'dummy.txt')]
             os.mkdir(os.path.join(self.logs_dir, 'T'))
             open(os.path.join(self.logs_dir, 'T', 'dummy.txt'), 'w').write('task\n')
-            recipe.tasks[0].logs[:] = [LogRecipeTask(server=self.log_server_url,
+            self.recipe.tasks[0].logs[:] = [LogRecipeTask(server=self.log_server_url,
                     path=u'T', filename=u'dummy.txt')]
             os.mkdir(os.path.join(self.logs_dir, 'TR'))
             open(os.path.join(self.logs_dir, 'TR', 'dummy.txt'), 'w').write('result\n')
-            recipe.tasks[0].results[0].logs[:] = [LogRecipeTaskResult(
+            self.recipe.tasks[0].results[0].logs[:] = [LogRecipeTaskResult(
                     server=self.log_server_url,
                     path=u'TR', filename=u'dummy.txt')]
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1391282
     def test_by_job(self):
         out = run_client(['bkr', 'job-logs', self.job.t_id])
         logs = out.splitlines()
-        self.assertEquals(logs[0], self.log_server_url + u'R/dummy.txt')
-        self.assertEquals(logs[1], self.log_server_url + u'T/dummy.txt')
-        self.assertEquals(logs[2], self.log_server_url + u'TR/dummy.txt')
+        self.assertEquals(logs[0], get_server_base() + u'recipes/%s/logs/R/dummy.txt'
+               % self.recipe.id)
+        self.assertEquals(logs[1], get_server_base() + u'recipes/%s/tasks/%s/logs/T/dummy.txt'
+                % (self.recipe.id, self.recipe.tasks[0].id))
+        self.assertEquals(logs[2], get_server_base() + u'recipes/%s/tasks/%s/results/%s/logs/TR/dummy.txt'
+                % (self.recipe.id, self.recipe.tasks[0].id, self.recipe.tasks[0].results[0].id))
 
     def test_by_recipeset(self):
         out = run_client(['bkr', 'job-logs', self.job.recipesets[0].t_id])
         logs = out.splitlines()
-        self.assertEquals(logs[0], self.log_server_url + u'R/dummy.txt')
-        self.assertEquals(logs[1], self.log_server_url + u'T/dummy.txt')
-        self.assertEquals(logs[2], self.log_server_url + u'TR/dummy.txt')
+        self.assertEquals(logs[0], get_server_base() + u'recipes/%s/logs/R/dummy.txt'
+               % self.recipe.id)
+        self.assertEquals(logs[1], get_server_base() + u'recipes/%s/tasks/%s/logs/T/dummy.txt'
+                % (self.recipe.id, self.recipe.tasks[0].id))
+        self.assertEquals(logs[2], get_server_base() + u'recipes/%s/tasks/%s/results/%s/logs/TR/dummy.txt'
+                % (self.recipe.id, self.recipe.tasks[0].id, self.recipe.tasks[0].results[0].id))
 
     def test_by_recipe(self):
         out = run_client(['bkr', 'job-logs',
                 self.job.recipesets[0].recipes[0].t_id])
         logs = out.splitlines()
-        self.assertEquals(logs[0], self.log_server_url + u'R/dummy.txt')
-        self.assertEquals(logs[1], self.log_server_url + u'T/dummy.txt')
-        self.assertEquals(logs[2], self.log_server_url + u'TR/dummy.txt')
+        self.assertEquals(logs[0], get_server_base() + u'recipes/%s/logs/R/dummy.txt'
+               % self.recipe.id)
+        self.assertEquals(logs[1], get_server_base() + u'recipes/%s/tasks/%s/logs/T/dummy.txt'
+                % (self.recipe.id, self.recipe.tasks[0].id))
+        self.assertEquals(logs[2], get_server_base() + u'recipes/%s/tasks/%s/results/%s/logs/TR/dummy.txt'
+                % (self.recipe.id, self.recipe.tasks[0].id, self.recipe.tasks[0].results[0].id))
 
     def test_by_task(self):
         out = run_client(['bkr', 'job-logs',
                 self.job.recipesets[0].recipes[0].tasks[0].t_id])
         logs = out.splitlines()
-        self.assertEquals(logs[0], self.log_server_url + u'T/dummy.txt')
-        self.assertEquals(logs[1], self.log_server_url + u'TR/dummy.txt')
+        self.assertEquals(logs[0], get_server_base() + u'recipes/%s/tasks/%s/logs/T/dummy.txt'
+                % (self.recipe.id, self.recipe.tasks[0].id))
+        self.assertEquals(logs[1], get_server_base() + u'recipes/%s/tasks/%s/results/%s/logs/TR/dummy.txt'
+                % (self.recipe.id, self.recipe.tasks[0].id, self.recipe.tasks[0].results[0].id))
 
     def test_by_taskresult(self):
         out = run_client(['bkr', 'job-logs',
                 self.job.recipesets[0].recipes[0].tasks[0].results[0].t_id])
         logs = out.splitlines()
-        self.assertEquals(logs[0], self.log_server_url + u'TR/dummy.txt')
+        self.assertEquals(logs[0], get_server_base() + u'recipes/%s/tasks/%s/results/%s/logs/TR/dummy.txt'
+                % (self.recipe.id, self.recipe.tasks[0].id, self.recipe.tasks[0].results[0].id))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=595512
     def test_invalid_taskspec(self):
@@ -90,16 +103,20 @@ class JobLogsTest(ClientTestCase):
     def test_prints_sizes(self):
         out = run_client(['bkr', 'job-logs', '--size', self.job.t_id])
         lines = out.splitlines()
-        self.assertEquals(lines[0], '     7 %sR/dummy.txt' % self.log_server_url)
-        self.assertEquals(lines[1], '     5 %sT/dummy.txt' % self.log_server_url)
-        self.assertEquals(lines[2], '     7 %sTR/dummy.txt' % self.log_server_url)
+        self.assertEquals(lines[0], '     7 %srecipes/%s/logs/R/dummy.txt' %
+                (get_server_base(), self.recipe.id))
+        self.assertEquals(lines[1], '     5 %srecipes/%s/tasks/%s/logs/T/dummy.txt' %
+                (get_server_base(), self.recipe.id, self.recipe.tasks[0].id))
+        self.assertEquals(lines[2], '     7 %srecipes/%s/tasks/%s/results/%s/logs/TR/dummy.txt' %
+                (get_server_base(), self.recipe.id, self.recipe.tasks[0].id, self.recipe.tasks[0].results[0].id))
 
     def test_size_handles_404(self):
         with session.begin():
             self.job.recipesets[0].recipes[0].logs[0].filename = u'idontexist.txt'
         out = run_client(['bkr', 'job-logs', '--size', self.job.t_id])
         lines = out.splitlines()
-        self.assertEquals(lines[0], '<missing> %sR/idontexist.txt' % self.log_server_url)
+        self.assertEquals(lines[0], '<missing> %srecipes/%s/logs/R/idontexist.txt' %
+                (get_server_base(), self.recipe.id))
 
     def test_size_handles_http_errors(self):
         with session.begin():
@@ -108,4 +125,5 @@ class JobLogsTest(ClientTestCase):
             self.job.recipesets[0].recipes[0].logs[0].filename = u'500'
         out = run_client(['bkr', 'job-logs', '--size', self.job.t_id])
         lines = out.splitlines()
-        self.assertEquals(lines[0], '<error:500> %serror/500' % self.log_server_url)
+        self.assertEquals(lines[0], '<error:500> %srecipes/%s/logs/error/500' %
+                (get_server_base(), self.recipe.id))
