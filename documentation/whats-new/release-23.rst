@@ -504,3 +504,68 @@ released:
 * :issue:`1351666`: The new ``virtlogd`` log rotation functionality in libvirt
   is disabled for Beaker guests, because it prevents the guest console log from 
   being captured. (Contributed by Jan Stancek)
+
+
+Beaker 23.3
+~~~~~~~~~~~
+
+* :issue:`1347239`: Beaker now prevents systems from being set to Automated
+  while not associated with any lab controller, since they cannot be used by 
+  the scheduler. (Contributed by Róman Joost)
+* :issue:`1298055`: The :program:`bkr job-modify` command accepts a new option
+  :option:`--whiteboard <bkr job-modify --whiteboard>` to update the whiteboard 
+  of an existing job or recipe. (Contributed by Dan Callaghan)
+* :issue:`1362596`: The system hostname is now shown for each recipe on the job
+  page. (Contributed by Dan Callaghan)
+* :issue:`874387`: Systems are no longer marked as broken if the
+  ``configure_netboot`` command fails, since that usually indicates a problem 
+  with the download URL for the distro rather than a problem with the system. 
+  (Contributed by Dan Callaghan)
+* :issue:`1375035`: Fixed an edge case with the scheduler's logic for handling
+  ``<reservesys/>`` which could cause the reservation to be skipped if the 
+  recipe contains only one task which finishes quickly. (Contributed by Róman 
+  Joost)
+* :issue:`1376645`: A recipe is now marked as "reviewed" only if the recipe
+  page is opened after the recipe is finished. Previously a recipe would be 
+  marked as reviewed even if it were still running and producing more results. 
+  (Contributed by Dan Callaghan)
+* :issue:`1369599`: When the scheduler increases the priority of a recipe set
+  because it only matches one candidate system, this change is now recorded in 
+  the job activity. (Contributed by Dan Callaghan)
+* :issue:`1083648`: The :program:`beaker-provision` daemon now only applies the
+  quiescent period delay between consecutive ``on`` and ``off`` operations. 
+  Previously the delay would also be applied unnecessarily between other 
+  commands, such as ``configure_netboot``. (Contributed by Dan Callaghan)
+* :issue:`1380600`: The ``/login`` endpoint no longer redirects based on the
+  HTTP ``Referer`` header, instead an explicit redirect URL is always passed. 
+  This avoids an issue with bad redirects when using mod_auth_mellon for 
+  handling authentication in Apache. (Contributed by Dan Callaghan)
+* :issue:`1387109`: Beaker now accepts a quiescent period of 0 in the system
+  power settings. (Contributed by Dan Callaghan)
+* :issue:`1379565`: The Beaker server now avoids looking up its own name in DNS
+  whenever possible. Previously the server would perform many DNS lookups of 
+  its own name, even when ``tg.url_domain`` was set in the server 
+  configuration.  (Contributed by Dan Callaghan)
+* :issue:`1364311`: Fixed URL generation to obey the ``server.webpath`` prefix.
+  On a number of pages the prefix was not correctly applied, causing HTTP 
+  requests in the browser to fail. (Contributed by Jon Orris)
+* :issue:`1390412`: Fixed absolute URL generation to obey the ``tg.url_scheme``
+  setting in all cases. Previously some pages would include an incorrect URL 
+  when the Beaker server is behind an SSL-terminating reverse proxy, causing 
+  HTTP requests in the browser to fail. (Contributed by Dan Callaghan)
+* :issue:`1350302`: The :program:`beaker-init` tool now considers a database to
+  be "empty" even if it contains a lone ``alembic_version`` table. This is to 
+  work around the behaviour of :option:`beaker-init --check`, which will create 
+  that table when run against an empty database. (Contributed by Jon Orris)
+* :issue:`1362598`: The wording of the :guilabel:`Hide Naks` option on the job
+  matrix has changed to :guilabel:`Hide Waived` to reflect the changed 
+  terminology in Beaker 23. (Contributed by Jon Orris)
+
+Version 1.0-6 of the ``/distribution/virt/image-install`` task has also been 
+released:
+
+* :issue:`1333456`: Fixed a regression in parsing guest recipe arguments.
+  (Contributed by Jan Stancek)
+
+.. internal only:
+    * :issue:`1275109`
