@@ -5,18 +5,16 @@ Beaker in a box
 
 .. highlight:: console
 
-Beaker in a box provides a way of using Vagrant and Ansible to install and configure
-a complete working Beaker environment, including three virtual guests(VMs) to
-act as test systems. This guide assumes that you already have Vagrant and Ansible
-installed and working, also have a spare system capable of KVM virtualization
-with at least 4GB of RAM running on Fedora 21.
+Beaker in a box provides a way of using Ansible to install and configure a
+complete working Beaker environment, including three virtual guests(VMs) to act
+as test systems. This guide assumes that you already have Ansible installed and
+working, also have a spare system capable of KVM virtualization with at least
+4GB of RAM running on Fedora 21.
 
 Package Prerequisites 
 ---------------------
 
-- vagrant
-- vagrant-libvirt
-- ansible
+- ansible >= 2.0
 
 Cloning the beaker-in-a-box repo
 --------------------------------
@@ -26,24 +24,22 @@ repository <http://git.beaker-project.org/cgit/~mjia/beaker-in-a-box/>`_::
 
     git clone git://git.beaker-project.org/beaker-in-a-box
 
-Setting up Ansible
-------------------
+Setting up Beaker
+-----------------
 
-Ansible is connecting with remote machines over SSH, so we need to set up
-passwordless ssh key authentication for your user account on the host machine::
+The playbook sets the entire environment in several steps:
 
-    ssh-copy-id <user>@localhost
+#. Defines virtual machines and a virtual network called ``beaker``.
 
-Using SSH keys is encouraged but password authentication can also be used where
-needed by supplying the option --ask-pass to ansible.
+#. Provisions the server and the lab controller as one virtual machine. SSH Keys
+   between host and virtual machine are exchanged to easy access and control of
+   test systems using ``virsh``. Default root password used is ``beaker``.
 
-Setting up libvirt and test systems
------------------------------------
+#. Provisions the test machines and adds them as available resources to the lab controller/server.
 
-We will use Ansible to create a virtual network called beaker and three
-test systems on your host system::
+Start the setup using Ansible by running::
 
-   ansible-playbook -i hosts setup_libvirt_and_virt.yml --ask-become-pass
+   ansible-playbook setup_beaker.yml --ask-become-pass
 
 .. note::
 
@@ -51,29 +47,38 @@ test systems on your host system::
    static IP and mac addresses do not collide with any other machines on the same
    network. Those static IP and mac addresses can be found in group_vars/beaker.
 
-Setting up Server and Lab controller 
-------------------------------------
+Customizing the provisioning
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-We will use Vagrant to set up a VM that acts as the server and the lab controller::
+By default the server and lab controller VM is provisioned from a CentOS 6 HTTP
+URL. If you prefer to provision it from a different HTTP URL, run the playbook
+by passing `variables on the command line
+<http://docs.ansible.com/ansible/playbooks_variables.html#passing-variables-on-the-command-line>`_
+which will overwrite the default.
 
-    vagrant up
+For example, create a new YAML file ``extravars.yml``::
 
-This will start the VM and run the provisioning playbook. By default, Vagrant is
-using centos-6 box as the base images of the VM, you can change it by modifying
-the Vagrantfile file. For more information, refer to `Vagrant <https://docs.vagrantup.com/v2/>`_
-documentation.
+  ---
+  netinstall_url: http://mirror.centos.org/centos/6/os/x86_64/
+  kickstart_repos:
+    updates: http://mirror.centos.org/centos/6/updates/x86_64/
 
-In case the playbook fails during provisioning, you can re-run the playbook
-against a partially provisioned VM by running ``vagrant provision`` again.
+It provides the netinstall URL and additional repositories the VM is provisioned
+with. Then run the playbook and include the file to the ``ansible-playbook``
+command::
 
-To be able to provision the test systems, passwordless login for the root user
-is required to set up from the VM to your host system. First, ssh to the VM::
+  ansible-playbook setup_beaker.yml --ask-become-pass -e@extravars.yml
 
-    vagrant ssh
+In the same fashion, you can add additional distros during the provisioning
+process by setting the ``user_distros`` variable. To illustrate this, here is an
+example::
 
-Then run::
+  ---
+  user_distros:
+    - http://mirror.centos.org/centos/6.8/os/x86_64/
 
-    ssh-copy-id root@192.168.120.1
+This will add CentOS 6.8 as an additional distribution, among the ones already
+added by default, to provision test machines from.
 
 Verifying the server installation
 ---------------------------------
@@ -82,23 +87,21 @@ Visiting `http://beaker-server-lc.beaker/bkr/
 <http://beaker-server-lc.beaker/bkr/>`_ from your hosts systems's browser should
 show the beaker systems page.
 
+An easy way to schedule a job is by performing a system scan for one of your
+test systems. On the systems page, click on a system and navigate to the
+:guilabel:`Details` tab. Schedule a scan by clicking on the :guilabel:`Scan`
+button.
+
 Configure the :program:`bkr` client to use your local Beaker server (see
 :ref:`installing-bkr-client`). You can run ``bkr whoami`` to check that is
 working.
 
-
-Setup server to run job
------------------------
-
-We will now upload a few task RPMs to Beaker so that we can run jobs. The
-following playbook uses the :program:`bkr` client to upload the tasks::
-
-    ansible-playbook -i hosts --ask-become-pass add_beaker_tasks.yml
-
 Next steps
 ----------
 
-You can now proceed to
+The playbook has already taken care of adding tasks, importing distros and
+adding systems, but for completeness we recommend reading the next sections to
+get a better understanding by proceeding to
 :ref:`adding tasks <adding-tasks>`,
 :ref:`importing distros <importing-distros>`,
 :ref:`adding systems <adding-systems>`, and
