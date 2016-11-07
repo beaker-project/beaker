@@ -821,12 +821,15 @@ class TestRecipeViewReservationTab(WebDriverTestCase):
         tab = b.find_element_by_id('reservation')
         tab.find_element_by_xpath('.//button[contains(text(), "Return the reservation")]')\
                 .click()
+        # Button goes to "Returning..." and confirmation modal appears
+        tab.find_element_by_xpath(u'.//button[normalize-space(string(.))="Returning\u2026"]')
         modal = b.find_element_by_class_name('modal')
         modal.find_element_by_xpath('.//button[text()="OK"]').click()
+        # Modal disappears, but the request is still going...
         b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
-        # The `Return the reservtion` button should be gone.
-        tab.find_element_by_xpath('//body[not(.//button[normalize-space(string(.))='
-                '"Return the reservation"])]')
+        # The "Returning..." button disappears when the request is complete
+        tab.find_element_by_xpath(u'//body[not(.//button[normalize-space(string(.))='
+                '"Returning\u2026"])]')
         with session.begin():
             session.expire_all()
             self.assertLessEqual(self.recipe.status_watchdog(), 0)

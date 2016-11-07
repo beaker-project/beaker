@@ -16,7 +16,7 @@ from bkr.server import identity
 from bkr.server.bexceptions import BX, InsufficientSystemPermissions, DatabaseLookupError, \
     StaleTaskStatusException
 from bkr.server.search_utility import lucene_to_sqlalchemy
-from bkr.server.util import absolute_url
+from bkr.server.util import absolute_url, strip_webpath
 
 # http://flask.pocoo.org/snippets/45/
 def request_wants_json():
@@ -92,9 +92,11 @@ def json_collection(query, columns=None, extra_sort_columns=None, max_page_size=
             # a page_size= param added, as a way of indicating that they should 
             # be using paging. There's no point doing this for the web UI though.
             if request.query_string:
-                url = request.url + ('&page_size=%s' % default_page_size)
+                url = '%s?%s&page_size=%s' % (request.path, request.query_string, default_page_size)
             else:
-                url = request.base_url + ('?page_size=%s' % default_page_size)
+                url = '%s?page_size=%s' % (request.path, default_page_size)
+            # absolute_url() prepends webpath so strip it off first
+            url = absolute_url(strip_webpath(url))
             raise PaginationRequiredException(response=redirect(url))
         elif force_paging:
             page_size = default_page_size

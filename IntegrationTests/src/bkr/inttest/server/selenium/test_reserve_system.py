@@ -73,6 +73,9 @@ class ReserveWorkflow(WebDriverTestCase):
         Select(b.find_element_by_name('osmajor'))\
             .select_by_visible_text(self.distro.osversion.osmajor.osmajor)
         Select(b.find_element_by_name('distro')).select_by_visible_text(self.distro.name)
+        # wait for the distro_tree_id select to be populated
+        b.find_element_by_xpath('//select[@name="distro_tree_id"]'
+                '/option[normalize-space(.)="%s Server x86_64"]' % self.distro.name)
         options = b.find_elements_by_xpath('//select[@name="distro_tree_id"]/option')
         self.assert_(not any('i386' in option.text for option in options), options)
 

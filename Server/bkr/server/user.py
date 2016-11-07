@@ -149,7 +149,7 @@ def get_users():
         'title': u'Users',
         'grid_collection_type': 'Users',
         'grid_collection_data': json_result,
-        'grid_collection_url': request.base_url,
+        'grid_collection_url': request.path,
         'grid_view_type': 'UsersView',
         'grid_add_label': 'Create',
         'grid_add_view_type': 'UserCreateModal' if identity.current.user.is_admin() else 'null',

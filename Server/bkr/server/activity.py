@@ -62,7 +62,7 @@ def get_activity():
         'title': u'Activity',
         'grid_collection_type': 'Activity',
         'grid_collection_data': json_result,
-        'grid_collection_url': request.base_url,
+        'grid_collection_url': request.path,
         'grid_view_type': 'ActivityView',
     })
 
@@ -99,7 +99,7 @@ def get_distro_activity():
         'title': u'Distro Activity',
         'grid_collection_type': 'Activity',
         'grid_collection_data': json_result,
-        'grid_collection_url': request.base_url,
+        'grid_collection_url': request.path,
         'grid_view_type': 'DistroActivityView',
     })
 
@@ -145,7 +145,7 @@ def get_distro_tree_activity():
         'title': u'Distro Tree Activity',
         'grid_collection_type': 'Activity',
         'grid_collection_data': json_result,
-        'grid_collection_url': request.base_url,
+        'grid_collection_url': request.path,
         'grid_view_type': 'DistroTreeActivityView',
     })
 
@@ -181,7 +181,7 @@ def get_group_activity():
         'title': u'Group Activity',
         'grid_collection_type': 'Activity',
         'grid_collection_data': json_result,
-        'grid_collection_url': request.base_url,
+        'grid_collection_url': request.path,
         'grid_view_type': 'GroupActivityView',
     })
 
@@ -217,7 +217,7 @@ def get_lab_controller_activity():
         'title': u'Lab Controller Activity',
         'grid_collection_type': 'Activity',
         'grid_collection_data': json_result,
-        'grid_collection_url': request.base_url,
+        'grid_collection_url': request.path,
         'grid_view_type': 'LabControllerActivityView',
     })
 
@@ -254,7 +254,7 @@ def get_systems_activity(): # distinct from get_system_activity
         'title': u'System Activity',
         'grid_collection_type': 'Activity',
         'grid_collection_data': json_result,
-        'grid_collection_url': request.base_url,
+        'grid_collection_url': request.path,
         'grid_view_type': 'SystemsActivityView',
     })
 
@@ -298,6 +298,6 @@ def get_system_pools_activity():
         'title': u'System Pool Activity',
         'grid_collection_type': 'Activity',
         'grid_collection_data': json_result,
-        'grid_collection_url': request.base_url,
+        'grid_collection_url': request.path,
         'grid_view_type': 'SystemPoolActivityView',
     })
