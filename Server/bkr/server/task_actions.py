@@ -78,6 +78,9 @@ class TaskActions(RPCRoot):
         """
         Returns an array of XML-RPC structures (dicts) describing each of the 
         result files for the given job component and its descendants.
+
+        :param taskid: see above
+        :type taskid: string
         """
         return [l.dict for l in TaskBase.get_by_t_id(taskid).all_logs()]
 

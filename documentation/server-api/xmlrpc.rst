@@ -171,6 +171,8 @@ Running jobs
 
 .. automethod:: taskactions.to_xml
 
+.. automethod:: taskactions.files
+
 .. automethod:: taskactions.stop
 
 .. jobs.set_response should actually be in tasksactions namespace, it takes 
