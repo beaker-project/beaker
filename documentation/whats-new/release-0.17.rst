@@ -44,7 +44,7 @@ used. The job owner must have ``reserve`` permission on the system in question
 in order to reserve it through the scheduler.
 
 The :program:`bkr machine-test` command now accepts a new option 
-:option:`--ignore-system-status <bkr machine-test --ignore-system-status>`
+:option:`--ignore-system-status <bkr --ignore-system-status>`
 which uses this feature. This option makes it possible to test a system or 
 update its hardware details even if its condition is set to Manual or Broken.
 
@@ -99,9 +99,9 @@ the search criteria would also be listed along with other matching systems.
 As a consequence, ``Removed`` is no longer an accepted value for the 
 ``System/Status`` field on system search pages.
 
-Removed systems are also excluded from the output of :program:`bkr 
-list-systems` by default. A new option :option:`--removed <bkr-list-systems 
---removed>` can be given in order to list removed systems.
+Removed systems are also excluded from the output of :program:`bkr list-systems`
+by default. A new option :option:`--removed <bkr-system-list --removed>` can be
+given in order to list removed systems.
 
 (Contributed by Amit Saha in :issue:`1000092`.)
 

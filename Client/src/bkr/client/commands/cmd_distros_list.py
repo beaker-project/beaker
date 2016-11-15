@@ -15,9 +15,8 @@ Synopsis
 --------
 
 | :program:`bkr distros-list` [*options*]
-|       [:option:`--tag` <tag>] [:option:`--name` <name>] [:option:`--treepath` <url>] [:option:`--family` <family>]
-        [:option:`--arch` <arch>] [:option:`--distro-id` <distroid>]
-|       [:option:`--limit` <number>] [:option:`--format` <format>]
+|       [:option:`--tag` <tag>] [:option:`--name` <name>] [:option:`--family` <family>]
+|       [:option:`--distro-id` <distroid>] [:option:`--limit` <number>] [:option:`--format` <format>]
 
 Description
 -----------
@@ -74,9 +73,9 @@ List details of all RHEL6 distros with the RELEASED tag::
 History
 -------
 
-Prior to version 0.9, this command also accepted :option:`--treepath`, 
-:option:`--labcontroller`, and :option:`--arch` filter options. Use 
-:program:`bkr distro-trees-list` instead.
+Prior to version 0.9, this command also accepted :option:`--treepath <bkr distro-trees-list --treepath>`, 
+:option:`--labcontroller <bkr distro-trees-list --labcontroller>`, and :option:`--arch <bkr distro-trees-list --arch>`
+filter options. Use :program:`bkr distro-trees-list` instead.
 
 See also
 --------

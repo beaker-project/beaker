@@ -14,7 +14,7 @@ Synopsis
 |       [*job-specific options*]
 
 Job-specific options are defined in the Job Configuration XML, and will be 
-described with :option:`--help`.
+described with :option:`--help <bkr --help>`.
 
 Description
 -----------
@@ -177,10 +177,10 @@ Tag descriptions
         This tag is optional. It will set a default value if this option is not 
         used on the command line.
     <description/>
-        This tag is used for the :option:`--help` screen, describing the 
+        This tag is used for the :option:`--help <bkr --help>` screen, describing the 
         command line option to :program:`bkr workflow-xslt`.
     <metavar/>
-        This is used for the :option:`--help` screen as well. This is used as 
+        This is used for the :option:`--help <bkr --help>` screen as well. This is used as 
         a substitute for the variable contents, purely for. To make it obvious, 
         it is recommended to put use capital letters.
 

@@ -32,6 +32,14 @@ When the account is removed:
 Common :program:`bkr` options are described in the :ref:`Options
 <common-options>` section of :manpage:`bkr(1)`.
 
+Options
+-------
+
+.. option:: --new-owner <username>
+
+   Transfers the ownership of any systems currently owned by the closed
+   accounts to USERNAME.
+
 Exit status
 -----------
 

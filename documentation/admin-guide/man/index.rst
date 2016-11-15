@@ -10,3 +10,4 @@ Administrative command reference
    beaker-init
    beaker-repo-update
    beaker-usage-reminder
+   beaker-sync-tasks

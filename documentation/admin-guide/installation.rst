@@ -283,8 +283,8 @@ will be overwritten only if the versions are different.
 
 By default, the script asks for your approval before beginning the
 task upload. If that is not suitable for your purpose, you may specify
-a :option:`--force` switch so that the script may run without any user
-intervention. The :option:`--debug` switch turns on verbose logging
+a :option:`--force <beaker-sync-tasks --force>` switch so that the script may run without any user
+intervention. The :option:`--debug <beaker-sync-tasks --debug>` switch turns on verbose logging
 messages on the standard output.
 
 
@@ -298,4 +298,3 @@ You can now proceed to
 :ref:`importing distros <importing-distros>`,
 :ref:`adding systems <adding-systems>`, and
 :ref:`running jobs <jobs>`.
-

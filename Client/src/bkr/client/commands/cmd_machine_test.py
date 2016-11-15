@@ -16,7 +16,7 @@ bkr machine-test: Generate Beaker job to test a system
 Synopsis
 --------
 
-:program:`bkr machine-test` :option:`--machine` <fqdn> [--inventory] [*workflow options*] [*options*]
+:program:`bkr machine-test` :option:`--machine <bkr --machine>` <fqdn> [--inventory] [*workflow options*] [*options*]
 
 Description
 -----------

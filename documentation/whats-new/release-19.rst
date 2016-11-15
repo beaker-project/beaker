@@ -338,8 +338,8 @@ Beaker 19.1
   :option:`--job-owner <bkr --job-owner>`. Submission delegates can use this 
   option to submit jobs on behalf of other users. (Contributed by Dan 
   Callaghan)
-* :issue:`1118523`: The :program:`bkr list-systems` command now accepts
-  :option:`--host-filter <bkr list-systems --host-filter>`. This option has the 
+* :issue:`1118523`: The :program:`bkr list-systems <bkr system-list>` command now accepts
+  :option:`--host-filter <bkr system-list --host-filter>`. This option has the 
   same functionality as the :option:`--host-filter <bkr --host-filter>` option 
   for :program:`bkr` workflow commands. (Contributed by Dan Callaghan)
 * :issue:`1131429`: By default :program:`beaker-wizard` now suggests excluding
@@ -376,13 +376,14 @@ Beaker 19.1
   invalid username is given in the ``user=""`` attribute of the ``<job/>`` 
   element when submitting a job. (Contributed by Dan Callaghan)
 * :issue:`1167164`: When syntactically invalid XML is passed to :option:`bkr
-  list-systems --xml-filter`, the command now prints a concise error message 
-  instead of an HTML error page. (Contributed by Dan Callaghan)
+  list-systems --xml-filter <bkr system-list --xml-filter>`, the command now
+  prints a concise error message instead of an HTML error page. (Contributed by
+  Dan Callaghan)
 * :issue:`1073266`: Improved the wording of error messages when the lab
   controller daemons fail to start. (Contributed by Dan Callaghan)
-* :issue:`1009377`: The :option:`--help` output for :program:`bkr policy-grant`
-  and :program:`bkr policy-revoke` now lists all possible permission values.  
-  (Contributed by Dan Callaghan)
+* :issue:`1009377`: The :option:`--help <bkr --help>` output for :program:`bkr
+  policy-grant` and :program:`bkr policy-revoke` now lists all possible
+  permission values. (Contributed by Dan Callaghan)
 * :issue:`1142591`: The ``beaker-lab-controller`` package now correctly
   depends on ``syslinux``. This allows Beaker to automatically copy 
   :file:`pxelinux.0` into the TFTP root directory for convenience in new Beaker 
