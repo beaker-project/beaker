@@ -6,68 +6,6 @@
 
 __requires__=['TurboGears']
 
-DESCRIPTION = """ beaker-sync-tasks is a script to sync local Beaker Task RPMs from a remote
-Beaker installation
-"""
-__doc__ = """
-
-beaker-sync-tasks: Tool to sync local Beaker task RPMs from a remote Beaker installation
-========================================================================================
-
-Synopsis
---------
-
-`beaker-sync-tasks` [*options*]
-
-Description
------------
-
-beaker-sync-tasks is a script to sync local task RPMs from a remote Beaker installation
-
-Syncing protocol:
-
-- Task doesn't exist in local: copy it.
-- Task exists in local: Overwrite it, if it is a different version
-  on the remote
-- Tasks which exist on the local and not on the remote are left
-  untouched
-
-Options
--------
-
--h, --help                                     show this help message and exit
-
-Servers:
-  --remote=REMOTE                              Remote Beaker instance
-
-Extra:
-  --force                                      Do not ask before overwriting task RPMs
-  --debug                                      Display messages useful for debugging (verbose)
-
-Examples
---------
-
-Sync tasks from a remote Beaker server and display debug messages:
-
-$ beaker-sync-tasks --remote=http://127.0.0.1/bkr --debug
-
-Don't prompt before beginning task upload:
-
-$ beaker-sync-tasks --remote=http://127.0.0.1/bkr --force
-
-More information
-----------------
-
-Querying the existing tasks: The script communicates with the remote Beaker server via XML-RPC
-calls and directly interacts with the local Beaker database.
-
-Adding new tasks: The tasks to be added to the local Beaker database
-are first downloaded in the task directory (usually,
-/var/www/beaker/rpms). Each of these tasks are then added to the
-Beaker database and finally createrepo is run.
-
-"""
-
 import pwd
 import os
 import sys
@@ -84,9 +22,9 @@ from bkr.common.helpers import siphon
 from bkr.server.model import TaskLibrary, Task
 from bkr.server.util import load_config
 
+from bkr.common import __version__
 __description__ = 'Script to sync local task RPMs from a remote Beaker instance'
 __version__ = '0.1'
-
 
 # Helper function which doesn't need to be a class method
 def find_task_version_url(task_xml):

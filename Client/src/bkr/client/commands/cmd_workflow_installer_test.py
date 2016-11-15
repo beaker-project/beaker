@@ -11,15 +11,15 @@ bkr workflow-installer-test: DEPRECATED workflow to generate a kickstart for tes
 Synopsis
 --------
 
-:program:`bkr workflow-installer-test` (:option:`--family` <family> | :option:`--distro` <distro>)
-    :option:`--arch` <arch> :option:`--template` <kickstart_template> [*workflow options*] [*options*]
+:program:`bkr workflow-installer-test` [*workflow options*] [*options*]
+|    [:option:`--template` <kickstart_template>] 
 
 Description
 -----------
 
 Generates an Anaconda kickstart for the purpose of testing. Uses
 `Jinja2 <http://jinja.pocoo.org/docs/>`_ to render the templates.
-This workflow is deprecated, use :option:`--kickstart` with
+This workflow is deprecated, use :option:`--kickstart <bkr --kickstart>` with
 :program:`bkr workflow-simple` or any other workflow command.
 
 
@@ -58,8 +58,6 @@ The templates understand the following variables::
 * DISTRO
 * VARIANT
 * ARCH
-
-Plus any keys from the :option:`--taskparams`.
 
 See also
 --------

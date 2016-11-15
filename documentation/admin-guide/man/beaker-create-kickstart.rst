@@ -36,7 +36,7 @@ Options
 
    Use <recipeid> as the basis of the kickstart.
 
-.. option:: -f <fqdn>, --system-id <fqdn>
+.. option:: -f <fqdn>, --system <fqdn>
 
    This system, combined with :option:`--distro-tree-id`, form the basis of
    the kickstart. Alternatively, :option:`--recipe-id` can be used.

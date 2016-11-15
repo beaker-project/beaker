@@ -44,6 +44,23 @@ job-list` does. See the :ref:`Options <job-list-options>` section of
 
    Do not perform any deletions.
 
+.. option:: --family <family>
+
+   Delete jobs which ran with distro belonging to <family>, for example
+   ``RedHatEnterpriseLinuxServer5``.
+
+.. option:: --completeDays <days>
+
+   Delete jobs which finished at least <days> ago.
+
+.. option:: --tag <tag>
+
+   Delete jobs which have retention tag <tag>, for example ``scratch``.
+
+.. option:: --product <cpeid>
+
+   Delete jobs which were testing the product identified by <cpeid>.
+
 Common :program:`bkr` options are described in the :ref:`Options 
 <common-options>` section of :manpage:`bkr(1)`.
 

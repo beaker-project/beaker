@@ -89,6 +89,10 @@ These options are applicable to all :program:`bkr` subcommands.
    so that a trusted script can perform actions on behalf of any other
    Beaker user.
 
+.. option:: --help
+
+   Show a brief summary of the command and its available options then exit.
+
 .. _workflow-options:
 
 Workflow options

@@ -203,7 +203,7 @@ Client bug fixes
 * :issue:`1323921`: You can now set ``AUTH_METHOD="none"`` in the client
   configuration file to make :program:`bkr` skip any attempt at authentication.
   This is useful for automated tools which want to perform read-only requests
-  against Beaker, for example workflow commands with the :option:`--dry-run`
+  against Beaker, for example workflow commands with the :option:`--dry-run <bkr --dry-run>`
   option.
   (Contributed by Dan Callaghan)
 

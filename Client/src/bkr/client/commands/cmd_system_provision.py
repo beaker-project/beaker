@@ -14,8 +14,13 @@ Synopsis
 --------
 
 | :program:`bkr system-provision` [*options*]
-|       [:option:`--ks-meta` <variables>] [:option:`--kernel-options` <opts>] [:option:`--kernel-option-post` <opts>] [:option:`--kickstart` <file>]
-|       [--no-reboot] :option:`--distro` <name> <fqdn>
+|       [:option:`--ks-meta` <variables>]
+|       [:option:`--kernel-options` <opts>]
+|       [:option:`--kernel-options-post` <opts>]
+|       [:option:`--kickstart` <file>]
+|       [--no-reboot]
+|       :option:`--distro-tree` <id>
+|       <fqdn>
 
 Description
 -----------
@@ -100,8 +105,7 @@ it::
 History
 -------
 
-Prior to version 0.9.1, this command accepted :option:`--distro` instead of
-:option:`--distro-tree`.
+Prior to version 0.9.1, this command accepted --distro instead of :option:`--distro-tree`.
 
 See also
 --------

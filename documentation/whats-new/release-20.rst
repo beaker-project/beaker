@@ -59,8 +59,8 @@ layout.
 
 (Contributed by Amit Saha in :issue:`1156036`.)
 
-Workflow commands accept :option:`--reserve`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Workflow commands accept :option:`--reserve <bkr --reserve>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A new option :option:`--reserve <bkr --reserve>` is now accepted by 
 :program:`bkr` workflow commands. This option adds the ``<reservesys/>`` 
@@ -73,8 +73,8 @@ For more details about the ``<reservesys/>`` element, refer to
 
 (Contributed by Dan Callaghan in :issue:`1186719`.)
 
-Workflow commands accept wildcards in :option:`--distro`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Workflow commands accept wildcards in :option:`--distro <bkr --distro>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The :program:`bkr` workflow commands now treat the value of the 
 :option:`--distro <bkr --distro>` option as a SQL LIKE pattern (the % character 
@@ -90,8 +90,8 @@ hypervisor field for a system.
 
 (Contributed by Dan Callaghan in :issue:`1206978`.)
 
-New :option:`--proxy-user` option, to authenticate as other users
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+New :option:`--proxy-user <bkr --proxy-user>` option, to authenticate as other users
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This option can only be used when the authenticating user is a member of 
 a group which has been granted "proxy_user" permission by the Beaker 
@@ -329,9 +329,9 @@ Beaker 20.2
   expected effect inside the ``<disk/>`` element in ``<hostRequires/>``. 
   Previously they were ignored. (Contributed by Matt Jia)
 * :issue:`1217158`: The :option:`--pool <bkr list-systems --pool>` option
-  replaces the :option:`--group` option for :program:`bkr list-systems`. The 
-  old option is still accepted as an alias for compatibility. (Contributed by 
-  Dan Callaghan)
+  replaces the :option:`--group <bkr list-systems --group>` option for
+  :program:`bkr list-systems`. The old option is still
+  accepted as an alias for compatibility. (Contributed by Dan Callaghan)
 * :issue:`1219965`: The kickstart templates now define an EFI System Partition
   when using custom partitioning on aarch64, for compatibility with systems 
   which have UEFI firmware. (Contributed by Matt Jia)

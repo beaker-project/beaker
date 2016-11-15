@@ -89,7 +89,7 @@ packages::
 History
 -------
 
-Prior to version 0.9, this command accepted :option:`--install_name` instead of
+Prior to version 0.9, this command accepted --install_name instead of
 :option:`--distro`.
 
 See also
