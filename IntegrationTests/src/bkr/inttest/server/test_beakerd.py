@@ -1846,6 +1846,7 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
         with session.begin():
             recipe = Recipe.query.get(self.recipe.id)
             self.assertEquals(recipe.status, TaskStatus.installing)
+            self.assertIsNotNone(recipe.resource.instance_created)
             instance = self.virt_manager.novaclient.servers.get(recipe.resource.instance_id)
             self.assertTrue(instance.status, u'ACTIVE')
 
