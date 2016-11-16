@@ -82,6 +82,7 @@ class LabControllerTestCase(DatabaseTestCase):
 
     def cleanup_system(self, system):
         with session.begin():
+            session.expire(system)
             system.status = SystemStatus.removed
             system.lab_controller = None
 

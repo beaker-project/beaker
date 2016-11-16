@@ -172,6 +172,7 @@ class PowerTest(LabControllerTestCase):
         quiescent_period = get_conf().get('SLEEP_TIME') * 2.0
         with session.begin():
             system = data_setup.create_system(lab_controller=self.get_lc())
+            self.addCleanup(self.cleanup_system, system)
             system.power.power_type = PowerType.lazy_create(name=u'dummy')
             system.power.power_quiescent_period = quiescent_period
             system.power.power_id = u'' # make power script not sleep
