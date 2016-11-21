@@ -411,7 +411,7 @@ window.SystemResource = Backbone.Model.extend({
         return data;
     },
     resource_summary_fragment: function () {
-        return this.get('system').toHTML();
+        return '<span class="fqdn"></span>';
     }
 });
 
@@ -429,8 +429,8 @@ window.VirtResource = Backbone.Model.extend({
                                                                  this.get('href'),
                                                                  this.os_instance_present())});
         if (!_.isEmpty(this.get('fqdn'))) {
-            result = _.template('<%= fqdn %><br /> (<%= os_instance %>)',
-                                {fqdn: this.get('fqdn'), os_instance: result}
+            result = _.template('<span class="fqdn"></span><br /> (<%= os_instance %>)',
+                                {os_instance: result}
                                );
         }
         return result;
@@ -449,7 +449,7 @@ window.VirtResource = Backbone.Model.extend({
 
 window.GuestResource = Backbone.Model.extend({
     resource_summary_fragment: function () {
-        return this.get('fqdn');
+        return '<span class="fqdn"></span>';
     }
 })
 

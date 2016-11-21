@@ -149,7 +149,7 @@ class TestRecipeView(WebDriverTestCase):
         self.assertEqual(
                 b.find_element_by_xpath('//div[@class="recipe-summary"]/p[2]').text,
                 'Using PurpleUmbrellaLinux5.11-20160428 Server x86_64\n'
-                'on pewlett-hackard-x004.example.com.')
+                'on pewlett-hackard-x004.example.com\n.')
         self.assertEqual(
                 b.find_element_by_xpath('//div[@class="recipe-installation-summary"]/div[1]').text,
                 'Installation of PurpleUmbrellaLinux5.11-20160428 Server x86_64 finished.')
@@ -224,7 +224,7 @@ class TestRecipeView(WebDriverTestCase):
         b = self.browser
         go_to_recipe_view(b, recipe)
         self.assertEqual('Using PurpleUmbrellaLinux5.11-20160428 Server x86_64\n'
-            'on example.openstacklocal\n(OpenStack instance %s).' % recipe.resource.instance_id,
+            'on example.openstacklocal\n\n(OpenStack instance %s).' % recipe.resource.instance_id,
             b.find_element_by_xpath('//div[@class="recipe-summary"]/p[2]').text)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1390409

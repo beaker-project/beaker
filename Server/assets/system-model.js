@@ -222,7 +222,9 @@ window.System = Backbone.Model.extend({
                 new DistroTree(data['reprovision_distro_tree'], {parse: true}) : null);
         return data;
     },
-    _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>view/<%- encodeURIComponent(fqdn) %>"><%- fqdn %></a>'),
+    // We build an absolute URL in the hyperlink so that it works properly when 
+    // copied to the clipboard and pasted elsewhere.
+    _toHTML_template: _.template('<a href="<%- window.location.protocol %>//<%- window.location.host %><%- beaker_url_prefix %>view/<%- encodeURIComponent(fqdn) %>"><%- fqdn %></a>'),
     toHTML: function () {
         return this._toHTML_template(this.attributes);
     },

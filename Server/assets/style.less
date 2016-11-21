@@ -184,6 +184,35 @@ td form, td input, td select, td .input-append, td .input-prepend {
     font-size: @baseFontSize;
 }
 
+// Bordered text inside btn-groups (looks kind of like a static button)
+.btn-group > .bordered-text {
+    font-size: @baseFontSize;
+    line-height: @baseLineHeight;
+    display: inline-block;
+    vertical-align: middle;
+    border: 1px solid @btnBorder;
+    border-bottom-color: darken(@btnBorder, 10%);
+}
+.btn-group > .bordered-text + .btn,
+.btn-group > .btn + .bordered-text {
+    margin-left: -1px;
+}
+.btn-group > .bordered-text:first-child {
+    margin-left: 0;
+    .border-top-left-radius(@baseBorderRadius);
+    .border-bottom-left-radius(@baseBorderRadius);
+}
+.btn-group > .bordered-text:last-child {
+    .border-top-right-radius(@baseBorderRadius);
+    .border-bottom-right-radius(@baseBorderRadius);
+}
+
+// btn-groups inline inside a paragraph
+.btn-group-inline > .btn,
+.btn-group-inline > .bordered-text {
+    padding: 2px 6px 1px 6px;
+}
+
 // buttons in grid cells
 .table .btn {
     white-space: nowrap;

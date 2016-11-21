@@ -30,6 +30,7 @@ window.RecipeSummaryView = Backbone.View.extend({
     className: 'recipe-summary',
     template: JST['recipe-summary'],
     initialize: function () {
+        this.fqdn_view = new RecipeFqdnView({model: this.model});
         this.listenTo(this.model, 'change', this.render);
         this.render();
     },
@@ -37,6 +38,44 @@ window.RecipeSummaryView = Backbone.View.extend({
         var data = _.extend({
             last_result_started: this.model.get_last_result_started()}, this.model.attributes);
         this.$el.html(this.template(data));
+        this.fqdn_view.setElement(this.$('.fqdn').get(0)).render();
+    },
+});
+
+window.RecipeFqdnView = Backbone.View.extend({
+    tagName: 'span',
+    template: JST['recipe-fqdn'],
+    events: {
+        'click .copy-hostname': 'copy_hostname',
+    },
+    initialize: function () {
+        this.listenTo(this.model, 'change:resource', this.render);
+    },
+    render: function () {
+        this.$el.empty().addClass('btn-group btn-group-inline');
+        var resource = this.model.get('resource');
+        if (_.isEmpty(resource))
+            return;
+        var fqdn = resource.get('fqdn');
+        if (_.isEmpty(fqdn))
+            return;
+        this.$el.html(this.template(resource.attributes));
+    },
+    copy_hostname: function (evt) {
+        evt.preventDefault();
+        var resource = this.model.get('resource');
+        if (_.isEmpty(resource))
+            return;
+        var hostname = resource.get('fqdn');
+        var html = (!_.isEmpty(resource.get('system')))
+                 ? resource.get('system').toHTML() : null;
+        $(document).one('copy', function (evt) {
+            evt.preventDefault();
+            evt.originalEvent.clipboardData.setData('text/plain', hostname);
+            if (html)
+                evt.originalEvent.clipboardData.setData('text/html', html);
+        });
+        document.execCommand('copy');
     },
 });
 
