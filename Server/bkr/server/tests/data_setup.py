@@ -544,6 +544,26 @@ def create_completed_job(**kwargs):
     mark_job_complete(job, **kwargs)
     return job
 
+def create_installing_job(**kwargs):
+    job = create_job(**kwargs)
+    mark_job_installing(job, **kwargs)
+    return job
+
+def create_scheduled_job(**kwargs):
+    job = create_job(**kwargs)
+    mark_job_scheduled(job, **kwargs)
+    return job
+
+def create_queued_job(**kwargs):
+    job = create_job(**kwargs)
+    mark_job_queued(job, **kwargs)
+    return job
+
+def create_waiting_job(**kwargs):
+    job = create_job(**kwargs)
+    mark_job_waiting(job, **kwargs)
+    return job
+
 def mark_recipe_complete(recipe, result=TaskResult.pass_,
                          task_status=TaskStatus.completed,
                          start_time=None, finish_time=None, only=False,
@@ -711,6 +731,11 @@ def mark_job_waiting(job, **kwargs):
     for recipeset in job.recipesets:
         for recipe in recipeset.recipes:
             mark_recipe_waiting(recipe, **kwargs)
+
+def mark_job_installing(job, **kwargs):
+    for recipeset in job.recipesets:
+        for recipe in recipeset.recipes:
+            mark_recipe_installing(recipe, **kwargs)
 
 def mark_recipe_installing(recipe, fqdn=None, only=False, install_started=None, **kwargs):
     if install_started is None:

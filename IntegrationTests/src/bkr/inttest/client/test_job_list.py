@@ -9,6 +9,7 @@ from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client, create_client_config, ClientError, \
         ClientTestCase
 import json
+from bkr.server.model import TaskStatus
 
 class JobListTest(ClientTestCase):
 
@@ -96,3 +97,40 @@ class JobListTest(ClientTestCase):
         self.assertRaises(ClientError, run_client, ['bkr', 'job-list', '--mine', \
                                                         '--username', 'xyz',\
                                                         '--password','xyz'])
+
+    def test_cannot_specify_finished_and_unfinished_at_the_same_time (self):
+        try:
+            run_client(['bkr', 'job-list', '--finished', '--unfinished'])
+            self.fail('should raise')
+        except ClientError, e:
+            self.assertEqual(e.status, 2)
+            self.assertIn("Only one of --finished or --unfinished may be specified", e.stderr_output)
+
+    def test_filter_finished_jobs(self):
+        with session.begin():
+            completed_job = data_setup.create_completed_job(task_status=TaskStatus.completed)
+            cancelled_job = data_setup.create_completed_job(task_status=TaskStatus.cancelled)
+            aborted_job = data_setup.create_completed_job(task_status=TaskStatus.aborted)
+            running_job = data_setup.create_running_job()
+        out = run_client(['bkr', 'job-list', '--finished'])
+        self.assertIn(completed_job.t_id, out)
+        self.assertIn(cancelled_job.t_id, out)
+        self.assertIn(aborted_job.t_id, out)
+        self.assertNotIn(running_job.t_id, out)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1175853
+    def test_filter_unfinished_jobs(self):
+        with session.begin():
+            queued_job = data_setup.create_queued_job()
+            running_job = data_setup.create_running_job()
+            waiting_job = data_setup.create_waiting_job()
+            scheduled_job = data_setup.create_scheduled_job()
+            installing_job = data_setup.create_installing_job()
+            completed_job = data_setup.create_completed_job()
+        out = run_client(['bkr', 'job-list', '--unfinished'])
+        self.assertIn(queued_job.t_id, out)
+        self.assertIn(running_job.t_id, out)
+        self.assertIn(waiting_job.t_id, out)
+        self.assertIn(scheduled_job.t_id, out)
+        self.assertIn(installing_job.t_id, out)
+        self.assertNotIn(completed_job.t_id, out)

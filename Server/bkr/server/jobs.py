@@ -9,7 +9,7 @@ from turbogears.database import session
 from turbogears import expose, flash, widgets, validate, validators, redirect, paginate, url
 from cherrypy import response
 from formencode.api import Invalid
-from sqlalchemy import and_
+from sqlalchemy import and_, not_
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server.widgets import myPaginateDataGrid, \
@@ -218,6 +218,9 @@ class Jobs(RPCRoot):
                 Min JobID of the jobs to search
             'maxid'
                 Maximum Job ID of the jobs to search
+            'is_finished'
+                If True, limit to jobs which are finished(completed, aborted, cancelled)
+                If False, limit to jobs which are not finished.
 
         Returns an array of JobIDs of the form ``'J:123'``, suitable to be passed
         to the :meth:`jobs.delete_jobs` method. Does not return deleted jobs.
@@ -240,6 +243,7 @@ class Jobs(RPCRoot):
         whiteboard = filters.get('whiteboard', None)
         mine = filters.get('mine', None)
         limit = filters.get('limit', None)
+        is_finished = filters.get('is_finished', None)
 
         if mine and not identity.not_anonymous():
             raise BX(_('You should be authenticated to use the --mine filter.'))
@@ -266,7 +270,11 @@ class Jobs(RPCRoot):
             jobs = Job.by_owner(owner, jobs)
         if whiteboard:
             jobs = jobs.filter(Job.whiteboard.like(u'%%%s%%' % whiteboard))
-
+        # is_finished is a tri-state value, True limit finished job, False limit unfinished job, None don't limit
+        if is_finished:
+            jobs = jobs.filter(and_(Job.is_finished(), not_(Job.is_dirty)))
+        elif is_finished is False:
+            jobs = jobs.filter(not_(Job.is_finished()))
         jobs = Job.sanitise_jobs(jobs)
 
         if limit:
@@ -274,7 +282,7 @@ class Jobs(RPCRoot):
             jobs = jobs.limit(limit)
 
         jobs = jobs.values(Job.id)
-        
+
         return_value = ['J:%s' % j[0] for j in jobs]
         return return_value
 
