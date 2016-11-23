@@ -583,6 +583,21 @@ class TestRecipeView(WebDriverTestCase):
                 '/div/a[@class="comments-link"]').text
         self.assertEqual(comments_link, '1')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1396874
+    def test_virt_doesnt_show_OS_link_after_reservation_complete(self):
+        with session.begin():
+            start_time = datetime.datetime.utcnow()
+            finish_time = start_time + datetime.timedelta(hours=1)
+            recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_complete(recipe, virt=True, start_time=start_time, finish_time=finish_time)
+
+        b = self.browser
+        go_to_recipe_view(b, recipe, tab='Tasks')
+        summary_without_link_xpath = '//div[@class="recipe-summary"][not(//a[contains(., "OpenStack instance %s")])]' % (recipe.resource.instance_id)
+        b.find_element_by_xpath(summary_without_link_xpath)
+
+
 class TestRecipeViewInstallationTab(WebDriverTestCase):
 
     def setUp(self):
