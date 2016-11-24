@@ -462,11 +462,26 @@ def delete_submission_delegate(username):
     user.remove_submission_delegate(submission_delegate)
     return '', 204
 
+@app.route('/users/+self/keystone-trust', methods=['PUT'])
+@auth_required
+def create_keystone_trust_for_self():
+    """
+    Creates a Keystone trust between the Beaker Keystone account and the
+    currently authenticated user. This allows the Beaker Keystone account to
+    represent the delegated authority of this user when creating virtual
+    machines on OpenStack.
+
+    :jsonparam string openstack_username: OpenStack username.
+    :jsonparam string openstack_password: OpenStack password.
+    :jsonparam string openstack_project_name: OpenStack project name.
+    """
+    return _create_keystone_trust(identity.current.user)
+
 @app.route('/users/<path:username>/keystone-trust', methods=['PUT'])
 @auth_required
 def create_keystone_trust(username):
     """
-    Creats a Keystone trust between the Beaker Keystone account and this user.
+    Creates a Keystone trust between the Beaker Keystone account and this user.
     This allows the Beaker Keystone account to represent the delegated
     authority of this user when creating virtual machines on OpenStack.
 
@@ -476,10 +491,13 @@ def create_keystone_trust(username):
     :jsonparam string openstack_project_name: OpenStack project name.
     """
     user = _get_user(username)
+    return _create_keystone_trust(user)
+
+def _create_keystone_trust(user):
     if not config.get('openstack.identity_api_url'):
         raise BadRequest400("OpenStack Integration is not enabled")
     if not user.can_edit_keystone_trust(identity.current.user):
-        raise Forbidden403('Cannot edit Keystone trust of user %s' % username)
+        raise Forbidden403('Cannot edit Keystone trust of user %s' % user.username)
     data = read_json_request(request)
     if 'openstack_username' not in data:
         raise BadRequest400('No OpenStack username specified')
