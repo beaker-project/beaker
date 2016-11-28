@@ -39,3 +39,14 @@ class UpdateOpenStackTrustTest(ClientTestCase):
         with session.begin():
             session.refresh(self.user)
             self.assertIsNotNone(self.user.openstack_trust_id)
+
+    def test_errors_if_unauthorised(self):
+        try:
+            run_client(['bkr', 'update-openstack-trust',
+                        '--os-username=invalid',
+                        '--os-password=invalid',
+                        '--os-project-name=invalid-project'],
+                       config=self.client_config)
+            self.fail('should raise')
+        except ClientError, e:
+            self.assertIn('Could not authenticate with OpenStack using your credentials', e.stderr_output)

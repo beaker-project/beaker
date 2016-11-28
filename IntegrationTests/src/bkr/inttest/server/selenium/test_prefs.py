@@ -281,3 +281,13 @@ class UserPrefs(WebDriverTestCase):
             self.assertEqual(self.user.notify_broken_system, True)
             self.assertEqual(self.user.notify_group_membership, False)
             self.assertEqual(self.user.notify_reservesys, False)
+
+    def test_virt_set_keystone_trusts_invalid(self):
+        b = self.browser
+        pane = self.go_to_prefs_tab('OpenStack Keystone Trust')
+        pane.find_element_by_name('openstack_username').send_keys('invalid')
+        pane.find_element_by_name('openstack_password').send_keys('invalid')
+        pane.find_element_by_name('openstack_project_name').send_keys('invalid')
+        pane.find_element_by_tag_name('form').submit()
+        self.assertIn('Could not authenticate with OpenStack using your credentials: The request you have made requires authentication.',
+                pane.find_element_by_class_name('alert-error').text)

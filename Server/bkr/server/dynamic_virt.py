@@ -167,13 +167,13 @@ class VirtManager(object):
 
 def create_keystone_trust(username, password, project_name):
     auth_url = config.get('openstack.identity_api_url')
+    trustee = keystoneclient.v3.client.Client(
+            username=config.get('openstack.username'),
+            password=config.get('openstack.password'),
+            auth_url=auth_url)
     try:
         trustor = keystoneclient.v3.client.Client(username=username,
                 password=password, project_name=project_name, auth_url=auth_url)
-        trustee = keystoneclient.v3.client.Client(
-                username=config.get('openstack.username'),
-                password=config.get('openstack.password'),
-                auth_url=auth_url)
         trust = trustor.trusts.create(trustor_user=trustor.user_id,
                                       trustee_user=trustee.user_id,
                                       role_names=trustor.auth_ref.role_names,

@@ -505,8 +505,11 @@ def _create_keystone_trust(user):
         raise BadRequest400('No OpenStack password specified')
     if 'openstack_project_name' not in data:
         raise BadRequest400('No OpenStack project name specified')
-    trust_id = dynamic_virt.create_keystone_trust(data['openstack_username'],
-            data['openstack_password'], data['openstack_project_name'])
+    try:
+        trust_id = dynamic_virt.create_keystone_trust(data['openstack_username'],
+                data['openstack_password'], data['openstack_project_name'])
+    except ValueError as err:
+        raise BadRequest400(u'Could not authenticate with OpenStack using your credentials: %s' % unicode(err))
     user.openstack_trust_id = trust_id
     user.record_activity(user=identity.current.user, service=u'HTTP',
             field=u'OpenStack Trust ID', action=u'Changed')
