@@ -1,5 +1,5 @@
 <% if (!can_edit_keystone_trust) { %>
-    <p>OpenStack Integration is not enabled.</p>
+    <div class="alert alert-info">OpenStack Integration is not enabled.</div>
 <% } else if (openstack_trust_id) { %>
 <p>
     You have created a Keystone Trust for Beaker.
