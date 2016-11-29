@@ -86,21 +86,23 @@ var RecipeExtendReservation = Backbone.View.extend({
         'hidden': 'remove',
     },
     initialize: function () {
+        var remaining_seconds = this.model.get('time_remaining_seconds') > 0 ? this.model.get('time_remaining_seconds') : 1;
+        this.reserve_input = new ReservationDurationSelection({reserve_duration: remaining_seconds});
         this.render();
         this.$el.modal();
-        if(this.model.get('time_remaining_seconds') > 0) {
-            this.$('[name=kill_time]').val(this.model.get('time_remaining_seconds'));
-        }
-        this.$('[name=kill_time]').focus();
+        this.reserve_input.$('input').focus();
     },
     render: function () {
         this.$el.html(this.template(this.model.attributes));
+        this.reserve_input
+            .setElement(this.$('.reservation-duration-widget').get(0))
+            .render();
     },
     submit: function (evt) {
         evt.preventDefault();
         this.$('.sync-status').empty();
         this.$('.modal-footer button').button('loading');
-        var kill_time = this.$('[name=kill_time]').val();
+        var kill_time = this.reserve_input.get_reservation_duration().asSeconds();
         this.model.update_reservation(kill_time)
             .done(_.bind(this.save_success, this))
             .fail(_.bind(this.save_error, this));

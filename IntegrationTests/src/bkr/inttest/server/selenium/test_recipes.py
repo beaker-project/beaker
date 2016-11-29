@@ -801,8 +801,8 @@ class TestRecipeViewReservationTab(WebDriverTestCase):
         tab.find_element_by_xpath('.//button[contains(text(), "Extend the reservation")]')\
                 .click()
         modal = b.find_element_by_class_name('modal')
-        modal.find_element_by_name('kill_time').clear()
-        modal.find_element_by_name('kill_time').send_keys('600')
+        modal.find_element_by_name('reserve_duration').clear()
+        modal.find_element_by_name('reserve_duration').send_keys('600')
         modal.find_element_by_xpath('.//button[text()="Save changes"]').click()
         b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
         with session.begin():
