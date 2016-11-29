@@ -31,7 +31,7 @@ try:
 except ImportError:
     has_keystoneclient = False
 try:
-    import glanceclient
+    import glanceclient.v2.client
     has_glanceclient = True
 except ImportError:
     has_glanceclient = False
@@ -290,7 +290,7 @@ def _glance():
             project_name=project_name, auth_url=auth_url)
     glance_url = keystone.service_catalog.url_for(
             service_type='image', endpoint_type='publicURL')
-    return glanceclient.Client('1', endpoint=glance_url, token=keystone.auth_token)
+    return glanceclient.v2.client.Client(glance_url, token=keystone.auth_token)
 
 def setup_openstack():
     with session.begin():
@@ -303,7 +303,7 @@ def setup_openstack():
                 datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S'),
                 socket.gethostname())
         ConfigItem.by_name(u'guest_name_prefix').set(guest_name_prefix, user=admin_user)
-        ipxe_image.upload_image(_glance(), public=False)
+        ipxe_image.upload_image(_glance(), visibility=u'private')
 
 def cleanup_openstack():
     with session.begin():
