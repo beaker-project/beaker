@@ -88,11 +88,6 @@ class RepeatTimer(Thread):
             self.finished.clear()
 
 
-def curry(f, *arg, **kw):
-    def curried(*more_args, **more_kw):
-        return f(*(arg + more_args), **dict(kw, **more_kw))
-    return curried
-
 class SensitiveUnicode(unicode):
     def __repr__(self):
         return '<repr blocked>'

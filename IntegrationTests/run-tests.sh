@@ -17,10 +17,6 @@ fi
 
 set -x
 
-# If you want to run unittests for beaker client, in your env set BEAKER_CLIENT_TEST_QPID=1,
-# and also set BEAKER_CLIENT_TEST_QPID_BROKER to something reasonable.
-
-
 # pkg_resources.requires() does not work if multiple versions are installed in 
 # parallel. This semi-supported hack using __requires__ is the workaround.
 # http://bugs.python.org/setuptools/issue139

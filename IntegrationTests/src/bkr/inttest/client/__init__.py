@@ -20,8 +20,6 @@ def create_client_config(username=data_setup.ADMIN_USER,
                          password=data_setup.ADMIN_PASSWORD,
                          hub_url=None,
                          auth_method=u'password',
-                         qpid_broker='localhost',
-                         qpid_krb=False,
                          cacert=None):
     if hub_url is None:
         hub_url = get_server_base()
@@ -37,10 +35,6 @@ def create_client_config(username=data_setup.ADMIN_USER,
                 'PASSWORD = "%s"' % password,
                 # Kobo wigs out if HUB_URL ends with a trailing slash, not sure why..
                 'HUB_URL = "%s"' % hub_url.rstrip('/'),
-                'QPID_TOPIC_EXCHANGE = "amqp.topic"',
-                'QPID_HEADERS_EXCHANGE = "amqp.headers"',
-                'QPID_BROKER = "%s"' % qpid_broker,
-                'QPID_KRB = %s' % qpid_krb,
                 cacert_conf
         ]))
 
