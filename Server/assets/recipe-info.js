@@ -25,18 +25,6 @@ window.RecipeQuickInfoView = Backbone.View.extend({
     },
 });
 
-function render_link_by_state(content, href, show_link) {
-    if (show_link) {
-        var link = _.template('<a href="<%= href %>"><%= content %></a>');
-        return link({content: content, href: href});
-    }
-    return content;
-};
-
-function os_instance_gone(resource) {
-    return !_.isEmpty(resource.get('instance_delete'));
-};
-
 window.RecipeSummaryView = Backbone.View.extend({
     tagName: 'div',
     className: 'recipe-summary',
@@ -48,7 +36,6 @@ window.RecipeSummaryView = Backbone.View.extend({
     render: function () {
         var data = _.extend({
             last_result_started: this.model.get_last_result_started()}, this.model.attributes);
-        var data = _.extend(data, {render_link_by_state: render_link_by_state, os_instance_gone: os_instance_gone});
         this.$el.html(this.template(data));
     },
 });

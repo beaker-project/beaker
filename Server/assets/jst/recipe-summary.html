@@ -32,19 +32,10 @@
     Guest recipe hosted by <%= hostrecipe.toHTML() %>.
     <br/>
   <% } %>
-  Using <%= distro_tree.toHTML() %><%
-  if (!_.isEmpty(resource)) { %><%
-      if (!_.isEmpty(resource.get('system'))) {
-          %><br/>on <%= resource.get('system').toHTML() %><%
-      } else if (!_.isEmpty(resource.get('instance_id')) && !_.isEmpty(resource.get('fqdn'))) {
-          %><br/>on <%- resource.get('fqdn') %>
-          <br/>(OpenStack instance <%= render_link_by_state(resource.get('instance_id'), resource.get('href'), os_instance_gone(resource)) %>)<%
-      } else if (!_.isEmpty(resource.get('instance_id'))) {
-          %><br/>on OpenStack instance <%= render_link_by_state(resource.get('instance_id'), resource.get('href'), os_instance_gone(resource)) %><%
-      } else if (!_.isEmpty(resource.get('fqdn'))) {
-          %><br/>on <%- resource.get('fqdn') %><%
-      } %><%
-  } %><%
+  Using <%= distro_tree.toHTML() %>
+  <% if (!_.isEmpty(resource)) { %>
+    <br/>on <%= resource.resource_summary_fragment()
+  %><% } %><%
   if (status == 'Queued' && !_.isEmpty(possible_systems)) { %>
       <br/>on
       <a href="<%- beaker_url_prefix %>recipes/systems?recipe_id=<%- id %>">

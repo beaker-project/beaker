@@ -3939,6 +3939,7 @@ class RecipeResource(DeclarativeMappedObject):
     def __json__(self):
         return {
             'fqdn': self.fqdn,
+            'type': self.type,
         }
 
     @staticmethod

@@ -185,6 +185,19 @@ window.Recipe = Backbone.Model.extend({
         if (options.url)
             this.url = options.url;
     },
+    _create_resource: function (data) {
+        switch (data['type']) {
+            case 'virt':
+                resource = new VirtResource(data, {parse: true});
+                break;
+            case 'guest':
+                resource = new GuestResource(data, {parse: true});
+                break;
+            default:
+                resource = new SystemResource(data, {parse: true});
+        }
+        return resource;
+    },
     parse: function (data) {
         var recipe = this;
         if (!_.isEmpty(data['recipeset'])) {
@@ -229,11 +242,11 @@ window.Recipe = Backbone.Model.extend({
         }
         if (!_.isEmpty(data['resource'])) {
             if (this.get('resource')) {
-                var resource = this.get('resource') || new RecipeResource();
+                var resource = this.get('resource');
                 resource.set(resource.parse(data['resource']));
                 data['resource'] = resource;
             } else {
-                data['resource'] = new RecipeResource(data['resource'], {parse: true});
+                data['resource'] = this._create_resource(data['resource']);
             }
         }
         if (!_.isEmpty(data['installation'])) {
@@ -392,16 +405,53 @@ window.RecipeTaskResult = Backbone.Model.extend({
     },
 });
 
-window.RecipeResource = Backbone.Model.extend({
+window.SystemResource = Backbone.Model.extend({
     parse: function (data) {
         data['system'] = !_.isEmpty(data['system']) ? new System(data['system']) : null;
-        if (data['instance_created']) {
+        return data;
+    },
+    resource_summary_fragment: function () {
+        return this.get('system').toHTML();
+    }
+});
+
+window.VirtResource = Backbone.Model.extend({
+    parse: function (data) {
+        if (!_.isEmpty(data['instance_created'])) {
             var parsed = moment.utc(data['instance_created']);
             data['instance_created'] = parsed.isSame(this.get('instance_created')) ? this.get('instance_created') : parsed;
         }
         return data;
     },
+    resource_summary_fragment: function () {
+        var result = _.template('OpenStack instance <%= link %>',
+                                {link: this.render_link_by_state(this.get('instance_id'),
+                                                                 this.get('href'),
+                                                                 this.os_instance_gone())});
+        if (!_.isEmpty(this.get('fqdn'))) {
+            result = _.template('<%= fqdn %><br /> (<%= os_instance %>)',
+                                {fqdn: this.get('fqdn'), os_instance: result}
+                               );
+        }
+        return result;
+    },
+    render_link_by_state: function(content, href, show_link) {
+        if (show_link) {
+            var link = _.template('<a href="<%= href %>"><%= content %></a>');
+            return link({content: content, href: href});
+        }
+        return content;
+    },
+    os_instance_gone: function() {
+        return !_.isEmpty(this.get('instance_delete'));
+    }
 });
+
+window.GuestResource = Backbone.Model.extend({
+    resource_summary_fragment: function () {
+        return this.get('fqdn');
+    }
+})
 
 window.RecipeReservationRequest = Backbone.Model.extend({
     initialize: function (attributes, options) {
