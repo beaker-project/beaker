@@ -1868,6 +1868,27 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
                     tolerance=datetime.timedelta(seconds=10),
                     reference=datetime.datetime.utcnow() + datetime.timedelta(seconds=3000))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1397649
+    def test_cheapest_OpenStack_flavor_should_be_picked(self):
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        beakerd.provision_virt_recipes()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            recipe = Recipe.query.get(self.recipe.id)
+            instance = self.virt_manager.novaclient.servers.get(recipe.resource.instance_id)
+            available_flavors = self.virt_manager.available_flavors()
+            #remove the flavor that has no disk.
+            for flavor in available_flavors:
+                if flavor.disk == 0:
+                    available_flavors.remove(flavor)
+            cheapest_flavor = sorted(available_flavors, key=lambda flavor: flavor.ram)[0]
+            instance_flavor = self.virt_manager.novaclient.flavors.get(instance.flavor['id'])
+            self.assertEquals(instance_flavor.ram, cheapest_flavor.ram)
+            self.assertEquals(instance_flavor.id, cheapest_flavor.id)
+
 @patch('bkr.server.tools.beakerd.metrics')
 class TestBeakerdMetrics(DatabaseTestCase):
 

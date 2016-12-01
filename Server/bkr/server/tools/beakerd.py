@@ -621,7 +621,6 @@ def provision_virt_recipe(recipe_id):
         # We want them in order of smallest to largest, so that we can pick the
         # smallest flavor that satisfies the recipe's requirements. Sorting by RAM
         # is a decent approximation.
-        available_flavors = sorted(available_flavors, key=lambda flavor: flavor.ram)
         possible_flavors = XmlHost.from_string(recipe.host_requires)\
             .filter_openstack_flavors(available_flavors, manager.lab_controller)
         if not possible_flavors:
@@ -629,6 +628,7 @@ def provision_virt_recipe(recipe_id):
                     recipe.id)
             recipe.virt_status = RecipeVirtStatus.precluded
             return
+        possible_flavors = sorted(possible_flavors, key=lambda flavor: flavor.ram)
         flavor = possible_flavors[0]
         vm_name = '%srecipe-%s' % (
                 ConfigItem.by_name(u'guest_name_prefix').current_value(u'beaker-'),
