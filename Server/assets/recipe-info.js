@@ -59,7 +59,10 @@ window.RecipeFqdnView = Backbone.View.extend({
         var fqdn = resource.get('fqdn');
         if (_.isEmpty(fqdn))
             return;
-        this.$el.html(this.template(resource.attributes));
+        if (fqdn.endsWith('.openstacklocal')) {
+            fqdn = resource.get('floating_ip');
+        }
+        this.$el.html(this.template(_.extend(resource.attributes, {fqdn: fqdn})));
     },
     copy_hostname: function (evt) {
         evt.preventDefault();

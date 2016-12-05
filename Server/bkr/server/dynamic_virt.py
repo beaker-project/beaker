@@ -94,11 +94,13 @@ class VirtManager(object):
             log.info('Created %r', instance)
             try:
                 self._wait_for_build(instance)
+                self._assign_floating_ip(net.floating_ip.get('id'), instance)
                 # would be nice if nova let us build an instance without starting it
                 instance.stop()
                 self._wait_for_stop(instance)
                 return VirtResource(uuid.UUID(instance.id), uuid.UUID(net.network_id),
                         uuid.UUID(net.subnet_id), uuid.UUID(net.router_id),
+                        net.floating_ip.get('floating_ip_address'),
                         self.lab_controller)
             except:
                 exc_type, exc_value, exc_tb = sys.exc_info()
@@ -146,6 +148,18 @@ class VirtManager(object):
             raise RuntimeError('%r failed to delete, status %s'
                     % (instance, instance.status))
 
+    def _get_instance_port(self, instance_id):
+        ports = self.neutronclient.list_ports(device_id=instance_id)['ports']
+        # should be only one port associated with the instance
+        assert len(ports) == 1
+        return ports[0]
+
+    def _assign_floating_ip(self, floating_ip, instance):
+        port = self._get_instance_port(instance.id)
+        self.neutronclient.update_floatingip(floating_ip, {'floatingip': {
+                'port_id': port['id']}})
+        log.info('Associated floating ip %r to %r', floating_ip, instance)
+
     def start_vm(self, instance_id):
         self.novaclient.servers.start(instance_id)
 
@@ -157,6 +171,9 @@ class VirtManager(object):
                 {'subnet_id': str(vm.subnet_id)})
         self.neutronclient.delete_router(str(vm.router_id))
         self.neutronclient.delete_network(str(vm.network_id))
+        fips = self.neutronclient.list_floatingips(floating_ip_address=vm.floating_ip)
+        for fip in fips['floatingips']:
+            self.neutronclient.delete_floatingip(fip['id'])
 
     def get_console_output(self, instance_id, length):
         return self.novaclient.servers.get_console_output(instance_id,
@@ -194,6 +211,7 @@ class VirtNetwork(object):
         self.router_id = None
         self.subnet_id = None
         self.interface_id = None
+        self.floating_ip = None
 
     def __repr__(self):
         return '%s(name=%r, network_id=%r, router_id=%r, subnet_id=%r, \
@@ -220,8 +238,14 @@ class VirtNetwork(object):
         subnet_info = {'name': self.name, 'network_id': network_id, 'cidr': cidr,
                   'ip_version': 4}
         subnet = self.neutron.create_subnet({'subnet': subnet_info})
-        log.info('Created subnet %r',subnet)
+        log.info('Created subnet %r', subnet)
         return subnet['subnet']['id']
+
+    def _create_floating_ip(self, network_id):
+        fip = self.neutron.create_floatingip({'floatingip': {
+                'floating_network_id': network_id}})
+        log.info('Created floating ip %r', fip)
+        return fip['floatingip']
 
     def _add_interface_to_router(self, router_id, subnet_id):
         interface = self.neutron.add_interface_router(router_id, {
@@ -241,6 +265,7 @@ class VirtNetwork(object):
         self.subnet_id = self._create_subnet(self.network_id)
         self.interface_id = self._add_interface_to_router(self.router_id,
                 self.subnet_id)
+        self.floating_ip = self._create_floating_ip(external_network.get('id'))
 
     def _cleanup(self):
         try:
@@ -250,6 +275,8 @@ class VirtNetwork(object):
                 self.neutron.delete_router(self.router_id)
             if self.network_id:
                 self.neutron.delete_network(self.network_id)
+            if self.floating_ip:
+                self.neutron.delete_floatingip(self.floating_ip.get('id'))
         except Exception:
             log.exception('Failed to clean up network %s, leaked!', self.name)
             # suppress this exception so the original one is not masked

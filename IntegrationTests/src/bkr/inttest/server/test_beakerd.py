@@ -1833,16 +1833,19 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
     def tearDown(self):
         with session.begin():
             recipe = Recipe.query.get(self.recipe.id)
-            if recipe.resource:
+            if recipe.resource and not recipe.resource.instance_deleted:
                 self.virt_manager.destroy_vm(recipe.resource)
 
-    def test_openstack_instance_created(self):
+    def _run_beakerd_once(self):
         beakerd.process_new_recipes()
         beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
         beakerd.update_dirty_jobs()
         beakerd.provision_virt_recipes()
         beakerd.update_dirty_jobs()
+
+    def test_openstack_instance_created(self):
+        self._run_beakerd_once()
         with session.begin():
             recipe = Recipe.query.get(self.recipe.id)
             self.assertEquals(recipe.status, TaskStatus.installing)
@@ -1852,12 +1855,7 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1361936
     def test_after_reboot_watchdog_killtime_extended_on_virt_recipes(self):
-        beakerd.process_new_recipes()
-        beakerd.update_dirty_jobs()
-        beakerd.queue_processed_recipesets()
-        beakerd.update_dirty_jobs()
-        beakerd.provision_virt_recipes()
-        beakerd.update_dirty_jobs()
+        self._run_beakerd_once()
         with session.begin():
             recipe = Recipe.query.get(self.recipe.id)
             self.assertEquals(recipe.status, TaskStatus.installing)
@@ -1888,6 +1886,65 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
             instance_flavor = self.virt_manager.novaclient.flavors.get(instance.flavor['id'])
             self.assertEquals(instance_flavor.ram, cheapest_flavor.ram)
             self.assertEquals(instance_flavor.id, cheapest_flavor.id)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1396851
+    def test_floating_ip_is_assigned(self):
+        self._run_beakerd_once()
+        with session.begin():
+            recipe = Recipe.query.get(self.recipe.id)
+            port = self.virt_manager._get_instance_port(str(recipe.resource.instance_id))
+            fips = self.virt_manager.neutronclient.list_floatingips(port_id=port['id'])
+            # the port of the instance should be associated with a floating ip
+            self.assertEquals(len(fips['floatingips']), 1)
+            self.assertEquals(fips['floatingips'][0]['floating_ip_address'],
+                              str(recipe.resource.floating_ip))
+
+    def test_cleanup_openstack(self):
+        self._run_beakerd_once()
+        with session.begin():
+            recipe = Recipe.query.get(self.recipe.id)
+            instance = self.virt_manager.novaclient.servers.get(recipe.resource.instance_id)
+            self.assertTrue(instance.status, u'ACTIVE')
+            recipe.recipeset.job.cancel()
+            recipe.recipeset.job.update_status()
+        # the instance should be deleted
+        try:
+            self.virt_manager.novaclient.servers.get(recipe.resource.instance_id)
+            self.fail('should raise')
+        except Exception, e:
+            self.assertIn('Instance %s could not be found' % recipe.resource.instance_id,
+                    e.message)
+        # the network should be deleted
+        try:
+            self.virt_manager.neutronclient.show_network(recipe.resource.network_id)
+            self.fail('should raise')
+        except Exception, e:
+            # neutronclient on RHEL7+ raise NetworkNotFoundClient for missing nets
+            if hasattr(e, 'status_code'):
+                self.assertEquals(e.status_code, 404)
+            else:
+                self.assertEquals(e.response.status_code, 404)
+        # the subnet should be deleted
+        try:
+            self.virt_manager.neutronclient.show_subnet(recipe.resource.subnet_id)
+            self.fail('should raise')
+        except Exception, e:
+            if hasattr(e, 'status_code'):
+                self.assertEquals(e.status_code, 404)
+            else:
+                self.assertEquals(e.response.status_code, 404)
+        # the router should be deleted
+        try:
+            self.virt_manager.neutronclient.show_router(recipe.resource.router_id)
+            self.fail('should raise')
+        except Exception, e:
+            if hasattr(e, 'status_code'):
+                self.assertEquals(e.status_code, 404)
+            else:
+                self.assertEquals(e.response.status_code, 404)
+        # the floating ip should be deleted
+        self.assertFalse(self.virt_manager.neutronclient.list_floatingips(
+                floating_ip_address=recipe.resource.floating_ip)['floatingips'])
 
 @patch('bkr.server.tools.beakerd.metrics')
 class TestBeakerdMetrics(DatabaseTestCase):

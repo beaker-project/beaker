@@ -213,3 +213,22 @@ class MACAddress(TypeDecorator):
         if value is None:
             return value
         return netaddr.EUI(value, dialect=mac_unix_padded_dialect)
+
+class IPAddress(TypeDecorator):
+    """
+    Database type for IP addresses. Stores them as raw integers, which 
+    lets us do arithmetic on them in the database.
+    """
+    impl = BigInteger
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return value
+        if isinstance(value, netaddr.IPAddress):
+            return int(value)
+        return int(netaddr.IPAddress(value))
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return value
+        return netaddr.IPAddress(value)

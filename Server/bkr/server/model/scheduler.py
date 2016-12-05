@@ -43,7 +43,7 @@ from bkr.server.helpers import make_link, make_fake_link
 from bkr.server.hybrid import hybrid_method, hybrid_property
 from bkr.server.installopts import InstallOptions, global_install_options
 from bkr.server.util import absolute_url
-from .types import (UUID, MACAddress, TaskResult, TaskStatus, TaskPriority,
+from .types import (UUID, MACAddress, IPAddress, TaskResult, TaskStatus, TaskPriority,
                     ResourceType, RecipeVirtStatus, mac_unix_padded_dialect, SystemStatus,
                     RecipeReservationCondition)
 from .base import DeclarativeMappedObject
@@ -4054,6 +4054,7 @@ class VirtResource(RecipeResource):
     network_id = Column(UUID, nullable=True)
     subnet_id = Column(UUID, nullable=True)
     router_id = Column(UUID, nullable=True)
+    floating_ip = Column(IPAddress(), nullable=True, default=None)
     instance_created = Column(DateTime, nullable=True, default=None)
     instance_deleted = Column(DateTime, nullable=True, default=None)
     lab_controller_id = Column(Integer, ForeignKey('lab_controller.id',
@@ -4067,7 +4068,8 @@ class VirtResource(RecipeResource):
             instance_id = uuid.UUID(instance_id)
         return cls.query.filter(cls.instance_id == instance_id).one()
 
-    def __init__(self, instance_id, network_id, subnet_id, router_id, lab_controller):
+    def __init__(self, instance_id, network_id, subnet_id, router_id, floating_ip,
+        lab_controller):
         super(VirtResource, self).__init__()
         if isinstance(instance_id, basestring):
             instance_id = uuid.UUID(instance_id)
@@ -4081,6 +4083,7 @@ class VirtResource(RecipeResource):
         if isinstance(router_id, basestring):
             router_id = uuid.UUID(router_id)
         self.router_id = router_id
+        self.floating_ip = floating_ip
         self.lab_controller = lab_controller
 
     @validates('network_id')
@@ -4101,6 +4104,12 @@ class VirtResource(RecipeResource):
             raise ValueError('OpenStack instance must have an associated router')
         return router_id
 
+    @validates('floating_ip')
+    def validate_floating_ip(self, key, floating_ip):
+        if not floating_ip:
+            raise ValueError('OpenStack instance must have an associated floating ip address')
+        return floating_ip
+
     def __repr__(self):
         return '%s(fqdn=%r, instance_id=%r, lab_controller=%r)' % (
                 self.__class__.__name__, self.fqdn, self.instance_id,
@@ -4109,6 +4118,7 @@ class VirtResource(RecipeResource):
     def __json__(self):
         data = super(VirtResource, self).__json__()
         data['instance_id'] = unicode(self.instance_id)
+        data['floating_ip'] = unicode(self.floating_ip)
         data['instance_created'] = self.instance_created
         data['instance_deleted'] = self.instance_deleted
         data['href'] = self.href
@@ -4119,7 +4129,10 @@ class VirtResource(RecipeResource):
         span = Element('span')
         span.text = u''
         if self.fqdn:
-            span.text += self.fqdn + u' '
+            if self.fqdn.endswith('.openstacklocal'):
+                span.text += unicode(self.floating_ip) + u' '
+            else:
+                span.text += self.fqdn + u' '
         span.text += u'(OpenStack instance '
         if not self.href:
             span.text += unicode(self.instance_id) + u')'

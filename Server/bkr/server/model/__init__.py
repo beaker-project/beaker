@@ -19,7 +19,8 @@ from .base import DeclarativeMappedObject, MappedObject
 from .migration import DataMigration
 from .types import (TaskStatus, CommandStatus, TaskResult, TaskPriority,
         SystemStatus, SystemType, ReleaseAction, ImageType, ResourceType,
-        RecipeVirtStatus, SystemPermission, UUID, MACAddress, GroupMembershipType)
+        RecipeVirtStatus, SystemPermission, UUID, MACAddress, IPAddress,
+        GroupMembershipType)
 from .activity import Activity, ActivityMixin
 from .config import ConfigItem
 from .identity import (User, Group, Permission, SSHPubKey,

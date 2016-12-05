@@ -220,11 +220,11 @@ class TestRecipeView(WebDriverTestCase):
             recipe = data_setup.create_recipe(distro_tree=self.distro_tree)
             data_setup.create_job_for_recipes([recipe])
             data_setup.mark_recipe_installing(recipe, virt=True)
-            recipe.resource.fqdn = u'example.openstacklocal'
+            recipe.resource.fqdn = u'example.openstacklocal.invalid'
         b = self.browser
         go_to_recipe_view(b, recipe)
         self.assertEqual('Using PurpleUmbrellaLinux5.11-20160428 Server x86_64\n'
-            'on example.openstacklocal\n\n(OpenStack instance %s).' % recipe.resource.instance_id,
+            'on example.openstacklocal.invalid\n\n(OpenStack instance %s).' % recipe.resource.instance_id,
             b.find_element_by_xpath('//div[@class="recipe-summary"]/p[2]').text)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1390409
@@ -609,6 +609,19 @@ class TestRecipeView(WebDriverTestCase):
         summary_link = '//div[@class="recipe-summary"]/p/a[contains(., "%s")]' % (recipe.resource.instance_id)
         b.find_element_by_xpath(summary_link)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1396851
+    def test_virt_shows_ip_address_if_the_fqdn_can_not_be_resolved(self):
+        with session.begin():
+            start_time = datetime.datetime.utcnow()
+            finish_time = start_time + datetime.timedelta(hours=1)
+            recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_complete(recipe, virt=True)
+            recipe.resource.fqdn = 'invalid.openstacklocal'
+        b = self.browser
+        go_to_recipe_view(b, recipe, tab='Tasks')
+        b.find_element_by_xpath('//div[@class="recipe-summary"]'
+                '/p[contains(., "%s")]' % recipe.resource.floating_ip)
 
 class TestRecipeViewInstallationTab(WebDriverTestCase):
 
