@@ -163,8 +163,9 @@ class SystemPoolEditTest(WebDriverTestCase):
         modal.find_element_by_xpath('.//p[text()="Are you sure you want to '
                 'delete this pool?"]')
         modal.find_element_by_xpath('.//button[text()="OK"]').click()
-        self.assertIn('System pool %s does not exist' % pool.name,
-                b.find_element_by_class_name('alert-error').text)
+        b.find_element_by_xpath('//div[contains(@class, "alert-error") and '
+                'h4/text()="Failed to delete" and '
+                'contains(string(.), "System pool %s does not exist")]' % pool.name)
 
     def test_page_info_display(self):
         self.go_to_pool_edit()
