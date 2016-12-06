@@ -7,7 +7,7 @@ from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client, create_client_config, ClientError, \
         ClientTestCase
-from bkr.server.model import TaskStatus, Job, User, SystemPermission
+from bkr.server.model import TaskStatus, Job, User, SystemPermission, SystemStatus
 from bkr.server.tools import beakerd
 
 class RemoveAccountTest(ClientTestCase):
@@ -63,7 +63,7 @@ class RemoveAccountTest(ClientTestCase):
             owned_system = data_setup.create_system(owner=user)
             loaned_system = data_setup.create_system()
             loaned_system.loaned = user
-            reserved_system = data_setup.create_system(status=u'Manual')
+            reserved_system = data_setup.create_system(status=SystemStatus.manual)
             reserved_system.reserve_manually(service=u'testdata', user=user)
             reserved_system.custom_access_policy.add_rule(
                     SystemPermission.reserve, user=user)

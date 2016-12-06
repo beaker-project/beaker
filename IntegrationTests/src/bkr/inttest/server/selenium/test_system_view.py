@@ -35,7 +35,7 @@ class SystemViewTestWD(WebDriverTestCase):
             self.system_owner = data_setup.create_user()
             self.unprivileged_user = data_setup.create_user(password=u'password')
             self.system = data_setup.create_system(lab_controller=self.lab_controller,
-                    owner=self.system_owner, status=u'Automated', arch=u'i386')
+                    owner=self.system_owner, status=SystemStatus.automated, arch=u'i386')
             self.distro_tree = data_setup.create_distro_tree(
                     lab_controllers=[self.lab_controller])
         self.browser = self.get_browser()
@@ -843,11 +843,13 @@ class SystemViewTestWD(WebDriverTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=664482
     def test_cannot_change_lab_controller_while_system_in_use(self):
         with session.begin():
-            self.system.reserve_manually(service=u'testdata',
-                                         user=data_setup.create_user())
+            system = data_setup.create_system(lab_controller=self.lab_controller,
+                                              status=SystemStatus.manual)
+            system.reserve_manually(service=u'testdata',
+                                    user=data_setup.create_user())
         b = self.browser
         login(b)
-        self.go_to_system_view(tab='Essentials')
+        self.go_to_system_view(system=system, tab='Essentials')
         tab = b.find_element_by_id('essentials')
         BootstrapSelect(b.find_element_by_name('lab_controller_id'))\
             .select_by_visible_text('(none)')
@@ -1137,7 +1139,8 @@ class SystemStatusHTTPTest(DatabaseTestCase):
 
     def test_it(self):
         with session.begin():
-            system = data_setup.create_system(status=u'Automated')
+            system = data_setup.create_system(lab_controller=data_setup.create_labcontroller(),
+                                              status=SystemStatus.manual)
             reserved_by = data_setup.create_user(u'dracula')
             loaned_to = data_setup.create_user(u'wolfman')
             system.reserve_manually(user=reserved_by, service=u'testdata')
@@ -1146,7 +1149,7 @@ class SystemStatusHTTPTest(DatabaseTestCase):
         response = requests.get(get_server_base() + 'systems/%s/status' % system.fqdn)
         response.raise_for_status()
         json = response.json()
-        self.assertEquals(json['condition'], 'Automated')
+        self.assertEquals(json['condition'], 'Manual')
         reservation_info = json['current_reservation']
         self.assertEquals(reservation_info['user_name'], u'dracula') # Beaker 0.15.3
         self.assertEquals(reservation_info['user']['user_name'], 'dracula') # Beaker 19

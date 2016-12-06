@@ -1017,7 +1017,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
         self._ensure_user_is_authenticated(user)
         # Manual reservations are permitted only for systems that are
         # either not automated or are currently loaned to this user
-        if (self.status != SystemStatus.automated or
+        if (self.status == SystemStatus.manual or
               (self.loaned and self.loaned == user)):
             return self.can_reserve(user)
         return False

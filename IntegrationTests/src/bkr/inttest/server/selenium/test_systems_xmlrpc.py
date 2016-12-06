@@ -49,7 +49,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
     def test_cannot_reserve_system_in_use(self):
         with session.begin():
             user = data_setup.create_user(password=u'password')
-            system = data_setup.create_system(owner=user, status=u'Manual', shared=True)
+            system = data_setup.create_system(owner=user, status=SystemStatus.manual, shared=True)
             system.user = User.by_user_name(data_setup.ADMIN_USER)
         server = self.get_server()
         server.auth.login_password(user.user_name, 'password')
@@ -64,7 +64,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
             user = data_setup.create_user(password=u'password')
             system = data_setup.create_system(
                     owner=User.by_user_name(data_setup.ADMIN_USER),
-                    status=u'Manual', shared=True)
+                    status=SystemStatus.manual, shared=True)
             self.assert_(system.user is None)
         server = self.get_server()
         server.auth.login_password(user.user_name, 'password')
@@ -88,7 +88,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
             user = data_setup.create_user(password=u'password')
             system = data_setup.create_system(
                     owner=User.by_user_name(data_setup.ADMIN_USER),
-                    status=u'Manual', shared=True)
+                    status=SystemStatus.manual, shared=True)
             self.assert_(system.user is None)
         server = self.get_server()
         server.auth.login_password(user.user_name, 'password')
@@ -107,7 +107,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
             user = data_setup.create_user(password=u'notused')
             system = data_setup.create_system(
                     owner=User.by_user_name(data_setup.ADMIN_USER),
-                    status=u'Manual', shared=True)
+                    status=SystemStatus.manual, shared=True)
             self.assert_(system.user is None)
         server = self.get_server()
         server.auth.login_password(service_user.user_name, 'password',
@@ -144,7 +144,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
         with session.begin():
             system = data_setup.create_system(
                     owner=User.by_user_name(data_setup.ADMIN_USER),
-                    status=u'Manual', shared=True)
+                    status=SystemStatus.manual, shared=True)
             user = data_setup.create_user(password=u'password')
             other_user = data_setup.create_user()
             system.reserve_manually(service=u'testdata', user=other_user)
@@ -160,7 +160,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
         with session.begin():
             system = data_setup.create_system(
                     owner=User.by_user_name(data_setup.ADMIN_USER),
-                    status=u'Manual', shared=True)
+                    status=SystemStatus.manual, shared=True)
             user = data_setup.create_user(password=u'password')
             system.reserve_manually(service=u'testdata', user=user)
         server = self.get_server()
@@ -187,7 +187,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
         with session.begin():
             system = data_setup.create_system(
                     owner=User.by_user_name(data_setup.ADMIN_USER),
-                    status=u'Manual', shared=True)
+                    status=SystemStatus.manual, shared=True)
             user = data_setup.create_user(password=u'password')
             system.reserve_manually(service=u'testdata', user=user)
         server = self.get_server()
@@ -355,7 +355,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                 arch=u'i386', lab_controllers=[self.lab_controller])
         self.usable_system = data_setup.create_system(arch=u'i386',
                 owner=User.by_user_name(data_setup.ADMIN_USER),
-                status=u'Manual', shared=True)
+                status=SystemStatus.manual, shared=True)
         data_setup.configure_system_power(self.usable_system, power_type=u'drac',
                 address=u'nowhere.example.com', user=u'teh_powz0r',
                 password=u'onoffonoff', power_id=u'asdf')
@@ -391,7 +391,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         with session.begin():
             system = data_setup.create_system(
                     owner=User.by_user_name(data_setup.ADMIN_USER),
-                    status=u'Manual', shared=True)
+                    status=SystemStatus.manual, shared=True)
             user = data_setup.create_user(password=u'password')
             other_user = data_setup.create_user()
             system.user = other_user

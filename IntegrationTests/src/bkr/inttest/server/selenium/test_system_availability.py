@@ -21,6 +21,16 @@ class SystemAvailabilityTest(WebDriverTestCase):
             self.distro_tree = data_setup.create_distro_tree(
                     lab_controllers=[self.lc])
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1401749
+    def test_cant_take_broken_system(self):
+        with session.begin():
+            owner = data_setup.create_user(password=u'testing')
+            system = data_setup.create_system(status=SystemStatus.broken,
+                                              lab_controller=self.lc)
+        b = self.browser
+        login(b, user=owner.user_name, password='testing')
+        self.check_cannot_take(system)
+
     def test_own_system(self):
         with session.begin():
             owner = data_setup.create_user(password=u'testing')

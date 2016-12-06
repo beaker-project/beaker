@@ -10,7 +10,7 @@ import datetime
 from unittest2 import SkipTest
 import requests
 from bkr.server.model import session, SystemPermission, TaskStatus, User, \
-        SSHPubKey
+        SSHPubKey, SystemStatus
 from bkr.server import dynamic_virt
 from bkr.inttest import data_setup, DatabaseTestCase, get_server_base
 from bkr.inttest.server.requests_utils import login as requests_login, \
@@ -533,7 +533,7 @@ class UserHTTPTest(DatabaseTestCase):
             owned_system = data_setup.create_system(owner=user)
             loaned_system = data_setup.create_system()
             loaned_system.loaned = user
-            reserved_system = data_setup.create_system(status=u'Manual')
+            reserved_system = data_setup.create_system(status=SystemStatus.manual)
             reserved_system.reserve_manually(service=u'testdata', user=user)
             reserved_system.custom_access_policy.add_rule(
                     SystemPermission.reserve, user=user)
