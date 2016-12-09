@@ -1188,3 +1188,20 @@ class SystemActivityHTTPTest(DatabaseTestCase):
                 headers={'Accept': 'application/json'})
         self.assertEquals(response.status_code, 302)
         self.assertEquals(response.headers['Location'], expected_redirect)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1401964
+    def test_filter_by_activity_id_range(self):
+        with session.begin():
+            system = data_setup.create_system()
+            excluded_activity = system.record_activity(service=u'testdata',
+                    field=u'nonsense', action=u'fire')
+            included_activity = system.record_activity(service=u'testdata',
+                    field=u'nonsense', action=u'fire')
+        url = (get_server_base() +
+                'systems/%s/activity/?q=id:[%s TO *]' %
+                (system.fqdn, included_activity.id))
+        response = requests.get(url, allow_redirects=False,
+                headers={'Accept': 'application/json'})
+        results = [activity['id'] for activity in response.json()['entries']]
+        self.assertIn(included_activity.id, results)
+        self.assertNotIn(excluded_activity.id, results)

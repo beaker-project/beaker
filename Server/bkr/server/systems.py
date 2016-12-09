@@ -1191,6 +1191,8 @@ def get_system_command_queue(fqdn):
 
     The following fields are supported for filtering and sorting:
 
+    ``id``
+        ID of the power command.
     ``user``
         Username of the user who performed the action.
     ``user.user_name``
@@ -1228,6 +1230,7 @@ def get_system_command_queue(fqdn):
     query = query.outerjoin(Command.user)\
             .options(contains_eager(Command.user))
     json_result = json_collection(query, columns={
+        'id': Command.id,
         'user': User.user_name,
         'user.user_name': User.user_name,
         'user.email_address': User.email_address,
@@ -1297,6 +1300,8 @@ def get_system_activity(fqdn):
 
     The following fields are supported for filtering and sorting:
 
+    ``id``
+        ID of the activity.
     ``user``
         Username of the user who performed the action.
     ``user.user_name``
@@ -1325,6 +1330,7 @@ def get_system_activity(fqdn):
     query = query.outerjoin(SystemActivity.user)\
             .options(contains_eager(SystemActivity.user))
     json_result = json_collection(query, columns={
+        'id': SystemActivity.id,
         'user': User.user_name,
         'user.user_name': User.user_name,
         'user.email_address': User.email_address,

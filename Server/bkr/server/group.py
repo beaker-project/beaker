@@ -329,6 +329,8 @@ def get_groups():
 
     The following fields are supported for filtering and sorting:
 
+    ``id``
+        ID of the group.
     ``group_name``
         Symbolic name of the group.
     ``display_name``
@@ -341,6 +343,7 @@ def get_groups():
     query = query.options(joinedload('user_group_assocs'),
             joinedload('user_group_assocs.user'))
     json_result = json_collection(query, columns={
+        'id': Group.id,
         'group_name': Group.group_name,
         'display_name': Group.display_name,
         'created': Group.created,

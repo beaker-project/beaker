@@ -121,6 +121,8 @@ def get_users():
 
     The following fields are supported for filtering and sorting:
 
+    ``id``
+        ID of the user.
     ``user_name``
         The user's username.
     ``display_name``
@@ -137,6 +139,7 @@ def get_users():
     """
     query = User.query.order_by(User.user_name)
     json_result = json_collection(query, columns={
+        'id': User.id,
         'user_name': User.user_name,
         'display_name': User.display_name,
         'email_address': User.email_address,

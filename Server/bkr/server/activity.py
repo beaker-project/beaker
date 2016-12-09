@@ -16,6 +16,7 @@ from bkr.server.model import (Activity, User, Distro, DistroTree,
 
 # Search field mapping which applies to all activity types.
 common_activity_search_columns = {
+    'id': Activity.id,
     'type': Activity.type,
     'service': Activity.service,
     'created': Activity.created,
@@ -33,6 +34,8 @@ def get_activity():
 
     The following fields are supported for filtering and sorting:
 
+    ``id``
+        ID of the activity.
     ``type``
         Type of the activity record. Possible values are: ``system_activity``, 
         ``lab_controller_activity``, ``distro_activity``, 

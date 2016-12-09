@@ -429,6 +429,8 @@ def get_tasks():
 
     The following fields are supported for filtering and sorting:
 
+    ``id``
+        ID of the task.
     ``name``
         Name of the task.
     ``description``

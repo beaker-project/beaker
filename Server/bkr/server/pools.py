@@ -31,6 +31,8 @@ def get_pools():
 
     The following fields are supported for filtering and sorting:
 
+    ``id``
+        ID of the pool.
     ``name``
         Name of the pool.
     ``owner.user_name``
@@ -48,6 +50,7 @@ def get_pools():
             .outerjoin(SystemPool.owning_group)\
             .options(contains_eager(SystemPool.owning_group))
     json_result = json_collection(query, columns={
+        'id': SystemPool.id,
         'name': SystemPool.name,
         'owner.user_name': User.user_name,
         'owner.group_name': Group.group_name,
