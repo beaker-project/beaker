@@ -9,6 +9,7 @@ import subprocess
 import tempfile
 import logging
 import pipes
+import re
 from bkr.inttest import get_server_base, data_setup, DatabaseTestCase
 from bkr.client import wizard
 
@@ -51,9 +52,16 @@ class ClientError(Exception):
 
     def __init__(self, command, status, stderr_output):
         Exception.__init__(self, 'Client command %r failed '
-                'with exit status %s:\n%s' % (command, status, stderr_output))
+                'with exit status %s:\n%s' % (censor_passwords(command), status, stderr_output))
         self.status = status
         self.stderr_output = stderr_output
+
+
+def censor_passwords(command_args):
+    """Returns a joined command as a string with a censored password"""
+    return ' '.join(re.sub(r'(pass.*=).*\b', r'\1***', pipes.quote(arg))
+                    for arg in command_args)
+
 
 # If running against installed beaker-client, BEAKER_CLIENT_COMMAND=bkr should 
 # be set in the environment. Otherwise we assume we're in a source checkout and 
@@ -67,7 +75,7 @@ def start_client(args, config=None, env=None, extra_env=None, **kwargs):
         global default_client_config
         config = default_client_config
     log.debug('Starting client %r as BEAKER_CLIENT_CONF=%s %s',
-              client_command, config.name, ' '.join(pipes.quote(arg) for arg in args))
+              client_command, config.name, censor_passwords(args))
     env = dict(env or os.environ)
     env.update(extra_env or {})
     env['PYTHONUNBUFFERED'] = '1'
