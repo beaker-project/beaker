@@ -17,7 +17,8 @@ from bkr.server.model import TaskStatus, Job, System, User, \
         Group, SystemStatus, SystemActivity, Recipe, Cpu, LabController, \
         Provision, TaskPriority, RecipeSet, RecipeTaskResult, Task, SystemPermission,\
         MachineRecipe, GuestRecipe, LabControllerDistroTree, DistroTree, \
-        TaskResult, CommandActivity, CommandStatus, GroupMembershipType
+        TaskResult, CommandActivity, CommandStatus, GroupMembershipType, \
+        RecipeVirtStatus
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import not_
 from turbogears.database import session, get_engine
@@ -270,6 +271,7 @@ class TestBeakerd(DatabaseTestCase):
             j2 = data_setup.create_job_for_recipes([r2])
 
             data_setup.mark_job_queued(j1)
+            r1.virt_status = RecipeVirtStatus.precluded
             r1.systems[:] = [system]
             data_setup.mark_job_running(j2, system=system)
 
