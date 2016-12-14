@@ -4,7 +4,7 @@ After=httpd.service
 
 [Service]
 Type=forking
-PIDFile=/var/run/beaker-lab-controller/beaker-proxy.pid
+PIDFile=/run/beaker-lab-controller/beaker-proxy.pid
 ExecStart=/usr/bin/beaker-proxy
 User=apache
 Group=apache

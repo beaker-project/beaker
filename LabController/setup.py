@@ -36,6 +36,7 @@ if systemd_unit_dir():
                               'systemd/beaker-watchdog.service',
                               'systemd/beaker-transfer.service']),
         (systemd_tmpfiles_dir(), ['tmpfiles.d/beaker-lab-controller.conf']),
+        ('/run/beaker-lab-controller', []),
     ])
 else:
     data_files.extend([
