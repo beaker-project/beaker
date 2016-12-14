@@ -597,6 +597,18 @@ class TestRecipeView(WebDriverTestCase):
         summary_without_link_xpath = '//div[@class="recipe-summary"][not(//a[contains(., "OpenStack instance %s")])]' % (recipe.resource.instance_id)
         b.find_element_by_xpath(summary_without_link_xpath)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1396874
+    def test_virt_shows_OS_link_during_installation(self):
+        with session.begin():
+            recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_installing(recipe, virt=True)
+
+        b = self.browser
+        go_to_recipe_view(b, recipe, tab='Tasks')
+        summary_link = '//div[@class="recipe-summary"]/p/a[contains(., "%s")]' % (recipe.resource.instance_id)
+        b.find_element_by_xpath(summary_link)
+
 
 class TestRecipeViewInstallationTab(WebDriverTestCase):
 

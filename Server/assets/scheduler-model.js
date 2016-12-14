@@ -427,7 +427,7 @@ window.VirtResource = Backbone.Model.extend({
         var result = _.template('OpenStack instance <%= link %>',
                                 {link: this.render_link_by_state(this.get('instance_id'),
                                                                  this.get('href'),
-                                                                 this.os_instance_gone())});
+                                                                 this.os_instance_present())});
         if (!_.isEmpty(this.get('fqdn'))) {
             result = _.template('<%= fqdn %><br /> (<%= os_instance %>)',
                                 {fqdn: this.get('fqdn'), os_instance: result}
@@ -442,8 +442,8 @@ window.VirtResource = Backbone.Model.extend({
         }
         return content;
     },
-    os_instance_gone: function() {
-        return !_.isEmpty(this.get('instance_delete'));
+    os_instance_present: function() {
+        return _.isEmpty(this.get('instance_deleted'));
     }
 });
 
