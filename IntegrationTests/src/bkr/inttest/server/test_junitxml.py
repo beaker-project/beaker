@@ -11,6 +11,7 @@ import unittest2 as unittest
 from bkr.server.junitxml import job_to_junit_xml
 from bkr.server.model import session, TaskResult, TaskStatus, Task, RecipeTaskResult
 from bkr.server.tests import data_setup
+from bkr.inttest import get_server_base
 
 class JUnitXMLUnitTest(unittest.TestCase):
     maxDiff = None
@@ -30,16 +31,17 @@ class JUnitXMLUnitTest(unittest.TestCase):
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
-  <testsuite name="happy" id="R:%s" hostname="happysystem.testdata" tests="2" failures="0" errors="0">
+  <testsuite name="happy" id="R:{recipe_id}" hostname="happysystem.testdata" tests="2" failures="0" errors="0">
     <testcase classname="/distribution/reservesys">
-      <system-out>http://dummy-archive-server/beaker/tasks/dummy.txt</system-out>
+      <system-out>{server}recipes/{recipe_id}/tasks/{task_id}/logs/tasks/dummy.txt</system-out>
     </testcase>
     <testcase classname="/distribution/reservesys" name="(none)" time="10">
-      <system-out>http://dummy-archive-server/beaker/result.txt</system-out>
+      <system-out>{server}recipes/{recipe_id}/tasks/{task_id}/results/{result_id}/logs/result.txt</system-out>
     </testcase>
   </testsuite>
 </testsuites>
-""" % recipe.id
+""".format(server=get_server_base(), recipe_id=recipe.id, task_id=recipe.tasks[0].id,
+           result_id=recipe.tasks[0].results[0].id)
         self.assertMultiLineEqual(expected, out)
 
     def test_failing_result(self):
@@ -53,17 +55,18 @@ class JUnitXMLUnitTest(unittest.TestCase):
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
-  <testsuite name="failing result" id="R:%s" hostname="happysystem.testdata" tests="2" failures="1" errors="0">
+  <testsuite name="failing result" id="R:{recipe_id}" hostname="happysystem.testdata" tests="2" failures="1" errors="0">
     <testcase classname="/distribution/reservesys">
-      <system-out>http://dummy-archive-server/beaker/tasks/dummy.txt</system-out>
+      <system-out>{server}recipes/{recipe_id}/tasks/{task_id}/logs/tasks/dummy.txt</system-out>
     </testcase>
     <testcase classname="/distribution/reservesys" name="(none)" time="10">
       <failure message="(Fail)" type="failure"/>
-      <system-out>http://dummy-archive-server/beaker/result.txt</system-out>
+      <system-out>{server}recipes/{recipe_id}/tasks/{task_id}/results/{result_id}/logs/result.txt</system-out>
     </testcase>
   </testsuite>
 </testsuites>
-""" % recipe.id
+""".format(server=get_server_base(), recipe_id=recipe.id, task_id=recipe.tasks[0].id,
+           result_id=recipe.tasks[0].results[0].id)
         self.assertMultiLineEqual(expected, out)
 
     def test_aborted(self):
@@ -148,16 +151,17 @@ class JUnitXMLUnitTest(unittest.TestCase):
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
-  <testsuite name="running job" id="R:%s" hostname="busysystem.testdata" tests="2" failures="0" errors="0">
+  <testsuite name="running job" id="R:{recipe_id}" hostname="busysystem.testdata" tests="2" failures="0" errors="0">
     <testcase classname="/test_junitxml/completed">
-      <system-out>http://dummy-archive-server/beaker/tasks/dummy.txt</system-out>
+      <system-out>{server}recipes/{recipe_id}/tasks/{task_id}/logs/tasks/dummy.txt</system-out>
     </testcase>
     <testcase classname="/test_junitxml/completed" name="(none)" time="10">
-      <system-out>http://dummy-archive-server/beaker/result.txt</system-out>
+      <system-out>{server}recipes/{recipe_id}/tasks/{task_id}/results/{result_id}/logs/result.txt</system-out>
     </testcase>
   </testsuite>
 </testsuites>
-""" % recipe.id
+""".format(server=get_server_base(), recipe_id=recipe.id, task_id=recipe.tasks[0].id,
+           result_id=recipe.tasks[0].results[0].id)
         self.assertMultiLineEqual(expected, out)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1291107

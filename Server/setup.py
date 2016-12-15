@@ -176,6 +176,7 @@ if systemd_unit_dir():
     data_files.extend([
         (systemd_unit_dir(), ['systemd/beakerd.service']),
         (systemd_tmpfiles_dir(), ['tmpfiles.d/beaker-server.conf']),
+        ('/run/beaker', []),
     ])
 else:
     data_files.extend([

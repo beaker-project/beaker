@@ -47,7 +47,9 @@ class TestBeakerd(DatabaseTestCase):
                         <distroRequires>
                             <distro_name op="=" value="%s" />
                         </distroRequires>
-                        <hostRequires/>
+                        <hostRequires>
+                            <hypervisor value=""/>
+                        </hostRequires>
                         <task name="/distribution/install" role="STANDALONE">
                             <params/>
                         </task>

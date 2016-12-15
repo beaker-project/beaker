@@ -4,7 +4,7 @@ After=mysqld.service mariadb.service
 
 [Service]
 Type=forking
-PIDFile=/var/run/beaker/beakerd.pid
+PIDFile=/run/beaker/beakerd.pid
 ExecStart=/usr/bin/beakerd
 User=apache
 Group=apache

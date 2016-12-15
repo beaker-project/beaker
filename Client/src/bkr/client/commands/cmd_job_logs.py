@@ -70,7 +70,7 @@ class Job_Logs(BeakerCommand):
         self.parser.usage = "%%prog %s [options] <taskspec>..." % self.normalized_name
 
     def _log_size(self, url):
-        response = self.session.head(url)
+        response = self.session.head(url, allow_redirects=True)
         if response.status_code in (404, 410):
             return '<missing>'
         elif response.status_code >= 400:

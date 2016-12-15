@@ -122,7 +122,7 @@ class Recipes(RPCRoot):
         :type recipe_id: integer
 
         .. deprecated:: 0.9.4
-           Use :meth:`taskactions.files` instead.
+           Use :meth:`taskactions.files() <bkr.server.task_actions.taskactions.files>` instead.
         """
         try:
             recipe = Recipe.by_id(recipe_id)

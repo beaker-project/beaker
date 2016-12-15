@@ -4,7 +4,7 @@ After=httpd.service
 
 [Service]
 Type=forking
-PIDFile=/var/run/beaker-lab-controller/beaker-watchdog.pid
+PIDFile=/run/beaker-lab-controller/beaker-watchdog.pid
 ExecStart=/usr/bin/beaker-watchdog
 User=apache
 Group=apache

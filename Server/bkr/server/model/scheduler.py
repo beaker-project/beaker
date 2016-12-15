@@ -366,7 +366,7 @@ class Log(object):
                     tid      = '%s:%s' % (self.type, self.id),
                     filepath = self.parent.filepath,
                     basepath = self.basepath,
-                    url      = self.absolute_url,
+                    url      =  absolute_url(self.href),
                    )
 
     def to_xml(self):

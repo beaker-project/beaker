@@ -23,10 +23,10 @@ from bkr.server.util import absolute_url
 from bkr.server.model import TaskStatus, TaskResult
 
 def _systemout_for_task(task):
-    return '\n'.join(log.absolute_url for log in task.logs)
+    return '\n'.join(absolute_url(log.href) for log in task.logs)
 
 def _systemout_for_result(result):
-    return '\n'.join(log.absolute_url for log in result.logs)
+    return '\n'.join(absolute_url(log.href) for log in result.logs)
 
 def _testcases_for_task(task):
     if not task.is_finished():

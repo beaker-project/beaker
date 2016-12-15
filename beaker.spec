@@ -494,6 +494,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %if %{with_systemd}
 %{_unitdir}/beakerd.service
 %attr(0644,apache,apache) %{_tmpfilesdir}/beaker-server.conf
+%attr(-,apache,root) %dir /run/%{name}
 %else
 %{_sysconfdir}/init.d/beakerd
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}
@@ -587,6 +588,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_unitdir}/beaker-watchdog.service
 %{_unitdir}/beaker-transfer.service
 %{_tmpfilesdir}/beaker-lab-controller.conf
+%attr(-,apache,root) %dir /run/%{name}-lab-controller
 %else
 %{_sysconfdir}/init.d/beaker-proxy
 %{_sysconfdir}/init.d/beaker-watchdog
