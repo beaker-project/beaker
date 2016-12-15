@@ -26,6 +26,7 @@ import re
 import time
 import shutil
 import urlparse
+import mimetypes
 import wsgiref.util, wsgiref.simple_server
 
 class Application(object):
@@ -69,10 +70,13 @@ class Application(object):
             if os.path.isdir(localpath):
                 listing = '\n'.join(os.listdir(localpath))
                 response_headers.append(('Content-Length', str(len(listing))))
+                response_headers.append(('Content-Type', 'text/plain'))
                 start_response('200 OK', response_headers)
                 return [listing]
             else:
                 response_headers.append(('Content-Length', str(os.path.getsize(localpath))))
+                mimetype, encoding = mimetypes.guess_type(localpath)
+                response_headers.append(('Content-Type', mimetype or 'application/octet-stream'))
                 start_response('200 OK', response_headers)
                 return wsgiref.util.FileWrapper(open(localpath, 'r'))
         elif environ['REQUEST_METHOD'] == 'DELETE' and self.writable:

@@ -11,11 +11,13 @@
 __requires__ = ['CherryPy < 3.0']
 
 import sys
+import cgi
 from bkr.common import __version__
 from bkr.log import log_to_stream
 from bkr.server.model import Product
 from bkr.server.util import load_config_or_exit
 import lxml.etree
+import requests
 from optparse import OptionParser
 from turbogears.database import session
 
@@ -27,6 +29,8 @@ def get_parser():
             help='Load Beaker server configuration from FILE')
     parser.add_option('-f', '--product-file', metavar='FILE', dest='productfile',
             help='Load product XML data from FILE')
+    parser.add_option('--product-url', metavar='URL', dest='producturl',
+            help='Load product XML or JSON data from URL')
     return parser
 
 def update_products(xml_file):
@@ -45,13 +49,22 @@ def main():
     parser = get_parser()
     opts, args = parser.parse_args()
 
-    if not opts.productfile:
-        parser.error('Specify product data to load using --product-file')
+    if not opts.productfile and not opts.producturl:
+        parser.error('Specify product data to load using --product-file or --product-url')
 
     load_config_or_exit(opts.configfile)
     log_to_stream(sys.stderr)
 
-    update_products(opts.productfile)
+    if opts.productfile:
+        xml_file = open(opts.productfile, 'rb')
+    elif opts.producturl:
+        response = requests.get(opts.producturl, stream=True)
+        response.raise_for_status()
+        mimetype, options = cgi.parse_header(response.headers['Content-Type'])
+        if mimetype not in ['text/xml', 'application/xml']:
+            raise ValueError('Resource at %s is not XML' % opts.producturl)
+        xml_file = response.raw
+    update_products(xml_file)
 
 if __name__ == '__main__':
     main()
