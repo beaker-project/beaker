@@ -1468,6 +1468,12 @@ class Product(DeclarativeMappedObject):
     created = Column(DateTime, nullable=False, default=datetime.utcnow)
     jobs = relationship(Job, back_populates='product', cascade_backrefs=False)
 
+    @validates('name')
+    def validate_name(self, key, value):
+        if not value:
+            raise ValueError('Product name must not be empty')
+        return value
+
     def __init__(self, name):
         super(Product, self).__init__()
         self.name = name

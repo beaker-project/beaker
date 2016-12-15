@@ -4,12 +4,73 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import tempfile
 from bkr.common import __version__
+from bkr.server.model import session, Product
 from bkr.inttest import DatabaseTestCase
-from bkr.inttest.server.tools import run_command
+from bkr.inttest.server.tools import run_command, CommandError
 
 class ProductUpdateTest(DatabaseTestCase):
 
     def test_version(self):
         out = run_command('product_update.py', 'product-update', ['--version'])
         self.assertEquals(out.strip(), __version__)
+
+    def test_errors_out_if_file_not_specified(self):
+        try:
+            run_command('product_update.py', 'product-update', [])
+            self.fail('should raise')
+        except CommandError as e:
+            self.assertIn('Specify product data to load using --product-file',
+                    e.stderr_output)
+
+    def test_loads_cpe_identifiers_from_xml_file(self):
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write("""\
+            <products>
+                <product>
+                    <cpe>cpe:/a:redhat:ceph_storage:2</cpe>
+                </product>
+                <product>
+                    <cpe>cpe:/o:redhat:enterprise_linux:4:update8</cpe>
+                </product>
+            </products>
+            """)
+        xml_file.flush()
+        run_command('product_update.py', 'product-update', ['-f', xml_file.name])
+        with session.begin():
+            # check that the products have been inserted into the db
+            Product.by_name(u'cpe:/a:redhat:ceph_storage:2')
+            Product.by_name(u'cpe:/o:redhat:enterprise_linux:4:update8')
+
+    def test_ignores_duplicate_cpe_identifiers(self):
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write("""\
+            <products>
+                <product>
+                    <cpe>cpe:/a:redhat:ceph_storage:69</cpe>
+                </product>
+                <product>
+                    <cpe>cpe:/a:redhat:ceph_storage:69</cpe>
+                </product>
+            </products>
+            """)
+        xml_file.flush()
+        run_command('product_update.py', 'product-update', ['-f', xml_file.name])
+        with session.begin():
+            Product.by_name(u'cpe:/a:redhat:ceph_storage:69')
+
+    def test_ignores_empty_cpe_identifiers(self):
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write("""\
+            <products>
+                <product>
+                    <cpe></cpe>
+                </product>
+            </products>
+            """)
+        xml_file.flush()
+        run_command('product_update.py', 'product-update', ['-f', xml_file.name])
+        with session.begin():
+            self.assertEquals(Product.query.filter(Product.name == u'').count(), 0)
+            self.assertEquals(Product.query.filter(Product.name == u'None').count(), 0)

@@ -15,60 +15,43 @@ from bkr.common import __version__
 from bkr.log import log_to_stream
 from bkr.server.model import Product
 from bkr.server.util import load_config_or_exit
-from lxml import etree
+import lxml.etree
 from optparse import OptionParser
 from turbogears.database import session
-from sqlalchemy.orm.exc import NoResultFound
 
-__description__ = 'Script to update product table with cpe'
-
-USAGE_TEXT = """ Usage: product_update --file <product_xml_file> """
-
+__description__ = 'Update CPE identifiers for products in Beaker'
 
 def get_parser():
-    usage = "usage: %prog [options]"
-    parser = OptionParser(usage, description=__description__,version=__version__)
-    parser.add_option("-f","--product-file", default=None, dest='productfile',
-                      help="This should be the XML file that contains the product cpe")
-    parser.add_option("-c","--config-file",dest="configfile",default=None)
+    parser = OptionParser(description=__description__, version=__version__)
+    parser.add_option('-c', '--config-file', metavar='FILE', dest='configfile',
+            help='Load Beaker server configuration from FILE')
+    parser.add_option('-f', '--product-file', metavar='FILE', dest='productfile',
+            help='Load product XML data from FILE')
     return parser
 
-
-def usage():
-    print USAGE_TEXT
-    sys.exit(-1)
-
 def update_products(xml_file):
-    dom = etree.parse(xml_file)
-    xpath_string = '//cpe'
-    cpes = dom.xpath(xpath_string)
-    
-    session.begin()
-    try:
-        to_add = {}
-        dupe_errors = []
-        for cpe in cpes:
-            cpe_text = cpe.text
-
-            if cpe_text in to_add:
-                dupe_errors.append(cpe_text)
+    xml = lxml.etree.parse(xml_file)
+    with session.begin():
+        for element in xml.xpath('//cpe'):
+            # lxml returns text as str if it's ASCII, else unicode...
+            if isinstance(element.text, str):
+                cpe = element.text.decode('ascii')
             else:
-                to_add[cpe_text] = 1
-
-        for cpe_to_add in to_add:
-            prod = Product.lazy_create(name=unicode(cpe_to_add))
-        session.commit()
-    finally:
-        session.rollback()
+                cpe = element.text
+            if cpe:
+                Product.lazy_create(name=cpe)
 
 def main():
     parser = get_parser()
-    opts,args = parser.parse_args()
-    configfile = opts.configfile
-    xml_file = opts.productfile
-    load_config_or_exit(configfile)
+    opts, args = parser.parse_args()
+
+    if not opts.productfile:
+        parser.error('Specify product data to load using --product-file')
+
+    load_config_or_exit(opts.configfile)
     log_to_stream(sys.stderr)
-    update_products(xml_file)
+
+    update_products(opts.productfile)
 
 if __name__ == '__main__':
     main()
