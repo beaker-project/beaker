@@ -106,3 +106,19 @@ class ProductUpdateTest(DatabaseTestCase):
         with session.begin():
             Product.by_name(u'cpe:/o:redhat:enterprise_linux:7.0')
             Product.by_name(u'cpe:/o:redhat:enterprise_linux:7:2')
+
+    def test_loads_cpe_identifiers_from_json_url(self):
+        with open(os.path.join(self.product_docroot, 'product.json'), 'wb') as json_file:
+            json_file.write("""\
+                [
+                    {"id": 1, "cpe": "cpe:/a:redhat:jboss_data_virtualization:6.2.0"},
+                    {"id": 2, "cpe": "cpe:/a:redhat:jboss_operations_network:3.2.0"},
+                    {"id": 3, "cpe": ""},
+                    {"id": 4}
+                ]
+                """)
+        run_command('product_update.py', 'product-update',
+                ['--product-url', 'http://localhost:19998/product.json'])
+        with session.begin():
+            Product.by_name(u'cpe:/a:redhat:jboss_data_virtualization:6.2.0')
+            Product.by_name(u'cpe:/a:redhat:jboss_operations_network:3.2.0')

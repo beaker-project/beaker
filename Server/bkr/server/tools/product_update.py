@@ -17,6 +17,7 @@ from bkr.log import log_to_stream
 from bkr.server.model import Product
 from bkr.server.util import load_config_or_exit
 import lxml.etree
+import json
 import requests
 from optparse import OptionParser
 from turbogears.database import session
@@ -33,7 +34,7 @@ def get_parser():
             help='Load product XML or JSON data from URL')
     return parser
 
-def update_products(xml_file):
+def update_products_from_xml(xml_file):
     xml = lxml.etree.parse(xml_file)
     with session.begin():
         for element in xml.xpath('//cpe'):
@@ -44,6 +45,13 @@ def update_products(xml_file):
                 cpe = element.text
             if cpe:
                 Product.lazy_create(name=cpe)
+
+def update_products_from_json(json_file):
+    entries = json.load(json_file)
+    for entry in entries:
+        if isinstance(entry, dict) and entry.get('cpe'):
+            assert isinstance(entry['cpe'], unicode)
+            Product.lazy_create(name=entry['cpe'])
 
 def main():
     parser = get_parser()
@@ -57,14 +65,18 @@ def main():
 
     if opts.productfile:
         xml_file = open(opts.productfile, 'rb')
+        update_products_from_xml(xml_file)
     elif opts.producturl:
         response = requests.get(opts.producturl, stream=True)
         response.raise_for_status()
         mimetype, options = cgi.parse_header(response.headers['Content-Type'])
-        if mimetype not in ['text/xml', 'application/xml']:
-            raise ValueError('Resource at %s is not XML' % opts.producturl)
-        xml_file = response.raw
-    update_products(xml_file)
+        if mimetype in ['text/xml', 'application/xml']:
+            update_products_from_xml(response.raw)
+        elif mimetype == 'application/json':
+            update_products_from_json(response.raw)
+        else:
+            raise ValueError('Resource at %s is %s, should be XML or JSON'
+                    % (opts.producturl, mimetype))
 
 if __name__ == '__main__':
     main()
