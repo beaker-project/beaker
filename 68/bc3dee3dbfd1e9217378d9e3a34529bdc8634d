@@ -1,0 +1,8 @@
+Ready-for-Checks+1: Jon Orris <jorris@redhat.com>
+Code-Review+2: Jon Orris <jorris@redhat.com>
+Verified+1: Jon Orris <jorris@redhat.com>
+Submitted-by: Jon Orris <jorris@redhat.com>
+Submitted-at: Mon, 19 Dec 2016 23:49:45 +0000
+Reviewed-on: https://gerrit.beaker-project.org/5274
+Project: beaker
+Branch: refs/heads/develop
