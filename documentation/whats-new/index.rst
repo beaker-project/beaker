@@ -18,18 +18,29 @@ version, see :doc:`../admin-guide/upgrading`.
    with an explicit list that puts the subsections in some kind of
    sensible order.
 
+.. Commented out for release
 
-Unreleased changes
-------------------
+    Unreleased changes
+    ------------------
 
-The following changes will appear in the next Beaker release.
+    The following changes will appear in the next Beaker release.
+
+    .. toctree::
+      :maxdepth: 2
+      :glob:
+
+      next/*
+
+Beaker 24
+---------
+
+Beaker 24 brings improved OpenStack integration, conditional reservations, and many
+other improvements.
 
 .. toctree::
    :maxdepth: 2
-   :glob:
 
-   next/*
-
+   release-24
 
 Beaker 23
 ---------
