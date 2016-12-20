@@ -11,3 +11,4 @@ Administrative command reference
    beaker-repo-update
    beaker-usage-reminder
    beaker-sync-tasks
+   product-update
