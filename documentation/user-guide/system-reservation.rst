@@ -144,6 +144,24 @@ After both the tasks have finished execution, the system will be
 reserved. The recipe status will be "Reserved" during the duration of
 the system being reserved.
 
+You can also conditionally reserve the system at the end of your recipe by using
+the attribute ``when=""``, with the following values:
+
+``onabort``
+  The system will be reserved if the recipe status is Aborted.
+``onfail``
+  The system will be reserved if the recipe status is Aborted, or the result is 
+  Fail.
+``onwarn``
+  The system will be reserved if the recipe status is Aborted, or the result is 
+  Fail or Warn. This corresponds to the existing ``RESERVE_IF_FAIL=1`` option 
+  for the ``/distribution/reservesys`` task.
+``always``
+  The system will be reserved unconditionally.
+
+If this element is given without a ``when=""`` attribute, it defaults to
+``when="always"``, matching the behaviour from previous Beaker versions.
+
 The advantage of using this approach is that this will also reserve
 the system under abnormal circumstances which cause the recipe to be
 aborted. Circumstances in which this may happen include a
