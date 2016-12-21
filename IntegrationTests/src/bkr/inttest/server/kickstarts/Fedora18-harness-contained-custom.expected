@@ -271,6 +271,7 @@ cat << EOF > /root/Dockerfile
 
 FROM docker-registry.mysys.com/fedora:latest
 MAINTAINER Beaker Developers <beaker-devel@lists.fedoraproject.org>
+ENV container docker
 ADD beaker-tasks.repo /etc/yum.repos.d/
 ADD customrepos/ /etc/yum.repos.d/
 ADD beaker-harness-env.sh /etc/profile.d/beaker-harness-env.sh
