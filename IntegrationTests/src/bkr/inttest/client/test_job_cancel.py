@@ -107,3 +107,11 @@ class JobCancelTest(ClientTestCase):
             self.assertEquals(job.activity[0].action, u'Cancelled')
             self.assertEquals(job.recipesets[0].recipes[0].tasks[0].results[0].log,
                     'test adding cancel message')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1174615
+    def test_cancel_with_invalid_ID_raise_error(self):
+        try:
+            run_client(['bkr', 'job-cancel', 'T:9q9999q'])
+            self.fail('should raise')
+        except ClientError, e:
+            self.assertIn('Invalid T 9q9999q', e.stderr_output)

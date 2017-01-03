@@ -117,8 +117,8 @@ class TaskActions(RPCRoot):
         task_type, task_id = taskid.split(":")
         if task_type.upper() in self.stoppable_task_types.keys():
             try:
-                task = self.stoppable_task_types[task_type.upper()].by_id(task_id)
-            except InvalidRequestError:
+                task = self.stoppable_task_types[task_type.upper()].by_id(int(task_id))
+            except (InvalidRequestError, ValueError):
                 raise BX(_("Invalid %s %s" % (task_type, task_id)))
         else:
             raise BX(_("Task type %s is not stoppable" % (task_type)))
