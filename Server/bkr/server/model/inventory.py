@@ -1715,6 +1715,13 @@ class System(DeclarativeMappedObject, ActivityMixin):
 
     cc = association_proxy('_system_ccs', 'email_address')
 
+@event.listens_for(System.lab_controller, 'set')
+def lab_controller_changed(system, new_controller, old_controller, dontcare):
+    if old_controller is None or old_controller is NEVER_SET:
+        return
+    if new_controller is None:
+        system.abort_queued_commands("System disassociated from lab controller")
+
 @event.listens_for(System.status, 'set')
 def set_removed_status(system, new_status, oldstatus, dontcare):
     """
