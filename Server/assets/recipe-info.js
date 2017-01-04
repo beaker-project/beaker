@@ -47,6 +47,7 @@ window.RecipeFqdnView = Backbone.View.extend({
     template: JST['recipe-fqdn'],
     events: {
         'click .copy-hostname': 'copy_hostname',
+        'click .report-problem': 'sys_report_problem',
     },
     initialize: function () {
         this.listenTo(this.model, 'change:resource', this.render);
@@ -79,6 +80,10 @@ window.RecipeFqdnView = Backbone.View.extend({
                 evt.originalEvent.clipboardData.setData('text/html', html);
         });
         document.execCommand('copy');
+    },
+    sys_report_problem: function (evt) {
+        system = this.model.get('resource').get('system')
+        new SystemReportProblemModal({model: system});
     },
 });
 

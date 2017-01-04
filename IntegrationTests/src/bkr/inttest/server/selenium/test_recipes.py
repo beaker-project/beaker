@@ -24,7 +24,6 @@ from bkr.inttest.server.requests_utils import post_json, patch_json, \
         put_json, login as requests_login
 from bkr.inttest.assertions import assert_datetime_within
 
-
 class TestRecipesDataGrid(WebDriverTestCase):
 
     log = logging.getLogger(__name__ + '.TestRecipesIndex')
@@ -120,6 +119,32 @@ class TestRecipeView(WebDriverTestCase):
                 recipe.system = self.system
         self.browser = self.get_browser()
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1362595
+    def test_report_system_problem_for_recipe_works(self):
+        with session.begin():
+            job = data_setup.create_job(owner=self.user, distro_tree=self.distro_tree)
+            recipe = job.recipesets[0].recipes[0]
+            start_time = datetime.datetime.utcnow()
+            finish_time = start_time + datetime.timedelta(seconds=1)
+            system = data_setup.create_system(arch=u'x86_64',
+                    fqdn=u'snoopy.example.com',
+                    lab_controller=self.lab_controller)
+            data_setup.mark_recipe_complete(recipe, system=system,
+                    result=TaskResult.pass_,
+                    start_time=start_time, finish_time=finish_time)
+
+        b = self.browser
+        login(b)
+        go_to_recipe_view(b, recipe)
+        b.find_element_by_xpath('//button[@aria-label="System actions"]').click()
+
+        b.find_element_by_xpath('//a[@class="report-problem"]').click()
+        b.find_element_by_name('message').send_keys(u'a' + u'\u044f' * 100)
+        b.find_element_by_xpath('//button[text()="Report"]').click()
+        b.find_element_by_xpath('//div[contains(@class, "alert-success")]'
+                '/h4[text()="Report sent"]')
+
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1335343
     def test_page_updates_itself_while_recipe_is_running(self):
         with session.begin():
@@ -150,6 +175,9 @@ class TestRecipeView(WebDriverTestCase):
                 b.find_element_by_xpath('//div[@class="recipe-summary"]/p[2]').text,
                 'Using PurpleUmbrellaLinux5.11-20160428 Server x86_64\n'
                 'on pewlett-hackard-x004.example.com\n.')
+        # Check that Report problem button displays
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1362595
+        b.find_element_by_xpath('//a[@class="report-problem"]')
         self.assertEqual(
                 b.find_element_by_xpath('//div[@class="recipe-installation-summary"]/div[1]').text,
                 'Installation of PurpleUmbrellaLinux5.11-20160428 Server x86_64 finished.')
@@ -226,6 +254,10 @@ class TestRecipeView(WebDriverTestCase):
         self.assertEqual('Using PurpleUmbrellaLinux5.11-20160428 Server x86_64\n'
             'on example.openstacklocal.invalid\n\n(OpenStack instance %s).' % recipe.resource.instance_id,
             b.find_element_by_xpath('//div[@class="recipe-summary"]/p[2]').text)
+
+        # Ensure Report problem button not showing for virtual system
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1362595
+        b.find_element_by_xpath('//body[not(.//a[@class="report-problem"])]')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1390409
     def test_view_virt_recipe_when_the_hostname_is_not_known_yet(self):

@@ -199,7 +199,11 @@ window.SystemPools = BeakerPageableCollection.extend({
 window.System = Backbone.Model.extend({
     initialize: function (attributes, options) {
         options = options || {};
-        this.url = options.url;
+        if(options.url)
+            this.url = options.url;
+        else
+            this.url = window.beaker_url_prefix + 'systems/' + encodeURIComponent(this.get('fqdn')) + '/';
+
         this.command_queue = new CommandQueue([], {system: this});
         this.activity = new SystemActivity([], {system: this});
         // if the system object changes, chances are there are new activity 
