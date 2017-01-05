@@ -172,7 +172,8 @@ class PowerTest(LabControllerTestCase):
         # But the quiescent period should not count any other commands like 
         # clear_logs or configure_netboot, because those are not touching the 
         # power supply.
-        quiescent_period = get_conf().get('SLEEP_TIME') * 2.0
+        loop_interval = get_conf().get('SLEEP_TIME')
+        quiescent_period = loop_interval * 3.0
         with session.begin():
             system = data_setup.create_system(lab_controller=self.get_lc())
             self.addCleanup(self.cleanup_system, system)
@@ -182,8 +183,8 @@ class PowerTest(LabControllerTestCase):
             system.action_power(action=u'off', service=u'testdata')
             system.enqueue_command(action=u'clear_netboot', service=u'testdata')
             commands = system.command_queue[:2]
-        assert_command_is_delayed(commands[1], quiescent_period - 0.5, timeout=quiescent_period / 2)
-        wait_for_command_to_finish(commands[0], timeout=quiescent_period / 2)
+        assert_command_is_delayed(commands[1], quiescent_period - 0.5, timeout=2 * loop_interval)
+        wait_for_command_to_finish(commands[0], timeout=2 * loop_interval)
         time.sleep(quiescent_period)
         # Now there should be no delays because the quiescent period has 
         # already elapsed since the 'off' command above.
@@ -191,8 +192,8 @@ class PowerTest(LabControllerTestCase):
             system.enqueue_command(action=u'clear_logs', service=u'testdata')
             system.action_power(action=u'on', service=u'testdata')
             commands = system.command_queue[:2]
-        wait_for_command_to_finish(commands[1], timeout=quiescent_period / 2)
-        wait_for_command_to_finish(commands[0], timeout=quiescent_period / 2)
+        wait_for_command_to_finish(commands[1], timeout=2 * loop_interval)
+        wait_for_command_to_finish(commands[0], timeout=2 * loop_interval)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=951309
     def test_power_commands_are_not_run_twice(self):
