@@ -3006,7 +3006,13 @@ class GuestRecipe(Recipe):
         return data
 
     def to_xml(self, clone=False, **kwargs):
-        recipe = super(GuestRecipe, self).to_xml(clone=clone, **kwargs)
+        node = super(GuestRecipe, self).to_xml(clone=clone, **kwargs)
+        # Note that node may be either a job element or a guestrecipe element, 
+        # depending on the value of include_enclosing_job kwarg.
+        if node.tag != self.xml_element_name:
+            recipe = node.find('.//' + self.xml_element_name)
+        else:
+            recipe = node
         recipe.set("guestname", "%s" % (self.guestname or ""))
         recipe.set("guestargs", "%s" % self.guestargs)
         if self.resource and self.resource.mac_address and not clone:
@@ -3023,7 +3029,7 @@ class GuestRecipe(Recipe):
             for scheme, location in sorted(scheme_locations.iteritems()):
                 attr = '%s_location' % re.sub(r'[^a-z0-9]+', '_', scheme.lower())
                 recipe.set(attr, location)
-        return recipe
+        return node
 
     def _add_to_job_element(self, guestrecipe, clone):
         recipe = etree.Element('recipe')

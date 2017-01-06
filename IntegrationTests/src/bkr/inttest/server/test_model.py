@@ -2112,10 +2112,16 @@ class GuestRecipeTest(DatabaseTestCase):
         guest_recipe = job.recipesets[0].recipes[0].guests[0]
         session.flush()
 
-        guestxml = lxml.etree.tostring(guest_recipe.to_xml(), encoding=unicode)
-        self.assert_(u'location="nfs://something:/somewhere"' in guestxml, guestxml)
-        self.assert_(u'nfs_location="nfs://something:/somewhere"' in guestxml, guestxml)
-        self.assert_(u'http_location="http://something/somewhere"' in guestxml, guestxml)
+        guestxml = guest_recipe.to_xml()
+        self.assertEqual(
+                guestxml.find('recipeSet/recipe/guestrecipe').get('location'),
+                u'nfs://something:/somewhere')
+        self.assertEqual(
+                guestxml.find('recipeSet/recipe/guestrecipe').get('nfs_location'),
+                u'nfs://something:/somewhere')
+        self.assertEqual(
+                guestxml.find('recipeSet/recipe/guestrecipe').get('http_location'),
+                u'http://something/somewhere')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=691666
     def test_guestname(self):
@@ -2125,10 +2131,14 @@ class GuestRecipeTest(DatabaseTestCase):
         guest_recipe_2 = job_2.recipesets[0].recipes[0].guests[0]
         session.flush()
 
-        guestxml_1 = lxml.etree.tostring(guest_recipe_1.to_xml(), encoding=unicode)
-        guestxml_2 = lxml.etree.tostring(guest_recipe_2.to_xml(), encoding=unicode)
-        self.assert_(u'guestname=""' in guestxml_1, guestxml_1)
-        self.assert_(u'guestname="blueguest"' in guestxml_2, guestxml_2)
+        guestxml_1 = guest_recipe_1.to_xml()
+        guestxml_2 = guest_recipe_2.to_xml()
+        self.assertEqual(
+                guestxml_1.find('recipeSet/recipe/guestrecipe').get('guestname'),
+                u'')
+        self.assertEqual(
+                guestxml_2.find('recipeSet/recipe/guestrecipe').get('guestname'),
+                u'blueguest')
 
 class MACAddressAllocationTest(DatabaseTestCase):
 
