@@ -2123,6 +2123,26 @@ class GuestRecipeTest(DatabaseTestCase):
                 guestxml.find('recipeSet/recipe/guestrecipe').get('http_location'),
                 u'http://something/somewhere')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1410089
+    def test_location_attribute_obeys_method(self):
+        lc = data_setup.create_labcontroller()
+        distro_tree = data_setup.create_distro_tree(lab_controllers=[lc],
+                urls=[u'nfs://something:/somewhere',
+                      u'http://something/somewhere',
+                      u'ftp://something/somewhere'])
+        job = data_setup.create_completed_job(distro_tree=distro_tree,
+                system=data_setup.create_system(lab_controller=lc),
+                num_guestrecipes=1, ks_meta=u'method=ftp')
+        guest_recipe = job.recipesets[0].recipes[0].guests[0]
+        root = guest_recipe.to_xml(clone=False)
+        expected_location = u'ftp://something/somewhere'
+        location = root.find('recipeSet/recipe/guestrecipe').get('location')
+        self.assertEqual(location, expected_location)
+        # The point is that it must match the url command in the kickstart.
+        self.assertEqual(
+                guest_recipe.installation.rendered_kickstart.kickstart.splitlines()[0],
+                u'url --url=%s' % expected_location)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=691666
     def test_guestname(self):
         job_1 = data_setup.create_job(num_guestrecipes=1)

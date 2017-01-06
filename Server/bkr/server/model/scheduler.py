@@ -2588,10 +2588,8 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
             return (status == TaskStatus.aborted or result == TaskResult.fail
                     or result == TaskResult.warn)
 
-    def provision(self):
-
-        from bkr.server.kickstart import generate_kickstart
-        install_options = InstallOptions.reduce(chain(
+    def reduced_install_options(self):
+        return InstallOptions.reduce(chain(
                 [global_install_options()],
                 self.distro_tree.install_options(),
                 self.resource.install_options(self.distro_tree),
@@ -2599,6 +2597,9 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
                  InstallOptions.from_strings(self.ks_meta,
                     self.kernel_options, self.kernel_options_post)]))
 
+    def provision(self):
+        from bkr.server.kickstart import generate_kickstart
+        install_options = self.reduced_install_options()
         if 'contained_harness' not in install_options.ks_meta \
            and 'ostree_repo_url' not in install_options.ks_meta:
             if 'harness' not in install_options.ks_meta and not self.harness_repo():
@@ -3018,7 +3019,9 @@ class GuestRecipe(Recipe):
         if self.resource and self.resource.mac_address and not clone:
             recipe.set("mac_address", "%s" % self.resource.mac_address)
         if self.distro_tree and self.recipeset.lab_controller and not clone:
-            location = self.distro_tree.url_in_lab(self.recipeset.lab_controller)
+            method = self.reduced_install_options().ks_meta.get('method', None)
+            location = self.distro_tree.url_in_lab(
+                    self.recipeset.lab_controller, scheme=method)
             if location:
                 recipe.set("location", location)
             scheme_locations = {}

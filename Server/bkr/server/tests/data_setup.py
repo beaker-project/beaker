@@ -442,10 +442,11 @@ def create_tasks(xmljob):
 
 def create_recipe(distro_tree=None, task_list=None,
         task_name=u'/distribution/reservesys', num_tasks=None, whiteboard=None,
-        role=None, cls=MachineRecipe, **kwargs):
+        role=None, ks_meta=None, cls=MachineRecipe, **kwargs):
     if not distro_tree:
         distro_tree = create_distro_tree(**kwargs)
     recipe = cls(ttasks=1)
+    recipe.ks_meta = ks_meta
     recipe.whiteboard = whiteboard
     recipe.distro_tree = distro_tree
     recipe.role = role or u'STANDALONE'
