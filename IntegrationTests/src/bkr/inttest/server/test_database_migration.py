@@ -17,8 +17,7 @@ from alembic.environment import MigrationContext
 from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, User, \
         OSMajor, OSMajorInstallOptions, GroupMembershipType, SystemActivity, \
         Activity, RecipeSetComment, Recipe, RecipeSet, RecipeTaskResult, \
-        Command, CommandStatus, LogRecipeTaskResult, DataMigration, LogRecipe, LogRecipeTask
-
+        Command, CommandStatus, LogRecipeTaskResult, DataMigration
 
 def has_initial_sublist(larger, prefix):
     """ Return true iff list *prefix* is an initial sublist of list 
@@ -837,46 +836,28 @@ class MigrationTest(unittest.TestCase):
         with self.migration_metadata.bind.connect() as connection:
             # populate empty database
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                                                             'database-dumps/22.sql'))
+                    'database-dumps/22.sql'))
             # populate test jobs
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                                                             'bz1322700-and-bz1337790-migration-setup.sql'))
+                    'bz1322700-and-bz1337790-migration-setup.sql'))
         # run migration
         upgrade_db(self.migration_metadata)
         # Job one's recipe task results should not be deleted
         self.assertEquals(
-            self.migration_session.query(RecipeTaskResult).filter_by(recipe_task_id=1).count(),
-            1)
+                self.migration_session.query(RecipeTaskResult).filter_by(recipe_task_id=1).count(),
+                1)
         # Job one's log recipe task results should not be deleted
         self.assertEquals(
-            self.migration_session.query(LogRecipeTaskResult).filter_by(recipe_task_result_id=1).count(),
-            1)
-
-        # Job one's log recipe tasks should not be deleted
-        self.assertEquals(
-            self.migration_session.query(LogRecipeTask).filter_by(recipe_task_id=1).count(),
-            1)
-        # Job one's log recipies should not be deleted
-        self.assertEquals(
-            self.migration_session.query(LogRecipe).filter_by(recipe_id=1).count(),
-            1)
-
+                self.migration_session.query(LogRecipeTaskResult).filter_by(recipe_task_result_id=1).count(),
+                1)
         # Job two's recipe task results should be deleted
         self.assertEquals(
-            self.migration_session.query(RecipeTaskResult).filter_by(recipe_task_id=2).count(),
-            0)
+                self.migration_session.query(RecipeTaskResult).filter_by(recipe_task_id=2).count(),
+                0)
         # Job two's log recipe task results should be deleted
         self.assertEquals(
-            self.migration_session.query(LogRecipeTaskResult).filter_by(recipe_task_result_id=2).count(),
-            0)
-        # Job two's log recipe tasks should be deleted
-        self.assertEquals(
-            self.migration_session.query(LogRecipeTask).filter_by(recipe_task_id=2).count(),
-            0)
-        # Job two's log recipies should be deleted
-        self.assertEquals(
-            self.migration_session.query(LogRecipe).filter_by(recipe_id=2).count(),
-            0)
+                self.migration_session.query(LogRecipeTaskResult).filter_by(recipe_task_result_id=2).count(),
+                0)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1346586
     def test_Installing_status_is_mapped_on_downgrade(self):
