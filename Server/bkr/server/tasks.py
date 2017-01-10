@@ -15,9 +15,9 @@ from bkr.server.bexceptions import DatabaseLookupError
 from bkr.server.app import app
 from bkr.common.helpers import siphon
 from bkr.common.bexceptions import BX
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, not_
 from sqlalchemy.exc import InvalidRequestError
-from sqlalchemy.orm import joinedload, joinedload_all
+from sqlalchemy.orm import joinedload
 from bkr.server.flask_util import NotFound404, request_wants_json, \
     render_tg_template, admin_auth_required, read_json_request, \
     convert_internal_errors, json_collection
@@ -237,11 +237,10 @@ class Tasks(RPCRoot):
         return self._do_search(hidden=hidden, **kw)
 
     def _do_search(self, hidden={}, **kw):
-        tasks = RecipeTask.query\
-                .filter(RecipeTask.recipe.has(Recipe.recipeset.has(RecipeSet.job.has(
-                    and_(Job.to_delete == None, Job.deleted == None)))))\
-                .options(joinedload(RecipeTask.task),
-                     joinedload_all(RecipeTask.results, RecipeTaskResult.logs))
+        tasks = RecipeTask.query.join(RecipeTask.recipe).join(Recipe.recipeset).join(RecipeSet.job) \
+            .filter(not_(Job.is_deleted)) \
+            .options(joinedload(RecipeTask.task),
+                     joinedload(RecipeTask.results).joinedload(RecipeTaskResult.logs))
 
         recipe_task_id = kw.get('recipe_task_id')
         if recipe_task_id:
@@ -250,25 +249,24 @@ class Tasks(RPCRoot):
             elif isinstance(recipe_task_id, list):
                 tasks = tasks.filter(RecipeTask.id.in_(recipe_task_id))
         if 'recipe_id' in kw: #most likely we are coming here from a LinkRemoteFunction in recipe_widgets
-            tasks = tasks.join(RecipeTask.recipe).filter(Recipe.id == kw['recipe_id'])
-
+            tasks = tasks.filter(Recipe.id == kw['recipe_id'])
             hidden = dict(distro_tree=1, system=1)
         if kw.get('distro_tree_id'):
-            tasks = tasks.join(RecipeTask.recipe, Recipe.distro_tree)\
+            tasks =  tasks.join(Recipe.distro_tree) \
                     .filter(DistroTree.id == kw.get('distro_tree_id'))
             hidden = dict(distro_tree=1)
         elif kw.get('distro_id'):
-            tasks = tasks.join(RecipeTask.recipe, Recipe.distro_tree, DistroTree.distro)\
+            tasks = tasks.join(Recipe.distro_tree).join(DistroTree.distro) \
                     .filter(Distro.id == kw.get('distro_id'))
         if kw.get('task_id'):
             try:
-                tasks = tasks.join('task').filter(Task.id==kw.get('task_id'))
+                tasks = tasks.join(RecipeTask.task).filter(Task.id==kw.get('task_id'))
                 hidden = dict(task = 1,
                              )
             except InvalidRequestError:
                 return "<div>Invalid data:<br>%r</br></div>" % kw
         if kw.get('system_id'):
-            tasks = tasks.join(RecipeTask.recipe,
+            tasks = tasks.join(
                     Recipe.resource.of_type(SystemResource),
                     SystemResource.system)\
                     .filter(System.id == kw.get('system_id'))\
@@ -278,9 +276,9 @@ class Tasks(RPCRoot):
             job_id = kw.get('job_id')
             if not isinstance(job_id, list):
                 job_id = [job_id]
-            tasks = tasks.join('recipe','recipeset','job').filter(Job.id.in_(job_id))
+            tasks = tasks.filter(Job.id.in_(job_id))
         if kw.get('system'):
-            tasks = tasks.join(RecipeTask.recipe, Recipe.resource)\
+            tasks = tasks.join(RecipeResource)\
                     .filter(RecipeResource.fqdn.like('%%%s%%' % kw.get('system')))
         if kw.get('task'):
             # Shouldn't have to do this.  This only happens on the LinkRemoteFunction calls
@@ -289,10 +287,10 @@ class Tasks(RPCRoot):
         if kw.get('version'):
             tasks = tasks.filter(RecipeTask.version.like(kw.get('version').replace('*', '%')))
         if kw.get('distro'):
-            tasks = tasks.join(RecipeTask.recipe, Recipe.distro_tree, DistroTree.distro)\
+            tasks = tasks.join(Recipe.distro_tree).join(DistroTree.distro) \
                     .filter(Distro.name.like('%%%s%%' % kw.get('distro')))
         if kw.get('arch_id'):
-            tasks = tasks.join(RecipeTask.recipe, Recipe.distro_tree, DistroTree.arch)\
+            tasks = tasks.join(Recipe.distro_tree).join(DistroTree.arch) \
                     .filter(Arch.id == kw.get('arch_id'))
         if kw.get('status'):
             tasks = tasks.filter(RecipeTask.status == kw['status'])
@@ -301,11 +299,12 @@ class Tasks(RPCRoot):
         elif kw.get('result'):
             tasks = tasks.filter(RecipeTask.result == kw['result'])
         if kw.get('osmajor_id'):
-            tasks = tasks.join(RecipeTask.recipe, Recipe.distro_tree,
-                    DistroTree.distro, Distro.osversion, OSVersion.osmajor)\
-                    .filter(OSMajor.id == kw.get('osmajor_id'))
+            tasks.join(Recipe.distro_tree).join(DistroTree.distro) \
+                .join(Distro.osversion) \
+                .join(OSVersion.osmajor) \
+                .filter(OSMajor.id == kw.get('osmajor_id'))
         if kw.get('whiteboard'):
-            tasks = tasks.join('recipe').filter(Recipe.whiteboard==kw.get('whiteboard'))
+            tasks = tasks.filter(Recipe.whiteboard==kw.get('whiteboard'))
         return dict(tasks = tasks,
                     hidden = hidden,
                     task_widget = self.task_widget)

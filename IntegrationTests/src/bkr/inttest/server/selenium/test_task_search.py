@@ -4,14 +4,12 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from selenium.webdriver.support.ui import Select
 from bkr.inttest.server.selenium import WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import check_task_search_results, \
-        wait_for_animation
-from bkr.inttest import data_setup, get_server_base
+from bkr.inttest.server.webdriver_utils import check_task_search_results
+from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
 from turbogears.database import session
-from bkr.server.model import OSMajor, Task
-
+from bkr.server.model import OSMajor
+from bkr.server.tasks import Tasks
 
 class ExecutedTasksTest(WebDriverTestCase):
 
@@ -181,3 +179,65 @@ class Search(WebDriverTestCase):
         b.find_element_by_class_name('grid-filter').submit()
         check_task_search_results(b, absent=[self.task_three],
                 present=[self.task_one, self.task_two])
+
+
+
+class TaskSearchControllerTest(DatabaseTestCase):
+    def setUp(self):
+        with session.begin():
+            self.arch_one = u'i386'
+            self.osmajor_one = u'testosmajor'
+            self.task_one = data_setup.create_task(name=u'/a/a/a', exclude_arches=[self.arch_one])
+            self.task_two = data_setup.create_task(name=u'/a/a/b', exclude_arches=[self.arch_one])
+            self.task_three = data_setup.create_task(name=u'/a/a/c', exclude_osmajors=[self.osmajor_one])
+            data_setup.create_completed_job(task_list=[self.task_one, self.task_two, self.task_three])
+
+        self.recipe_tasks = []
+        t = Tasks()
+        for id in [t.id for t in [self.task_one, self.task_two, self.task_three]]:
+            self.recipe_tasks = self.recipe_tasks + self.get_task_query({'task_id': id}, False).all()
+
+    def tearDown(self):
+        with session.begin():
+            for t in self.recipe_tasks:
+                session.delete(t)
+            session.delete(self.task_one)
+            session.delete(self.task_two)
+            session.delete(self.task_three)
+
+    def get_task_query(self, kw, filter_on_recipe_task_ids=True):
+        t = Tasks()
+        if filter_on_recipe_task_ids:
+            kw['recipe_task_id'] = [r.id for r in self.recipe_tasks]
+        ret = t._do_search({}, **kw)
+        return ret['tasks']
+
+    def assert_result_counts_match(self, search_key, items):
+        for [id, count] in [[x, items.count(x)] for x in set(items)]:
+            query = self.get_task_query({search_key: id})
+            self.assertEqual(count, query.count())
+
+    # Tests to ensure there are no regressions from query refactor
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1224848
+    def test_search_api_directly(self):
+        all_tasks = self.recipe_tasks
+        self.assertEqual(3, len(all_tasks))
+
+        self.assert_result_counts_match('distro_tree_id', [t.recipe.distro_tree.id for t in all_tasks])
+        self.assert_result_counts_match('distro_id', [t.recipe.distro_tree.distro.id for t in all_tasks])
+        self.assert_result_counts_match('distro', [t.recipe.distro_tree.distro.name for t in all_tasks])
+        self.assert_result_counts_match('arch_id', [t.recipe.distro_tree.arch_id for t in all_tasks])
+        self.assert_result_counts_match('task_id', [t.task_id for t in all_tasks])
+        self.assert_result_counts_match('task', [t.name for t in all_tasks])
+        self.assert_result_counts_match('status', [t.status for t in all_tasks])
+        self.assert_result_counts_match('result', [t.result for t in all_tasks])
+        self.assert_result_counts_match('osmajor_id', [t.recipe.distro_tree.distro.osversion.osmajor_id for t in all_tasks])
+
+        self.assertEqual(0, self.get_task_query({'is_failed': True}).count())
+
+        self.assertEqual(0, self.get_task_query({'whiteboard': 'foo'}).count())
+        self.assertEqual(3, self.get_task_query({'whiteboard': None}).count())
+
+        system = all_tasks[0].recipe.resource.system
+        self.assertEqual(3, self.get_task_query({'system': system.fqdn}).count())
+        self.assertEqual(3, self.get_task_query({'system_id': system.id}).count())
