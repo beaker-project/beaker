@@ -1,0 +1,9 @@
+Ready-for-Checks+1: dong wang <dowang@redhat.com>
+Code-Review+1: Blake McIvor <bmcivor@redhat.com>
+Code-Review+2: Tyrone Abdy <tabdy@redhat.com>
+Verified+1: dong wang <dowang@redhat.com>
+Submitted-by: dong wang <dowang@redhat.com>
+Submitted-at: Wed, 11 Jan 2017 01:49:50 +0000
+Reviewed-on: https://gerrit.beaker-project.org/5563
+Project: beaker
+Branch: refs/heads/develop
