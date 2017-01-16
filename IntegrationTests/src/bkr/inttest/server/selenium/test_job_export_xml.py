@@ -27,7 +27,7 @@ class JobExportXML(WebDriverTestCase):
         # actually click it because it triggers a download, which WebDriver 
         # can't handle.
         b.get(get_server_base() + 'jobs/')
-        b.find_element_by_name('simplesearch').send_keys(unicode(self.job_to_export.id))
+        b.find_element_by_name('simplesearch').send_keys(unicode(self.job_to_export.whiteboard))
         b.find_element_by_name('jobsearch_simple').submit()
         b.find_element_by_xpath(
                 '//tr[normalize-space(string(./td[1]))="%s"]'

@@ -565,9 +565,14 @@ class Jobs(RPCRoot):
         simplesearch = None
         if kw.get('simplesearch'):
             value = kw['simplesearch']
-            kw['jobsearch'] = [{'table' : 'Id',
-                                 'operation' : 'is',
-                                 'value' : value}]
+            if value.startswith('J:'):
+                kw['jobsearch'] = [{'table' : 'Id',
+                                     'operation' : 'is',
+                                     'value' : value.strip("J:")}]
+            else:
+                kw['jobsearch'] = [{'table' : 'Whiteboard',
+                                     'operation' : 'contains',
+                                     'value' : value}]
             simplesearch = value
         if kw.get("jobsearch"):
             if 'quick_search' in kw['jobsearch']:
@@ -903,7 +908,7 @@ class Jobs(RPCRoot):
 
         search_bar = SearchBar(name='jobsearch',
                            label=_(u'Job Search'),    
-                           simplesearch_label = 'Lookup ID',
+                           simplesearch_label = 'Search',
                            table = search_utility.Job.search.create_complete_search_table(without=('Owner')),
                            search_controller=url("/get_search_options_job"),
                            quick_searches = [('Status-is-Queued','Queued'),('Status-is-Running','Running'),('Status-is-Completed','Completed')])

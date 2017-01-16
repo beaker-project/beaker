@@ -176,3 +176,30 @@ class SearchJobsWD(WebDriverTestCase):
         completed_table_text = b.find_element_by_xpath("//table[@id='widget']").text
         self.assert_('J:%s' % self.queued_job.id not in completed_table_text)
         self.assert_('J:%s' % self.running_job.id not in completed_table_text)
+
+    def test_simple_search(self):
+        with session.begin():
+            group = data_setup.create_group()
+            whiteboard = data_setup.unique_name(u'default_search%s')
+            job = data_setup.create_job(whiteboard=whiteboard)
+
+        b = self.browser
+        b.get(get_server_base() + 'jobs')
+        b.find_element_by_xpath("//form[@id='simpleform']/input").\
+            send_keys("default_search")
+        b.find_element_by_xpath("//form[@id='simpleform']/button[text()='Search']").click()
+        whiteboard_search = b.find_element_by_xpath("//table[@id='widget']/tbody/tr[1]/td[2]").text
+        self.assertEqual(whiteboard_search, whiteboard)
+
+    def test_search_id_if_text_starts_with_job_prefix(self):
+        with session.begin():
+            job = data_setup.create_job()
+        b = self.browser
+        b.get(get_server_base() + 'jobs')
+        b.find_element_by_xpath("//form[@id='simpleform']/input").\
+            send_keys(job.t_id)
+        b.find_element_by_xpath("//form[@id='simpleform']/button[text()='Search']").click()
+        id_search = b.find_element_by_xpath("//table[@id='widget']/tbody/tr[1]/td[2]").text
+        self.assertEqual(job.whiteboard, id_search)
+
+
