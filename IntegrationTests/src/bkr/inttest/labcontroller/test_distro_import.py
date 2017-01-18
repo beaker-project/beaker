@@ -1012,6 +1012,85 @@ class DistroImportTest(LabControllerTestCase):
                            u'arch': u'armhfp',
                            u'ks_meta': None}
 
+        self.x86_64_f25 = {u'osmajor': u'Fedora25',
+                           u'name': u'Fedora-25',
+                           u'tree_build_time': u'1479239952',
+                           u'osminor': u'0',
+                           u'tags': [],
+                           u'kernel_options_post': None,
+                           u'repos': [
+                               {u'path': u'.',
+                                u'type': u'variant',
+                                u'repoid': u'Fedora'},
+                               {u'path': u'../../../Everything/x86_64/os',
+                                u'repoid': u'Fedora-Everything',
+                                u'type': u'fedora'},
+                               {u'path': u'../debug', u'type': u'debug',
+                                u'repoid': u'Fedora-debuginfo'}],
+                           u'variant': u'Server',
+                           u'kernel_options': None,
+                           u'images': [{u'path': u'images/pxeboot/vmlinuz',
+                                        u'type': u'kernel'},
+                                       {u'path': u'images/pxeboot/initrd.img',
+                                        u'type': u'initrd'}],
+                           u'arches': [],
+                           u'urls': [u'http://localhost:19998/F-25/Server/x86_64/os/'],
+                           u'arch': u'x86_64',
+                           u'ks_meta': None}
+
+        self.i386_f25 = {u'osmajor': u'Fedora25',
+                         u'name': u'Fedora-25',
+                         u'tree_build_time': u'1479239942',
+                         u'osminor': u'0',
+                         u'tags': [],
+                         u'kernel_options_post': None,
+                         u'repos': [
+                             {u'path': u'.',
+                              u'type': u'variant',
+                              u'repoid': u'Fedora'},
+                             {u'path': u'../../../Everything/i386/os',
+                              u'repoid': u'Fedora-Everything',
+                              u'type': u'fedora'},
+                             {u'path': u'../debug', u'type': u'debug',
+                              u'repoid': u'Fedora-debuginfo'}],
+                         u'variant': u'Server',
+                         u'kernel_options': None,
+                         u'images': [{u'path': u'images/pxeboot/vmlinuz',
+                                      u'type': u'kernel'},
+                                     {u'path': u'images/pxeboot/initrd.img',
+                                      u'type': u'initrd'}],
+                         u'arches': [],
+                         u'urls': [u'http://localhost:19998/F-25/Server/i386/os/'],
+                         u'arch': u'i386',
+                         u'ks_meta': None}
+
+        self.armhfp_f25 = {u'osmajor': u'Fedora25',
+                           u'name': u'Fedora-25',
+                           u'tree_build_time': u'1479239938',
+                           u'osminor': u'0',
+                           u'tags': [],
+                           u'kernel_options_post': None,
+                           u'repos': [
+                               {u'path': u'.',
+                                u'type': u'variant',
+                                u'repoid': u'Fedora'},
+                               {u'path': u'../../../Everything/armhfp/os',
+                                u'repoid': u'Fedora-Everything',
+                                u'type': u'fedora'},
+                               {u'path': u'../debug',
+                                u'type': u'debug',
+                                u'repoid': u'Fedora-debuginfo'}],
+                           u'variant': u'Server',
+                           u'kernel_options': None,
+                           u'images': [{u'path': u'images/pxeboot/vmlinuz',
+                                        u'type': u'kernel'},
+                                       {u'path': u'images/pxeboot/initrd.img',
+                                        u'type': u'initrd'}],
+                           u'arches': [],
+                           u'urls': [u'http://localhost:19998/F-25/Server/armhfp/os/'],
+                           u'arch': u'armhfp',
+                           u'ks_meta': None}
+
     def _run_import(self, import_args):
         p = subprocess.Popen(import_args,
                              stdout=subprocess.PIPE,
@@ -1203,6 +1282,15 @@ class DistroImportTest(LabControllerTestCase):
 
         trees = self.dry_run_import_trees(['%sF-21/Server/' % self.distro_url])
         self.assertItemsEqual(trees, [self.i386_f21, self.x86_64_f21, self.armhfp_f21])
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1412487
+    def test_f25_tree_import_compose(self):
+        trees = self.dry_run_import_trees(['%sF-25/' % self.distro_url])
+        self.assertIn(self.i386_f25, trees)
+        self.assertIn(self.x86_64_f25, trees)
+        self.assertIn(self.armhfp_f25, trees)
+        # There will also be Cloud, Workstation, and Everything trees
+        # which we are not asserting here.
 
     def _rawhide_treeinfo(self, compose_tree):
         # "derive" the expected treeinfo data from the

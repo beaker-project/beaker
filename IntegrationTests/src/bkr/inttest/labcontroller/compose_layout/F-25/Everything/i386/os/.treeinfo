@@ -1,0 +1,52 @@
+[checksums]
+images/boot.iso = sha256:f2f373e85d96e2164d38e26fe8ed7cf00abcf1edcf2704be69f2bdc1b851376a
+images/install.img = sha256:a04d634d6f4e0458ace95d7728ff8a007b79b9b56d129b0aa7d0671432886f96
+images/pxeboot/initrd-PAE.img = sha256:fc08bd8ff4f9df5573ad9366a4240a945f7bc08eeae05c622fb010e677d228ba
+images/pxeboot/initrd.img = sha256:3b71433f526fba2bd107362764842f020421cefe796195d5e50f0fa069d8ef68
+images/pxeboot/vmlinuz = sha256:5229cbe1499be6f4a4c6165cd9d096c59f7a3c8da140c855e0f9791173b72918
+images/pxeboot/vmlinuz-PAE = sha256:481b93fb6f5e03e6736abb76c9a5f0ff6abdf791affa4973e6b02b493f29dc41
+
+[general]
+; WARNING.0 = This section provides compatibility with pre-productmd treeinfos.
+; WARNING.1 = Read productmd documentation for details about new format.
+arch = i386
+family = Fedora
+name = Fedora 25
+platforms = i386,xen
+timestamp = 1479239917
+variant = Everything
+variants = Everything
+version = 25
+
+[header]
+version = 1.0
+
+[images-i386]
+boot.iso = images/boot.iso
+initrd = images/pxeboot/initrd.img
+kernel = images/pxeboot/vmlinuz
+
+[images-xen]
+initrd = images/pxeboot/initrd-PAE.img
+kernel = images/pxeboot/vmlinuz-PAE
+
+[release]
+name = Fedora
+short = Fedora
+version = 25
+
+[stage2]
+mainimage = images/install.img
+
+[tree]
+arch = i386
+build_timestamp = 1479239917
+platforms = i386,xen
+variants = Everything
+
+[variant-Everything]
+id = Everything
+name = Everything
+type = variant
+uid = Everything
+

@@ -1,0 +1,98 @@
+[variant-Cloud.src]
+arch = src
+os_dir = Cloud/source/tree
+
+[variant-Cloud.armhfp]
+arch = armhfp
+os_dir = Cloud/armhfp/os
+
+[variant-Cloud.i386]
+arch = i386
+os_dir = Cloud/i386/os
+
+[variant-Cloud.x86_64]
+arch = x86_64
+os_dir = Cloud/x86_64/os
+
+[variant-Everything.src]
+arch = src
+os_dir = Everything/source/tree
+
+[variant-Everything.armhfp]
+arch = armhfp
+os_dir = Everything/armhfp/os
+
+[variant-Everything.i386]
+arch = i386
+os_dir = Everything/i386/os
+
+[variant-Everything.x86_64]
+arch = x86_64
+os_dir = Everything/x86_64/os
+
+[variant-Server.src]
+arch = src
+os_dir = Server/source/tree
+
+[variant-Server.armhfp]
+arch = armhfp
+os_dir = Server/armhfp/os
+
+[variant-Server.i386]
+arch = i386
+os_dir = Server/i386/os
+
+[variant-Server.x86_64]
+arch = x86_64
+os_dir = Server/x86_64/os
+
+[variant-Workstation.src]
+arch = src
+os_dir = Workstation/source/tree
+
+[variant-Workstation.armhfp]
+arch = armhfp
+os_dir = Workstation/armhfp/os
+
+[variant-Workstation.i386]
+arch = i386
+os_dir = Workstation/i386/os
+
+[variant-Workstation.x86_64]
+arch = x86_64
+os_dir = Workstation/x86_64/os
+
+[product]
+family = Fedora
+name = Fedora-25
+version = 25
+variants = Everything,Workstation,Cloud,Server
+
+[variant-Everything]
+arches = src,armhfp,i386,x86_64
+id = Everything
+name = Everything
+type = variant
+variants = 
+
+[variant-Workstation]
+arches = src,armhfp,i386,x86_64
+id = Workstation
+name = Workstation
+type = variant
+variants = 
+
+[variant-Cloud]
+arches = src,armhfp,i386,x86_64
+id = Cloud
+name = Cloud
+type = variant
+variants = 
+
+[variant-Server]
+arches = src,armhfp,i386,x86_64
+id = Server
+name = Server
+type = variant
+variants = 
+

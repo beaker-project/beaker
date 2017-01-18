@@ -608,6 +608,9 @@ sources = Workstation/source/SRPMS
         
         all_arches = self.parser.get('variant-%s' % variant, 'arches'). \
             split(',')
+        # Fedora 25+ .composeinfo includes src but it's not a real arch that can be installed
+        if 'src' in all_arches:
+            all_arches.remove('src')
         specific_arches = set(self.options.arch)
         if specific_arches:
             applicable_arches = specific_arches.intersection(set(all_arches))
