@@ -89,7 +89,7 @@ BuildRequires:  python-turbojson13
 %else
 BuildRequires:  python-turbojson
 %endif
-BuildRequires:  python-sqlalchemy >= 0.8
+BuildRequires:  python-sqlalchemy >= 0.9
 BuildRequires:  python-lxml
 BuildRequires:  python-ldap
 BuildRequires:  python-TurboMail >= 3.0
@@ -165,7 +165,7 @@ Requires:       python-turbojson13
 %else
 Requires:       python-turbojson
 %endif
-Requires:       python-sqlalchemy >= 0.8
+Requires:       python-sqlalchemy >= 0.9
 Requires:       intltool
 Requires:       python-decorator
 Requires:       python-lxml
