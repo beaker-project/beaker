@@ -283,6 +283,10 @@ A number of bug fixes are also included in this release:
   message when given an invalid task.
   (Contributed by Dong Wang)
 
+* :issue:`1224848`: The database query used for pagination on the executed tasks page has been optimized
+  in order to avoid producing a large temptable in MySQL that can cause errors when loading
+  the page.
+  (Contributed by Jon Orris)
 
 .. Unreleased bugs:
 
