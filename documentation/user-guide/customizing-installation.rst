@@ -386,6 +386,12 @@ overridden if necessary for custom distros.
 ``has_chrony``
     Indicates that chrony is available in the distro.
 
+``has_dhcp_mtu_support``
+    Indicates that the DHCP client obeys option 26 for controlling the network 
+    interface MTU. Support for this DHCP option is required for a recipe to run 
+    successfully in OpenStack. All modern distributions from RHEL 5 onwards 
+    support this.
+
 ``has_gpt_bios_support``
     Indicates that the installer is capable of formatting disks using GPT on 
     x86 systems with BIOS firmware.

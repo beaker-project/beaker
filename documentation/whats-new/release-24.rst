@@ -48,8 +48,10 @@ Here is a list of issues resolved and enhancements made for OpenStack integratio
   when running recipes on OpenStack
 * :issue:`1396874`: Openstack instance link is removed when the job is not
   finished or deleted
+* :issue:`1413783`: RHEL4 recipes are excluded from OpenStack because RHEL4
+  does not obey DHCP option 26 for controlling MTU
 
-(Contributed by Matt Jia, Róman Joost, and Hui Wang)
+(Contributed by Matt Jia, Róman Joost, Hui Wang, and Dan Callaghan.)
 
 New result type Skip
 --------------------

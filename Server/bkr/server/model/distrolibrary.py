@@ -345,6 +345,10 @@ class OSMajor(DeclarativeMappedObject):
         ks_meta['has_chrony'] = True
         if rhel in ('3', '4', '5', '6'):
             del ks_meta['has_chrony']
+        # DHCP option 26
+        ks_meta['has_dhcp_mtu_support'] = True
+        if rhel in ('3', '4'):
+            del ks_meta['has_dhcp_mtu_support']
         # GPT on BIOS
         ks_meta['has_gpt_bios_support'] = True
         if rhel in ('3', '4', '5', '6'):

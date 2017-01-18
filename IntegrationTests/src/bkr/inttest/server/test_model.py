@@ -2012,6 +2012,12 @@ class CheckDynamicVirtTest(DatabaseTestCase):
         data_setup.create_job_for_recipes([recipe], owner=self.user)
         self.assertVirtPrecluded(recipe, 'force="" should preclude virt')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1413783
+    def test_rhel4_precluded(self):
+        recipe = data_setup.create_recipe(osmajor=u'RedHatEnterpriseLinux4')
+        data_setup.create_job_for_recipes([recipe], owner=self.user)
+        self.assertVirtPrecluded(recipe, 'RHEL4 should be precluded')
+
 
 class MachineRecipeTest(DatabaseTestCase):
 

@@ -2589,13 +2589,15 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
                     or result == TaskResult.warn)
 
     def reduced_install_options(self):
-        return InstallOptions.reduce(chain(
-                [global_install_options()],
-                self.distro_tree.install_options(),
-                self.resource.install_options(self.distro_tree),
-                [self.generated_install_options(),
-                 InstallOptions.from_strings(self.ks_meta,
-                    self.kernel_options, self.kernel_options_post)]))
+        sources = []
+        sources.append(global_install_options())
+        sources.extend(self.distro_tree.install_options())
+        if self.resource:
+            sources.extend(self.resource.install_options(self.distro_tree))
+        sources.append(self.generated_install_options())
+        sources.append(InstallOptions.from_strings(self.ks_meta,
+                    self.kernel_options, self.kernel_options_post))
+        return InstallOptions.reduce(sources)
 
     def provision(self):
         from bkr.server.kickstart import generate_kickstart
@@ -3106,6 +3108,10 @@ class MachineRecipe(Recipe):
             return RecipeVirtStatus.precluded
         # Multihost testing won't work (for now!)
         if len(self.recipeset.recipes) > 1:
+            return RecipeVirtStatus.precluded
+        # The distro needs to support DHCP option 26
+        install_options = self.reduced_install_options()
+        if 'has_dhcp_mtu_support' not in install_options.ks_meta:
             return RecipeVirtStatus.precluded
         # Check for any host requirements which cannot be virtualised
         # Delayed import to avoid circular dependency
