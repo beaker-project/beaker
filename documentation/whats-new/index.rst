@@ -18,18 +18,16 @@ version, see :doc:`../admin-guide/upgrading`.
    with an explicit list that puts the subsections in some kind of
    sensible order.
 
-.. Commented out for release
+Unreleased changes
+------------------
 
-    Unreleased changes
-    ------------------
+The following changes will appear in the next Beaker release.
 
-    The following changes will appear in the next Beaker release.
+.. toctree::
+   :maxdepth: 2
+   :glob:
 
-    .. toctree::
-      :maxdepth: 2
-      :glob:
-
-      next/*
+   next/*
 
 Beaker 24
 ---------
