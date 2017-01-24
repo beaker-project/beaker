@@ -12,7 +12,7 @@ def get_compose_layout():
 
 setup(
     name='beaker-integration-tests',
-    version='23.3',
+    version='24.0',
     description='Integration tests for Beaker',
     author='Red Hat, Inc.',
     author_email='beaker-devel@lists.fedorahosted.org',
