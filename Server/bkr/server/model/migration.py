@@ -38,17 +38,6 @@ class DataMigration(DeclarativeMappedObject):
         Returns a list of all defined migrations, whether or not they have been 
         applied to this database yet.
         """
-        # Beaker 23.0 originally shipped with data migrations handled manually 
-        # by beaker-init, without this database table, so we need to gracefully 
-        # handle the case where this table doesn't exist. In that case we 
-        # assume there are *no* incomplete migrations because it means the 
-        # admin has successfully run them using beaker-init from 23.0.
-        # This special handling can be removed in 24.0+ because it is assumed 
-        # that the admin will run all Alembic migrations like normal.
-        if cls.__tablename__ not in inspect(get_engine()).get_table_names():
-            logger.debug('Data migration table does not exist, skipping all migrations')
-            return []
-
         migrations = []
         for filename in pkg_resources.resource_listdir('bkr.server', 'data-migrations'):
             name, extension = os.path.splitext(filename)
