@@ -3,11 +3,15 @@ HUB_URL = "http://localhost/bkr"
 
 # Hub authentication method
 #AUTH_METHOD = "krbv"
+#AUTH_METHOD = "oauth2"
 AUTH_METHOD = "password"
 
 # Username and password
 #USERNAME = ""
 #PASSWORD = ""
+
+# OAuth2 token
+#ACCESS_TOKEN = ""
 
 # Kerberos principal. If commented, default principal obtained by kinit is used.
 #KRB_PRINCIPAL = "host/$HOSTNAME"

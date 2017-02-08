@@ -11,6 +11,7 @@ from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.model import User
 import cherrypy
 import logging
+import requests
 import socket
 
 log = logging.getLogger(__name__)
@@ -25,6 +26,10 @@ class Auth(RPCRoot):
 
     KRB_AUTH_PRINCIPAL = get("identity.krb_auth_principal")
     KRB_AUTH_KEYTAB = get("identity.krb_auth_keytab")
+
+    OAUTH2_TOKEN_INFO_URL = get('identity.oauth2_token_info_url')
+    OAUTH2_CLIENT_ID = get('identity.oauth2_client_id')
+    OAUTH2_CLIENT_SECRET = get('identity.oauth2_client_secret')
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
@@ -87,21 +92,70 @@ class Auth(RPCRoot):
         return user.user_name
 
     @cherrypy.expose
+    def login_oauth2(self, access_token, proxy_user=None):
+        """
+        Authenticates the current session using OAuth2.
+
+        The caller may act as a proxy on behalf of another user by passing the
+        *proxy_user* argument. This requires that the caller has 'proxy_auth'
+        permission.
+
+        :param access_token: The OAuth2 access token
+        :type access_token: string
+        :param proxy_user: username on whose behalf the caller is proxying
+        :type proxy_user: string or None
+        """
+        token_info_resp = requests.post(
+            self.OAUTH2_TOKEN_INFO_URL,
+            timeout=get('identity.soldapprovider.timeout'),
+            data={'client_id': self.OAUTH2_CLIENT_ID,
+                  'client_secret': self.OAUTH2_CLIENT_SECRET,
+                  'token': access_token})
+        token_info_resp.raise_for_status()
+        token_info = token_info_resp.json()
+
+        if not token_info['active']:
+            raise LoginException(_(u'Invalid token'))
+
+        if not 'https://beaker-project.org/oidc/scope' in token_info.get('scope', '').split(' '):
+            raise LoginException(_(u'Token missing required scope'))
+
+        username = token_info.get('sub')
+        if not username:
+            raise LoginException(_(u'Token missing subject'))
+
+        user = User.by_user_name(username)
+        if user is None:
+            raise LoginException(_(u'Invalid username'))
+        if not user.can_log_in():
+            raise LoginException(_(u'Invalid username'))
+        if proxy_user:
+            if not user.has_permission(u'proxy_auth'):
+                raise LoginException(_(u'%s does not have proxy_auth permission') % user.user_name)
+            proxied_user = User.by_user_name(proxy_user)
+            if proxied_user is None:
+                raise LoginException(_(u'Proxy user %s does not exist') % proxy_user)
+            identity.set_authentication(proxied_user, proxied_by=user)
+        else:
+            identity.set_authentication(user)
+        return username
+
+    @cherrypy.expose
     def login_krbV(self, krb_request, proxy_user=None):
         """
         Authenticates the current session using Kerberos.
 
-        The caller may act as a proxy on behalf of another user by passing the 
-        *proxy_user* argument. This requires that the caller has 'proxy_auth' 
+        The caller may act as a proxy on behalf of another user by passing the
+        *proxy_user* argument. This requires that the caller has 'proxy_auth'
         permission.
-        
-        :param krb_request: KRB_AP_REQ message containing client credentials, 
+
+        :param krb_request: KRB_AP_REQ message containing client credentials,
             as produced by :c:func:`krb5_mk_req`
         :type krb_request: base64-encoded string
         :param proxy_user: username on whose behalf the caller is proxying
         :type proxy_user: string or None
 
-        This method is also available under the alias :meth:`auth.login_krbv`, 
+        This method is also available under the alias :meth:`auth.login_krbv`,
         for compatibility with `Kobo`_.
         """
         import krbV

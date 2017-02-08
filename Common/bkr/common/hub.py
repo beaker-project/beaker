@@ -115,6 +115,13 @@ class HubProxy(object):
             raise AuthenticationError("USERNAME is not set")
         self._hub.auth.login_password(username, password, proxyuser)
 
+    def _login_oauth2(self):
+        """Login using OAuth2 access token."""
+        access_token = self._conf.get("ACCESS_TOKEN")
+        if not access_token:
+            raise AuthenticationError("ACCESS_TOKEN is not set")
+        self._hub.auth.login_oauth2(access_token)
+
     def _login_worker_key(self):
         """Login using worker key."""
         worker_key = self._conf.get("WORKER_KEY")
