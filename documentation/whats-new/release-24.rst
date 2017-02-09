@@ -259,10 +259,10 @@ A number of bug fixes are also included in this release:
   to fail when moving the log files.
   (Contributed by Dan Callaghan)
 
-* :issue:`1366098`: The :program:`beaker-provision` daemon now finds and aborts any
-   commands which were left in the Running state due to network problems or other error
-   conditions. Previously the commands would be left Running forever.
-   (Contributed by Jon Orris)
+* :issue:`1366098`: The :program:`beaker-provision` daemon now finds and aborts
+  any commands which were left in the Running state due to network problems or 
+  other error conditions. Previously the commands would be left Running 
+  forever. (Contributed by Jon Orris)
 
 * :issue:`1370399`: The :program:`bkr system-delete` command now shows a more meaningful
   message when deleting a nonexistent system.
