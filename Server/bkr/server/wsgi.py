@@ -167,7 +167,10 @@ def close_session(exception=None):
         # not closed the old one here. So we kill the entire process with 
         # SIGABRT. The application container should spawn a fresh worker to 
         # replace this one.
-        log.exception('Error closing session when tearing down app context, aborting')
+        # Note that the most likely failure here is MemoryError, so we must not 
+        # do any other work before we abort (not even logging a message) 
+        # because that could try to allocate, which will just fail again with 
+        # MemoryError.
         os.abort()
 
 app.before_request(identity.check_authentication)
