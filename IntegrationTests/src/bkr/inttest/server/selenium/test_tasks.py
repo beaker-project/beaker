@@ -11,7 +11,6 @@ from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, check_task_search_results
 from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
 from bkr.inttest.server.requests_utils import login as requests_login, patch_json
-from bkr.common.helpers import unlink_ignore
 import unittest2 as unittest
 import time, re, os, shutil, turbogears
 import pkg_resources
@@ -42,9 +41,6 @@ class TestSubmitTask(WebDriverTestCase):
                 pkg_resources.resource_filename('bkr.inttest.server',
                                                 'task-rpms/tmp-distribution-beaker-task_test-1.1-0.noarch.rpm'))
         b.find_element_by_xpath('//button[text()="Upload"]').click()
-        self.addCleanup(unlink_ignore,
-                os.path.join(turbogears.config.get('basepath.rpms'),
-                'tmp-distribution-beaker-task_test-1.1-0.noarch.rpm'))
         self.assert_task_upload_task_header(test_package_name)
         self.assert_task_correct_v1_1()
         self.assertEqual(self.get_task_info_field('Uploader'), self.uploader.user_name)
@@ -57,9 +53,6 @@ class TestSubmitTask(WebDriverTestCase):
                 pkg_resources.resource_filename('bkr.inttest.server',
                                                 'task-rpms/tmp-distribution-beaker-task_test-2.0-5.noarch.rpm'))
         b.find_element_by_xpath('//button[text()="Upload"]').click()
-        self.addCleanup(unlink_ignore,
-                os.path.join(turbogears.config.get('basepath.rpms'),
-                'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm'))
         self.assert_task_upload_task_header(test_package_name)
         # ...and make sure everything was updated
         self.assert_task_correct_v2_0()
@@ -126,9 +119,6 @@ class TestSubmitTask(WebDriverTestCase):
             pkg_resources.resource_filename('bkr.inttest.server',
                                             'task-rpms/tmp-distribution-beaker-dummy_for_bz681143-1.0-1.noarch.rpm'))
         b.find_element_by_xpath('//button[text()="Upload"]').click()
-        self.addCleanup(unlink_ignore,
-                os.path.join(turbogears.config.get('basepath.rpms'),
-                'tmp-distribution-beaker-dummy_for_bz681143-1.0-1.noarch.rpm'))
         self.assert_task_upload_task_header(test_package_name)
         # Should have openCryptoki in correct case:
         self.assertEqual(self.get_task_info_field('Run For'), 'openCryptoki')
@@ -223,9 +213,6 @@ class TestSubmitTask(WebDriverTestCase):
                 'task-rpms/tmp-distribution-beaker-arm-related-arches-1.0-0.noarch.rpm')
         b.find_element_by_id('task_task_rpm').send_keys(rpm_path)
         b.find_element_by_xpath('//button[text()="Upload"]').click()
-        self.addCleanup(unlink_ignore,
-                os.path.join(turbogears.config.get('basepath.rpms'),
-                'tmp-distribution-beaker-arm-related-arches-1.0-0.noarch.rpm'))
         self.assert_task_upload_task_header('/distribution/beaker/arm-related-arches')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1226443
@@ -236,9 +223,6 @@ class TestSubmitTask(WebDriverTestCase):
                 'task-rpms/tmp-distribution-beaker-dummy_for_bz1226443-1.0-1.noarch.rpm')
         b.find_element_by_id('task_task_rpm').send_keys(rpm_path)
         b.find_element_by_xpath('//button[text()="Upload"]').click()
-        self.addCleanup(unlink_ignore,
-                os.path.join(turbogears.config.get('basepath.rpms'),
-                'tmp-distribution-beaker-dummy_for_bz1226443-1.0-1.noarch.rpm'))
         self.assert_task_upload_task_header('/distribution/beaker/dummy_for_bz1226443')
 
 

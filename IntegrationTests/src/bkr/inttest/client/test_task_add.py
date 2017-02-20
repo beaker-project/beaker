@@ -35,8 +35,8 @@ class TaskAddTest(ClientTestCase):
     def test_cannot_add_duplicate_tasks(self):
         import_rpm = pkg_resources.resource_filename('bkr.inttest.server',
                                                  'task-rpms/tmp-test-cannot-add-duplicate-tasks-1.1.1-0.noarch.rpm')
+        run_client(['bkr', 'task-add', import_rpm])
         try:
-            run_client(['bkr', 'task-add', import_rpm])
             # run this task-add twice to make duplicate error will show.
             run_client(['bkr', 'task-add', import_rpm])
             self.fail('should raise')
@@ -101,8 +101,8 @@ class TaskAddTest(ClientTestCase):
                                                   'task-rpms/tmp-test-cannot-add-same-version-tasks-1.1.2-0.noarch.rpm')
         same_version_rpm = pkg_resources.resource_filename('bkr.inttest.server',
                                                   'task-rpms/tmp-test-cannot-add-same-version-1-tasks-1.1.2-0.noarch.rpm')
+        run_client(['bkr', 'task-add', new_rpm])
         try:
-            run_client(['bkr', 'task-add', new_rpm])
             run_client(['bkr', 'task-add', same_version_rpm])
             self.fail('should raise')
         except ClientError, e:
