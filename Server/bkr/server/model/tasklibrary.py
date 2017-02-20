@@ -447,7 +447,7 @@ class Task(DeclarativeMappedObject):
         if includeFamily:
             for family in families.difference(set(includeFamily)):
                 if family not in task.excluded_osmajors:
-                    task.excluded_osmajors.append(osmajor=OSMajor.by_name_alias(family))
+                    task.excluded_osmajors.append(OSMajor.by_name_alias(family))
         if tinfo.test_archs:
             arches = set([ '%s' % arch.arch for arch in Arch.query])
             for arch in arches.difference(set(tinfo.test_archs)):
