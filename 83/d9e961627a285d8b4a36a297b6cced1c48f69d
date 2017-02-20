@@ -1,0 +1,9 @@
+Ready-for-Checks+1: Dan Callaghan <dcallagh@redhat.com>
+Verified+1: Dan Callaghan <dcallagh@redhat.com>
+Code-Review+1: Tyrone Abdy <tabdy@redhat.com>
+Code-Review+2: Blake McIvor <bmcivor@redhat.com>
+Submitted-by: Dan Callaghan <dcallagh@redhat.com>
+Submitted-at: Mon, 20 Feb 2017 12:34:06 +0000
+Reviewed-on: https://gerrit.beaker-project.org/5638
+Project: beaker
+Branch: refs/heads/release-24
