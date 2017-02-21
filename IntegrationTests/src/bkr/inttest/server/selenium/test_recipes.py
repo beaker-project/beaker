@@ -271,6 +271,26 @@ class TestRecipeView(WebDriverTestCase):
             'on OpenStack instance %s.' % recipe.resource.instance_id,
             b.find_element_by_xpath('//div[@class="recipe-summary"]/p[2]').text)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1412878
+    def test_link_to_httpthesystem(self):
+        with session.begin():
+            recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_running(recipe)
+        b = self.browser
+        go_to_recipe_view(b, recipe)
+        b.find_element_by_xpath(
+                '//span[contains(@class, "fqdn")]//a[contains(., "View http://%s/")]'
+                % recipe.resource.fqdn)
+        # Once the recipe is finished there is nothing running on the system to 
+        # link to anymore, so the link should disappear.
+        with session.begin():
+            data_setup.mark_recipe_complete(recipe, only=True)
+        go_to_recipe_view(b, recipe)
+        b.find_element_by_xpath(
+                '//span[contains(@class, "fqdn") and '
+                'not(.//a[contains(., "View http://")])]')
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=626529
     def test_guest_recipe_info(self):
         with session.begin():
