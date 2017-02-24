@@ -153,7 +153,9 @@ def process_new_recipe(recipe_id):
     all_systems = recipe.candidate_systems(only_in_lab=False)
     # based on above queries, condition on systems but add
     # all_systems.
+    log.debug('Counting candidate systems for recipe %s', recipe.id)
     if systems.count():
+        log.debug('Computing all candidate systems for recipe %s', recipe.id)
         for system in all_systems:
             # Add matched systems to recipe.
             recipe.systems.append(system)
