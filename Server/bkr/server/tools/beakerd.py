@@ -838,21 +838,32 @@ def metrics_loop(*args, **kwargs):
         time.sleep(max(30.0 - duration, 5.0))
 
 def _main_recipes():
-    work_done = update_dirty_jobs()
-    work_done |= abort_dead_recipes()
-    work_done |= update_dirty_jobs()
-    work_done |= process_new_recipes()
-    work_done |= update_dirty_jobs()
-    work_done |= queue_processed_recipesets()
+    work_done = False
+    if update_dirty_jobs():
+        work_done = True
+    if abort_dead_recipes():
+        work_done = True
+        update_dirty_jobs()
+    if process_new_recipes():
+        work_done = True
+        update_dirty_jobs()
+    if queue_processed_recipesets():
+        work_done = True
+        update_dirty_jobs()
     if _virt_enabled():
-        work_done |= update_dirty_jobs()
-        work_done |= provision_virt_recipes()
-    work_done |= update_dirty_jobs()
-    work_done |= schedule_queued_recipes()
-    work_done |= update_dirty_jobs()
-    work_done |= provision_scheduled_recipesets()
+        if provision_virt_recipes():
+            work_done = True
+            update_dirty_jobs()
+    if schedule_queued_recipes():
+        work_done = True
+        update_dirty_jobs()
+    if provision_scheduled_recipesets():
+        work_done = True
+        # update_dirty_jobs() will be done at the start of the next loop
+        # iteration, so no need to do it here at the end as well
     if _outstanding_data_migrations:
-        work_done |= run_data_migrations()
+        run_data_migrations()
+        work_done = True
     return work_done
 
 @log_traceback(log)
