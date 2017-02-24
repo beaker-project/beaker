@@ -814,7 +814,6 @@ def dirty_job_metrics():
 @log_traceback(log)
 def metrics_loop(*args, **kwargs):
     # bind thread local session to reports_engine
-    reports_engine = get_reports_engine()
     metrics_session = create_session(bind=get_reports_engine())
     session.registry.set(metrics_session)
 
