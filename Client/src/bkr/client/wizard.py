@@ -1842,7 +1842,9 @@ class Bugs(MultipleChoice):
             # contact bugzilla and try to fetch the details
             try:
                 print "Fetching details for", self.showItem(self.data[0])
-                self.bug = self.options.bugzilla.getbug(bugid)
+                self.bug = self.options.bugzilla.getbug(bugid,
+                        include_fields=['id', 'alias', 'component', 'summary',
+                                        'attachments'])
             except Exception, e:
                 if re.search('not authorized to access', str(e)):
                     print "Sorry, %s has a restricted access.\n"\
