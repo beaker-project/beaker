@@ -10,7 +10,8 @@ import pkg_resources
 import sqlalchemy
 from turbogears import config
 from turbogears.database import metadata
-from bkr.server.tools.init import upgrade_db, downgrade_db, check_db, doit
+from bkr.server.tools.init import upgrade_db, downgrade_db, check_db, doit, \
+        init_db
 from sqlalchemy.orm import create_session
 from sqlalchemy.sql import func
 from alembic.environment import MigrationContext
@@ -1093,3 +1094,11 @@ class MigrationTest(unittest.TestCase):
         cmd = self.migration_session.query(Command).get(9)
         self.assertEquals(cmd.status, CommandStatus.failed)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1404054
+    def test_marks_all_migrations_as_finished_on_fresh_db(self):
+        init_db(self.migration_metadata)
+        with self.migration_session.begin():
+            for name in DataMigration.all_names():
+                migration = self.migration_session.query(DataMigration)\
+                        .filter(DataMigration.name == name).one()
+                self.assertEquals(migration.is_finished, True)

@@ -13,18 +13,20 @@
 __requires__ = ['CherryPy < 3.0']
 
 import sys
+import datetime
 import re
 import logging
 import pkg_resources
 from sqlalchemy.inspection import inspect
 from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.orm import create_session
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.common import __version__
 from bkr.log import log_to_stream, log_to_syslog
 from bkr.server.model import (User, Group, Permission, Hypervisor, KernelType,
-        Arch, PowerType, Key, RetentionTag, ConfigItem, UserGroup)
+        Arch, PowerType, Key, RetentionTag, ConfigItem, UserGroup, DataMigration)
 from bkr.server.util import load_config_or_exit, log_traceback
-from turbogears.database import session
+from turbogears.database import session, metadata as tg_metadata
 from os.path import dirname, exists, join
 from os import getcwd
 from optparse import OptionParser
@@ -57,8 +59,11 @@ def check_db(metadata, target_version):
 
 def init_db(metadata):
     logger.info('Creating tables in empty database')
+    if metadata != tg_metadata:
+        metadata.tables = tg_metadata.tables.copy()
     metadata.create_all()
 
+    logger.info('Stamping database with Alembic "head" revision')
     def stamp(rev, context):
         try:
             return context.script._stamp_revs('head', rev)
@@ -68,7 +73,16 @@ def init_db(metadata):
             context._update_current_rev(current, head.revision)
             return []
     run_alembic_operation(metadata, stamp)
-    logger.info('Created tables')
+
+    # Also mark all data migrations as done, because there is no data to 
+    # migrate. This avoids beakerd wasting time trying to run them all when it 
+    # first starts up.
+    session = create_session(bind=metadata.bind)
+    with session.begin():
+        for migration_name in DataMigration.all_names():
+            logger.info('Marking data migration %s finished', migration_name)
+            session.add(DataMigration(name=migration_name,
+                    finish_time=datetime.datetime.utcnow()))
 
 def populate_db(user_name=None, password=None, user_display_name=None,
         user_email_address=None):

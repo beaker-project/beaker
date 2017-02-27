@@ -33,17 +33,24 @@ class DataMigration(DeclarativeMappedObject):
     finish_time = Column(DateTime)
 
     @classmethod
+    def all_names(cls):
+        names = []
+        for filename in pkg_resources.resource_listdir('bkr.server', 'data-migrations'):
+            name, extension = os.path.splitext(filename)
+            if extension != '.py':
+                continue
+            name = name.decode(sys.getfilesystemencoding())
+            names.append(name)
+        return names
+
+    @classmethod
     def all(cls):
         """
         Returns a list of all defined migrations, whether or not they have been 
         applied to this database yet.
         """
         migrations = []
-        for filename in pkg_resources.resource_listdir('bkr.server', 'data-migrations'):
-            name, extension = os.path.splitext(filename)
-            if extension != '.py':
-                continue
-            name = name.decode(sys.getfilesystemencoding())
+        for name in cls.all_names():
             try:
                 migration = cls.query.filter(cls.name == name).one()
             except NoResultFound:
