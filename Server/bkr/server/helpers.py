@@ -6,6 +6,23 @@
 
 from kid import Element, XML
 import turbogears
+from markdown import markdown
+from xml.sax.saxutils import escape as xml_escape
+import lxml.etree
+
+def markdown_first_paragraph(text):
+    try:
+        rendered = markdown(text, safe_mode='escape')
+        # Extract the contents of the first <p>
+        root = lxml.etree.fromstring('<div>' + rendered + '</div>')
+        first_para = root.find('p')
+        html_content = ''.join(
+                [xml_escape(first_para.text or '')] +
+                [lxml.etree.tostring(child) for child in first_para.iterchildren()] +
+                [xml_escape(first_para.tail or '')])
+        return XML(html_content)
+    except Exception:
+        return text
 
 def make_link(url, text, elem_class=None, **kwargs):
     # make an <a> element

@@ -1453,6 +1453,21 @@ class TestJobsGrid(WebDriverTestCase):
         self.check_job_row(rownum=2, job_t_id=job2.t_id, group=group1)
         self.check_job_row(rownum=3, job_t_id=job1.t_id, group=None)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1420106
+    def test_renders_whiteboard_as_markdown(self):
+        with session.begin():
+            job = data_setup.create_job(whiteboard=u'hello & *here* is '
+                    '[a link](http://example.com/) lol\n\n'
+                    'with a separate paragraph that is ignored')
+        b = self.browser
+        b.get(get_server_base() + 'jobs/')
+        whiteboard_cell = b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[1]/td[2]')
+        self.assertEquals(whiteboard_cell.text, 'hello & here is a link lol')
+        self.assertEquals(whiteboard_cell.find_element_by_xpath('./em').text, 'here')
+        self.assertEquals(
+                whiteboard_cell.find_element_by_xpath('./a').get_attribute('href'),
+                'http://example.com/')
+
 class SystemUpdateInventoryHTTPTest(WebDriverTestCase):
     """
     Directly tests the HTTP interface for updating system inventory
