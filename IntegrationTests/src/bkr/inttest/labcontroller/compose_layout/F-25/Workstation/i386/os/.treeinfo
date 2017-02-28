@@ -1,0 +1,55 @@
+[checksums]
+images/boot.iso = sha256:5be31b8a3f7158c9dc2a72be2032331e7d84227d71a03134b57861c9b058e86e
+images/install.img = sha256:3e0fa1e43a532654af5fac7b0b35708ddbe6a689a9e0b6351886a27fa81e2a01
+images/product.img = sha256:33fca81adc4374f920089a691482a8a171ddce9959b60d2f2e30421f3d5ac682
+images/pxeboot/initrd-PAE.img = sha256:daafe6c56bdb34fe9d00272ecdd01b66b78d5d713999418e6e0567f5b60f443d
+images/pxeboot/initrd.img = sha256:a09cf5f4a8d545be3f6ee178875147a3a6269b9e4b6d04c2f6d070617e9a5c80
+images/pxeboot/vmlinuz = sha256:5229cbe1499be6f4a4c6165cd9d096c59f7a3c8da140c855e0f9791173b72918
+images/pxeboot/vmlinuz-PAE = sha256:481b93fb6f5e03e6736abb76c9a5f0ff6abdf791affa4973e6b02b493f29dc41
+
+[general]
+; WARNING.0 = This section provides compatibility with pre-productmd treeinfos.
+; WARNING.1 = Read productmd documentation for details about new format.
+arch = i386
+family = Fedora
+name = Fedora 25
+platforms = i386,xen
+timestamp = 1479239966
+variant = Workstation
+variants = Workstation
+version = 25
+
+[header]
+version = 1.0
+
+[images-i386]
+boot.iso = images/boot.iso
+initrd = images/pxeboot/initrd.img
+kernel = images/pxeboot/vmlinuz
+product.img = images/product.img
+
+[images-xen]
+initrd = images/pxeboot/initrd-PAE.img
+kernel = images/pxeboot/vmlinuz-PAE
+product.img = images/product.img
+
+[release]
+name = Fedora
+short = Fedora
+version = 25
+
+[stage2]
+mainimage = images/install.img
+
+[tree]
+arch = i386
+build_timestamp = 1479239966
+platforms = i386,xen
+variants = Workstation
+
+[variant-Workstation]
+id = Workstation
+name = Workstation
+type = variant
+uid = Workstation
+

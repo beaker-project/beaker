@@ -1,0 +1,32 @@
+[general]
+; WARNING.0 = This section provides compatibility with pre-productmd treeinfos.
+; WARNING.1 = Read productmd documentation for details about new format.
+arch = src
+family = Fedora
+name = Fedora 25
+platforms = src
+timestamp = 1479239938
+variant = Everything
+variants = Everything
+version = 25
+
+[header]
+version = 1.0
+
+[release]
+name = Fedora
+short = Fedora
+version = 25
+
+[tree]
+arch = src
+build_timestamp = 1479239938
+platforms = src
+variants = Everything
+
+[variant-Everything]
+id = Everything
+name = Everything
+type = variant
+uid = Everything
+

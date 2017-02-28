@@ -10,6 +10,7 @@ from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError, ClientTestCase
 import pkg_resources
 from os import path
+from bkr.server.model import Task, OSMajor
 from bkr.server.model.tasklibrary import TaskLibrary
 
 
@@ -32,11 +33,25 @@ class TaskAddTest(ClientTestCase):
         self.assertIn(u'Success', out)
         self.assertTrue(path.exists(new_rpm))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1422410
+    def test_adding_task_with_releases_list(self):
+        with session.begin():
+            OSMajor.lazy_create(osmajor=u'RedHatEnterpriseLinux5')
+            OSMajor.lazy_create(osmajor=u'RedHatEnterpriseLinux6')
+        rpm_path = pkg_resources.resource_filename('bkr.inttest.server',
+                'task-rpms/tmp-distribution-beaker-dummy_for_bz1422410-1.0-1.noarch.rpm')
+        out = run_client(['bkr', 'task-add', rpm_path])
+        self.assertIn(u'Success', out)
+        with session.begin():
+            task = Task.by_name(u'/distribution/beaker/dummy_for_bz1422410')
+            self.assertIn(OSMajor.by_name(u'RedHatEnterpriseLinux6'),
+                    task.excluded_osmajors)
+
     def test_cannot_add_duplicate_tasks(self):
         import_rpm = pkg_resources.resource_filename('bkr.inttest.server',
                                                  'task-rpms/tmp-test-cannot-add-duplicate-tasks-1.1.1-0.noarch.rpm')
+        run_client(['bkr', 'task-add', import_rpm])
         try:
-            run_client(['bkr', 'task-add', import_rpm])
             # run this task-add twice to make duplicate error will show.
             run_client(['bkr', 'task-add', import_rpm])
             self.fail('should raise')
@@ -101,8 +116,8 @@ class TaskAddTest(ClientTestCase):
                                                   'task-rpms/tmp-test-cannot-add-same-version-tasks-1.1.2-0.noarch.rpm')
         same_version_rpm = pkg_resources.resource_filename('bkr.inttest.server',
                                                   'task-rpms/tmp-test-cannot-add-same-version-1-tasks-1.1.2-0.noarch.rpm')
+        run_client(['bkr', 'task-add', new_rpm])
         try:
-            run_client(['bkr', 'task-add', new_rpm])
             run_client(['bkr', 'task-add', same_version_rpm])
             self.fail('should raise')
         except ClientError, e:

@@ -1,0 +1,57 @@
+[checksums]
+images/boot.iso = sha256:4d3413ed81e89baf79efa4c0217ad652967699b5072147ae3eeef7e075e3723d
+images/efiboot.img = sha256:1f3ce30628bc54550de730b2f118bdc54fea20c80792444ca1603df53b4260bc
+images/install.img = sha256:bfb6613adbb5a78e1c27595fabe160d245440260f3868816971756614308c41a
+images/macboot.img = sha256:cfce4d8d660f6ed981fe215aca71429068d7c9468d5e771d4b464044545bab65
+images/product.img = sha256:6273e3e47572c83f23a1b55cde80f9d049f2b6008690f206052cd00951a90ef7
+images/pxeboot/initrd.img = sha256:27582f74a366eb611eaa3cc73db3ad42fc6ed0ac1f57c4d3e9cb96cd36ce0bf5
+images/pxeboot/vmlinuz = sha256:7b529dc1810902afd89e02db3357fccb9aef0029d0f4d03a1333a0e288fd7709
+
+[general]
+; WARNING.0 = This section provides compatibility with pre-productmd treeinfos.
+; WARNING.1 = Read productmd documentation for details about new format.
+arch = x86_64
+family = Fedora
+name = Fedora 25
+platforms = x86_64,xen
+timestamp = 1479239900
+variant = Cloud
+variants = Cloud
+version = 25
+
+[header]
+version = 1.0
+
+[images-x86_64]
+boot.iso = images/boot.iso
+efiboot.img = images/efiboot.img
+initrd = images/pxeboot/initrd.img
+kernel = images/pxeboot/vmlinuz
+macboot.img = images/macboot.img
+product.img = images/product.img
+
+[images-xen]
+initrd = images/pxeboot/initrd.img
+kernel = images/pxeboot/vmlinuz
+product.img = images/product.img
+
+[release]
+name = Fedora
+short = Fedora
+version = 25
+
+[stage2]
+mainimage = images/install.img
+
+[tree]
+arch = x86_64
+build_timestamp = 1479239900
+platforms = x86_64,xen
+variants = Cloud
+
+[variant-Cloud]
+id = Cloud
+name = Cloud
+type = variant
+uid = Cloud
+

@@ -29,7 +29,8 @@ from bkr.server.model import (Job, RecipeSet, Recipe, MachineRecipe,
         Power, PowerType, DataMigration)
 from bkr.server.model.scheduler import machine_guest_map
 from bkr.server.needpropertyxml import XmlHost
-from bkr.server.util import load_config_or_exit, log_traceback
+from bkr.server.util import load_config_or_exit, log_traceback, \
+        get_reports_engine
 from bkr.server.recipetasks import RecipeTasks
 from turbogears.database import session, get_engine
 from turbogears import config
@@ -37,7 +38,7 @@ from turbomail.control import interface
 from xmlrpclib import ProtocolError
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.sql.expression import func, select, and_, or_, not_
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import aliased, create_session
 
 import socket
 import exceptions
@@ -812,15 +813,22 @@ def dirty_job_metrics():
 
 @log_traceback(log)
 def metrics_loop(*args, **kwargs):
+    # bind thread local session to reports_engine
+    metrics_session = create_session(bind=get_reports_engine())
+    session.registry.set(metrics_session)
+
     while running:
         start = time.time()
         try:
+            session.begin()
             recipe_count_metrics()
             system_count_metrics()
             dirty_job_metrics()
             system_command_metrics()
         except Exception:
             log.exception('Exception in metrics loop')
+        finally:
+            session.close()
         end = time.time()
         duration = end - start
         if duration >= 30.0:

@@ -1,0 +1,53 @@
+[checksums]
+images/install.img = sha256:014b5bb6d942f72481c065319d6ac713ce77211e672dbc7590ddabf9d12726c0
+images/product.img = sha256:f88272adec2106af35b5ae58ce9ae1f647b13e957eccbecfd40549a6679241bd
+images/pxeboot/initrd-lpae.img = sha256:156573ff45dea858db3ff9dc96cba84de8621c1f32d869ee910ba5a21f0b762d
+images/pxeboot/initrd.img = sha256:3276b5d152d7461e3e6c4f9a8ff3c1396f20bc606f1ad0fda2dfaae7f8896e86
+images/pxeboot/vmlinuz = sha256:98497e7902935a922b32fb592996157f42b4088fb267bcee18f29c8cdf9d0aa2
+images/pxeboot/vmlinuz-lpae = sha256:e2bd08181f59cf9d8a790439767d9f4d6f870fb3437d34658e678fd2d4472d6f
+
+[general]
+; WARNING.0 = This section provides compatibility with pre-productmd treeinfos.
+; WARNING.1 = Read productmd documentation for details about new format.
+arch = armhfp
+family = Fedora
+name = Fedora 25
+platforms = armhfp,lpae
+timestamp = 1479239884
+variant = Cloud
+variants = Cloud
+version = 25
+
+[header]
+version = 1.0
+
+[images-armhfp]
+initrd = images/pxeboot/initrd.img
+kernel = images/pxeboot/vmlinuz
+product.img = images/product.img
+
+[images-lpae]
+initrd = images/pxeboot/initrd-lpae.img
+kernel = images/pxeboot/vmlinuz-lpae
+product.img = images/product.img
+
+[release]
+name = Fedora
+short = Fedora
+version = 25
+
+[stage2]
+mainimage = images/install.img
+
+[tree]
+arch = armhfp
+build_timestamp = 1479239884
+platforms = armhfp,lpae
+variants = Cloud
+
+[variant-Cloud]
+id = Cloud
+name = Cloud
+type = variant
+uid = Cloud
+

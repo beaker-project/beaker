@@ -259,10 +259,10 @@ A number of bug fixes are also included in this release:
   to fail when moving the log files.
   (Contributed by Dan Callaghan)
 
-* :issue:`1366098`: The :program:`beaker-provision` daemon now finds and aborts any
-   commands which were left in the Running state due to network problems or other error
-   conditions. Previously the commands would be left Running forever.
-   (Contributed by Jon Orris)
+* :issue:`1366098`: The :program:`beaker-provision` daemon now finds and aborts
+  any commands which were left in the Running state due to network problems or 
+  other error conditions. Previously the commands would be left Running 
+  forever. (Contributed by Jon Orris)
 
 * :issue:`1370399`: The :program:`bkr system-delete` command now shows a more meaningful
   message when deleting a nonexistent system.
@@ -319,3 +319,31 @@ A number of bug fixes are also included in this release:
 
 .. internal only:
     * :issue:`1225982`
+
+
+Maintenance updates
+-------------------
+
+The following fixes have been included in Beaker 24 maintenance updates.
+
+Beaker 24.1
+~~~~~~~~~~~
+
+* :issue:`1422410`: Fixed a regression which caused task uploads to crash with
+  ``TypeError`` if the task introduced new excluded releases in its metadata. 
+  (Contributed by Dan Callaghan)
+* :issue:`1412487`: The :program:`beaker-import` utility now ignores ``src``
+  when it appears as an architecture in compose metadata, for example in Fedora 
+  25 :file:`.composeinfo`, allowing the import to complete successfully instead 
+  of failing. (Contributed by Dan Callaghan)
+* :issue:`1422874`: The Beaker web application's last resort error handling for
+  failed database rollbacks is more more resilient in out-of-memory conditions. 
+  (Contributed by Dan Callaghan)
+* :issue:`1412878`: The recipe page now only links to HTTP on the running
+  system if the recipe is actually running (or reserved). Previously the link 
+  would appear even before the recipe had started or after it was finished, 
+  when it didn't make sense. (Contributed by Dan Callaghan)
+* :issue:`1425522`: Beaker now sends queries for computing Graphite metrics to
+  the "reporting" database connection, if configured. This allows 
+  administrators to offload the queries to a read-only database replica. 
+  (Contributed by Dan Callaghan)

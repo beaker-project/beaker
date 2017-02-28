@@ -1,0 +1,53 @@
+[checksums]
+images/install.img = sha256:0cedaba0be69936097ae6b44e0b501e2c017a04e4ef7099c4173df09f9e8c39b
+images/product.img = sha256:3ea89a06ea8209025f81fad97e359540ab6d3b378e85ea8a17abc630b2169a92
+images/pxeboot/initrd-lpae.img = sha256:fcaf47d6efb16e6596704a10626b3cbae69f7050db34dba60f83d5b9e21b8502
+images/pxeboot/initrd.img = sha256:dc4ca474f6ad8b4de46ebab8d797526e5d59baa71cae88e8333dcfa27c15dfa3
+images/pxeboot/vmlinuz = sha256:98497e7902935a922b32fb592996157f42b4088fb267bcee18f29c8cdf9d0aa2
+images/pxeboot/vmlinuz-lpae = sha256:e2bd08181f59cf9d8a790439767d9f4d6f870fb3437d34658e678fd2d4472d6f
+
+[general]
+; WARNING.0 = This section provides compatibility with pre-productmd treeinfos.
+; WARNING.1 = Read productmd documentation for details about new format.
+arch = armhfp
+family = Fedora
+name = Fedora 25
+platforms = armhfp,lpae
+timestamp = 1479239938
+variant = Server
+variants = Server
+version = 25
+
+[header]
+version = 1.0
+
+[images-armhfp]
+initrd = images/pxeboot/initrd.img
+kernel = images/pxeboot/vmlinuz
+product.img = images/product.img
+
+[images-lpae]
+initrd = images/pxeboot/initrd-lpae.img
+kernel = images/pxeboot/vmlinuz-lpae
+product.img = images/product.img
+
+[release]
+name = Fedora
+short = Fedora
+version = 25
+
+[stage2]
+mainimage = images/install.img
+
+[tree]
+arch = armhfp
+build_timestamp = 1479239938
+platforms = armhfp,lpae
+variants = Server
+
+[variant-Server]
+id = Server
+name = Server
+type = variant
+uid = Server
+

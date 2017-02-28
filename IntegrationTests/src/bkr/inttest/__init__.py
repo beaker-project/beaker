@@ -362,7 +362,13 @@ def setup_package():
         data_setup.create_task(name=u'/distribution/inventory')
         data_setup.create_distro()
 
-    if not os.path.exists(turbogears.config.get('basepath.rpms')):
+    if os.path.exists(turbogears.config.get('basepath.rpms')):
+        # Remove any task RPMs left behind by previous test runs
+        for entry in os.listdir(turbogears.config.get('basepath.rpms')):
+            shutil.rmtree(os.path.join(
+                    turbogears.config.get('basepath.rpms'),
+                    entry), ignore_errors=True)
+    else:
         os.mkdir(turbogears.config.get('basepath.rpms'))
 
     setup_slapd()
