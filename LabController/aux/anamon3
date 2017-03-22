@@ -1,0 +1,273 @@
+#!/usr/bin/python3
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
+"""
+This is a script used to automatically log details from an Anaconda
+install back to Beaker. Derived from Cobbler's anamon.
+"""
+
+import os
+import errno
+import sys
+import string
+import time
+import re
+import base64
+import shlex
+from xmlrpc.client import Server as xmlrpc_server
+try:
+    from hashlib import md5
+except ImportError:
+    from md5 import md5
+
+# shlex.split support arrived in python-2.3, the following will provide some
+# accomodation for older distros (e.g. RHEL3)
+if not hasattr(shlex, "split"):
+    shlex.split = lambda s: s.split(" ")
+
+class WatchedFile:
+    def __init__(self, fn, alias):
+        self.fn = fn
+        self.alias = alias
+        self.reset()
+
+    def reset(self):
+        self.where = 0
+        self.last_size = 0
+        self.lfrag=''
+        self.re_list={}
+        self.seen_line={}
+
+    def exists(self):
+        return os.access(self.fn, os.F_OK)
+
+    def lookfor(self,pattern):
+        self.re_list[pattern] = re.compile(pattern,re.MULTILINE)
+        self.seen_line[pattern] = 0
+
+    def seen(self,pattern):
+        if pattern in self.seen_line:
+            return self.seen_line[pattern]
+        else:
+            return 0
+
+    def changed(self):
+        if not self.exists():
+            return 0
+        size = os.stat(self.fn)[6]
+        if size > self.last_size:
+            self.last_size = size
+            return 1
+        else:
+            return 0
+
+    def uploadWrapper(self, blocksize = 262144):
+        """upload a file in chunks using the uploadFile call"""
+        retries = 3
+        fo = open(self.fn, "r")
+        totalsize = os.path.getsize(self.fn)
+        ofs = 0
+        while True:
+            lap = time.time()
+            contents = str.encode(fo.read(blocksize))
+            size = len(contents)
+            if size == 0:
+                break
+            md5sum = md5(contents).hexdigest()
+            data = base64.encodestring(contents)
+            del contents
+            tries = 0
+            while tries <= retries:
+                debug("recipe_upload_file(%r, '/', %r, %r, %r, %r, ...)\n"
+                        % (recipe_id, self.alias, size, md5sum, ofs))
+                if session.recipe_upload_file(recipe_id, '/', self.alias,
+                        size, md5sum, ofs, data.decode()):
+                    break
+                else:
+                    tries = tries + 1
+            ofs += size
+        fo.close()
+
+    def update(self):
+        if not self.exists():
+            return
+        if not self.changed():
+            return
+        try:
+            self.uploadWrapper()
+        except:
+            raise
+
+class MountWatcher:
+
+    def __init__(self,mp):
+        self.mountpoint = mp
+        self.zero()
+
+    def zero(self):
+        self.line=''
+        self.time = time.time()
+
+    def update(self):
+        found = 0
+        try:
+            fd = open('/proc/mounts')
+        except IOError as e:
+            if e.errno != errno.ENOENT:
+                raise
+        else:
+            while 1:
+                line = fd.readline()
+                if not line:
+                    break
+                parts = line.split()
+                mp = parts[1]
+                if mp == self.mountpoint:
+                    found = 1
+                    if line != self.line:
+                        self.line = line
+                        self.time = time.time()
+            fd.close()
+        if not found:
+            self.zero()
+
+    def stable(self):
+        self.update()
+        if self.line and (time.time() - self.time > 60):
+            return 1
+        else:
+            return 0
+
+def anamon_loop():
+    alog = WatchedFile("/tmp/anaconda.log", "anaconda.log")
+    alog.lookfor("step installpackages$")
+
+    default_watchlist = [
+        alog,
+        WatchedFile("/tmp/syslog", "sys.log"),
+        WatchedFile("/tmp/X.log", "X.log"),
+        WatchedFile("/tmp/lvmout", "lvmout.log"),
+        WatchedFile("/tmp/storage.log", "storage.log"),
+        WatchedFile("/tmp/program.log", "program.log"),
+        WatchedFile("/tmp/vncserver.log", "vncserver.log"),
+        WatchedFile("/tmp/ks.cfg", "ks.cfg"),
+        WatchedFile("/run/install/ks.cfg", "ks.cfg"),
+        WatchedFile("/tmp/ks-script.log", "ks-script.log"),
+        WatchedFile("/tmp/anacdump.txt", "anacdump.txt"),
+        WatchedFile("/tmp/modprobe.conf", "modprobe.conf"),
+        WatchedFile("/tmp/ifcfg.log", "ifcfg.log"),
+        WatchedFile("/tmp/packaging.log", "packaging.log"),
+    ]
+
+    # Setup '/mnt/sysimage' watcher
+    sysimage = MountWatcher("/mnt/sysimage")
+
+    # Monitor for {install,upgrade}.log changes
+    package_logs = list()
+    package_logs.append(WatchedFile("/mnt/sysimage/root/install.log", "install.log"))
+    package_logs.append(WatchedFile("/mnt/sysimage/tmp/install.log", "tmp+install.log"))
+    package_logs.append(WatchedFile("/mnt/sysimage/root/upgrade.log", "upgrade.log"))
+    package_logs.append(WatchedFile("/mnt/sysimage/tmp/upgrade.log", "tmp+upgrade.log"))
+
+    # Monitor for bootloader configuration changes
+    bootloader_cfgs = list()
+    bootloader_cfgs.append(WatchedFile("/mnt/sysimage/boot/grub/grub.conf", "grub.conf"))
+    bootloader_cfgs.append(WatchedFile("/mnt/sysimage/boot/etc/yaboot.conf", "yaboot.conf"))
+    bootloader_cfgs.append(WatchedFile("/mnt/sysimage/boot/efi/efi/redhat/elilo.conf", "elilo.conf"))
+    bootloader_cfgs.append(WatchedFile("/mnt/sysimage/etc/zipl.conf", "zipl.conf"))
+
+    # Were we asked to watch specific files?
+    watchlist = list()
+    waitlist = list()
+    if watchfiles:
+        # Create WatchedFile objects for each requested file
+        for watchfile in watchfiles:
+            if os.path.exists(watchfile):
+                watchfilebase = os.path.basename(watchfile)
+                watchlog = WatchedFile(watchfile, watchfilebase)
+                watchlist.append(watchlog)
+
+    # Use the default watchlist and waitlist
+    else:
+        watchlist = list(default_watchlist)
+        waitlist.extend(package_logs)
+        waitlist.extend(bootloader_cfgs)
+
+    # Monitor loop
+    already_added_anaconda_tbs = []
+    anaconda_tb_pattern = 'anaconda-tb'
+    while 1:
+        time.sleep(5)
+        for f in os.listdir('/tmp'):
+            if f.startswith(anaconda_tb_pattern):
+                f = os.path.join('/tmp', f)
+                if f not in already_added_anaconda_tbs:
+                    watchlist.append(WatchedFile(f, os.path.basename(f)))
+                    already_added_anaconda_tbs.append(f)
+
+        # Not all log files are available at the start, we'll loop through the
+        # waitlist to determine when each file can be added to the watchlist
+        for watch in waitlist:
+            if alog.seen("step installpackages$") or (sysimage.stable() and watch.exists()):
+                debug("Adding %s to watch list\n" % watch.alias)
+                watchlist.append(watch)
+                waitlist.remove(watch)
+
+        # Send any updates
+        for wf in watchlist:
+            wf.update()
+
+        # If asked to run_once, exit now
+        if exit:
+            break
+
+# Establish some defaults
+recipe_id = None
+xmlrpc_url = ''
+daemon = 1
+debug = lambda x,**y: None
+watchfiles = []
+exit = False
+
+# Process command-line args
+n = 0
+while n < len(sys.argv):
+    arg = sys.argv[n]
+    if arg == '--recipe-id':
+        n = n+1
+        recipe_id = sys.argv[n]
+    elif arg == '--watchfile':
+        n = n+1
+        watchfiles.extend(shlex.split(sys.argv[n]))
+    elif arg == '--exit':
+        exit = True
+    elif arg == '--xmlrpc-url':
+        n = n+1
+        xmlrpc_url = sys.argv[n]
+    elif arg == '--debug':
+        debug = lambda x,**y: sys.stderr.write(x % y)
+    elif arg == '--fg':
+        daemon = 0
+    n = n+1
+
+# Create an xmlrpc session handle
+session = xmlrpc_server(xmlrpc_url)
+
+# Fork and loop
+if daemon:
+    if not os.fork():
+        # Redirect the standard I/O file descriptors to the specified file.
+        DEVNULL = getattr(os, "devnull", "/dev/null")
+        os.open(DEVNULL, os.O_RDWR) # standard input (0)
+        os.dup2(0, 1)               # Duplicate standard input to standard output (1)
+        os.dup2(0, 2)               # Duplicate standard input to standard error (2)
+
+        anamon_loop()
+        sys.exit(1)
+    sys.exit(0)
+else:
+    anamon_loop()
