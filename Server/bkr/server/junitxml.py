@@ -31,9 +31,17 @@ def _systemout_for_result(result):
 def _testcases_for_task(task):
     if not task.is_finished():
         return
-    yield E.testcase(
-        E(u'system-out', _systemout_for_task(task)),
-        classname=task.name)
+    testcase = E.testcase(
+            classname=task.name,
+            name='(main)')
+    if task.status == TaskStatus.cancelled:
+        testcase.append(E.skipped(type=u'skipped'))
+    elif task.status == TaskStatus.aborted:
+        testcase.append(E.error(type=u'error'))
+    elif task.result in (TaskResult.warn, TaskResult.fail):
+        testcase.append(E.failure(type=u'failure'))
+    testcase.append(E(u'system-out', _systemout_for_task(task)))
+    yield testcase
     for result in task.results:
         testcase = E.testcase(
                 classname=task.name,
@@ -60,9 +68,8 @@ def _testsuite_for_recipe(recipe):
         testsuite.set('hostname', recipe.resource.fqdn)
     for task in recipe.tasks:
         testsuite.extend(_testcases_for_task(task))
-    testsuite.set('tests', str(
-            len(testsuite.findall('testcase')) -
-            len(testsuite.findall('testcase/skipped'))))
+    testsuite.set('tests', str(len(testsuite.findall('testcase'))))
+    testsuite.set('skipped', str(len(testsuite.findall('testcase/skipped'))))
     testsuite.set('failures', str(len(testsuite.findall('testcase/failure'))))
     testsuite.set('errors', str(len(testsuite.findall('testcase/error'))))
     return testsuite

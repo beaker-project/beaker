@@ -17,7 +17,7 @@ from bkr.server.widgets import myPaginateDataGrid, \
     SearchBar, JobWhiteboard, ProductWidget, JobActionWidget, JobPageActionWidget, \
     HorizontalForm, BeakerDataGrid
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import make_link
+from bkr.server.helpers import make_link, markdown_first_paragraph
 from bkr.server.junitxml import job_to_junit_xml
 from bkr.server import search_utility, identity, metrics
 from bkr.server.needpropertyxml import XmlHost
@@ -843,7 +843,7 @@ class Jobs(RPCRoot):
                     getter=lambda x:make_link(url = './%s' % x.id, text = x.t_id),
                     title='ID', options=dict(sortable=True)),
                 PDC(name='whiteboard',
-                    getter=lambda x:x.whiteboard, title='Whiteboard',
+                    getter=lambda x: markdown_first_paragraph(x.whiteboard), title='Whiteboard',
                     options=dict(sortable=True)),
                 PDC(name='group',
                     getter=get_group, title='Group',

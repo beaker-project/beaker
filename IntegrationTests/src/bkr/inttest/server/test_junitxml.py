@@ -31,8 +31,8 @@ class JUnitXMLUnitTest(unittest.TestCase):
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
-  <testsuite name="happy" id="R:{recipe_id}" hostname="happysystem.testdata" tests="2" failures="0" errors="0">
-    <testcase classname="/distribution/reservesys">
+  <testsuite name="happy" id="R:{recipe_id}" hostname="happysystem.testdata" tests="2" skipped="0" failures="0" errors="0">
+    <testcase classname="/distribution/reservesys" name="(main)">
       <system-out>{server}recipes/{recipe_id}/tasks/{task_id}/logs/tasks/dummy.txt</system-out>
     </testcase>
     <testcase classname="/distribution/reservesys" name="(none)" time="10">
@@ -55,8 +55,9 @@ class JUnitXMLUnitTest(unittest.TestCase):
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
-  <testsuite name="failing result" id="R:{recipe_id}" hostname="happysystem.testdata" tests="2" failures="1" errors="0">
-    <testcase classname="/distribution/reservesys">
+  <testsuite name="failing result" id="R:{recipe_id}" hostname="happysystem.testdata" tests="2" skipped="0" failures="2" errors="0">
+    <testcase classname="/distribution/reservesys" name="(main)">
+      <failure type="failure"/>
       <system-out>{server}recipes/{recipe_id}/tasks/{task_id}/logs/tasks/dummy.txt</system-out>
     </testcase>
     <testcase classname="/distribution/reservesys" name="(none)" time="10">
@@ -81,8 +82,9 @@ class JUnitXMLUnitTest(unittest.TestCase):
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
-  <testsuite name="ewd" id="R:%s" hostname="sadsystem.testdata" tests="2" failures="0" errors="1">
-    <testcase classname="/distribution/reservesys">
+  <testsuite name="ewd" id="R:%s" hostname="sadsystem.testdata" tests="2" skipped="0" failures="0" errors="2">
+    <testcase classname="/distribution/reservesys" name="(main)">
+      <error type="error"/>
       <system-out></system-out>
     </testcase>
     <testcase classname="/distribution/reservesys" name="(none)" time="10">
@@ -106,8 +108,9 @@ class JUnitXMLUnitTest(unittest.TestCase):
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
-  <testsuite name="cancelled" id="R:%s" hostname="sadsystem.testdata" tests="1" failures="0" errors="0">
-    <testcase classname="/distribution/reservesys">
+  <testsuite name="cancelled" id="R:%s" hostname="sadsystem.testdata" tests="2" skipped="2" failures="0" errors="0">
+    <testcase classname="/distribution/reservesys" name="(main)">
+      <skipped type="skipped"/>
       <system-out></system-out>
     </testcase>
     <testcase classname="/distribution/reservesys" name="(none)" time="10">
@@ -128,7 +131,7 @@ class JUnitXMLUnitTest(unittest.TestCase):
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
-  <testsuite name="new job" id="R:%s" tests="0" failures="0" errors="0"/>
+  <testsuite name="new job" id="R:%s" tests="0" skipped="0" failures="0" errors="0"/>
 </testsuites>
 """ % job.recipesets[0].recipes[0].id
         self.assertMultiLineEqual(expected, out)
@@ -151,8 +154,8 @@ class JUnitXMLUnitTest(unittest.TestCase):
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
-  <testsuite name="running job" id="R:{recipe_id}" hostname="busysystem.testdata" tests="2" failures="0" errors="0">
-    <testcase classname="/test_junitxml/completed">
+  <testsuite name="running job" id="R:{recipe_id}" hostname="busysystem.testdata" tests="2" skipped="0" failures="0" errors="0">
+    <testcase classname="/test_junitxml/completed" name="(main)">
       <system-out>{server}recipes/{recipe_id}/tasks/{task_id}/logs/tasks/dummy.txt</system-out>
     </testcase>
     <testcase classname="/test_junitxml/completed" name="(none)" time="10">
@@ -179,8 +182,8 @@ class JUnitXMLUnitTest(unittest.TestCase):
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
-  <testsuite name="duration" id="R:%s" hostname="happysystem.testdata" tests="3" failures="0" errors="0">
-    <testcase classname="/distribution/reservesys">
+  <testsuite name="duration" id="R:%s" hostname="happysystem.testdata" tests="3" skipped="0" failures="0" errors="0">
+    <testcase classname="/distribution/reservesys" name="(main)">
       <system-out></system-out>
     </testcase>
     <testcase classname="/distribution/reservesys" name="first" time="10">
@@ -214,8 +217,8 @@ class JUnitXMLUnitTest(unittest.TestCase):
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
-  <testsuite name="duration" id="R:%s" hostname="happysystem.testdata" tests="5" failures="0" errors="0">
-    <testcase classname="/junitxml/names">
+  <testsuite name="duration" id="R:%s" hostname="happysystem.testdata" tests="5" skipped="0" failures="0" errors="0">
+    <testcase classname="/junitxml/names" name="(main)">
       <system-out></system-out>
     </testcase>
     <testcase classname="/junitxml/names" name="start" time="1">
@@ -246,8 +249,9 @@ class JUnitXMLUnitTest(unittest.TestCase):
         expected = """\
 <?xml version=\'1.0\' encoding=\'utf8\'?>
 <testsuites>
-  <testsuite name="cancelled" id="R:%s" tests="1" failures="0" errors="0">
-    <testcase classname="/test_junixml/cancelled">
+  <testsuite name="cancelled" id="R:%s" tests="2" skipped="2" failures="0" errors="0">
+    <testcase classname="/test_junixml/cancelled" name="(main)">
+      <skipped type="skipped"/>
       <system-out></system-out>
     </testcase>
     <testcase classname="/test_junixml/cancelled" name="(none)">
@@ -269,8 +273,9 @@ class JUnitXMLUnitTest(unittest.TestCase):
         expected = """\
 <?xml version='1.0' encoding='utf8'?>
 <testsuites>
-  <testsuite name="aborted" id="R:%s" tests="2" failures="0" errors="1">
-    <testcase classname="/distribution/reservesys">
+  <testsuite name="aborted" id="R:%s" tests="2" skipped="0" failures="0" errors="2">
+    <testcase classname="/distribution/reservesys" name="(main)">
+      <error type="error"/>
       <system-out></system-out>
     </testcase>
     <testcase classname="/distribution/reservesys" name="(none)">

@@ -89,10 +89,8 @@ def get_virt_executor():
     return _threadpool_executor
 
 def update_dirty_jobs():
+    work_done = False
     dirty_jobs = Job.query.filter(Job.dirty_version != Job.clean_version)
-    if not dirty_jobs.count():
-        return False
-    log.debug("Entering update_dirty_jobs")
     for job_id, in dirty_jobs.values(Job.id):
         session.begin()
         try:
@@ -103,10 +101,10 @@ def update_dirty_jobs():
             session.rollback()
         finally:
             session.close()
+        work_done = True
         if event.is_set():
             break
-    log.debug("Exiting update_dirty_jobs")
-    return True
+    return work_done
 
 def update_dirty_job(job_id):
     log.debug('Updating dirty job %s', job_id)
@@ -114,13 +112,11 @@ def update_dirty_job(job_id):
     job.update_status()
 
 def process_new_recipes(*args):
+    work_done = False
     recipes = MachineRecipe.query\
             .join(MachineRecipe.recipeset).join(RecipeSet.job)\
             .filter(Job.dirty_version == Job.clean_version)\
             .filter(Recipe.status == TaskStatus.new)
-    if not recipes.count():
-        return False
-    log.debug("Entering process_new_recipes")
     for recipe_id, in recipes.values(MachineRecipe.id):
         session.begin()
         try:
@@ -131,8 +127,8 @@ def process_new_recipes(*args):
             session.rollback()
         finally:
             session.close()
-    log.debug("Exiting process_new_recipes")
-    return True
+        work_done = True
+    return work_done
 
 def process_new_recipe(recipe_id):
     recipe = MachineRecipe.by_id(recipe_id)
@@ -153,7 +149,9 @@ def process_new_recipe(recipe_id):
     all_systems = recipe.candidate_systems(only_in_lab=False)
     # based on above queries, condition on systems but add
     # all_systems.
+    log.debug('Counting candidate systems for recipe %s', recipe.id)
     if systems.count():
+        log.debug('Computing all candidate systems for recipe %s', recipe.id)
         for system in all_systems:
             # Add matched systems to recipe.
             recipe.systems.append(system)
@@ -183,13 +181,11 @@ def process_new_recipe(recipe_id):
         guestrecipe.process()
 
 def queue_processed_recipesets(*args):
+    work_done = False
     recipesets = RecipeSet.query.join(RecipeSet.job)\
             .filter(and_(Job.dirty_version == Job.clean_version, Job.deleted == None))\
             .filter(not_(RecipeSet.recipes.any(
                 Recipe.status != TaskStatus.processed)))
-    if not recipesets.count():
-        return False
-    log.debug("Entering queue_processed_recipesets")
     for rs_id, in recipesets.values(RecipeSet.id):
         session.begin()
         try:
@@ -200,8 +196,8 @@ def queue_processed_recipesets(*args):
             session.rollback()
         finally:
             session.close()
-    log.debug("Exiting queue_processed_recipesets")
-    return True
+        work_done = True
+    return work_done
 
 def queue_processed_recipeset(recipeset_id):
     recipeset = RecipeSet.by_id(recipeset_id)
@@ -314,6 +310,7 @@ def queue_processed_recipeset(recipeset_id):
                 guestrecipe.queue()
 
 def abort_dead_recipes(*args):
+    work_done = False
     filters = [not_(DistroTree.lab_controller_assocs.any())]
     if _virt_enabled():
         filters.append(and_(not_(Recipe.systems.any()),
@@ -326,9 +323,6 @@ def abort_dead_recipes(*args):
             .outerjoin(Recipe.distro_tree)\
             .filter(Recipe.status == TaskStatus.queued)\
             .filter(or_(*filters))
-    if not recipes.count():
-        return False
-    log.debug("Entering abort_dead_recipes")
     for recipe_id, in recipes.values(MachineRecipe.id):
         session.begin()
         try:
@@ -339,8 +333,8 @@ def abort_dead_recipes(*args):
             session.rollback()
         finally:
             session.close()
-    log.debug("Exiting abort_dead_recipes")
-    return True
+        work_done = True
+    return work_done
 
 def abort_dead_recipe(recipe_id):
     recipe = MachineRecipe.by_id(recipe_id)
@@ -356,6 +350,7 @@ def abort_dead_recipe(recipe_id):
         recipe.recipeset.abort(msg)
 
 def schedule_queued_recipes(*args):
+    work_done = False
     session.begin()
     try:
         # This query returns a queued host recipe and and the guest which has
@@ -425,9 +420,6 @@ def schedule_queued_recipes(*args):
                         ) # or
                     ) # and
                   )
-        # Get out of here if we have no recipes
-        if not recipes.count():
-            return False
         # This should be the guest recipe with the latest distro.
         # We return it in this query, to save us from re-running the
         # derived table query in schedule_queued_recipe()
@@ -443,7 +435,6 @@ def schedule_queued_recipes(*args):
             order_by(MachineRecipe.id)
         # Don't do a GROUP BY before here, it is not needed.
         recipes = recipes.group_by(MachineRecipe.id)
-        log.debug("Entering schedule_queued_recipes")
         for recipe_id, guest_recipe_id in recipes.values(MachineRecipe.id, guest_recipe.id):
             session.begin(nested=True)
             try:
@@ -473,8 +464,8 @@ def schedule_queued_recipes(*args):
                 except Exception, e:
                     log.exception("Error during error handling in schedule_queued_recipe: %s" % e)
                     session.rollback()
-        log.debug("Exiting schedule_queued_recipes")
-        return True
+            work_done = True
+        return work_done
     except Exception:
         log.exception('Uncaught exception in schedule_queued_recipes')
         raise
@@ -489,6 +480,7 @@ def schedule_queued_recipes(*args):
         session.close()
 
 def schedule_queued_recipe(recipe_id, guest_recipe_id=None):
+    log.debug('Selecting a system for recipe %s', recipe_id)
     guest_recipe = aliased(Recipe)
     guest_distros_map = aliased(LabControllerDistroTree)
     guest_labcontroller = aliased(LabController)
@@ -594,6 +586,7 @@ def schedule_queued_recipe(recipe_id, guest_recipe_id=None):
                 recipe.id, guestrecipe.id)
 
 def provision_virt_recipes(*args):
+    work_done = False
     recipes = MachineRecipe.query\
             .join(Recipe.recipeset).join(RecipeSet.job)\
             .filter(Job.dirty_version == Job.clean_version)\
@@ -604,16 +597,15 @@ def provision_virt_recipes(*args):
             .filter(or_(RecipeSet.lab_controller == None,
                 RecipeSet.lab_controller_id == LabController.id))\
             .order_by(RecipeSet.priority.desc(), Recipe.id.asc())
-    if not recipes.count():
-        return False
-    log.debug("Entering provision_virt_recipes")
     futures = [get_virt_executor().submit(provision_virt_recipe, recipe_id)
             for recipe_id, in recipes.values(Recipe.id.distinct())]
-    concurrent.futures.wait(futures)
-    log.debug("Exiting provision_virt_recipes")
-    return True
+    if futures:
+        concurrent.futures.wait(futures)
+        work_done = True
+    return work_done
 
 def provision_virt_recipe(recipe_id):
+    log.debug('Attempting to provision dynamic virt guest for recipe %s', recipe_id)
     session.begin()
     try:
         recipe = Recipe.by_id(recipe_id)
@@ -677,15 +669,12 @@ def provision_scheduled_recipesets(*args):
     if All recipes in a recipeSet are in Scheduled state then move them to
      Running.
     """
+    work_done = False
     recipesets = RecipeSet.query.join(RecipeSet.job)\
             .filter(and_(Job.dirty_version == Job.clean_version, Job.deleted == None))\
             .filter(not_(RecipeSet.recipes.any(
                 Recipe.status != TaskStatus.scheduled)))
-    if not recipesets.count():
-        return False
-    log.debug("Entering provision_scheduled_recipesets")
     for rs_id, in recipesets.values(RecipeSet.id):
-        log.info("scheduled_recipesets: RS:%s" % rs_id)
         session.begin()
         try:
             provision_scheduled_recipeset(rs_id)
@@ -695,13 +684,14 @@ def provision_scheduled_recipesets(*args):
             session.rollback()
         finally:
             session.close()
-    log.debug("Exiting provision_scheduled_recipesets")
-    return True
+        work_done = True
+    return work_done
 
 def provision_scheduled_recipeset(recipeset_id):
     recipeset = RecipeSet.by_id(recipeset_id)
     # Go through each recipe in the recipeSet
     for recipe in recipeset.recipes:
+        log.debug('Provisioning recipe %s in RS:%s', recipe.id, recipeset_id)
         try:
             recipe.waiting()
             recipe.provision()
@@ -718,7 +708,6 @@ def provision_scheduled_recipeset(recipeset_id):
 _outstanding_data_migrations = []
 
 def run_data_migrations():
-    log.debug('Entering run_data_migrations')
     migration = _outstanding_data_migrations[0]
     log.debug('Performing online data migration %s (one batch)', migration.name)
     finished = migration.migrate_one_batch(get_engine())
@@ -728,7 +717,6 @@ def run_data_migrations():
             migration.mark_as_finished()
         session.close()
         _outstanding_data_migrations.pop(0)
-    log.debug('Exiting run_data_migrations')
     return True
 
 # Real-time metrics reporting
@@ -836,21 +824,32 @@ def metrics_loop(*args, **kwargs):
         time.sleep(max(30.0 - duration, 5.0))
 
 def _main_recipes():
-    work_done = update_dirty_jobs()
-    work_done |= abort_dead_recipes()
-    work_done |= update_dirty_jobs()
-    work_done |= process_new_recipes()
-    work_done |= update_dirty_jobs()
-    work_done |= queue_processed_recipesets()
+    work_done = False
+    if update_dirty_jobs():
+        work_done = True
+    if abort_dead_recipes():
+        work_done = True
+        update_dirty_jobs()
+    if process_new_recipes():
+        work_done = True
+        update_dirty_jobs()
+    if queue_processed_recipesets():
+        work_done = True
+        update_dirty_jobs()
     if _virt_enabled():
-        work_done |= update_dirty_jobs()
-        work_done |= provision_virt_recipes()
-    work_done |= update_dirty_jobs()
-    work_done |= schedule_queued_recipes()
-    work_done |= update_dirty_jobs()
-    work_done |= provision_scheduled_recipesets()
+        if provision_virt_recipes():
+            work_done = True
+            update_dirty_jobs()
+    if schedule_queued_recipes():
+        work_done = True
+        update_dirty_jobs()
+    if provision_scheduled_recipesets():
+        work_done = True
+        # update_dirty_jobs() will be done at the start of the next loop
+        # iteration, so no need to do it here at the end as well
     if _outstanding_data_migrations:
-        work_done |= run_data_migrations()
+        run_data_migrations()
+        work_done = True
     return work_done
 
 @log_traceback(log)

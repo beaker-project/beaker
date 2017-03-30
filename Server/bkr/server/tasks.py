@@ -101,17 +101,17 @@ class Tasks(RPCRoot):
         .. versionchanged:: 0.9
            Changed 'install_name' to 'distro_name' in the *filter* argument.
         """
+        tasks = Task.query
+
         if filter.get('distro_name'):
             distro = Distro.by_name(filter['distro_name'])
-            tasks = distro.tasks()
+            tasks = tasks.filter(Task.compatible_with(distro=distro))
         elif 'osmajor' in filter and filter['osmajor']:
             try:
                 osmajor = OSMajor.by_name(filter['osmajor'])
             except InvalidRequestError:
                 raise BX(_('Invalid OSMajor: %s' % filter['osmajor']))
-            tasks = osmajor.tasks()
-        else:
-            tasks = Task.query
+            tasks = tasks.filter(Task.compatible_with(osmajor=osmajor))
 
         # Filter by valid task if requested
         if 'valid' in filter:

@@ -347,3 +347,32 @@ Beaker 24.1
   the "reporting" database connection, if configured. This allows 
   administrators to offload the queries to a read-only database replica. 
   (Contributed by Dan Callaghan)
+
+Beaker 24.2
+~~~~~~~~~~~
+
+* :issue:`1415309`: The JUnit XML results produced by Beaker is now more
+  consistent with the format produced by JUnit itself. This fixes some issues 
+  which prevented the Jenkins JUnit reporter from importing the results. 
+  (Contributed by Bill Peck)
+* :issue:`1420106`: The jobs grid now renders the whiteboard as Markdown
+  instead of treating it as plain text, to match the behaviour of the job page. 
+  (Contributed by Bill Peck)
+* :issue:`1422385`: The :program:`beaker-wizard` utility is now compatible with
+  python-bugzilla 2.0. (Contributed by Dan Callaghan)
+* :issue:`1404054`: The :program:`beakerd` daemon no longer attempts to run
+  (pointless) data migrations on an empty, freshly created database. 
+  (Contributed by Matt Jia)
+* :issue:`1426745`: Eliminated some redundant ``COUNT()`` queries in the
+  scheduler. (Contributed by Dan Callaghan)
+* :issue:`1426764`: Adjusted the ordering of scheduler steps to avoid giving
+  too much bias to the ``update_dirty_jobs`` routine. (Contributed by Dan 
+  Callaghan)
+
+Version 4.0-93 of the ``/distribution/virt/install`` and version 1.0-7 of the 
+``/distribution/virt/image-install`` tasks have also been released:
+
+* :issue:`1425793`: The :program:`wait4guesttasks` utility now correctly waits
+  for tasks only in the *guest* recipe. Previously it would incorrectly return 
+  early if the *host* recipe also contained a completed task with the same 
+  name. (Contributed by Jan Tluka)
