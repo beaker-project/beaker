@@ -36,6 +36,26 @@ class UpdateInventoryTest(ClientTestCase):
         # Make sure no new jobs was submitted
         self.assertEquals(c1, c2)
 
+    def test_update_inventory_dryrun_with_update_job_already_submitted(self):
+        '''
+        Test if we can run the command 'bkr update-inventory --dry-run'
+        without the sever giving us an error if there is already an
+        inventory job running on the server.
+        '''
+        out = run_client(['bkr', 'update-inventory', self.system1.fqdn])
+        self.assertTrue(out)
+        # old job count
+        with session.begin():
+            c1 = Job.query.count()
+        out = run_client(['bkr', 'update-inventory', '--dryrun',
+                          self.system1.fqdn])
+        self.assertFalse(out)
+        with session.begin():
+            session.flush()
+            c2 = Job.query.count()
+        # Make sure no new jobs were submitted
+        self.assertEquals(c1, c2)
+
     def test_update_inventory_xml(self):
         out = run_client(['bkr', 'update-inventory', '--prettyxml', self.system1.fqdn])
         self.assertIn('<hostRequires force="%s"/>' % self.system1.fqdn,
