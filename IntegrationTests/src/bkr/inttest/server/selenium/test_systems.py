@@ -22,10 +22,10 @@ from bkr.inttest import data_setup, get_server_base, with_transaction, \
         DatabaseTestCase
 from bkr.inttest.assertions import assert_sorted
 from bkr.server.model import Cpu, Key, Key_Value_String, System, \
-    SystemStatus, SystemPermission, Job, Disk
+    SystemStatus, SystemPermission, Job, Disk, User
 from bkr.inttest.server.webdriver_utils import check_system_search_results, login, \
     wait_for_animation
-from bkr.inttest.server.requests_utils import patch_json
+from bkr.inttest.server.requests_utils import patch_json, login as requests_login
 
 def atom_xpath(expr):
     return lxml.etree.XPath(expr, namespaces={'atom': 'http://www.w3.org/2005/Atom'})
@@ -460,6 +460,39 @@ class SystemHTTPTest(DatabaseTestCase):
         self.assertEquals(in_progress_scan['recipe_id'], recipe.id)
         self.assertEquals(in_progress_scan['status'], u'Running')
         self.assertEquals(in_progress_scan['job_id'], recipe.recipeset.job.t_id)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1386074
+    def test_get_system_returns_correct_id(self):
+        # The bug was that Power.id was overwriting System.id.
+        with session.begin():
+            # The bug is not observable if the system and power rows both 
+            # happen to have the same id, which is likely in the test suite 
+            # since we always create system and power rows together. Create 
+            # a throwaway system row without power, to ensure the autoincrement 
+            # ids are not in sync.
+            data_setup.create_system(with_power=False)
+            system = data_setup.create_system(owner=self.owner)
+            self.assertNotEqual(system.id, system.power.id)
+            # The bug is only observable to users with access to view power settings.
+            self.assertTrue(system.can_view_power(self.owner))
+        s = requests.Session()
+        requests_login(s, user=self.owner.user_name, password=u'theowner')
+        response = s.get(get_server_base() + '/systems/%s/' % system.fqdn,
+                headers={'Accept': 'application/json'})
+        response.raise_for_status()
+        self.assertEqual(response.json()['id'], system.id)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1386074
+    def test_updating_power_returns_correct_id(self):
+        # The bug was that Power.id was overwriting System.id
+        with session.begin():
+            system = data_setup.create_system(with_power=False, owner=self.owner)
+        s = requests.Session()
+        requests_login(s, user=self.owner.user_name, password=u'theowner')
+        response = patch_json(get_server_base() + 'systems/%s/' % system.fqdn,
+                session=s, data={'power_type': 'ilo', 'power_address': 'nowhere'})
+        response.raise_for_status()
+        self.assertEqual(response.json()['id'], system.id)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1206033
     def test_system_details_includes_disks(self):

@@ -2465,7 +2465,6 @@ class Power(DeclarativeMappedObject):
 
     def __json__(self):
         return {
-            'id': self.id,
             'power_type': self.power_type.name,
             'power_address': self.power_address,
             'power_user': self.power_user,
