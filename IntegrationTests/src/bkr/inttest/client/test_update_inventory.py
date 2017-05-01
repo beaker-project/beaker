@@ -60,8 +60,14 @@ class UpdateInventoryTest(ClientTestCase):
         out = run_client(['bkr', 'update-inventory', '--prettyxml', self.system1.fqdn])
         self.assertIn('<hostRequires force="%s"/>' % self.system1.fqdn,
                       out)
-        self.assertIn('<task name="/distribution/inventory" role="STANDALONE"/>',
+        self.assertIn('<task name="/distribution/inventory" role="STANDALONE">',
                       out)
+
+    def test_update_inventory_hostname(self):
+        out = run_client(['bkr', 'update-inventory', "--prettyxml",
+                          self.system1.fqdn])
+        self.assertIn('<param name="HOSTNAME" value="%s"/>' %
+                self.system1.fqdn, out)
 
     def test_update_inventory_wait(self):
         args = ['bkr', 'update-inventory',
