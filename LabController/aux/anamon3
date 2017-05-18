@@ -19,10 +19,6 @@ import re
 import base64
 import shlex
 from xmlrpc.client import Server as xmlrpc_server
-try:
-    from hashlib import md5
-except ImportError:
-    from md5 import md5
 
 # shlex.split support arrived in python-2.3, the following will provide some
 # accomodation for older distros (e.g. RHEL3)
@@ -68,24 +64,22 @@ class WatchedFile:
     def uploadWrapper(self, blocksize = 262144):
         """upload a file in chunks using the uploadFile call"""
         retries = 3
-        fo = open(self.fn, "r")
+        fo = open(self.fn, "rb")
         totalsize = os.path.getsize(self.fn)
         ofs = 0
         while True:
-            lap = time.time()
-            contents = str.encode(fo.read(blocksize))
+            contents = fo.read(blocksize)
             size = len(contents)
             if size == 0:
                 break
-            md5sum = md5(contents).hexdigest()
             data = base64.encodestring(contents)
             del contents
             tries = 0
             while tries <= retries:
                 debug("recipe_upload_file(%r, '/', %r, %r, %r, %r, ...)\n"
-                        % (recipe_id, self.alias, size, md5sum, ofs))
+                        % (recipe_id, self.alias, size, None, ofs))
                 if session.recipe_upload_file(recipe_id, '/', self.alias,
-                        size, md5sum, ofs, data.decode()):
+                        size, None, ofs, data.decode('ascii')):
                     break
                 else:
                     tries = tries + 1
@@ -255,7 +249,7 @@ while n < len(sys.argv):
     n = n+1
 
 # Create an xmlrpc session handle
-session = xmlrpc_server(xmlrpc_url)
+session = xmlrpc_server(xmlrpc_url, allow_none=True)
 
 # Fork and loop
 if daemon:
