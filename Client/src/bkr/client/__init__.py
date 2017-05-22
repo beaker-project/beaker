@@ -748,9 +748,14 @@ class BeakerRecipeBase(BeakerBase):
     def _addBaseHostRequires(self, **kwargs):
         """ Add hostRequires """
 
-        hostRequires = self.node.getElementsByTagName('hostRequires')[0]
         machine = kwargs.get("machine", None)
-        if machine:
+        force = kwargs.get('ignore_system_status', False)
+        systype = kwargs.get("systype", None)
+        keyvalues = kwargs.get("keyvalue", [])
+        requires = kwargs.get("hostrequire", [])
+        random = kwargs.get("random", False)
+        host_filter = kwargs.get('host_filter', None)
+        if machine and force:
             # if machine is specified, emit a warning message that any
             # other host selection criteria is ignored
             for opt in ['hostrequire', 'keyvalue', 'random', 'systype', 
@@ -758,19 +763,14 @@ class BeakerRecipeBase(BeakerBase):
                 if kwargs.get(opt, None):
                     sys.stderr.write('Warning: Ignoring --%s'
                                      ' because --machine was specified\n' % opt.replace('_', '-'))
-            if kwargs.get('ignore_system_status', False):
-                hostRequires.setAttribute("force", "%s" % kwargs.get('machine'))
-            else:
+            hostRequires = self.node.getElementsByTagName('hostRequires')[0]
+            hostRequires.setAttribute("force", "%s" % kwargs.get('machine'))
+        else:
+            if machine:
                 hostMachine = self.doc.createElement('hostname')
                 hostMachine.setAttribute('op', '=')
                 hostMachine.setAttribute('value', '%s' % machine)
                 self.addHostRequires(hostMachine)
-        else:
-            systype = kwargs.get("systype", None)
-            keyvalues = kwargs.get("keyvalue", [])
-            requires = kwargs.get("hostrequire", [])
-            random = kwargs.get("random", False)
-            host_filter = kwargs.get('host_filter', None)
             if systype:
                 systemType = self.doc.createElement('system_type')
                 systemType.setAttribute('op', '=')
