@@ -6,7 +6,7 @@ bootloader --location=mbr
 text
 # no specific network configuration
 
-repo --name=fedora-updates --mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=updates-released-f18&arch=x86_64
+repo --name=fedora-updates --mirrorlist=https://mirrors.fedoraproject.org/mirrorlist?repo=updates-released-f18&arch=x86_64
 repo --name=beaker-debug --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/F-18/GOLD/Fedora/x86_64/debug
 
 firewall --disabled
