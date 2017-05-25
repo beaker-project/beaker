@@ -692,6 +692,35 @@ class SystemViewTestWD(WebDriverTestCase):
                 self.assertEquals(activity.new_value,
                                   power_fields_changed[activity.field_name])
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1386074
+    def test_new_power_settings_saved_twice(self):
+        with session.begin():
+            system = data_setup.create_system(lab_controller=self.lab_controller,
+                    with_power=False)
+        b = self.browser
+        login(b)
+        self.go_to_system_view(system=system, tab='Power Settings')
+        tab = b.find_element_by_id('power-settings')
+        BootstrapSelect(tab.find_element_by_name('power_type'))\
+            .select_by_visible_text('ilo')
+        tab.find_element_by_name('power_address').send_keys('nowhere')
+        tab.find_element_by_tag_name('form').submit()
+        # Wait for request to complete
+        tab.find_element_by_xpath('.//button[text()="Save Changes"]')
+        # Change power settings and save them again
+        tab.find_element_by_name('power_address').clear()
+        tab.find_element_by_name('power_address').send_keys('somewhere')
+        tab.find_element_by_tag_name('form').submit()
+        # Wait for request to complete
+        tab.find_element_by_xpath('.//button[text()="Save Changes"]')
+        # There should be no error div
+        tab.find_element_by_xpath('.//div[@class="sync-status" and '
+                'not(.//div[contains(@class, "alert")])]')
+        # Database should be updated
+        with session.begin():
+            #session.refresh(system.power)
+            self.assertEqual(system.power.power_address, u'somewhere')
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1059535
     def test_activity_is_not_logged_when_leaving_power_settings_empty(self):
         # The bug was that we were recording a change to power_user or 

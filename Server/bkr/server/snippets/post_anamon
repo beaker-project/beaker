@@ -1,7 +1,11 @@
 {% if recipe %}
 {% set anamon_url = anamon|default('http://' + lab_controller.fqdn + '/beaker/anamon') %}
 
-fetch /usr/local/sbin/anamon {{ anamon_url|shell_quoted }}
+if command -v python3 >/dev/null ; then
+    fetch /usr/local/sbin/anamon {{ (anamon_url + '3')|shell_quoted }}
+else
+    fetch /usr/local/sbin/anamon {{ anamon_url|shell_quoted }}
+fi
 fetch /etc/rc.d/init.d/anamon {{ (anamon_url + '.init')|shell_quoted }}
 
 chmod 755 /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
