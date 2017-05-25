@@ -122,13 +122,6 @@ class HubProxy(object):
             raise AuthenticationError("ACCESS_TOKEN is not set")
         self._hub.auth.login_oauth2(access_token)
 
-    def _login_worker_key(self):
-        """Login using worker key."""
-        worker_key = self._conf.get("WORKER_KEY")
-        if not worker_key:
-            raise AuthenticationError("WORKER_KEY is not set")
-        self._hub.auth.login_worker_key(worker_key)
-
     def _login_krbv(self):
         """Login using kerberos credentials (uses python-krbV)."""
 
