@@ -376,3 +376,52 @@ Version 4.0-93 of the ``/distribution/virt/install`` and version 1.0-7 of the
   for tasks only in the *guest* recipe. Previously it would incorrectly return 
   early if the *host* recipe also contained a completed task with the same 
   name. (Contributed by Jan Tluka)
+
+Beaker 24.3
+~~~~~~~~~~~
+
+* :issue:`1442147`: A new, Python 3 compatible version of the :program:`anamon`
+  monitoring script is now used when the installation environment contains 
+  Python 3, for example on Fedora 26. (Contributed by Johnny Bieren)
+* :issue:`1442146`: The kickstart template for Fedora now correctly passes the
+  "mirrorlist" URL for the updates repo. Previously it passes the Metalink URL 
+  instead, which is not supported in Anaconda starting from Fedora 26. 
+  (Contributed by Dan Callaghan)
+* :issue:`1438666`: Beaker now fills in the ``HOSTNAME`` parameter for the
+  ``/distribution/inventory`` task when it schedules a hardware scan job for 
+  a system. This avoids problems in case the system is not assigned the correct 
+  fully-qualified domain name by DHCP. (Contributed by Jonathan Toppins)
+* :issue:`1335394`: The :option:`bkr update-inventory --dry-run` option now
+  works correctly when a hardware scan job is already running. Previously it 
+  would refuse to produce a dry run of the job definition. (Contributed by 
+  Jonathan Toppins)
+* :issue:`1386074`: Under some circumstances the JSON API for system details
+  would return an incorrect value for the `id` key, which caused the web UI to 
+  report an error: "System access policy not specified". This has been 
+  corrected. (Contributed by Dan Callaghan)
+* :issue:`1234323`: The :program:`bkr` workflow commands no longer reject
+  other host filtering options when combined with the :option:`--machine
+  <bkr --machine>` option. This is necessary when using 
+  :option:`--systype=Prototype <bkr --systype>` to select prototype systems. 
+  (Contributed by Dan Callaghan)
+
+Version 4.0-94 of the ``/distribution/virt/install`` and version 1.0-8 of the 
+``/distribution/virt/image-install`` tasks have also been released:
+
+* :issue:`1440647`: The ``--nographics`` and ``--noautoconsole`` options are
+  now passed to :program:`virt-install` on aarch64. (Contributed by Artem 
+  Savkov)
+* :issue:`1441751`: The :program:`logguestconsoles` program now correctly
+  handles the case where the guest console log file is truncated by qemu. 
+  (Contributed by Jakub Racek)
+* The ``/distribution/virt/install`` now compares the OS release numerically
+  instead of lexicographically. Previously the task would consider Fedora 
+  releases to be too old to support KVM. (Contributed by Johnny Bieren)
+
+Version 4.73 of the ``rhts`` test development and execution library has also 
+been released:
+
+* :issue:`1417988`: If a task tries to upload a non-existent log file using
+  :program:`rhts-report-result` or :program:`rhts-submit-log`, the command will 
+  exit with an error instead of an unhandled exception, to avoid triggering 
+  abrt. (Contributed by Dan Callaghan)
