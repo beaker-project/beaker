@@ -227,6 +227,7 @@ class WorkflowSimpleTest(ClientTestCase):
                           '--random',
                           '--host-filter', 'my_awesome_filter',
                           '--machine', 'test.system',
+                          '--ignore-system-status',
                           '--arch', self.distro_tree.arch.arch,
                           '--family', self.distro.osversion.osmajor.osmajor,
                           '--task', self.task.name])
@@ -242,9 +243,20 @@ class WorkflowSimpleTest(ClientTestCase):
         self.assertNotIn('<hostlabcontroller op="=" value="lab.example.com"/>',
                          out)
         self.assertNotIn('<autopick random="true"/>', out)
-        self.assertIn('<hostname op="=" value="test.system"/>',
+        self.assertIn('<hostRequires force="test.system"/>',
                       out)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1234323
+    def test_accepts_machine_and_systype(self):
+        out = run_client(['bkr', 'workflow-simple',
+                '--dryrun', '--prettyxml',
+                '--machine', 'system.example.com',
+                '--systype', 'Prototype',
+                '--arch', self.distro_tree.arch.arch,
+                '--family', self.distro.osversion.osmajor.osmajor,
+                '--task', self.task.name])
+        self.assertIn('<hostname op="=" value="system.example.com"/>', out)
+        self.assertIn('<system_type op="=" value="Prototype"/>', out)
 
     def test_repo(self):
         first_url = 'http://repo1.example.invalid'

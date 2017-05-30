@@ -1238,7 +1238,7 @@ def submit_inventory_job():
         system = System.by_fqdn(fqdn, identity.current.user)
     except DatabaseLookupError:
         raise BadRequest400('System not found: %s' % fqdn)
-    if system.find_current_hardware_scan_recipe():
+    if not dryrun and system.find_current_hardware_scan_recipe():
         raise Conflict409('Hardware scanning already in progress')
     distro = system.distro_tree_for_inventory()
     if not distro:

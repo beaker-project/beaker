@@ -86,11 +86,12 @@ See also
 :manpage:`bkr(1)`, :manpage:`bkr-machine-test(1)`,
 """
 
+import sys
+import cgi
+from xml.dom.minidom import parseString
+from requests.exceptions import HTTPError
 from bkr.client import BeakerCommand
 from bkr.client.task_watcher import watch_tasks
-import sys
-from requests.exceptions import HTTPError
-from xml.dom.minidom import parseString
 
 class Update_Inventory(BeakerCommand):
     """Submits a Inventory job"""
@@ -143,7 +144,13 @@ class Update_Inventory(BeakerCommand):
             try:
                 res.raise_for_status()
             except HTTPError, e:
-                sys.stderr.write('Exception: %s\n' % e.message)
+                sys.stderr.write('HTTP error: %s, %s\n' % (fqdn, e))
+                content_type, _ = cgi.parse_header(e.response.headers.get(
+                    'Content-Type', ''))
+                if content_type == 'text/plain':
+                    sys.stderr.write('\t' +
+                                     e.response.content.rstrip('\n') +
+                                     '\n')
                 failed = True
             else:
                 res_data = res.json()

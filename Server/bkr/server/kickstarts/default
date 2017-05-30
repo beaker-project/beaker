@@ -21,7 +21,7 @@ bootloader --location={{ boot_loc|default("mbr") }}{% if kernel_options_post %} 
 
 {% if distro.osversion.osmajor.name == 'Fedora' %}
 {% if no_updates_repos is undefined and distro.osversion.osmajor.number != 'rawhide' %}
-repo --name=fedora-updates --mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=updates-released-f{{ distro.osversion.osmajor.number }}&arch={{ distro_tree.arch.arch }}
+repo --name=fedora-updates --mirrorlist=https://mirrors.fedoraproject.org/mirrorlist?repo=updates-released-f{{ distro.osversion.osmajor.number }}&arch={{ distro_tree.arch.arch }}
 {% endif %}
 {% endif %}
 {% if has_rpmostree is not defined %}
