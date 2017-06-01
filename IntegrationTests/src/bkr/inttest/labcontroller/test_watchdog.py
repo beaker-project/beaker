@@ -104,6 +104,17 @@ class WatchdogConsoleLogTest(TestHelper):
         wait_for_condition(lambda: self.check_cached_log_contents(junk + panic))
         self.assert_panic_detected(u'Kernel panic')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1457606
+    def test_report_panic_with_nonascii_whiteboard(self):
+        with session.begin():
+            self.recipe.recipeset.job.whiteboard = u'fat\u3000space'
+        panic = 'Kernel panic - not syncing: Fatal exception in interrupt\n'
+        with open(self.console_log, 'w') as f:
+            f.write(panic)
+        wait_for_condition(self.check_console_log_registered)
+        wait_for_condition(lambda: self.check_cached_log_contents(panic))
+        self.assert_panic_detected(u'Kernel panic')
+
     def test_incomplete_lines_not_buffered_forever(self):
         # The panic detection is only applied to complete lines (terminated 
         # with \n) but if for some reason we get a huge amount of output with 
