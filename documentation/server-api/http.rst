@@ -175,7 +175,8 @@ Systems
    :file:`Common/bkr/common/schema/beaker-inventory.ttl`.
 
 .. autoflask:: bkr.server.wsgi:app
-   :endpoints: get_system, add_system, update_system, report_problem, get_system_activity,
+   :endpoints: get_system, add_system, update_system, add_system_note, 
+     get_system_note, update_system_note, report_problem, get_system_activity, 
      get_system_executed_tasks
 
 .. _system-access-policies-api:

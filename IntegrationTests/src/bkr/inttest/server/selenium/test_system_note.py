@@ -4,11 +4,16 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import datetime
+import requests
+from bkr.inttest.server.requests_utils import login as requests_login, \
+        patch_json, post_json
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, logout, delete_and_confirm
-from bkr.inttest.assertions import wait_for_condition
-from bkr.inttest import data_setup, with_transaction, get_server_base
-from bkr.server.model import SystemPermission
+from bkr.inttest.assertions import wait_for_condition, assert_datetime_within
+from bkr.inttest import data_setup, with_transaction, get_server_base, \
+        DatabaseTestCase
+from bkr.server.model import SystemPermission, Note
 from turbogears.database import session
 
 class SystemNoteTests(WebDriverTestCase):
@@ -178,3 +183,66 @@ Also a URL <http://example.com/>.''')
         b.find_element_by_name('notes').submit()
         b.find_element_by_xpath("//form[@name='notes']/../table//td/"
             "p[normalize-space(text())='%s']" % bad_note)
+
+class SystemNoteHTTPTest(DatabaseTestCase):
+    """
+    Directly tests the HTTP interface for system notes.
+    """
+
+    def setUp(self):
+        with session.begin():
+            self.owner = data_setup.create_user(password=u'owner')
+            self.system = data_setup.create_system(owner=self.owner)
+
+    def test_add_note(self):
+        note_text = 'sometimes it breaks'
+        s = requests.Session()
+        requests_login(s, user=self.owner.user_name, password=u'owner')
+        response = post_json(get_server_base() + 'systems/%s/notes/' % self.system.fqdn,
+                session=s, data={'text': note_text})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.system.notes[0].user, self.owner)
+            self.assertEquals(self.system.notes[0].text, note_text)
+            assert_datetime_within(self.system.notes[0].created,
+                    reference=datetime.datetime.utcnow(),
+                    tolerance=datetime.timedelta(seconds=10))
+
+    def test_get_note(self):
+        with session.begin():
+            note_text = u'sometimes it works'
+            self.system.notes.append(Note(text=note_text, user=self.owner))
+            session.flush()
+            note_id = self.system.notes[0].id
+        response = requests.get(get_server_base() + 'systems/%s/notes/%s'
+                % (self.system.fqdn, note_id))
+        response.raise_for_status()
+        self.assertEquals(response.json()['id'], note_id)
+        self.assertEquals(response.json()['text'], note_text)
+        self.assertEquals(response.json()['user']['user_name'], self.owner.user_name)
+
+    def test_mark_note_as_deleted(self):
+        # Notes never get actually deleted, they just get marked as "deleted" 
+        # which hides them by default in the UI. "Obsoleted" would be a better 
+        # word but "deleted" is what we have.
+        with session.begin():
+            note_text = u'some obsolete info'
+            self.system.notes.append(Note(text=note_text, user=self.owner))
+            session.flush()
+            note_id = self.system.notes[0].id
+        s = requests.Session()
+        requests_login(s, user=self.owner.user_name, password=u'owner')
+        response = patch_json(get_server_base() + 'systems/%s/notes/%s'
+                % (self.system.fqdn, note_id), session=s, data={'deleted': 'now'})
+        response.raise_for_status()
+        self.assertEquals(response.json()['id'], note_id)
+        assert_datetime_within(
+                datetime.datetime.strptime(response.json()['deleted'], '%Y-%m-%d %H:%M:%S'),
+                reference=datetime.datetime.utcnow(),
+                tolerance=datetime.timedelta(seconds=10))
+        with session.begin():
+            session.refresh(self.system.notes[0])
+            assert_datetime_within(self.system.notes[0].deleted,
+                    reference=datetime.datetime.utcnow(),
+                    tolerance=datetime.timedelta(seconds=10))

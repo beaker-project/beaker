@@ -21,7 +21,7 @@ from bkr.server.model import System, SystemActivity, SystemStatus, SystemPool, \
         VirtResource, Hypervisor, Numa, LabController, SystemType, \
         Command, Power, PowerType, ReleaseAction, Task, \
         Recipe, RecipeSet, RecipeTask, RecipeResource, Job, TaskStatus, \
-        Installation
+        Installation, Note
 from bkr.server.installopts import InstallOptions
 from bkr.server.kickstart import generate_kickstart
 from bkr.server.app import app
@@ -1291,6 +1291,81 @@ def system_command(fqdn):
         raise BadRequest400('Unknown action %r' % action)
     session.flush() # for created attribute
     return jsonify(command.__json__())
+
+@app.route('/systems/<fqdn>/notes/', methods=['POST'])
+@auth_required
+def add_system_note(fqdn):
+    """
+    Records a new note for a system. System owners can use notes to record 
+    important, long-term information about a system in human-readable form. 
+    Use this to record any known limitations or unusual configurations which 
+    other users may need to be aware of.
+
+    Notes are shown on the system page, rendered as Markdown.
+
+    :param fqdn: The system's fully-qualified domain name.
+    :jsonparam string text: The text of the new note.
+    """
+    system = _get_system_by_FQDN(fqdn)
+    if not system.can_edit(identity.current.user):
+        raise Forbidden403('You do not have permission to add a note to this system')
+    if not request.json:
+        raise UnsupportedMediaType415
+    note = system.add_note(text=request.json['text'], user=identity.current.user,
+            service=u'HTTP')
+    session.flush() # to populate note.id
+    return jsonify(note.__json__())
+
+@app.route('/systems/<fqdn>/notes/<id>', methods=['GET'])
+def get_system_note(fqdn, id):
+    """
+    Returns details of a note recorded against a system.
+
+    :param fqdn: The system's fully-qualified domain name.
+    :param id: The id of the note.
+    """
+    system = _get_system_by_FQDN(fqdn)
+    try:
+        note = Note.by_id(id)
+    except (NoResultFound, ValueError):
+        raise NotFound404('Note %s does not exist' % id)
+    if note not in system.notes:
+        raise NotFound404('Note %s does not exist on %s' % (id, system))
+    return jsonify(note.__json__())
+
+@app.route('/systems/<fqdn>/notes/<id>', methods=['PATCH'])
+@auth_required
+def update_system_note(fqdn, id):
+    """
+    Updates an existing note for a system.
+
+    Currently, the only permitted operation is to mark a note as deleted, by 
+    setting the "deleted" key to "now". Deleted notes are hidden by default in 
+    the web UI, although users can still view them by requesting them 
+    explicitly.
+
+    :param fqdn: The system's fully-qualified domain name.
+    :param id: The id of the note to be updated.
+    :jsonparam string deleted: Timestamp at which the note should be deleted. 
+      The only permitted value is "now".
+    """
+    system = _get_system_by_FQDN(fqdn)
+    if not system.can_edit(identity.current.user):
+        raise Forbidden403('You do not have permission to update notes for this system')
+    if not request.json:
+        raise UnsupportedMediaType415
+    try:
+        note = Note.by_id(id)
+    except (NoResultFound, ValueError):
+        raise NotFound404('Note %s does not exist' % id)
+    if note not in system.notes:
+        raise NotFound404('Note %s does not exist on %s' % (id, system))
+    with convert_internal_errors():
+        if 'deleted' in request.json:
+            if request.json['deleted'] != 'now':
+                raise ValueError('"deleted" value must be "now"')
+            note.deleted = datetime.datetime.utcnow().replace(microsecond=0)
+    return jsonify(note.__json__())
 
 @app.route('/systems/<fqdn>/activity/', methods=['GET'])
 def get_system_activity(fqdn):

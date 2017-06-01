@@ -500,6 +500,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             'queue_size': None,
             'pools': [pool.name for pool in self.pools],
             'disks': self.disks,
+            'notes': self.notes,
         }
         in_progress_scan = self.find_current_hardware_scan_recipe()
         if in_progress_scan:
@@ -1703,6 +1704,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
                              action='Added', field='Note',
                              old='', new=text)
         self.date_modified = datetime.utcnow()
+        return note
 
     def abort_queued_commands(self, msg):
         """
@@ -2541,6 +2543,15 @@ class Note(DeclarativeMappedObject):
         except Exception:
             return self.text
         return XML(rendered)
+
+    def __json__(self):
+        return {
+            'id': self.id,
+            'user': self.user,
+            'created': self.created,
+            'deleted': self.deleted,
+            'text': self.text,
+        }
 
 
 class Key(DeclarativeMappedObject):
