@@ -1311,10 +1311,11 @@ def add_system_note(fqdn):
         raise Forbidden403('You do not have permission to add a note to this system')
     if not request.json:
         raise UnsupportedMediaType415
-    note = system.add_note(text=request.json['text'], user=identity.current.user,
-            service=u'HTTP')
-    session.flush() # to populate note.id
-    return jsonify(note.__json__())
+    with convert_internal_errors():
+        note = system.add_note(text=request.json['text'], user=identity.current.user,
+                service=u'HTTP')
+        session.flush() # to populate note.id
+        return jsonify(note.__json__())
 
 @app.route('/systems/<fqdn>/notes/<id>', methods=['GET'])
 def get_system_note(fqdn, id):

@@ -2526,6 +2526,12 @@ class Note(DeclarativeMappedObject):
         self.user = user
         self.text = text
 
+    @validates('text')
+    def validate_text(self, key, value):
+        if not value:
+            raise ValueError('Note text cannot be empty')
+        return value
+
     @classmethod
     def all(cls):
         return cls.query

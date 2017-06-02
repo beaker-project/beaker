@@ -187,6 +187,14 @@ class SystemNoteHTTPTest(DatabaseTestCase):
                     reference=datetime.datetime.utcnow(),
                     tolerance=datetime.timedelta(seconds=10))
 
+    def test_empty_notes_are_rejected(self):
+        s = requests.Session()
+        requests_login(s, user=self.owner.user_name, password=u'owner')
+        response = post_json(get_server_base() + 'systems/%s/notes/' % self.system.fqdn,
+                session=s, data={'text': ''})
+        self.assertEquals(response.status_code, 400)
+        self.assertEquals(response.content, 'Note text cannot be empty')
+
     def test_get_note(self):
         with session.begin():
             note_text = u'sometimes it works'
