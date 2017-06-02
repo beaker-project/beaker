@@ -196,6 +196,23 @@ window.SystemPools = BeakerPageableCollection.extend({
     },
 });
 
+var SystemNote = Backbone.Model.extend({
+    parse: function (data) {
+        data['user'] = !_.isEmpty(data['user']) ? new User(data['user']) : null;
+        return data;
+    },
+});
+
+var SystemNotes = Backbone.Collection.extend({
+    model: SystemNote,
+    initialize: function (attributes, options) {
+        this.system = options.system;
+    },
+    url: function () {
+        return _.result(this.system, 'url') + 'notes/';
+    },
+});
+
 window.System = Backbone.Model.extend({
     initialize: function (attributes, options) {
         options = options || {};
@@ -224,6 +241,11 @@ window.System = Backbone.Model.extend({
                 {parse: true, system: this});
         data['reprovision_distro_tree'] = (!_.isEmpty(data['reprovision_distro_tree']) ?
                 new DistroTree(data['reprovision_distro_tree'], {parse: true}) : null);
+        if (_.has(data, 'notes')) {
+            var notes = this.get('notes') || new SystemNotes([], {system: this});
+            notes.reset(data['notes'], {parse: true});
+            data['notes'] = notes;
+        }
         return data;
     },
     // We build an absolute URL in the hyperlink so that it works properly when 

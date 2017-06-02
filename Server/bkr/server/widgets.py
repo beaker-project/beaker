@@ -926,24 +926,6 @@ class SystemInstallOptions(Form):
         if 'provisions' in d['options']:
             d['provisions'] = d['options']['provisions']
 
-class SystemNotes(Form):
-    template = "bkr.server.templates.system_notes"
-    member_widgets = ["id", "note", "delete_link"]
-    params = ['options', 'readonly', 'notes']
-    delete_link = DeleteLinkWidgetAJAX()
-
-    def __init__(self, *args, **kw):
-        super(SystemNotes, self).__init__(*args, **kw)
-        self.id = HiddenField(name="id")
-        self.note = TextArea(name='note', label=_(u'Note'))
-
-    def update_params(self, d):
-        super(SystemNotes, self).update_params(d)
-        if 'readonly' in d['options']:
-            d['readonly'] = d['options']['readonly']
-        if 'notes' in d['options']:
-            d['notes'] = d['options']['notes']
-
 class SystemExclude(Form):
     template = """
     <form xmlns:py="http://purl.org/kid/ns#"

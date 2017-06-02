@@ -1,0 +1,38 @@
+<% if (_.isEmpty(display_notes) && _.isEmpty(deleted_notes)) { %>
+  <p>No notes have been recorded for this system.</p>
+<% } %>
+<% if (can_change_notes) { %>
+<form class="add-system-note">
+  <textarea class="input-block-level" name="text" rows="6"></textarea>
+  <span class="help-block">Notes are rendered as Markdown.</span>
+  <p><button type="submit" class="btn btn-primary" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Adding&hellip;"><i class="fa fa-plus"></i> Add</button></p>
+</form>
+<% } %>
+<% _.each(display_notes, function (note) { %>
+  <div class="system-note">
+    <p class="system-note-metadata">
+      <%= note.get('user').toHTML() %> added 
+      <time datetime="<%- moment.utc(note.get('created')).toISOString() %>"
+            title="<%- moment.utc(note.get('created')).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
+        <%- moment.utc(note.get('created')).fromNow() %></time><% if (note.get('deleted')) { %>,
+        a user deleted
+        <time datetime="<%- moment.utc(note.get('deleted')).toISOString() %>"
+              title="<%- moment.utc(note.get('deleted')).local().format('YYYY-MM-DD HH:mm:ss Z') %>">
+          <%- moment.utc(note.get('deleted')).fromNow() %>
+        </time>
+      <% } %>
+    </p>
+    <div class="system-note-text"><%= marked(note.get('text'), {sanitize: true, smartypants: false}) %></div>
+    <% if (can_change_notes && !note.get('deleted')) { %>
+      <button type="button" class="btn btn-small delete-system-note" data-note-id="<%- note.get('id') %>" data-loading-text="<i class='fa fa-trash-o fa-spin'></i> Deleting &hellip;"><i class="fa fa-trash-o"></i> Delete</button>
+    <% } %>
+  </div>
+<% }) %>
+<% if (!_.isEmpty(deleted_notes)) { %>
+  <div class="deleted-system-notes">
+    <%- _.size(deleted_notes) %>
+    deleted <%- _.size(deleted_notes) > 1 ? 'notes are' : 'note is' %>
+    not shown
+    <button type="button" class="btn btn-small show-deleted">Show</button>
+  </div>
+<% } %>

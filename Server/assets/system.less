@@ -117,3 +117,22 @@
         margin: 0 0 0 4px;
    }
 }
+
+div.system-note + div.system-note,
+form.add-system-note + div.system-note,
+div.system-note + div.deleted-system-notes {
+    padding-top: 1em;
+    border-top: 1px solid @grayLighter;
+    margin-top: 1em;
+}
+.system-note-metadata {
+    .muted;
+}
+form.add-system-note,
+div.system-note-text {
+    max-width: 50em;
+}
+div.deleted-system-notes {
+    .muted;
+    font-style: italic;
+}

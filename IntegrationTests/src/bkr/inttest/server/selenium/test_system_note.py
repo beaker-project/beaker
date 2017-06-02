@@ -9,7 +9,7 @@ import requests
 from bkr.inttest.server.requests_utils import login as requests_login, \
         patch_json, post_json
 from bkr.inttest.server.selenium import WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login, logout, delete_and_confirm
+from bkr.inttest.server.webdriver_utils import login, logout
 from bkr.inttest.assertions import wait_for_condition, assert_datetime_within
 from bkr.inttest import data_setup, with_transaction, get_server_base, \
         DatabaseTestCase
@@ -26,47 +26,71 @@ class SystemNoteTests(WebDriverTestCase):
         self.nobody = data_setup.create_user(password='password')
         self.browser = self.get_browser()
 
-    def add_note(self):
+    def go_to_notes_tab(self):
         b = self.browser
         b.get(get_server_base() + 'view/%s' % self.system.fqdn)
-        b.find_element_by_link_text('Notes').click()
+        b.find_element_by_xpath('//title[normalize-space(text())="%s"]'
+                % self.system.fqdn)
+        b.find_element_by_xpath('//ul[contains(@class, "system-nav")]'
+                '//a[text()="Notes"]').click()
+        return b.find_element_by_id('notes')
+
+    def test_no_notes(self):
+        pane = self.go_to_notes_tab()
+        self.assertEquals(pane.find_element_by_xpath('p[1]').text,
+                'No notes have been recorded for this system.')
+
+    def add_note(self):
+        pane = self.go_to_notes_tab()
         note = data_setup.unique_name('note%s')
-        b.find_element_by_id('notes_note').send_keys(note)
-        b.find_element_by_name('notes').submit()
-        b.find_element_by_xpath('//*[@id="notes"]//tr/td[3]/p[text()="%s"]' % note)
+        pane.find_element_by_name('text').send_keys(note)
+        pane.find_element_by_tag_name('form').submit()
+        # Wait for it to appear
+        pane.find_element_by_xpath('div[@class="system-note"]'
+                '/div[@class="system-note-text"]/p[text()="%s"]' % note)
         return note
 
     def delete_note(self, note):
         b = self.browser
-        b.find_element_by_link_text('Notes').click()
-        delete_and_confirm(b, '//tr[td/p/text()="%s"]' % note)
+        pane = b.find_element_by_id('notes')
+        note_div = pane.find_element_by_xpath('div[@class="system-note" '
+                'and div[@class="system-note-text"]/p[text()="%s"]]' % note)
+        note_div.find_element_by_xpath('.//button[normalize-space(string(.))="Delete"]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_xpath('.//p[text()="Are you sure you want to delete this note?"]')
+        modal.find_element_by_xpath('.//button[text()="OK"]').click()
         # Test that it is hidden
-        wait_for_condition(lambda: not b.find_element_by_xpath(
-                '//tr[td/p/text()="%s"]' % note).is_displayed())
+        b.find_element_by_xpath('//div[@id="notes" and '
+                'not(.//div[@class="system-note-text"]/p[text()="%s"])]' % note)
 
     def test_can_show_deleted_notes(self):
+        note_text = u'deleteme'
+        with session.begin():
+            self.system.notes.append(Note(text=note_text, user=self.owner))
         b = self.browser
         login(b)
-        note = self.add_note()
-        self.delete_note(note)
+        pane = self.go_to_notes_tab()
+        self.delete_note(note_text)
         # Test that we have acreated a new element to toggle the notes
-        b.find_element_by_link_text('Toggle deleted notes').click()
+        deleted_div = pane.find_element_by_xpath('div[@class="deleted-system-notes"]')
+        self.assertEquals(deleted_div.text, '1 deleted note is not shown Show')
+        deleted_div.find_element_by_xpath('button[text()="Show"]').click()
         # Test that it reappears when toggled
-        wait_for_condition(lambda: b.find_element_by_xpath(
-                '//tr[td/p/text()="%s"]' % note).is_displayed())
+        pane.find_element_by_xpath('div[@class="system-note"]'
+                '/div[@class="system-note-text"]/p[text()="%s"]' % note_text)
 
     def test_notes_are_hidden_by_default(self):
-        b = self.browser
-        login(b)
-        note = self.add_note()
-        self.delete_note(note)
-        b.get(get_server_base() + 'view/%s' % self.system.fqdn)
-        b.find_element_by_link_text('Notes').click()
+        note_text = u'something-deleted'
+        with session.begin():
+            self.system.notes.append(Note(text=note_text, user=self.owner))
+            self.system.notes[0].deleted = datetime.datetime.utcnow()
+        pane = self.go_to_notes_tab()
         # Test existing deleted notes are hidden
-        self.assertFalse(b.find_element_by_xpath(
-                '//tr[td/p/text()="%s"]' % note).is_displayed())
-        # Test that it recognises deleted notes and gives us a toggle option
-        b.find_element_by_link_text('Toggle deleted notes')
+        deleted_div = pane.find_element_by_xpath('div[@class="deleted-system-notes"]')
+        self.assertEquals(deleted_div.text, '1 deleted note is not shown Show')
+        deleted_div.find_element_by_xpath('button[text()="Show"]').click()
+        pane.find_element_by_xpath('div[@class="system-note"]'
+                '/div[@class="system-note-text"]/p[text()="%s"]' % note_text)
 
     def test_multiple_hidden_notes(self):
         b = self.browser
@@ -77,112 +101,66 @@ class SystemNoteTests(WebDriverTestCase):
         # both of the deleted notes display together, and are hidden together
         note_2 = self.add_note()
         self.delete_note(note_2)
-        b.find_element_by_link_text('Toggle deleted notes').click()
-        wait_for_condition(lambda: b.find_element_by_xpath(
-                '//tr[td/p/text()="%s"]' % note).is_displayed())
-        wait_for_condition(lambda: b.find_element_by_xpath(
-                '//tr[td/p/text()="%s"]' % note_2).is_displayed())
-
-    def test_notes_as_admin(self):
-        login(self.browser)
-        note = self.add_note()
-        self.delete_note(note)
+        pane = b.find_element_by_id('notes')
+        pane.find_element_by_xpath('.//button[text()="Show"]').click()
+        pane.find_element_by_xpath('div[@class="system-note"]'
+                '/div[@class="system-note-text"]/p[text()="%s"]' % note)
+        pane.find_element_by_xpath('div[@class="system-note"]'
+                '/div[@class="system-note-text"]/p[text()="%s"]' % note_2)
 
     def test_notes_as_owner(self):
         login(self.browser, user=self.owner.user_name, password='password')
         note = self.add_note()
         self.delete_note(note)
 
-    def test_notes_as_user_with_edit_permission(self):
-        with session.begin():
-            user = data_setup.create_user(password='password')
-            self.system.custom_access_policy.add_rule(
-                    permission=SystemPermission.edit_system, user=user)
-        login(self.browser, user=user.user_name, password='password')
-        note = self.add_note()
-        self.delete_note(note)
-
     def test_notes_as_nobody(self):
-        # Add a note by authorised user
-        login(self.browser)
-        note = self.add_note()
-
+        with session.begin():
+            self.system.notes.append(Note(text=u'something', user=self.owner))
+        login(self.browser, user=self.nobody.user_name, password=u'password')
+        self.go_to_notes_tab()
+        b = self.browser
         # Test that we cannot add another as unprivileged user
-        logout(self.browser)
-        login(self.browser, user=self.nobody.user_name, password='password')
-        try:
-            self.add_note()
-        except Exception:
-            pass
-        else:
-            raise AssertionError('Unprivileged user was able to add note')
-
-        #Try to delete the first added note
-        try:
-            self.delete_note(note)
-        except Exception:
-            pass
-        else:
-            raise AssertionError('Unprivileged user was able to delete a note')
+        b.find_element_by_xpath('//div[@id="notes" and '
+                'not(.//button[normalize-space(string(.))="Add"])]')
+        # Delete button should also not be present
+        b.find_element_by_xpath('//div[@id="notes" and '
+                'not(.//button[normalize-space(string(.))="Delete"])]')
 
     def test_notes_logged_out(self):
-        # Add a note by authorised user
-        login(self.browser)
-        note = self.add_note()
-
+        with session.begin():
+            self.system.notes.append(Note(text=u'something', user=self.owner))
+        b = self.browser
+        self.go_to_notes_tab()
         # Test that we cannot add another note without logging in
-        logout(self.browser)
-        try:
-            self.add_note()
-        except Exception:
-            pass
-        else:
-            raise AssertionError('User without credentials was able to add note')
-
-        #Try to delete the first added note
-        try:
-            self.delete_note(note)
-        except Exception:
-            pass
-        else:
-            raise AssertionError('User without credentials was able to delete a note')
+        b.find_element_by_xpath('//div[@id="notes" and '
+                'not(.//button[normalize-space(string(.))="Add"])]')
+        # Delete button should also not be present
+        b.find_element_by_xpath('//div[@id="notes" and '
+                'not(.//button[normalize-space(string(.))="Delete"])]')
 
     def test_markdown_formatting(self):
-        b = self.browser
-        login(b)
-        b.get(get_server_base() + 'view/%s' % self.system.fqdn)
-        b.find_element_by_link_text('Notes').click()
-        b.find_element_by_id('notes_note').send_keys('''Here is my note.
+        note_text = '''Here is my note.
 
 It has multiple paragraphs, *and emphasis*.
-Also a URL <http://example.com/>.''')
-        b.find_element_by_name('notes').submit()
-        b.find_element_by_xpath('//td/p[1][text()="Here is my note."]')
-        b.find_element_by_xpath('//td/p[2][em/text()="and emphasis"]')
-        b.find_element_by_xpath('//td/p[2][a/@href="http://example.com/"]')
+Also a URL <http://example.com/>.'''
+        with session.begin():
+            self.system.notes.append(Note(text=note_text, user=self.owner))
+        pane = self.go_to_notes_tab()
+        pane.find_element_by_xpath('div[@class="system-note"]'
+                '/div[@class="system-note-text"]/p[1][text()="Here is my note."]')
+        pane.find_element_by_xpath('div[@class="system-note"]'
+                '/div[@class="system-note-text"]/p[2][em/text()="and emphasis"]')
+        pane.find_element_by_xpath('div[@class="system-note"]'
+                '/div[@class="system-note-text"]/p[2][a/@href="http://example.com/"]')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1014870
     def test_html_is_escaped(self):
         bad_note = 'Console is available via: console -l <user> <system_fqdn>'
-        b = self.browser
-        login(b)
-        b.get(get_server_base() + 'view/%s' % self.system.fqdn)
-        b.find_element_by_link_text('Notes').click()
-        b.find_element_by_id('notes_note').send_keys(bad_note)
-        b.find_element_by_name('notes').submit()
-        b.find_element_by_xpath('//td/p[1][text()="%s"]' % bad_note)
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=1020153
-    def test_rendering_errors_are_ignored(self):
-        bad_note = '<this will break python-markdown in RHEL 6.4>'
-        b = self.browser
-        login(b)
-        b.get(get_server_base() + 'view/%s' % self.system.fqdn)
-        b.find_element_by_link_text('Notes').click()
-        b.find_element_by_id('notes_note').send_keys(bad_note)
-        b.find_element_by_name('notes').submit()
-        b.find_element_by_xpath("//form[@name='notes']/../table//td/"
-            "p[normalize-space(text())='%s']" % bad_note)
+        with session.begin():
+            self.system.notes.append(Note(text=bad_note, user=self.owner))
+        pane = self.go_to_notes_tab()
+        pane.find_element_by_xpath('div[@class="system-note"]'
+                '/div[@class="system-note-text"]/p[text()="%s"]' % bad_note)
 
 class SystemNoteHTTPTest(DatabaseTestCase):
     """
@@ -246,3 +224,63 @@ class SystemNoteHTTPTest(DatabaseTestCase):
             assert_datetime_within(self.system.notes[0].deleted,
                     reference=datetime.datetime.utcnow(),
                     tolerance=datetime.timedelta(seconds=10))
+
+    def test_user_with_edit_permission_can_add_note(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            self.system.custom_access_policy.add_rule(
+                    permission=SystemPermission.edit_system, user=user)
+        s = requests.Session()
+        requests_login(s, user=user.user_name, password=u'password')
+        response = post_json(get_server_base() + 'systems/%s/notes/' % self.system.fqdn,
+                session=s, data={'text': 'asdf'})
+        response.raise_for_status()
+
+    def test_user_with_edit_permission_can_delete_note(self):
+        with session.begin():
+            self.system.notes.append(Note(text=u'asdf', user=self.owner))
+            session.flush()
+            note_id = self.system.notes[0].id
+            user = data_setup.create_user(password='password')
+            self.system.custom_access_policy.add_rule(
+                    permission=SystemPermission.edit_system, user=user)
+        s = requests.Session()
+        requests_login(s, user=user.user_name, password=u'password')
+        response = patch_json(get_server_base() + 'systems/%s/notes/%s'
+                % (self.system.fqdn, note_id), session=s, data={'deleted': 'now'})
+        response.raise_for_status()
+
+    def test_unprivileged_user_cannot_add_note(self):
+        with session.begin():
+            unprivileged = data_setup.create_user(password=u'password')
+        s = requests.Session()
+        requests_login(s, user=unprivileged.user_name, password=u'password')
+        response = post_json(get_server_base() + 'systems/%s/notes/' % self.system.fqdn,
+                session=s, data={'text': 'asdf'})
+        self.assertEquals(response.status_code, 403)
+
+    def test_unprivileged_user_cannot_delete_note(self):
+        with session.begin():
+            self.system.notes.append(Note(text=u'asdf', user=self.owner))
+            session.flush()
+            note_id = self.system.notes[0].id
+            unprivileged = data_setup.create_user(password=u'password')
+        s = requests.Session()
+        requests_login(s, user=unprivileged.user_name, password=u'password')
+        response = patch_json(get_server_base() + 'systems/%s/notes/%s'
+                % (self.system.fqdn, note_id), session=s, data={'deleted': 'now'})
+        self.assertEquals(response.status_code, 403)
+
+    def test_anonymous_cannot_add_note(self):
+        response = post_json(get_server_base() + 'systems/%s/notes/' % self.system.fqdn,
+                data={'text': 'asdf'})
+        self.assertEquals(response.status_code, 401)
+
+    def test_anonymous_cannot_delete_note(self):
+        with session.begin():
+            self.system.notes.append(Note(text=u'asdf', user=self.owner))
+            session.flush()
+            note_id = self.system.notes[0].id
+        response = patch_json(get_server_base() + 'systems/%s/notes/%s'
+                % (self.system.fqdn, note_id), data={'deleted': 'now'})
+        self.assertEquals(response.status_code, 401)

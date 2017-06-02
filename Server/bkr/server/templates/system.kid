@@ -31,6 +31,7 @@
             distro_picker_options: distro_picker_options,
         });
         new SystemSchedulerSettingsView({model: system, el: $('#scheduler-settings')});
+        new SystemNotesView({model: system, el: $('#notes')});
         new SystemAccessPolicyView({model: system, el: $('#access-policy')});
         new SystemActivityView({model: system, el: $('#history')});
         new SystemExecutedTasksView({model: system, el: $('#tasks')});
@@ -107,9 +108,7 @@
       <div class="tab-pane" id="power"></div>
       <div class="tab-pane" id="power-settings"></div>
       <div class="tab-pane" id="scheduler-settings"></div>
-   <div class="tab-pane" id="notes">
-    ${widgets['notes'].display(method='get', action=widgets_action['notes'], value=value, options=widgets_options['notes'])} 
-   </div>
+      <div class="tab-pane" id="notes"></div>
    <div class="tab-pane" id="install">
     <span py:if="value.lab_controller and value.arch">
      ${install_widget.display(method='get', action=widgets_action['install'], value=value, options=widgets_options['install'])}

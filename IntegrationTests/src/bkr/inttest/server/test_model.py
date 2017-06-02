@@ -165,24 +165,6 @@ class TestSystem(DatabaseTestCase):
         self.assertEqual(system_activity.old_value, u'Automated')
         self.assertEqual(system_activity.new_value, u'Broken')
 
-    # https://bugzilla.redhat.com/show_bug.cgi?id=1020153
-    def test_markdown_rendering_errors_ignored(self):
-        # Set up system and expected note output
-        system = data_setup.create_system()
-        note_text = "<this will break python-markdown in RHEL 6.4>"
-        system.add_note(note_text, system.owner)
-        # Ensure the markdown call fails
-        def bad_markdown(data, *args, **kwds):
-            self.assertEqual(data, note_text)
-            raise Exception("HTML converter should have stopped this...")
-        orig_markdown = model.inventory.markdown
-        model.inventory.markdown = bad_markdown
-        try:
-            actual = system.notes[0].html
-        finally:
-            model.inventory.markdown = orig_markdown
-        self.assertEqual(actual, note_text)
-
     # https://bugzilla.redhat.com/show_bug.cgi?id=1037878
     def test_invalid_fqdn(self):
         system = data_setup.create_system()

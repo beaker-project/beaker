@@ -15,7 +15,7 @@ from bkr.server.model import (TaskBase, Device, System,
         SystemActivity, Key, OSMajor, DistroTree, Arch, TaskPriority,
         Group, GroupActivity, RecipeSet, RecipeSetActivity, User, LabInfo,
         ReleaseAction, LabController, Hypervisor, KernelType,
-        SystemType, Distro, Note, Job, InstallOptions, ExcludeOSMajor,
+        SystemType, Distro, Job, InstallOptions, ExcludeOSMajor,
         ExcludeOSVersion, OSVersion, Provision, ProvisionFamily,
         ProvisionFamilyUpdate, SystemStatus, Key_Value_Int, Key_Value_String,
                               SystemAccessPolicy, SystemPermission, MachineRecipe, DistroTag, SystemPool)
@@ -39,7 +39,7 @@ from bkr.server.systems import SystemsController
 from bkr.server.system_action import SystemAction as SystemActionController
 from bkr.server.widgets import TaskSearchForm, SearchBar, \
     SystemInstallOptions, \
-    SystemNotes, SystemKeys, SystemExclude, SystemDetails, \
+    SystemKeys, SystemExclude, SystemDetails, \
     LabInfoForm, myPaginateDataGrid
 from bkr.server.preferences import Preferences
 from bkr.server.authentication import Auth
@@ -172,7 +172,6 @@ class Root(RPCRoot):
     system_details = SystemDetails()
     system_exclude = SystemExclude(name='excluded_families')
     system_keys = SystemKeys(name='keys')
-    system_notes = SystemNotes(name='notes')
     system_installoptions = SystemInstallOptions(name='installoptions')
     task_form = TaskSearchForm(name='tasks')
 
@@ -684,7 +683,6 @@ class Root(RPCRoot):
                         details   = self.system_details,
                         exclude   = self.system_exclude,
                         keys      = self.system_keys,
-                        notes     = self.system_notes,
                       )
         # Lab Info is deprecated, only show it if the system has existing data
         widgets['labinfo'] = self.labinfo_form if system.labinfo else None
@@ -700,7 +698,6 @@ class Root(RPCRoot):
             widgets_action  = dict( labinfo   = url('/save_labinfo'),
                                     exclude   = url('/save_exclude'),
                                     keys      = url('/save_keys'),
-                                    notes     = url('/save_note'),
                                     install   = url('/save_install'),
                                     tasks     = '/tasks/do_search',
                                   ),
@@ -709,8 +706,6 @@ class Root(RPCRoot):
                                    keys      = dict(readonly = readonly,
                                                 key_values_int = system.key_values_int,
                                                 key_values_string = system.key_values_string),
-                                   notes     = dict(readonly = readonly,
-                                                notes = system.notes),
                                    install   = dict(readonly = readonly,
                                                 provisions = system.provisions,
                                                 prov_arch = [(arch.id, arch.arch) for arch in system.arch]),
@@ -747,22 +742,6 @@ class Root(RPCRoot):
             return self._view_system_as_rdf(fqdn, **kwargs)
         else:
             return self._view_system_as_html(fqdn, **kwargs)
-
-    @cherrypy.expose
-    def delete_note(self, id=None):
-        id = int(id)
-        try:
-            system = System.query.join(System.notes).filter(Note.id == id).one()
-        except InvalidRequestError, e:
-            log.exception(e)
-            return ('0',)
-        if not system.can_edit(identity.current.user):
-            log.error('User does not have the correct permission to delete this note')
-            return ('0',)
-        note = Note.query.filter_by(id=id).one()
-        note.deleted = datetime.utcnow()
-        session.flush()
-        return ('1',)
 
     @error_handler(view)
     @expose()
@@ -849,21 +828,6 @@ class Root(RPCRoot):
             gactivity = GroupActivity(identity.current.user, 'WEBUI', 'Added', 'System', "", system.fqdn)
             group.activity.append(gactivity)
             system.date_modified = datetime.utcnow()
-        redirect("/view/%s" % system.fqdn)
-
-    @expose()
-    @identity.require(identity.not_anonymous())
-    def save_note(self, id, **kw):
-        try:
-            system = System.by_id(id,identity.current.user)
-        except InvalidRequestError:
-            flash( _(u"Unable to save Note for %s" % id) )
-            redirect("/")
-        # Add a Note
-        if kw.get('note'):
-            system.add_note(text=kw['note'],
-                            user=identity.current.user,
-                            service='WEBUI')
         redirect("/view/%s" % system.fqdn)
 
     @expose()

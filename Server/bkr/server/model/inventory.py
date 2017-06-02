@@ -13,8 +13,6 @@ from collections import defaultdict
 import urllib
 import xml.dom.minidom
 import lxml.etree
-from kid import XML
-from markdown import markdown
 from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
         Integer, Unicode, UnicodeText, DateTime, String, Boolean, Numeric, Float,
         BigInteger, VARCHAR, TEXT, event)
@@ -591,6 +589,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['can_change_type'] = self.can_edit(u)
             data['can_change_hardware'] = self.can_edit(u)
             data['can_change_power'] = self.can_edit(u)
+            data['can_change_notes'] = self.can_edit(u)
             data['can_view_power'] = self.can_view_power(u)
             data['can_power'] = self.can_power(u)
             data['can_configure_netboot'] = self.can_configure_netboot(u)
@@ -615,6 +614,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['can_change_type'] = False
             data['can_change_hardware'] = False
             data['can_change_power'] = False
+            data['can_change_notes'] = False
             data['can_view_power'] = False
             data['can_power'] = False
             data['can_configure_netboot'] = False
@@ -2529,20 +2529,6 @@ class Note(DeclarativeMappedObject):
     @classmethod
     def all(cls):
         return cls.query
-
-    @property
-    def html(self):
-        """
-        The note's text rendered to HTML using Markdown.
-        """
-        # Try rendering as markdown, if that fails for any reason, just
-        # return the raw text string. The template will take care of the
-        # difference (this really doesn't belong in the model, though...)
-        try:
-            rendered = markdown(self.text, safe_mode='escape')
-        except Exception:
-            return self.text
-        return XML(rendered)
 
     def __json__(self):
         return {
