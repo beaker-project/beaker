@@ -3,7 +3,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from turbogears import expose
+from turbogears import expose, config
 from turbogears.database import session
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
@@ -159,6 +159,8 @@ class Groups(RPCRoot):
 
         if ldap and not identity.current.user.is_admin():
             raise BX(_(u'Only admins can create LDAP groups'))
+        if ldap and not config.get("identity.ldap.enabled", False):
+            raise BX(_(u'LDAP is not enabled'))
         try:
             group = Group.by_name(group_name)
         except NoResultFound:

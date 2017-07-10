@@ -5,6 +5,8 @@
 # (at your option) any later version.
 
 from turbogears.database import session
+from turbogears import config
+from unittest2 import SkipTest
 from bkr.server.model import Group, GroupMembershipType, User
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError, create_client_config, \
@@ -72,6 +74,8 @@ class GroupCreateTest(ClientTestCase):
                     e.stderr_output)
 
     def test_ldap_group(self):
+        if not config.get("identity.ldap.enabled", False):
+            raise SkipTest('Server is not configured for LDAP')
 
         group_name = u'wyfp'
         display_name = u'My LDAP Group'
@@ -100,6 +104,19 @@ class GroupCreateTest(ClientTestCase):
         except ClientError, e:
             self.assert_('Only admins can create LDAP groups' in
                          e.stderr_output)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1043772
+    def test_server_with_ldap_disabled_throws_appropriate_error(self):
+        if config.get("identity.ldap.enabled", False):
+            raise SkipTest('Server is configured for LDAP')
+        try:
+            group_name =  data_setup.unique_name(u'group%s')
+            run_client(['bkr', 'group-create', '--ldap',
+                        '--display-name', 'Test Display Name',
+                        group_name])
+            self.fail('Must fail or die')
+        except ClientError, e:
+            self.assertIn('LDAP is not enabled', e.stderr_output)
 
     def test_group_passwords(self):
         group_name = data_setup.unique_name(u'group%s')
