@@ -854,6 +854,44 @@ class GroupHTTPTest(DatabaseTestCase):
             self.assertEquals(group.activity[-3].service, u'HTTP')
             self.assertEquals('blapppy7', group.root_password)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1469345
+    def test_create_group_invalid_group_name_throws_error(self):
+        s = requests.Session()
+        requests_login(s, user=self.user, password=u'password')
+
+        # group name exceeds valid length
+        response = post_json(get_server_base() + 'groups/', session=s, data={
+            'group_name': 'grouplongname'*20,
+            'display_name': 'groupdisplayname',
+            'description': 'grouplongname description',
+            'root_password': 'blapppy7',
+        })
+        self.assertEquals(response.status_code, 400)
+        self.assertIn('Group name must be not more than 255 characters long',
+                      response.text)
+
+        # group name contains leading spaces
+        response = post_json(get_server_base() + 'groups/', session=s, data={
+            'group_name': '  containsspace',
+            'display_name': 'groupdisplayname',
+            'description': 'grouplongname description',
+            'root_password': 'blapppy7',
+        })
+        self.assertEquals(response.status_code, 400)
+        self.assertIn('Group name must not contain leading or trailing whitespace',
+                      response.text)
+
+        # group name contains forward slash
+        response = post_json(get_server_base() + 'groups/', session=s, data={
+            'group_name': 'group/name',
+            'display_name': 'groupdisplayname',
+            'description': 'grouplongname description',
+            'root_password': 'blapppy7',
+        })
+        self.assertEquals(response.status_code, 400)
+        self.assertIn('Group name cannot contain \'/\'', response.text)
+
+
     def test_create_ldap_group_with_old_format(self):
         s = requests.Session()
         requests_login(s)

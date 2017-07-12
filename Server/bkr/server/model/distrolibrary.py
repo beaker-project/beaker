@@ -298,14 +298,6 @@ class OSMajor(DeclarativeMappedObject):
         self._validate_osmajor(value)
         return value
 
-    @classmethod
-    def lazy_create(cls, osmajor, **kwargs):
-        """
-        Like the normal lazy_create, but with empty check for osmajor.
-        """
-        cls._validate_osmajor(osmajor)
-        return super(OSMajor, cls).lazy_create(osmajor=osmajor, **kwargs)
-
     def default_install_options(self):
         """
         Returns the default install options supplied by Beaker (rather than the 
