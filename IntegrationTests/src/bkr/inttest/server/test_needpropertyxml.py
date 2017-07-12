@@ -749,6 +749,30 @@ class SystemFilteringTest(DatabaseTestCase):
             </hostRequires>
             """,
             present=[baremetal, xen], absent=[kvm])
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1464120
+        self.check_filter("""
+            <hostRequires>
+                <not><hypervisor op="=" value="KVM" /></not>
+            </hostRequires>
+            """,
+            present=[baremetal, xen], absent=[kvm])
+        self.check_filter("""
+            <hostRequires>
+                <not><hypervisor op="like" value="%KVM%" /></not>
+            </hostRequires>
+            """,
+            present=[baremetal, xen], absent=[kvm])
+        self.check_filter("""
+            <hostRequires>
+                <not>
+                    <or>
+                        <hypervisor op="like" value="%KVM%" />
+                        <hypervisor op="like" value="%Xen%" />
+                    </or>
+                </not>
+            </hostRequires>
+            """,
+            present=[baremetal], absent=[kvm, xen])
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=731615
     def test_filtering_by_device(self):
