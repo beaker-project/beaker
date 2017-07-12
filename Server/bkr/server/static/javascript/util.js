@@ -109,3 +109,12 @@ function system_action_remote_form_request(form, options, action) {
     remoteRequest(form, action, null, query, options);
     return true;
 }
+
+function excludeAll(){
+    var major = $(".majorCheckbox");
+    major[0].checked = !major[0].checked;
+    for(var i = 1; i < major.length; i++){
+       major[i].checked = major[0].checked;
+    }
+}
+

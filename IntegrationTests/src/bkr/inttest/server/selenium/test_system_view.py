@@ -977,6 +977,20 @@ class SystemViewTestWD(WebDriverTestCase):
                 '//input[@name="excluded_families_subsection.i386" and @value="%s"]'
                 % self.distro_tree.distro.osversion_id).is_selected())
 
+    def test_exclude_all(self):
+        #view excluded families
+        b = self.browser
+        login(b)
+        #navigate to the correct tabs
+        self.go_to_system_view(tab='Excluded Families')
+        tab = b.find_element_by_id('exclude')
+        #simulate click of exclude all button
+        tab.find_element_by_id('excludeButton').click()
+        #find all major rel checkboxes
+        checkboxes = b.find_elements_by_class_name('majorCheckbox')
+        #assert all clicks are correct
+        assert all([i.is_selected() for i in checkboxes])
+
     def test_can_sort_activity_grid(self):
         with session.begin():
             self.system.record_activity(service=u'testdata', field=u'status_reason',

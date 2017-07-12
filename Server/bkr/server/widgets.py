@@ -752,7 +752,8 @@ class ExcludedFamilies(FormField):
       >
        <li py:for="value, desc, subsection, attrs in a_options">
         <label class="checkbox">
-        <input type="checkbox"
+        <input class="majorCheckbox"
+	       type="checkbox"
                name="${name}.${arch}"
                id="${field_id}_${value}_${arch}"
                value="${value}"
@@ -951,6 +952,7 @@ class SystemExclude(Form):
           method="${method}" width="100%">
      ${display_field_for("id")}
      ${display_field_for("excluded_families")}
+     <button id="excludeButton" type="button" py:if="not readonly" class="btn" onclick='excludeAll();'>Exclude All</button>
      <a py:if="not readonly" class="btn btn-primary" href="javascript:document.${name}.submit();">Save Exclude Changes</a>
     </form>
     """
