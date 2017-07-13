@@ -27,13 +27,13 @@ class GroupCreateTest(ClientTestCase):
             self.assertEquals(group.activity[-1].action, u'Added')
             self.assertEquals(group.activity[-1].field_name, u'Owner')
             self.assertEquals(group.activity[-1].new_value, data_setup.ADMIN_USER)
-            self.assertEquals(group.activity[-1].service, u'XMLRPC')
+            self.assertEquals(group.activity[-1].service, u'HTTP')
             self.assertEquals(group.activity[-2].action, u'Added')
             self.assertEquals(group.activity[-2].field_name, u'User')
             self.assertEquals(group.activity[-2].new_value, data_setup.ADMIN_USER)
-            self.assertEquals(group.activity[-2].service, u'XMLRPC')
+            self.assertEquals(group.activity[-2].service, u'HTTP')
             self.assertEquals(group.activity[-3].action, u'Created')
-            self.assertEquals(group.activity[-3].service, u'XMLRPC')
+            self.assertEquals(group.activity[-3].service, u'HTTP')
 
         group_name = data_setup.unique_name(u'group%s')
         out = run_client(['bkr', 'group-create',
@@ -60,7 +60,7 @@ class GroupCreateTest(ClientTestCase):
             self.fail('Must fail or die')
         except ClientError,e:
             self.assertIn(
-                    'Group display name must be not more than 255 characters long',
+                    'Group name must be not more than 255 characters long',
                     e.stderr_output)
         try:
             out = run_client(['bkr', 'group-create',

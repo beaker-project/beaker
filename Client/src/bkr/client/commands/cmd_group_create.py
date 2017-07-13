@@ -105,8 +105,12 @@ class Group_Create(BeakerCommand):
         password = kwargs.get('root_password', None)
 
         self.set_hub(**kwargs)
-        print self.hub.groups.create(dict(group_name=group_name,
-                                          root_password=password,
-                                          display_name=display_name,
-                                          description=description,
-                                          ldap=ldap))
+
+        request_session = self.requests_session()
+        res = request_session.post('groups/', json=dict(group_name=group_name,
+                                                        root_password=password,
+                                                        display_name=display_name,
+                                                        description=description,
+                                                        ldap=ldap))
+        res.raise_for_status()
+        print('Group created: %s.' % group_name)

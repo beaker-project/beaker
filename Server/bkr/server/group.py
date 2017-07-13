@@ -423,12 +423,17 @@ def create_group():
     # for backwards compatibility
     if data.pop('ldap', False):
         data['membership_type'] = 'ldap'
+    if data.get('membership_type') == 'ldap':
+        if not config.get("identity.ldap.enabled", False):
+            raise BadRequest400('LDAP is not enabled')
+        if not identity.current.user.is_admin():
+            raise BadRequest400('Only admins can create LDAP groups')
     try:
         Group.by_name(data['group_name'])
     except NoResultFound:
         pass
     else:
-        raise Conflict409("Group '%s' already exists" % data['group_name'])
+        raise Conflict409("Group already exists: %s" % data['group_name'])
     with convert_internal_errors():
         group = Group.lazy_create(group_name=data['group_name'])
         group.display_name = data['display_name']
