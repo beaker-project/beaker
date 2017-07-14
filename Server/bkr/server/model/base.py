@@ -8,6 +8,7 @@ import logging
 import random
 import time
 from turbogears.database import metadata, session
+from sqlalchemy import util
 from sqlalchemy.sql import and_
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import class_mapper, object_mapper, ColumnProperty
@@ -35,7 +36,14 @@ class MappedObject(object):
         properties instead of relationship properties (for example, osmajor_id 
         not osmajor).
         """
-        # We do a conditional INSERT, which will always succeed or 
+        # scan the class for any validators that need triggering
+        for key, method in util.iterate_attributes(cls):
+            if hasattr(method, '__sa_validators__'):
+                for arg_key, arg_val in kwargs.iteritems():
+                    if arg_key in method.__sa_validators__:
+                        method(cls, arg_key, arg_val)
+
+        # We do a conditional INSERT, which will always succeed or
         # silently have no effect.
         # http://stackoverflow.com/a/6527838/120202
         # Note that (contrary to that StackOverflow answer) on InnoDB the 

@@ -12,7 +12,7 @@ import signal
 import time
 import datetime
 import base64
-import xmltramp
+import lxml.etree
 import glob
 import re
 import json
@@ -563,16 +563,15 @@ class Watchdog(ProxyHelper):
         """
         logger.info("External Watchdog Expired for %s", watchdog['system'])
         if self.conf.get("WATCHDOG_SCRIPT"):
-            recipexml = self.get_my_recipe(dict(recipe_id=watchdog['recipe_id']))
-            recipeset = xmltramp.parse(recipexml).recipeSet
-            try:
-                recipe = recipeset.recipe
-            except AttributeError:
-                recipe = recipeset.guestrecipe
-            for task in recipe['task':]: #pylint: disable=invalid-slice-index
-                if task()['status'] == 'Running':
+            job = lxml.etree.fromstring(self.get_my_recipe(
+                    dict(recipe_id=watchdog['recipe_id'])))
+            recipe = job.find('recipeSet/guestrecipe')
+            if recipe is None:
+                recipe = job.find('recipeSet/recipe')
+            for task in recipe.iterfind('task'):
+                if task.get('status') == 'Running':
                     break
-            task_id = task()['id']
+            task_id = task.get('id')
             try:
                 args = [self.conf.get('WATCHDOG_SCRIPT'),
                         str(watchdog['system']),
@@ -620,57 +619,49 @@ class Monitor(ProxyHelper):
         logger.info('Panic detected for recipe %s on system %s: '
                 'console log contains string %r', watchdog['recipe_id'],
                 watchdog['system'], panic_message)
-        recipeset = xmltramp.parse(self.get_my_recipe(
-            dict(recipe_id=watchdog['recipe_id']))).recipeSet
-        try:
-            recipe = recipeset.recipe
-        except AttributeError:
-            recipe = recipeset.guestrecipe
-        watchdog = recipe.watchdog()
-        if watchdog.get('panic') == 'ignore':
+        job = lxml.etree.fromstring(self.get_my_recipe(
+                dict(recipe_id=watchdog['recipe_id'])))
+        recipe = job.find('recipeSet/guestrecipe')
+        if recipe is None:
+            recipe = job.find('recipeSet/recipe')
+        if recipe.find('watchdog').get('panic') == 'ignore':
             # Don't Report the panic
             logger.info('Not reporting panic due to panic=ignore')
         else:
             # Report the panic
             # Look for active task, worst case it records it on the last task
-            for task in recipe['task':]: #pylint: disable=invalid-slice-index
-                if task()['status'] == 'Running':
+            for task in recipe.iterfind('task'):
+                if task.get('status') == 'Running':
                     break
-            self.task_result(task()['id'], 'panic', '/', 0, panic_message)
+            self.task_result(task.get('id'), 'panic', '/', 0, panic_message)
             # set the watchdog timeout to 10 minutes, gives some time for all data to 
             # print out on the serial console
             # this may abort the recipe depending on what the recipeSets
             # watchdog behaviour is set to.
-            self.extend_watchdog(task()['id'], 60 * 10)
+            self.extend_watchdog(task.get('id'), 60 * 10)
 
     def report_install_failure(self, watchdog, failure_message):
         logger.info('Install failure detected for recipe %s on system %s: '
                 'console log contains string %r', watchdog['recipe_id'],
                 watchdog['system'], failure_message)
-        recipeset = xmltramp.parse(self.get_my_recipe(
-            dict(recipe_id=watchdog['recipe_id']))).recipeSet
-        try:
-            recipe = recipeset.recipe
-        except AttributeError:
-            recipe = recipeset.guestrecipe
-        watchdog = recipe.watchdog()
-        try:
-            installation = recipe.installation()
-        except AttributeError:
-            installation = {}
+        job = lxml.etree.fromstring(self.get_my_recipe(
+                dict(recipe_id=watchdog['recipe_id'])))
+        recipe = job.find('recipeSet/guestrecipe')
+        if recipe is None:
+            recipe = job.find('recipeSet/recipe')
         # For now we are re-using the same panic="" attribute which is used to 
         # control panic detection, bug 1055320 is an RFE to change this
-        if watchdog.get('panic') == 'ignore':
+        if recipe.find('watchdog').get('panic') == 'ignore':
             logger.info('Not reporting install failure due to panic=ignore')
-        elif installation.get('install_finished'):
+        elif recipe.find('installation') is not None and recipe.find('installation').get('install_finished'):
             logger.info('Not reporting install failure for finished installation')
         else:
             # Ideally we would record it against the Installation entity for 
             # the recipe, but that's not a thing yet, so we just add a result 
             # to the first task (which is typically /distribution/install)
-            first_task = recipe['task']
-            self.task_result(first_task()['id'], 'fail', '/', 0, failure_message)
-            self.recipe_stop(recipe()['id'], 'abort', 'Installation failed')
+            first_task = recipe.findall('task')[0]
+            self.task_result(first_task.get('id'), 'fail', '/', 0, failure_message)
+            self.recipe_stop(recipe.get('id'), 'abort', 'Installation failed')
 
 class Proxy(ProxyHelper):
     def task_upload_file(self, 

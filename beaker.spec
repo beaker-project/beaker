@@ -117,7 +117,7 @@ BuildRequires:  systemd
 %if %{with labcontroller}
 # These LC dependencies are needed in build due to tests
 BuildRequires:  python-gevent >= 1.0
-BuildRequires:  python-xmltramp
+BuildRequires:  python-lxml
 %endif
 
 # As above, these client dependencies are needed in build because of sphinx
@@ -257,7 +257,7 @@ Requires:       sudo
 Requires:       python-cpio
 Requires:       %{name}-common = %{version}-%{release}
 Requires:       python-setuptools
-Requires:       python-xmltramp
+Requires:       python-lxml
 Requires:       python-krbV
 Requires:       python-gevent >= 1.0
 Requires:       python-daemon
