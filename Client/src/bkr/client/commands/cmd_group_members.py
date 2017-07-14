@@ -69,14 +69,25 @@ class Group_Members(BeakerCommand):
         group = args[0]
 
         self.set_hub(**kwargs)
-        members = self.hub.groups.members(group)
+        requests_session = self.requests_session()
+
+        res = requests_session.get('groups/%s' % group, headers={'Accept': 'application/json'})
+        res.raise_for_status()
+        members = []
+
+        for u in res.json()["members"]:
+            user = dict()
+            user['username'] = u["user_name"]
+            user['email'] = u["email_address"]
+            user['owner'] = u in res.json()["owners"]
+            members.append(user)
 
         if format == 'list':
             for m in members:
                 if m['owner']:
-                    output_tuple = (m['username'],m['email'], 'Owner')
+                    output_tuple = (m['username'], m['email'], 'Owner')
                 else:
-                    output_tuple = (m['username'],m['email'], 'Member')
+                    output_tuple = (m['username'], m['email'], 'Member')
 
                 print '%s %s %s' % output_tuple
 

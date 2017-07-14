@@ -45,9 +45,10 @@ class GroupMembersTest(ClientTestCase):
 
         # non-existent group
         try:
-            out = run_client(['bkr', 'group-members',
-                              'idontexist'])
+            non_existent_group = 'idontexist'
+            run_client(['bkr', 'group-members',
+                        non_existent_group])
             self.fail('Must fail or die')
         except ClientError, e:
-            self.assert_('Group does not exist' in
-                         e.stderr_output, e.stderr_output)
+            self.assertIn('Group %s does not exist' % non_existent_group,
+                          e.stderr_output)
