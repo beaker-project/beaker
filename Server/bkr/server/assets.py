@@ -157,7 +157,7 @@ def _create_runtime_env():
 def get_assets_env():
     global _env
     if _env is None:
-        with _env_lock:
+        with _env_lock: #pylint: disable=not-context-manager
             if _env is None:
                 _env = _create_runtime_env()
     return _env
