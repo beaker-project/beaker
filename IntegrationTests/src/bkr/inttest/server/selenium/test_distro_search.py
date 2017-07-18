@@ -150,6 +150,28 @@ class Search(WebDriverTestCase):
         check_distro_search_results(b, present=[self.distro_one],
                                     absent=[self.distro_two, self.distro_three])
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1472070
+    def test_search_by_tag(self):
+        with session.begin():
+            released_distro = data_setup.create_distro(tags=[u'STABLE', u'RELEASED'])
+            data_setup.create_distro_tree(distro=released_distro)
+            unreleased_distro = data_setup.create_distro(tags=[u'STABLE'])
+            data_setup.create_distro_tree(distro=unreleased_distro)
+
+        b = self.browser
+        b.get(get_server_base() + 'distros')
+        b.find_element_by_link_text('Show Search Options').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_name('distrosearch-0.table')).select_by_visible_text('Tag')
+        Select(b.find_element_by_name('distrosearch-0.operation')).select_by_visible_text('is')
+        Select(b.find_element_by_name('distrosearch-0.value')).select_by_visible_text('RELEASED')
+        b.find_element_by_name('distrosearch').submit()
+        check_distro_search_results(b, present=[released_distro], absent=[unreleased_distro])
+
+        Select(b.find_element_by_name('distrosearch-0.operation')).select_by_visible_text('is not')
+        b.find_element_by_name('distrosearch').submit()
+        check_distro_search_results(b, present=[unreleased_distro], absent=[released_distro])
+
 
 class SearchOptionsTest(WebDriverTestCase):
 

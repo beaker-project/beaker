@@ -1218,15 +1218,8 @@ class Distro(SystemObject):
     def tag_is_not_filter(cls,col,val):
         """
         tag_is_not_filter is a function dynamically called from append_results.
-        """       
-        if not val: 
-           return or_(col != None, col != val) 
-        else:
-            #If anyone knows of a better way to do this, by all means...
-            query = model.Distro.query.filter(model.Distro._tags.any(model.DistroTag.tag == val))
-          
-        ids = [r.id for r in query]  
-        return not_(model.distro_table.c.id.in_(ids)) 
+        """
+        return not_(model.Distro._tags.any(model.DistroTag.tag == val))
 
 class DistroTree(SystemObject):
     search = DistroTreeSearch
