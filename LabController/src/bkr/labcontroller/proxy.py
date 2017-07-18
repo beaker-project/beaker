@@ -209,15 +209,6 @@ class ConsoleLogHelper(object):
         self.where = 0
         self.incomplete_line = ''
 
-    def __cmp__(self,other):
-        """
-        Used to compare logs that are already being watched.
-        """
-        if self.log == other:
-            return 0
-        else:
-            return 1
-
     def process_log(self, block):
         # Sanitize control characters
         # We can't just strip the ansi codes, that would change the size
