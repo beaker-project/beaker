@@ -104,7 +104,7 @@ See also
 
 
 import sys
-import bkr.client.json_compat as json
+import json
 from bkr.client import BeakerCommand
 
 class Distro_Trees_List(BeakerCommand):

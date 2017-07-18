@@ -83,7 +83,7 @@ See also
 
 import urllib
 from bkr.client import BeakerCommand
-import bkr.client.json_compat as json
+import json
 from prettytable import PrettyTable
 
 

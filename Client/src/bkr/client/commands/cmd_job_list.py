@@ -114,7 +114,7 @@ See also
 """
 
 from bkr.client import BeakerCommand
-import bkr.client.json_compat as json
+import json
 from optparse import OptionValueError
 
 class Job_List(BeakerCommand):

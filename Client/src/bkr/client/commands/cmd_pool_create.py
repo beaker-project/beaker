@@ -75,7 +75,7 @@ See also
 
 
 from bkr.client import BeakerCommand
-import bkr.client.json_compat as json
+import json
 
 class Pool_Create(BeakerCommand):
     """Creates a system pool"""

@@ -114,7 +114,7 @@ See also
 
 
 from bkr.client import BeakerCommand
-import bkr.client.json_compat as json
+import json
 
 class System_Create(BeakerCommand):
     """Creates a system"""

@@ -43,7 +43,7 @@ Non-zero on error, otherwise zero.
 """
 
 from bkr.client import BeakerCommand
-import bkr.client.json_compat as json
+import json
 
 class Group_Members(BeakerCommand):
     """List group members"""

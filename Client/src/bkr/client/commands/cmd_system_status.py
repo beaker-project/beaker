@@ -52,7 +52,7 @@ See also
 
 import urllib
 from bkr.client import BeakerCommand
-from bkr.client.json_compat import loads
+from json import loads
 
 class System_Status(BeakerCommand):
 

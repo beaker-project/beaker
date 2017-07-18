@@ -5,6 +5,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import json
 import xml.dom.minidom
 import re, errno, sys, os
 from urlparse import urljoin
@@ -77,7 +78,6 @@ class BeakerCommand(Command):
             proxy_user=proxy_user)
 
     def requests_session(self):
-        import bkr.client.json_compat as json
         try:
             import requests
         except ImportError:

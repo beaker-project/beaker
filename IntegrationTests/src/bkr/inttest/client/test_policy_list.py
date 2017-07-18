@@ -8,7 +8,7 @@ from bkr.server.model import session, SystemPermission, User
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError,\
     create_client_config, ClientTestCase
-import bkr.client.json_compat as json
+import json
 from prettytable import PrettyTable
 
 class PolicyListTest(ClientTestCase):

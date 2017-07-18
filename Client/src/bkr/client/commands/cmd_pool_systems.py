@@ -52,7 +52,7 @@ See also
 """
 
 from bkr.client import BeakerCommand
-import bkr.client.json_compat as json
+import json
 
 class Pool_Systems(BeakerCommand):
     """List systems in a pool"""

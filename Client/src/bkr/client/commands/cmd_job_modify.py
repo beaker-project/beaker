@@ -107,7 +107,7 @@ See also
 from bkr.client import BeakerCommand
 from xmlrpclib import Fault
 import requests
-import bkr.client.json_compat as json
+import json
 import sys
 
 class Job_Modify(BeakerCommand):

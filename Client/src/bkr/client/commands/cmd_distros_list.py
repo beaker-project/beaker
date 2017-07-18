@@ -85,7 +85,7 @@ See also
 
 
 import sys
-import bkr.client.json_compat as json
+import json
 from bkr.client import BeakerCommand
 
 class Distros_List(BeakerCommand):
