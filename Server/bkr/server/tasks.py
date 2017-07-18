@@ -388,38 +388,6 @@ class Tasks(RPCRoot):
         """
         return Task.by_name(name, valid).to_dict()
 
-    def _tasks(self,task,**kw):
-        return_dict = {}                    
-        if 'simplesearch' in kw:
-            simplesearch = kw['simplesearch']
-            kw['tasksearch'] = [{'table' : 'Name',   
-                                 'operation' : 'contains', 
-                                 'value' : kw['simplesearch']}]                    
-        else:
-            simplesearch = None
-
-        return_dict.update({'simplesearch':simplesearch})
-
-        if kw.get("tasksearch"):
-            searchvalue = kw['tasksearch']  
-            tasks_found = self._task_search(task,**kw) 
-            return_dict.update({'tasks_found':tasks_found})               
-            return_dict.update({'searchvalue':searchvalue})
-        return return_dict
-
-    def _task_search(self,task,**kw):
-        task_search = search_utility.Task.search(task)
-        for search in kw['tasksearch']:
-            col = search['table'] 
-            task_search.append_results(search['value'],col,search['operation'],**kw)
-        return task_search.return_results()
-
-    @expose(template='bkr.server.templates.tasks')
-    def parrot(self,*args,**kw): 
-        if 'recipe_id' in kw:
-            recipe = Recipe.by_id(kw['recipe_id'])
-            return recipe.all_tasks
-
 @app.route('/tasks', methods=['GET'])
 def get_tasks():
     """
