@@ -517,13 +517,13 @@ def get_recipe(id):
     :param id: Recipe's id.
     """
     recipe = _get_recipe_by_id(id)
+    if identity.current.user and (recipe.is_finished()
+                                  or recipe.status == TaskStatus.reserved):
+        recipe.set_reviewed_state(identity.current.user, True)
     if request_wants_json():
         return jsonify(recipe.to_json(include_recipeset=True))
     if identity.current.user and identity.current.user.use_old_job_page:
         return NotFound404('Fall back to old recipe page')
-    if identity.current.user and (recipe.is_finished()
-            or recipe.status == TaskStatus.reserved):
-        recipe.set_reviewed_state(identity.current.user, True)
     return render_tg_template('bkr.server.templates.recipe', {
         'title': recipe.t_id,
         'recipe': recipe,

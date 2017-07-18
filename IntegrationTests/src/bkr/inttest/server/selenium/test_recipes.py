@@ -584,6 +584,25 @@ class TestRecipeView(WebDriverTestCase):
         with session.begin():
             self.assertEqual(recipe.get_reviewed_state(self.user), False)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1360589
+    def test_completed_and_viewed_recipe_marked_as_reviewed(self):
+        with session.begin():
+            job = data_setup.create_running_job()
+            recipe = job.recipesets[0].recipes[0]
+
+        b = self.browser
+        login(b, user=self.user.user_name, password='password')
+        go_to_recipe_view(b, recipe)
+
+        with session.begin():
+            # mark completed
+            data_setup.mark_recipe_complete(recipe, only=True)
+        # wait for recipes page to refresh
+        time.sleep(40)
+        with session.begin():
+            # assert that completed recipe is marked reviewed
+            self.assertTrue(recipe.get_reviewed_state(self.user))
+
     def test_anonymous_can_see_recipetask_comments(self):
         with session.begin():
             recipe = data_setup.create_recipe(num_tasks=2)
