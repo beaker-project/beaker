@@ -133,8 +133,8 @@ class WSGIApplication(object):
 
 # Temporary hack to disable keepalive in gevent.wsgi.WSGIServer. This should be easier.
 class WSGIHandler(gevent.wsgi.WSGIHandler):
-    def read_request(self, *args):
-        result = super(WSGIHandler, self).read_request(*args)
+    def read_request(self, raw_requestline):
+        result = super(WSGIHandler, self).read_request(raw_requestline)
         self.close_connection = True
         return result
 
