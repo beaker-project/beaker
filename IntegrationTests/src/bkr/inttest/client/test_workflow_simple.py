@@ -4,18 +4,16 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import os
 import datetime
-import pkg_resources
 import re
-from tempfile import NamedTemporaryFile
 import textwrap
-from threading import Thread
+from tempfile import NamedTemporaryFile
+import pkg_resources
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client, start_client, \
     create_client_config, ClientError, ClientTestCase
-from bkr.server.model import Job, Arch, SystemStatus
+from bkr.server.model import Job, SystemStatus
 
 class WorkflowSimpleTest(ClientTestCase):
 
@@ -23,7 +21,33 @@ class WorkflowSimpleTest(ClientTestCase):
     def setUp(self):
         self.distro = data_setup.create_distro(tags=[u'STABLE'])
         self.distro_tree = data_setup.create_distro_tree(distro=self.distro)
-        self.task = data_setup.create_task()
+        # multihost task required as bkr assumes there is always one available
+        self.multihost_task = data_setup.create_task(type=['Multihost'])
+        self.task = data_setup.create_task(runfor=['apache'])
+
+    def test_no_specified_tasks_throws_relevant_error_with_hint(self):
+        with self.assertRaises(ClientError) as assertion:
+            run_client(['bkr', 'workflow-simple',
+                        '--dryrun', '--prettyxml',
+                        '--arch', self.distro_tree.arch.arch,
+                        '--family', self.distro.osversion.osmajor.osmajor])
+        self.assertIn(
+                'No tasks specified to be run\nHint', assertion.exception.stderr_output)
+
+    def test_package_option_without_assocaited_tasks_throws_error(self):
+        # package with associated task runs error-free
+        out = run_client(['bkr', 'workflow-simple',
+                          '--package', "apache",
+                          '--family', self.distro.osversion.osmajor.osmajor])
+        self.assertIn('Submitted', out)
+
+        # package without associated task throws error
+        with self.assertRaises(ClientError) as assertion:
+            run_client(['bkr', 'workflow-simple',
+                          '--package', "nonexistentpackage",
+                          '--family', self.distro.osversion.osmajor.osmajor])
+        self.assertIn(
+            'No tasks match the specified option(s)', assertion.exception.stderr_output)
 
     def test_job_group(self):
         with session.begin():
