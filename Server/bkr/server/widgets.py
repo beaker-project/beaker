@@ -949,7 +949,7 @@ class SystemExclude(Form):
     <form xmlns:py="http://purl.org/kid/ns#"
           name="${name}"
           action="${action}"
-          method="${method}" width="100%">
+          method="post" width="100%">
      ${display_field_for("id")}
      ${display_field_for("excluded_families")}
      <button id="excludeButton" type="button" py:if="not readonly" class="btn" onclick='excludeAll();'>Exclude All</button>
