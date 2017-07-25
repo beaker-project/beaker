@@ -562,7 +562,7 @@ class UserHTTPTest(DatabaseTestCase):
             self.assertEqual(reserved_system.activity[0].field_name, u'Access Policy Rule')
             self.assertEqual(reserved_system.activity[0].action, u'Removed')
             self.assertEqual(reserved_system.activity[0].old_value,
-                    u'<grant reserve to %s>' % user.user_name)
+                    u'User:%s:reserve' % user.user_name)
             # systems owned by the user should be transferred to the caller
             self.assertEqual(owned_system.owner.user_name, data_setup.ADMIN_USER)
             self.assertEqual(owned_system.activity[0].field_name, u'Owner')

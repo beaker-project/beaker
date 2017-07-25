@@ -1407,7 +1407,7 @@ class GroupHTTPTest(DatabaseTestCase):
             self.assertEquals(system.activity[0].field_name, u'Access Policy Rule')
             self.assertEquals(system.activity[0].action, u'Removed')
             self.assertEquals(system.activity[0].old_value,
-                    '<grant edit_system to Group LNP>')
+                    u'Group:LNP:edit_system')
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=1199368
     def test_deleting_group_with_pool(self):

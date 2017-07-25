@@ -944,9 +944,7 @@ def _edit_access_policy_rules(object, policy, rules=None):
         if old_rule.id not in kept_rule_ids:
             removed.append(old_rule)
     for old_rule in removed:
-        object.record_activity(user=identity.current.user, service=u'HTTP',
-                field=u'Access Policy Rule', action=u'Removed',
-                old=repr(old_rule))
+        old_rule.record_deletion(service=u'HTTP')
         policy.rules.remove(old_rule)
     for rule in rules:
         if 'id' not in rule:
@@ -963,9 +961,7 @@ def _edit_access_policy_rules(object, policy, rules=None):
             permission = SystemPermission.from_string(rule['permission'])
             new_rule = policy.add_rule(user=user, group=group,
                     everybody=rule['everybody'], permission=permission)
-            object.record_activity(user=identity.current.user, service=u'HTTP',
-                    field=u'Access Policy Rule', action=u'Added',
-                    new=repr(new_rule))
+            new_rule.record_creation(service=u'HTTP')
 
 @app.route('/systems/<fqdn>/access-policy', methods=['POST', 'PUT'])
 @auth_required
@@ -1040,9 +1036,7 @@ def add_system_access_policy_rule(fqdn):
         raise BadRequest400
     new_rule = policy.add_rule(user=user, group=group,
             everybody=rule['everybody'], permission=permission)
-    system.record_activity(user=identity.current.user, service=u'HTTP',
-            field=u'Access Policy Rule', action=u'Added',
-            new=repr(new_rule))
+    new_rule.record_creation(service=u'HTTP')
     return '', 204
 
 @app.route('/systems/<fqdn>/status', methods=['GET'])

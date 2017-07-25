@@ -378,6 +378,9 @@ class SystemAccessPolicyHTTPTest(DatabaseTestCase):
         self.assertEquals(response.status_code, 403)
 
     def test_save_policy(self):
+        with session.begin():
+            other_user = data_setup.create_user()
+            other_group = data_setup.create_group()
         s = requests.Session()
         s.post(get_server_base() + 'login', data={'user_name': self.owner.user_name,
                 'password': 'theowner'}).raise_for_status()
@@ -389,21 +392,39 @@ class SystemAccessPolicyHTTPTest(DatabaseTestCase):
                      'everybody': True, 'user': None, 'group': None},
                     {'id': self.policy.rules[2].id, 'permission': 'edit_system',
                      'user': None, 'group': self.privileged_group.group_name},
-                    # .. and add a new rule
-                    {'permission': 'control_system', 'everybody': True,
-                     'user': None, 'group': None},
+                    # .. and two new rules
+                    {'permission': 'control_system', 'everybody': False,
+                     'user': None, 'group': other_group.group_name},
+                    {'permission': 'reserve', 'everybody': False,
+                     'user': other_user.user_name, 'group': None},
                 ]})
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(len(self.policy.rules), 3)
+            self.assertEquals(len(self.policy.rules), 4)
             self.assertEquals(self.policy.rules[0].permission,
                     SystemPermission.view)
+            self.assertEquals(self.policy.rules[0].everybody, True)
             self.assertEquals(self.policy.rules[1].permission,
                     SystemPermission.edit_system)
+            self.assertEquals(self.policy.rules[1].group, self.privileged_group)
             self.assertEquals(self.policy.rules[2].permission,
                     SystemPermission.control_system)
-            self.assertEquals(self.policy.rules[2].everybody, True)
+            self.assertEquals(self.policy.rules[2].group, other_group)
+            self.assertEquals(self.policy.rules[3].permission,
+                    SystemPermission.reserve)
+            self.assertEquals(self.policy.rules[3].user, other_user)
+            self.assertEquals(self.system.activity[0].action, u'Added')
+            self.assertEquals(self.system.activity[0].field_name, u'Access Policy Rule')
+            self.assertEquals(self.system.activity[0].new_value,
+                    u'User:%s:reserve' % other_user.user_name)
+            self.assertEquals(self.system.activity[1].action, u'Added')
+            self.assertEquals(self.system.activity[1].field_name, u'Access Policy Rule')
+            self.assertEquals(self.system.activity[1].new_value,
+                    u'Group:%s:control_system' % other_group.group_name)
+            self.assertEquals(self.system.activity[2].action, u'Removed')
+            self.assertEquals(self.system.activity[2].field_name, u'Access Policy Rule')
+            self.assertEquals(self.system.activity[2].old_value, u'Everybody::reserve')
 
     def test_get_active_access_policy(self):
         response = requests.get(get_server_base() +

@@ -2125,6 +2125,28 @@ class SystemAccessPolicyRule(DeclarativeMappedObject):
     def everybody(self):
         return (self.user == None) & (self.group == None)
 
+    @property
+    def activity_value(self):
+        """
+        How we represent this rule in activity records.
+        """
+        if self.group:
+            return u'Group:%s:%s' % (self.group.group_name, self.permission)
+        elif self.user:
+            return u'User:%s:%s' % (self.user.user_name, self.permission)
+        elif self.everybody:
+            return u'Everybody::%s' % self.permission
+
+    def record_creation(self, service=u'WEBUI'):
+        if self.policy.system_pool:
+            object = self.policy.system_pool
+        else:
+            object = self.policy.system
+        object.record_activity(user=identity.current.user, service=service,
+                               action=u'Added',
+                               field=u'Access Policy Rule',
+                               new=self.activity_value)
+
     def record_deletion(self, service=u'WEBUI'):
         if self.policy.system_pool:
             object = self.policy.system_pool
@@ -2132,7 +2154,8 @@ class SystemAccessPolicyRule(DeclarativeMappedObject):
             object = self.policy.system
         object.record_activity(user=identity.current.user, service=service,
                                action=u'Removed',
-                               field=u'Access Policy Rule', old=repr(self))
+                               field=u'Access Policy Rule',
+                               old=self.activity_value)
 
 class Provision(DeclarativeMappedObject):
 
