@@ -145,7 +145,7 @@ def create_group(permissions=None, group_name=None, display_name=None,
     group = Group.lazy_create(group_name=group_name)
     group.root_password = root_password
     if display_name is None:
-        group.display_name = u'Group %s' % group_name
+        group.display_name = u'Group %s display name' % group_name
     else:
         group.display_name = display_name
 

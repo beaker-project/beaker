@@ -566,7 +566,7 @@ class Group(DeclarativeMappedObject, ActivityMixin):
             return cls.query.filter_by(group_id=id).one()
 
     def __unicode__(self):
-        return self.display_name
+        return self.group_name
 
     def __str__(self):
         return unicode(self).encode('utf8')

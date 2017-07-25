@@ -1429,7 +1429,7 @@ class GroupHTTPTest(DatabaseTestCase):
             self.assertEquals(pool.owning_user.user_name, data_setup.ADMIN_USER)
             self.assertEquals(pool.activity[-1].action, u'Changed')
             self.assertEquals(pool.activity[-1].field_name, u'Owner')
-            self.assertEquals(pool.activity[-1].old_value, 'Group %s' % group.group_name)
+            self.assertEquals(pool.activity[-1].old_value, group.group_name)
             self.assertEquals(pool.activity[-1].new_value, data_setup.ADMIN_USER)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
