@@ -618,16 +618,23 @@ class InstallDoneTest(LabControllerTestCase):
 
     def setUp(self):
         with session.begin():
-            self.recipe = data_setup.create_recipe()
-            data_setup.create_job_for_recipes([self.recipe])
-            data_setup.mark_recipe_running(self.recipe)
+            job = data_setup.create_job(num_guestrecipes=1)
+            data_setup.mark_recipe_running(job.recipesets[0].recipes[0])
+            data_setup.mark_recipe_installing(job.recipesets[0].recipes[0].guests[0])
+            # On a normal (machine) recipe, the fqdn reported in the 
+            # install_done call is just discarded since we already know the 
+            # machine's real FQDN. For this test we use a guest recipe, so that 
+            # the reported FQDN will be filled in by the install_done call.
+            self.recipe = job.recipesets[0].recipes[0].guests[0]
+            self.assertIsNone(self.recipe.resource.fqdn)
 
     def test_install_done(self):
         s = xmlrpclib.ServerProxy(self.get_proxy_url())
         s.install_done(self.recipe.id, 'somefqdn')
         with session.begin():
             session.expire_all()
-            self.assert_(self.recipe.installation.install_finished is not None)
+            self.assertIsNotNone(self.recipe.installation.install_finished)
+            self.assertEquals(self.recipe.resource.fqdn, 'somefqdn')
 
     def test_install_done_GET(self):
         response = requests.get('%sinstall_done/%s/%s' %
@@ -635,7 +642,18 @@ class InstallDoneTest(LabControllerTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assert_(self.recipe.installation.install_finished is not None)
+            self.assertIsNotNone(self.recipe.installation.install_finished)
+            self.assertEquals(self.recipe.resource.fqdn, 'somefqdn')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1412897
+    def test_install_done_without_fqdn(self):
+        response = requests.get('%sinstall_done/%s/' %
+                (self.get_proxy_url(), self.recipe.id))
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertIsNotNone(self.recipe.installation.install_finished)
+            self.assertEquals(self.recipe.resource.fqdn, None)
 
 class PostrebootTest(LabControllerTestCase):
 

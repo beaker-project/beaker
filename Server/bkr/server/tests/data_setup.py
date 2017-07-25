@@ -740,19 +740,15 @@ def mark_job_installing(job, **kwargs):
         for recipe in recipeset.recipes:
             mark_recipe_installing(recipe, **kwargs)
 
-def mark_recipe_installing(recipe, fqdn=None, only=False, install_started=None, **kwargs):
+def mark_recipe_installing(recipe, only=False, install_started=None, **kwargs):
     if install_started is None:
         install_started = datetime.datetime.utcnow()
     if not only:
-        mark_recipe_waiting(recipe, fqdn=fqdn, **kwargs)
+        mark_recipe_waiting(recipe, **kwargs)
     if recipe.installation.commands:
         recipe.installation.rebooted = recipe.start_time
     recipe.installation.install_started = install_started
     recipe.extend(10800)
-    if isinstance(recipe, GuestRecipe):
-        if not fqdn:
-            fqdn = unique_name(u'guest_fqdn_%s')
-        recipe.resource.fqdn = fqdn
     recipe.recipeset.job.update_status()
     assert recipe.status == TaskStatus.installing
     log.debug('Started installation for %s', recipe.t_id)
