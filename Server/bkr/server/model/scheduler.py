@@ -1007,8 +1007,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
 
     @classmethod
     def find_jobs(cls, query=None, tag=None, complete_days=None, family=None,
-        product=None, include_deleted=False, include_to_delete=False,
-        owner=None, **kw):
+        product=None, owner=None, **kw):
         """Return a filtered job query
 
         Does what it says. Also helps searching for expired jobs
@@ -1016,10 +1015,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         """
         if not query:
             query = cls.query
-        if not include_deleted:
-            query = query.filter(Job.deleted == None)
-        if not include_to_delete:
-            query = query.filter(Job.to_delete == None)
+        query = query.filter(not_(Job.is_deleted))
         if complete_days:
             query = query.filter(Job.completed_n_days_ago(int(complete_days)))
         if family:
