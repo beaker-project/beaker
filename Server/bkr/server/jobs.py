@@ -275,7 +275,7 @@ class Jobs(RPCRoot):
             jobs = jobs.filter(and_(Job.is_finished(), not_(Job.is_dirty)))
         elif is_finished is False:
             jobs = jobs.filter(not_(Job.is_finished()))
-        jobs = Job.sanitise_jobs(jobs)
+        jobs = jobs.filter(not_(Job.is_deleted))
 
         if limit:
             limit = int(limit)

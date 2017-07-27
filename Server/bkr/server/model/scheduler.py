@@ -854,29 +854,7 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         return query.join('owner').filter(owner_query)
 
     @classmethod
-    def sanitise_job_ids(cls, job_ids):
-        """
-            sanitise_job_ids takes a list of job ids and returns the list
-            sans ids that are not 'valid' (i.e deleted jobs)
-        """
-        invalid_job_ids = [j[0] for j in cls.marked_for_deletion().values(Job.id)]
-        valid_job_ids = []
-        for job_id in job_ids:
-            if job_id not in invalid_job_ids:
-                valid_job_ids.append(job_id)
-        return valid_job_ids
-
-    @classmethod
-    def sanitise_jobs(cls, query):
-        """
-            This method will remove any jobs from a query that are
-            deemed to not be a 'valid' job
-        """
-        query = query.filter(and_(cls.to_delete==None, cls.deleted==None))
-        return query
-
-    @classmethod
-    def by_whiteboard(cls, desc, like=False, only_valid=False):
+    def by_whiteboard(cls, desc, like=False):
         if type(desc) is list and len(desc) <= 1:
             desc = desc.pop()
         if type(desc) is list:
@@ -892,8 +870,6 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
                 query = Job.query.filter(Job.whiteboard.like('%%%s%%' % desc))
             else:
                 query = Job.query.filter_by(whiteboard=desc)
-        if only_valid:
-            query = cls.sanitise_jobs(query)
         return query
 
     @classmethod
@@ -1028,10 +1004,6 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
             system.hardware_scan_recipes.append(recipe)
             session.flush()
         return job_xml
-
-    @classmethod
-    def marked_for_deletion(cls):
-        return cls.query.filter(and_(cls.to_delete!=None, cls.deleted==None))
 
     @classmethod
     def find_jobs(cls, query=None, tag=None, complete_days=None, family=None,

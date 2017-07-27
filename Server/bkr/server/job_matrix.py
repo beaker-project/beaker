@@ -58,14 +58,16 @@ class JobMatrix:
             job_ids = []
             if 'job_ids' in kw:
                 job_ids = [int(j) for j in kw['job_ids'].split()]
-                job_ids = model.Job.sanitise_job_ids(job_ids)
+                # Filter out ids of deleted jobs
+                query = model.Job.query.filter(not_(model.Job.is_deleted)).filter(model.Job.id.in_(job_ids))
+                job_ids = [job_id for job_id, in query.values(model.Job.id)]
             # Build the result grid
             gen_results = self.generate(whiteboard=kw.get('whiteboard'),
                 job_ids=job_ids, toggle_nacks=kw.get('toggle_nacks_on'))
             matrix_options['grid'] = gen_results['grid']
             matrix_options['list'] = gen_results['data']
             if 'whiteboard' in kw: # Getting results by whiteboard
-                jobs = model.Job.by_whiteboard(kw.get('whiteboard'), only_valid=True)
+                jobs = model.Job.by_whiteboard(kw.get('whiteboard')).filter(not_(model.Job.is_deleted))
                 job_count = jobs.count()
                 if job_count > model.Job.max_by_whiteboard:
                     flash(_('Your whiteboard contains %s jobs, only %s will be used' % (job_count, model.Job.max_by_whiteboard)))
@@ -102,10 +104,10 @@ class JobMatrix:
         if selected is None:
             selected = []
         if filter:
-            query = model.Job.by_whiteboard(filter, like=True,
-                only_valid=True)
+            query = model.Job.by_whiteboard(filter, like=True)
         else:
-            query = model.Job.sanitise_jobs(model.Job.query)
+            query = model.Job.query
+        query = query.filter(not_(model.Job.is_deleted))
         query = query.group_by(model.Job.whiteboard). \
             order_by(model.Job.id.desc()).limit(50)
         whiteboards = query.values(model.Job.whiteboard)
@@ -189,7 +191,7 @@ class JobMatrix:
             # have converted it to CRLF, convert it back here.
             whiteboards = [w.replace('\r\n', '\n') for w in whiteboards]
             job_ids = []
-            job_query = model.Job.by_whiteboard(whiteboards, only_valid=True)
+            job_query = model.Job.by_whiteboard(whiteboards).filter(not_(model.Job.is_deleted))
             for job in job_query:
                 job_ids.append(job.id)
 
