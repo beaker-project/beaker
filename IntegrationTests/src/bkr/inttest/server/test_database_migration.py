@@ -198,6 +198,13 @@ class MigrationTest(unittest.TestCase):
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
+    def test_from_24(self):
+        with self.migration_engine.connect() as connection:
+            connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                    'database-dumps/24.sql'))
+        upgrade_db(self.migration_metadata)
+        self.check_migrated_schema()
+
     def test_already_upgraded(self):
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
