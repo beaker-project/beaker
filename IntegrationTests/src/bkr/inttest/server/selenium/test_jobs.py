@@ -1783,7 +1783,7 @@ class JobHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertTrue(self.job.to_delete)
+            self.assertTrue(self.job.is_deleted)
 
     def test_cannot_delete_running_job(self):
         with session.begin():
@@ -1793,6 +1793,16 @@ class JobHTTPTest(DatabaseTestCase):
         response = s.delete(get_server_base() + 'jobs/%s' % self.job.id)
         self.assertEquals(response.status_code, 400)
         self.assertEquals('Cannot delete running job', response.text)
+
+    def test_cannot_delete_already_deleted_job(self):
+        with session.begin():
+            data_setup.mark_job_complete(self.job)
+            self.job.deleted = datetime.datetime.utcnow()
+        s = requests.Session()
+        requests_login(s, user=self.owner, password=u'theowner')
+        response = s.delete(get_server_base() + 'jobs/%s' % self.job.id)
+        self.assertEquals(response.status_code, 409)
+        self.assertEquals('Job has already been deleted', response.text)
 
     def test_anonymous_cannot_update_status(self):
         response = post_json(get_server_base() + 'jobs/%s/status' % self.job.id,

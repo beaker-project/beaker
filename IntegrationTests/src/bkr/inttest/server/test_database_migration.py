@@ -17,7 +17,7 @@ from sqlalchemy.sql import func
 from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, User, \
         OSMajor, OSMajorInstallOptions, GroupMembershipType, SystemActivity, \
         Activity, RecipeSetComment, Recipe, RecipeSet, RecipeTaskResult, \
-        Command, CommandStatus, LogRecipeTaskResult, DataMigration
+        Command, CommandStatus, LogRecipeTaskResult, DataMigration, Job
 
 def has_initial_sublist(larger, prefix):
     """ Return true iff list *prefix* is an initial sublist of list 
@@ -1133,3 +1133,18 @@ class MigrationTest(unittest.TestCase):
             self.assertEquals(connection.scalar('SELECT ipxe_image_id FROM openstack_region '
                                                 'WHERE lab_controller_id = 1'),
                               u'deadbeef-dead-beef-dead-beefdeadbeef')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1337789
+    def test_purged_jobs_are_also_deleted(self):
+        # The new invariant is that a job is always deleted *before* it is 
+        # purged (not one or the other) so any existing purged jobs must also 
+        # be marked as deleted.
+        with self.migration_metadata.bind.connect() as connection:
+            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
+            connection.execute(
+                    "INSERT INTO job (owner_id, retention_tag_id, dirty_version, clean_version, deleted) "
+                    "VALUES (1, 1, '', '', '2017-07-27 14:28:20')")
+        upgrade_db(self.migration_metadata)
+        job = self.migration_session.query(Job).get(1)
+        self.assertEquals(job.purged, datetime.datetime(2017, 7, 27, 14, 28, 20))
+        self.assertEquals(job.deleted, datetime.datetime(2017, 7, 27, 14, 28, 20))

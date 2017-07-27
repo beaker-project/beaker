@@ -13,11 +13,13 @@ __requires__ = ['TurboGears']
 import sys
 import os, os.path
 import errno
+import datetime
 import shutil
 import urlparse
 import warnings
 import requests
 from turbogears import config
+from sqlalchemy.sql import and_
 from bkr.common import __version__
 from bkr.log import log_to_stream
 from optparse import OptionParser
@@ -35,7 +37,6 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-__description__ = 'Script to delete expired log files'
 
 def remove_descendants(paths):
     """
@@ -79,8 +80,8 @@ class MultipleAuth(requests.auth.AuthBase):
 def main(argv=None):
 
     parser = OptionParser('usage: %prog [options]',
-            description='Permanently deletes log files from Beaker and/or '
-                'archive server',
+            description='Deletes expired jobs and permanently purges log files '
+                        'from Beaker and/or archive server',
             version=__version__)
     parser.add_option('-c', '--config', metavar='FILENAME',
             help='Read configuration from FILENAME')
@@ -105,7 +106,6 @@ def main(argv=None):
 def log_delete(print_logs=False, dry=False, limit=None):
     if dry:
         logger.info('Dry run only')
-    logger.info('Getting expired jobs')
 
     failed = False
     if not dry:
@@ -129,8 +129,25 @@ def log_delete(print_logs=False, dry=False, limit=None):
         logger.debug('Available authentication methods: %s' %
             ', '.join(available_auth_names))
 
-    for jobid, in Job.query.filter(Job.is_expired).limit(limit).values(Job.id):
-        logger.info('Deleting logs for job %s', jobid)
+    logger.info('Fetching expired jobs to be deleted')
+    try:
+        session.begin()
+        for job in Job.query.filter(Job.is_expired).limit(limit):
+            logger.info('Deleting expired job %s', job.id)
+            job.deleted = datetime.datetime.utcnow()
+        if not dry:
+            session.commit()
+        else:
+            session.rollback()
+        session.close()
+    except Exception as e:
+        logger.exception('Exception while deleting expired jobs')
+        failed = True
+        session.close()
+
+    logger.info('Fetching deleted jobs to be purged')
+    for jobid, in Job.query.filter(and_(Job.is_deleted, Job.purged == None)).limit(limit).values(Job.id):
+        logger.info('Purging logs for deleted job %s', jobid)
         try:
             session.begin()
             job = Job.by_id(jobid)
@@ -165,14 +182,14 @@ def log_delete(print_logs=False, dry=False, limit=None):
                                 pass
                 if print_logs:
                     print path
+            job.purge()
             if not dry:
-                job.delete()
                 session.commit()
-                session.close()
             else:
-                session.close()
+                session.rollback()
+            session.close()
         except Exception, e:
-            logger.exception('Exception while deleting logs for job %s', jobid)
+            logger.exception('Exception while purging logs for job %s', jobid)
             failed = True
             session.close()
             continue

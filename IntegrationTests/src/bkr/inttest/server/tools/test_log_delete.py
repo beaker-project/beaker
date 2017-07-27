@@ -14,6 +14,7 @@ import tempfile
 import subprocess
 import sys
 import mock
+from sqlalchemy.sql import and_
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.common import __version__
 from bkr.server.model import LogRecipe, TaskBase, Job, Recipe, \
@@ -31,7 +32,9 @@ def setUpModule():
     # been left behind from earlier tests in the run.
     with session.begin():
         for job in Job.query.filter(Job.is_expired):
-            job.delete()
+            job.deleted = datetime.datetime.utcnow()
+        for job in Job.query.filter(and_(Job.is_deleted, Job.purged == None)):
+            job.purged = datetime.datetime.utcnow()
 
 class LogDelete(DatabaseTestCase):
 
@@ -58,6 +61,8 @@ class LogDelete(DatabaseTestCase):
     def _assert_logs_not_in_db(self, job):
         with session.begin():
             session.expire_all()
+            self.assertIsNotNone(job.deleted)
+            self.assertIsNotNone(job.purged)
             for rs in job.recipesets:
                 for r in rs.recipes:
                     self.assert_(r.logs == [])
@@ -76,10 +81,9 @@ class LogDelete(DatabaseTestCase):
         def _create_jobs():
             with session.begin():
                 for i in range(limit + 1):
-                    job_to_delete = data_setup.create_completed_job(
-                            start_time=datetime.datetime.utcnow() - datetime.timedelta(days=60),
-                            finish_time=datetime.datetime.utcnow() - datetime.timedelta(days=31))
-                    job_to_delete.recipesets[0].recipes[0].logs.append(LogRecipe(filename=u'test.log'))
+                    job_to_purge = data_setup.create_completed_job()
+                    job_to_purge.recipesets[0].recipes[0].logs.append(LogRecipe(filename=u'test.log'))
+                    job_to_purge.deleted = datetime.datetime.utcnow()
 
         # Test with limit
         _create_jobs()
@@ -114,7 +118,7 @@ class LogDelete(DatabaseTestCase):
         except AssertionError:
             pass
 
-    def test_log_delete_expired(self):
+    def test_delete_and_purge_expired(self):
         with session.begin():
             job_to_delete = data_setup.create_completed_job(
                     start_time=datetime.datetime.utcnow() - datetime.timedelta(days=60),
@@ -131,9 +135,9 @@ class LogDelete(DatabaseTestCase):
         self._assert_logs_not_in_db(job_to_delete)
         self.check_dir_not_there(dir_delete)
 
-    def test_log_delete_to_delete(self):
+    def test_purge_deleted(self):
         with session.begin():
-            self.job_to_delete.to_delete = datetime.datetime.utcnow()
+            self.job_to_delete.deleted = datetime.datetime.utcnow()
             self.job_to_delete.recipesets[0].recipes[0].logs.append(LogRecipe(filename=u'test.log'))
         r_ = self.job_to_delete.recipesets[0].recipes[0]
         dir = os.path.join(r_.logspath ,r_.filepath)
@@ -146,7 +150,7 @@ class LogDelete(DatabaseTestCase):
 
     def test_rendered_kickstart_is_deleted(self):
         with session.begin():
-            self.job_to_delete.to_delete = datetime.datetime.utcnow()
+            self.job_to_delete.deleted = datetime.datetime.utcnow()
             recipe = self.job_to_delete.recipesets[0].recipes[0]
             ks = RenderedKickstart(kickstart=u'This is not a real kickstart.')
             recipe.installation.rendered_kickstart = ks
@@ -161,7 +165,7 @@ class LogDelete(DatabaseTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1322700
     def test_recipe_task_result_rows_are_deleted(self):
         with session.begin():
-            self.job_to_delete.to_delete = datetime.datetime.utcnow()
+            self.job_to_delete.deleted = datetime.datetime.utcnow()
             recipe = self.job_to_delete.recipesets[0].recipes[0]
             recipetask = recipe.tasks[0]
             self.assertEqual(len(recipetask.results), 1)
@@ -242,7 +246,7 @@ class RemoteLogDeletionTest(DatabaseTestCase):
     def create_deleted_job_with_log(self, path, filename):
         with session.begin():
             job = data_setup.create_completed_job()
-            job.to_delete = datetime.datetime.utcnow()
+            job.deleted = datetime.datetime.utcnow()
             session.flush()
             job.recipesets[0].recipes[0].log_server = self.log_server
             job.recipesets[0].recipes[0].logs[:] = [
@@ -253,7 +257,7 @@ class RemoteLogDeletionTest(DatabaseTestCase):
                 for rtr in rt.results:
                     rtr.logs[:] = []
 
-    def test_deletion(self):
+    def test_purge(self):
         open(os.path.join(self.recipe_logs_dir, 'dummy.txt'), 'w').write('dummy')
         self.create_deleted_job_with_log(u'recipe/', u'dummy.txt')
         run_command('log_delete.py', 'beaker-log-delete')
@@ -286,8 +290,7 @@ class RemoteLogDeletionTest(DatabaseTestCase):
 
         with session.begin():
             job = data_setup.create_completed_job()
-            job.to_delete = datetime.datetime.utcnow()
-            self.assertTrue(job.is_expired)
+            job.deleted = datetime.datetime.utcnow()
             recipe = job.recipesets[0].recipes[0]
 
             server = self.log_server_url + '/recipe/'
@@ -311,4 +314,4 @@ class RemoteLogDeletionTest(DatabaseTestCase):
         # Check that we really deleted something, if not the test setup was faulty.
         with session.begin():
             job = Job.by_id(job.id)
-            self.assertIsNotNone(job.deleted)
+            self.assertIsNotNone(job.purged)

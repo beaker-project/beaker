@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import datetime
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import check_task_search_results
 from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
@@ -110,7 +111,7 @@ class ExecutedTasksTest(WebDriverTestCase):
         self.check_recipetask_present_in_results(recipe.tasks[0])
 
         with session.begin():
-            job.soft_delete()
+            job.deleted = datetime.datetime.utcnow()
         b.get(get_server_base() + 'tasks%s' % task.name)
         b.find_element_by_id('form').submit()
         self.check_recipetask_absent_from_results(recipe.tasks[0])

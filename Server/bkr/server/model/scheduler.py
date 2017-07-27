@@ -635,8 +635,8 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
             default=TaskResult.new, index=True)
     status = Column(TaskStatus.db_type(), nullable=False,
             default=TaskStatus.new, index=True)
+    purged = Column(DateTime, default=None, index=True)
     deleted = Column(DateTime, default=None, index=True)
-    to_delete = Column(DateTime, default=None, index=True)
     # Total tasks
     ttasks = Column(Integer, default=0)
     # Total tasks completed with no result
@@ -780,14 +780,11 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         """
         A job is expired if:
             * it's not already deleted; and
-            * a user has explicitly requested that it be deleted; or
             * it's older than the expiry time specified by its retention tag.
-        Expired jobs will be purged by beaker-log-delete when it runs.
+        Expired jobs will be deleted by beaker-log-delete when it runs.
         """
         if self.deleted:
             return False
-        if self.to_delete:
-            return True
         expire_in_days = self.retention_tag.expire_in_days
         if expire_in_days and self.completed_n_days_ago(expire_in_days):
             return True
@@ -806,13 +803,8 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
                 .where(RetentionTag.jobs).correlate(Job).label('expire_in_days')
         return and_(
             Job.deleted == None,
-            or_(
-                Job.to_delete != None,
-                and_(
-                    expire_in_days_subquery > 0,
-                    Job.completed_n_days_ago(expire_in_days_subquery)
-                )
-            )
+            expire_in_days_subquery > 0,
+            Job.completed_n_days_ago(expire_in_days_subquery)
         )
 
     @classmethod
@@ -1062,19 +1054,15 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         for job in jobs:
             job.cancel(msg=msg)
 
-    def delete(self):
-        """Deletes entries relating to a Job and it's children
-
-            currently only removes log entries of a job and child tasks and marks
-            the job as deleted.
-            It does not delete other mapped relations or the job row itself.
-            it does not remove log FS entries
-
-
+    def purge(self):
         """
+        Purges all results and logs for a deleted job.
+        """
+        if not self.deleted:
+            raise RuntimeError('Attempted to purge %r which is not deleted' % self)
         for rs in self.recipesets:
-            rs.delete()
-        self.deleted = datetime.utcnow()
+            rs.purge()
+        self.purged = datetime.utcnow()
 
     def set_waived(self, waived):
         for rs in self.recipesets:
@@ -1082,13 +1070,6 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
 
     def requires_product(self):
         return self.retention_tag.requires_product()
-
-    def soft_delete(self, *args, **kw):
-        if self.deleted:
-            raise BeakerException(u'%s has already been deleted, cannot delete it again' % self.t_id)
-        if self.to_delete:
-            raise BeakerException(u'%s is already marked to delete' % self.t_id)
-        self.to_delete = datetime.utcnow()
 
     def all_logs(self, load_parent=True):
         """
@@ -1129,13 +1110,13 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
 
     @hybrid_property
     def is_deleted(self):
-        if self.deleted or self.to_delete:
+        if self.deleted:
             return True
         return False
 
     @is_deleted.expression
     def is_deleted(cls): #pylint: disable=E0213
-        return or_(cls.deleted != None, cls.to_delete != None)
+        return cls.deleted != None
 
     def priority_settings(self, prefix, colspan='1'):
         span = Element('span')
@@ -1722,9 +1703,9 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
             if not isinstance(recipe, GuestRecipe):
                 yield recipe
 
-    def delete(self):
+    def purge(self):
         for r in self.recipes:
-            r.delete()
+            r.purge()
 
     @classmethod
     def allowed_priorities_initial(cls,user):
@@ -2038,7 +2019,7 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         return self.recipeset.job.owner
     owner = property(owner)
 
-    def delete(self):
+    def purge(self):
         """
         How we delete a Recipe.
         """

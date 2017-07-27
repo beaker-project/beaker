@@ -137,7 +137,7 @@ class Jobs(RPCRoot):
         job = TaskBase.get_by_t_id(t_id)
         self._check_job_deletability(t_id, job)
         if job.is_finished() and not job.is_deleted:
-            job.soft_delete()
+            job.deleted = datetime.datetime.utcnow()
         return [t_id]
 
     @expose()
@@ -320,7 +320,7 @@ class Jobs(RPCRoot):
                     continue # skip it
                 if job.is_deleted:
                     continue # skip it
-                job.soft_delete()
+                job.deleted = datetime.datetime.utcnow()
                 deleted_jobs.append(job)
         else:
             # only allow people to delete their own jobs while using these kwargs
@@ -330,7 +330,7 @@ class Jobs(RPCRoot):
                 owner=identity.current.user.user_name)
             query = query.filter(Job.is_finished()).filter(not_(Job.is_deleted))
             for job in query:
-                job.soft_delete()
+                job.deleted = datetime.datetime.utcnow()
                 deleted_jobs.append(job)
 
         msg = 'Jobs deleted'
@@ -1173,10 +1173,9 @@ def delete_job(id):
         raise Forbidden403('Cannot delete job')
     if not job.is_finished():
         raise BadRequest400('Cannot delete running job')
-    try:
-        job.soft_delete()
-    except BeakerException as exc:
-        raise BadRequest400(unicode(exc))
+    if job.is_deleted:
+        raise Conflict409('Job has already been deleted')
+    job.deleted = datetime.datetime.utcnow()
     return '', 204
 
 @app.route('/jobs/<int:id>/activity/', methods=['GET'])

@@ -52,7 +52,7 @@ class RecipesXmlRpcTest(XmlRpcTestCase):
         with session.begin():
             job = data_setup.create_completed_job(lab_controller=self.lc,
                     finish_time=datetime.datetime.utcnow() - datetime.timedelta(minutes=2))
-            job.soft_delete()
+            job.deleted = datetime.datetime.utcnow()
         result = self.server.recipes.by_log_server(self.lc.fqdn)
         self.assertEqual(result, [])
 

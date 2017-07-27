@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import datetime
 import unittest
 import logging
 import time
@@ -88,7 +89,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
 
         #Now delete the only job with that whiteboard
         with session.begin():
-            self.passed_job.soft_delete()
+            self.passed_job.deleted = datetime.datetime.utcnow()
 
         # Confirm it is no longer there
         b.get(get_server_base() + 'matrix')
@@ -115,7 +116,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
 
         # Delete Job
         with session.begin():
-            self.passed_job.soft_delete()
+            self.passed_job.deleted = datetime.datetime.utcnow()
 
         # Assert it is no longer there
         b.get(get_server_base() + 'matrix')

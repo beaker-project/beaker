@@ -232,7 +232,7 @@ class TestRecipeView(WebDriverTestCase):
             recipe = data_setup.create_recipe()
             job = data_setup.create_job_for_recipes([recipe])
             recipetask = recipe.tasks[0]
-            job.delete()
+            job.deleted = datetime.datetime.utcnow()
         b = self.browser
         b.get(get_server_base() + 'recipes/%s#task%s'
                 % (recipe.id, recipe.tasks[0].id))
