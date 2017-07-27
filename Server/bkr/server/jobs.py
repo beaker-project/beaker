@@ -818,7 +818,7 @@ class Jobs(RPCRoot):
                 *args, **kw)
 
     def jobs(self,jobs,action='.', title=u'Jobs', *args, **kw):
-        jobs = jobs.filter(and_(Job.deleted == None, Job.to_delete == None))
+        jobs = jobs.filter(not_(Job.is_deleted))
         jobs_return = self._jobs(jobs, **kw)
         searchvalue = None
         search_options = {}

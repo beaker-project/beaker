@@ -8,7 +8,7 @@ import logging
 import xmlrpclib
 import datetime
 import urlparse
-from sqlalchemy import and_, desc
+from sqlalchemy import and_, desc, not_
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm.exc import NoResultFound
 from flask import request, jsonify, redirect as flask_redirect
@@ -1445,7 +1445,7 @@ def get_system_executed_tasks(fqdn):
     """
     query = RecipeTask.query\
         .filter(RecipeTask.recipe.has(Recipe.recipeset.has(RecipeSet.job.has(
-            and_(Job.to_delete == None, Job.deleted == None)))))\
+            not_(Job.is_deleted)))))\
         .join(RecipeTask.recipe, Recipe.resource)\
         .filter(RecipeResource.fqdn == fqdn)\
         .outerjoin(RecipeTask.recipe, Recipe.distro_tree, DistroTree.distro, DistroTree.arch)\
