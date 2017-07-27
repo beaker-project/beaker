@@ -1148,3 +1148,35 @@ class MigrationTest(unittest.TestCase):
         job = self.migration_session.query(Job).get(1)
         self.assertEquals(job.purged, datetime.datetime(2017, 7, 27, 14, 28, 20))
         self.assertEquals(job.deleted, datetime.datetime(2017, 7, 27, 14, 28, 20))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1337789
+    def test_deleted_jobs_with_logs_are_not_purged(self):
+        with self.migration_metadata.bind.connect() as connection:
+            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
+            # We have a job which beaker-log-delete claims to have purged the 
+            # logs for (deleted timestamp is set) but there are actually still 
+            # logs left in it.
+            # Note that we are setting the 'deleted' column here which becomes 
+            # 'purged' after the migration.
+            connection.execute(
+                    "INSERT INTO job (owner_id, retention_tag_id, dirty_version, clean_version, deleted) "
+                    "VALUES (1, 1, '', '', '2017-07-27 14:28:20')")
+            connection.execute(
+                    "INSERT INTO recipe_set (job_id, queue_time) "
+                    "VALUES (1, '2015-11-09 17:03:04')")
+            connection.execute(
+                    "INSERT INTO recipe (type, recipe_set_id, autopick_random) "
+                    "VALUES ('machine_recipe', 1, FALSE)")
+            connection.execute(
+                    "INSERT INTO log_recipe (recipe_id, filename) "
+                    "VALUES (1, 'console.log')")
+        # Do the schema upgrades
+        upgrade_db(self.migration_metadata)
+        # Do the data migration
+        migration = DataMigration(name=u're-purge-old-jobs-with-logs')
+        finished = migration.migrate_one_batch(self.migration_metadata.bind)
+        self.assertTrue(finished)
+        # Job should be deleted, but not purged, so that beaker-log-delete will purge it again
+        job = self.migration_session.query(Job).get(1)
+        self.assertEquals(job.purged, None)
+        self.assertEquals(job.deleted, datetime.datetime(2017, 7, 27, 14, 28, 20))
