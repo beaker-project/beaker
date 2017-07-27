@@ -136,7 +136,8 @@ class Jobs(RPCRoot):
     def _delete_job(self, t_id):
         job = TaskBase.get_by_t_id(t_id)
         self._check_job_deletability(t_id, job)
-        Job.delete_jobs([job])
+        if job.is_finished() and not job.is_deleted:
+            job.soft_delete()
         return [t_id]
 
     @expose()
@@ -305,26 +306,32 @@ class Jobs(RPCRoot):
         themselves by using the tag, complete_days etc kwargs, instead, they
         should do that via the *jobs* argument.
         """
+        deleted_jobs = []
         if jobs: #Turn them into job objects
             if not isinstance(jobs,list):
                 jobs = [jobs]
-            jobs_to_try_to_del = []
             for j_id in jobs:
                 job = TaskBase.get_by_t_id(j_id)
                 if not isinstance(job,Job):
                     raise BeakerException('Incorrect task type passed %s' % j_id )
                 if not job.can_delete(identity.current.user):
                     raise BeakerException("You don't have permission to delete job %s" % j_id)
-                jobs_to_try_to_del.append(job)
-            delete_jobs_kw = dict(jobs=jobs_to_try_to_del)
+                if not job.is_finished():
+                    continue # skip it
+                if job.is_deleted:
+                    continue # skip it
+                job.soft_delete()
+                deleted_jobs.append(job)
         else:
             # only allow people to delete their own jobs while using these kwargs
-            delete_jobs_kw = dict(query=Job.find_jobs(tag=tag,
+            query = Job.find_jobs(tag=tag,
                 complete_days=complete_days,
                 family=family, product=product,
-                owner=identity.current.user.user_name))
-
-        deleted_jobs = Job.delete_jobs(**delete_jobs_kw)
+                owner=identity.current.user.user_name)
+            query = query.filter(Job.is_finished()).filter(not_(Job.is_deleted))
+            for job in query:
+                job.soft_delete()
+                deleted_jobs.append(job)
 
         msg = 'Jobs deleted'
         if dryrun:

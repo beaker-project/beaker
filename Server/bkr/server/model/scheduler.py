@@ -1062,39 +1062,6 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         for job in jobs:
             job.cancel(msg=msg)
 
-    @classmethod
-    def delete_jobs(cls, jobs=None, query=None):
-        jobs_to_delete  = cls._delete_criteria(jobs,query)
-
-        for job in jobs_to_delete:
-            job.soft_delete()
-
-        return jobs_to_delete
-
-    @classmethod
-    def _delete_criteria(cls, jobs=None, query=None):
-        """Returns valid jobs for deletetion
-
-
-           takes either a list of Job objects or a query object, and returns
-           those that are valid for deletion
-
-
-        """
-        if not jobs and not query:
-            raise BeakerException('Need to pass either list of jobs or a query to _delete_criteria')
-        valid_jobs = []
-        if jobs:
-            for j in jobs:
-                if j.is_finished() and not j.is_deleted:
-                    valid_jobs.append(j)
-            return valid_jobs
-        elif query:
-            query = query.filter(cls.status.in_([status for status in TaskStatus if status.finished]))
-            query = query.filter(not_(Job.is_deleted))
-            query = query.filter(Job.owner==identity.current.user)
-            return query
-
     def delete(self):
         """Deletes entries relating to a Job and it's children
 
