@@ -80,7 +80,6 @@ class BeakerUsage(object):
             .filter(Recipe.status == TaskStatus.queued)\
             .join(Recipe.recipeset)\
             .filter(RecipeSet.queue_time <= (datetime.utcnow() - timedelta(hours=self.waiting_recipe_age)))\
-            .join(RecipeSet.job).filter(Job.deleted == None)\
             .with_entities(System.id, func.count(System.id).label('waiting_recipes_count'))\
             .group_by(System.id).subquery()
         # For sqlalchemy < 0.7, query.join() takes an onclause as in the following:

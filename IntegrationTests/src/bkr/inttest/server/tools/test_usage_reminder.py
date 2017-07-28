@@ -53,13 +53,6 @@ class TestUsageReminder(DatabaseTestCase):
             job = data_setup.create_job_for_recipes([recipe])
             data_setup.mark_job_queued(job)
             job.recipesets[0].queue_time = datetime.utcnow() - timedelta(hours=self.waiting_recipe_age)
-            # Create another system with waiting recipes and delete the job
-            recipe_in_deleted_job = data_setup.create_recipe()
-            recipe_in_deleted_job.systems[:] = [system_with_waiting_recipes]
-            deleted_job = data_setup.create_job_for_recipes([recipe_in_deleted_job])
-            data_setup.mark_job_queued(deleted_job)
-            deleted_job.recipesets[0].queue_time = datetime.utcnow() - timedelta(hours=self.waiting_recipe_age)
-            deleted_job.delete()
             # system with no waiting recipes
             system_without_waiting_recipes = data_setup.create_system()
             data_setup.create_manual_reservation(system_without_waiting_recipes,
