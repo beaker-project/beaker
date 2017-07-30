@@ -14,7 +14,6 @@ from bkr.server.tools.init import upgrade_db, downgrade_db, check_db, doit, \
         init_db
 from sqlalchemy.orm import create_session
 from sqlalchemy.sql import func
-from alembic.environment import MigrationContext
 from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, User, \
         OSMajor, OSMajorInstallOptions, GroupMembershipType, SystemActivity, \
         Activity, RecipeSetComment, Recipe, RecipeSet, RecipeTaskResult, \
@@ -1109,3 +1108,28 @@ class MigrationTest(unittest.TestCase):
                 migration = self.migration_session.query(DataMigration)\
                         .filter(DataMigration.name == name).one()
                 self.assertEquals(migration.is_finished, True)
+
+    def test_values_are_preserved_after_migration(self):
+        with self.migration_metadata.bind.connect() as connection:
+            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
+            # inserting data into openstack_region requires a lab controller
+            connection.execute("INSERT INTO lab_controller(id, fqdn, disabled, user_id) "
+                               "VALUES(1, 'lab.controller', 0, 1);")
+            connection.execute("INSERT INTO openstack_region (lab_controller_id, ipxe_image_id) VALUES "
+                               "(1, 'deadbeef-dead-beef-dead-beefdeadbeef');")
+
+        upgrade_db(self.migration_metadata)
+
+        # check ipxe_image_id binary value after upgrade
+        with self.migration_metadata.bind.connect() as connection:
+            self.assertEquals(connection.scalar('SELECT ipxe_image_id FROM openstack_region '
+                                                'WHERE lab_controller_id = 1'),
+                              '\xde\xad\xbe\xef\xde\xad\xbe\xef\xde\xad\xbe\xef\xde\xad\xbe\xef')
+
+        downgrade_db(self.migration_metadata, 'f18df089261')
+
+        # check ipxe_image_id varchar value after downgrade
+        with self.migration_metadata.bind.connect() as connection:
+            self.assertEquals(connection.scalar('SELECT ipxe_image_id FROM openstack_region '
+                                                'WHERE lab_controller_id = 1'),
+                              u'deadbeef-dead-beef-dead-beefdeadbeef')

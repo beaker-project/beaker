@@ -21,6 +21,7 @@ import socket
 import tempfile
 import subprocess
 import datetime
+import uuid
 try:
     import keystoneclient.v3.client
     has_keystoneclient = True
@@ -79,7 +80,7 @@ def upload_image(glance, visibility=u'public'):
             disk_format='raw', container_format='bare', visibility=visibility)
     log.debug('Uploading image %s to Glance', f.name)
     glance.images.upload(image.id, f)
-    region.ipxe_image_id = image.id
+    region.ipxe_image_id = uuid.UUID(image.id)
 
 def main():
     parser = OptionParser(description=__description__, version=__version__)

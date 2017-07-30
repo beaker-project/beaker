@@ -9,6 +9,7 @@ from sqlalchemy.types import Integer, Unicode
 from sqlalchemy.orm import relationship
 from bkr.server.model.base import DeclarativeMappedObject
 from bkr.server.model.lab import LabController
+from .types import UUID
 
 # Currently Beaker does not understand OpenStack regions, so there should only 
 # be one row in this table, created by the administrator. In future this can be 
@@ -23,4 +24,4 @@ class OpenStackRegion(DeclarativeMappedObject):
             name='openstack_region_lab_controller_id_fk'), nullable=False)
     lab_controller = relationship(LabController, back_populates='openstack_regions')
     # NULL ipxe_image_id means not uploaded yet
-    ipxe_image_id = Column(Unicode(2048))
+    ipxe_image_id = Column(UUID)
