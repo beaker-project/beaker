@@ -29,7 +29,7 @@ in :manpage:`bkr(1)`.
 Options
 -------
 
-.. option:: --format beaker-results-xml, --format junit-xml
+.. option:: --format <format>
 
    Shows results in the given format.
    The ``beaker-results-xml`` format (default) is a superset of the Beaker job 

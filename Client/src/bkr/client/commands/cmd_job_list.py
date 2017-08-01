@@ -76,12 +76,13 @@ Options
 
     Limit to jobs which are not finished.
 
-.. option:: --format list, --format json
+.. option:: --format <format>
 
-   Display results in the given format. ``list`` lists one Job ID per
-   line and is useful to be fed as input to other command line
-   utilities. The default format is ``json``, which returns the Job
-   IDs as a JSON string and is compact. This is useful for quick human observation.
+   Display results in the given format, either ``list`` or ``json``.
+   The `list`` format lists one job ID per line and is useful to be fed as 
+   input to other command line utilities. The default format is ``json``, which 
+   returns the job IDs as a JSON array and is compact. This is useful for quick 
+   human observation.
 
 Common :program:`bkr` options are described in the :ref:`Options
 <common-options>` section of :manpage:`bkr(1)`.
