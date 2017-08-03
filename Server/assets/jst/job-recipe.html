@@ -1,5 +1,5 @@
 <td>
-  <input type="checkbox" class="recipe-reviewed" title="Reviewed?" <% if (reviewed) { %>checked="checked"<% } %> />
+  <input type="checkbox" class="recipe-reviewed" title="Reviewed?" <%if (reviewed) { %>checked="checked"<% }; if (!can_set_reviewed_state) { %>disabled="disabled"<% } %> />
 </td>
 <td>
   <a class="recipe-id" href="<%- beaker_url_prefix %>recipes/<%- id %>"><abbr title="<% if (guest) { %>Guest <% } %>Recipe">R</abbr>:<%- id %></a>

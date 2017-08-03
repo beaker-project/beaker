@@ -630,6 +630,21 @@ class TestViewJob(WebDriverTestCase):
         # So we have to resort to poll-waiting on the database instead.
         wait_for_condition(lambda: recipe.get_reviewed_state(owner) == False)
 
+    def test_anonymous_cannot_control_recipe_reviewed_state(self):
+        with session.begin():
+            job = data_setup.create_completed_job()
+            recipe = job.recipesets[0].recipes[0]
+        b = self.browser
+        self.go_to_job_page(job)
+        recipe_row = b.find_element_by_xpath(
+            '//tr[td/a[@class="recipe-id" and normalize-space(string(.))="%s"]]'
+            % recipe.t_id)
+        reviewed_checkbox = recipe_row.find_element_by_xpath(
+            './/input[@type="checkbox" and @title="Reviewed?"]')
+        # Checkbox should not be enabled/checked because user is not logged in
+        self.assertFalse(reviewed_checkbox.is_selected())
+        self.assertFalse(reviewed_checkbox.is_enabled())
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=894137
     def test_recipeset_in_url_anchor_is_highlighted(self):
         # When the URL is /jobs/123#set456, RS:456 should be focused and highlighted.

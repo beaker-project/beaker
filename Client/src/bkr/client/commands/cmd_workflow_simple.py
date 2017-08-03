@@ -41,12 +41,12 @@ Non-zero on error, otherwise zero.
 Examples
 --------
 
-Schedule a job on RHEL6 Server containing all tests for the ``apache`` and 
-``tomcat6`` packages on a random x86_64 machine::
+Schedule a job using CentOS 7 Server, containing the hypothetical
+``/mypackage/mytest`` task on a randomly selected x86_64 machine::
 
     bkr workflow-simple --arch x86_64 --random \\
-            --family RedHatEnterpriseLinux6 --variant Server \\
-            --package apache --package tomcat6
+            --family CentOS7 --variant Server \\
+            --task /mypackage/mytest
 
 See also
 --------
@@ -57,6 +57,7 @@ See also
 
 from bkr.client.task_watcher import *
 from bkr.client import BeakerCommand, BeakerWorkflow, BeakerJob, BeakerRecipeSet, BeakerRecipe
+import xmlrpclib
 from optparse import OptionValueError
 import sys
 import xml.dom.minidom
@@ -71,18 +72,21 @@ class Workflow_Simple(BeakerWorkflow):
         self.parser.usage = "%%prog %s [options]" % self.normalized_name
 
     def run(self, *args, **kwargs):
+
+        if not kwargs.get("package", []) and not kwargs.get("task", []) \
+                and not kwargs.get("taskfile", []) and not kwargs.get("type", []):
+            self.parser.error('No tasks specified to be run\nHint: '
+                              'Use --task, --package, --taskfile or --task-type to select tasks\n')
+
         self.set_hub(**kwargs)
 
-        # get all tasks requested
-        requestedTasks = self.getTasks(*args, **kwargs)
-
-        debug  = kwargs.get("debug", False)
+        debug = kwargs.get("debug", False)
         dryrun = kwargs.get("dryrun", False)
         wait = kwargs.get("wait", False)
-	family = kwargs.get("family", None)
-	distro = kwargs.get("distro", None)
-	arches = kwargs.get("arches", [])
-	taskParams = kwargs.get("taskparam", [])
+        family = kwargs.get("family", None)
+        distro = kwargs.get("distro", None)
+        arches = kwargs.get("arches", [])
+        taskParams = kwargs.get("taskparam", [])
 
         if not family and not distro:
             sys.stderr.write("No Family or Distro specified\n")
@@ -92,8 +96,14 @@ class Workflow_Simple(BeakerWorkflow):
             # Get default arches that apply for this distro/family
             arches = self.getArches(*args, **kwargs)
 
+        # get all tasks requested
+        try:
+            requestedTasks = self.getTasks(*args, **kwargs)
+        except xmlrpclib.Fault:
+            requestedTasks = None
+
         if not requestedTasks:
-            sys.stderr.write("You must specify a package, type or task to run\n")
+            sys.stderr.write("No tasks match the specified option(s)\n")
             sys.exit(1)
 
         # Create Job

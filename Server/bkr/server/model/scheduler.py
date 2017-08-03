@@ -2947,11 +2947,13 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
         if identity.current.user:
             u = identity.current.user
             data['can_edit'] = self.can_edit(u)
+            data['can_set_reviewed_state'] = True
             data['can_update_reservation_request'] = self.can_update_reservation_request(u)
             data['can_comment'] = self.can_comment(u)
             data['reviewed'] = self.get_reviewed_state(u)
         else:
             data['can_edit'] = False
+            data['can_set_reviewed_state'] = False
             data['can_update_reservation_request'] = False
             data['can_comment'] = False
             data['reviewed'] = None

@@ -23,12 +23,12 @@ List the members of an existing group.
 Options
 -------
 
-.. option:: --format list, --format json
+.. option:: --format <format>
 
-   Display results in the given format. ``list`` lists one user per
-   line and is useful to be fed as input to other command line
-   utilities. The default format is ``json``, which returns the users
-   as a JSON array.
+   Display results in the given format, either ``list`` or ``json``.
+   The `list`` format lists one user per line and is useful to be fed as input 
+   to other command line utilities. The default format is ``json``, which 
+   returns the users as a JSON array.
 
 Common :program:`bkr` options are described in the :ref:`Options
 <common-options>` section of :manpage:`bkr(1)`.

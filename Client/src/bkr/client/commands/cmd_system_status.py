@@ -27,10 +27,11 @@ includes the condition, current reservation details, and current loan details.
 Options
 -------
 
-.. option:: --format tabular, --format json
+.. option:: --format <format>
 
-   Display results in the given format. ``tabular`` is intended
-   for human consumption, whereas ``json`` is machine-readable.
+   Display results in the given format, either ``tabular`` or ``json``.
+   The ``tabular`` format is intended for human consumption, whereas the 
+   ``json`` format is machine-readable. The default is ``tabular``.
 
 Exit status
 -----------

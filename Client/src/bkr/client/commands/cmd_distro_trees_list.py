@@ -74,10 +74,11 @@ Options
 
    Return at most <number> distro trees.
 
-.. option:: --format tabular, --format json
+.. option:: --format <format>
 
-   Display results in the given format. ``tabular`` is verbose and intended 
-   for human consumption, whereas ``json`` is machine-readable.
+   Display results in the given format, either ``tabular`` or ``json``.
+   The ``tabular`` format is verbose and intended for human consumption, 
+   whereas the ``json`` format is machine-readable. The default is ``tabular``.
 
 Common :program:`bkr` options are described in the :ref:`Options 
 <common-options>` section of :manpage:`bkr(1)`.

@@ -50,11 +50,12 @@ Options
 
    Retrieve the access policy rules for group, <group>. This option can be specified multiple times.
 
-.. option:: --format tabular, --format json
+.. option:: --format <format>
 
-   Display results in the given format. The ``tabular`` format lists one rule per
-   row as a table. This is the default. The ``json`` format returns the rules as a
-   JSON string and is compact.
+   Display results in the given format, either ``tabular`` or ``json``.
+   The ``tabular`` format lists one rule per row as a table. This is the 
+   default. The ``json`` format returns the rules as a JSON array and is 
+   compact.
 
 Common :program:`bkr` options are described in the :ref:`Options
 <common-options>` section of :manpage:`bkr(1)`.

@@ -6,7 +6,7 @@
 # (at your option) any later version.
 
 import operator
-from sqlalchemy import or_, and_, not_, exists
+from sqlalchemy import or_, and_, not_, exists, func
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import aliased
 import datetime
@@ -482,14 +482,9 @@ class XmlHypervisor(ElementWrapper):
     """
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None) or None
+        value = self.get_xml_attr('value', unicode, '')
         joins = joins.outerjoin(System.hypervisor)
-        if op == '__ne__' and value:
-            query = or_(
-                    Hypervisor.hypervisor == None,
-                    getattr(Hypervisor.hypervisor, op)(value))
-        else:
-            query = getattr(Hypervisor.hypervisor, op)(value)
+        query = getattr(func.coalesce(Hypervisor.hypervisor, ''), op)(value)
         return (joins, query)
 
     def filter_openstack_flavors(self, flavors, lab_controller):
@@ -505,7 +500,7 @@ class XmlHypervisor(ElementWrapper):
         # XXX 'KVM' is hardcoded here assuming that is what OpenStack is using, 
         # but we should have a better solution
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None) or None
+        value = self.get_xml_attr('value', unicode, '')
         return getattr(operator, op)('KVM', value)
 
 class XmlSystemType(ElementWrapper):

@@ -23,11 +23,11 @@ Lists systems in a pool.
 Options
 -------
 
-.. option:: --format list, --format json
+.. option:: --format <format>
 
-    Display results in the given format. The default format is ``list``,
-    which lists one system per line. The format ``json`` displays systems as a
-    JSON array.
+    Display results in the given format, either ``list`` or ``json``.
+    The default format is ``list``, which lists one system per line. The 
+    ``json`` format displays systems as a JSON array.
 
 Common :program:`bkr` options are described in the :ref:`Options
 <common-options>` section of :manpage:`bkr(1)`.
