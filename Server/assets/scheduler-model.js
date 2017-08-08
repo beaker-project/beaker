@@ -310,7 +310,7 @@ window.Recipe = Backbone.Model.extend({
             contentType: 'application/json',
             data: JSON.stringify({'kill_time': parseInt(kill_time)}),
             dataType: 'json'
-        }).done(function () {
+        }).then(function () {
             return model.fetch(); // refresh recipe
         });
     },
