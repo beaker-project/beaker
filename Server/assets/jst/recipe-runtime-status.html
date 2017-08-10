@@ -5,9 +5,3 @@
     <i class="fa fa-times"></i> No console output
 <% } %>
 </p>
-<% if (!_.isNull(time_remaining_seconds)) { %>
-    <p class="recipe-watchdog-time-remaining">
-        Remaining watchdog time: <span class="recipe-watchdog-countdown"><%-
-             moment.duration(time_remaining_seconds, 'seconds').format("hh:mm:ss", {trim: false})%></span>
-    </p>
-<% } %>

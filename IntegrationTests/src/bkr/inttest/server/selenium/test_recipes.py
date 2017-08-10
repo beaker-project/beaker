@@ -944,9 +944,38 @@ class TestRecipeViewReservationTab(WebDriverTestCase):
         b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
 
         # check watchdog timer has been updated
-        new_duration = b.find_element_by_class_name('recipe-watchdog-countdown').text
+        new_duration = b.find_element_by_class_name('recipe-watchdog-time-remaining').text
         self.assertRegexpMatches(new_duration, r'00:09:\d\d')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1358619
+    def test_extend_reservation_modal_shows_accurate_time_remaining(self):
+        with session.begin():
+            data_setup.mark_recipe_tasks_finished(self.recipe, only=True)
+            self.job.update_status()
+        b = self.browser
+        login(b)
+        go_to_recipe_view(b, self.recipe, tab='Reservation')
+        tab = b.find_element_by_id('reservation')
+
+        # Edit the reservation extension to be 10 mins
+        tab.find_element_by_xpath('.//button[contains(text(), "Extend the reservation")]')\
+                .click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('reserve_duration').clear()
+        modal.find_element_by_name('reserve_duration').send_keys('600')
+
+        # close the modal
+        modal.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
+
+        # wait 1 second
+        time.sleep(1)
+
+        # open the modal
+        tab.find_element_by_xpath('.//button[contains(text(), "Extend the reservation")]')\
+                .click()
+        modal = b.find_element_by_class_name('modal')
+        self.assertNotEquals(modal.find_element_by_id('reserve_duration').get_attribute('value'), '600')
 
     def test_authenticated_user_can_return_reservation(self):
         with session.begin():

@@ -114,38 +114,37 @@ window.RecipeRuntimeStatusView = Backbone.View.extend({
     className: 'recipe-runtime-status',
     template: JST['recipe-runtime-status'],
     initialize: function () {
-        this.listenTo(this.model, 'change:logs change:time_remaining_seconds', this.render);
+        this.listenTo(this.model, 'change:logs', this.render);
         this.render();
     },
-    clearTimer: function () {
-        window.clearInterval(this.timer);
-    },
     render: function () {
-        // Clear the existing countdown timer when re-rendering.
-        if (this.timer) {
-            this.clearTimer();
-        }
         var console_log = _.findWhere(this.model.get('logs'), {path: 'console.log'});
         this.$el.html(this.template(_.extend({console_log: console_log}, this.model.attributes)));
-        var time_remaining_seconds = this.model.get('time_remaining_seconds');
-        if (time_remaining_seconds && time_remaining_seconds > 0) {
-            var duration = moment.duration(time_remaining_seconds, 'seconds');
-            var interval = 1;
-            var model = this.model;
-            // Initialize the countdown timer
-            this.timer = window.setInterval(function() {
-                if (duration.asSeconds() <= 0) {
-                    this.clearTimer();
-                } else {
-                    duration = moment.duration(
-                        duration.asSeconds() - interval, 'seconds');
-                    $('.recipe-watchdog-countdown').text(
-                        duration.format("hh:mm:ss", {trim: false}));
-                }
-            }.bind(this), interval*1000);
-        }
+        new RecipeWatchdogTimeRemainingView({model: this.model}).$el
+                .appendTo(this.$el);
         return this;
     },
 });
+
+window.RecipeWatchdogTimeRemainingView = Backbone.View.extend({
+    tagName: 'p',
+    className: 'recipe-watchdog-time-remaining',
+    initialize: function() {
+        this.listenTo(this.model, 'change:time_remaining_seconds', this.render);
+        this.render();
+    },
+    render: function() {
+        var time_remaining_seconds = this.model.get('time_remaining_seconds');
+        if (!_.isNull(time_remaining_seconds)) {
+            var duration = moment.duration(time_remaining_seconds, 'seconds');
+            this.$el.text(
+                "Remaining watchdog time: " + duration.format("hh:mm:ss", {trim: false}));
+        }
+        else {
+            this.$el.empty();
+        }
+        return this;
+    }
+})
 
 })();
