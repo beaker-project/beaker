@@ -1,0 +1,8 @@
+Ready-for-Checks+1: Dan Callaghan <dcallagh@redhat.com>
+Code-Review+2: Anwesha Chatterjee <achatter@redhat.com>
+Verified+1: Dan Callaghan <dcallagh@redhat.com>
+Submitted-by: Dan Callaghan <dcallagh@redhat.com>
+Submitted-at: Thu, 17 Aug 2017 05:43:48 +0000
+Reviewed-on: https://gerrit.beaker-project.org/5787
+Project: beaker
+Branch: refs/heads/release-24
