@@ -937,7 +937,7 @@ class TestRecipeViewReservationTab(WebDriverTestCase):
                 .click()
         modal = b.find_element_by_class_name('modal')
         modal.find_element_by_name('reserve_duration').clear()
-        modal.find_element_by_name('reserve_duration').send_keys('600')
+        modal.find_element_by_name('reserve_duration').send_keys('599')
 
         # close the modal
         modal.find_element_by_xpath('.//button[text()="Save changes"]').click()
@@ -945,7 +945,7 @@ class TestRecipeViewReservationTab(WebDriverTestCase):
 
         # check watchdog timer has been updated
         new_duration = b.find_element_by_class_name('recipe-watchdog-countdown').text
-        self.assertEqual(new_duration, u'00:10:00')
+        self.assertRegexpMatches(new_duration, r'00:09:\d\d')
 
 
     def test_authenticated_user_can_return_reservation(self):
