@@ -1,0 +1,8 @@
+Ready-for-Checks+1: Anwesha Chatterjee <achatter@redhat.com>
+Code-Review+2: Dan Callaghan <dcallagh@redhat.com>
+Verified+1: Anwesha Chatterjee <achatter@redhat.com>
+Submitted-by: Anwesha Chatterjee <achatter@redhat.com>
+Submitted-at: Sun, 20 Aug 2017 22:40:25 +0000
+Reviewed-on: https://gerrit.beaker-project.org/5791
+Project: beaker
+Branch: refs/heads/release-24
