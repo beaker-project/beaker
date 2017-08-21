@@ -96,6 +96,18 @@ menu end
                     distro_name=u'PinkUshankaLinux8.1', distro_tags=[tag],
                     arch=u'x86_64', lab_controllers=[lc],
                     urls=['http://localhost:19998/'])
+            # https://bugzilla.redhat.com/show_bug.cgi?id=1420471
+            # i386 and RHEL3-5 should be filtered out
+            ignored_combos = [
+                (u'PinkUshankaLinux8', u'1', u'i386'),
+                (u'RedHatEnterpriseLinux3', u'9', u'x86_64'),
+                (u'RedHatEnterpriseLinux4', u'9', u'x86_64'),
+                (u'RedHatEnterpriseLinuxServer5', u'10', u'x86_64'),
+            ]
+            for osmajor, osminor, arch in ignored_combos:
+                data_setup.create_distro_tree(osmajor=osmajor, osminor=osminor,
+                        arch=arch, distro_tags=[tag], lab_controllers=[lc],
+                        urls=['http://localhost:19998/'])
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
         menu = open(os.path.join(self.tftp_dir, 'grub', 'efidefault')).read()
         self.assertEquals(menu, '''\

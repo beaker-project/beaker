@@ -62,6 +62,8 @@ class WSGIApplication(object):
             # (these permit GET to make it more convenient to trigger them using curl)
             Rule('/nopxe/<fqdn>', endpoint=(self.proxy, 'clear_netboot')),
             Rule('/install_start/<recipe_id>', endpoint=(self.proxy, 'install_start')),
+            Rule('/install_done/<recipe_id>/',
+                    endpoint=(self.proxy, 'install_done')),
             Rule('/install_done/<recipe_id>/<fqdn>',
                     endpoint=(self.proxy, 'install_done')),
             Rule('/postinstall_done/<recipe_id>',

@@ -7,6 +7,7 @@
 import string
 import sys
 import os, os.path
+import re
 import errno
 import xmlrpclib
 import shutil
@@ -15,6 +16,7 @@ import urlparse
 import contextlib
 from optparse import OptionParser
 from bkr.common.helpers import atomically_replaced_file, siphon, makedirs_ignore, atomic_symlink
+from bkr.labcontroller.config import get_conf
 from jinja2 import Environment, PackageLoader
 
 def _get_url(available):
@@ -77,6 +79,8 @@ def write_menu(menu, template_name, distro_trees):
         menu.write(template.render({'osmajors': osmajors}))
 
 def write_menus(tftp_root, tags, xml_filter):
+    conf = get_conf()
+
     # The order of steps for cleaning images is important,
     # to avoid races and to avoid deleting stuff we shouldn't:
     # first read the directory,
@@ -112,17 +116,25 @@ def write_menus(tftp_root, tags, xml_filter):
     pxe_menu = atomically_replaced_file(os.path.join(tftp_root, 'pxelinux.cfg', 'beaker_menu'))
     write_menu(pxe_menu, u'pxelinux-menu', x86_distrotrees)
 
-    print 'Generating EFI GRUB menus for %s distro trees' % len(x86_distrotrees)
+    x86_efi_distrotrees = [distro for distro in distro_trees if distro['arch'] == 'x86_64']
+    # Regardless of any filtering options selected by the admin, we always 
+    # filter out certain distros which are known not to have EFI support. This 
+    # is a space saving measure for the EFI GRUB menu, which can't be nested so 
+    # we try to keep it as small possible.
+    x86_efi_distrotrees = [distro for distro in x86_efi_distrotrees
+            if not re.match(conf['EFI_EXCLUDED_OSMAJORS_REGEX'], distro['distro_osmajor'])]
+
+    print 'Generating EFI GRUB menus for %s distro trees' % len(x86_efi_distrotrees)
     makedirs_ignore(os.path.join(tftp_root, 'grub'), mode=0755)
     atomic_symlink('../distrotrees', os.path.join(tftp_root, 'grub', 'distrotrees'))
     efi_grub_menu = atomically_replaced_file(os.path.join(tftp_root, 'grub', 'efidefault'))
-    write_menu(efi_grub_menu, u'efi-grub-menu', x86_distrotrees)
+    write_menu(efi_grub_menu, u'efi-grub-menu', x86_efi_distrotrees)
 
-    print 'Generating GRUB2 menus for x86 EFI for %s distro trees' % len(x86_distrotrees)
+    print 'Generating GRUB2 menus for x86 EFI for %s distro trees' % len(x86_efi_distrotrees)
     makedirs_ignore(os.path.join(tftp_root, 'boot', 'grub2'), mode=0755)
     x86_grub2_menu = atomically_replaced_file(os.path.join(tftp_root, 'boot', 'grub2',
             'beaker_menu_x86.cfg'))
-    write_menu(x86_grub2_menu, u'grub2-menu', x86_distrotrees)
+    write_menu(x86_grub2_menu, u'grub2-menu', x86_efi_distrotrees)
 
     # XXX: would be nice if we can find a good time to move this into boot/grub2
     aarch64_distrotrees = [distro for distro in distro_trees if distro['arch'] == 'aarch64']

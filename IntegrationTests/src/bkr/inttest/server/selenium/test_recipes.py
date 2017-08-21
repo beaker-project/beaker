@@ -922,6 +922,32 @@ class TestRecipeViewReservationTab(WebDriverTestCase):
                     tolerance=datetime.timedelta(seconds=10),
                     reference=datetime.datetime.utcnow() + datetime.timedelta(seconds=600))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1358619
+    def test_recipe_reservation_extension_causes_immediate_watchdog_time_change(self):
+        with session.begin():
+            data_setup.mark_recipe_tasks_finished(self.recipe, only=True)
+            self.job.update_status()
+        b = self.browser
+        login(b)
+        go_to_recipe_view(b, self.recipe, tab='Reservation')
+        tab = b.find_element_by_id('reservation')
+
+        # Edit the reservation extension to be 10 mins
+        tab.find_element_by_xpath('.//button[contains(text(), "Extend the reservation")]')\
+                .click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('reserve_duration').clear()
+        modal.find_element_by_name('reserve_duration').send_keys('599')
+
+        # close the modal
+        modal.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
+
+        # check watchdog timer has been updated
+        new_duration = b.find_element_by_class_name('recipe-watchdog-countdown').text
+        self.assertRegexpMatches(new_duration, r'00:09:\d\d')
+
+
     def test_authenticated_user_can_return_reservation(self):
         with session.begin():
             data_setup.mark_recipe_tasks_finished(self.recipe, only=True)

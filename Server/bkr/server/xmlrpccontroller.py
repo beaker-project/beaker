@@ -58,6 +58,7 @@ class RPCRoot(controllers.Controller):
                 raise AssertionError("method cannot be 'RPC2'")
             response = self.process_rpc(method,params)
             response = xmlrpclib.dumps((response,), methodresponse=1, allow_none=True)
+            session.flush()
         except identity.IdentityFailure, e:
             session.rollback()
             response = xmlrpclib.dumps(xmlrpclib.Fault(1,"%s: %s" % (e.__class__, str(e))))

@@ -142,7 +142,10 @@ function find_fqdn() {
     fqdn=$(grep ^HOSTNAME= /etc/sysconfig/network | cut -f2- -d=)
     if [[ "$fqdn" == *.* && "$fqdn" != localhost.* ]] ; then echo "$fqdn" ; return ; fi
     # Getting desperate... pick the first local IP address
-    hostname -I | cut -d' ' -f1
+    ipaddr=$(hostname -i)
+    if [[ "$ipaddr" != "127.0.0.1" ]] ; then echo "$ipaddr" ; return ; fi
+    # Getting even more desperate (RHEL5 and earlier)
+    ip addr show | grep -v ' lo' | grep -Po '(?<=inet )[0-9.]+'
 }
 REPORTED_FQDN=$(find_fqdn)
 fetch - "http://lab.test-kickstart.invalid:8000/install_done/@RECIPEID@/$REPORTED_FQDN"

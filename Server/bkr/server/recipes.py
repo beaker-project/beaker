@@ -262,8 +262,6 @@ class Recipes(RPCRoot):
         """
         if not recipe_id:
             raise BX(_("No recipe id provided!"))
-        if not fqdn:
-            raise BX(_("No fqdn provided!"))
 
         try:
             recipe = Recipe.by_id(recipe_id)
@@ -276,7 +274,7 @@ class Recipes(RPCRoot):
         # We don't want to change an existing FQDN, just set it
         # if it hasn't been set already (see BZ#879146)
         configured = recipe.resource.fqdn
-        if configured is None:
+        if configured is None and fqdn:
             recipe.resource.fqdn = configured = fqdn
         elif configured != fqdn:
             # We use eager formatting here to make this easier to test
