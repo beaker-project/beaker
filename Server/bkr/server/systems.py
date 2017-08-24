@@ -1485,7 +1485,7 @@ def ipxe_script(uuid):
     except (NoResultFound, ValueError):
         raise NotFound404('Instance is not known to Beaker')
     recipe = resource.recipe
-    if recipe.installation is None:
+    if recipe.installation.kernel_options is None:
         # recipe.provision() hasn't been called yet
         # We need to handle this case because the VM is created and boots up 
         # *before* we generate the kickstart etc

@@ -25,7 +25,7 @@ class Installation(DeclarativeMappedObject):
     distro_tree_id = Column(Integer, ForeignKey('distro_tree.id',
             name='installation_distro_tree_id_fk'), nullable=False)
     distro_tree = relationship(DistroTree)
-    kernel_options = Column(UnicodeText, nullable=False)
+    kernel_options = Column(UnicodeText, nullable=True)
     rendered_kickstart_id = Column(Integer, ForeignKey('rendered_kickstart.id',
             name='installation_rendered_kickstart_id_fk', ondelete='SET NULL'))
     rendered_kickstart = relationship('RenderedKickstart')

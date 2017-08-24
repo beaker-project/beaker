@@ -105,7 +105,7 @@ var RecipeInstallationProgress = Backbone.View.extend({
                 netboot_configured = configure_netboot_cmd.get('finish_time');
             }
             var resource = this.model.get('resource');
-            if(!_.isEmpty(resource.get('instance_id'))) {
+            if(resource && !_.isEmpty(resource.get('instance_id'))) {
                 openstack_instance_created = resource.get('instance_created');
             }
             rebooted = installation.get('rebooted');

@@ -981,6 +981,7 @@ class Job(TaskBase, ActivityMixin):
         # Include the XML definition so that cloning this job will act as expected.
         recipe.distro_requires = etree.tostring(distro_tree.to_xml(), encoding=unicode)
         recipe.distro_tree = distro_tree
+        recipe.installation = Installation(distro_tree=recipe.distro_tree)
         system = kw.get('system')
         # Some extra sanity checks, to help out the user
         if system.status == SystemStatus.removed:
@@ -2601,9 +2602,8 @@ class Recipe(TaskBase, ActivityMixin):
                     recipe=self, ks_appends=ks_appends)
             install_options.kernel_options['ks'] = rendered_kickstart.link
 
-        self.installation = Installation(distro_tree=self.distro_tree,
-                kernel_options=install_options.kernel_options_str,
-                rendered_kickstart=rendered_kickstart)
+        self.installation.kernel_options = install_options.kernel_options_str
+        self.installation.rendered_kickstart = rendered_kickstart
         if isinstance(self.resource, SystemResource):
             self.resource.system.installations.append(self.installation)
             self.resource.system.configure_netboot(installation=self.installation,

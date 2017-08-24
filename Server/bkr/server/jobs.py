@@ -50,6 +50,7 @@ from bkr.server.util import parse_untrusted_xml
 import cgi
 from bkr.server.job_utilities import Utility
 from bkr.server.bexceptions import DatabaseLookupError
+from bkr.server.model import Installation
 
 log = logging.getLogger(__name__)
 
@@ -692,6 +693,7 @@ class Jobs(RPCRoot):
             recipe.tasks.append(recipetask)
         if not recipe.tasks:
             raise BX(_('No Tasks! You can not have a recipe with no tasks!'))
+        recipe.installation = Installation(distro_tree=recipe.distro_tree)
         return recipe
 
     @expose('json')

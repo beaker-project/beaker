@@ -244,3 +244,21 @@ class TestJobsController(DatabaseTestCase):
         ''')
         job = self.controller.process_xmljob(xmljob, self.user)
         self.assertEqual(job.whiteboard, u'so pretty')
+
+    def test_installation_row_is_created_at_job_submission_time(self):
+        jobxml = lxml.etree.fromstring('''
+            <job>
+                <whiteboard>
+                    so pretty
+                </whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires/> <hostRequires/>
+                        <task name="/distribution/install"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+        ''')
+        job = self.controller.process_xmljob(jobxml, self.user)
+        recipe = job.recipesets[0].recipes[0]
+        self.assertNotEqual(recipe.installation, None)
