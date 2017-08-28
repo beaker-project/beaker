@@ -627,6 +627,8 @@ class Monitor(ProxyHelper):
         if recipe.find('watchdog').get('panic') == 'ignore':
             # Don't Report the panic
             logger.info('Not reporting panic due to panic=ignore')
+        elif recipe.get('status') == 'Reserved':
+            logger.info('Not reporting panic as recipe is reserved')
         else:
             # Report the panic
             # Look for active task, worst case it records it on the last task
