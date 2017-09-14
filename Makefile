@@ -4,6 +4,8 @@
 # the Free Software # Foundation, either version 2 of the License, or
 # (at your option) any later version.
 
+DEPCMD  :=  $(shell if [ -f /usr/bin/dnf ]; then echo "dnf builddep"; else echo "yum-builddep"; fi)
+
 SUBDIRS := Common Client documentation
 ifdef WITH_SERVER
     SUBDIRS += Server
@@ -27,6 +29,16 @@ install:
 clean:
 	set -e; for i in $(SUBDIRS); do $(MAKE) -C $$i clean; done
 
-.PHONY: check
 check:
 	set -e; for i in $(SUBDIRS); do $(MAKE) -C $$i check; done
+
+.PHONY: devel
+devel: build
+	set -e; for i in $(SUBDIRS); do $(MAKE) -C $$i devel; done
+
+deps:
+	sudo $(DEPCMD) -y beaker.spec
+
+submods:
+	git submodules init
+	git submodules update

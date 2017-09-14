@@ -27,3 +27,7 @@ clean:
 .PHONY: check
 check:
 	./run-tests.sh
+
+.PHONY: devel
+devel:
+	DESTDIR="/" make install
