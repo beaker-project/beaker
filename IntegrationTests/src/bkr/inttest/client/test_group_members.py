@@ -52,3 +52,11 @@ class GroupMembersTest(ClientTestCase):
         except ClientError, e:
             self.assertIn('Group %s does not exist' % non_existent_group,
                           e.stderr_output)
+
+    def test_escapes_uri_characters_in_group_name(self):
+        bad_group_name = u'!@#$%^&*()_+{}|:><?'
+        with session.begin():
+            group = data_setup.create_group(group_name=bad_group_name)
+        out = run_client(['bkr', 'group-members', bad_group_name])
+        out = json.loads(out)
+        self.assertEquals(len(out), 1)

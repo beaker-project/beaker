@@ -43,6 +43,7 @@ Non-zero on error, otherwise zero.
 """
 
 from bkr.client import BeakerCommand
+import urllib
 import json
 
 class Group_Members(BeakerCommand):
@@ -71,7 +72,7 @@ class Group_Members(BeakerCommand):
         self.set_hub(**kwargs)
         requests_session = self.requests_session()
 
-        res = requests_session.get('groups/%s' % group, headers={'Accept': 'application/json'})
+        res = requests_session.get('groups/%s' % urllib.quote(group), headers={'Accept': 'application/json'})
         res.raise_for_status()
         members = []
 
