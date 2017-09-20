@@ -645,3 +645,13 @@ class GroupModifyTest(ClientTestCase):
             self.fail('Must fail or die')
         except ClientError, e:
             self.assert_('Cannot modify group ownership')
+
+    def test_escapes_uri_characters_in_group_name(self):
+        bad_group_name = u'!@#$%^&*()_+{}|:><?'
+        with session.begin():
+            group = data_setup.create_group(group_name=bad_group_name)
+        run_client(['bkr', 'group-modify', bad_group_name, '--display-name', 'a'])
+        run_client(['bkr', 'group-modify', bad_group_name, '--add-member', self.user.user_name])
+        run_client(['bkr', 'group-modify', bad_group_name, '--grant-owner', self.user.user_name])
+        run_client(['bkr', 'group-modify', bad_group_name, '--revoke-owner', self.user.user_name])
+        run_client(['bkr', 'group-modify', bad_group_name, '--remove-member', self.user.user_name])

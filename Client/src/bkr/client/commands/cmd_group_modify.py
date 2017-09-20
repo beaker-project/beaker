@@ -102,6 +102,7 @@ See also
 
 """
 
+import urllib
 from bkr.client import BeakerCommand
 
 class Group_Modify(BeakerCommand):
@@ -183,25 +184,25 @@ class Group_Modify(BeakerCommand):
         requests_session = self.requests_session()
 
         for member in add_member:
-            url = 'groups/%s/members/' % group
+            url = 'groups/%s/members/' % urllib.quote(group)
             res = requests_session.post(url, json={'user_name': member})
             res.raise_for_status()
 
         for member in remove_member:
-            url = 'groups/%s/members/?user_name=%s' % (group, member)
-            res = requests_session.delete(url)
+            url = 'groups/%s/members/' % urllib.quote(group)
+            res = requests_session.delete(url, params={'user_name': member})
             res.raise_for_status()
 
         if grant_owner:
             for member in grant_owner:
-                url = 'groups/%s/owners/' % group
+                url = 'groups/%s/owners/' % urllib.quote(group)
                 res = requests_session.post(url, json={'user_name': member})
                 res.raise_for_status()
 
         if revoke_owner:
             for member in revoke_owner:
-                url = 'groups/%s/owners/?user_name=%s' % (group, member)
-                res = requests_session.delete(url)
+                url = 'groups/%s/owners/' % urllib.quote(group)
+                res = requests_session.delete(url, params={'user_name': member})
                 res.raise_for_status()
 
         group_attrs = {}
@@ -214,5 +215,5 @@ class Group_Modify(BeakerCommand):
         if password:
             group_attrs['root_password'] = password
         if group_attrs:
-            res = requests_session.patch('groups/%s' % group, json=group_attrs)
+            res = requests_session.patch('groups/%s' % urllib.quote(group), json=group_attrs)
             res.raise_for_status()
