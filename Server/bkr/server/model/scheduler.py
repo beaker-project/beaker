@@ -253,7 +253,8 @@ class Watchdog(DeclarativeMappedObject):
                 self.id, self.recipe_id, self.kill_time)
 
 
-class Log(object):
+class Log(DeclarativeMappedObject):
+    __abstract__ = True
 
     # Log tables all have the following fields:
     #   path
@@ -396,7 +397,7 @@ class Log(object):
             'href': url(self.href),
         }
 
-class LogRecipe(Log, DeclarativeMappedObject):
+class LogRecipe(Log):
     type = 'R'
 
     __tablename__ = 'log_recipe'
@@ -409,7 +410,7 @@ class LogRecipe(Log, DeclarativeMappedObject):
     def href(self):
         return '/recipes/%s/logs/%s' % (self.parent.id, self.combined_path)
 
-class LogRecipeTask(Log, DeclarativeMappedObject):
+class LogRecipeTask(Log):
     type = 'T'
 
     __tablename__ = 'log_recipe_task'
@@ -424,7 +425,7 @@ class LogRecipeTask(Log, DeclarativeMappedObject):
         return '/recipes/%s/tasks/%s/logs/%s' % (self.parent.recipe.id,
                 self.parent.id, self.combined_path)
 
-class LogRecipeTaskResult(Log, DeclarativeMappedObject):
+class LogRecipeTaskResult(Log):
     type = 'E'
 
     __tablename__ = 'log_recipe_task_result'
@@ -440,13 +441,25 @@ class LogRecipeTaskResult(Log, DeclarativeMappedObject):
                 self.parent.recipetask.recipe.id, self.parent.recipetask.id,
                 self.parent.id, self.combined_path)
 
-class TaskBase(object):
+class TaskBase(DeclarativeMappedObject):
+    __abstract__ = True
 
     t_id_types = dict(T = 'RecipeTask',
                       TR = 'RecipeTaskResult',
                       R = 'Recipe',
                       RS = 'RecipeSet',
                       J = 'Job')
+
+    # Defined on subclasses
+    id = 0
+    result = None
+    tasks = None
+    ttasks = 0
+    ntasks = 0
+    ptasks = 0
+    wtasks = 0
+    ftasks = 0
+    ktasks = 0
 
     @property
     def logspath(self):
@@ -605,7 +618,7 @@ class TaskBase(object):
     t_id = property(t_id)
 
 
-class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
+class Job(TaskBase, ActivityMixin):
     """
     Container to hold like recipe sets.
     """
@@ -1530,7 +1543,7 @@ class RetentionTag(BeakerTag):
             'needs_product': self.needs_product,
         }
 
-class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
+class RecipeSet(TaskBase, ActivityMixin):
     """
     A Collection of Recipes that must be executed at the same time.
     """
@@ -1886,7 +1899,7 @@ class RecipeReservationRequest(DeclarativeMappedObject):
         }
 
 
-class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
+class Recipe(TaskBase, ActivityMixin):
     """
     Contains requires for host selection and distro selection.
     Also contains what tasks will be executed.
@@ -3155,7 +3168,7 @@ class RecipeTag(DeclarativeMappedObject):
     recipes = relationship(Recipe, secondary=recipe_tag_map, back_populates='tags')
 
 
-class RecipeTask(TaskBase, DeclarativeMappedObject):
+class RecipeTask(TaskBase):
     """
     This holds the results/status of the task being executed.
     """
@@ -3709,7 +3722,7 @@ class RecipeTaskRpm(DeclarativeMappedObject):
     running_kernel = Column(Boolean)
 
 
-class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
+class RecipeTaskResult(TaskBase):
     """
     Each task can report multiple results
     """

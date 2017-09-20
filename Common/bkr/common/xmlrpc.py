@@ -75,7 +75,7 @@ class TimeoutHTTPProxyConnection(TimeoutHTTPConnection):
 
     def set_host_and_port(self, host, port):
         if hasattr(self, "_set_hostport"): # Python < 2.7.7
-            self._set_hostport(host, port)
+            self._set_hostport(host, port) #pylint: disable=no-member
         else:
             (self.host, self.port) = self._get_hostport(host, port)
 

@@ -916,7 +916,7 @@ class Group(DeclarativeMappedObject, ActivityMixin):
 
     @property
     def users(self):
-        return self.dyn_users.all()
+        return self.dyn_users.all() #pylint: disable=no-member
 
 
 class UserGroup(DeclarativeMappedObject):

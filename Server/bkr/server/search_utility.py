@@ -1017,6 +1017,10 @@ class SystemSearch(Search):
 
 class SystemObject(object):
 
+    # Defined on subclasses
+    searchable_columns = {}
+    search_values_dict = {}
+
     @classmethod
     def create_column(cls, column, *args, **kw):
         column = cls.searchable_columns.get(column)

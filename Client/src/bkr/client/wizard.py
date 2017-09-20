@@ -581,6 +581,9 @@ def removeEmbargo(summary):
 class Preferences:
     """ Test's author preferences """
 
+    # There is too much eval() magic for pylint to handle this properly.
+    #pylint: disable=no-member
+
     def __init__(self, load_user_prefs=True):
         """ Set (in future get) user preferences / defaults """
         self.template = parseString(PreferencesTemplate)

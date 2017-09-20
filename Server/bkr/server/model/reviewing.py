@@ -14,7 +14,15 @@ from .scheduler import RecipeSet, Recipe, RecipeTask, RecipeTaskResult
 
 log = logging.getLogger(__name__)
 
-class CommentBase(object):
+class CommentBase(DeclarativeMappedObject):
+    __abstract__ = True
+
+    # Defined on subclasses
+    id = 0
+    user = None
+    comment = u''
+    created = datetime.utcnow()
+
     def __json__(self):
         return {
             'id': self.id,
@@ -32,7 +40,7 @@ class CommentBase(object):
         return value
 
 
-class RecipeSetComment(CommentBase, DeclarativeMappedObject):
+class RecipeSetComment(CommentBase):
 
     __tablename__ = 'recipe_set_comment'
     __table_args__ = {'mysql_engine': 'InnoDB'}
@@ -46,7 +54,7 @@ class RecipeSetComment(CommentBase, DeclarativeMappedObject):
     comment = Column(Unicode(4000), nullable=False)
     created = Column(DateTime, nullable=False, default=datetime.utcnow)
 
-class RecipeTaskComment(CommentBase, DeclarativeMappedObject):
+class RecipeTaskComment(CommentBase):
 
     __tablename__ = 'recipe_task_comment'
     __table_args__ = {'mysql_engine': 'InnoDB'}
@@ -62,7 +70,7 @@ class RecipeTaskComment(CommentBase, DeclarativeMappedObject):
     comment = Column(Unicode(4000), nullable=False)
     created = Column(DateTime, nullable=False, default=datetime.utcnow)
 
-class RecipeTaskResultComment(CommentBase, DeclarativeMappedObject):
+class RecipeTaskResultComment(CommentBase):
 
     __tablename__ = 'recipe_task_result_comment'
     __table_args__ = {'mysql_engine': 'InnoDB'}

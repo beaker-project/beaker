@@ -9,5 +9,12 @@ else
     PYLINT=pylint
 fi
 
-export PYTHONPATH=Common:Server:LabController/src:Client/src:IntegrationTests/src${PYTHONPATH:+:$PYTHONPATH}
-$PYLINT --rcfile=Misc/pylint-errors.cfg "$@"
+# Add Beaker source code to PYTHONPATH
+PYTHONPATH=Common:Server:LabController/src:Client/src:IntegrationTests/src${PYTHONPATH:+:$PYTHONPATH}
+export PYTHONPATH
+
+# For Beaker Pylint plugin
+PYTHONPATH=Misc:$PYTHONPATH
+PYLINT_PLUGINS=pylint_beaker
+
+$PYLINT --rcfile=Misc/pylint-errors.cfg --load-plugins=$PYLINT_PLUGINS "$@"

@@ -136,7 +136,7 @@ class PluginContainer(object):
         """Return dictionary of registered plugins."""
 
         result = {}
-        parent_plugins = cls._get_parent_plugins(cls.normalize_name).items()
+        parent_plugins = cls._get_parent_plugins(cls.normalize_name).items() #pylint: disable=no-member
         class_plugins = getattr(cls, "_class_plugins", {}).items()
         for name, plugin_class in parent_plugins + class_plugins:
             result[name] = plugin_class
@@ -155,11 +155,11 @@ class PluginContainer(object):
                 continue
 
             # read inherited plugins first (conflicts are resolved recursively)
-            plugins = parent._get_parent_plugins(normalize_function)
+            plugins = parent._get_parent_plugins(normalize_function) #pylint: disable=no-member
 
             # read class plugins, override inherited on name conflicts
             if hasattr(parent, "_class_plugins"):
-                for plugin_class in parent._class_plugins.values():
+                for plugin_class in parent._class_plugins.values(): #pylint: disable=no-member
                     normalized_name = normalize_function(plugin_class.__name__)
                     plugins[normalized_name] = plugin_class
 

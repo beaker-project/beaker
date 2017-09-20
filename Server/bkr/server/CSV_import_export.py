@@ -239,6 +239,14 @@ class CSV(RPCRoot):
             log.append("Invalid csv_type %s" % csv_type)
         return log
 
+    # Defined on subclasses
+    csv_type = None
+    csv_keys = []
+
+    @classmethod
+    def query(cls):
+        raise NotImplementedError()
+
     @classmethod
     def _to_csv(cls, file):
         """

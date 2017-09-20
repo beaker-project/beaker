@@ -129,7 +129,7 @@ def generateKickstart(template_file, args):
                     cache_size = 0,
                     line_comment_prefix = '##',
                 )
-    env.skip_blocks.append('kernel_options')
+    env.skip_blocks.append('kernel_options') #pylint: disable=no-member
 
     template = env.get_template(base_name)
     return "\n"+template.render(args)

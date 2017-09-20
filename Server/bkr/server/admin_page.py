@@ -13,6 +13,10 @@ from bkr.server.widgets import AlphaNavBar, AutoCompleteField, InlineForm
 class AdminPage(RPCRoot):
     exposed = False
 
+    # Defined on subclasses
+    search_mapper = None
+    search_col = None
+
     def __init__(self,**kw):
         if 'search_name' in kw:
             self.search_name = kw['search_name']
