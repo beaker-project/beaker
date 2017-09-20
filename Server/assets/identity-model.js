@@ -108,7 +108,7 @@ window.Users = BeakerPageableCollection.extend({
 });
 
 window.Group = Backbone.Model.extend({
-    _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>groups/<%- group_name %>" title="<%- display_name %>"><%- group_name %></a>'),
+    _toHTML_template: _.template('<a href="<%- beaker_url_prefix %>groups/<%- encodeURIComponent(group_name) %>" title="<%- display_name %>"><%- group_name %></a>'),
     toHTML: function () {
         return this._toHTML_template(this.attributes);
     },

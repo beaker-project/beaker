@@ -184,6 +184,16 @@ window.Recipe = Backbone.Model.extend({
         options = options || {};
         if (options.url)
             this.url = options.url;
+        // set watchdog timer
+        var interval = 1;
+        var timer = window.setInterval(function() {
+            if (this.get('time_remaining_seconds') > 0) {
+                this.set({time_remaining_seconds: this.get('time_remaining_seconds') - 1});
+            }
+            else {
+                window.clearInterval(timer);
+            }
+        }.bind(this), interval*1000);
     },
     _create_resource: function (data) {
         switch (data['type']) {

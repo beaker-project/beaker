@@ -92,6 +92,18 @@ class GroupsGridTest(WebDriverTestCase):
         check_group_search_results(b, present=[inverted_group],
                 absent=[group])
 
+    def test_group_link_escapes_uri_characters(self):
+        bad_group_name = u'!@#$%^&*()_+{}|:><?'
+        with session.begin():
+            group = data_setup.create_group(group_name=bad_group_name)
+        b = self.browser
+        b.get(get_server_base() + 'groups/')
+        b.find_element_by_class_name('search-query').send_keys(
+                'group_name:"%s"' % group.group_name)
+        b.find_element_by_class_name('grid-filter').submit()
+        b.find_element_by_xpath('//table/tbody/tr/td[1]/a[text()="%s"]' % bad_group_name).click()
+        b.find_element_by_xpath('//title[text()="%s"]' % bad_group_name)
+
 
 class GroupCreationTest(WebDriverTestCase):
 

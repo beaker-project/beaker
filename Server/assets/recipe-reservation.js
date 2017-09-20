@@ -69,9 +69,6 @@ var RecipeRunningReservation = Backbone.View.extend({
         this.listenTo(this.model, 'change:time_remaining_seconds', this.render);
         this.render();
     },
-    clearTimer: function () {
-        window.clearInterval(this.timer);
-    },
     render: function () {
         this.$el.html(this.template(this.model.attributes));
     }
