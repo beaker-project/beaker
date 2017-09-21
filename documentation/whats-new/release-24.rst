@@ -425,3 +425,59 @@ been released:
   :program:`rhts-report-result` or :program:`rhts-submit-log`, the command will 
   exit with an error instead of an unhandled exception, to avoid triggering 
   abrt. (Contributed by Dan Callaghan)
+
+Beaker 24.4
+~~~~~~~~~~~
+
+* :issue:`1420471`: The boot menu for EFI GRUB now excludes distros which are
+  known not to support EFI, namely Red Hat Enterprise Linux 3, 4, and 5, and 
+  any distro for the i386 architecture. (Contributed by Dan Callaghan)
+* :issue:`1464120`: The ``<hypervisor/>`` element in host filter XML now works
+  correctly with systems which have no hypervisor. Previously this filter would 
+  incorrectly exclude systems when used with ``op="like"`` or ``<not/>``. 
+  (Contributed by Dan Callaghan)
+* :issue:`1470959`: Fixed a scheduling deadlock which could occur in certain
+  circumstances when two multi-host recipe sets both require the same candidate 
+  systems. (Contributed by Dan Callaghan)
+* :issue:`1344889`: Fixed an error when using the :program:`bkr` client with
+  Python 2.7.7+ through an HTTP proxy. (Contributed by Dan Callaghan)
+* :issue:`1457606`: The :program:`beaker-watchdog` daemon no longer crashes
+  when reporting a panic for a job which has non-ASCII characters in the 
+  whiteboard. (Contributed by Dan Callaghan)
+* :issue:`1043772`: Beaker now returns a more informative error message if you
+  attempt to create an LDAP group but the server is not configured to use LDAP. 
+  (Contributed by Anwesha Chatterjee)
+* :issue:`1469345`: Beaker's JSON API now returns a more informative error
+  message if you attempt to create a group with a name longer than 255 
+  characters. (Contributed by Anwesha Chatterjee)
+* :issue:`1358619`: The watchdog time remaining shown on the recipe page is now
+  correctly updated when you extend the reservation. (Contributed by Anwesha 
+  Chatterjee)
+* :issue:`1412897`: The post-install script for reporting the system hostname
+  now works correctly on RHEL5 when the system has no valid FQDN. (Contributed 
+  by Dan Callaghan)
+* :issue:`1472070`: The distros grid search for "Tag is not" now works
+  correctly. Previously it would fail with 500 Internal Server Error. 
+  (Contributed by Dan Callaghan)
+* :issue:`1473067`: The :program:`bkr` workflow commands now print a more
+  informative error message if you have not selected any tasks to run in your 
+  job, or if you have tried to select tasks for a package which does not exist. 
+  (Contributed by Anwesha Chatterjee)
+* :issue:`1473135`: The checkboxes for tracking recipe reviewed state on the
+  job page are now disabled when you have not logged in. Previously the 
+  checkboxes were not disabled but clicking them would do nothing. (Contributed 
+  by Anwesha Chatterjee)
+* :issue:`1360589`: Recipes are now automatically marked as reviewed if they
+  finish while the recipe page is open in the browser. Previously they would 
+  only be marked as reviewed if you refreshed the page. (Contributed by Anwesha 
+  Chatterjee)
+* :issue:`1340566`: Fixed a server-side error message which would occur if the
+  :program:`beaker-watchdog` daemon detected a kernel panic for a Reserved 
+  recipe. (Contributed by Anwesha Chatterjee)
+
+Version 4.0-95 of the ``/distribution/virt/install`` and version 1.0-9 of the 
+``/distribution/virt/image-install`` tasks have also been released:
+
+* :issue:`1465788`: The task now restarts the libvirtd service to ensure its
+  virtlogd feature is disabled. This is necessary with QEMU 2.9.0 and newer. 
+  (Contributed by Jan Stancek)
