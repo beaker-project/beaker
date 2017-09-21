@@ -115,7 +115,6 @@ def process_new_recipes(*args):
     work_done = False
     recipes = MachineRecipe.query\
             .join(MachineRecipe.recipeset).join(RecipeSet.job)\
-            .filter(Job.dirty_version == Job.clean_version)\
             .filter(Recipe.status == TaskStatus.new)
     for recipe_id, in recipes.values(MachineRecipe.id):
         session.begin()
@@ -183,7 +182,7 @@ def process_new_recipe(recipe_id):
 def queue_processed_recipesets(*args):
     work_done = False
     recipesets = RecipeSet.query.join(RecipeSet.job)\
-            .filter(and_(Job.dirty_version == Job.clean_version, Job.deleted == None))\
+            .filter(Job.deleted == None)\
             .filter(not_(RecipeSet.recipes.any(
                 Recipe.status != TaskStatus.processed)))
     for rs_id, in recipesets.values(RecipeSet.id):
@@ -371,7 +370,6 @@ def schedule_queued_recipes(*args):
 
         # This query will return queued recipes that are eligible to be scheduled.
         # They are determined to be eligible if:
-        # * They are clean
         # * There are systems available (see the filter criteria) in lab controllers where
         #   the recipe's distro tree is available.
         # * If it is a host recipe, the most recently created distro of all
@@ -383,7 +381,6 @@ def schedule_queued_recipes(*args):
         # until that situation was rectified.
         recipes = MachineRecipe.query\
             .join(Recipe.recipeset, RecipeSet.job)\
-            .filter(Job.dirty_version == Job.clean_version)\
             .outerjoin((guest_recipe, MachineRecipe.guests))\
             .outerjoin((guests_distro_tree, guest_recipe.distro_tree_id == guests_distro_tree.id))\
             .outerjoin((latest_guest_distro,
@@ -589,7 +586,6 @@ def provision_virt_recipes(*args):
     work_done = False
     recipes = MachineRecipe.query\
             .join(Recipe.recipeset).join(RecipeSet.job)\
-            .filter(Job.dirty_version == Job.clean_version)\
             .join(Recipe.distro_tree, DistroTree.lab_controller_assocs, LabController)\
             .filter(Recipe.status == TaskStatus.queued)\
             .filter(Recipe.virt_status == RecipeVirtStatus.possible)\
@@ -671,7 +667,7 @@ def provision_scheduled_recipesets(*args):
     """
     work_done = False
     recipesets = RecipeSet.query.join(RecipeSet.job)\
-            .filter(and_(Job.dirty_version == Job.clean_version, Job.deleted == None))\
+            .filter(Job.deleted == None)\
             .filter(not_(RecipeSet.recipes.any(
                 Recipe.status != TaskStatus.scheduled)))
     for rs_id, in recipesets.values(RecipeSet.id):
