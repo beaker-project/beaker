@@ -98,9 +98,8 @@ class GroupsGridTest(WebDriverTestCase):
             group = data_setup.create_group(group_name=bad_group_name)
         b = self.browser
         b.get(get_server_base() + 'groups/')
-        b.find_element_by_class_name('search-query').send_keys(
-                'group_name:"%s"' % group.group_name)
-        b.find_element_by_class_name('grid-filter').submit()
+        # We assume the group is always on the first page of results, which is
+        # likely since it's made of punctuation and therefore sorts to the top.
         b.find_element_by_xpath('//table/tbody/tr/td[1]/a[text()="%s"]' % bad_group_name).click()
         b.find_element_by_xpath('//title[text()="%s"]' % bad_group_name)
 
