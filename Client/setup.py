@@ -13,7 +13,7 @@ def bash_completion_dir():
 
 setup(
     name='beaker-client',
-    version='24.3',
+    version='24.4',
     description='Command-line client for interacting with Beaker',
     author='Red Hat, Inc.',
     author_email='beaker-devel@lists.fedorahosted.org',

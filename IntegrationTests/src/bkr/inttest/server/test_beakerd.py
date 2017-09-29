@@ -603,11 +603,13 @@ class TestBeakerd(DatabaseTestCase):
             data_setup.mark_job_complete(j1, only=True) # Release systemA
             j3 = Job.by_id(j3_id)
             data_setup.mark_job_queued(j3) # Queue higher priority recipes
-
-        # Ensure j2 is clean
-        with session.begin():
+            # j2 will be dirty. This can happen in the real scheduler if j2
+            # contains *other* unrelated recipe sets which are already running
+            # and receiving updates from the harness.
+            # But it shouldn't stop r2 from being scheduled.
             j2 = Job.by_id(j2_id)
-            j2.update_status()
+            self.assertTrue(j2.is_dirty)
+
         beakerd.schedule_queued_recipes()
         r2 = Recipe.by_id(r2_id)
         r3 = Recipe.by_id(r3_id)

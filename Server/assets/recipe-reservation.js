@@ -9,7 +9,7 @@
 window.RecipeReservationView = Backbone.View.extend({
     className: 'tab-pane recipe-reservation',
     initialize: function () {
-        this.listenTo(this.model, 'change', this.render);
+        this.listenTo(this.model, 'change:status', this.render);
         this.render();
     },
     render: function () {
@@ -35,6 +35,7 @@ window.RecipeReservationView = Backbone.View.extend({
 var RecipeCompletedReservation = Backbone.View.extend({
     template: JST['recipe-completed-reservation'],
     initialize: function () {
+        this.listenTo(this.model, 'change:reservation_held_by_recipes', this.render);
         this.render();
     },
     render: function () {
@@ -66,7 +67,8 @@ var RecipeRunningReservation = Backbone.View.extend({
         }
     },
     initialize: function (options) {
-        this.listenTo(this.model, 'change:time_remaining_seconds', this.render);
+        this.listenTo(this.model, 'change:can_edit change:time_remaining_seconds', this.render);
+        this.listenTo(this.model.get('reservation_request'), 'change', this.render);
         this.render();
     },
     render: function () {
@@ -122,6 +124,7 @@ var RecipePendingReservation = Backbone.View.extend({
         new EditRecipeReservationModal({model: this.model});
     },
     initialize: function (options) {
+        this.listenTo(this.model, 'change:can_edit', this.render);
         this.listenTo(this.model.get('reservation_request'), 'change', this.render);
         this.render();
     },

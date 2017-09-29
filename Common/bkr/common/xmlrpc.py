@@ -44,16 +44,16 @@ class TimeoutHTTPProxyConnection(TimeoutHTTPConnection):
     def __init__(self, host, proxy, port=None, proxy_user=None, proxy_password=None, **kwargs):
         TimeoutHTTPConnection.__init__(self, proxy, **kwargs)
         self.proxy, self.proxy_port = self.host, self.port
-        self._set_hostport(host, port)
+        self.set_host_and_port(host, port)
         self.real_host, self.real_port = self.host, self.port
         self.proxy_user = proxy_user
         self.proxy_password = proxy_password
 
     def connect(self):
         # Connect to the proxy
-        self._set_hostport(self.proxy, self.proxy_port)
+        self.set_host_and_port(self.proxy, self.proxy_port)
         httplib.HTTPConnection.connect(self)
-        self._set_hostport(self.real_host, self.real_port)
+        self.set_host_and_port(self.real_host, self.real_port)
         timeout = getattr(self, "_timeout", 0)
         if timeout:
             self.sock.settimeout(timeout)
@@ -73,6 +73,11 @@ class TimeoutHTTPProxyConnection(TimeoutHTTPConnection):
         enc_userpass = base64.encodestring(userpass).strip()
         self.putheader("Proxy-Authorization", "Basic %s" % enc_userpass)
 
+    def set_host_and_port(self, host, port):
+        if hasattr(self, "_set_hostport"): # Python < 2.7.7
+            self._set_hostport(host, port)
+        else:
+            (self.host, self.port) = self._get_hostport(host, port)
 
 class TimeoutHTTPSProxyConnection(TimeoutHTTPProxyConnection):
     default_port = httplib.HTTPSConnection.default_port
