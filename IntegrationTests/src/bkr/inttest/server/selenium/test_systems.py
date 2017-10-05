@@ -768,3 +768,17 @@ class SystemHTTPTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             self.assertEquals(system.power.power_quiescent_period, 0)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1497881
+    def test_cannot_give_to_deleted_user(self):
+        with session.begin():
+            system = data_setup.create_system()
+            deleted_user = data_setup.create_user()
+            deleted_user.removed = datetime.datetime.utcnow()
+        s = requests.Session()
+        requests_login(s)
+        response = patch_json(get_server_base() + 'systems/%s/' % system.fqdn,
+                session=s, data={'owner': {'user_name': deleted_user.user_name}})
+        self.assertEquals(response.status_code, 400)
+        self.assertEquals(response.text,
+                'Cannot change owner to deleted user %s' % deleted_user.user_name)

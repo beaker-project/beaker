@@ -360,6 +360,9 @@ def _update_system(system, data={}):
             new_owner = User.by_user_name(data['owner'].get('user_name'))
             if new_owner is None:
                 raise BadRequest400('No such user %s' % data['owner'].get('user_name'))
+            if new_owner.removed:
+                raise BadRequest400('Cannot change owner to deleted user %s'
+                        % new_owner.user_name)
             record_activity(u'Owner', system.owner, new_owner)
             system.owner = new_owner
             changed = True
