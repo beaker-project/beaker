@@ -2010,6 +2010,24 @@ class RecipeSetHTTPTest(DatabaseTestCase):
             session.expire_all()
             self.check_changed_recipeset()
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1497021
+    def test_group_member_can_reduce_group_job_priority_by_tid(self):
+        with session.begin():
+            group = data_setup.create_group()
+            group_member = data_setup.create_user(password=u'member')
+            group.add_member(group_member)
+            self.job.group = group
+        s = requests.Session()
+        requests_login(s, user=group_member, password=u'member')
+        response = patch_json(get_server_base() +
+                'recipesets/by-taskspec/%s' % self.job.t_id,
+                session=s, data={'priority': u'Low'})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            recipeset = self.job.recipesets[0]
+            self.assertEquals(recipeset.priority, TaskPriority.low)
+
     def test_update_containing_no_changes_should_silently_do_nothing(self):
         # PATCH request containing attributes with their existing values
         # should succeed and do nothing, including adding no activity records.
