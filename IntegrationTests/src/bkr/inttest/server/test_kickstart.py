@@ -2283,11 +2283,11 @@ part swap --recommended
             </job>
             ''', self.system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_('''
-network --bootproto=dhcp
+        self.assertIn('''
+network --bootproto=dhcp --hostname=test01.test-kickstart.invalid
 network --bootproto=static --device=00:11:22:33:44:55 --ip=192.168.99.1 --netmask=255.255.255.0
 network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netmask=255.255.255.0
-''' in k, k)
+''', k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=920470
     def test_dhcp_networks(self):
@@ -2308,11 +2308,11 @@ network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netma
             </job>
             ''', self.system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_('''
-network --bootproto=dhcp
+        self.assertIn('''
+network --bootproto=dhcp --hostname=test01.test-kickstart.invalid
 network --bootproto=dhcp --device=00:11:22:33:44:55
 network --bootproto=dhcp --device=66:77:88:99:aa:bb
-''' in k, k)
+''', k)
 
     def test_highbank(self):
         system = data_setup.create_system(arch=u'armhfp', status=u'Automated',

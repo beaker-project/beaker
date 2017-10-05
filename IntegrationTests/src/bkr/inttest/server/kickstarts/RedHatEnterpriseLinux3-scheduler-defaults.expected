@@ -6,7 +6,7 @@ bootloader --location=mbr
 # Use text mode install
 text
 
-# no specific network configuration
+network --bootproto=dhcp --hostname=test01.test-kickstart.invalid
 firewall --disabled
 # Run the Setup Agent on first boot
 firstboot --disable

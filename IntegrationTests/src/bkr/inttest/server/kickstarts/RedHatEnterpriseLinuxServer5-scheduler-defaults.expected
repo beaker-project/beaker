@@ -7,7 +7,7 @@ key 49af89414d147589
 bootloader --location=mbr
 
 
-# no specific network configuration
+network --bootproto=dhcp --hostname=test01.test-kickstart.invalid
 firewall --disabled
 # System keyboard
 keyboard us

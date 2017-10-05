@@ -4,7 +4,7 @@ nfs --server lab.test-kickstart.invalid --dir /distros/RHEL-6.2/Server/x86_64/os
 # System bootloader configuration
 bootloader --location=mbr
 cmdline
-# no specific network configuration
+network --bootproto=dhcp --hostname=test01.test-kickstart.invalid
 
 repo --name=beaker-HighAvailability --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/HighAvailability
 repo --name=beaker-LoadBalancer --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/LoadBalancer

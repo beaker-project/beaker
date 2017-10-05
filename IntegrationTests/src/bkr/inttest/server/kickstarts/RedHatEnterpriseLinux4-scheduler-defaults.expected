@@ -5,7 +5,7 @@ nfs --server lab.test-kickstart.invalid --dir /distros/RHEL-4/U9/AS/x86_64/tree/
 bootloader --location=mbr
 
 
-# no specific network configuration
+network --bootproto=dhcp --hostname=test01.test-kickstart.invalid
 firewall --disabled
 # System keyboard
 keyboard us

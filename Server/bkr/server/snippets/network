@@ -1,5 +1,5 @@
-{% if static_networks or dhcp_networks %}
-network --bootproto=dhcp
+network --bootproto=dhcp{% if system is defined and system.fqdn %} --hostname={{ system.fqdn }}{% endif %}
+
 {% if dhcp_networks %}
 {% for device in dhcp_networks|split(';') %}
 network --bootproto=dhcp --device={{ device }}
@@ -11,7 +11,4 @@ network --bootproto=dhcp --device={{ device }}
 {% set ip = netaddr.IPNetwork(cidr) %}
 network --bootproto=static --device={{ device }} --ip={{ ip.ip }} --netmask={{ ip.netmask }}
 {% endfor %}
-{% endif %}
-{% else %}
-# no specific network configuration
 {% endif %}

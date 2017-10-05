@@ -3,7 +3,7 @@ url --url=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/
 # System bootloader configuration
 bootloader --location=mbr
 text
-# no specific network configuration
+network --bootproto=dhcp --hostname=test01.test-kickstart.invalid
 
 repo --name=beaker-repos_addons_ScalableFileSystem --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/addons/ScalableFileSystem
 repo --name=beaker-repos_Workstation-optional --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation-optional/x86_64/os

@@ -4,7 +4,7 @@ nfs --server lab.test-kickstart.invalid --dir /distros/development/rawhide/x86_6
 # System bootloader configuration
 bootloader --location=mbr
 text
-# no specific network configuration
+network --bootproto=dhcp --hostname=test01.test-kickstart.invalid
 
 repo --name=beaker-debug --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/development/rawhide/x86_64/debug
 
