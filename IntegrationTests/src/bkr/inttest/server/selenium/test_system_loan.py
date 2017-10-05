@@ -5,11 +5,14 @@
 # (at your option) any later version.
 
 import unittest
+import datetime
+import requests
 from selenium.webdriver.support.ui import WebDriverWait
 from bkr.server.model import SystemActivity, System, SystemPermission
 from bkr.inttest.server.selenium import WebDriverTestCase
+from bkr.inttest.server.requests_utils import login as requests_login, post_json
 from bkr.inttest.server.webdriver_utils import login, logout
-from bkr.inttest import data_setup, with_transaction, get_server_base
+from bkr.inttest import data_setup, with_transaction, get_server_base, DatabaseTestCase
 from turbogears.database import session
 
 class SystemLoanTest(WebDriverTestCase):
@@ -255,3 +258,19 @@ class SystemLoanTest(WebDriverTestCase):
         self.change_loan(u' jgillard', expect_success=False)
         error = 'user name jgillard is invalid'
         self.verify_loan_error(error)
+
+class SystemLoanHTTPTest(DatabaseTestCase):
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1497881
+    def test_cannot_lend_to_deleted_user(self):
+        with session.begin():
+            system = data_setup.create_system()
+            deleted_user = data_setup.create_user()
+            deleted_user.removed = datetime.datetime.utcnow()
+        s = requests.Session()
+        requests_login(s)
+        response = post_json(get_server_base() + 'systems/%s/loans/' % system.fqdn,
+                session=s, data={'recipient': {'user_name': deleted_user.user_name}})
+        self.assertEquals(response.status_code, 400)
+        self.assertEquals(response.text,
+                'Cannot lend to deleted user %s' % deleted_user.user_name)

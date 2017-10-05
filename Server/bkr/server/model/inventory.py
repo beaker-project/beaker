@@ -1107,6 +1107,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
             if not user:
                 # This is an error condition
                 raise ValueError('user name %s is invalid' % loaning_to)
+            if user.removed:
+                raise ValueError('Cannot lend to deleted user %s' % user.user_name)
             if user == identity.current.user:
                 if not self.can_borrow(identity.current.user):
                     msg = '%s cannot borrow this system' % user
