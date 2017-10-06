@@ -111,6 +111,8 @@ def _get_owner(data):
         owner = User.by_user_name(user_name)
         if owner is None:
             raise BadRequest400('No such user %s' % user_name)
+        if owner.removed:
+            raise BadRequest400('System pool cannot be owned by deleted user %s' % owner.user_name)
         owner_type = 'user'
     if group_name:
         try:

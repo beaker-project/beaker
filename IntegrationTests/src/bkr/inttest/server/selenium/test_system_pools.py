@@ -568,6 +568,18 @@ class SystemPoolHTTPTest(DatabaseTestCase):
             self.assertEquals(pool.owner.user_name, self.owner.user_name)
             self.assertEquals(pool.access_policy.rules[0].everybody, True)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1498374
+    def test_cannot_create_system_pool_owned_by_deleted_user(self):
+        with session.begin():
+            self.owner.removed = datetime.datetime.utcnow()
+        s = requests.Session()
+        send_login(s)
+        response = post_json(get_server_base() + 'pools/', session=s,
+                data={'name': 'asdf', 'owner': {'user_name': self.owner.user_name}})
+        self.assertEquals(response.status_code, 400)
+        self.assertEquals(response.text,
+                'System pool cannot be owned by deleted user %s' % self.owner.user_name)
+
     def test_get_system_pool(self):
         response = requests.get(get_server_base() +
                 'pools/%s/' % self.pool.name, headers={'Accept': 'application/json'})
@@ -621,6 +633,18 @@ class SystemPoolHTTPTest(DatabaseTestCase):
         with session.begin():
             session.refresh(self.pool)
             self.assertTrue(self.pool.name)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1498374
+    def test_cannot_change_system_pool_owner_to_deleted_user(self):
+        with session.begin():
+            self.user.removed = datetime.datetime.utcnow()
+        s = requests.Session()
+        send_login(s, user=self.owner, password=u'theowner')
+        response = patch_json(get_server_base() + 'pools/%s/' % self.pool.name,
+                session=s, data={'owner': {'user_name': self.user.user_name}})
+        self.assertEquals(response.status_code, 400)
+        self.assertEquals(response.text,
+                'System pool cannot be owned by deleted user %s' % self.user.user_name)
 
     def test_add_system_to_pool(self):
         with session.begin():
