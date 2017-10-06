@@ -537,6 +537,7 @@ class UserHTTPTest(DatabaseTestCase):
             reserved_system.reserve_manually(service=u'testdata', user=user)
             reserved_system.custom_access_policy.add_rule(
                     SystemPermission.reserve, user=user)
+            owned_pool = data_setup.create_system_pool(owning_user=user)
             group = data_setup.create_group(owner=user)
         s = requests.Session()
         requests_login(s)
@@ -569,6 +570,12 @@ class UserHTTPTest(DatabaseTestCase):
             self.assertEqual(owned_system.activity[0].action, u'Changed')
             self.assertEqual(owned_system.activity[0].old_value, user.user_name)
             self.assertEqual(owned_system.activity[0].new_value, data_setup.ADMIN_USER)
+            # pools owned by the user should be transferred to the caller
+            self.assertEqual(owned_pool.owner.user_name, data_setup.ADMIN_USER)
+            self.assertEqual(owned_pool.activity[0].field_name, u'Owner')
+            self.assertEqual(owned_pool.activity[0].action, u'Changed')
+            self.assertEqual(owned_pool.activity[0].old_value, user.user_name)
+            self.assertEqual(owned_pool.activity[0].new_value, data_setup.ADMIN_USER)
             # group membership/ownership should be removed
             self.assertNotIn(group, user.groups)
             self.assertNotIn(user, group.users)
