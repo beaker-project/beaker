@@ -255,6 +255,8 @@ class Groups(RPCRoot):
             user = User.by_user_name(username)
             if user is None:
                 raise BX(_(u'User does not exist %s' % username))
+            if user.removed:
+                raise BX(_(u'Cannot add deleted user %s to group' % user.user_name))
 
             if user not in group.users:
                 group.add_member(user, service=u'XMLRPC',
@@ -607,6 +609,8 @@ def add_group_membership(group_name):
     if 'user_name' not in data:
         raise BadRequest400('User not specified')
     user = _get_user_by_username(data['user_name'])
+    if user.removed:
+        raise BadRequest400('Cannot add deleted user %s to group' % user.user_name)
     is_owner = data.get('is_owner', False)
     if user not in group.users:
         group.add_member(user, is_owner=is_owner, agent=identity.current.user)

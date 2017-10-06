@@ -4,12 +4,14 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import datetime
 import crypt
 import requests
+import xmlrpclib
 from turbogears.database import session
 from bkr.server.model import Group, User, Activity, UserGroup, \
     SystemPermission, GroupMembershipType
-from bkr.inttest.server.selenium import WebDriverTestCase
+from bkr.inttest.server.selenium import WebDriverTestCase, XmlRpcTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction, \
     mail_capture, DatabaseTestCase
 from bkr.inttest.server.webdriver_utils import login, logout, \
@@ -1169,6 +1171,19 @@ class GroupHTTPTest(DatabaseTestCase):
         self.assertIn("Cannot edit membership of group %s" %
                                 ldap_group.group_name, response.text)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1497881
+    def test_cannot_add_deleted_account_as_member(self):
+        with session.begin():
+            deleted_user = data_setup.create_user()
+            deleted_user.removed = datetime.datetime.utcnow()
+        s = requests.Session()
+        requests_login(s)
+        response = post_json(get_server_base() + 'groups/%s/members/' % self.group.group_name,
+                session=s, data={'user_name': deleted_user.user_name})
+        self.assertEquals(response.status_code, 400)
+        self.assertEquals(response.text,
+                'Cannot add deleted user %s to group' % deleted_user.user_name)
+
     def test_can_add_member(self):
         with session.begin():
             user = data_setup.create_user(password=u'password')
@@ -1495,3 +1510,23 @@ class GroupHTTPTest(DatabaseTestCase):
             self.assertEquals(self.inverted_group.activity[-1].field_name, 'User')
             self.assertEquals(self.inverted_group.activity[-1].action, 'Re-added')
             self.assertEquals(self.inverted_group.activity[-1].old_value, unicode(user))
+
+# There are no callers of the group XMLRPC methods left in Beaker itself, but 
+# we still support the XMLRPC methods for older client versions and other 
+# people's scripts, etc.
+class GroupXmlRpcTest(XmlRpcTestCase):
+
+    def setUp(self):
+        with session.begin():
+            self.owner = data_setup.create_user(password=u'owner')
+            self.group = data_setup.create_group(owner=self.owner)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1497881
+    def test_cannot_add_deleted_account_as_member(self):
+        with session.begin():
+            deleted_user = data_setup.create_user()
+            deleted_user.removed = datetime.datetime.utcnow()
+        server = self.get_server()
+        server.auth.login_password(self.owner.user_name, u'owner')
+        with self.assertRaisesRegexp(xmlrpclib.Fault, 'Cannot add deleted user .* to group'):
+            server.groups.modify(self.group.group_name, {'add_member': deleted_user.user_name})
