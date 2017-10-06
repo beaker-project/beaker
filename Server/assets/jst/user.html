@@ -42,6 +42,13 @@
       <% } %>
     </li>
     <li>
+      <% if (owned_pool_count == 0) { %>
+        Owner of 0 system pools
+      <% } else { %>
+        <a href="<%- beaker_url_prefix %>pools/?q=owner.user_name:<%- user_name %>">Owner of <%- owned_pool_count %> system pool<% if (owned_pool_count != 1) { %>s<% } %></a>
+      <% } %>
+    </li>
+    <li>
       <% if (group_membership_count == 0) { %>
         Member of 0 groups
       <% } else { %>

@@ -25,7 +25,7 @@ from turbogears import config
 
 from bkr.server.model import User, Job, System, SystemActivity, TaskStatus, \
     SystemAccessPolicyRule, GroupMembershipType, SystemStatus, ConfigItem, \
-    SSHPubKey
+    SSHPubKey, SystemPool
 
 class Users(RPCRoot):
     # For XMLRPC methods in this class.
@@ -187,6 +187,8 @@ def user_full_json(user):
     attributes['owned_system_count'] = System.query\
             .filter(System.status != SystemStatus.removed)\
             .filter(System.owner == user).count()
+    attributes['owned_pool_count'] = SystemPool.query\
+            .filter(SystemPool.owning_user == user).count()
     # Intentionally not counting membership in inverted groups because everyone 
     # is always in those
     attributes['group_membership_count'] = len(user.group_user_assocs)
