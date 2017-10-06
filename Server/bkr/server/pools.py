@@ -376,6 +376,8 @@ def add_access_policy_rule(pool_name):
         user = User.by_user_name(rule['user'])
         if not user:
             raise BadRequest400("User '%s' does not exist" % rule['user'])
+        if user.removed:
+            raise BadRequest400('Cannot add deleted user %s to access policy' % user.user_name)
     else:
         user = None
 

@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import datetime
 import requests
 from bkr.server.model import session, SystemAccessPolicy, SystemPermission, \
         Group
@@ -12,7 +13,7 @@ from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, logout, \
     find_policy_checkbox, check_policy_row_is_dirty, \
     check_policy_row_is_not_dirty, check_policy_row_is_absent
-from bkr.inttest.server.requests_utils import put_json
+from bkr.inttest.server.requests_utils import put_json, post_json
 from selenium.webdriver.support.ui import Select
 
 class SystemAccessPolicyWebUITest(WebDriverTestCase):
@@ -404,6 +405,29 @@ class SystemAccessPolicyHTTPTest(DatabaseTestCase):
             self.assertEquals(self.policy.rules[2].permission,
                     SystemPermission.control_system)
             self.assertEquals(self.policy.rules[2].everybody, True)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1497881
+    def test_cannot_add_deleted_user_to_access_policy(self):
+        with session.begin():
+            deleted_user = data_setup.create_user()
+            deleted_user.removed = datetime.datetime.utcnow()
+            bad_rule = {'user': deleted_user.user_name, 'permission': 'edit'}
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': self.owner.user_name,
+                'password': 'theowner'}).raise_for_status()
+        # Two different APIs for manipulating access policy rules
+        response = put_json(get_server_base() +
+                'systems/%s/access-policy' % self.system.fqdn, session=s,
+                data={'rules': [bad_rule]})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text,
+                'Cannot add deleted user %s to access policy' % deleted_user.user_name)
+        response = post_json(get_server_base() +
+                'systems/%s/access-policy/rules/' % self.system.fqdn, session=s,
+                data=bad_rule)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text,
+                'Cannot add deleted user %s to access policy' % deleted_user.user_name)
 
     def test_get_active_access_policy(self):
         response = requests.get(get_server_base() +

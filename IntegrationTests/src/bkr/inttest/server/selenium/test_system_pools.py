@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import datetime
 import requests
 from bkr.server.model import session, SystemAccessPolicy, SystemPermission, \
         Group, SystemPool, User, Activity
@@ -866,3 +867,25 @@ class SystemPoolAccessPolicyHTTPTest(DatabaseTestCase):
             self.assertFalse(self.pool.access_policy.grants
                              (user, SystemPermission.edit_system))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1497881
+    def test_cannot_add_deleted_user_to_access_policy(self):
+        with session.begin():
+            deleted_user = data_setup.create_user()
+            deleted_user.removed = datetime.datetime.utcnow()
+            bad_rule = {'user': deleted_user.user_name, 'permission': 'edit'}
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': self.owner.user_name,
+                'password': 'theowner'}).raise_for_status()
+        # Two different APIs for manipulating access policy rules
+        response = put_json(get_server_base() +
+                'pools/%s/access-policy/' % self.pool.name, session=s,
+                data={'rules': [bad_rule]})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text,
+                'Cannot add deleted user %s to access policy' % deleted_user.user_name)
+        response = post_json(get_server_base() +
+                'pools/%s/access-policy/rules/' % self.pool.name, session=s,
+                data=bad_rule)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text,
+                'Cannot add deleted user %s to access policy' % deleted_user.user_name)
