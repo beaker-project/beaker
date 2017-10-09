@@ -48,7 +48,9 @@ class CommonOptionsTest(ClientTestCase):
             run_client(['bkr', 'system-status', 'asdf.example.com'], config=config)
             self.fail('should raise')
         except ClientError as e:
-            self.assertEquals(e.stderr_output,
-                    'WARNING: client version is %s but server version is 999.3\n'
-                    'HTTP error: 404 Client Error: Not Found\n'
+            error_lines = e.stderr_output.splitlines()
+            self.assertEquals(error_lines[0],
+                    'WARNING: client version is %s but server version is 999.3'
                     % __version__)
+            self.assertIn('HTTP error: 404 Client Error: Not Found',
+                    error_lines[1])
