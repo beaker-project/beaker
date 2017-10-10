@@ -1270,6 +1270,17 @@ class OpenstackFlavorFilteringTest(DatabaseTestCase):
             """,
             present=[small_flavor], absent=[medium_flavor, large_flavor])
 
+    def test_not(self):
+        small_flavor = FakeFlavor(disk=10, ram=512, vcpus=1)
+        large_flavor = FakeFlavor(disk=20, ram=2048, vcpus=2)
+        self.check_filter("""
+            <hostRequires>
+                <not><pool value="somepool"/></not>
+                <not><memory op="&lt;" value="2048"/></not>
+            </hostRequires>
+            """,
+            present=[large_flavor], absent=[small_flavor])
+
 class VirtualisabilityTestCase(DatabaseTestCase):
 
     def setUp(self):
@@ -1421,3 +1432,13 @@ class VirtualisabilityTestCase(DatabaseTestCase):
             </hostRequires>
             """,
             False)
+
+    def test_not(self):
+        self.check_filter("""
+            <hostRequires>
+                <not>
+                    <pool value="somepool"/>
+                </not>
+            </hostRequires>
+            """,
+            True)
