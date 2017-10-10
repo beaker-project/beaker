@@ -83,11 +83,11 @@ def remove_labcontroller(labcontroller):
 
     # remove distro trees
     distro_tree_assocs = LabControllerDistroTree.query\
-        .filter(LabControllerDistroTree.lab_controller == labcontroller)\
-        .join(LabControllerDistroTree.distro_tree)
+        .filter(LabControllerDistroTree.lab_controller == labcontroller)
     DistroTree.record_bulk_activity(
-        distro_tree_assocs, user=identity.current.user,
-        service=u'HTTP', action=u'Removed', field=u'lab_controller_assocs',
+        distro_tree_assocs.join(LabControllerDistroTree.distro_tree),
+        user=identity.current.user, service=u'HTTP',
+        action=u'Removed', field=u'lab_controller_assocs',
         old=labcontroller.fqdn, new=None)
     distro_tree_assocs.delete(synchronize_session=False)
     labcontroller.disabled = True
