@@ -391,11 +391,11 @@ class Root(RPCRoot):
             class_field_list = search['table'].split('/')
             cls_ref = su.System.search.translate_name_to_class(class_field_list[0])
             col = class_field_list[1]              
-            #If value id False or True, let's convert them to
+            value = search.get('value', '')
             if class_field_list[0] != 'Key':
-                sys_search.append_results(cls_ref,search['value'],col,search['operation'])
+                sys_search.append_results(cls_ref, value, col, search['operation'])
             else:
-                sys_search.append_results(cls_ref,search['value'],col,search['operation'],keyvalue=search['keyvalue'])
+                sys_search.append_results(cls_ref, value, col, search['operation'], keyvalue=search['keyvalue'])
 
         return sys_search.return_results()
               
