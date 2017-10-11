@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import urllib
 import turbogears
 from turbojson import jsonify
 from flask import request
@@ -27,7 +28,7 @@ def beaker_version():
         return 'devel-version'   
 
 def login_url():
-    forward_url = request.path
+    forward_url = urllib.quote(request.path.encode('utf8'))
     if request.query_string:
         forward_url += '?%s' % request.query_string
     return turbogears.url('/login', forward_url=forward_url)

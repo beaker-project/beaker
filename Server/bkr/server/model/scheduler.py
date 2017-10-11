@@ -1832,9 +1832,12 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
             return []
         if user.in_group(['admin','queue_admin']):
             return [pri for pri in TaskPriority]
-        elif user == self.job.owner:
+        elif self.can_change_priority(user):
+            # Normal users are only allowed to *reduce* the priority,
+            # to prevent unfair queue jumping.
             return [pri for pri in TaskPriority
                     if TaskPriority.index(pri) <= TaskPriority.index(self.priority)]
+        return []
 
     def cancel_link(self):
         """ return link to cancel this recipe

@@ -49,10 +49,13 @@ def _update_recipeset(recipeset, data=None):
         if 'priority' in data:
             priority = TaskPriority.from_string(data['priority'])
             if priority != recipeset.priority:
-                if (not recipeset.can_change_priority(identity.current.user) or
-                        priority not in recipeset.allowed_priorities(identity.current.user)):
-                    raise Forbidden403('Cannot set recipe set %s priority to %s'
-                            % (recipeset.id, priority))
+                if not recipeset.can_change_priority(identity.current.user):
+                    raise Forbidden403('Cannot change recipe set %s priority' % recipeset.id)
+                allowed = recipeset.allowed_priorities(identity.current.user)
+                if priority not in allowed:
+                    raise Forbidden403('Cannot set recipe set %s priority to %s, '
+                            'permitted priorities are: %s'
+                            % (recipeset.id, priority, ' '.join(unicode(pri) for pri in allowed)))
                 record_activity(u'Priority', old=recipeset.priority.value, new=priority.value)
                 recipeset.priority = priority
         if 'waived' in data:

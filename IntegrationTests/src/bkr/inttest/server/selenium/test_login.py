@@ -9,6 +9,7 @@ import os
 import turbogears.config
 from turbogears.database import session
 import xmlrpclib
+import urllib
 from hashlib import sha1
 from unittest2 import SkipTest
 try:
@@ -77,6 +78,24 @@ class LoginTest(WebDriverTestCase):
         b.find_element_by_name('login').click()
         # Did it work?
         b.find_element_by_xpath('//title[text()="My Jobs"]')
+
+    def test_login_link_escapes_uri_characters(self):
+        bad_group_name = u'!@#$%^&*()_+{}|:><?'
+        with session.begin():
+            group = data_setup.create_group(group_name=bad_group_name)
+
+        # Go to the group page, whose URL contains URI-delimiting characters
+        b = self.browser
+        b.get(get_server_base() + '/groups/%s' % urllib.quote(bad_group_name))
+
+        # Click log in, and fill in details
+        b.find_element_by_link_text('Log in').click()
+        b.find_element_by_name('user_name').send_keys(self.user.user_name)
+        b.find_element_by_name('password').send_keys(self.password)
+        b.find_element_by_name('login').click()
+
+        # We should be back at the group page
+        b.find_element_by_xpath('//title[text()="%s"]' % bad_group_name)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=674566
 
