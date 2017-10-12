@@ -15,7 +15,7 @@ import xml.dom.minidom
 import lxml.etree
 from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
         Integer, Unicode, UnicodeText, DateTime, String, Boolean, Numeric, Float,
-        BigInteger, VARCHAR, TEXT, event)
+        BigInteger, VARCHAR, TEXT, event, Date)
 from sqlalchemy.sql import select, and_, or_, not_, case, func
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import (mapper, relationship, synonym,
@@ -1333,7 +1333,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
                                    bus = device['bus'],
                                    driver = device['driver'],
                                    device_class_id = device_class.id,
-                                   description = device['description'])
+                                   description = device['description'],
+                                   fw_version = device.get('fw_version', None))
             if mydevice not in self.devices:
                 self.devices.append(mydevice)
                 self.record_activity(user=identity.current.user,
@@ -2383,7 +2384,7 @@ class Device(DeclarativeMappedObject):
     __table_args__ = (
         UniqueConstraint('vendor_id', 'device_id', 'subsys_device_id',
                'subsys_vendor_id', 'bus', 'driver', 'description',
-               'device_class_id', name='device_uix_1'),
+               'device_class_id', 'fw_version', name='device_uix_1'),
         {'mysql_engine': 'InnoDB'}
     )
     id = Column(Integer, autoincrement=True, primary_key=True)
@@ -2398,6 +2399,7 @@ class Device(DeclarativeMappedObject):
     device_class = relationship(DeviceClass)
     date_added = Column(DateTime, default=datetime.utcnow, nullable=False)
     systems = relationship(System, secondary=system_device_map, back_populates='devices')
+    fw_version = Column(Unicode(32))
 
 Index('ix_device_pciid', Device.vendor_id, Device.device_id)
 

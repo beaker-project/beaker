@@ -128,6 +128,7 @@
       <th>Device ID</th>
       <th>Subsys Vendor ID</th>
       <th>Subsys Device ID</th>
+      <th>Firmware Version</th>
     </tr>
   </thead>
   <tbody>
@@ -155,6 +156,9 @@
         </td>
         <td>
             ${device.subsys_device_id}
+        </td>
+        <td>
+            ${device.fw_version}
         </td>
     </tr>
   </tbody>

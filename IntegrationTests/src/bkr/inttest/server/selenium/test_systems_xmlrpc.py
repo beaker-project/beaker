@@ -621,7 +621,7 @@ class PushXmlRpcTest(XmlRpcTestCase):
             'type': 'IDE', 'bus': u'pci', 'driver': u'PIIX_IDE',
             'vendorID': '8086', 'deviceID': '7111',
             'description': u'82371AB/EB/MB PIIX4 IDE',
-            'subsysVendorID': '0000', 'subsysDeviceID': '0000',
+            'subsysVendorID': '0000', 'subsysDeviceID': '0000', 'fw_version': None
         }]})
         with session.begin():
             session.refresh(system)
@@ -781,12 +781,48 @@ class PushXmlRpcTest(XmlRpcTestCase):
             'type': None, 'bus': u'pci', 'driver': u'noclass',
             'description': u'Oh so very tacky',
             'vendorID': None, 'deviceID': None,
-            'subsysVendorID': None, 'subsysDeviceID': None,
+            'subsysVendorID': None, 'subsysDeviceID': None, 'fw_version': None
         }]}
         self.server.push(system1.fqdn, device_data)
         # DeviceClass('NONE') already exists now, so do it again
         # and check that nothing blows up
         self.server.push(system2.fqdn, device_data)
+
+    # pass device with no fw_version for backward compatibility.
+    def test_device_with_no_firmware(self):
+        with session.begin():
+            system = data_setup.create_system()
+        self.server.push(system.fqdn, {'Devices': [{
+            'type': None, 'bus': u'pci', 'driver': u'noclass',
+            'description': u'Oh so very tacky',
+            'vendorID': None, 'deviceID': None,
+            'subsysVendorID': None, 'subsysDeviceID': None
+        }]})
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals(system.devices[0].fw_version, None)
+
+    # verify devices are saved properly.
+    def test_device_saved_properly(self):
+        with session.begin():
+            system = data_setup.create_system()
+        self.server.push(system.fqdn, {'Devices': [{
+            'type': None, 'bus': u'pci', 'driver': u'noclass',
+            'description': u'Oh so very tacky',
+            'vendorID': '1234', 'deviceID': '5678',
+            'subsysVendorID': '6543', 'subsysDeviceID': '1478',
+            'fw_version': 'ABCD'
+        }]})
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals(system.devices[0].bus, u'pci' )
+            self.assertEquals(system.devices[0].driver, u'noclass')
+            self.assertEquals(system.devices[0].description, u'Oh so very tacky')
+            self.assertEquals(system.devices[0].vendor_id, '1234')
+            self.assertEquals(system.devices[0].device_id, '5678')
+            self.assertEquals(system.devices[0].subsys_vendor_id, '6543')
+            self.assertEquals(system.devices[0].subsys_device_id, '1478')
+            self.assertEquals(system.devices[0].fw_version, 'ABCD')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1253111
     def test_unrecognised_arches_are_not_automatically_created(self):
