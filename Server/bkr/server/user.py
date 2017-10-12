@@ -25,7 +25,7 @@ from turbogears import config
 
 from bkr.server.model import User, Job, System, SystemActivity, TaskStatus, \
     SystemAccessPolicyRule, GroupMembershipType, SystemStatus, ConfigItem, \
-    SSHPubKey
+    SSHPubKey, SystemPool
 
 class Users(RPCRoot):
     # For XMLRPC methods in this class.
@@ -40,8 +40,9 @@ class Users(RPCRoot):
         * it is removed from all groups and access policies
         * any running jobs owned by the account are cancelled
         * any systems reserved by or loaned to the account are returned
-        * any systems owned by the account are transferred to the admin running this 
-          command, or some other user if specified using the *newowner* parameter
+        * any systems and system pools owned by the account are transferred to
+          the admin running this command, or some other user if specified using
+          the *newowner* parameter
         * the account is disabled for further login
 
         :param username: An existing username
@@ -100,6 +101,8 @@ def _remove(user, method, **kw):
         system.record_activity(user=identity.current.user, service=method,
                 action=u'Changed', field=u'Owner',
                                old=u'%s' % user, new=u'%s' % newowner)
+    for pool in SystemPool.query.filter(SystemPool.owning_user == user):
+        pool.change_owner(user=newowner, service=method)
     # Remove the user from all groups
     for group in user.groups:
         if not group.membership_type == GroupMembershipType.inverted:
@@ -187,6 +190,8 @@ def user_full_json(user):
     attributes['owned_system_count'] = System.query\
             .filter(System.status != SystemStatus.removed)\
             .filter(System.owner == user).count()
+    attributes['owned_pool_count'] = SystemPool.query\
+            .filter(SystemPool.owning_user == user).count()
     # Intentionally not counting membership in inverted groups because everyone 
     # is always in those
     attributes['group_membership_count'] = len(user.group_user_assocs)

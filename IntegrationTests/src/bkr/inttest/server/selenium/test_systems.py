@@ -22,7 +22,7 @@ from bkr.inttest import data_setup, get_server_base, with_transaction, \
         DatabaseTestCase
 from bkr.inttest.assertions import assert_sorted
 from bkr.server.model import Cpu, Key, Key_Value_String, System, \
-    SystemStatus, SystemPermission, Job, Disk, User
+    SystemStatus, SystemPermission, Job, Disk, User, Hypervisor
 from bkr.inttest.server.webdriver_utils import check_system_search_results, login, \
     wait_for_animation
 from bkr.inttest.server.requests_utils import patch_json, login as requests_login
@@ -355,6 +355,23 @@ class TestSystemsAtomFeed(DatabaseTestCase):
         feed = lxml.etree.parse(urlopen(feed_url)).getroot()
         self.assertFalse(self.feed_contains_system(feed, nopool.fqdn))
         self.assertTrue(self.feed_contains_system(feed, inpool.fqdn))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1498804
+    def test_filter_with_no_value(self):
+        with session.begin():
+            not_virtualised = data_setup.create_system()
+            not_virtualised.hypervisor = None
+            virtualised = data_setup.create_system()
+            virtualised.hypervisor = Hypervisor.by_name(u'KVM')
+        feed_url = urljoin(get_server_base(), '?' + urlencode({
+                'tg_format': 'atom',
+                'list_tgp_order': '-date_modified',
+                'list_tgp_limit': '0',
+                'systemsearch-0.table': 'System/Hypervisor',
+                'systemsearch-0.operation': 'is'}))
+        feed = lxml.etree.parse(urlopen(feed_url)).getroot()
+        self.assertFalse(self.feed_contains_system(feed, virtualised.fqdn))
+        self.assertTrue(self.feed_contains_system(feed, not_virtualised.fqdn))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=690063
     def test_xml_filter(self):
@@ -768,3 +785,17 @@ class SystemHTTPTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             self.assertEquals(system.power.power_quiescent_period, 0)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1497881
+    def test_cannot_give_to_deleted_user(self):
+        with session.begin():
+            system = data_setup.create_system()
+            deleted_user = data_setup.create_user()
+            deleted_user.removed = datetime.datetime.utcnow()
+        s = requests.Session()
+        requests_login(s)
+        response = patch_json(get_server_base() + 'systems/%s/' % system.fqdn,
+                session=s, data={'owner': {'user_name': deleted_user.user_name}})
+        self.assertEquals(response.status_code, 400)
+        self.assertEquals(response.text,
+                'Cannot change owner to deleted user %s' % deleted_user.user_name)

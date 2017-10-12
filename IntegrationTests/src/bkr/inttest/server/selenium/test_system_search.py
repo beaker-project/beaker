@@ -8,7 +8,7 @@ from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.keys import Keys
 from bkr.server.model import Numa, User, Key, Key_Value_String, Key_Value_Int, \
     Device, DeviceClass, Disk, Cpu, SystemPermission, System, \
-    SystemType, SystemStatus
+    SystemType, SystemStatus, Hypervisor
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import get_server_base, login, \
         search_for_system, wait_for_animation, check_system_search_results
@@ -467,6 +467,31 @@ class Search(WebDriverTestCase):
         # containing </script> so we can only expect empty results. The 
         # important thing is that there should not be a JS alert present.
         b.find_element_by_xpath('//span[@class="item-count" and text()="Items found: 0"]')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1498804
+    def test_no_value(self):
+        # This is just a bizarre edge case in how the existing search bar 
+        # handles adding new rows to the search, causing the value control to 
+        # be "unsuccessful" in HTML forms parlance.
+        # Just delete this test when the search bar is improved in future.
+        with session.begin():
+            not_virtualised = data_setup.create_system(fqdn=u'bz1498804.notvirtualised')
+            not_virtualised.hypervisor = None
+            virtualised = data_setup.create_system(fqdn=u'bz1498804.virtualised')
+            virtualised.hypervisor = Hypervisor.by_name(u'KVM')
+        b = self.browser
+        # Open a page with an existing search filled in.
+        b.get(get_server_base() +
+                '?systemsearch-0.table=System%2FName'
+                '&systemsearch-0.operation=contains'
+                '&systemsearch-0.value=bz1498804')
+        # Add a new row to the search
+        b.find_element_by_id('doclink').click()
+        # Select a field, but don't type anything into the value
+        Select(b.find_element_by_name('systemsearch-1.table'))\
+            .select_by_visible_text('System/Hypervisor')
+        b.find_element_by_id('searchform').submit()
+        check_system_search_results(b, present=[not_virtualised], absent=[virtualised])
 
 class LabControllerSearchTest(WebDriverTestCase):
 

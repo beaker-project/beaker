@@ -360,6 +360,9 @@ def _update_system(system, data={}):
             new_owner = User.by_user_name(data['owner'].get('user_name'))
             if new_owner is None:
                 raise BadRequest400('No such user %s' % data['owner'].get('user_name'))
+            if new_owner.removed:
+                raise BadRequest400('Cannot change owner to deleted user %s'
+                        % new_owner.user_name)
             record_activity(u'Owner', system.owner, new_owner)
             system.owner = new_owner
             changed = True
@@ -952,6 +955,9 @@ def _edit_access_policy_rules(object, policy, rules=None):
                 user = User.by_user_name(rule['user'])
                 if user is None:
                     raise BadRequest400('No such user %r' % rule['user'])
+                if user.removed:
+                    raise BadRequest400('Cannot add deleted user %s to access policy'
+                            % user.user_name)
             else:
                 user = None
             try:
@@ -1019,6 +1025,8 @@ def add_system_access_policy_rule(fqdn):
         user = User.by_user_name(rule['user'])
         if not user:
             raise BadRequest400("User '%s' does not exist" % rule['user'])
+        if user.removed:
+            raise BadRequest400('Cannot add deleted user %s to access policy' % user.user_name)
     else:
         user = None
 

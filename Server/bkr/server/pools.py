@@ -111,6 +111,8 @@ def _get_owner(data):
         owner = User.by_user_name(user_name)
         if owner is None:
             raise BadRequest400('No such user %s' % user_name)
+        if owner.removed:
+            raise BadRequest400('System pool cannot be owned by deleted user %s' % owner.user_name)
         owner_type = 'user'
     if group_name:
         try:
@@ -376,6 +378,8 @@ def add_access_policy_rule(pool_name):
         user = User.by_user_name(rule['user'])
         if not user:
             raise BadRequest400("User '%s' does not exist" % rule['user'])
+        if user.removed:
+            raise BadRequest400('Cannot add deleted user %s to access policy' % user.user_name)
     else:
         user = None
 

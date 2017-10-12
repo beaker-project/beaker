@@ -252,6 +252,20 @@ class XmlNot(ElementWrapper):
                     queries.append(query)
         return not_(and_(*queries))
 
+    def filter_openstack_flavors(self, flavors, lab_controller):
+        # Acceptable flavours are any flavour which was *not* matched by the
+        # child filters.
+        result = set(flavors)
+        for child in self:
+            child_result = child.filter_openstack_flavors(flavors, lab_controller)
+            result.difference_update(child_result)
+        return list(result)
+
+    def virtualisable(self):
+        # Even if the child filters cannot be satisfied by OpenStack,
+        # the negation of them probably can be.
+        return True
+
 
 class XmlDistroArch(ElementWrapper):
     """

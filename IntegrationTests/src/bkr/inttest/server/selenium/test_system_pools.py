@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import datetime
 import requests
 from bkr.server.model import session, SystemAccessPolicy, SystemPermission, \
         Group, SystemPool, User, Activity
@@ -567,6 +568,18 @@ class SystemPoolHTTPTest(DatabaseTestCase):
             self.assertEquals(pool.owner.user_name, self.owner.user_name)
             self.assertEquals(pool.access_policy.rules[0].everybody, True)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1498374
+    def test_cannot_create_system_pool_owned_by_deleted_user(self):
+        with session.begin():
+            self.owner.removed = datetime.datetime.utcnow()
+        s = requests.Session()
+        send_login(s)
+        response = post_json(get_server_base() + 'pools/', session=s,
+                data={'name': 'asdf', 'owner': {'user_name': self.owner.user_name}})
+        self.assertEquals(response.status_code, 400)
+        self.assertEquals(response.text,
+                'System pool cannot be owned by deleted user %s' % self.owner.user_name)
+
     def test_get_system_pool(self):
         response = requests.get(get_server_base() +
                 'pools/%s/' % self.pool.name, headers={'Accept': 'application/json'})
@@ -620,6 +633,18 @@ class SystemPoolHTTPTest(DatabaseTestCase):
         with session.begin():
             session.refresh(self.pool)
             self.assertTrue(self.pool.name)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1498374
+    def test_cannot_change_system_pool_owner_to_deleted_user(self):
+        with session.begin():
+            self.user.removed = datetime.datetime.utcnow()
+        s = requests.Session()
+        send_login(s, user=self.owner, password=u'theowner')
+        response = patch_json(get_server_base() + 'pools/%s/' % self.pool.name,
+                session=s, data={'owner': {'user_name': self.user.user_name}})
+        self.assertEquals(response.status_code, 400)
+        self.assertEquals(response.text,
+                'System pool cannot be owned by deleted user %s' % self.user.user_name)
 
     def test_add_system_to_pool(self):
         with session.begin():
@@ -866,3 +891,25 @@ class SystemPoolAccessPolicyHTTPTest(DatabaseTestCase):
             self.assertFalse(self.pool.access_policy.grants
                              (user, SystemPermission.edit_system))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1497881
+    def test_cannot_add_deleted_user_to_access_policy(self):
+        with session.begin():
+            deleted_user = data_setup.create_user()
+            deleted_user.removed = datetime.datetime.utcnow()
+            bad_rule = {'user': deleted_user.user_name, 'permission': 'edit'}
+        s = requests.Session()
+        s.post(get_server_base() + 'login', data={'user_name': self.owner.user_name,
+                'password': 'theowner'}).raise_for_status()
+        # Two different APIs for manipulating access policy rules
+        response = put_json(get_server_base() +
+                'pools/%s/access-policy/' % self.pool.name, session=s,
+                data={'rules': [bad_rule]})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text,
+                'Cannot add deleted user %s to access policy' % deleted_user.user_name)
+        response = post_json(get_server_base() +
+                'pools/%s/access-policy/rules/' % self.pool.name, session=s,
+                data=bad_rule)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text,
+                'Cannot add deleted user %s to access policy' % deleted_user.user_name)

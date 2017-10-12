@@ -380,6 +380,9 @@ class CSV_System(CSV):
                 if not owner:
                     raise ValueError("%s: Invalid User %s" %
                                               (system.fqdn, data['owner']))
+                if owner.removed:
+                    raise ValueError('%s: user %s is deleted'
+                            % (system.fqdn, owner.user_name))
             else:
                 owner = None
             if system.owner != owner:
