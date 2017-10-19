@@ -710,7 +710,7 @@ class Group(DeclarativeMappedObject, ActivityMixin):
 
     def is_protected_group(self):
         """Some group names are predefined by Beaker and cannot be modified"""
-        return self.group_name in (u'admin', u'queue_admin', u'lab_controller')
+        return self.group_name in (u'admin', u'lab_controller')
 
     def set_root_password(self, user, service, password):
         if self.root_password != password:

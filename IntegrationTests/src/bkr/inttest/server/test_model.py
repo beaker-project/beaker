@@ -1615,8 +1615,6 @@ class GroupTest(DatabaseTestCase):
         # The admin and lab_controller groups exist by default
         groups = [Group.by_name(u'admin')]
         groups.append(Group.by_name(u'lab_controller'))
-        # The queue_admin group is also special, but not created by default
-        groups.append(data_setup.create_group(group_name=u'queue_admin'))
         for group in groups:
             self.assert_(group.is_protected_group())
             orig_name = group.group_name

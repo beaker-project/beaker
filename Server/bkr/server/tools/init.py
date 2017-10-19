@@ -155,6 +155,13 @@ def populate_db(user_name=None, password=None, user_display_name=None,
         lab_controller.permissions.append(secret_visible_perm)
         admin.permissions.append(secret_visible_perm)
 
+    # Create change_prio perm if not present
+    try:
+        change_prio_perm = Permission.by_name(u'change_prio')
+    except NoResultFound:
+        change_prio_perm = Permission(u'change_prio')
+        session.add(change_prio_perm)
+
     #Setup Hypervisors Table
     if Hypervisor.query.count() == 0:
         for h in [u'KVM', u'Xen', u'HyperV', u'VMWare']:

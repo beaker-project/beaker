@@ -1320,7 +1320,7 @@ class Job(TaskBase, ActivityMixin):
         """Return True iff the given user can change the priority"""
         can_change = self._can_administer(user)
         if not can_change and user:
-            can_change = user.in_group(['admin','queue_admin'])
+            can_change = user.has_permission('change_prio')
         return can_change
 
     def can_change_whiteboard(self, user=None):
@@ -1719,7 +1719,7 @@ class RecipeSet(TaskBase, ActivityMixin):
     def allowed_priorities_initial(cls,user):
         if not user:
             return
-        if user.in_group(['admin','queue_admin']):
+        if user.is_admin() or user.has_permission('change_prio'):
             return [pri for pri in TaskPriority]
         default = TaskPriority.default_priority()
         return [pri for pri in TaskPriority
@@ -1838,7 +1838,7 @@ class RecipeSet(TaskBase, ActivityMixin):
     def allowed_priorities(self,user):
         if not user:
             return []
-        if user.in_group(['admin','queue_admin']):
+        if user.is_admin() or user.has_permission('change_prio'):
             return [pri for pri in TaskPriority]
         elif self.can_change_priority(user):
             # Normal users are only allowed to *reduce* the priority,

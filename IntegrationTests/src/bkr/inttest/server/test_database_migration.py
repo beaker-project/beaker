@@ -18,7 +18,7 @@ from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, User
         OSMajor, OSMajorInstallOptions, GroupMembershipType, SystemActivity, \
         Activity, RecipeSetComment, Recipe, RecipeSet, RecipeTaskResult, \
         Command, CommandStatus, LogRecipeTaskResult, DataMigration, Job, \
-        SystemSchedulerStatus
+        SystemSchedulerStatus, Permission
 
 def has_initial_sublist(larger, prefix):
     """ Return true iff list *prefix* is an initial sublist of list 
@@ -1318,4 +1318,15 @@ class MigrationTest(unittest.TestCase):
             self.assertIsNone(
                 connection.scalar('SELECT * FROM installation where recipe_id=1'))
 
-
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1159105
+    def test_queue_admin_group_is_granted_permission(self):
+        with self.migration_metadata.bind.connect() as connection:
+            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
+            connection.execute(
+                    "INSERT INTO tg_group (group_id, group_name, display_name, membership_type, created) "
+                    "VALUES (41, 'queue_admin', 'queue_admin', 'normal', '2010-05-17 17:23:47')")
+        upgrade_db(self.migration_metadata)
+        group = self.migration_session.query(Group).get(41)
+        change_prio = self.migration_session.query(Permission)\
+            .filter_by(permission_name=u'change_prio').one()
+        self.assertEquals(group.permissions, [change_prio])

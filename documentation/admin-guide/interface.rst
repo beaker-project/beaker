@@ -20,9 +20,9 @@ LDAP. Administrators with command line access to the main Beaker server may also
 run ``beaker-refresh-ldap`` directly to force an immediate update from the
 LDAP server.
 
-You can also grant additional permissions to groups. These permissions would 
-typically only be granted to special groups for service accounts or privileged 
-users. The following permissions are defined:
+You can also grant special system-wide permissions to groups. These permissions 
+would typically only be granted to special groups for service accounts or 
+privileged users. The following permissions are defined:
 
     tag_distro
         Permitted to tag and untag distros.
@@ -34,6 +34,8 @@ users. The following permissions are defined:
     stop_task
         Permitted to stop, cancel, or abort jobs or recipe sets owned by any 
         user.
+    change_prio
+        Permitted to increase or decrease the priority of any user's job.
 
 .. _admin-os-versions:
 
