@@ -21,12 +21,157 @@ from turbogears.database import session
 from bkr.server import identity
 from bkr.server.helpers import make_link
 from bkr.server.util import convert_db_lookup_error
-from bkr.server.installopts import InstallOptions
+from bkr.server.installopts import InstallOptions, global_install_options
 from .sql import ConditionalInsert
 from .base import DeclarativeMappedObject
 from .types import ImageType, SystemStatus
 from .activity import Activity, ActivityMixin
 from .lab import LabController
+
+def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
+    """
+    Returns the default install options supplied by Beaker (rather than the 
+    admin) based on some hardcoded OS major names.
+    This is where installer feature test variables are populated.
+    """
+    # Some convenience variables to make the name-based checks simpler:
+    name, version = OSMajor._split(osmajor_name)
+    rhel, fedora = False, False
+    if name in ('RedHatEnterpriseLinux', 'RedHatEnterpriseLinuxServer',
+            'RedHatEnterpriseLinuxClient', 'RedHatEnterpriseLinuxServerGrid',
+            'CentOS'):
+        rhel = version
+    if osmajor_name in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3',
+            'RedHatGlusterStorage3'):
+        rhel = '6'
+    if name == 'Fedora':
+        fedora = version
+
+    # We default to assuming all features are present, with features 
+    # conditionally turned off if needed. That way, unrecognised custom 
+    # distros will be assumed to support all features. The admin can 
+    # override these in OS major or distro install options if necessary.
+    ks_meta = {}
+    # %end
+    ks_meta['end'] = '%end'
+    if rhel in ('3', '4', '5'):
+        ks_meta['end'] = ''
+    # key option for RHEL 5
+    if rhel and int(rhel) == 5:
+        ks_meta['has_key'] = True
+    # autopart --type
+    ks_meta['has_autopart_type'] = True
+    if rhel in ('3', '4', '5', '6') or \
+            (fedora and fedora != 'rawhide' and int(fedora) < 18):
+        del ks_meta['has_autopart_type']
+    # chrony
+    ks_meta['has_chrony'] = True
+    if rhel in ('3', '4', '5', '6'):
+        del ks_meta['has_chrony']
+    # DHCP option 26
+    ks_meta['has_dhcp_mtu_support'] = True
+    if rhel in ('3', '4'):
+        del ks_meta['has_dhcp_mtu_support']
+    # GPT on BIOS
+    ks_meta['has_gpt_bios_support'] = True
+    if rhel in ('3', '4', '5', '6'):
+        del ks_meta['has_gpt_bios_support']
+    # bootloader --leavebootorder
+    ks_meta['has_leavebootorder'] = True
+    if rhel in ('3', '4', '5', '6') or \
+            (fedora and fedora != 'rawhide' and int(fedora) < 18):
+        del ks_meta['has_leavebootorder']
+    # repo --cost
+    ks_meta['has_repo_cost'] = True
+    if rhel in ('3', '4', '5'):
+        del ks_meta['has_repo_cost']
+    # systemd vs. SysV init
+    ks_meta['has_systemd'] = True
+    if rhel in ('3', '4', '5', '6') or \
+            (fedora and fedora != 'rawhide' and int(fedora) < 15):
+        del ks_meta['has_systemd']
+    # unsupported_hardware
+    ks_meta['has_unsupported_hardware'] = True
+    if rhel in ('3', '4', '5'):
+        del ks_meta['has_unsupported_hardware']
+    # yum
+    if rhel == '3':
+        ks_meta['yum'] = 'yum-2.2.2-1.rhts.EL3.noarch.rpm'
+    elif rhel == '4':
+        ks_meta['yum'] = 'yum-2.2.2-1.rhts.EL4.noarch.rpm'
+    # mode
+    if rhel == '6':
+        ks_meta['mode'] = 'cmdline'
+    if rhel in ('4', '5'):
+        ks_meta['mode'] = ''
+    # docker package name
+    ks_meta['docker_package'] = 'docker'
+    if (fedora and fedora != 'rawhide' and int(fedora) < 22)  or (rhel and int(rhel) <= 6):
+        ks_meta['docker_package'] = 'docker-io'
+    # recommended boot partition size
+    if rhel in ('5', '6'):
+        ks_meta['boot_partition_size'] = 250
+    elif rhel in ('3', '4'):
+        ks_meta['boot_partition_size'] = 200
+    # names of package groups containing conflicts
+    if name in ('RedHatEnterpriseLinux', 'RedHatEnterpriseLinuxServer',
+        'RedHatEnterpriseLinuxClient'):
+        if int(rhel) >= 5:
+            ks_meta['conflicts_groups'] = ['conflicts']
+        if (int(rhel) >= 6) and variant:
+            ks_meta['conflicts_groups'] = ['conflicts-%s' % variant.lower()]
+    elif name == 'CentOS' and int(rhel) >= 6:
+        ks_meta['conflicts_groups'] = [
+                'conflicts-client',
+                'conflicts-server',
+                'conflicts-workstation',
+        ]
+    else:
+        ks_meta['conflicts_groups'] = []
+
+    kernel_options = {}
+    # set arch specific default netboot loader paths
+    # relative to the TFTP root directory
+    netbootloader = {'i386': 'pxelinux.0',
+                     # We can't distinguish between UEFI and BIOS systems at this level
+                     # so, we default to pxelinux.0
+                     'x86_64': 'pxelinux.0',
+                     'ia64': 'elilo-ia64.efi',
+                     'ppc': 'yaboot',
+                     'ppc64': 'boot/grub2/powerpc-ieee1275/core.elf',
+                     'ppc64le': 'boot/grub2/powerpc-ieee1275/core.elf',
+                     'aarch64': 'aarch64/bootaa64.efi',
+                     }
+    if rhel and (int(rhel) <= 6 or (int(rhel) == 7 and osminor == '0')):
+        netbootloader['ppc64'] = 'yaboot'
+        netbootloader['ppc64le'] = 'yaboot'
+    # for s390, s390x and armhfp, we default to ''
+    kernel_options['netbootloader'] = netbootloader.get(arch.arch, '')
+    if arch.arch in ['ppc', 'ppc64', 'ppc64le']:
+        kernel_options['leavebootorder'] = None
+
+    return InstallOptions(ks_meta, kernel_options, {})
+
+def install_options_for_distro(osmajor_name, osminor, variant, arch):
+    sources = []
+    sources.append(global_install_options())
+    sources.append(default_install_options_for_distro(
+            osmajor_name, osminor, variant, arch))
+    try:
+        osmajor = OSMajor.by_name(osmajor_name)
+    except NoResultFound:
+        pass # not known to Beaker
+    else:
+        # arch=None means apply to all arches
+        if None in osmajor.install_options_by_arch:
+            op = osmajor.install_options_by_arch[None]
+            sources.append(InstallOptions.from_strings(
+                    op.ks_meta, op.kernel_options, op.kernel_options_post))
+        if arch in osmajor.install_options_by_arch:
+            opa = osmajor.install_options_by_arch[arch]
+            sources.append(InstallOptions.from_strings(
+                    opa.ks_meta, opa.kernel_options, opa.kernel_options_post))
+    return InstallOptions.reduce(sources)
 
 xmldoc = xml.dom.minidom.Document()
 
@@ -263,19 +408,20 @@ class OSMajor(DeclarativeMappedObject):
 
     def _sort_key(self):
         # Separate out the trailing digits, so that Fedora9 sorts before Fedora10
-        name, version = self._split()
+        name, version = self._split(self.osmajor)
         if version == 'rawhide':
             version = 999
         elif version:
             version = int(version)
         return (name.lower(), version)
 
-    def _split(self):
-        return re.match(r'(.*?)(rawhide|\d*)$', self.osmajor).groups()
+    @staticmethod
+    def _split(osmajor):
+        return re.match(r'(.*?)(rawhide|\d*)$', osmajor).groups()
 
     @property
     def name(self):
-        name, version = self._split()
+        name, version = self._split(self.osmajor)
         return name
 
     @property
@@ -285,7 +431,7 @@ class OSMajor(DeclarativeMappedObject):
         Note that this is not an int because it may be 'rawhide'!
         """
         # This property is called number to avoid confusion with OSVersion.
-        name, version = self._split()
+        name, version = self._split(self.osmajor)
         return version
 
     @staticmethod
@@ -297,93 +443,6 @@ class OSMajor(DeclarativeMappedObject):
     def validate_osmajor(self, key, value):
         self._validate_osmajor(value)
         return value
-
-    def default_install_options(self):
-        """
-        Returns the default install options supplied by Beaker (rather than the 
-        admin) based on some hardcoded OS major names.
-        This is where installer feature test variables are populated.
-        """
-        # We default to assuming all features are present, with features 
-        # conditionally turned off if needed. That way, unrecognised custom 
-        # distros will be assumed to support all features. The admin can 
-        # override these in OS major or distro install options if necessary.
-        ks_meta = {}
-        # Some convenience variables to make the name-based checks simpler:
-        name, version = self._split()
-        rhel, fedora = False, False
-        if name in ('RedHatEnterpriseLinux', 'RedHatEnterpriseLinuxServer',
-                'RedHatEnterpriseLinuxClient', 'RedHatEnterpriseLinuxServerGrid',
-                'CentOS'):
-            rhel = version
-        if self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3',
-                'RedHatGlusterStorage3'):
-            rhel = '6'
-        if name == 'Fedora':
-            fedora = version
-        # %end
-        ks_meta['end'] = '%end'
-        if rhel in ('3', '4', '5'):
-            ks_meta['end'] = ''
-        # key option for RHEL 5
-        if rhel and int(rhel) == 5:
-            ks_meta['has_key'] = True
-        # autopart --type
-        ks_meta['has_autopart_type'] = True
-        if rhel in ('3', '4', '5', '6') or \
-                (fedora and fedora != 'rawhide' and int(fedora) < 18):
-            del ks_meta['has_autopart_type']
-        # chrony
-        ks_meta['has_chrony'] = True
-        if rhel in ('3', '4', '5', '6'):
-            del ks_meta['has_chrony']
-        # DHCP option 26
-        ks_meta['has_dhcp_mtu_support'] = True
-        if rhel in ('3', '4'):
-            del ks_meta['has_dhcp_mtu_support']
-        # GPT on BIOS
-        ks_meta['has_gpt_bios_support'] = True
-        if rhel in ('3', '4', '5', '6'):
-            del ks_meta['has_gpt_bios_support']
-        # bootloader --leavebootorder
-        ks_meta['has_leavebootorder'] = True
-        if rhel in ('3', '4', '5', '6') or \
-                (fedora and fedora != 'rawhide' and int(fedora) < 18):
-            del ks_meta['has_leavebootorder']
-        # repo --cost
-        ks_meta['has_repo_cost'] = True
-        if rhel in ('3', '4', '5'):
-            del ks_meta['has_repo_cost']
-        # systemd vs. SysV init
-        ks_meta['has_systemd'] = True
-        if rhel in ('3', '4', '5', '6') or \
-                (fedora and fedora != 'rawhide' and int(fedora) < 15):
-            del ks_meta['has_systemd']
-        # unsupported_hardware
-        ks_meta['has_unsupported_hardware'] = True
-        if rhel in ('3', '4', '5'):
-            del ks_meta['has_unsupported_hardware']
-        # yum
-        if rhel == '3':
-            ks_meta['yum'] = 'yum-2.2.2-1.rhts.EL3.noarch.rpm'
-        elif rhel == '4':
-            ks_meta['yum'] = 'yum-2.2.2-1.rhts.EL4.noarch.rpm'
-        # mode
-        if rhel == '6':
-            ks_meta['mode'] = 'cmdline'
-        if rhel in ('4', '5'):
-            ks_meta['mode'] = ''
-        # docker package name
-        ks_meta['docker_package'] = 'docker'
-        if (fedora and fedora != 'rawhide' and int(fedora) < 22)  or (rhel and int(rhel) <= 6):
-            ks_meta['docker_package'] = 'docker-io'
-        # recommended boot partition size
-        if rhel in ('5', '6'):
-            ks_meta['boot_partition_size'] = 250
-        elif rhel in ('3', '4'):
-            ks_meta['boot_partition_size'] = 200
-
-        return InstallOptions(ks_meta, {}, {})
 
     def __repr__(self):
         return '%s' % self.osmajor
@@ -721,69 +780,7 @@ class DistroTree(DeclarativeMappedObject, ActivityMixin):
                 return image
 
     def install_options(self):
-        """
-        Yields install options for this distro tree, as well as any inherited 
-        from the OS major level.
-        """
-        osmajor = self.distro.osversion.osmajor
-        osminor = self.distro.osversion.osminor
-
-        # set arch specific default netboot loader paths
-        # relative to the TFTP root directory
-        netbootloader = {'i386': 'pxelinux.0',
-                         # We can't distinguish between UEFI and BIOS systems at this level
-                         # so, we default to pxelinux.0
-                         'x86_64': 'pxelinux.0', 
-                         'ia64': 'elilo-ia64.efi',
-                         'ppc': 'yaboot',
-                         'ppc64': 'boot/grub2/powerpc-ieee1275/core.elf',
-                         'ppc64le': 'boot/grub2/powerpc-ieee1275/core.elf',
-                         'aarch64': 'aarch64/bootaa64.efi',
-                         }
-        name, version = osmajor.name, osmajor.number
-        rhel = False
-        if name in ('RedHatEnterpriseLinux', 'RedHatEnterpriseLinuxServer',
-                'RedHatEnterpriseLinuxClient', 'RedHatEnterpriseLinuxServerGrid',
-                'CentOS'):
-            rhel = version
-
-        if rhel and (int(rhel) <= 6 or (int(rhel) == 7 and osminor == '0')):
-            netbootloader['ppc64'] = 'yaboot'
-            netbootloader['ppc64le'] = 'yaboot'
-        # for s390, s390x and armhfp, we default to ''
-        kernel_options = {'netbootloader': netbootloader.get(self.arch.arch, '')}
-
-        if self.arch.arch in ['ppc', 'ppc64', 'ppc64le']:
-            kernel_options['leavebootorder'] = None
-
-        ks_meta = {'conflicts_groups' : []}
-        if name in ('RedHatEnterpriseLinux', 'RedHatEnterpriseLinuxServer',
-            'RedHatEnterpriseLinuxClient'):
-            if int(rhel) >= 5:
-                ks_meta['conflicts_groups'] = ["conflicts"]
-
-            if (int(rhel) >= 6) and self.variant:
-                ks_meta['conflicts_groups'] = ["conflicts-%s" % self.variant.lower()]
-
-        if (name == 'CentOS') and (int(rhel) >= 6):
-            ks_meta['conflicts_groups'] = [
-                                                "conflicts-client",
-                                                "conflicts-server",
-                                                "conflicts-workstation",
-                                            ]
-
-        yield InstallOptions(ks_meta, kernel_options, {})
-        yield osmajor.default_install_options()
-        # arch=None means apply to all arches
-        if None in osmajor.install_options_by_arch:
-            op = osmajor.install_options_by_arch[None]
-            yield InstallOptions.from_strings(op.ks_meta, op.kernel_options,
-                    op.kernel_options_post)
-        if self.arch in osmajor.install_options_by_arch:
-            opa = osmajor.install_options_by_arch[self.arch]
-            yield InstallOptions.from_strings(opa.ks_meta, opa.kernel_options,
-                    opa.kernel_options_post)
-        yield InstallOptions.from_strings(self.ks_meta,
+        return InstallOptions.from_strings(self.ks_meta,
                 self.kernel_options, self.kernel_options_post)
 
 class DistroTreeRepo(DeclarativeMappedObject):

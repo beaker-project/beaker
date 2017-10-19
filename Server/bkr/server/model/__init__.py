@@ -29,7 +29,7 @@ from .lab import LabController, LabControllerActivity
 from .distrolibrary import (Arch, KernelType, OSMajor, OSVersion,
         OSMajorInstallOptions, Distro, DistroTree, DistroTreeImage,
         DistroTreeRepo, DistroTag, DistroActivity, DistroTreeActivity,
-        LabControllerDistroTree)
+        LabControllerDistroTree, install_options_for_distro)
 from .tasklibrary import (Task, TaskLibrary, TaskPackage, TaskType,
         TaskBugzilla, TaskPropertyNeeded)
 from .inventory import (System, SystemStatusDuration, SystemCc, Hypervisor,

@@ -16,9 +16,10 @@ import optparse
 from turbogears.database import session
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.common import __version__
-from bkr.server.model import DistroTree, System, User, Recipe
+from bkr.server.model import DistroTree, System, User, Recipe, \
+        install_options_for_distro
 from bkr.server.util import load_config_or_exit
-from bkr.server.installopts import InstallOptions, global_install_options
+from bkr.server.installopts import InstallOptions
 from bkr.server.kickstart import generate_kickstart, template_env, add_to_template_searchpath
 from bkr.server.bexceptions import DatabaseLookupError
 
@@ -95,14 +96,19 @@ def main(*args):
             if not distro_tree:
                 distro_tree = recipe.distro_tree
 
-            install_options = InstallOptions.reduce(chain(
-                    [global_install_options()],
-                    distro_tree.install_options(),
-                    system.install_options(distro_tree),
-                    [recipe.generated_install_options(),
-                     InstallOptions.from_strings(recipe.ks_meta,
-                        recipe.kernel_options, recipe.kernel_options_post),
-                     InstallOptions.from_strings(ks_meta, None, koptions_post)]))
+            sources = []
+            sources.append(install_options_for_distro(
+                    distro_tree.distro.osversion.osmajor.osmajor,
+                    distro_tree.distro.osversion.osminor,
+                    distro_tree.variant,
+                    distro_tree.arch))
+            sources.append(distro_tree.install_options())
+            sources.extend(system.install_options(distro_tree))
+            sources.append(recipe.generated_install_options())
+            sources.append(InstallOptions.from_strings(recipe.ks_meta,
+                        recipe.kernel_options, recipe.kernel_options_post))
+            sources.append(InstallOptions.from_strings(ks_meta, None, koptions_post))
+            install_options = InstallOptions.reduce(sources)
 
             ks_appends = [ks_append.ks_append for ks_append \
                           in recipe.ks_appends]

@@ -33,7 +33,7 @@ from bkr.server.bexceptions import (BX, InsufficientSystemPermissions,
         StaleCommandStatusException, StaleSystemUserException)
 from bkr.server.helpers import make_link
 from bkr.server.hybrid import hybrid_property, hybrid_method
-from bkr.server.installopts import InstallOptions, global_install_options
+from bkr.server.installopts import InstallOptions
 from bkr.server.util import is_valid_fqdn, convert_db_lookup_error
 from .base import DeclarativeMappedObject
 from .types import (SystemType, SystemStatus, ReleaseAction, CommandStatus,
@@ -42,7 +42,7 @@ from .activity import Activity, ActivityMixin
 from .identity import User, Group
 from .lab import LabController
 from .distrolibrary import (Arch, KernelType, OSMajor, OSVersion, Distro, DistroTree,
-        LabControllerDistroTree)
+        LabControllerDistroTree, install_options_for_distro)
 
 try:
     #pylint: disable=E0611
@@ -819,10 +819,15 @@ class System(DeclarativeMappedObject, ActivityMixin):
         """
         Manual as in, not a recipe.
         """
-        return InstallOptions.reduce(chain(
-                [global_install_options()],
-                distro_tree.install_options(),
-                self.install_options(distro_tree)))
+        sources = []
+        sources.append(install_options_for_distro(
+                distro_tree.distro.osversion.osmajor.osmajor,
+                distro_tree.distro.osversion.osminor,
+                distro_tree.variant,
+                distro_tree.arch))
+        sources.append(distro_tree.install_options())
+        sources.extend(self.install_options(distro_tree))
+        return InstallOptions.reduce(sources)
 
     @property
     def has_efi(self):

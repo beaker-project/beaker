@@ -41,7 +41,7 @@ from bkr.server import identity, metrics, mail
 from bkr.server.bexceptions import BX, BeakerException, StaleTaskStatusException, DatabaseLookupError
 from bkr.server.helpers import make_link, make_fake_link
 from bkr.server.hybrid import hybrid_method, hybrid_property
-from bkr.server.installopts import InstallOptions, global_install_options
+from bkr.server.installopts import InstallOptions
 from bkr.server.util import absolute_url
 from .types import (UUID, MACAddress, IPAddress, TaskResult, TaskStatus, TaskPriority,
                     ResourceType, RecipeVirtStatus, mac_unix_padded_dialect, SystemStatus,
@@ -51,7 +51,7 @@ from .activity import Activity, ActivityMixin
 from .identity import User, Group
 from .lab import LabController
 from .distrolibrary import (OSMajor, OSVersion, Distro, DistroTree,
-        LabControllerDistroTree)
+        LabControllerDistroTree, install_options_for_distro)
 from .tasklibrary import Task, TaskPackage
 from .inventory import System, SystemActivity, Reservation
 from .installation import Installation
@@ -2512,8 +2512,12 @@ class Recipe(TaskBase, DeclarativeMappedObject, ActivityMixin):
 
     def reduced_install_options(self):
         sources = []
-        sources.append(global_install_options())
-        sources.extend(self.distro_tree.install_options())
+        sources.append(install_options_for_distro(
+                self.distro_tree.distro.osversion.osmajor.osmajor,
+                self.distro_tree.distro.osversion.osminor,
+                self.distro_tree.variant,
+                self.distro_tree.arch))
+        sources.append(self.distro_tree.install_options())
         if self.resource:
             sources.extend(self.resource.install_options(self.distro_tree))
         sources.append(self.generated_install_options())
