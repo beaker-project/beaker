@@ -1044,6 +1044,10 @@ class System(DeclarativeMappedObject, ActivityMixin):
         self._ensure_user_is_authenticated(user)
         if self.can_configure_netboot(user):
             return True
+        # Lab controllers can power any system, to implement the
+        # power() XMLRPC method for rhts-power
+        if user.in_group(['lab_controller']):
+            return True
         # Anyone else needs the "control_system" permission
         if (self.active_access_policy and
             self.active_access_policy.grants(user, SystemPermission.control_system)):

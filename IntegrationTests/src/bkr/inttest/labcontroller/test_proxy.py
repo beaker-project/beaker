@@ -682,6 +682,26 @@ class PostrebootTest(LabControllerTestCase):
             self.assertEqual(self.system.command_queue[0].action, 'on')
             self.assertEqual(self.system.command_queue[1].action, 'off')
 
+class PowerTest(LabControllerTestCase):
+
+    def setUp(self):
+        with session.begin():
+            system = data_setup.create_system(lab_controller=self.get_lc())
+            self.target_system = data_setup.create_system(lab_controller=self.get_lc())
+            recipe = data_setup.create_recipe()
+            target_recipe = data_setup.create_recipe()
+            job = data_setup.create_job_for_recipes([recipe, target_recipe])
+            self.addCleanup(self.cleanup_job, job)
+            data_setup.mark_recipe_running(recipe, system=system)
+            data_setup.mark_recipe_running(target_recipe, system=self.target_system)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1501671
+    def test_power(self):
+        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s.power(self.target_system.fqdn, 'off')
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(self.target_system.command_queue[0].action, 'off')
 
 class LogUploadTestRestartProxy(LabControllerTestCase):
 
