@@ -584,6 +584,41 @@ class UserHTTPTest(DatabaseTestCase):
             self.assertEqual(group.activity[-1].action, u'Removed')
             self.assertEqual(group.activity[-1].old_value, user.user_name)
 
+    def test_user_resource_counts_are_accurate_when_removing(self):
+        with session.begin():
+            user = data_setup.create_user()
+            job = data_setup.create_job(owner=user)
+            data_setup.mark_job_running(job)
+            owned_system = data_setup.create_system(owner=user)
+            loaned_system = data_setup.create_system()
+            loaned_system.loaned = user
+            owned_pool = data_setup.create_system_pool(owning_user=user)
+            group = data_setup.create_group(owner=user)
+        s = requests.Session()
+        requests_login(s)
+        response = s.get(get_server_base() + 'users/%s' % user.user_name,
+                headers={'Accept': 'application/json'})
+        response.raise_for_status()
+        self.assertEquals(response.json()['job_count'], 1)
+        self.assertEquals(response.json()['reservation_count'], 1)
+        self.assertEquals(response.json()['loan_count'], 1)
+        self.assertEquals(response.json()['owned_system_count'], 1)
+        self.assertEquals(response.json()['owned_pool_count'], 1)
+        response = patch_json(get_server_base() + 'users/%s' % user.user_name,
+                data={'removed': 'now'}, session=s)
+        response.raise_for_status()
+        # The bug was that the counts in the PATCH response would still show 
+        # their old values, because the queries for producing the counts were 
+        # being run before all the removals were flushed to the database.
+        # Note that job_count stays as 1, because the job has been cancelled 
+        # but it will still be running until the next iteration of beakerd's 
+        # update_dirty_jobs.
+        self.assertEquals(response.json()['job_count'], 1)
+        self.assertEquals(response.json()['reservation_count'], 0)
+        self.assertEquals(response.json()['loan_count'], 0)
+        self.assertEquals(response.json()['owned_system_count'], 0)
+        self.assertEquals(response.json()['owned_pool_count'], 0)
+
     def test_unremove_account(self):
         with session.begin():
             user = data_setup.create_user()
