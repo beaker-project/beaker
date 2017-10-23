@@ -1,10 +1,9 @@
 nfs --server lab.test-kickstart.invalid --dir /distros/RHEL-4/U9/AS/x86_64/tree/
 #url --url=nfs://lab.test-kickstart.invalid:/distros/RHEL-4/U9/AS/x86_64/tree/
 
+
 # System bootloader configuration
 bootloader --location=mbr
-
-
 # no specific network configuration
 firewall --disabled
 # System keyboard

@@ -8,14 +8,13 @@
 
 key --skip
 
+{{ mode|default('cmdline') }}
 {% if manual is defined %}
 ignoredisk --interactive
 {% endif %}
 {% if manual is undefined %}
 # System bootloader configuration
 bootloader --location=mbr{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}
-
-{{ mode|default('cmdline') }}
 
 {% snippet 'network' %}
 {#

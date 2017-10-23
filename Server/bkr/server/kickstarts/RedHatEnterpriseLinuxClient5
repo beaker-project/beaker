@@ -6,6 +6,7 @@
 {% else %}
 {% snippet 'install_method' %}
 
+{{ mode }}
 {% if manual is undefined %}
 {% if auth %}
 auth {{ auth }}
@@ -17,8 +18,6 @@ bootloader --location=mbr{% if kernel_options_post %} --append="{{ kernel_option
 ## For normal provisioning use Workstation key
 #}
 key {{ key|default('da3122afdb7edd23') }}
-
-{{ mode }}
 
 {% snippet 'network' %}
 {#
