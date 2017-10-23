@@ -1,4 +1,6 @@
 
+# encoding: utf8
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -160,3 +162,16 @@ class TestWizard(BaseWizardTestCase):
         runtest_contents = open(
             os.path.join(self.tempdir, 'runtest.sh'), 'r').readlines()
         self.assertIn('PACKAGE="wget"\n', runtest_contents)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1491658
+    def test_accepts_non_ascii_names(self):
+        out = run_wizard(['beaker-wizard',
+                          '--current-directory',
+                          '-n', u'Gęśla Jaźń',
+                          '-m', 'gj@example.com'], cwd=self.tempdir)
+        self.assertNotIn('is not a valid author', out)
+        self.assertIn(u'Author : Gęśla Jaźń', out.decode('utf8'))
+        makefile_contents = open(os.path.join(self.tempdir, 'Makefile')).readlines()
+        self.assertIn(
+                '\t@echo "Owner:           Gęśla Jaźń <gj@example.com>" > $(METADATA)\n',
+                makefile_contents)

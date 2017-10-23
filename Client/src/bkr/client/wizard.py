@@ -352,7 +352,6 @@ RegExpBugPrefix  = re.compile("^bz")
 RegExpCVE        = re.compile("^\d{4}-\d{4}$")
 RegExpCVELong    = re.compile("^CVE-\d{4}-\d{4}$")
 RegExpCVEPrefix  = re.compile("^CVE-")
-RegExpAuthor     = re.compile("^[a-zA-Z]+\.?( [a-zA-Z]+\.?){1,2}$")
 RegExpEmail      = re.compile("^[a-z._-]+@[a-z.-]+$")
 RegExpYes        = re.compile("Everything OK|y|ye|jo|ju|ja|ano|da", re.I)
 RegExpReproducer = re.compile("repr|test|expl|poc|demo", re.I)
@@ -378,8 +377,6 @@ GuessAuthorName = pwd.getpwuid(os.getuid())[4]
 # Make sure guesses are valid values
 if not RegExpEmail.match(GuessAuthorEmail):
     GuessAuthorEmail = "your@email.com"
-if not RegExpAuthor.match(GuessAuthorName):
-    GuessAuthorName = "Your Name"
 
 # Commands
 GitCommand="git add".split()
@@ -1212,7 +1209,7 @@ class Inquisitor:
         """ Return current value nicely formatted (redefined in children)"""
         if not data: data = self.data
         if data == "": return "None"
-        return data
+        return data.encode('utf8')
 
     def singleName(self):
         """ Return the name in lowercase singular (for error reporting) """
@@ -2675,8 +2672,7 @@ class Author(Inquisitor):
         self.default(self.options.author())
 
     def valid(self):
-        return self.data is not None \
-            and RegExpAuthor.match(self.data)
+        return self.data is not None and self.data not in ["", "?"]
 
 
 class Email(Inquisitor):
