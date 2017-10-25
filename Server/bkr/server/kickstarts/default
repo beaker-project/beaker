@@ -4,7 +4,9 @@
 {% snippet snippet_profile %}
 {% endfor  %}
 {% else %}
+{% if liveimg_rpm is undefined and liveimg_file is undefined %}
 {% snippet 'install_method' %}
+{% endif %}
 
 {% if manual is defined %}
 ignoredisk --interactive
@@ -24,7 +26,7 @@ bootloader --location={{ boot_loc|default("mbr") }}{% if kernel_options_post %} 
 repo --name=fedora-updates --mirrorlist=https://mirrors.fedoraproject.org/mirrorlist?repo=updates-released-f{{ distro.osversion.osmajor.number }}&arch={{ distro_tree.arch.arch }}
 {% endif %}
 {% endif %}
-{% if has_rpmostree is not defined %}
+{% if has_rpmostree is undefined and liveimg_rpm is undefined and liveimg_file is undefined %}
 {% snippet 'print_anaconda_repos' %}
 {% endif %}
 
@@ -69,7 +71,14 @@ install
 unsupported_hardware
 {% endif %}
 
-{% if has_rpmostree is not defined %}
+{% if has_rpmostree is defined %}
+ostreesetup --osname=atomic-host --remote=atomic-host --url={{ ostree_repo_url }} --ref={{ ostree_ref }} --nogpg
+{% elif liveimg_rpm is defined %}
+liveimg --url=file:///tmp/squashfs
+{% elif liveimg_file is defined %}
+{% set main_url=distro_tree.url_in_lab(lab_controller, scheme='http', required=True) %}
+liveimg --url={{ main_url }}/{{ liveimg_file }}
+{% else %}
 %packages {{ pkgoptions|default('--ignoremissing') }}
 {%- if not recipe and packages is undefined %} --default
 {% else %}
@@ -81,8 +90,6 @@ unsupported_hardware
 chrony
 {% endif %}
 %end
-{% else %}
-ostreesetup --osname=atomic-host --remote=atomic-host --url={{ ostree_repo_url }} --ref={{ ostree_ref }} --nogpg
 {% endif %}
 
 {% endif %}{# manual #}
@@ -94,6 +101,7 @@ ostreesetup --osname=atomic-host --remote=atomic-host --url={{ ostree_repo_url }
 {% snippet (distro.osversion.osmajor.osmajor + '_pre') %}
 {% snippet (distro.osversion.osmajor.name + '_pre') %}
 {% snippet 'system_pre' %}
+{% snippet 'liveimg_pre' %}
 %end
 
 %post --log=/dev/console
@@ -101,6 +109,7 @@ ostreesetup --osname=atomic-host --remote=atomic-host --url={{ ostree_repo_url }
 {% snippet (distro.osversion.osmajor.osmajor + '_post') %}
 {% snippet (distro.osversion.osmajor.name + '_post') %}
 {% snippet 'system_post' %}
+{% snippet 'liveimg_post' %}
 %end
 
 {{ ks_appends|join('\n') }}

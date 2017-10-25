@@ -1,0 +1,3 @@
+{% if liveimg_post is defined %}
+{{ liveimg_post }}
+{% endif %}
