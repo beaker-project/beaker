@@ -673,6 +673,8 @@ class TestBeakerd(DatabaseTestCase):
     def test_empty_and_element(self):
         with session.begin():
             user = data_setup.create_user()
+            system = data_setup.create_system(owner=user, status=u'Automated',
+                    shared=True, lab_controller=self.lab_controller)
             job = data_setup.create_job(owner=user)
             job.recipesets[0].recipes[0]._host_requires = (
                     u'<hostRequires><and></and></hostRequires>')
