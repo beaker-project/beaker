@@ -12,18 +12,18 @@ window.SystemProvisionView = Backbone.View.extend({
         'submit form': 'submit',
     },
     initialize: function (options) {
-        this.request_in_progress = false;
-        this.distro_picker = new DistroPicker(_.extend({multiple: false, 
-          system: this.model.get('fqdn')}, distro_picker_options));
         this.listenTo(this.model,
-                'change:lab_controller_id change:arches change:status change:can_configure_netboot',
+                'change:lab_controller_id change:arches change:status change:can_configure_netboot change:possible_osmajors',
                 this.render);
-        this.listenTo(this.distro_picker.selection, 'change', this.update_button_state);
+        this.request_in_progress = false;
         this.render();
     },
     render: function () {
         this.$el.html(this.template(this.model.attributes));
-        this.distro_picker.setElement(this.$('.distro-picker')).render();
+        this.distro_picker = new DistroPicker(_.extend({el: this.$('.distro-picker'), multiple: false,
+          system: this.model.get('fqdn'), possible_osmajors: this.model.get('possible_osmajors')}, distro_picker_options));
+        this.listenTo(this.distro_picker.selection, 'change', this.update_button_state);
+        this.distro_picker.render();
         this.update_button_state();
     },
     update_button_state: function () {

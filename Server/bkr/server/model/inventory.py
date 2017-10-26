@@ -464,6 +464,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             'lab_controller_id': None,
             'possible_lab_controllers': LabController.query.filter(
                     LabController.removed == None).all(),
+            'possible_osmajors': [],
             'owner': self.owner,
             'notify_cc': list(self.cc),
             'status': self.status,
@@ -520,6 +521,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['active_access_policy'] = {'type':'custom'}
         if self.lab_controller:
             data['lab_controller_id'] = self.lab_controller.id
+            data['possible_osmajors'] = [osmajor.osmajor for osmajor in
+                                  OSMajor.ordered_by_osmajor(OSMajor.in_lab(self.lab_controller))]
         if identity.current.user and self.can_view_power(identity.current.user):
             if self.power:
                 data.update(self.power.__json__())
