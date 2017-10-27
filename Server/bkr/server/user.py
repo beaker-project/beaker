@@ -349,6 +349,7 @@ def update_user(username):
                     _remove(user, method=u'HTTP')
                 else:
                     raise ValueError('"removed" value must be "now" or null')
+    session.flush()
     response = jsonify(user_full_json(user))
     if renamed:
         response.headers.add('Location', absolute_url(user.href))

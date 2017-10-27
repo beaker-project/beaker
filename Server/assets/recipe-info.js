@@ -31,7 +31,8 @@ window.RecipeSummaryView = Backbone.View.extend({
     template: JST['recipe-summary'],
     initialize: function () {
         this.fqdn_view = new RecipeFqdnView({model: this.model});
-        this.listenTo(this.model, 'change', this.render);
+        this.listenTo(this.model, 'change:start_time change:finish_time change:resource change:status ' +
+        'change:possible_systems', this.render);
         this.render();
     },
     render: function () {

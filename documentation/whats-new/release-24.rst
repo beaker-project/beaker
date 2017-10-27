@@ -481,3 +481,34 @@ Version 4.0-95 of the ``/distribution/virt/install`` and version 1.0-9 of the
 * :issue:`1465788`: The task now restarts the libvirtd service to ensure its
   virtlogd feature is disabled. This is necessary with QEMU 2.9.0 and newer. 
   (Contributed by Jan Stancek)
+
+Beaker 24.5
+~~~~~~~~~~~
+
+* :issue:`1500142`: Fixed an issue causing some parts of the recipe page to be
+  re-rendered once per second. In particular, the panel which showed system 
+  information was re-rendered once per second, making it impossible to select 
+  or copy the hostname. (Contributed by Anwesha Chatterjee)
+* :issue:`1497021`: The :program:`bkr job-modify` command now correctly
+  modifies the priority of group jobs. Previously it would fail with 500 
+  Internal Server Error when the user making the request was not the original 
+  job submitter. (Contributed by Dan Callaghan)
+* :issue:`1498804`: The systems grid now correctly handles searches where the
+  ``value`` parameter is missing from the query string, which would occur in 
+  certain edge cases. (Contributed by Dan Callaghan)
+* :issue:`1497881`: Beaker no longer allows you to add deleted users to groups,
+  give deleted users ownership of systems, or lend systems to deleted users. 
+  (Contributed by Dan Callaghan)
+* :issue:`1498374`: Beaker now transfers ownership of system pools when a user
+  account is deleted, in the same way it transfers ownership of systems. 
+  Additionally, it no longer allows you to give deleted users ownership of 
+  system pools. (Contributed by Dan Callaghan)
+* :issue:`1499646`: Beaker now correctly evaluates ``<not/>`` host filters when
+  considering whether a recipe can be run in OpenStack. Previously, use of 
+  ``<not/>`` would always preclude the recipe from running in OpenStack. 
+  (Contributed by Dan Callaghan)
+* :issue:`1501671`: The :program:`rhts-power` command for Beaker tasks now
+  works correctly, regardless of the system access policy. Previously the 
+  command would fail with ``InsufficientSystemPermissions`` unless the system's 
+  access policy granted ``control_power`` permission to all users (which was 
+  the default in Beaker prior to 0.15). (Contributed by Dan Callaghan)

@@ -12,7 +12,9 @@ window.RecipePageHeaderView = Backbone.View.extend({
         'click .edit': 'edit',
     },
     initialize: function () {
-        this.listenTo(this.model, 'change', this.render);
+        this.listenTo(this.model, 'change:is_deleted change:can_edit', this.render);
+        // This view also updates the page title based on these attributes...
+        this.listenTo(this.model, 'change:whiteboard change:status change:result', this.render);
     },
     render: function () {
         this.$el.html(this.template(this.model.attributes));

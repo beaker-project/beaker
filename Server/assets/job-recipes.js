@@ -87,7 +87,7 @@ var JobRecipeRow = Backbone.View.extend({
     },
     initialize: function (options) {
         this.guest = !!options.guest;
-        this.listenTo(this.model, 'change', this.render);
+        this.listenTo(this.model, 'change:whiteboard change:status change:reviewed change:can_set_reviewed_state change:resource', this.render);
     },
     render: function () {
         var whiteboard = this.model.get('whiteboard');
