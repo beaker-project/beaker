@@ -6,7 +6,7 @@ available in the execution environment for tasks. At a bare minimum, a task
 should use :program:`rhts-report-result` to report a Pass or Fail result when 
 it finishes.
 
-The `BeakerLib <https://fedorahosted.org/beakerlib/>`_ shell library provides 
+The `BeakerLib <https://github.com/beakerlib/beakerlib>`_ shell library provides 
 many convenience functions on top of these commands, including functions to 
 structure complicated tasks into separate phases.
 
