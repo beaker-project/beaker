@@ -1,3 +1,6 @@
+
+# encoding: utf8
+
 # Copyright (c) 2006 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or
@@ -20,6 +23,7 @@
 # to be made in the corresponding file in rhts.
 import re
 import sys
+import codecs
 
 namespaces = [ ('desktop', ['evolution', 'openoffice.org', 'poppler', 'shared-mime-info']),
                ('tools', ['gcc']),
@@ -67,55 +71,56 @@ class TestInfo:
     def output_string_field(self, file, fileFieldName, dictFieldName):
         value = self.__dict__[dictFieldName]
         if value:
-            file.write('%s: %s\n'%(fileFieldName, value))            
+            file.write(u'%s: %s\n'%(fileFieldName, value))
 
     def output_string_list_field(self, file, fileFieldName, dictFieldName):
         value = self.__dict__[dictFieldName]
         if value:
-            file.write('%s: %s\n'%(fileFieldName, ' '.join(value)))
+            file.write(u'%s: %s\n'%(fileFieldName, u' '.join(value)))
 
     def output_string_dict_field(self, file, fileFieldName, dictFieldName):
         value = self.__dict__[dictFieldName]
         if value:
             for key, val in value.items():
                 if val:
-                    file.write('%s: %s=%s\n'%(fileFieldName, key, val))
+                    file.write(u'%s: %s=%s\n'%(fileFieldName, key, val))
 
     def output_bool_field(self, file, fileFieldName, dictFieldName):        
         value = self.__dict__[dictFieldName]
         if value is not None:
             if value:
-                strValue = "yes"
+                strValue = u"yes"
             else:
-                strValue = "no"
-            file.write('%s: %s\n'%(fileFieldName, strValue))
+                strValue = u"no"
+            file.write(u'%s: %s\n'%(fileFieldName, strValue))
 
     def output(self, file):
         """
         Write out a testinfo.desc to the file object
         """
-        self.output_string_field(file, 'Name', 'test_name')
-        self.output_string_field(file, 'Description', 'test_description')
-        self.output_string_list_field(file, 'Architectures', 'test_archs')
-        self.output_string_field(file, 'Owner', 'owner')
-        self.output_string_field(file, 'TestVersion', 'testversion')
-        self.output_string_list_field(file, 'Releases', 'releases')
-        self.output_string_field(file, 'Priority', 'priority')
-        self.output_bool_field(file, 'Destructive', 'destructive')
-        self.output_string_field(file, 'License', 'license')
-        self.output_bool_field(file, 'Confidential', 'confidential')
-        self.output_string_field(file, 'TestTime', 'avg_test_time')
-        self.output_string_field(file, 'Path', 'test_path')
-        self.output_string_list_field(file, 'Requires', 'requires')
-        self.output_string_list_field(file, 'RhtsRequires', 'rhtsrequires')
-        self.output_string_list_field(file, 'RunFor', 'runfor')
-        self.output_string_list_field(file, 'Bugs', 'bugs')
-        self.output_string_list_field(file, 'Type', 'types')
-        self.output_string_list_field(file, 'RhtsOptions', 'options')
-        self.output_string_dict_field(file, 'Environment', 'environment')
-        self.output_string_list_field(file, 'Provides', 'provides')
+        file = codecs.getwriter('utf8')(file)
+        self.output_string_field(file, u'Name', u'test_name')
+        self.output_string_field(file, u'Description', u'test_description')
+        self.output_string_list_field(file, u'Architectures', u'test_archs')
+        self.output_string_field(file, u'Owner', u'owner')
+        self.output_string_field(file, u'TestVersion', u'testversion')
+        self.output_string_list_field(file, u'Releases', u'releases')
+        self.output_string_field(file, u'Priority', u'priority')
+        self.output_bool_field(file, u'Destructive', u'destructive')
+        self.output_string_field(file, u'License', u'license')
+        self.output_bool_field(file, u'Confidential', u'confidential')
+        self.output_string_field(file, u'TestTime', u'avg_test_time')
+        self.output_string_field(file, u'Path', u'test_path')
+        self.output_string_list_field(file, u'Requires', u'requires')
+        self.output_string_list_field(file, u'RhtsRequires', u'rhtsrequires')
+        self.output_string_list_field(file, u'RunFor', u'runfor')
+        self.output_string_list_field(file, u'Bugs', u'bugs')
+        self.output_string_list_field(file, u'Type', u'types')
+        self.output_string_list_field(file, u'RhtsOptions', u'options')
+        self.output_string_dict_field(file, u'Environment', u'environment')
+        self.output_string_list_field(file, u'Provides', u'provides')
         for (name, op, value) in self.need_properties:
-            file.write('NeedProperty: %s %s %s\n'%(name, op, value))
+            file.write(u'NeedProperty: %s %s %s\n'%(name, op, value))
         file.write(self.generate_siteconfig_lines())
         
     def generate_siteconfig_lines(self):
@@ -125,7 +130,7 @@ class TestInfo:
                 if arg.startswith(self.test_name):
                     # Strip off common prefix:
                     arg = arg[len(self.test_name)+1:]
-            result += 'SiteConfig(%s): %s\n'%(arg, description)
+            result += u'SiteConfig(%s): %s\n'%(arg, description)
         return result
         
 class Validator:
@@ -658,11 +663,12 @@ class StrictParser(Parser):
             raise ParserWarning(message)
 
 def parse_string(string, raise_errors = True):
+    assert isinstance(string, unicode)
     p = StrictParser(raise_errors)
     p.parse(string.split("\n"))
     return p.info
 
 def parse_file(filename, raise_errors = True):
     p = StrictParser(raise_errors)
-    p.parse(open(filename).readlines())
+    p.parse(codecs.open(filename, 'r', 'utf8').readlines())
     return p.info
