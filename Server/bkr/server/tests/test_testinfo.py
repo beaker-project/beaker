@@ -130,6 +130,12 @@ class OwnerFieldTests(unittest.TestCase):
         parser.handle_owner('Owner', u'Endre Balint-Nagy <endre@redhat.com>')
         self.assertEquals(parser.info.owner, u'Endre Balint-Nagy <endre@redhat.com>')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1491658
+    def test_non_ascii_owner(self):
+        parser = StrictParser(raise_errors=True)
+        parser.handle_owner('Owner', u'Gęśla Jaźń <gj@example.com>')
+        self.assertEquals(parser.info.owner, u'Gęśla Jaźń <gj@example.com>')
+
 class PriorityFieldTests(unittest.TestCase):
     def test_priority(self):
         "Ensure Priority field is parsed correctly"

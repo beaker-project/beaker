@@ -1,4 +1,6 @@
 
+# encoding: utf8
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -225,6 +227,16 @@ class TestSubmitTask(WebDriverTestCase):
         b.find_element_by_xpath('//button[text()="Upload"]').click()
         self.assert_task_upload_task_header('/distribution/beaker/dummy_for_bz1226443')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1491658
+    def test_non_ascii_owner_is_accepted(self):
+        b = self.browser
+        b.get(get_server_base() + 'tasks/new')
+        rpm_path = pkg_resources.resource_filename('bkr.inttest.server',
+                'task-rpms/tmp-distribution-beaker-dummy_for_bz1491658-1.0-0.noarch.rpm')
+        b.find_element_by_id('task_task_rpm').send_keys(rpm_path)
+        b.find_element_by_xpath('//button[text()="Upload"]').click()
+        self.assert_task_upload_task_header('/distribution/beaker/dummy_for_bz1491658')
+        self.assertEqual(self.get_task_info_field('Owner'), u'Gęśla Jaźń <gj@example.com>')
 
 class TaskDisable(WebDriverTestCase):
 
