@@ -51,10 +51,8 @@ window.SystemPowerSettingsView = Backbone.View.extend({
         this.$('select').selectpicker();
     },
     pick_reprovision_distro_tree: function () {
-        var picker = new DistroPickerModal({
-            system: this.model.get('fqdn'),
-            options: this.distro_picker_options,
-        });
+        var picker = new DistroPickerModal(_.extend({system: this.model.get('fqdn')},
+                        this.distro_picker_options));
         var view = this;
         this.listenToOnce(picker, 'select', function (selection) {
             view.$('[name=reprovision_distro_tree_id]').val(selection.get('distro_tree_id'));

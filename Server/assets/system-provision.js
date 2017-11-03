@@ -13,11 +13,8 @@ window.SystemProvisionView = Backbone.View.extend({
     },
     initialize: function (options) {
         this.request_in_progress = false;
-        this.distro_picker = new DistroPicker({
-            multiple: false,
-            system: this.model.get('fqdn'),
-            options: options.distro_picker_options,
-        });
+        this.distro_picker = new DistroPicker(_.extend({multiple: false, 
+          system: this.model.get('fqdn')}, distro_picker_options));
         this.listenTo(this.model,
                 'change:lab_controller_id change:arches change:status change:can_configure_netboot',
                 this.render);

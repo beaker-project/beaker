@@ -18,18 +18,18 @@ window.DistroPicker = Backbone.View.extend({
         'change select.distro_tree_filter_criterion': 'get_distro_trees',
     },
     initialize: function (options) {
-        _.defaults(options, {multiple: true, options: {}, selection: {}});
+        _.defaults(options, {multiple: true, selection: {}});
         this.multiple = options.multiple;
         this.system = options.system; // only show distros compatible with this system
-        this.osmajors = options.options['osmajor'];
-        this.tags = options.options['tag'];
-        this.distros = options.options['distro'];
-        this.distro_trees = options.options['distro_tree_id'];
+        this.osmajors = options.osmajor;
+        this.tags = options.tag;
+        this.distros = options.distro;
+        this.distro_trees = options.distro_tree_id;
         this.selection = new DistroPickerSelection({
-            osmajor: options.selection['osmajor'],
-            tag: options.selection['tag'],
-            distro: options.selection['distro'],
-            distro_tree_id: options.selection['distro_tree_id'],
+            osmajor: options.selection.osmajor,
+            tag: options.selection.tag,
+            distro: options.selection.distro,
+            distro_tree_id: options.selection.distro_tree_id,
             distro_tree_label: '',
         });
     },
@@ -125,7 +125,10 @@ window.DistroPickerModal = Backbone.View.extend({
         this.distro_picker = new DistroPicker({
             multiple: false,
             system: options.system,
-            options: options.options,
+            osmajor: options.osmajor,
+            tag: options.tag,
+            distro: options.distro,
+            distro_tree_id: options.distro_tree_id,
             selection: options.selection,
         });
         this.selection = this.distro_picker.selection;

@@ -19,7 +19,10 @@ window.ReserveWorkflow = Backbone.View.extend({
     initialize: function (options) {
         this.request_in_progress = false;
         this.distro_picker = new DistroPicker({
-            options: options.options,
+            osmajor: options.options.osmajor,
+            tag: options.options.tag,
+            distro: options.options.distro,
+            distro_tree_id: options.options.distro_tree_id,
             selection: options.selection,
         });
         this.labs = options.options['lab'];
