@@ -35,7 +35,7 @@ cat << EOF > /etc/beah.conf
 LOG=Info
 {# On systemd distros, systemd will capture all beah output and send it to the 
  # journal and the system console for us. #}
-{% if has_systemd is undefined %}
+{% if has_systemd is undefined and beah_no_console_output is undefined %}
 # Also send logs to /dev/console.
 CONSOLE_LOG=Console
 {% endif %}
@@ -55,6 +55,24 @@ EOF
 systemctl enable beah-srv.service
 systemctl enable beah-beaker-backend.service
 systemctl enable beah-fwd-backend.service
+{% if beah_no_console_output is defined %}
+mkdir /etc/systemd/system/beah-srv.service.d
+cat >/etc/systemd/system/beah-srv.service.d/50-no-console.conf <<EOF
+[Service]
+StandardOutput=journal
+EOF
+mkdir /etc/systemd/system/beah-beaker-backend.service.d
+cat >/etc/systemd/system/beah-beaker-backend.service.d/50-no-console.conf <<EOF
+[Service]
+StandardOutput=journal
+EOF
+mkdir /etc/systemd/system/beah-fwd-backend.service.d
+cat >/etc/systemd/system/beah-fwd-backend.service.d/50-no-console.conf <<EOF
+[Service]
+StandardOutput=journal
+EOF
+restorecon -R /etc/systemd/system || :
+{% endif %}
 {% else %}
 chkconfig --level 345 beah-srv on
 chkconfig --level 345 beah-beaker-backend on
