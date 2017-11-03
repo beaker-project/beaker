@@ -57,7 +57,7 @@ itself is kept in ``runtest.sh`` executed by the test harness using the
 file instead.
 
 The test is written using `BeakerLib
-<https://fedorahosted.org/beakerlib/wiki/Manual>`_ commands. The functionality is
+<https://github.com/beakerlib/beakerlib/wiki/man>`_ commands. The functionality is
 divided into three stages: setup, start and cleanup, as indicated by the
 ``rlPhaseStartSetup``, ``rlPhaseStartTest`` and ``rlPhaseStartCleanup``
 functions respectively.
@@ -81,7 +81,7 @@ the file looks like this:
     rlJournalPrintText
     rlJournalEnd
 
-The `BeakerLib manual <https://fedorahosted.org/beakerlib/wiki/Manual>`_
+The `BeakerLib manual <https://github.com/beakerlib/beakerlib/wiki/man>`_
 provides an extensive reference of what utility functions are available to test
 authors.
 

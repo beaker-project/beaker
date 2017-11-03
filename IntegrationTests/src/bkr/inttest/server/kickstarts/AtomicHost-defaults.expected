@@ -1,8 +1,8 @@
 url --url=http://lab.test-kickstart.invalid/distros/atomic/images/PXE/
 
+text
 # System bootloader configuration
 bootloader --location=mbr --extlinux
-text
 network --bootproto=dhcp --hostname=test01.test-kickstart.invalid
 
 

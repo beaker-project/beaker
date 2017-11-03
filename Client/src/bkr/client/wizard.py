@@ -309,7 +309,7 @@ Library tasks
 The "library" skeleton can be used to create a "library task". It allows you to bundle
 together common functionality which may be required across multiple
 tasks. To learn more, see `the BeakerLib documentation for library
-tasks <https://fedorahosted.org/beakerlib/wiki/libraries>`__.
+tasks <https://github.com/beakerlib/beakerlib/wiki/man#rlimport>`__.
 
 Bugs
 ----
@@ -324,7 +324,7 @@ See also
 --------
 
 * `Beaker documentation <http://beaker-project.org/help.html>`_
-* `BeakerLib <https://fedorahosted.org/beakerlib>`_
+* `BeakerLib <https://github.com/beakerlib/beakerlib>`_
 """ % globals()
 
 from optparse import OptionParser, OptionGroup, IndentedHelpFormatter, SUPPRESS_HELP

@@ -6,14 +6,13 @@
 {% else %}
 {% snippet 'install_method' %}
 
+{{ mode }}
 {% if manual is undefined %}
 {% if auth %}
 authconfig {{ auth }}
 {% endif %}
 # System bootloader configuration
 bootloader --location=mbr{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}
-
-{{ mode }}
 
 {% snippet 'network' %}
 {#

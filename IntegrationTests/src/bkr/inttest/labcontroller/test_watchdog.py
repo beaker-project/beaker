@@ -251,6 +251,19 @@ class WatchdogVirtConsoleLogTest(TestHelper):
         self.assert_(self.check_console_log_registered())
         self.assert_(self.check_cached_log_contents('foo'))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1504527
+    @patch.object(ProxyHelper, 'get_console_log')
+    def test_handles_non_ascii_characters_in_openstack_console(self, test_get_console_log):
+        # OpenStack converts any non-ASCII bytes to U+FFFD.
+        # Hence this two-byte UTF-8 sequence for U+00AE becomes U+FFFD U+FFFD.
+        log_contents = u'Firmware for Intel\ufffd\ufffd Wireless 5150 A/G/N network adaptors\n'
+        test_get_console_log.return_value = log_contents
+        active_watchdogs = self.watchdog.hub.recipes.tasks.watchdogs('active')
+        self.watchdog.active_watchdogs(active_watchdogs)
+        self.watchdog.run()
+        self.assert_(self.check_console_log_registered())
+        self.assertEquals(open(self.cached_console_log).read().decode('utf8'), log_contents)
+
 # These cases are really unit tests but they are here because I don't want to 
 # ship all these failure logs in the beaker-lab-controller package.
 

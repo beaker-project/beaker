@@ -1,6 +1,7 @@
 nfs --server lab.test-kickstart.invalid --dir /distros/RHEL-6.2/Server/x86_64/os/
 #url --url=nfs://lab.test-kickstart.invalid:/distros/RHEL-6.2/Server/x86_64/os/
 
+cmdline
 ignoredisk --interactive
 
 

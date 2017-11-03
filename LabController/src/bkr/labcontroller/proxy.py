@@ -296,6 +296,13 @@ class ConsoleWatchVirt(ConsoleLogHelper):
     """
     def update(self):
         output = self.proxy.get_console_log(self.watchdog['recipe_id'])
+        # OpenStack returns the console output as unicode, although it just 
+        # replaces all non-ASCII bytes with U+FFFD REPLACEMENT CHARACTER.
+        # But Beaker normally deals in raw bytes for the consoles.
+        # We can't get back the original bytes that OpenStack discarded so 
+        # let's just convert to UTF-8 so that the U+FFFD characters are written 
+        # properly at least.
+        output = output.encode('utf8')
         if len(output) >= 102400:
             # If the console log is more than 100KB OpenStack only returns the *last* 100KB.
             # https://bugs.launchpad.net/nova/+bug/1081436
