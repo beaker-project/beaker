@@ -410,6 +410,10 @@ overridden if necessary for custom distros.
 ``has_repo_cost``
     Indicates that the ``repo`` command accepts a ``--cost`` option.
 
+``has_reqpart``
+    Indicates that the installer supports the ``reqpart`` command for adding 
+    platform-specific partition requirements.
+
 ``has_rpmostree``
     If specified, Beaker assumes that the specified distribution is 
     `rpm-ostree <http://www.projectatomic.io/docs/os-updates/>`__

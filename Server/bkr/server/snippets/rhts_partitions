@@ -13,6 +13,9 @@ clearpart --all --initlabel
 {#
 ## Arch Specific Boot requirements
 #}
+{% if has_reqpart is defined %}
+reqpart --add-boot
+{% else %}
 {% if distro_tree is arch('ia64') %}
 part /boot/efi --fstype vfat
 {%- if boot_partition_size %} --size {{ boot_partition_size }}{% endif %} --recommended
@@ -53,6 +56,7 @@ part /boot
 {%- if boot_partition_size %} --size {{ boot_partition_size }}{% endif %} --recommended --asprimary
 {%- if fstype %} --fstype {{ fstype }}{% endif %}
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
+{% endif %}
 {% endif %}
 
 {#

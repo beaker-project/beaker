@@ -190,6 +190,23 @@ class KickstartTest(unittest.TestCase):
                 DistroTreeRepo(repo_id=u'repos_Server', repo_type=u'os', path=u'.'),
             ]
 
+            cls.rhel72 = data_setup.create_distro(name=u'RHEL-7.2-20151030.0',
+                osmajor=u'RedHatEnterpriseLinux7', osminor=u'2')
+            cls.rhel72_server_ppc64 = data_setup.create_distro_tree(
+                distro=cls.rhel72, variant=u'Server', arch=u'ppc64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-7.2-20151030.0/Server/ppc64/os/'])
+            cls.rhel72_server_ppc64.repos[:] = [
+                DistroTreeRepo(repo_id=u'repos_debug_Server_optional',
+                    repo_type=u'debug',
+                    path=u'../../../Server-optional/ppc64/debuginfo'),
+                DistroTreeRepo(repo_id=u'repos_debug_Server', repo_type=u'debug',
+                    path=u'../debuginfo'),
+                DistroTreeRepo(repo_id=u'repos_Server-optional', repo_type=u'addon',
+                    path=u'../../../Server-optional/ppc64/os'),
+                DistroTreeRepo(repo_id=u'repos_Server', repo_type=u'os', path=u'.'),
+            ]
+
             cls.centos7 = data_setup.create_distro(name=u'CentOS-7',
                 osmajor=u'CentOS7', osminor=u'0')
             cls.centos7_x86_64 = data_setup.create_distro_tree(
@@ -230,6 +247,49 @@ class KickstartTest(unittest.TestCase):
                 DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
             ]
 
+            cls.f21 = data_setup.create_distro(name=u'Fedora-21',
+                osmajor=u'Fedora21', osminor=u'0')
+            cls.f21_x86_64 = data_setup.create_distro_tree(
+                distro=cls.f21, variant=u'Everything', arch=u'x86_64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/F-21/GOLD/Everything/x86_64/os/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/F-21/GOLD/Everything/x86_64/os/'])
+            cls.f21_x86_64.repos[:] = [
+                DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
+            ]
+            cls.f21_aarch64 = data_setup.create_distro_tree(
+                distro=cls.f21, variant=u'Everything', arch=u'aarch64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/F-21/GOLD/Everything/aarch64/os/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/F-21/GOLD/Everything/aarch64/os/'])
+            cls.f21_aarch64.repos[:] = [
+                DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
+            ]
+            cls.f21_ppc = data_setup.create_distro_tree(
+                distro=cls.f21, variant=u'Everything', arch=u'ppc',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/F-21/GOLD/Everything/ppc/os/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/F-21/GOLD/Everything/ppc/os/'])
+            cls.f21_ppc.repos[:] = [
+                DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
+            ]
+            cls.f21_ppc64 = data_setup.create_distro_tree(
+                distro=cls.f21, variant=u'Everything', arch=u'ppc64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/F-21/GOLD/Everything/ppc64/os/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/F-21/GOLD/Everything/ppc64/os/'])
+            cls.f21_ppc64.repos[:] = [
+                DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
+            ]
+            cls.f21_ppc64le = data_setup.create_distro_tree(
+                distro=cls.f21, variant=u'Everything', arch=u'ppc64le',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/F-21/GOLD/Everything/ppc64le/os/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/F-21/GOLD/Everything/ppc64le/os/'])
+            cls.f21_ppc64le.repos[:] = [
+                DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
+            ]
+
             cls.frawhide = data_setup.create_distro(name=u'Fedora-rawhide',
                 osmajor=u'Fedorarawhide', osminor=u'0')
             cls.frawhide_x86_64 = data_setup.create_distro_tree(
@@ -238,14 +298,6 @@ class KickstartTest(unittest.TestCase):
                 urls=[u'http://lab.test-kickstart.invalid/distros/development/rawhide/x86_64/os/',
                       u'nfs://lab.test-kickstart.invalid/distros/development/rawhide/x86_64/os/'])
             cls.frawhide_x86_64.repos[:] = [
-                DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
-            ]
-            cls.frawhide_ppc = data_setup.create_distro_tree(
-                distro=cls.frawhide, variant=u'Fedora', arch=u'ppc',
-                lab_controllers=[cls.lab_controller],
-                urls=[u'http://lab.test-kickstart.invalid/distros/development/rawhide/ppc/os/',
-                      u'nfs://lab.test-kickstart.invalid/distros/development/rawhide/ppc/os/'])
-            cls.frawhide_ppc.repos[:] = [
                 DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
             ]
             cls.frawhide_ppc64 = data_setup.create_distro_tree(
@@ -2767,7 +2819,7 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
                     <recipeSet>
                         <recipe>
                             <distroRequires>
-                                <distro_name op="=" value="Fedora-rawhide" />
+                                <distro_name op="=" value="Fedora-21" />
                                 <distro_arch op="=" value="%s" />
                             </distroRequires>
                             <hostRequires/>
@@ -2792,7 +2844,7 @@ part /boot --recommended --asprimary
                     <recipeSet>
                         <recipe ks_meta="ondisk=vdb fstype=ext4">
                             <distroRequires>
-                                <distro_name op="=" value="Fedora-rawhide" />
+                                <distro_name op="=" value="Fedora-21" />
                                 <distro_arch op="=" value="%s" />
                             </distroRequires>
                             <hostRequires/>
@@ -2818,7 +2870,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                 <recipeSet>
                     <recipe>
                         <distroRequires>
-                            <distro_name op="=" value="Fedora-rawhide" />
+                            <distro_name op="=" value="Fedora-21" />
                             <distro_arch op="=" value="aarch64" />
                         </distroRequires>
                         <hostRequires/>
@@ -2840,7 +2892,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                 <recipeSet>
                     <recipe ks_meta="ondisk=vdb">
                         <distroRequires>
-                            <distro_name op="=" value="Fedora-rawhide" />
+                            <distro_name op="=" value="Fedora-21" />
                             <distro_arch op="=" value="aarch64" />
                         </distroRequires>
                         <hostRequires/>
@@ -2856,6 +2908,35 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
         self.assertIn('\npart /boot/efi --fstype vfat --recommended --ondisk=vdb\n', ks)
         self.assertNotIn('\npart /boot ', ks)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1230997
+    def test_reqpart(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <partitions>
+                            <partition name="lol" fs="xfs" size="100"/>
+                        </partitions>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.2-20151030.0" />
+                            <distro_arch op="=" value="ppc64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        self.assertIn('\nreqpart --add-boot\n',
+                recipe.installation.rendered_kickstart.kickstart)
+        self.assertIn('\npart / --size 1024 --grow\n',
+                recipe.installation.rendered_kickstart.kickstart)
+        self.assertIn('\npart swap --recommended\n',
+                recipe.installation.rendered_kickstart.kickstart)
+        self.assertIn('\npart /lol --size=102400 --fstype xfs\n',
+                recipe.installation.rendered_kickstart.kickstart)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1262098
     def test_boot_partition_size(self):
         # On RHEL7 and later we just use --recommended, for earlier RHELs that 
@@ -2867,7 +2948,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                 <recipeSet>
                     <recipe ks_meta="fstype=ext4">
                         <distroRequires>
-                            <distro_name op="=" value="Fedora-rawhide" />
+                            <distro_name op="=" value="Fedora-21" />
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>

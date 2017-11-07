@@ -85,6 +85,13 @@ def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
     ks_meta['has_repo_cost'] = True
     if rhel in ('3', '4', '5'):
         del ks_meta['has_repo_cost']
+    # reqpart
+    ks_meta['has_reqpart'] = True
+    if rhel == '7' and osminor in ('0', '1'): # added in RHEL7.2
+        del ks_meta['has_reqpart']
+    if rhel in ('3', '4', '5', '6') or \
+            (fedora and fedora != 'rawhide' and int(fedora) < 23):
+        del ks_meta['has_reqpart']
     # systemd vs. SysV init
     ks_meta['has_systemd'] = True
     if rhel in ('3', '4', '5', '6') or \
