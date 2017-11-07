@@ -2307,7 +2307,7 @@ network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netma
             </job>
             ''', virt=True)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assertIn('network --bootproto=dhcp --hostname=beaker-recipe-%s' % recipe.id, k)
+        self.assertIn('network --bootproto=dhcp --hostname=beaker-recipe-%s.openstacklocal' % recipe.id, k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=920470
     def test_dhcp_networks(self):
