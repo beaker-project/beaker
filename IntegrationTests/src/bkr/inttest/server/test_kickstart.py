@@ -2710,6 +2710,35 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
                 '--recommended --ondisk=vdb\n', ks)
         self.assertNotIn('\npart /boot ', ks)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1510710
+    def test_x86_efi_partition_with_grub2(self):
+        newer_efi_system = data_setup.create_system(arch=u'x86_64',
+                status=u'Automated', lab_controller=self.lab_controller)
+        newer_efi_system.key_values_string.append(Key_Value_String(
+                key=Key.by_name(u'NETBOOT_METHOD'), key_value=u'grub2'))
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <partitions>
+                            <partition fs="ext4" name="mnt" size="10" />
+                        </partitions>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', newer_efi_system)
+        ks = recipe.installation.rendered_kickstart.kickstart
+        self.assertIn('\npart /boot/efi --fstype vfat --size 250 --recommended\n', ks)
+        self.assertNotIn('\npart /boot ', ks)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1108393
     def test_x86_biosboot(self):
         recipe = self.provision_recipe('''

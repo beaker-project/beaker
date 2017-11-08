@@ -840,7 +840,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
         # Currently we just examine NETBOOT_METHOD which is a hack,
         # this bug is about doing something better:
         # https://bugzilla.redhat.com/show_bug.cgi?id=1112439
-        return any(kv.key.key_name == u'NETBOOT_METHOD' and kv.key_value == u'efigrub'
+        return any(kv.key.key_name == u'NETBOOT_METHOD' and
+                (kv.key_value == u'efigrub' or kv.key_value == u'grub2')
                 for kv in self.key_values_string)
 
     @hybrid_method
