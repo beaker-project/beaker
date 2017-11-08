@@ -2289,26 +2289,6 @@ network --bootproto=static --device=00:11:22:33:44:55 --ip=192.168.99.1 --netmas
 network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netmask=255.255.255.0
 ''', k)
 
-    def test_openstack_instance_hostname_contains_recipe_id(self):
-        recipe = self.provision_recipe('''
-            <job>
-                <whiteboard/>
-                <recipeSet>
-                    <recipe>
-                        <distroRequires>
-                            <distro_name op="=" value="RHEL-6.2" />
-                            <distro_variant op="=" value="Server" />
-                            <distro_arch op="=" value="x86_64" />
-                        </distroRequires>
-                        <hostRequires/>
-                        <task name="/distribution/install" />
-                    </recipe>
-                </recipeSet>
-            </job>
-            ''', virt=True)
-        k = recipe.installation.rendered_kickstart.kickstart
-        self.assertIn('network --bootproto=dhcp --hostname=beaker-recipe-%s.openstacklocal' % recipe.id, k)
-
     # https://bugzilla.redhat.com/show_bug.cgi?id=920470
     def test_dhcp_networks(self):
         recipe = self.provision_recipe('''

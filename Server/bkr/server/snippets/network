@@ -1,4 +1,4 @@
-network --bootproto=dhcp{% if system is defined and system.fqdn %} --hostname={{ system.fqdn }}{% elif recipe is defined and recipe.resource and recipe.resource.instance_id %} --hostname=beaker-recipe-{{ recipe.id }}.openstacklocal {% endif %}
+network --bootproto=dhcp{% if system is defined and system.fqdn %} --hostname={{ system.fqdn }}{% endif %}
 
 {% if dhcp_networks %}
 {% for device in dhcp_networks|split(';') %}
