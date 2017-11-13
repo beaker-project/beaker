@@ -21,6 +21,8 @@ from bkr.common.bexceptions import BX
 import pprint
 import time
 import json
+import yum
+import uuid
 
 def url_exists(url):
     try:
@@ -859,6 +861,7 @@ class TreeInfoMixin(object):
                 if nfs_isos_url:
                     self.tree['urls'].append(nfs_isos_url)
 
+        self.extend_tree()
         if options.json:
             print json.dumps(self.tree)
         logging.debug('\n%s' % pprint.pformat(self.tree))
@@ -867,6 +870,9 @@ class TreeInfoMixin(object):
             logging.info('%s %s %s added to beaker.' % (self.tree['name'], self.tree['variant'], self.tree['arch']))
         except (xmlrpclib.Fault, socket.error), e:
             raise BX('failed to add %s %s %s to beaker: %s' % (self.tree['name'], self.tree['variant'], self.tree['arch'], e))
+
+    def extend_tree(self):
+        pass
 
     def find_common_repos(self, repo_base, arch):
         """
@@ -1451,6 +1457,42 @@ repository = LoadBalancer
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError), e:
             logging.debug('.treeinfo has no addon repos for %s, %s' % (self.parser.url,e))
         return repos
+
+
+class TreeInfoRHVH4(TreeInfoMixin, Importer):
+    @classmethod
+    def is_importer_for(cls, url, options=None):
+        parser = Tparser()
+        if not parser.parse(url):
+            return False
+        if parser.get('general', 'family') != "RHVH":
+            return False
+        return parser
+
+    def extend_tree(self):
+        kopts = self.tree.get("kernel_options") or ""
+        self.tree["kernel_options"] = kopts + " inst.stage2=%s" % self.parser.url
+        img_rpm = self._find_image_update_rpm()
+        ks_meta = self.tree.get("ks_meta") or ""
+        self.tree["ks_meta"] = ks_meta + " autopart_type=thinp liveimg=%s" % img_rpm
+
+    def _find_image_update_rpm(self):
+        yb = yum.YumBase()
+        yb.repos.disableRepo("*")
+        yb.add_enable_repo(uuid.uuid4().hex, [self.parser.url])
+        pkgs = yb.pkgSack.searchNames(["redhat-virtualization-host-image-update"])
+        if not pkgs:
+            raise IncompleteTree("Could not find a valid RHVH rpm")
+        return pkgs[0].remote_path
+
+    def find_repos(self):
+        return []
+
+    def get_kernel_path(self):
+        return self.parser.get('images-%s' % self.tree['arch'],'kernel')
+
+    def get_initrd_path(self):
+        return self.parser.get('images-%s' % self.tree['arch'],'initrd')
 
 
 class TreeInfoRhel7(TreeInfoMixin, Importer):

@@ -1,4 +1,4 @@
-{% if has_rpmostree is not defined %}
+{% if has_rpmostree is not defined and liveimg is not defined %}
 {% set repo_base = distro_tree.url_in_lab(lab_controller, scheme=['http', 'ftp']) %}
 {% if repo_base %}
 {% for repo in distro_tree.repos %}
