@@ -701,24 +701,30 @@ class System(DeclarativeMappedObject, ActivityMixin):
             return self.visible_to_user(identity.current.user)
 
     @hybrid_method
-    def compatible_with_distro_tree(self, distro_tree):
-        return (distro_tree.arch in self.arch and
-                not any(e.osmajor == distro_tree.distro.osversion.osmajor
-                    and e.arch == distro_tree.arch
-                    for e in self.excluded_osmajor) and
-                not any(e.osversion == distro_tree.distro.osversion
-                    and e.arch == distro_tree.arch
-                    for e in self.excluded_osversion))
+    def compatible_with_distro_tree(self, arch, osmajor, osminor):
+        return (arch in self.arch and
+                not any(e.osmajor.osmajor == osmajor
+                        and e.arch == arch
+                        for e in self.excluded_osmajor) and
+                not any(e.osversion.osmajor.osmajor == osmajor
+                        and e.osversion.osminor == osminor
+                        and e.arch == arch
+                        for e in self.excluded_osversion))
+
 
     @compatible_with_distro_tree.expression
-    def compatible_with_distro_tree(cls, distro_tree): #pylint: disable=E0213
-        return and_(cls.arch.contains(distro_tree.arch),
-                not_(cls.excluded_osmajor.any(and_(
-                    ExcludeOSMajor.osmajor == distro_tree.distro.osversion.osmajor,
-                    ExcludeOSMajor.arch == distro_tree.arch))),
-                not_(System.excluded_osversion.any(and_(
-                    ExcludeOSVersion.osversion == distro_tree.distro.osversion,
-                    ExcludeOSVersion.arch == distro_tree.arch))))
+    def compatible_with_distro_tree(cls, arch, osmajor, osminor): #pylint: disable=E0213
+        return and_(cls.arch.contains(arch),
+                    not_(cls.excluded_osmajor.any(and_(
+                        ExcludeOSMajor.osmajor,
+                        OSMajor.osmajor == osmajor,
+                        ExcludeOSMajor.arch == arch))),
+                    not_(cls.excluded_osversion.any(and_(
+                        ExcludeOSVersion.osversion,
+                        OSVersion.osmajor,
+                        OSMajor.osmajor == osmajor,
+                        OSVersion.osminor == osminor,
+                        ExcludeOSVersion.arch == arch))))
 
     @hybrid_method
     def in_lab_with_distro_tree(self, distro_tree):
@@ -803,21 +809,30 @@ class System(DeclarativeMappedObject, ActivityMixin):
         return (major,version)
     excluded_families=property(excluded_families)
 
-    def install_options(self, distro_tree):
+    def install_options(self, arch, osmajor, osminor):
         """
         Yields install options based on distro selected.
         Inherit options from Arch -> Family -> Update
         """
-        if distro_tree.arch in self.provisions:
-            pa = self.provisions[distro_tree.arch]
+        try:
+            osmajor = OSMajor.by_name(osmajor)
+        except NoResultFound:
+            osmajor = None
+        try:
+            osversion = OSVersion.by_name(osmajor, osminor)
+        except NoResultFound:
+           osversion = None
+
+        if arch in self.provisions:
+            pa = self.provisions[arch]
             yield InstallOptions.from_strings(pa.ks_meta, pa.kernel_options,
                     pa.kernel_options_post)
-            if distro_tree.distro.osversion.osmajor in pa.provision_families:
-                pf = pa.provision_families[distro_tree.distro.osversion.osmajor]
+            if osmajor in pa.provision_families:
+                pf = pa.provision_families[osmajor]
                 yield InstallOptions.from_strings(pf.ks_meta,
                         pf.kernel_options, pf.kernel_options_post)
-                if distro_tree.distro.osversion in pf.provision_family_updates:
-                    pfu = pf.provision_family_updates[distro_tree.distro.osversion]
+                if osversion in pf.provision_family_updates:
+                    pfu = pf.provision_family_updates[osversion]
                     yield InstallOptions.from_strings(pfu.ks_meta,
                             pfu.kernel_options, pfu.kernel_options_post)
 
@@ -832,7 +847,9 @@ class System(DeclarativeMappedObject, ActivityMixin):
                 distro_tree.variant,
                 distro_tree.arch))
         sources.append(distro_tree.install_options())
-        sources.extend(self.install_options(distro_tree))
+        sources.extend(self.install_options(arch=distro_tree.arch,
+                       osmajor=distro_tree.distro.osversion.osmajor.osmajor,
+                       osminor=distro_tree.distro.osversion.osminor))
         return InstallOptions.reduce(sources)
 
     @property

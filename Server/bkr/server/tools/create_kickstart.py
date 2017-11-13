@@ -103,7 +103,8 @@ def main(*args):
                     distro_tree.variant,
                     distro_tree.arch))
             sources.append(distro_tree.install_options())
-            sources.extend(system.install_options(distro_tree))
+            sources.extend(system.install_options(distro_tree.arch,
+                           distro_tree.distro.osversion.osmajor.osmajor, distro_tree.distro.osversion.osminor))
             sources.append(recipe.generated_install_options())
             sources.append(InstallOptions.from_strings(recipe.ks_meta,
                         recipe.kernel_options, recipe.kernel_options_post))

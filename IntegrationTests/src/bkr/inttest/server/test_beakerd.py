@@ -1416,7 +1416,10 @@ class TestBeakerd(DatabaseTestCase):
             system = data_setup.create_system(shared=True,
                     lab_controller=self.lab_controller,
                     exclude_osmajor=[distro_tree.distro.osversion.osmajor])
-            self.assertFalse(system.compatible_with_distro_tree(distro_tree))
+            self.assertFalse(system.compatible_with_distro_tree(
+                arch=distro_tree.arch,
+                osmajor=distro_tree.distro.osversion.osmajor.osmajor,
+                osminor=distro_tree.distro.osversion.osminor))
             job = data_setup.create_job(distro_tree=distro_tree)
             job.recipesets[0].recipes[0].host_requires = \
                 '<hostRequires force="%s"/>' % system.fqdn

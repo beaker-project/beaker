@@ -904,7 +904,10 @@ class Job(TaskBase, ActivityMixin):
                 if not system.in_lab_with_distro_tree(distro_tree):
                     raise BX(_(u'%s is not available on %s'
                             % (distro_tree, system.lab_controller)))
-                if not system.compatible_with_distro_tree(distro_tree):
+                if not system.compatible_with_distro_tree(
+                        arch=distro_tree.arch,
+                        osmajor=distro_tree.distro.osversion.osmajor.osmajor,
+                        osminor=distro_tree.distro.osversion.osminor):
                     raise BX(_(u'%s does not support %s' % (system, distro_tree)))
                 # Inlcude the XML definition so that cloning this job will act as expected.
                 recipe.host_requires = u'<hostRequires force="%s" />' % system.fqdn
@@ -2519,7 +2522,9 @@ class Recipe(TaskBase, ActivityMixin):
                 self.distro_tree.arch))
         sources.append(self.distro_tree.install_options())
         if self.resource:
-            sources.extend(self.resource.install_options(self.distro_tree))
+            sources.extend(self.resource.install_options(arch=self.distro_tree.arch,
+                           osmajor=self.distro_tree.distro.osversion.osmajor.osmajor,
+                           osminor=self.distro_tree.distro.osversion.osminor))
         sources.append(self.generated_install_options())
         sources.append(InstallOptions.from_strings(self.ks_meta,
                     self.kernel_options, self.kernel_options_post))
@@ -3095,7 +3100,9 @@ class MachineRecipe(Recipe):
         if not host_filter.force:
             systems = host_filter.apply_filter(systems). \
                       filter(System.status == SystemStatus.automated)
-            systems = systems.filter(System.compatible_with_distro_tree(self.distro_tree))
+            systems = systems.filter(System.compatible_with_distro_tree(arch=self.distro_tree.arch,
+                                                                        osmajor=self.distro_tree.distro.osversion.osmajor.osmajor,
+                                                                        osminor=self.distro_tree.distro.osversion.osminor))
         else:
             systems = systems.filter(System.fqdn == host_filter.force). \
                       filter(System.status != SystemStatus.removed)
@@ -3120,7 +3127,9 @@ class MachineRecipe(Recipe):
         if not force:
             systems = systems.filter(System.status == SystemStatus.automated)
             if distro_tree:
-                systems = systems.filter(System.compatible_with_distro_tree(distro_tree))
+                systems = systems.filter(System.compatible_with_distro_tree(arch=distro_tree.arch,
+                                                                            osmajor=distro_tree.distro.osversion.osmajor.osmajor,
+                                                                            osminor=distro_tree.distro.osversion.osminor))
         else:
             systems = systems.filter(System.status != SystemStatus.removed)
         if distro_tree:
@@ -4016,8 +4025,8 @@ class SystemResource(RecipeResource):
         return make_link(url='/view/%s' % self.system.fqdn,
                          text=self.fqdn)
 
-    def install_options(self, distro_tree):
-        return self.system.install_options(distro_tree)
+    def install_options(self, arch, osmajor, osminor):
+        return self.system.install_options(arch, osmajor, osminor)
 
     def allocate(self):
         log.debug('Reserving system %s for recipe %s', self.system, self.recipe.id)
@@ -4153,7 +4162,7 @@ class VirtResource(RecipeResource):
         return urlparse.urljoin(get('openstack.dashboard_url'),
                 'project/instances/%s/' % self.instance_id)
 
-    def install_options(self, distro_tree):
+    def install_options(self, arch, osmajor, osminor):
         yield InstallOptions.from_strings('hwclock_is_utc', u'console=tty0 console=ttyS0,115200n8', '')
 
     def release(self):
@@ -4194,7 +4203,7 @@ class GuestResource(RecipeResource):
     def link(self):
         return self.fqdn # just text, not a link
 
-    def install_options(self, distro_tree):
+    def install_options(self, arch, osmajor, osminor):
         ks_meta = {
             'hwclock_is_utc': True,
         }

@@ -443,7 +443,9 @@ class SystemFilterMethodsTest(DatabaseTestCase):
                 exclude_osversion=[distro_tree.distro.osversion])
         compatible = data_setup.create_system(arch=u'x86_64')
         self.check_hybrid(System.query,
-                lambda s: s.compatible_with_distro_tree(distro_tree),
+                lambda s: s.compatible_with_distro_tree(arch=distro_tree.arch,
+                                                        osmajor=distro_tree.distro.osversion.osmajor.osmajor,
+                                                        osminor=distro_tree.distro.osversion.osminor),
                 included=[compatible],
                 excluded=[wrong_arch, osmajor_excluded, osversion_excluded])
 

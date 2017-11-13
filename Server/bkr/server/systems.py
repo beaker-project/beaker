@@ -201,7 +201,9 @@ class SystemsController(controllers.Controller):
         distro_tree = DistroTree.by_id(distro_tree_id)
 
         # sanity check: does the distro tree apply to this system?
-        if not system.compatible_with_distro_tree(distro_tree):
+        if not system.compatible_with_distro_tree(arch=distro_tree.arch,
+                                                  osmajor=distro_tree.distro.osversion.osmajor.osmajor,
+                                                  osminor=distro_tree.distro.osversion.osminor):
             raise BX(_(u'Distro tree %s cannot be provisioned on %s')
                     % (distro_tree, system.fqdn))
         if not system.lab_controller:

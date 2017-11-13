@@ -353,7 +353,9 @@ class Root(RPCRoot):
                     System.status == SystemStatus.manual))
         if distro_tree:
             query = query\
-                    .filter(System.compatible_with_distro_tree(distro_tree))\
+                    .filter(System.compatible_with_distro_tree(arch=distro_tree.arch,
+                            osmajor=distro_tree.distro.osversion.osmajor.osmajor,
+                            osminor=distro_tree.distro.osversion.osminor))\
                     .filter(System.in_lab_with_distro_tree(distro_tree))
         warn = None
         if query.count() < 1:
