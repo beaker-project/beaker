@@ -790,6 +790,18 @@ class DistroTree(DeclarativeMappedObject, ActivityMixin):
         return InstallOptions.from_strings(self.ks_meta,
                 self.kernel_options, self.kernel_options_post)
 
+    def create_installation_from_tree(self):
+        # delayed import to avoid circular dependency
+        from bkr.server.model.installation import Installation
+        installation = Installation()
+        installation.distro_tree = self
+        installation.arch = self.arch
+        installation.distro_name = self.distro.name
+        installation.osmajor = self.distro.osversion.osmajor.osmajor
+        installation.osminor = self.distro.osversion.osminor
+        installation.variant = self.variant
+        return installation
+
 class DistroTreeRepo(DeclarativeMappedObject):
 
     __tablename__ = 'distro_tree_repo'

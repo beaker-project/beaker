@@ -253,7 +253,10 @@ class TestJobsController(DatabaseTestCase):
                 </whiteboard>
                 <recipeSet>
                     <recipe>
-                        <distroRequires/> <hostRequires/>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires/>
                         <task name="/distribution/install"/>
                     </recipe>
                 </recipeSet>
@@ -261,4 +264,8 @@ class TestJobsController(DatabaseTestCase):
         ''')
         job = self.controller.process_xmljob(jobxml, self.user)
         recipe = job.recipesets[0].recipes[0]
-        self.assertNotEqual(recipe.installation, None)
+        self.assertEqual(recipe.installation.distro_name, "BlueShoeLinux5-5")
+        self.assertEqual(recipe.installation.arch.arch, "i386")
+        self.assertEqual(recipe.installation.osmajor, "DansAwesomeLinux6")
+        self.assertEqual(recipe.installation.osminor, "9")
+        self.assertEqual(recipe.installation.variant, "Server")

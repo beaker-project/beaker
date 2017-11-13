@@ -9,7 +9,7 @@ from sqlalchemy import Column, Integer, DateTime, UnicodeText, ForeignKey
 from sqlalchemy.orm import relationship
 from bkr.server.util import absolute_url
 from .base import DeclarativeMappedObject
-from .distrolibrary import DistroTree
+from .distrolibrary import DistroTree, Arch
 from .inventory import System, Command
 
 
@@ -25,15 +25,15 @@ class Installation(DeclarativeMappedObject):
     distro_tree_id = Column(Integer, ForeignKey('distro_tree.id',
             name='installation_distro_tree_id_fk'), nullable=False)
     distro_tree = relationship(DistroTree)
-    kernel_options = Column(UnicodeText, nullable=True)
+    kernel_options = Column(UnicodeText)
     rendered_kickstart_id = Column(Integer, ForeignKey('rendered_kickstart.id',
             name='installation_rendered_kickstart_id_fk', ondelete='SET NULL'))
     rendered_kickstart = relationship('RenderedKickstart')
     created = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
-    rebooted = Column(DateTime, default=None)
-    install_started = Column(DateTime, default=None)
-    install_finished = Column(DateTime, default=None)
-    postinstall_finished = Column(DateTime, default=None)
+    rebooted = Column(DateTime)
+    install_started = Column(DateTime)
+    install_finished = Column(DateTime)
+    postinstall_finished = Column(DateTime)
     # System where this installation was done. Note that this is optional, the 
     # installation might have been done on a dynamically created VM instead.
     system_id = Column(Integer, ForeignKey('system.id',
@@ -49,15 +49,27 @@ class Installation(DeclarativeMappedObject):
     recipe_id = Column(Integer, ForeignKey('recipe.id',
             name='installation_recipe_id_fk'))
     recipe = relationship('Recipe', back_populates='installation')
+    tree_url = Column(UnicodeText)
+    initrd_path = Column(UnicodeText)
+    kernel_path = Column(UnicodeText)
+    arch = relationship(Arch)
+    arch_id = Column(Integer, ForeignKey('arch.id', name='installation_arch_id_fk'))
+    distro_name = Column(UnicodeText)
+    osmajor = Column(UnicodeText)
+    osminor = Column(UnicodeText)
+    variant = Column(UnicodeText)
 
     def __repr__(self):
         return ('%s(created=%r, system=%r, distro_tree=%r, kernel_options=%r, '
                 'rendered_kickstart=%r, rebooted=%r, install_started=%r, '
-                'install_finished=%r, postinstall_finished=%r)'
-                % (self.__class__.__name__, self.created, self.system,
+                'install_finished=%r, postinstall_finished=%r, tree_url=%r,'
+                ' initrd_path=%r, kernel_path=%r, arch=%r, distro_name=%r, osmajor=%r, osminor=%r,'
+                ' variant=%r)' % (self.__class__.__name__, self.created, self.system,
                 self.distro_tree, self.kernel_options, self.rendered_kickstart,
                 self.rebooted, self.install_started, self.install_finished,
-                self.postinstall_finished))
+                self.postinstall_finished, self.tree_url, self.initrd_path,
+                self.kernel_path, self.arch, self.distro_name, self.osmajor, self.osminor,
+                self.variant))
 
     def __json__(self):
         return {
@@ -70,6 +82,14 @@ class Installation(DeclarativeMappedObject):
             'install_started': self.install_started,
             'install_finished': self.install_finished,
             'postinstall_finished': self.postinstall_finished,
+            'tree_url': self.tree_url,
+            'initrd_path': self.initrd_path,
+            'kernel_path': self.kernel_path,
+            'arch': self.arch,
+            'distro_name': self.distro_name,
+            'osmajor': self.osmajor,
+            'osminor': self.osminor,
+            'variant': self.variant,
             'commands': self.commands,
         }
 

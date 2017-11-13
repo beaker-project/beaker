@@ -1551,6 +1551,47 @@ class TestBeakerd(DatabaseTestCase):
             self.assertEquals(activity_entry.old_value, u'Low')
             self.assertEquals(activity_entry.new_value, u'Medium')
 
+    def test_installation_table_parameters_filled_out_at_provisioning_time(self):
+        with session.begin():
+            lc = data_setup.create_labcontroller()
+            system = data_setup.create_system(lab_controller=lc)
+            distro_tree = data_setup.create_distro_tree(distro_name=u'MyUniqueLinux5-5',
+                                                        lab_controllers=[lc])
+            user = data_setup.create_user(user_name=u'test-job-owner',
+                                          email_address=u'test-job-owner@example.com')
+        jobxml = lxml.etree.fromstring('''
+                    <job>
+                        <whiteboard>
+                            so pretty
+                        </whiteboard>
+                        <recipeSet>
+                            <recipe>
+                                <distroRequires>
+                                    <distro_name op="=" value="MyUniqueLinux5-5" />
+                                </distroRequires>
+                                <hostRequires/>
+                                <task name="/distribution/install"/>
+                            </recipe>
+                        </recipeSet>
+                    </job>
+                ''')
+        controller = Jobs()
+        with session.begin():
+            job = controller.process_xmljob(jobxml, user)
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        beakerd.provision_scheduled_recipesets()
+        with session.begin():
+            job = Job.query.get(job.id)
+            recipe = job.recipesets[0].recipes[0]
+        self.assertEqual(recipe.installation.tree_url,
+                         u'nfs://%s:/distros/MyUniqueLinux5-5/Server/i386/os/' % lc)
+        self.assertEqual(recipe.installation.kernel_path, u'pxeboot/vmlinuz')
+        self.assertEqual(recipe.installation.initrd_path, u'pxeboot/initrd')
+
+
 class TestProvisionVirtRecipes(DatabaseTestCase):
 
     def setUp(self):

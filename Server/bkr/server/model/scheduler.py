@@ -45,13 +45,13 @@ from bkr.server.installopts import InstallOptions
 from bkr.server.util import absolute_url
 from .types import (UUID, MACAddress, IPAddress, TaskResult, TaskStatus, TaskPriority,
                     ResourceType, RecipeVirtStatus, mac_unix_padded_dialect, SystemStatus,
-                    RecipeReservationCondition, SystemSchedulerStatus)
+                    RecipeReservationCondition, SystemSchedulerStatus, ImageType)
 from .base import DeclarativeMappedObject
 from .activity import Activity, ActivityMixin
 from .identity import User, Group
 from .lab import LabController
 from .distrolibrary import (OSMajor, OSVersion, Distro, DistroTree,
-        LabControllerDistroTree, install_options_for_distro)
+        LabControllerDistroTree, install_options_for_distro, KernelType)
 from .tasklibrary import Task, TaskPackage
 from .inventory import System, SystemActivity, Reservation
 from .installation import Installation
@@ -892,6 +892,7 @@ class Job(TaskBase, ActivityMixin):
             # Inlcude the XML definition so that cloning this job will act as expected.
             recipe.distro_requires = etree.tostring(distro_tree.to_xml(), encoding=unicode)
             recipe.distro_tree = distro_tree
+            recipe.installation = recipe.distro_tree.create_installation_from_tree()
             # Don't report panic's for reserve workflow.
             recipe.panic = 'ignore'
             if pick == 'fqdn':
@@ -984,8 +985,12 @@ class Job(TaskBase, ActivityMixin):
         # Include the XML definition so that cloning this job will act as expected.
         recipe.distro_requires = etree.tostring(distro_tree.to_xml(), encoding=unicode)
         recipe.distro_tree = distro_tree
-        recipe.installation = Installation(distro_tree=recipe.distro_tree)
         system = kw.get('system')
+        recipe.installation = Installation(distro_tree=recipe.distro_tree, arch=distro_tree.arch,
+                                           distro_name=distro_tree.distro.name,
+                                           osmajor=distro_tree.distro.osversion.osmajor.osmajor,
+                                           osminor=distro_tree.distro.osversion.osminor,
+                                           variant=distro_tree.variant)
         # Some extra sanity checks, to help out the user
         if system.status == SystemStatus.removed:
             raise ValueError(u'%s is removed' % system)
@@ -2533,6 +2538,21 @@ class Recipe(TaskBase, ActivityMixin):
     def provision(self):
         from bkr.server.kickstart import generate_kickstart
         install_options = self.reduced_install_options()
+        self.installation.tree_url = self.distro_tree.url_in_lab(
+            lab_controller=self.recipeset.lab_controller, scheme=install_options.ks_meta.get('method', None))
+        by_kernel = ImageType.kernel
+        by_initrd = ImageType.initrd
+        if getattr(self.resource, 'system', None) and self.resource.system.kernel_type:
+            if self.resource.system.kernel_type.uboot:
+                by_kernel = ImageType.uimage
+                by_initrd = ImageType.uinitrd
+            kernel_type = self.resource.system.kernel_type
+        else:
+            kernel_type = KernelType.by_name(u'default')
+        self.installation.kernel_path = self.distro_tree.image_by_type(
+            by_kernel, kernel_type).path
+        self.installation.initrd_path = self.distro_tree.image_by_type(
+            by_initrd, kernel_type).path
         if 'contained_harness' not in install_options.ks_meta \
            and 'ostree_repo_url' not in install_options.ks_meta:
             if 'harness' not in install_options.ks_meta and not self.harness_repo():

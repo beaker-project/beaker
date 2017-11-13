@@ -463,7 +463,7 @@ def create_recipe(distro_tree=None, task_list=None,
     recipe.ks_meta = ks_meta
     recipe.whiteboard = whiteboard
     recipe.distro_tree = distro_tree
-    recipe.installation = Installation(distro_tree=recipe.distro_tree)
+    recipe.installation = recipe.distro_tree.create_installation_from_tree()
     recipe.role = role or u'STANDALONE'
     recipe.distro_requires = lxml.etree.tostring(recipe.distro_tree.to_xml(), encoding=unicode)
 

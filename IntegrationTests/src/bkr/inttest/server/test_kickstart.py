@@ -13,6 +13,8 @@ from bkr.server import dynamic_virt
 from bkr.server.model import session, DistroTreeRepo, LabControllerDistroTree, \
         Provision, SSHPubKey, ProvisionFamily, OSMajor, Arch, \
         Key, Key_Value_String, OSMajorInstallOptions
+from bkr.server.model.distrolibrary import DistroTreeImage, KernelType
+from bkr.server.model.types import ImageType
 from bkr.server.kickstart import template_env, generate_kickstart
 from bkr.server.jobs import Jobs
 from bkr.inttest import data_setup, get_server_base, with_transaction
@@ -243,6 +245,31 @@ class KickstartTest(unittest.TestCase):
                 lab_controllers=[cls.lab_controller],
                 urls=[u'http://lab.test-kickstart.invalid/distros/F-18/GOLD/Fedora/armhfp/os/',
                       u'nfs://lab.test-kickstart.invalid:/distros/F-18/GOLD/Fedora/armhfp/os/'])
+
+            cls.f18_armhfp.images.extend([DistroTreeImage(
+                    image_type=ImageType.kernel, kernel_type=KernelType.by_name(u'highbank'),
+                    path='images/pxeboot/vmlinuz-highbank'),
+                DistroTreeImage(
+                    image_type=ImageType.uimage, kernel_type=KernelType.by_name(u'highbank'),
+                    path='images/pxeboot/uImage-highbank'),
+                DistroTreeImage(
+                    image_type=ImageType.initrd, kernel_type=KernelType.by_name(u'highbank'),
+                    path='images/pxeboot/initrd-highbank.img'),
+                DistroTreeImage(
+                    image_type=ImageType.uinitrd, kernel_type=KernelType.by_name(u'highbank'),
+                    path='images/pxeboot/uInitrd-highbank'),DistroTreeImage(
+                    image_type=ImageType.kernel, kernel_type=KernelType.by_name(u'mvebu'),
+                    path='images/pxeboot/vmlinuz-mvebu'),
+                DistroTreeImage(
+                    image_type=ImageType.uimage, kernel_type=KernelType.by_name(u'mvebu'),
+                    path='images/pxeboot/uImage-mvebu'),
+                DistroTreeImage(
+                    image_type=ImageType.initrd, kernel_type=KernelType.by_name(u'mvebu'),
+                    path='images/pxeboot/initrd-mvebu.img'),
+                DistroTreeImage(
+                    image_type=ImageType.uinitrd, kernel_type=KernelType.by_name(u'mvebu'),
+                    path='images/pxeboot/uInitrd-mvebu'),
+            ])
             cls.f18_armhfp.repos[:] = [
                 DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
             ]

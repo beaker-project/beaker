@@ -693,7 +693,7 @@ class Jobs(RPCRoot):
             recipe.tasks.append(recipetask)
         if not recipe.tasks:
             raise BX(_('No Tasks! You can not have a recipe with no tasks!'))
-        recipe.installation = Installation(distro_tree=recipe.distro_tree)
+        recipe.installation = recipe.distro_tree.create_installation_from_tree()
         return recipe
 
     @expose('json')
