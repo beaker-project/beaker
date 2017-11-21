@@ -12,7 +12,7 @@ import crypt
 from bkr.server import dynamic_virt
 from bkr.server.model import session, DistroTreeRepo, LabControllerDistroTree, \
         Provision, SSHPubKey, ProvisionFamily, OSMajor, Arch, \
-        Key, Key_Value_String, OSMajorInstallOptions
+        Key, Key_Value_String, OSMajorInstallOptions, Installation
 from bkr.server.model.distrolibrary import DistroTreeImage, KernelType
 from bkr.server.model.types import ImageType
 from bkr.server.kickstart import template_env, generate_kickstart
@@ -2223,8 +2223,11 @@ sed -i -e '/\[updates\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora-up
         # recipe defined at all (which can happen when systems are
         # switched to manual mode instead of automatic)
         tree = self.rhel62_server_x86_64
-        ks = generate_kickstart(self.system.manual_provision_install_options(tree),
-                                tree, self.system, self.user).kickstart
+        installation = tree.create_installation_from_tree()
+        installation.tree_url = tree.url_in_lab(lab_controller=self.system.lab_controller)
+        ks = generate_kickstart(install_options=self.system.manual_provision_install_options(tree),
+                                distro_tree=tree, system=self.system,
+                                user=self.user, installation=installation).kickstart
         compare_expected('RedHatEnterpriseLinux6-manual-defaults', None, ks)
 
     def test_no_system_or_recipe(self):
@@ -3226,7 +3229,11 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                                                                 ks_meta=u'remote_post=http://path/to/myscript')
         tree = self.rhel62_server_x86_64
         install_options = self.system.manual_provision_install_options(tree)
-        ks = generate_kickstart(install_options, tree, self.system, self.user).kickstart
+        ks = generate_kickstart(install_options=install_options,
+                                distro_tree=tree,
+                                system=self.system,
+                                user=self.user,
+                                installation=recipe.installation).kickstart
         self.assertIn("fetch remote_script http://path/to/myscript "
                       "&& chmod +x remote_script && ./remote_script", ks.splitlines())
 

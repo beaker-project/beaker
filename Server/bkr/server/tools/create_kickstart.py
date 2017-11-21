@@ -25,6 +25,15 @@ from bkr.server.bexceptions import DatabaseLookupError
 
 __description__ = 'Creates an Anaconda kickstart file'
 
+class FakeInstallation(object):
+    def __init__(self, osmajor, osminor, name, variant, arch, tree_url):
+        self.osmajor = osmajor
+        self.osminor = osminor
+        self.distro_name = name
+        self.variant = variant
+        self.arch = arch
+        self.tree_url = tree_url
+
 def main(*args):
     parser = optparse.OptionParser('usage: %prog [options]',
         description=__description__,
@@ -97,18 +106,21 @@ def main(*args):
                 distro_tree = recipe.distro_tree
 
             sources = []
-            sources.append(install_options_for_distro(
-                    distro_tree.distro.osversion.osmajor.osmajor,
-                    distro_tree.distro.osversion.osminor,
-                    distro_tree.variant,
-                    distro_tree.arch))
-            sources.append(distro_tree.install_options())
-            sources.extend(system.install_options(distro_tree.arch,
-                           distro_tree.distro.osversion.osmajor.osmajor, distro_tree.distro.osversion.osminor))
+            # if distro_tree is specified, distro_tree overrides recipe
+            osmajor = distro_tree.distro.osversion.osmajor.osmajor if distro_tree else recipe.installation.osmajor
+            osminor = distro_tree.distro.osversion.osminor if distro_tree else recipe.installation.osminor
+            variant = distro_tree.variant if distro_tree else recipe.installation.variant
+            arch = distro_tree.arch if distro_tree else recipe.installation.arch
+
+            sources.append(install_options_for_distro(osmajor, osminor, variant, arch))
+            if distro_tree:
+                sources.append(distro_tree.install_options())
+            sources.extend(system.install_options(arch, osmajor, osminor))
             sources.append(recipe.generated_install_options())
             sources.append(InstallOptions.from_strings(recipe.ks_meta,
-                        recipe.kernel_options, recipe.kernel_options_post))
+                                                       recipe.kernel_options, recipe.kernel_options_post))
             sources.append(InstallOptions.from_strings(ks_meta, None, koptions_post))
+
             install_options = InstallOptions.reduce(sources)
 
             ks_appends = [ks_append.ks_append for ks_append \
@@ -116,8 +128,16 @@ def main(*args):
             user = recipe.recipeset.job.owner
 
         # Render the kickstart
-        rendered_kickstart = generate_kickstart(install_options,
+        installation = recipe.installation if recipe and recipe.installation else \
+            FakeInstallation(distro_tree.distro.osversion.osmajor.osmajor,
+                             distro_tree.distro.osversion.osminor,
+                             distro_tree.distro.name,
+                             distro_tree.variant,
+                             distro_tree.arch,
+                             distro_tree.url_in_lab(lab_controller=system.lab_controller))
+        rendered_kickstart = generate_kickstart(install_options=install_options,
                                                 distro_tree=distro_tree,
+                                                installation=installation,
                                                 system=system,
                                                 user=user,
                                                 recipe=recipe,

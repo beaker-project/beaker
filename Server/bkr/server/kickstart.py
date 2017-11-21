@@ -15,8 +15,9 @@ from turbogears import config, redirect
 from turbogears.controllers import expose
 import cherrypy
 import jinja2.sandbox, jinja2.ext, jinja2.nodes
-from bkr.server.model import session, RenderedKickstart
+from bkr.server.model import session, RenderedKickstart, OSMajor, OSVersion
 from bkr.server.util import absolute_url
+from bkr.server.model.distrolibrary import split_osmajor_name_version
 
 log = logging.getLogger(__name__)
 
@@ -99,33 +100,44 @@ class TemplateRenderingEnvironment(object):
 # want. Server templates (controlled by the admin) on the other hand have 
 # access to the real model objects because it is more powerful.
 class RestrictedOSMajor(object):
-    def __init__(self, osmajor):
-        self.osmajor = unicode(osmajor.osmajor)
-        self.name = unicode(osmajor.name)
-        self.number = unicode(osmajor.number)
+    def __init__(self, osmajor, name=None, number=None):
+        self.osmajor = unicode(osmajor)
+        name, number = split_osmajor_name_version(osmajor)
+        self.name = unicode(name)
+        self.number = unicode(number)
 class RestrictedOSVersion(object):
-    def __init__(self, osversion):
-        self.osmajor = RestrictedOSMajor(osversion.osmajor)
-        if osversion.osminor is None:
+    def __init__(self, osmajor, osminor):
+        self.osmajor = RestrictedOSMajor(osmajor)
+        if osminor is None:
             self.osminor = None
         else:
-            self.osminor = unicode(osversion.osminor)
+            self.osminor = unicode(osminor)
 class RestrictedDistro(object):
-    def __init__(self, distro):
-        self.osversion = RestrictedOSVersion(distro.osversion)
-        self.name = unicode(distro.name)
+    def __init__(self, osmajor, osminor, name):
+        self.osversion = RestrictedOSVersion(osmajor, osminor)
+        self.name = unicode(name)
 class RestrictedArch(object):
     def __init__(self, arch):
-        self.arch = unicode(arch.arch)
+        self.arch = unicode(arch)
 class RestrictedDistroTree(object):
-    def __init__(self, distro_tree):
-        self.distro = RestrictedDistro(distro_tree.distro)
-        if distro_tree.variant is None:
+    def __init__(self, osmajor, osminor, name, variant, arch, tree_url, distro_tree=None):
+        self.distro = RestrictedDistro(osmajor, osminor, name)
+        if variant is None:
             self.variant = None
         else:
-            self.variant = unicode(distro_tree.variant)
-        self.arch = RestrictedArch(distro_tree.arch)
-        self.url_in_lab = distro_tree.url_in_lab
+            self.variant = unicode(variant)
+        self.arch = RestrictedArch(arch)
+        self.distro_tree = distro_tree
+        self.tree_url = tree_url
+        # Empty repo list to avoid breaking templates
+        self.repos = []
+
+    def url_in_lab(self, lab_controller, scheme=None, required=False):
+        if self.distro_tree:
+            return self.distro_tree.url_in_lab(lab_controller, scheme)
+        else:
+            return self.tree_url
+
 class RestrictedLabController(object):
     def __init__(self, lab_controller):
         self.fqdn = unicode(lab_controller.fqdn)
@@ -180,10 +192,10 @@ template_env.globals.update({
     'absolute_url': absolute_url,
 })
 
-def kickstart_template(distro_tree):
+def kickstart_template(osmajor):
     candidates = [
-        'kickstarts/%s' % distro_tree.distro.osversion.osmajor.osmajor,
-        'kickstarts/%s' % distro_tree.distro.osversion.osmajor.osmajor.rstrip(string.digits),
+        'kickstarts/%s' % osmajor,
+        'kickstarts/%s' % osmajor.rstrip(string.digits),
         'kickstarts/default',
     ]
     for candidate in candidates:
@@ -192,10 +204,10 @@ def kickstart_template(distro_tree):
         except jinja2.TemplateNotFound:
             continue
     raise ValueError('No kickstart template found for %s, tried: %s'
-            % (distro_tree.distro, ', '.join(candidates)))
+                     % (osmajor, ', '.join(candidates)))
 
 def generate_kickstart(install_options, distro_tree, system, user,
-        recipe=None, ks_appends=None, kickstart=None):
+        recipe=None, ks_appends=None, kickstart=None, installation=None):
     if recipe:
         lab_controller = recipe.recipeset.lab_controller
     elif system:
@@ -203,8 +215,6 @@ def generate_kickstart(install_options, distro_tree, system, user,
     else:
         raise ValueError("Must specify either a system or a recipe")
 
-    # User-supplied templates don't get access to our model objects, in case
-    # they do something foolish/naughty.
     recipe_whiteboard = job_whiteboard = ''
     if recipe:
         if recipe.whiteboard:
@@ -212,12 +222,18 @@ def generate_kickstart(install_options, distro_tree, system, user,
         if recipe.recipeset.job.whiteboard:
             job_whiteboard = recipe.recipeset.job.whiteboard
 
+    installation = installation if installation is not None else recipe.installation
+    # User-supplied templates don't get access to our model objects, in case
+    # they do something foolish/naughty.
     restricted_context = {
         'kernel_options_post': install_options.kernel_options_post_str,
         'recipe_whiteboard': recipe_whiteboard,
         'job_whiteboard': job_whiteboard,
-        'distro_tree': RestrictedDistroTree(distro_tree),
-        'distro': RestrictedDistro(distro_tree.distro),
+        'distro_tree': RestrictedDistroTree(installation.osmajor, installation.osminor,
+                                            installation.distro_name, installation.variant,
+                                            installation.arch.arch, installation.tree_url, distro_tree),
+        'distro': RestrictedDistro(installation.osmajor, installation.osminor,
+                                   installation.distro_name),
         'lab_controller': RestrictedLabController(lab_controller),
         'recipe': RestrictedRecipe(recipe) if recipe else None,
         'ks_appends': ks_appends or [],
@@ -228,14 +244,26 @@ def generate_kickstart(install_options, distro_tree, system, user,
     # System templates and snippets have access to more useful stuff.
     context = dict(restricted_context)
     context.update({
-        'distro_tree': distro_tree,
-        'distro': distro_tree.distro,
         'system': system,
         'lab_controller': lab_controller,
         'user': user,
         'recipe': recipe,
         'config': config,
     })
+    if distro_tree:
+        context.update({
+            'distro_tree': distro_tree,
+            'distro': distro_tree.distro,
+        })
+    else:
+        # But user-defined distros only get access to our "Restricted" model objects
+        context.update({
+            'distro_tree': RestrictedDistroTree(installation.osmajor, installation.osminor,
+                                                installation.distro_name, installation.variant,
+                                                installation.arch.arch, installation.tree_url),
+            'distro': RestrictedDistro(installation.osmajor, installation.osminor,
+                                       installation.distro_name),
+        })
 
     snippet_locations = []
     if system:
@@ -243,8 +271,8 @@ def generate_kickstart(install_options, distro_tree, system, user,
              'snippets/per_system/%%s/%s' % system.fqdn)
     snippet_locations.extend([
         'snippets/per_lab/%%s/%s' % lab_controller.fqdn,
-        'snippets/per_osversion/%%s/%s' % distro_tree.distro.osversion,
-        'snippets/per_osmajor/%%s/%s' % distro_tree.distro.osversion.osmajor,
+        'snippets/per_osversion/%%s/%s.%s' % (installation.osmajor, installation.osminor),
+        'snippets/per_osmajor/%%s/%s' % installation.osmajor,
         'snippets/%s',
     ])
 
@@ -273,7 +301,7 @@ def generate_kickstart(install_options, distro_tree, system, user,
                     "{% snippet 'install_method' %}\n" + kickstart)
             result = template.render(restricted_context)
         else:
-            template = kickstart_template(distro_tree)
+            template = kickstart_template(installation.osmajor)
             result = template.render(context)
 
     rendered_kickstart = RenderedKickstart(kickstart=result)

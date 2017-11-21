@@ -2612,7 +2612,7 @@ class Recipe(TaskBase, ActivityMixin):
             kickstart = kicktemplate % dict(
                                         beforepackages = beforepackages,
                                         afterpackages = afterpackages)
-            rendered_kickstart = generate_kickstart(install_options,
+            rendered_kickstart = generate_kickstart(install_options=install_options,
                     distro_tree=self.distro_tree,
                     system=getattr(self.resource, 'system', None),
                     user=self.recipeset.job.owner,
@@ -2620,7 +2620,7 @@ class Recipe(TaskBase, ActivityMixin):
             install_options.kernel_options['ks'] = rendered_kickstart.link
         else:
             ks_appends = [ks_append.ks_append for ks_append in self.ks_appends]
-            rendered_kickstart = generate_kickstart(install_options,
+            rendered_kickstart = generate_kickstart(install_options=install_options,
                     distro_tree=self.distro_tree,
                     system=getattr(self.resource, 'system', None),
                     user=self.recipeset.job.owner,

@@ -28,6 +28,11 @@ from .types import ImageType, SystemStatus
 from .activity import Activity, ActivityMixin
 from .lab import LabController
 
+
+def split_osmajor_name_version(osmajor):
+    return re.match(r'(.*?)(rawhide|\d*)$', osmajor).groups()
+
+
 def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
     """
     Returns the default install options supplied by Beaker (rather than the 
@@ -35,7 +40,7 @@ def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
     This is where installer feature test variables are populated.
     """
     # Some convenience variables to make the name-based checks simpler:
-    name, version = OSMajor._split(osmajor_name)
+    name, version = split_osmajor_name_version(osmajor_name)
     rhel, fedora = False, False
     if name in ('RedHatEnterpriseLinux', 'RedHatEnterpriseLinuxServer',
             'RedHatEnterpriseLinuxClient', 'RedHatEnterpriseLinuxServerGrid',
@@ -415,20 +420,16 @@ class OSMajor(DeclarativeMappedObject):
 
     def _sort_key(self):
         # Separate out the trailing digits, so that Fedora9 sorts before Fedora10
-        name, version = self._split(self.osmajor)
+        name, version = split_osmajor_name_version(self.osmajor)
         if version == 'rawhide':
             version = 999
         elif version:
             version = int(version)
         return (name.lower(), version)
 
-    @staticmethod
-    def _split(osmajor):
-        return re.match(r'(.*?)(rawhide|\d*)$', osmajor).groups()
-
     @property
     def name(self):
-        name, version = self._split(self.osmajor)
+        name, version = split_osmajor_name_version(self.osmajor)
         return name
 
     @property
@@ -438,7 +439,7 @@ class OSMajor(DeclarativeMappedObject):
         Note that this is not an int because it may be 'rawhide'!
         """
         # This property is called number to avoid confusion with OSVersion.
-        name, version = self._split(self.osmajor)
+        name, version = split_osmajor_name_version(self.osmajor)
         return version
 
     @staticmethod

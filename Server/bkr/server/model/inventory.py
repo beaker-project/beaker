@@ -1517,18 +1517,17 @@ class System(DeclarativeMappedObject, ActivityMixin):
                     from bkr.server.model.installation import Installation
                     install_options = self.manual_provision_install_options(
                             self.reprovision_distro_tree)
+                    installation = self.reprovision_distro_tree.create_installation_from_tree()
+                    installation.tree_url = self.reprovision_distro_tree.url_in_lab(lab_controller=self.lab_controller)
                     if 'ks' not in install_options.kernel_options:
-                        rendered_kickstart = generate_kickstart(install_options,
+                        rendered_kickstart = generate_kickstart(
+                            install_options=install_options,
+                            installation=installation,
                             distro_tree=self.reprovision_distro_tree,
                             system=self, user=self.owner)
                         install_options.kernel_options['ks'] = rendered_kickstart.link
                     else:
                         rendered_kickstart = None
-                    installation = Installation(distro_tree=self.reprovision_distro_tree,
-                            kernel_options=install_options.kernel_options_str,
-                            rendered_kickstart=rendered_kickstart)
-                    installation.tree_url = self.reprovision_distro_tree.url_in_lab(
-                        lab_controller=self.lab_controller)
                     by_kernel = ImageType.uimage if self.kernel_type and self.kernel_type.uboot \
                         else ImageType.kernel
                     by_initrd = ImageType.uinitrd if self.kernel_type and self.kernel_type.uboot \
@@ -1536,6 +1535,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
                     kernel_type = self.kernel_type if self.kernel_type else KernelType.by_name(u'default')
                     installation.kernel_path = self.reprovision_distro_tree.image_by_type(by_kernel, kernel_type).path
                     installation.initrd_path = self.reprovision_distro_tree.image_by_type(by_initrd, kernel_type).path
+                    installation.kernel_options = install_options.kernel_options_str
+                    installation.rendered_kickstart = rendered_kickstart
                     self.installations.append(installation)
                     self.configure_netboot(installation=installation, service=service)
                     self.action_power(action=u'reboot', installation=installation,

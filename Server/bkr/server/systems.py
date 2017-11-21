@@ -222,17 +222,17 @@ class SystemsController(controllers.Controller):
                     ks_meta or '',
                     kernel_options or '',
                     kernel_options_post or ''))
+        installation = distro_tree.create_installation_from_tree()
+        installation.tree_url = distro_tree.url_in_lab(lab_controller=system.lab_controller)
         if 'ks' not in options.kernel_options:
-            rendered_kickstart = generate_kickstart(options,
-                    distro_tree=distro_tree,
-                    system=system, user=identity.current.user, kickstart=kickstart)
+            rendered_kickstart = generate_kickstart(
+                install_options=options,
+                installation=installation,
+                distro_tree=distro_tree,
+                system=system, user=identity.current.user, kickstart=kickstart)
             options.kernel_options['ks'] = rendered_kickstart.link
         else:
             rendered_kickstart = None
-        installation = Installation(distro_tree=distro_tree,
-                kernel_options=options.kernel_options_str,
-                rendered_kickstart=rendered_kickstart)
-        installation.tree_url = distro_tree.url_in_lab(lab_controller=system.lab_controller)
         by_kernel = ImageType.uimage if system.kernel_type and system.kernel_type.uboot \
             else ImageType.kernel
         by_initrd = ImageType.uinitrd if system.kernel_type and system.kernel_type.uboot \
@@ -240,6 +240,8 @@ class SystemsController(controllers.Controller):
         kernel_type = system.kernel_type if system.kernel_type else KernelType.by_name(u'default')
         installation.kernel_path = distro_tree.image_by_type(by_kernel, kernel_type).path
         installation.initrd_path = distro_tree.image_by_type(by_initrd, kernel_type).path
+        installation.kernel_options = options.kernel_options_str
+        installation.rendered_kickstart = rendered_kickstart
         system.installations.append(installation)
         system.configure_netboot(installation=installation, service=u'XMLRPC')
         system.record_activity(user=identity.current.user,
@@ -1175,17 +1177,16 @@ def provision_system(fqdn):
         install_options = system.manual_provision_install_options(distro_tree)\
                 .combined_with(InstallOptions.from_strings(data.get('ks_meta'),
                     data.get('koptions'), data.get('koptions_post')))
+        installation = distro_tree.create_installation_from_tree()
+        installation.tree_url = distro_tree.url_in_lab(lab_controller=system.lab_controller)
+        installation.system = system
+
         if 'ks' not in install_options.kernel_options:
-            kickstart = generate_kickstart(install_options,
-                    distro_tree=distro_tree, system=system, user=user)
+            kickstart = generate_kickstart(install_options=install_options,
+                    distro_tree=distro_tree, system=system, user=user, installation=installation)
             install_options.kernel_options['ks'] = kickstart.link
         else:
             kickstart = None
-        installation = Installation(distro_tree=distro_tree,
-                kernel_options=install_options.kernel_options_str,
-                rendered_kickstart=kickstart,
-                system=system)
-        installation.tree_url = distro_tree.url_in_lab(lab_controller=system.lab_controller)
         by_kernel = ImageType.uimage if system.kernel_type and system.kernel_type.uboot \
             else ImageType.kernel
         by_initrd = ImageType.uinitrd if system.kernel_type and system.kernel_type.uboot \
@@ -1193,6 +1194,8 @@ def provision_system(fqdn):
         kernel_type = system.kernel_type if system.kernel_type else KernelType.by_name(u'default')
         installation.kernel_path = distro_tree.image_by_type(by_kernel, kernel_type).path
         installation.initrd_path = distro_tree.image_by_type(by_initrd, kernel_type).path
+        installation.kernel_options = install_options.kernel_options_str
+        installation.rendered_kickstart = kickstart
         system.configure_netboot(installation=installation, service=u'HTTP')
         system.record_activity(user=identity.current.user, service=u'HTTP',
                 action=u'Provision', field=u'Distro Tree',
