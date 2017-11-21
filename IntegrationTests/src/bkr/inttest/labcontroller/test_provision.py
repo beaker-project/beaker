@@ -309,8 +309,9 @@ class ConfigureNetbootTest(LabControllerTestCase):
                     lab_controllers=[lc],
                     # /slow/600 means the response will be delayed 10 minutes
                     urls=['http://localhost:19998/slow/600/'])
-            installation = Installation(distro_tree=distro_tree, system=system,
-                    kernel_options=u'')
+            installation = distro_tree.create_installation_from_tree()
+            installation.tree_url = distro_tree.url_in_lab(lab_controller=lc)
+            installation.kernel_options = u''
             system.configure_netboot(installation=installation, service=u'testdata')
         wait_for_commands_to_finish(system, timeout=(2 * get_conf().get('SLEEP_TIME')
                 + get_conf().get('IMAGE_FETCH_TIMEOUT')))
@@ -328,8 +329,9 @@ class ConfigureNetbootTest(LabControllerTestCase):
             distro_tree = data_setup.create_distro_tree(arch=u'x86_64',
                     lab_controllers=[lc],
                     urls=['http://localhost:19998/error/404/'])
-            installation = Installation(distro_tree=distro_tree, system=system,
-                    kernel_options=u'')
+            installation = distro_tree.create_installation_from_tree()
+            installation.tree_url = distro_tree.url_in_lab(lab_controller=lc)
+            installation.kernel_options = u''
             system.configure_netboot(installation=installation, service=u'testdata')
         wait_for_commands_to_finish(system, timeout=(2 * get_conf().get('SLEEP_TIME')))
         self.assertEquals(system.command_queue[0].action, u'configure_netboot')

@@ -450,38 +450,27 @@ class LabControllers(RPCRoot):
             elif cmd.action == u'configure_netboot':
                 installation = cmd.installation
                 distro_tree = cmd.installation.distro_tree
-                schemes = ['http', 'ftp']
-                if distro_tree.arch.arch == 's390' or distro_tree.arch.arch == 's390x':
-                    # zPXE needs FTP URLs for the images, it has no HTTP client.
-                    # It would be nicer if we could leave this decision up to 
-                    # beaker-provision, but the API doesn't work like that...
-                    schemes = ['ftp']
-                distro_tree_url = distro_tree.url_in_lab(lab_controller, scheme=schemes)
+                if distro_tree:
+                    schemes = ['http', 'ftp']
+                    if distro_tree.arch.arch == 's390' or distro_tree.arch.arch == 's390x':
+                        # zPXE needs FTP URLs for the images, it has no HTTP client.
+                        # It would be nicer if we could leave this decision up to
+                        # beaker-provision, but the API doesn't work like that...
+                        schemes = ['ftp']
+                    distro_tree_url = distro_tree.url_in_lab(lab_controller, scheme=schemes)
+                else:
+                    distro_tree_url = installation.tree_url
                 if not distro_tree_url:
                     cmd.abort(u'No usable URL found for distro tree %s in lab %s'
                             % (distro_tree.id, lab_controller.fqdn))
                     continue
 
-                if cmd.system.kernel_type.uboot:
-                    by_kernel = ImageType.uimage
-                    by_initrd = ImageType.uinitrd
-                else:
-                    by_kernel = ImageType.kernel
-                    by_initrd = ImageType.initrd
-
-                kernel = distro_tree.image_by_type(by_kernel, cmd.system.kernel_type)
-                if not kernel:
-                    cmd.abort(u'Kernel image not found for distro tree %s' % distro_tree.id)
-                    continue
-                initrd = distro_tree.image_by_type(by_initrd, cmd.system.kernel_type)
-                if not initrd:
-                    cmd.abort(u'Initrd image not found for distro tree %s' % distro_tree.id)
-                    continue
                 d['netboot'] = {
-                    'arch': distro_tree.arch.arch,
-                    'distro_tree_id': distro_tree.id,
-                    'kernel_url': urlparse.urljoin(distro_tree_url, kernel.path),
-                    'initrd_url': urlparse.urljoin(distro_tree_url, initrd.path),
+                    'arch': installation.arch.arch,
+                    # distro_tree_id is None for user-defined case
+                    'distro_tree_id': distro_tree.id if distro_tree else None,
+                    'kernel_url': urlparse.urljoin(distro_tree_url, installation.kernel_path),
+                    'initrd_url': urlparse.urljoin(distro_tree_url, installation.initrd_path),
                     'kernel_options': installation.kernel_options or '',
                 }
             result.append(d)

@@ -612,6 +612,25 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
         self.server = self.get_server()
         self.server.auth.login_password(self.lc.user.user_name, u'logmein')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=911515
+    def test_queued_commands_with_user_defined_metadata(self):
+        with session.begin():
+            system = data_setup.create_system(lab_controller=self.lc)
+            installation = Installation(tree_url='ftp://dummylab.example.com/distros/MyAwesomeLinux1/',
+                                        initrd_path='pxeboot/initrd', kernel_path='pxeboot/vmlinuz',
+                                        arch=Arch.by_name('i386'), system=system, kernel_options=u'anwesha')
+            system.configure_netboot(installation=installation, service=u'testdata')
+        queued_commands = self.server.labcontrollers.get_queued_command_details()
+        self.assertEquals(queued_commands[1]['action'], 'configure_netboot')
+        self.assertEquals(queued_commands[1]['fqdn'], system.fqdn)
+        self.assertEquals(queued_commands[1]['netboot']['arch'], 'i386')
+        self.assertEquals(queued_commands[1]['netboot']['distro_tree_id'], None)
+        self.assertEquals(queued_commands[1]['netboot']['kernel_url'],
+                          'ftp://dummylab.example.com/distros/MyAwesomeLinux1/pxeboot/vmlinuz')
+        self.assertEquals(queued_commands[1]['netboot']['initrd_url'],
+                          'ftp://dummylab.example.com/distros/MyAwesomeLinux1/pxeboot/initrd')
+        self.assertEquals(queued_commands[1]['netboot']['kernel_options'], u'anwesha')
+
     def setup_system_with_queued_commands(self):
         with session.begin():
             system = data_setup.create_system(arch=[u'i386', u'x86_64'],
@@ -835,8 +854,8 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
                                               lab_controller=self.lc,
                                               status=SystemStatus.automated, shared=True)
             distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20')
-            installation = Installation(distro_tree=distro_tree, system=system,
-                    kernel_options=u'')
+            installation = Installation(distro_tree=distro_tree, system=system, arch=Arch.by_name('i386'),
+                                        kernel_options=u'')
             system.configure_netboot(installation=installation, service=u'testdata')
         queued_commands = self.server.labcontrollers.get_queued_command_details()
         self.assertEquals(queued_commands[1]['action'], 'configure_netboot')
@@ -855,7 +874,8 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
                         u'ftp://mylabmirror.example.invalid/Fedora23/s390x/',
                     ])
             installation = Installation(distro_tree=distro_tree, system=system,
-                    kernel_options=u'')
+                    kernel_options=u'', arch=Arch.by_name('s390x'),
+                    initrd_path='pxeboot/initrd', kernel_path='pxeboot/vmlinuz')
             system.configure_netboot(installation=installation, service=u'testdata')
         queued_commands = self.server.labcontrollers.get_queued_command_details()
         self.assertEquals(queued_commands[1]['action'], 'configure_netboot')

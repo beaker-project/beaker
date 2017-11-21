@@ -1511,21 +1511,9 @@ def ipxe_script(uuid):
         # We need to handle this case because the VM is created and boots up 
         # *before* we generate the kickstart etc
         raise ServiceUnavailable503('Recipe has not been provisioned yet')
-    distro_tree = recipe.distro_tree
-    distro_tree_url = distro_tree.url_in_lab(resource.lab_controller,
-            scheme=['http', 'ftp'])
-    kernel = distro_tree.image_by_type(ImageType.kernel,
-            KernelType.by_name(u'default'))
-    if not kernel:
-        raise BadRequest400('Kernel image not found for distro tree %s'
-                % distro_tree.id)
-    initrd = recipe.distro_tree.image_by_type(ImageType.initrd,
-            KernelType.by_name(u'default'))
-    if not initrd:
-        raise BadRequest400('Initrd image not found for distro tree %s'
-                % distro_tree.id)
-    kernel_url = urlparse.urljoin(distro_tree_url, kernel.path)
-    initrd_url = urlparse.urljoin(distro_tree_url, initrd.path)
+    distro_tree_url = recipe.installation.tree_url
+    kernel_url = urlparse.urljoin(distro_tree_url, recipe.installation.kernel_path)
+    initrd_url = urlparse.urljoin(distro_tree_url, recipe.installation.initrd_path)
     kernel_options = recipe.installation.kernel_options + ' netboot_method=ipxe'
 
     # strip out netbootloader=.. string since it doesn't make sense for
