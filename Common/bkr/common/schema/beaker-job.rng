@@ -223,14 +223,23 @@ the Free Software Foundation; either version 2 of the License, or
       <optional>
         <ref name="repos"/>
       </optional>
-      <element name="distroRequires">
-        <a:documentation xml:lang="en">
-          This element is a container for expressing constraints on the
-          operating system distribution which will be selected and
-          provisioned at the start of this recipe.
-        </a:documentation>
-        <zeroOrMore><ref name="distroreq"/></zeroOrMore>
-      </element>
+      <choice>
+        <element name="distroRequires">
+          <a:documentation xml:lang="en">
+            This element is a container for expressing constraints on the
+            operating system distribution which will be selected and
+            provisioned at the start of this recipe.
+          </a:documentation>
+          <zeroOrMore><ref name="distroreq"/></zeroOrMore>
+        </element>
+        <element name="distro">
+          <a:documentation xml:lang="en">
+            This element is a container for specifying the operating system
+            distribution which will be provisioned at the start of this recipe.
+          </a:documentation>
+          <ref name="distrometadata"/>
+        </element>
+      </choice>
       <element name="hostRequires">
         <a:documentation xml:lang="en">
           This element is a container for expressing constraints on the
@@ -557,6 +566,60 @@ the Free Software Foundation; either version 2 of the License, or
       </element>
       <element name="labcontroller"><ref name="req"/></element>
     </choice>
+  </define>
+  <define name="distrometadata">
+    <element name="tree">
+      <a:documentation xml:lang="en">
+        The URL where the installation tree is located.
+      </a:documentation>
+      <attribute name="url"/>
+    </element>
+    <element name="kernel">
+      <a:documentation xml:lang="en">
+        Location of the installer kernel image. May be specified as
+        an absolute URL or as a path relative to the installation tree URL.
+      </a:documentation>
+      <attribute name="url"/>
+    </element>
+    <element name="initrd">
+      <a:documentation xml:lang="en">
+        Location of the installer initramfs image. May be specified as
+        an absolute URL or as a path relative to the installation tree URL.
+      </a:documentation>
+      <attribute name="url"/>
+    </element>
+    <element name="arch">
+      <a:documentation xml:lang="en">
+        CPU architecture that the distro is built for.
+      </a:documentation>
+      <attribute name="value"/>
+    </element>
+    <element name="osversion">
+      <a:documentation xml:lang="en">
+        OS version expressed as the major and minor versions of this distro.
+        For example, &lt;osversion major="RedHatEnterpriseLinux7" minor="4"/&gt;.
+      </a:documentation>
+      <attribute name="major"/>
+      <optional>
+        <attribute name="minor"/>
+      </optional>
+    </element>
+    <optional>
+      <element name="name">
+        <a:documentation xml:lang="en">
+          The (optional) distro name, used for display purposes.
+        </a:documentation>
+        <attribute name="value"/>
+      </element>
+    </optional>
+    <optional>
+      <element name="variant">
+        <a:documentation xml:lang="en">
+          The (optional) distro variant, used for display purposes.
+        </a:documentation>
+        <attribute name="value"/>
+      </element>
+    </optional>
   </define>
   <define name="hostreq">
     <choice>

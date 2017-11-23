@@ -245,7 +245,44 @@ class TestJobsController(DatabaseTestCase):
         job = self.controller.process_xmljob(xmljob, self.user)
         self.assertEqual(job.whiteboard, u'so pretty')
 
-    def test_installation_row_is_created_at_job_submission_time(self):
+    # https://bugzilla.redhat.com/show_bug.cgi?id=911515
+    def test_distro_metadata_stored_at_job_submission_time_for_user_defined_distro(self):
+        jobxml = lxml.etree.fromstring('''
+            <job>
+                <whiteboard>
+                    so pretty
+                </whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distro>
+                            <tree url="ftp://dummylab.example.com/distros/MyCustomLinux1.0/Server/i386/os/"/>
+                            <initrd url="pxeboot/initrd"/>
+                            <kernel url="pxeboot/vmlinuz"/>
+                            <arch value="i386"/>
+                            <osversion major="RedHatEnterpriseLinux7" minor="4"/>
+                            <name value="MyCustomLinux1.0"/>
+                            <variant value="Server"/>
+                        </distro>
+                        <hostRequires/>
+                        <task name="/distribution/install"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+        ''')
+        job = self.controller.process_xmljob(jobxml, self.user)
+        recipe = job.recipesets[0].recipes[0]
+        self.assertEqual(recipe.installation.tree_url,
+                         "ftp://dummylab.example.com/distros/MyCustomLinux1.0/Server/i386/os/")
+        self.assertEqual(recipe.installation.initrd_path, "pxeboot/initrd")
+        self.assertEqual(recipe.installation.kernel_path, "pxeboot/vmlinuz")
+        self.assertEqual(recipe.installation.arch.arch, "i386")
+        self.assertEqual(recipe.installation.distro_name, "MyCustomLinux1.0")
+        self.assertEqual(recipe.installation.osmajor, "RedHatEnterpriseLinux7")
+        self.assertEqual(recipe.installation.osminor, "4")
+        self.assertEqual(recipe.installation.variant, "Server")
+        self.assertEqual(recipe.distro_requires, None)
+
+    def test_distro_metadata_stored_at_job_submission_time_for_traditional_distro(self):
         jobxml = lxml.etree.fromstring('''
             <job>
                 <whiteboard>
@@ -264,8 +301,132 @@ class TestJobsController(DatabaseTestCase):
         ''')
         job = self.controller.process_xmljob(jobxml, self.user)
         recipe = job.recipesets[0].recipes[0]
-        self.assertEqual(recipe.installation.distro_name, "BlueShoeLinux5-5")
-        self.assertEqual(recipe.installation.arch.arch, "i386")
-        self.assertEqual(recipe.installation.osmajor, "DansAwesomeLinux6")
-        self.assertEqual(recipe.installation.osminor, "9")
-        self.assertEqual(recipe.installation.variant, "Server")
+        self.assertIsNone(recipe.installation.tree_url)
+        self.assertIsNone(recipe.installation.initrd_path)
+        self.assertIsNone(recipe.installation.kernel_path)
+        self.assertEqual(recipe.installation.arch.arch, u'i386')
+        self.assertEqual(recipe.installation.distro_name, u'BlueShoeLinux5-5')
+        self.assertEqual(recipe.installation.osmajor, u'DansAwesomeLinux6')
+        self.assertEqual(recipe.installation.osminor, u'9')
+        self.assertEqual(recipe.installation.variant, u'Server')
+        self.assertNotEqual(recipe.distro_requires, None)
+
+    def test_unknown_arch_in_user_defined_distro_throws_exception(self):
+        jobxml = lxml.etree.fromstring('''
+            <job>
+                <whiteboard>
+                    so pretty
+                </whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distro>
+                            <tree url="ftp://dummylab.example.com/distros/MyCustomLinux1.0/Server/i386/os/"/>
+                            <initrd url="pxeboot/initrd"/>
+                            <kernel url="pxeboot/vmlinuz"/>
+                            <arch value="idontexist"/>
+                            <osversion major="RedHatEnterpriseLinux7" minor="4"/>
+                            <name value="MyCustomLinux1.0"/>
+                            <variant value="Server"/>
+                        </distro>
+                        <hostRequires/>
+                        <task name="/distribution/install"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+        ''')
+        with self.assertRaisesRegexp(BX, 'No arch matches'):
+            self.controller.process_xmljob(jobxml, self.user)
+
+    def test_osminor_defaults_to_zero_when_not_provided_in_distro_metadata(self):
+        jobxml = lxml.etree.fromstring('''
+            <job>
+                <whiteboard>
+                    so pretty
+                </whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distro>
+                            <tree url="ftp://dummylab.example.com/distros/MyCustomLinux1.0/Server/i386/os/"/>
+                            <initrd url="pxeboot/initrd"/>
+                            <kernel url="pxeboot/vmlinuz"/>
+                            <arch value="i386"/>
+                            <osversion major="RedHatEnterpriseLinux7"/>
+                            <name value="MyCustomLinux1.0"/>
+                        </distro>
+                        <hostRequires/>
+                        <task name="/distribution/install"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+        ''')
+        job = self.controller.process_xmljob(jobxml, self.user)
+        recipe = job.recipesets[0].recipes[0]
+        self.assertEqual(recipe.installation.osminor, "0")
+
+    def test_required_attributes_throw_exception_when_empty(self):
+        jobxml = lxml.etree.fromstring('''
+            <job>
+                <whiteboard>
+                    so pretty
+                </whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distro>
+                            <tree url="some/random/tree"/>
+                            <kernel url="some/kernel"/>
+                            <arch value="i386"/>
+                            <osversion major=""/>
+                            <name value="MyCustomLinux1.0"/>
+                        </distro>
+                        <hostRequires/>
+                        <task name="/distribution/install"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+        ''')
+        with self.assertRaisesRegexp(BX, '<initrd/> element is required'):
+            self.controller.process_xmljob(jobxml, self.user)
+        jobxml = lxml.etree.fromstring('''
+            <job>
+                <whiteboard>
+                    so pretty
+                </whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distro>
+                            <tree url="some/random/tree"/>
+                            <initrd url="some/random/initrd"/>
+                            <arch value="i386"/>
+                            <osversion major=""/>
+                            <name value="MyCustomLinux1.0"/>
+                        </distro>
+                        <hostRequires/>
+                        <task name="/distribution/install"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+        ''')
+        with self.assertRaisesRegexp(BX, '<kernel/> element is required'):
+            self.controller.process_xmljob(jobxml, self.user)
+        jobxml = lxml.etree.fromstring('''
+            <job>
+                <whiteboard>
+                    so pretty
+                </whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distro>
+                            <tree url="/some/random/tree"/>
+                            <initrd url="/some/random/initrd"/>
+                            <kernel url="/some/random/kernel"/>
+                            <arch value="i386"/>
+                            <name value="MyCustomLinux1.0"/>
+                        </distro>
+                        <hostRequires/>
+                        <task name="/distribution/install"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+        ''')
+        with self.assertRaisesRegexp(BX, '<osmajor/> element is required'):
+            self.controller.process_xmljob(jobxml, self.user)

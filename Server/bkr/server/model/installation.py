@@ -5,6 +5,9 @@
 # (at your option) any later version.
 
 import datetime
+import re
+from lxml import etree
+from lxml.builder import E
 from sqlalchemy import Column, Integer, DateTime, UnicodeText, ForeignKey
 from sqlalchemy.orm import relationship
 from bkr.server.util import absolute_url
@@ -23,7 +26,7 @@ class Installation(DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, primary_key=True)
     distro_tree_id = Column(Integer, ForeignKey('distro_tree.id',
-            name='installation_distro_tree_id_fk'), nullable=False)
+            name='installation_distro_tree_id_fk'), nullable=True)
     distro_tree = relationship(DistroTree)
     kernel_options = Column(UnicodeText)
     rendered_kickstart_id = Column(Integer, ForeignKey('rendered_kickstart.id',
@@ -58,6 +61,17 @@ class Installation(DeclarativeMappedObject):
     osmajor = Column(UnicodeText)
     osminor = Column(UnicodeText)
     variant = Column(UnicodeText)
+
+    def distro_to_xml(self):
+        return E.distro(
+            E.tree(url=self.tree_url),
+            E.kernel(url=self.kernel_path),
+            E.initrd(url=self.initrd_path),
+            E.arch(value=self.arch.arch),
+            E.osversion(major=self.osmajor, minor=self.osminor),
+            E.name(value=self.distro_name),
+            E.variant(value=self.variant)
+        )
 
     def __repr__(self):
         return ('%s(created=%r, system=%r, distro_tree=%r, kernel_options=%r, '

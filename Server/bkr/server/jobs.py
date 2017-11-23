@@ -35,7 +35,7 @@ from bkr.server.model import (Job, RecipeSet, RetentionTag, TaskBase,
                               TaskPriority, User, Group, MachineRecipe,
                               DistroTree, TaskPackage, RecipeRepo,
                               RecipeKSAppend, Task, Product, GuestRecipe,
-                              RecipeTask, RecipeTaskParam,
+                              RecipeTask, RecipeTaskParam, Arch,
                               StaleTaskStatusException,
                               RecipeSetActivity, System, RecipeReservationRequest,
                               TaskStatus, RecipeSetComment,
@@ -603,16 +603,21 @@ class Jobs(RPCRoot):
             recipe.guestname = xmlrecipe.get('guestname')
             recipe.guestargs = xmlrecipe.get('guestargs')
         recipe.host_requires = lxml.etree.tostring(xmlrecipe.find('hostRequires'), encoding=unicode)
-        recipe.distro_requires = lxml.etree.tostring(xmlrecipe.find('distroRequires'), encoding=unicode)
-
         partitions = xmlrecipe.find('partitions')
         if partitions is not None:
             recipe.partitions = lxml.etree.tostring(partitions, encoding=unicode)
-
-        try:
-            recipe.distro_tree = DistroTree.by_filter("%s" % recipe.distro_requires)[0]
-        except IndexError:
-            raise BX(_('No distro tree matches Recipe: %s') % recipe.distro_requires)
+        if xmlrecipe.find('distroRequires') is not None:
+            recipe.distro_requires = lxml.etree.tostring(xmlrecipe.find('distroRequires'), encoding=unicode)
+            recipe.distro_tree = DistroTree.by_filter(recipe.distro_requires).first()
+            if recipe.distro_tree is None:
+                raise BX(_('No distro tree matches Recipe: %s') % recipe.distro_requires)
+            # The attributes "tree", "initrd" and "kernel" in the installation table are populated later by the
+            # scheduler during provisioning time, when the recipe has been allocated a system to provision
+            recipe.installation = recipe.distro_tree.create_installation_from_tree()
+        elif xmlrecipe.find('distro') is not None:
+            recipe.installation = self.handle_distro(xmlrecipe.find('distro'))
+        else:
+            raise BX(_('You must define either <distroRequires/> or <distro/> element'))
         try:
             # try evaluating the host_requires, to make sure it's valid
             XmlHost.from_string(recipe.host_requires).apply_filter(System.query)
@@ -693,8 +698,27 @@ class Jobs(RPCRoot):
             recipe.tasks.append(recipetask)
         if not recipe.tasks:
             raise BX(_('No Tasks! You can not have a recipe with no tasks!'))
-        recipe.installation = recipe.distro_tree.create_installation_from_tree()
         return recipe
+
+    @staticmethod
+    def handle_distro(distro):
+        try:
+            arch = Arch.by_name(distro.find("arch").get("value"))
+        except ValueError:
+            raise BX(_('No arch matches: %s') % distro.find("arch").get("value"))
+        missing_attribute = 'tree' if distro.find("tree") is None else 'initrd' if distro.find("initrd") is None else \
+            'kernel' if distro.find("kernel") is None else 'osmajor' if distro.find("osversion") is None else None
+        if missing_attribute:
+            raise BX(_('<%s/> element is required' % missing_attribute))
+        tree_url = distro.find("tree").get("url")
+        initrd_path = distro.find("initrd").get("url")
+        kernel_path = distro.find("kernel").get("url")
+        osmajor = distro.find("osversion").get("major")
+        osminor = distro.find("osversion").get("minor", "0")
+        name = distro.find("name").get("value") if distro.find("name") is not None else None
+        variant = distro.find("variant").get("value") if distro.find("variant") is not None else None
+        return Installation(tree_url=tree_url, initrd_path=initrd_path, kernel_path=kernel_path,
+                            arch=arch, distro_name=name, osmajor=osmajor, osminor=osminor, variant=variant)
 
     @expose('json')
     def update_recipe_set_response(self, recipe_set_id, response_id):

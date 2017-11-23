@@ -2017,6 +2017,12 @@ class MachineRecipeTest(DatabaseTestCase):
         session.flush()
         return recipes
 
+    def _create_recipe_with_custom_distro(self):
+        recipe = data_setup.create_recipe(custom_distro=True)
+        data_setup.create_job_for_recipes([recipe])
+        session.flush()
+        return recipe
+
     def _advance_recipe_states(self, recipes):
         # Advance some of the recipes through their state machine
         recipes[3].abort()
@@ -2079,6 +2085,31 @@ class MachineRecipeTest(DatabaseTestCase):
         expected_stats[u'x86_64'] = self._advance_recipe_states(x86_64)
         # Check we get the expected answers
         _check_queue_stats(expected_stats)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=911515
+    def test_custom_distro_xml(self):
+        recipe = self._create_recipe_with_custom_distro()
+        xml = recipe.to_xml()
+        self.assertEqual(xml.find('recipeSet/recipe').get('distro'), 'MyAwesomeLinux1.0')
+        self.assertEqual(xml.find('recipeSet/recipe').get('arch'), 'i386')
+        self.assertEqual(xml.find('recipeSet/recipe').get('family'), 'DansAwesomeLinux6')
+        self.assertEqual(xml.find('recipeSet/recipe').get('variant'), 'Server')
+        self.assertEqual(xml.find('recipeSet/recipe/distro/tree').get('url'),
+                         'ftp://dummylab.example.com/distros/MyAwesomeLinux1/')
+        self.assertEqual(xml.find('recipeSet/recipe/distro/initrd').get('url'),
+                         'pxeboot/initrd')
+        self.assertEqual(xml.find('recipeSet/recipe/distro/kernel').get('url'),
+                         'pxeboot/vmlinuz')
+        self.assertEqual(xml.find('recipeSet/recipe/distro/arch').get('value'),
+                         'i386')
+        self.assertEqual(xml.find('recipeSet/recipe/distro/variant').get('value'),
+                         'Server')
+        self.assertEqual(xml.find('recipeSet/recipe/distro/name').get('value'),
+                         'MyAwesomeLinux1.0')
+        self.assertEqual(xml.find('recipeSet/recipe/distro/osversion').get('major'),
+                         'DansAwesomeLinux6')
+        self.assertEqual(xml.find('recipeSet/recipe/distro/osversion').get('minor'),
+                         '0')
 
 
 class GuestRecipeTest(DatabaseTestCase):

@@ -2124,11 +2124,11 @@ class Recipe(TaskBase, ActivityMixin):
             recipe.set("result", "%s" % self.result)
         if self.status and not clone:
             recipe.set("status", "%s" % self.status)
-        if self.distro_tree and not clone:
-            recipe.set("distro", "%s" % self.distro_tree.distro.name)
-            recipe.set("arch", "%s" % self.distro_tree.arch)
-            recipe.set("family", "%s" % self.distro_tree.distro.osversion.osmajor)
-            recipe.set("variant", "%s" % self.distro_tree.variant)
+        if self.installation and not clone:
+            recipe.set("distro", "%s" % self.installation.distro_name)
+            recipe.set("arch", "%s" % self.installation.arch)
+            recipe.set("family", "%s" % self.installation.osmajor)
+            recipe.set("variant", "%s" % self.installation.variant)
         watchdog = etree.Element("watchdog")
         if self.panic:
             watchdog.set("panic", "%s" % self.panic)
@@ -2169,7 +2169,11 @@ class Recipe(TaskBase, ActivityMixin):
         for repo in self.repos:
             repos.append(repo.to_xml())
         recipe.append(repos)
-        drs = etree.XML(self.distro_requires)
+        if self.distro_requires:
+            drs = etree.XML(self.distro_requires)
+        else:
+            drs = self.installation.distro_to_xml()
+
         hrs = etree.XML(self.host_requires)
         prs = etree.XML(self.partitions)
         recipe.append(drs)

@@ -457,15 +457,31 @@ def create_tasks(xmljob):
 def create_recipe(distro_tree=None, task_list=None,
         task_name=u'/distribution/reservesys', num_tasks=None, whiteboard=None,
         role=None, ks_meta=None, cls=MachineRecipe, **kwargs):
-    if not distro_tree:
-        distro_tree = create_distro_tree(**kwargs)
     recipe = cls(ttasks=1)
     recipe.ks_meta = ks_meta
     recipe.whiteboard = whiteboard
     recipe.distro_tree = distro_tree
-    recipe.installation = recipe.distro_tree.create_installation_from_tree()
     recipe.role = role or u'STANDALONE'
-    recipe.distro_requires = lxml.etree.tostring(recipe.distro_tree.to_xml(), encoding=unicode)
+    custom_distro = kwargs.get('custom_distro', False)
+
+    if not custom_distro:
+        if not distro_tree:
+            distro_tree = create_distro_tree(**kwargs)
+        recipe.distro_tree = distro_tree
+        recipe.installation = recipe.distro_tree.create_installation_from_tree()
+        recipe.distro_requires = lxml.etree.tostring(recipe.distro_tree.to_xml(), encoding=unicode)
+    else:
+        name = kwargs.get('distro_name', u'MyAwesomeLinux1.0')
+        tree_url = kwargs.get('tree_url', u'ftp://dummylab.example.com/distros/MyAwesomeLinux1/')
+        initrd_path = kwargs.get('initrd_path', u'pxeboot/initrd')
+        kernel_path = kwargs.get('kernel_path', u'pxeboot/vmlinuz')
+        arch = kwargs.get('arch', u'i386')
+        variant = kwargs.get('variant', u'Server')
+        osmajor = kwargs.get('osmajor', u'DansAwesomeLinux6')
+        osminor = kwargs.get('osminor', u'0')
+        arch = Arch.by_name(arch)
+        recipe.installation = Installation(tree_url=tree_url, initrd_path=initrd_path, kernel_path=kernel_path, arch=arch,
+                                           distro_name=name, osmajor=osmajor, osminor=osminor, variant=variant)
 
     if kwargs.get('reservesys', False):
         recipe.reservation_request = RecipeReservationRequest()

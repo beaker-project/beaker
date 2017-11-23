@@ -39,6 +39,21 @@ class JobSubmitTest(ClientTestCase):
                          config=config)
         self.assert_(out.startswith('Submitted:'), out)
 
+    def test_missing_distro_and_distroRequires_element(self):
+        faulty_xml = '''<job>
+                <whiteboard>job with encoding in XML declaration</whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            '''
+        with self.assertRaises(ClientError) as cm:
+            run_client(['bkr', 'job-submit', '-'], input=faulty_xml)
+        self.assertIn("You must define either <distroRequires/> or <distro/> element", str(cm.exception))
+
     def job_xml_with_encoding(self, encoding, funny_chars):
         return (u'''<?xml version="1.0" encoding="%s"?>
             <job>
