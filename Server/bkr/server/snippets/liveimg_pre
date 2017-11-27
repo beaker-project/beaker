@@ -1,0 +1,7 @@
+{% if liveimg_rpm is defined %}
+cd /tmp
+{% set main_url = distro_tree.url_in_lab(lab_controller, scheme='http', required=True) %}
+fetch - {{ main_url }}/{{ liveimg_rpm }} | rpm2cpio - | cpio -divu
+squashfs=$(find|grep squashfs|grep -v meta)
+ln -s $squashfs /tmp/squashfs
+{% endif %}
