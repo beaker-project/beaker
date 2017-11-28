@@ -2717,16 +2717,6 @@ class Recipe(TaskBase, ActivityMixin):
                     .options(contains_eager(LogRecipeTaskResult.parent))
         return chain(recipe_logs, recipe_task_logs, recipe_task_result_logs)
 
-    def is_task_applicable(self, task):
-        """ Does the given task apply to this recipe?
-            ie: not excluded for this distro family or arch.
-        """
-        if self.distro_tree.arch in task.excluded_arches:
-            return False
-        if self.distro_tree.distro.osversion.osmajor in task.excluded_osmajors:
-            return False
-        return True
-
     @classmethod
     def mine(cls, owner):
         """
