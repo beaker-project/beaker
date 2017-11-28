@@ -375,21 +375,13 @@ class Task(DeclarativeMappedObject):
             query=cls.query
         return query.join('runfor').filter(TaskPackage.package==package)
 
-    @hybrid_method
-    def compatible_with(self, distro=None, osmajor=None):
-        if distro:
-            return (distro.osversion.osmajor not in self.excluded_osmajors)
-        if osmajor:
-            return (osmajor not in self.excluded_osmajors)
-        return True
+    @classmethod
+    def compatible_with_distro(cls, distro):
+        return cls.compatible_with_osmajor(distro.osversion.osmajor)
 
-    @compatible_with.expression
-    def compatible_with(cls, distro=None, osmajor=None): #pylint: disable=E0213
-        if distro:
-            return not_(Task.excluded_osmajors.any(OSMajor.id == distro.osversion.osmajor.id))
-        if osmajor:
-            return not_(Task.excluded_osmajors.any(OSMajor.id == osmajor.id))
-        return true()
+    @classmethod
+    def compatible_with_osmajor(cls, osmajor):
+        return not_(Task.excluded_osmajors.any(OSMajor.id == osmajor.id))
 
     @classmethod
     def get_rpm_path(cls, rpm_name):

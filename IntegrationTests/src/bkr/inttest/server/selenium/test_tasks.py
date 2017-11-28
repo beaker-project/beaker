@@ -319,5 +319,16 @@ class TasksXmlRpcTest(XmlRpcTestCase):
         self.assertIn(included.name, task_names)
         self.assertNotIn(excluded.name, task_names)
 
+    def test_filter_by_distro(self):
+        with session.begin():
+            distro = data_setup.create_distro(osmajor=u'MagentaGloveLinux5')
+            included = data_setup.create_task()
+            excluded = data_setup.create_task(
+                    exclude_osmajors=[u'MagentaGloveLinux5'])
+        result = self.server.tasks.filter(dict(distro_name=distro.name))
+        task_names = [task['name'] for task in result]
+        self.assertIn(included.name, task_names)
+        self.assertNotIn(excluded.name, task_names)
+
 if __name__ == "__main__":
     unittest.main()

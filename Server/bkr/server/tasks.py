@@ -105,13 +105,13 @@ class Tasks(RPCRoot):
 
         if filter.get('distro_name'):
             distro = Distro.by_name(filter['distro_name'])
-            tasks = tasks.filter(Task.compatible_with(distro=distro))
+            tasks = tasks.filter(Task.compatible_with_distro(distro))
         elif 'osmajor' in filter and filter['osmajor']:
             try:
                 osmajor = OSMajor.by_name(filter['osmajor'])
             except InvalidRequestError:
                 raise BX(_('Invalid OSMajor: %s' % filter['osmajor']))
-            tasks = tasks.filter(Task.compatible_with(osmajor=osmajor))
+            tasks = tasks.filter(Task.compatible_with_osmajor(osmajor))
 
         # Filter by valid task if requested
         if 'valid' in filter:
