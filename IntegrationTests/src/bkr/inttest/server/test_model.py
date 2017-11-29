@@ -2400,6 +2400,27 @@ class TaskTest(DatabaseTestCase):
         tasks = Task.query.filter(Task.name == u'Task1').all()
         self.assertEquals(len(tasks), 1)
 
+    def test_compatible_with_osmajor_obeys_excluded_releases(self):
+        rhel6 = OSMajor.lazy_create(osmajor=u'RedHatEnterpriseLinux6')
+        incompatible_task = data_setup.create_task(exclude_osmajors=[u'RedHatEnterpriseLinux6'])
+        compatible_task = data_setup.create_task(exclude_osmajors=[
+                u'RedHatEnterpriseLinuxServer5', u'RedHatEnterpriseLinuxClient5'])
+        session.flush()
+        filtered = Task.query.filter(Task.compatible_with_osmajor(rhel6)).all()
+        self.assertNotIn(incompatible_task, filtered)
+        self.assertIn(compatible_task, filtered)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=800455
+    def test_compatible_with_osmajor_obeys_exclusive_releases(self):
+        rhel6 = OSMajor.lazy_create(osmajor=u'RedHatEnterpriseLinux6')
+        compatible_task = data_setup.create_task(exclusive_osmajors=[u'RedHatEnterpriseLinux6'])
+        incompatible_task = data_setup.create_task(exclusive_osmajors=[
+                u'RedHatEnterpriseLinuxServer5', u'RedHatEnterpriseLinuxClient5'])
+        session.flush()
+        filtered = Task.query.filter(Task.compatible_with_osmajor(rhel6)).all()
+        self.assertIn(compatible_task, filtered)
+        self.assertNotIn(incompatible_task, filtered)
+
 class TaskLibraryTest(DatabaseTestCase):
 
     def setUp(self):

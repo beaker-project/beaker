@@ -139,6 +139,18 @@
         </td>
     </tr>
     <% } %>
+    <% if (!_.isEmpty(exclusive_osmajor)) { %>
+    <tr>
+        <th>Exclusive OSMajors</th>
+        <td>
+            <ul class="unstyled">
+                <% _.each(exclusive_osmajor, function(elem) { %>
+                <li><%- elem %></li>
+                <% }) %>
+            </ul>
+        </td>
+    </tr>
+    <% } %>
     <% if (!_.isEmpty(excluded_arch)) { %>
     <tr>
         <th>Excluded Arches</th>

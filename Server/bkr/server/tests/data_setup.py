@@ -385,7 +385,8 @@ def create_system_status_history(system, statuses):
     system.status_durations.append(SystemStatusDuration(status=system.status,
             start_time=ssd.finish_time))
 
-def create_task(name=None, exclude_arches=None, exclude_osmajors=None, version=u'1.0-1',
+def create_task(name=None, exclude_arches=None, exclude_osmajors=None,
+        exclusive_osmajors=None, version=u'1.0-1',
         uploader=None, owner=None, priority=u'Manual', valid=None, path=None, 
         description=None, requires=None, runfor=None, type=None, avg_time=1200):
     if name is None:
@@ -421,6 +422,9 @@ def create_task(name=None, exclude_arches=None, exclude_osmajors=None, version=u
     if exclude_osmajors:
         for osmajor in exclude_osmajors:
             task.excluded_osmajors.append(OSMajor.lazy_create(osmajor=osmajor))
+    if exclusive_osmajors:
+        for osmajor in exclusive_osmajors:
+            task.exclusive_osmajors.append(OSMajor.lazy_create(osmajor=osmajor))
     if requires:
         for require in requires:
             tp = TaskPackage.lazy_create(package=require)

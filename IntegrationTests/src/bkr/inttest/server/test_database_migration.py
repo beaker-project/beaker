@@ -1180,3 +1180,22 @@ class MigrationTest(unittest.TestCase):
         job = self.migration_session.query(Job).get(1)
         self.assertEquals(job.purged, None)
         self.assertEquals(job.deleted, datetime.datetime(2017, 7, 27, 14, 28, 20))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=800455
+    def test_downgrading_task_exclusive_osmajors_converts_to_excluded_osmajors(self):
+        with self.migration_metadata.bind.connect() as connection:
+            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
+            connection.execute("INSERT INTO osmajor (osmajor) "
+                    "VALUES ('Fedora26'), ('Fedora27'), ('CentOS7')")
+        # Upgrade to 25
+        upgrade_db(self.migration_metadata)
+        # We have a task which is exclusive to Fedora26
+        with self.migration_metadata.bind.connect() as connection:
+            connection.execute("INSERT INTO task (name, rpm, path) VALUES ('/a', 'a.rpm', '/a')")
+            connection.execute("INSERT INTO task_exclusive_osmajor (task_id, osmajor_id) VALUES (1, 1)")
+        # Downgrade back to 24
+        downgrade_db(self.migration_metadata, '24')
+        # Now the task should have excluded all other releases
+        with self.migration_metadata.bind.connect() as connection:
+            osmajor_ids = connection.execute('SELECT osmajor_id FROM task_exclude_osmajor WHERE task_id = 1').fetchall()
+            self.assertItemsEqual(osmajor_ids, [(2,), (3,)])

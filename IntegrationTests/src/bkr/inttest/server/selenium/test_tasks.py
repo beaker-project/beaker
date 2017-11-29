@@ -17,7 +17,7 @@ import unittest2 as unittest
 import time, re, os, shutil, turbogears
 import pkg_resources
 from turbogears.database import session
-from bkr.server.model import TaskPackage, User, Task
+from bkr.server.model import TaskPackage, User, Task, OSMajor
 from sqlalchemy.sql import func
 import turbogears as tg
 
@@ -26,6 +26,12 @@ class TestSubmitTask(WebDriverTestCase):
     def setUp(self):
         with session.begin():
             self.uploader = data_setup.create_user(password=u'upload')
+            # Make sure the Releases values we are using in the test cases 
+            # below are already known to Beaker, otherwise they will be ignored.
+            OSMajor.lazy_create(osmajor=u'RedHatEnterpriseLinuxServer5')
+            OSMajor.lazy_create(osmajor=u'RedHatEnterpriseLinuxClient5')
+            OSMajor.lazy_create(osmajor=u'RedHatEnterpriseLinux6')
+            OSMajor.lazy_create(osmajor=u'RedHatEnterpriseLinux7')
         self.browser = self.get_browser()
         login(self.browser, user=self.uploader.user_name, password=u'upload')
 
@@ -237,6 +243,31 @@ class TestSubmitTask(WebDriverTestCase):
         b.find_element_by_xpath('//button[text()="Upload"]').click()
         self.assert_task_upload_task_header('/distribution/beaker/dummy_for_bz1491658')
         self.assertEqual(self.get_task_info_field('Owner'), u'Gęśla Jaźń <gj@example.com>')
+
+    def test_excluded_releases(self):
+        b = self.browser
+        b.get(get_server_base() + 'tasks/new')
+        rpm_path = pkg_resources.resource_filename('bkr.inttest.server',
+                'task-rpms/tmp-distribution-beaker-excluded-releases-1.0-1.noarch.rpm')
+        b.find_element_by_id('task_task_rpm').send_keys(rpm_path)
+        b.find_element_by_xpath('//button[text()="Upload"]').click()
+        self.assert_task_upload_task_header('/distribution/beaker/excluded-releases')
+        self.assertEqual(self.get_task_info_field('Excluded OSMajors'),
+                'RedHatEnterpriseLinuxServer5\n'
+                'RedHatEnterpriseLinuxClient5')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=800455
+    def test_exclusive_releases(self):
+        b = self.browser
+        b.get(get_server_base() + 'tasks/new')
+        rpm_path = pkg_resources.resource_filename('bkr.inttest.server',
+                'task-rpms/tmp-distribution-beaker-exclusive-releases-1.0-1.noarch.rpm')
+        b.find_element_by_id('task_task_rpm').send_keys(rpm_path)
+        b.find_element_by_xpath('//button[text()="Upload"]').click()
+        self.assert_task_upload_task_header('/distribution/beaker/exclusive-releases')
+        self.assertEqual(self.get_task_info_field('Exclusive OSMajors'),
+                'RedHatEnterpriseLinux6\n'
+                'RedHatEnterpriseLinux7')
 
 class TaskDisable(WebDriverTestCase):
 

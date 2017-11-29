@@ -14,7 +14,7 @@ import lxml.etree
 import rpmUtils.miscutils
 from sqlalchemy import (Table, Column, ForeignKey, Integer, Unicode, Boolean,
                         DateTime)
-from sqlalchemy.sql.expression import not_, true
+from sqlalchemy.sql.expression import and_, or_, not_, true
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import relationship
 from turbogears.config import get
@@ -329,6 +329,7 @@ class Task(DeclarativeMappedObject):
     valid = Column(Boolean, default=True, nullable=False)
     types = relationship('TaskType', secondary=task_type_map, back_populates='tasks')
     excluded_osmajors = relationship('OSMajor', secondary='task_exclude_osmajor')
+    exclusive_osmajors = relationship('OSMajor', secondary='task_exclusive_osmajor')
     excluded_arches = relationship('Arch', secondary='task_exclude_arch')
     runfor = relationship(TaskPackage, secondary=task_packages_runfor_map,
             back_populates='tasks')
@@ -381,7 +382,10 @@ class Task(DeclarativeMappedObject):
 
     @classmethod
     def compatible_with_osmajor(cls, osmajor):
-        return not_(Task.excluded_osmajors.any(OSMajor.id == osmajor.id))
+        return and_(
+                or_(not_(Task.exclusive_osmajors.any()),
+                    Task.exclusive_osmajors.any(OSMajor.id == osmajor.id)),
+                not_(Task.excluded_osmajors.any(OSMajor.id == osmajor.id)))
 
     @classmethod
     def get_rpm_path(cls, rpm_name):
@@ -438,8 +442,8 @@ class Task(DeclarativeMappedObject):
         task.runfor = []
         task.needs = []
         task.excluded_osmajors = []
+        task.exclusive_osmajors = []
         task.excluded_arches = []
-        includeFamily=[]
         for family in tinfo.releases:
             if family.startswith('-'):
                 try:
@@ -450,14 +454,11 @@ class Task(DeclarativeMappedObject):
                     pass
             else:
                 try:
-                    includeFamily.append(OSMajor.by_name_alias(family).osmajor)
+                    osmajor = OSMajor.by_name_alias(family)
+                    if osmajor not in task.exclusive_osmajors:
+                        task.exclusive_osmajors.append(osmajor)
                 except NoResultFound:
                     pass
-        families = set([ '%s' % family.osmajor for family in OSMajor.query])
-        if includeFamily:
-            for family in families.difference(set(includeFamily)):
-                if family not in task.excluded_osmajors:
-                    task.excluded_osmajors.append(OSMajor.by_name_alias(family))
         if tinfo.test_archs:
             arches = set([ '%s' % arch.arch for arch in Arch.query])
             for arch in arches.difference(set(tinfo.test_archs)):
@@ -520,6 +521,7 @@ class Task(DeclarativeMappedObject):
                     valid = self.valid or False,
                     types = ['%s' % type.type for type in self.types],
                     excluded_osmajor = ['%s' % osmajor for osmajor in self.excluded_osmajors],
+                    exclusive_osmajor = ['%s' % osmajor for osmajor in self.exclusive_osmajors],
                     excluded_arch = ['%s' % arch for arch in self.excluded_arches],
                     runfor = ['%s' % package for package in self.runfor],
                     required = ['%s' % package for package in self.required],
@@ -646,6 +648,16 @@ class Task(DeclarativeMappedObject):
 
 task_exclude_osmajor = Table(
     'task_exclude_osmajor', DeclarativeMappedObject.metadata,
+    Column('task_id', Integer,
+           ForeignKey('task.id', onupdate='CASCADE', ondelete='CASCADE'),
+           primary_key=True, nullable=False, index=True),
+    Column('osmajor_id', Integer,
+           ForeignKey('osmajor.id', onupdate='CASCADE', ondelete='CASCADE'),
+           primary_key=True, nullable=False, index=True),
+    mysql_engine='InnoDB',
+)
+
+task_exclusive_osmajor = Table('task_exclusive_osmajor', DeclarativeMappedObject.metadata,
     Column('task_id', Integer,
            ForeignKey('task.id', onupdate='CASCADE', ondelete='CASCADE'),
            primary_key=True, nullable=False, index=True),

@@ -44,8 +44,8 @@ class TaskAddTest(ClientTestCase):
         self.assertIn(u'Success', out)
         with session.begin():
             task = Task.by_name(u'/distribution/beaker/dummy_for_bz1422410')
-            self.assertIn(OSMajor.by_name(u'RedHatEnterpriseLinux6'),
-                    task.excluded_osmajors)
+            self.assertItemsEqual([OSMajor.by_name(u'RedHatEnterpriseLinux5')],
+                    task.exclusive_osmajors)
 
     def test_cannot_add_duplicate_tasks(self):
         import_rpm = pkg_resources.resource_filename('bkr.inttest.server',
