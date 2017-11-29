@@ -163,5 +163,17 @@
         </td>
     </tr>
     <% } %>
+    <% if (!_.isEmpty(exclusive_arch)) { %>
+    <tr>
+        <th>Exclusive Arches</th>
+        <td>
+            <ul class="unstyled">
+                <% _.each(exclusive_arch, function(elem) { %>
+                <li><%- elem %></li>
+                <% }) %>
+            </ul>
+        </td>
+    </tr>
+    <% } %>
     </tbody>
 </table>

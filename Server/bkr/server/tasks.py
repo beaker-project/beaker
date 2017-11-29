@@ -157,8 +157,17 @@ class Tasks(RPCRoot):
                 or_types.append(TaskType.id==tasktype.id)
             tasks = tasks.filter(or_(*or_types))
 
-        # Return all task names
-        return [dict(name = task.name, arches = [str(arch.arch) for arch in task.excluded_arches]) for task in tasks]
+        result = []
+        for task in tasks:
+            if task.exclusive_arches:
+                excluded_arches = [arch.arch for arch in Arch.query
+                                   if arch not in task.exclusive_arches]
+            else:
+                excluded_arches = [arch.arch for arch in task.excluded_arches]
+            # Note that the 'arches' key in the return value is actually the 
+            # list of *excluded* arches, in spite of its name.
+            result.append({'name': task.name, 'arches': excluded_arches})
+        return result
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())

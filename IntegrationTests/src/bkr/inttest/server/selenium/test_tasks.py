@@ -269,6 +269,27 @@ class TestSubmitTask(WebDriverTestCase):
                 'RedHatEnterpriseLinux6\n'
                 'RedHatEnterpriseLinux7')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=670149
+    def test_excluded_architectures(self):
+        b = self.browser
+        b.get(get_server_base() + 'tasks/new')
+        rpm_path = pkg_resources.resource_filename('bkr.inttest.server',
+                'task-rpms/tmp-distribution-beaker-excluded-arches-1.0-1.noarch.rpm')
+        b.find_element_by_id('task_task_rpm').send_keys(rpm_path)
+        b.find_element_by_xpath('//button[text()="Upload"]').click()
+        self.assert_task_upload_task_header('/distribution/beaker/excluded-arches')
+        self.assertEqual(self.get_task_info_field('Excluded Arches'), 'ia64')
+
+    def test_exclusive_architectures(self):
+        b = self.browser
+        b.get(get_server_base() + 'tasks/new')
+        rpm_path = pkg_resources.resource_filename('bkr.inttest.server',
+                'task-rpms/tmp-distribution-beaker-exclusive-arches-1.0-1.noarch.rpm')
+        b.find_element_by_id('task_task_rpm').send_keys(rpm_path)
+        b.find_element_by_xpath('//button[text()="Upload"]').click()
+        self.assert_task_upload_task_header('/distribution/beaker/exclusive-arches')
+        self.assertEqual(self.get_task_info_field('Exclusive Arches'), 'x86_64')
+
 class TaskDisable(WebDriverTestCase):
 
     def setUp(self):
@@ -360,6 +381,16 @@ class TasksXmlRpcTest(XmlRpcTestCase):
         task_names = [task['name'] for task in result]
         self.assertIn(included.name, task_names)
         self.assertNotIn(excluded.name, task_names)
+
+    def test_exclusive_arches(self):
+        with session.begin():
+            task = data_setup.create_task(runfor=[u'httpd'],
+                    exclusive_arches=[u's390', u's390x'])
+        result = self.server.tasks.filter(dict(packages=['httpd']))
+        self.assertEquals(result[0]['name'], task.name)
+        # Note that the 'arches' key is actually the *excluded* arches.
+        self.assertEquals(result[0]['arches'],
+                ['aarch64', 'arm', 'armhfp', 'i386', 'ia64', 'ppc', 'ppc64', 'ppc64le', 'x86_64'])
 
 if __name__ == "__main__":
     unittest.main()

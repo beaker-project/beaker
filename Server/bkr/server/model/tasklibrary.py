@@ -331,6 +331,7 @@ class Task(DeclarativeMappedObject):
     excluded_osmajors = relationship('OSMajor', secondary='task_exclude_osmajor')
     exclusive_osmajors = relationship('OSMajor', secondary='task_exclusive_osmajor')
     excluded_arches = relationship('Arch', secondary='task_exclude_arch')
+    exclusive_arches = relationship('Arch', secondary='task_exclusive_arch')
     runfor = relationship(TaskPackage, secondary=task_packages_runfor_map,
             back_populates='tasks')
     required = relationship(TaskPackage, secondary=task_packages_required_map,
@@ -444,6 +445,7 @@ class Task(DeclarativeMappedObject):
         task.excluded_osmajors = []
         task.exclusive_osmajors = []
         task.excluded_arches = []
+        task.exclusive_arches = []
         for family in tinfo.releases:
             if family.startswith('-'):
                 try:
@@ -459,11 +461,23 @@ class Task(DeclarativeMappedObject):
                         task.exclusive_osmajors.append(osmajor)
                 except NoResultFound:
                     pass
-        if tinfo.test_archs:
-            arches = set([ '%s' % arch.arch for arch in Arch.query])
-            for arch in arches.difference(set(tinfo.test_archs)):
-                if arch not in task.excluded_arches:
-                    task.excluded_arches.append(Arch.by_name(arch))
+        for value in tinfo.test_archs:
+            if value.startswith('-'):
+                try:
+                    arch = Arch.by_name(value.lstrip('-'))
+                except ValueError:
+                    pass
+                else:
+                    if arch not in task.excluded_arches:
+                        task.excluded_arches.append(arch)
+            else:
+                try:
+                    arch = Arch.by_name(value)
+                except ValueError:
+                    pass
+                else:
+                    if arch not in task.exclusive_arches:
+                        task.exclusive_arches.append(arch)
         task.avg_time = tinfo.avg_test_time
         for type in tinfo.types:
             ttype = TaskType.lazy_create(type=type)
@@ -523,6 +537,7 @@ class Task(DeclarativeMappedObject):
                     excluded_osmajor = ['%s' % osmajor for osmajor in self.excluded_osmajors],
                     exclusive_osmajor = ['%s' % osmajor for osmajor in self.exclusive_osmajors],
                     excluded_arch = ['%s' % arch for arch in self.excluded_arches],
+                    exclusive_arch = ['%s' % arch for arch in self.exclusive_arches],
                     runfor = ['%s' % package for package in self.runfor],
                     required = ['%s' % package for package in self.required],
                     bugzillas = ['%s' % bug.bugzilla_id for bug in self.bugzillas],
@@ -669,6 +684,16 @@ task_exclusive_osmajor = Table('task_exclusive_osmajor', DeclarativeMappedObject
 
 task_exclude_arch = Table(
     'task_exclude_arch', DeclarativeMappedObject.metadata,
+    Column('task_id', Integer,
+           ForeignKey('task.id', onupdate='CASCADE', ondelete='CASCADE'),
+           primary_key=True, nullable=False, index=True),
+    Column('arch_id', Integer,
+           ForeignKey('arch.id', onupdate='CASCADE', ondelete='CASCADE'),
+           primary_key=True, nullable=False, index=True),
+    mysql_engine='InnoDB',
+)
+
+task_exclusive_arch = Table('task_exclusive_arch', DeclarativeMappedObject.metadata,
     Column('task_id', Integer,
            ForeignKey('task.id', onupdate='CASCADE', ondelete='CASCADE'),
            primary_key=True, nullable=False, index=True),

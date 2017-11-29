@@ -1199,3 +1199,25 @@ class MigrationTest(unittest.TestCase):
         with self.migration_metadata.bind.connect() as connection:
             osmajor_ids = connection.execute('SELECT osmajor_id FROM task_exclude_osmajor WHERE task_id = 1').fetchall()
             self.assertItemsEqual(osmajor_ids, [(2,), (3,)])
+
+    def test_downgrading_task_exclusive_arches_converts_to_excluded_arches(self):
+        with self.migration_metadata.bind.connect() as connection:
+            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
+        # Upgrade to 25
+        upgrade_db(self.migration_metadata)
+        # We have a task which is exclusive to s390(x)
+        with self.migration_metadata.bind.connect() as connection:
+            connection.execute("INSERT INTO task (name, rpm, path) VALUES ('/a', 'a.rpm', '/a')")
+            connection.execute("INSERT INTO task_exclusive_arch (task_id, arch_id) "
+                    "SELECT 1, arch.id FROM arch WHERE arch.arch IN ('s390', 's390x')")
+        # Downgrade back to 24
+        downgrade_db(self.migration_metadata, '24')
+        # Now the task should have excluded all other arches
+        with self.migration_metadata.bind.connect() as connection:
+            arches = connection.execute(
+                    'SELECT arch.arch FROM task_exclude_arch '
+                    'INNER JOIN arch ON task_exclude_arch.arch_id = arch.id '
+                    'WHERE task_id = 1').fetchall()
+            self.assertItemsEqual(arches,
+                    [('aarch64',), ('arm',), ('armhfp',), ('i386',), ('ia64',),
+                     ('ppc',), ('ppc64',), ('ppc64le',), ('x86_64',)])

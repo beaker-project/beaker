@@ -401,8 +401,10 @@ class Parser:
 
         archs = []
         for arch in value.split(" "):
-            self.error_if_not_in_array("Architecture", arch, self.valid_architectures)
+            self.error_if_not_in_array("Architecture", arch.lstrip('-'), self.valid_architectures)
             archs.append(arch)
+        if any(arch.startswith('-') for arch in archs) and not all(arch.startswith('-') for arch in archs):
+            self.handle_warning("Architectures field lists both negated and non-negated architectures (should be all negated, or all non-negated)")
         self.info.test_archs = archs
 
     def handle_options(self, key, value):
