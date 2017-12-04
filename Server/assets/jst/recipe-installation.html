@@ -1,13 +1,13 @@
 <div class="recipe-installation-summary">
     <div>
         <% if (installation && installation.get('install_finished')) { %>
-            Installation of <%= distro_tree.toHTML() %> finished.
+            Installation of <%= installation.getDistroSummary() %> finished.
         <% } else if (status == 'Installing') { %>
-            Installing <%= distro_tree.toHTML() %>.
+            Installing <%= installation.getDistroSummary() %>.
         <% } else if (installation && installation.get('rebooted') && status == 'Aborted') { %>
-            Installation of <%= distro_tree.toHTML() %> aborted.
+            Installation of <%= installation.getDistroSummary() %> aborted.
         <% } else { %>
-            Installation of <%= distro_tree.toHTML() %> not started.
+            Installation of <%= installation.getDistroSummary() %> not started.
         <% } %>
     </div>
     <div class="recipe-installation-logs">

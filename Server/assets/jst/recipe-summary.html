@@ -32,7 +32,7 @@
     Guest recipe hosted by <%= hostrecipe.toHTML() %>.
     <br/>
   <% } %>
-  Using <%= distro_tree.toHTML() %>
+  Using <%= installation.getDistroSummary() %>
   <% if (!_.isEmpty(resource)) { %>
     <br/>on <%= resource.resource_summary_fragment()
   %><% } %><%

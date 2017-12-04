@@ -28,8 +28,17 @@ window.Installation = Backbone.Model.extend({
                 return command;
             });
         }
+        if (!_.isEmpty(data['distro_tree'])) {
+            data['distro_tree'] = new DistroTree(data['distro_tree'], {parse: true});
+        }
         return data;
     },
+    getDistroSummary: function() {
+        if (!_.isEmpty(this.get('distro_tree'))) return this.get('distro_tree').toHTML();
+        else if (!this.get('distro_name')) return this.get("tree_url");
+        else return this.get("variant") ? this.get('distro_name')  + " " + this.get("variant") +
+         " " + this.get("arch") : this.get('distro_name')  + " " + this.get("arch");
+    }
 });
 
 })();

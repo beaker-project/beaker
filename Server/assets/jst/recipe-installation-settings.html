@@ -1,3 +1,27 @@
+<% if (installation) {%>
+  <% if (installation.get('tree_url')) {%>
+      <h4>Tree URL</h4>
+      <pre><%- installation.get('tree_url') %></pre>
+  <% } %>
+  <% if (installation.get('initrd')) {%>
+      <h4>Initrd Image URL</h4>
+      <pre><%- installation.get('initrd') %></pre>
+  <% } %>
+  <% if (installation.get('kernel')) {%>
+      <h4>Kernel Image URL</h4>
+      <pre><%- installation.get('kernel') %></pre>
+  <% } %>
+  <h4>OS Major</h4>
+  <pre><%- installation.get('osmajor') %></pre>
+  <h4>OS Minor </h4>
+  <pre><%- installation.get('osminor') ? installation.get('osminor') : "0" %></pre>
+  <% if (installation.get('variant')) {%>
+      <h4>Variant</h4>
+      <pre><%-installation.get('variant')%></pre>
+  <% } %>
+  <h4>Architecture</h4>
+  <pre><%- installation.get('arch') %></pre>
+<% } %>
 <% if (typeof hostrecipe != 'undefined' && hostrecipe) { %>
   <h4>Guest Name</h4>
   <div>
