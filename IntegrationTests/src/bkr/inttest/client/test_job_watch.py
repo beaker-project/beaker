@@ -75,3 +75,15 @@ class JobWatchTest(ClientTestCase):
             fail('should raise')
         except ClientError, e:
             self.assert_('Invalid taskspec' in e.stderr_output)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1415104
+    def test_exits_141_when_pipe_is_closed(self):
+        with session.begin():
+            job = data_setup.create_job(whiteboard=u'jobwb')
+        p = start_client(['bkr', 'job-watch', job.t_id])
+        self.assertEquals(p.stdout.readline(),
+                'Watching tasks (this may be safely interrupted)...\n')
+        p.stdout.close()
+        err = p.stderr.read()
+        p.wait()
+        self.assertEquals(p.returncode, 141, err)

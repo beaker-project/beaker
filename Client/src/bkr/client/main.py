@@ -8,6 +8,8 @@
 
 import os
 import sys
+import errno
+import signal
 import pkg_resources
 import logging
 from optparse import Option, IndentedHelpFormatter, SUPPRESS_HELP
@@ -122,6 +124,13 @@ def main():
         sys.stderr.write('%s\n' % e)
         return 1
     except BeakerClientConfigurationError, e:
+        sys.stderr.write('%s\n' % e)
+        return 1
+    except IOError as e:
+        if e.errno == errno.EPIPE:
+            # Let's assume it was EPIPE writing to stdout, because we were in
+            # a shell pipeline and the other side exited early.
+            return 128 + signal.SIGPIPE
         sys.stderr.write('%s\n' % e)
         return 1
 
