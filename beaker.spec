@@ -175,7 +175,6 @@ Requires:       python-daemon
 Requires:       python-lockfile >= 0.9
 Requires:       crontabs
 Requires:       mod_wsgi
-Requires:       python-tgexpandingformwidget
 Requires:       httpd
 Requires:       python-krbV
 Requires:       %{name}-common = %{version}-%{release}

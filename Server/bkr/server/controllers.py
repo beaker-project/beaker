@@ -56,7 +56,6 @@ from bkr.server.bexceptions import BeakerException, BX
 from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
 from bkr.server.cherrypy_util import PlainTextHTTPException
-from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from bkr.server.helpers import make_link
 from bkr.server import metrics, identity
 from bkr.server.needpropertyxml import XmlHost
