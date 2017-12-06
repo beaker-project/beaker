@@ -90,6 +90,14 @@ class SystemStatus(DeclEnum):
         ('removed',   u'Removed',   dict(bad=True)),
     ]
 
+class SystemSchedulerStatus(DeclEnum):
+
+    symbols = [
+        ('idle',     u'Idle',     dict()),
+        ('pending',  u'Pending',  dict()),
+        ('reserved', u'Reserved', dict()),
+    ]
+
 class SystemType(DeclEnum):
 
     symbols = [

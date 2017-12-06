@@ -26,7 +26,7 @@ from bkr.server.model import (Job, RecipeSet, Recipe, MachineRecipe,
         Watchdog, System, DistroTree, LabControllerDistroTree, SystemStatus,
         SystemResource, GuestResource, Arch,
         SystemAccessPolicy, SystemPermission, ConfigItem, Command,
-        Power, PowerType, DataMigration)
+        Power, PowerType, DataMigration, SystemSchedulerStatus)
 from bkr.server.model.scheduler import machine_guest_map
 from bkr.server.needpropertyxml import XmlHost
 from bkr.server.util import load_config_or_exit, log_traceback, \
@@ -37,8 +37,9 @@ from turbogears import config
 from turbomail.control import interface
 from xmlrpclib import ProtocolError
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import func, select, and_, or_, not_
-from sqlalchemy.orm import aliased, create_session
+from sqlalchemy.orm import create_session
 
 import socket
 import exceptions
@@ -184,7 +185,9 @@ def queue_processed_recipesets(*args):
     recipesets = RecipeSet.query.join(RecipeSet.job)\
             .filter(not_(Job.is_deleted))\
             .filter(not_(RecipeSet.recipes.any(
-                Recipe.status != TaskStatus.processed)))
+                Recipe.status != TaskStatus.processed)))\
+            .order_by(RecipeSet.priority.desc())\
+            .order_by(RecipeSet.id)
     for rs_id, in recipesets.values(RecipeSet.id):
         session.begin()
         try:
@@ -200,109 +203,134 @@ def queue_processed_recipesets(*args):
 
 def queue_processed_recipeset(recipeset_id):
     recipeset = RecipeSet.by_id(recipeset_id)
-    bad_l_controllers = set()
-    # We only need to do this processing on multi-host recipes
-    if len(list(recipeset.machine_recipes)) == 1:
-        recipe = recipeset.machine_recipes.next()
-        recipe.queue()
-        log.info("recipe ID %s moved from Processed to Queued", recipe.id)
-        for guestrecipe in recipe.guests:
-            guestrecipe.queue()
-        return
-    # Find all the lab controllers that this recipeset may run.
-    rsl_controllers = set(LabController.query\
-                                  .join('systems',
-                                        'queued_recipes',
-                                        'recipeset')\
-                                  .filter(RecipeSet.id==recipeset.id).all())
 
-    # Any lab controllers that are not associated to all recipes in the
-    # recipe set must have those systems on that lab controller removed
-    # from any recipes.  For multi-host all recipes must be schedulable
-    # on one lab controller
-    for recipe in recipeset.machine_recipes:
-        rl_controllers = set(LabController.query\
-                                   .join('systems',
-                                         'queued_recipes')\
-                                   .filter(Recipe.id==recipe.id).all())
-        bad_l_controllers = bad_l_controllers.union(rl_controllers.difference(rsl_controllers))
+    # We only need to check "not enough systems" logic for multi-host recipe sets
+    if len(list(recipeset.machine_recipes)) > 1:
+        bad_l_controllers = set()
+        # Find all the lab controllers that this recipeset may run.
+        rsl_controllers = set(LabController.query\
+                                      .join('systems',
+                                            'queued_recipes',
+                                            'recipeset')\
+                                      .filter(RecipeSet.id==recipeset.id).all())
 
-    for l_controller in rsl_controllers:
-        enough_systems = False
+        # Any lab controllers that are not associated to all recipes in the
+        # recipe set must have those systems on that lab controller removed
+        # from any recipes.  For multi-host all recipes must be schedulable
+        # on one lab controller
         for recipe in recipeset.machine_recipes:
-            systems = recipe.dyn_systems.filter(
-                                      System.lab_controller==l_controller
-                                               ).all()
-            if len(systems) < len(recipeset.recipes):
-                break
-        else:
-            # There are enough choices We don't need to worry about dead
-            # locks
-            enough_systems = True
-        if not enough_systems:
-            log.debug("recipe: %s labController:%s entering not enough systems logic" % 
-                                  (recipe.id, l_controller))
-            # Eliminate bad choices.
-            for recipe in recipeset.machine_recipes_orderby(l_controller)[:]:
-                for tmprecipe in recipeset.machine_recipes:
-                    systemsa = set(recipe.dyn_systems.filter(
-                                      System.lab_controller==l_controller
-                                                            ).all())
-                    systemsb = set(tmprecipe.dyn_systems.filter(
-                                      System.lab_controller==l_controller
-                                                               ).all())
+            rl_controllers = set(LabController.query\
+                                       .join('systems',
+                                             'queued_recipes')\
+                                       .filter(Recipe.id==recipe.id).all())
+            bad_l_controllers = bad_l_controllers.union(rl_controllers.difference(rsl_controllers))
 
-                    if systemsa.difference(systemsb):
-                        for rem_system in systemsa.intersection(systemsb):
-                            if rem_system in recipe.systems:
-                                log.debug("recipe: %s labController:%s Removing system %s" % (recipe.id, l_controller, rem_system))
-                                recipe.systems.remove(rem_system)
+        for l_controller in rsl_controllers:
+            enough_systems = False
             for recipe in recipeset.machine_recipes:
-                count = 0
                 systems = recipe.dyn_systems.filter(
-                                  System.lab_controller==l_controller
+                                          System.lab_controller==l_controller
                                                    ).all()
-                for tmprecipe in recipeset.machine_recipes:
-                    tmpsystems = tmprecipe.dyn_systems.filter(
-                                      System.lab_controller==l_controller
-                                                             ).all()
-                    if recipe != tmprecipe and \
-                       systems == tmpsystems:
-                        count += 1
-                if len(systems) <= count:
-                    # Remove all systems from this lc on this rs.
-                    log.debug("recipe: %s labController:%s %s <= %s Removing lab" % (recipe.id, l_controller, len(systems), count))
-                    bad_l_controllers = bad_l_controllers.union([l_controller])
+                if len(systems) < len(recipeset.recipes):
+                    break
+            else:
+                # There are enough choices We don't need to worry about dead
+                # locks
+                enough_systems = True
+            if not enough_systems:
+                log.debug("recipe: %s labController:%s entering not enough systems logic" % 
+                                      (recipe.id, l_controller))
+                # Eliminate bad choices.
+                for recipe in recipeset.machine_recipes_orderby(l_controller)[:]:
+                    for tmprecipe in recipeset.machine_recipes:
+                        systemsa = set(recipe.dyn_systems.filter(
+                                          System.lab_controller==l_controller
+                                                                ).all())
+                        systemsb = set(tmprecipe.dyn_systems.filter(
+                                          System.lab_controller==l_controller
+                                                                   ).all())
 
-    # Remove systems that are on bad lab controllers
-    # This means one of the recipes can be fullfilled on a lab controller
-    # but not the rest of the recipes in the recipeSet.
-    # This could very well remove ALL systems from all recipes in this
-    # recipeSet.  If that happens then the recipeSet cannot be scheduled
-    # and will be aborted by the abort process.
-    for recipe in recipeset.machine_recipes:
-        for l_controller in bad_l_controllers:
-            systems = (recipe.dyn_systems.filter(
+                        if systemsa.difference(systemsb):
+                            for rem_system in systemsa.intersection(systemsb):
+                                if rem_system in recipe.systems:
+                                    log.debug("recipe: %s labController:%s Removing system %s" % (recipe.id, l_controller, rem_system))
+                                    recipe.systems.remove(rem_system)
+                for recipe in recipeset.machine_recipes:
+                    count = 0
+                    systems = recipe.dyn_systems.filter(
                                       System.lab_controller==l_controller
-                                            ).all()
-                          )
-            log.debug("recipe: %s labController: %s Removing lab" % (recipe.id, l_controller))
-            for system in systems:
-                if system in recipe.systems:
-                    log.debug("recipe: %s labController: %s Removing system %s" % (recipe.id, l_controller, system))
-                    recipe.systems.remove(system)
-    # Are we left with any recipes having no candidate systems?
-    dead_recipes = [recipe for recipe in recipeset.machine_recipes if not recipe.systems]
-    if dead_recipes:
-        # Set status to Aborted
-        log.debug('Not enough systems logic for %s left %s with no candidate systems',
-                recipeset.t_id, ', '.join(recipe.t_id for recipe in dead_recipes))
-        log.info('%s moved from Processed to Aborted' % recipeset.t_id)
-        recipeset.abort(u'Recipe ID %s does not match any systems'
-                % ', '.join(str(recipe.id) for recipe in dead_recipes))
-    else:
+                                                       ).all()
+                    for tmprecipe in recipeset.machine_recipes:
+                        tmpsystems = tmprecipe.dyn_systems.filter(
+                                          System.lab_controller==l_controller
+                                                                 ).all()
+                        if recipe != tmprecipe and \
+                           systems == tmpsystems:
+                            count += 1
+                    if len(systems) <= count:
+                        # Remove all systems from this lc on this rs.
+                        log.debug("recipe: %s labController:%s %s <= %s Removing lab" % (recipe.id, l_controller, len(systems), count))
+                        bad_l_controllers = bad_l_controllers.union([l_controller])
+
+        # Remove systems that are on bad lab controllers
+        # This means one of the recipes can be fullfilled on a lab controller
+        # but not the rest of the recipes in the recipeSet.
+        # This could very well remove ALL systems from all recipes in this
+        # recipeSet.  If that happens then the recipeSet cannot be scheduled
+        # and will be aborted by the abort process.
         for recipe in recipeset.machine_recipes:
-            # Set status to Queued
+            for l_controller in bad_l_controllers:
+                systems = (recipe.dyn_systems.filter(
+                                          System.lab_controller==l_controller
+                                                ).all()
+                              )
+                log.debug("recipe: %s labController: %s Removing lab" % (recipe.id, l_controller))
+                for system in systems:
+                    if system in recipe.systems:
+                        log.debug("recipe: %s labController: %s Removing system %s" % (recipe.id, l_controller, system))
+                        recipe.systems.remove(system)
+
+        # Are we left with any recipes having no candidate systems?
+        dead_recipes = [recipe for recipe in recipeset.machine_recipes if not recipe.systems]
+        if dead_recipes:
+            # Set status to Aborted
+            log.debug('Not enough systems logic for %s left %s with no candidate systems',
+                    recipeset.t_id, ', '.join(recipe.t_id for recipe in dead_recipes))
+            log.info('%s moved from Processed to Aborted' % recipeset.t_id)
+            recipeset.abort(u'Recipe ID %s does not match any systems'
+                    % ', '.join(str(recipe.id) for recipe in dead_recipes))
+            return
+
+    # Can we schedule any recipes immediately?
+    for recipe in recipeset.machine_recipes:
+        systems = recipe.matching_systems()
+        if not systems: # may be None if we know there are no possible LCs
+            continue
+        system_count = systems.count()
+        if not system_count:
+            continue
+        # Order systems by owner, then Group, finally shared for everyone.
+        # FIXME Make this configurable, so that a user can specify their scheduling
+        # Implemented order, still need to do pool
+        # preference from the job.
+        # <recipe>
+        #  <autopick order='sequence|random'>
+        #   <pool>owner</pool>
+        #   <pool>groups</pool>
+        #   <pool>public</pool>
+        #  </autopick>
+        # </recipe>
+        if True: #FIXME if pools are defined add them here in the order requested.
+            systems = System.scheduler_ordering(recipeset.job.owner, query=systems)
+        if recipe.autopick_random:
+            system = systems[random.randrange(0, system_count)]
+        else:
+            system = systems.first()
+        schedule_recipe_on_system(recipe, system)
+
+    for recipe in recipeset.machine_recipes:
+        if recipe.status == TaskStatus.processed:
+            # Leave it Queued until a system becomes free
             log.info("recipe: %s moved from Processed to Queued" % recipe.id)
             recipe.queue()
             for guestrecipe in recipe.guests:
@@ -348,209 +376,43 @@ def abort_dead_recipe(recipe_id):
         log.info(msg)
         recipe.recipeset.abort(msg)
 
-def schedule_queued_recipes(*args):
+def schedule_pending_systems():
     work_done = False
-    session.begin()
-    try:
-        # This query returns a queued host recipe and and the guest which has
-        # the most recent distro tree. It is to be used as a derived table.
-        latest_guest_distro = select([machine_guest_map.c.machine_recipe_id.label('host_id'),
-            func.max(DistroTree.date_created).label('latest_distro_date')],
-            from_obj=[machine_guest_map.join(GuestRecipe.__table__,
-                    machine_guest_map.c.guest_recipe_id==GuestRecipe.__table__.c.id). \
-                join(Recipe.__table__).join(DistroTree.__table__)],
-            whereclause=Recipe.status=='Queued',
-            group_by=machine_guest_map.c.machine_recipe_id).alias()
-
-        hosts_lab_controller_distro_map = aliased(LabControllerDistroTree)
-        hosts_distro_tree = aliased(DistroTree)
-        guest_recipe = aliased(Recipe)
-        guests_distro_tree = aliased(DistroTree)
-        guests_lab_controller = aliased(LabController)
-
-        # This query will return queued recipes that are eligible to be scheduled.
-        # They are determined to be eligible if:
-        # * There are systems available (see the filter criteria) in lab controllers where
-        #   the recipe's distro tree is available.
-        # * If it is a host recipe, the most recently created distro of all
-        #   the guest recipe's distros is available in at least one of the same
-        #   lab controllers as that of the host's distro tree.
-        #
-        # Also note that we do not try to handle the situation where the guest and host never
-        # have a common labcontroller. In that situation the host and guest would stay queued
-        # until that situation was rectified.
-        recipes = MachineRecipe.query\
-            .join(Recipe.recipeset, RecipeSet.job)\
-            .outerjoin((guest_recipe, MachineRecipe.guests))\
-            .outerjoin((guests_distro_tree, guest_recipe.distro_tree_id == guests_distro_tree.id))\
-            .outerjoin((latest_guest_distro,
-                and_(latest_guest_distro.c.host_id == MachineRecipe.id,
-                    latest_guest_distro.c.latest_distro_date == \
-                    guests_distro_tree.date_created)))\
-            .outerjoin(guests_distro_tree.lab_controller_assocs, guests_lab_controller)\
-            .join(Recipe.systems)\
-            .join((hosts_distro_tree, hosts_distro_tree.id == MachineRecipe.distro_tree_id))\
-            .join((hosts_lab_controller_distro_map, hosts_distro_tree.lab_controller_assocs),
-                (LabController, and_(
-                    hosts_lab_controller_distro_map.lab_controller_id == LabController.id,
-                    System.lab_controller_id == LabController.id)))\
-            .filter(
-                and_(Recipe.status == TaskStatus.queued,
-                    System.user == None,
-                    LabController.disabled == False,
-                    or_(
-                        RecipeSet.lab_controller == None,
-                        RecipeSet.lab_controller_id == System.lab_controller_id,
-                       ),
-                    or_(
-                        System.loan_id == None,
-                        System.loan_id == Job.owner_id,
-                       ),
-                    or_(
-                        # We either have no guest
-                        guest_recipe.id == None,
-                        # Or we have a guest of which the latest
-                        # is in a common lab controller.
-                        and_(guests_lab_controller.id == LabController.id,
-                            latest_guest_distro.c.latest_distro_date != None
-                            ),
-                        ) # or
-                    ) # and
-                  )
-        # This should be the guest recipe with the latest distro.
-        # We return it in this query, to save us from re-running the
-        # derived table query in schedule_queued_recipe()
-        recipes = recipes.add_column(guest_recipe.id)
-        # Effective priority is given in the following order:
-        # * Multi host recipes with already scheduled siblings
-        # * Priority level (i.e Normal, High etc)
-        # * RecipeSet id
-        # * Recipe id
-        recipes = recipes.order_by(RecipeSet.lab_controller == None). \
-            order_by(RecipeSet.priority.desc()). \
-            order_by(RecipeSet.id). \
-            order_by(MachineRecipe.id)
-        # Don't do a GROUP BY before here, it is not needed.
-        recipes = recipes.group_by(MachineRecipe.id)
-        for recipe_id, guest_recipe_id in recipes.values(MachineRecipe.id, guest_recipe.id):
-            session.begin(nested=True)
-            try:
-                schedule_queued_recipe(recipe_id, guest_recipe_id)
-                session.commit()
-            except (StaleSystemUserException, InsufficientSystemPermissions,
-                 StaleTaskStatusException), e:
-                # Either
-                # System user has changed before
-                # system allocation
-                # or
-                # System permissions have changed before
-                # system allocation
-                # or
-                # Something has moved our status on from queued
-                # already.
-                log.warn(str(e))
-                session.rollback()
-            except Exception, e:
-                log.exception('Error in schedule_queued_recipe(%s)', recipe_id)
-                session.rollback()
-                session.begin(nested=True)
-                try:
-                    recipe=MachineRecipe.by_id(recipe_id)
-                    recipe.recipeset.abort(u"Aborted in schedule_queued_recipe: %s" % e)
-                    session.commit()
-                except Exception, e:
-                    log.exception("Error during error handling in schedule_queued_recipe: %s" % e)
-                    session.rollback()
-            work_done = True
-        return work_done
-    except Exception:
-        log.exception('Uncaught exception in schedule_queued_recipes')
-        raise
-    finally:
+    systems = System.query\
+            .join(System.lab_controller)\
+            .filter(LabController.disabled == False)\
+            .filter(System.scheduler_status == SystemSchedulerStatus.pending)
+    for system_id, in systems.values(System.id):
+        session.begin()
         try:
+            schedule_pending_system(system_id)
             session.commit()
-        except OperationalError:
-            msg = 'Possible DB deadlock in schedule_queued_recipes. '
-            msg += 'See https://bugzilla.redhat.com/show_bug.cgi?id=958362'
-            log.exception(msg)
+        except Exception, e:
+            log.exception('Error in schedule_pending_system(%s)', system_id)
             session.rollback()
-        session.close()
+        finally:
+            session.close()
+        work_done = True
+    return work_done
 
-def schedule_queued_recipe(recipe_id, guest_recipe_id=None):
-    log.debug('Selecting a system for recipe %s', recipe_id)
-    guest_recipe = aliased(Recipe)
-    guest_distros_map = aliased(LabControllerDistroTree)
-    guest_labcontroller = aliased(LabController)
-    # This query will return all the systems that a recipe is
-    # able to run on. A system is deemed eligible if:
-    # * If the recipe's distro tree is available to the system's lab controller
-    # * The system is available (see the filter criteria).
-    # * If it's a host recipe, then the system needs to be on a lab controller
-    #   that can access the distro tree of both the host recipe,
-    #   and the guest recipe.
-    systems = System.query.join(System.queued_recipes) \
-        .outerjoin(System.cpu) \
-        .join(Recipe.recipeset, RecipeSet.job) \
-        .join(System.lab_controller, LabController._distro_trees)\
-        .join((DistroTree,
-            and_(LabControllerDistroTree.distro_tree_id ==
-                DistroTree.id, Recipe.distro_tree_id == DistroTree.id)))\
-        .outerjoin((machine_guest_map,
-            Recipe.id == machine_guest_map.c.machine_recipe_id))\
-        .outerjoin((guest_recipe,
-            machine_guest_map.c.guest_recipe_id == guest_recipe.id ))\
-        .outerjoin((guest_distros_map,
-            guest_recipe.distro_tree_id == guest_distros_map.distro_tree_id))\
-        .outerjoin((guest_labcontroller,
-            guest_distros_map.lab_controller_id == guest_labcontroller.id))\
-        .filter(Recipe.id == recipe_id) \
-        .filter(or_(guest_recipe.id == guest_recipe_id,
-            guest_recipe.id == None))\
-        .filter(and_(System.user == None,
-                or_(guest_distros_map.id == None,
-                    and_(guest_distros_map.id != None,
-                        guest_labcontroller.id == LabController.id,
-                        ),
-                   ),
-                LabController.disabled == False,
-                or_(System.loan_id == None,
-                    System.loan_id == Job.owner_id,
-                   ),
-                    ), # and
-                )
-
-    # We reapply this filter here in case a peer recipe has locked the recipe
-    # set in to a particular lab controller earlier in this scheduling pass
-    recipe = MachineRecipe.by_id(recipe_id)
-    if recipe.recipeset.lab_controller:
-        systems = systems.filter(
-                     System.lab_controller==recipe.recipeset.lab_controller)
-
-    # Something earlier in this pass meant we can't schedule this recipe
-    # right now after all. We'll try again next pass.
-    if not systems.count():
+def schedule_pending_system(system_id):
+    system = System.query.get(system_id)
+    # Do we have any queued recipes which could run on this system?
+    recipes = MachineRecipe.runnable_on_system(system)
+    # Effective priority is given in the following order:
+    # * Multi host recipes with already scheduled siblings
+    # * Priority level (i.e Normal, High etc)
+    # * RecipeSet id
+    # * Recipe id
+    recipes = recipes.order_by(RecipeSet.lab_controller == None)\
+        .order_by(RecipeSet.priority.desc())\
+        .order_by(RecipeSet.id)\
+        .order_by(Recipe.id)
+    recipe = recipes.first()
+    if not recipe:
+        log.debug('No recipes runnable on %s, returning to idle', system.fqdn)
+        system.scheduler_status = SystemSchedulerStatus.idle
         return
-
-    # Order systems by owner, then Group, finally shared for everyone.
-    # FIXME Make this configurable, so that a user can specify their scheduling
-    # Implemented order, still need to do pool
-    # preference from the job.
-    # <recipe>
-    #  <autopick order='sequence|random'>
-    #   <pool>owner</pool>
-    #   <pool>groups</pool>
-    #   <pool>public</pool>
-    #  </autopick>
-    # </recipe>
-    user = recipe.recipeset.job.owner
-    if True: #FIXME if pools are defined add them here in the order requested.
-        systems = System.scheduler_ordering(user, query=systems)
-    if recipe.autopick_random:
-        system = systems[random.randrange(0,systems.count())]
-    else:
-        system = systems.first()
-
-    log.debug("System : %s is available for Recipe %s" % (system, recipe.id))
     # Check to see if user still has proper permissions to use the system.
     # Remember the mapping of available systems could have happend hours or even
     # days ago and groups or loans could have been put in place since.
@@ -558,8 +420,12 @@ def schedule_queued_recipe(recipe_id, guest_recipe_id=None):
         log.debug("System : %s recipe: %s no longer has access. removing" % (system, 
                                                                              recipe.id))
         recipe.systems.remove(system)
+        # Try again on the next pass.
         return
+    schedule_recipe_on_system(recipe, system)
 
+def schedule_recipe_on_system(recipe, system):
+    log.debug('Assigning recipe %s to system %s', recipe.id, system.fqdn)
     recipe.resource = SystemResource(system=system)
     # Reserving the system may fail here if someone stole it out from
     # underneath us, but that is fine...
@@ -836,7 +702,7 @@ def _main_recipes():
         if provision_virt_recipes():
             work_done = True
             update_dirty_jobs()
-    if schedule_queued_recipes():
+    if schedule_pending_systems():
         work_done = True
         update_dirty_jobs()
     if provision_scheduled_recipesets():

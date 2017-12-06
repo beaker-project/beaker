@@ -20,7 +20,7 @@ from .migration import DataMigration
 from .types import (TaskStatus, CommandStatus, TaskResult, TaskPriority,
         SystemStatus, SystemType, ReleaseAction, ImageType, ResourceType,
         RecipeVirtStatus, SystemPermission, UUID, MACAddress, IPAddress,
-        GroupMembershipType)
+        GroupMembershipType, SystemSchedulerStatus)
 from .activity import Activity, ActivityMixin
 from .config import ConfigItem
 from .identity import (User, Group, Permission, SSHPubKey,

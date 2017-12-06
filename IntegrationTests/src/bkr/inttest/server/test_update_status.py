@@ -471,12 +471,10 @@ class ConcurrentUpdateTest(DatabaseTestCase):
                 """ % system.fqdn)
         beakerd.process_new_recipes()
         beakerd.update_dirty_jobs()
-        beakerd.queue_processed_recipesets()
-        beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.by_id(job.id)
             system = System.query.get(system.id)
-            self.assertEquals(job.status, TaskStatus.queued)
+            self.assertEquals(job.status, TaskStatus.processed)
             self.assertEquals(job.recipesets[0].recipes[0].systems, [system])
 
         # Two "concurrent" transactions, in the first one beakerd has 
@@ -488,12 +486,12 @@ class ConcurrentUpdateTest(DatabaseTestCase):
                 self.continue_evt = Event()
             def run(self):
                 session.begin()
-                recipe = Job.by_id(job.id).recipesets[0].recipes[0]
-                assert recipe.status == TaskStatus.queued
+                recipeset = Job.by_id(job.id).recipesets[0]
+                assert recipeset.status == TaskStatus.processed
                 self.ready_evt.set()
                 self.continue_evt.wait()
                 try:
-                    beakerd.schedule_queued_recipe(recipe.id)
+                    beakerd.queue_processed_recipeset(recipeset.id)
                     assert False, 'should raise'
                 except StaleTaskStatusException:
                     pass # expected

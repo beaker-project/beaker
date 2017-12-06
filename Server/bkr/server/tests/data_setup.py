@@ -33,7 +33,8 @@ from bkr.server.model import LabController, User, Group, UserGroup, \
         GuestResource, VirtResource, SystemStatusDuration, SystemAccessPolicy, \
         SystemPermission, DistroTreeImage, ImageType, KernelType, \
         RecipeReservationRequest, OSMajorInstallOptions, SystemPool, \
-        GroupMembershipType, Installation, CommandStatus, OpenStackRegion
+        GroupMembershipType, Installation, CommandStatus, OpenStackRegion, \
+        SystemSchedulerStatus
 from bkr.server.model.types import mac_unix_padded_dialect
 from bkr.server import dynamic_virt
 
@@ -300,6 +301,14 @@ def create_system(arch=u'i386', type=SystemType.machine, status=None,
         system = System(fqdn=fqdn,type=type, owner=owner, status=status,
                         lab_controller=lab_controller, **kw)
         session.add(system)
+
+    # Normally the system would be "idle" when first added, and then becomes 
+    # "pending" when a user flips it to Automated status. But for simplicity in 
+    # the tests, we will just force it back to "idle" here since we know we 
+    # just created it. This lets a subsequent call to the scheduler pick it up 
+    # immediately, without going through an iteration of 
+    # schedule_pending_systems() first.
+    system.scheduler_status = SystemSchedulerStatus.idle
 
     if date_added is not None:
         system.date_added = date_added

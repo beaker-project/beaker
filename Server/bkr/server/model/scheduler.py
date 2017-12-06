@@ -28,7 +28,7 @@ from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
 from sqlalchemy.sql import select, union, and_, or_, not_, func, literal, exists, delete
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import (mapper, relationship, object_mapper,
-        dynamic_loader, validates, synonym, contains_eager)
+        dynamic_loader, validates, synonym, contains_eager, aliased)
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.associationproxy import association_proxy
 from turbogears import url
@@ -45,7 +45,7 @@ from bkr.server.installopts import InstallOptions
 from bkr.server.util import absolute_url
 from .types import (UUID, MACAddress, IPAddress, TaskResult, TaskStatus, TaskPriority,
                     ResourceType, RecipeVirtStatus, mac_unix_padded_dialect, SystemStatus,
-                    RecipeReservationCondition)
+                    RecipeReservationCondition, SystemSchedulerStatus)
 from .base import DeclarativeMappedObject
 from .activity import Activity, ActivityMixin
 from .identity import User, Group
@@ -3130,6 +3130,72 @@ class MachineRecipe(Recipe):
         systems = System.scheduler_ordering(user, query=systems)
         return systems
 
+    def matching_systems(self):
+        """
+        Returns a query of systems which are free to run this recipe *right now*.
+        Note that this returns a filtered-down version of the candidate system 
+        list (recipe.systems) which is populated by beakerd from the 
+        .candidate_systems() query above.
+        """
+        # The system must be in a lab where this recipe's distro tree is available.
+        eligible_labcontrollers = set(lca.lab_controller for lca in self.distro_tree.lab_controller_assocs)
+        # This recipe's guest recipes' distro trees must also be in the lab.
+        for guestrecipe in self.guests:
+            eligible_labcontrollers.intersection_update(lca.lab_controller
+                    for lca in guestrecipe.distro_tree.lab_controller_assocs)
+        # Another recipe in the set might have locked us to a specific lab.
+        if self.recipeset.lab_controller:
+            eligible_labcontrollers.intersection_update([self.recipeset.lab_controller])
+        if not eligible_labcontrollers:
+            return None
+        return self.dyn_systems\
+                .join(System.lab_controller)\
+                .outerjoin(System.cpu)\
+                .filter(System.user == None)\
+                .filter(System.scheduler_status == SystemSchedulerStatus.idle)\
+                .filter(System.lab_controller_id.in_([lc.id for lc in eligible_labcontrollers]))\
+                .filter(LabController.disabled == False)\
+                .filter(or_(System.loaned == None, System.loaned == self.recipeset.job.owner))
+
+    @classmethod
+    def runnable_on_system(cls, system):
+        """
+        Like .matching_systems() but from the other direction.
+        Returns a query of Recipes which are ready to be run on the given system.
+        """
+        recipes = system.dyn_queued_recipes\
+                .join(Recipe.recipeset)\
+                .join(RecipeSet.job)\
+                .filter(not_(Job.is_deleted))\
+                .filter(Recipe.status == TaskStatus.queued)
+        # The recipe set might be locked to a specific lab by an earlier recipe in the set.
+        recipes = recipes.filter(or_(
+                RecipeSet.lab_controller == None,
+                RecipeSet.lab_controller == system.lab_controller))
+        # The recipe's distro tree must be available in the same lab as the system.
+        recipes = recipes.filter(
+                LabControllerDistroTree.query
+                .filter(LabControllerDistroTree.lab_controller == system.lab_controller)
+                .filter(LabControllerDistroTree.distro_tree_id == Recipe.distro_tree_id)
+                .exists().correlate(Recipe))
+        # All of the recipe's guest recipe's distros must also be available in the lab.
+        # We have to use the outer-join-not-NULL trick because we want
+        # *all* guests, not *any* guest.
+        guestrecipe = aliased(Recipe, name='guestrecipe')
+        recipes = recipes.filter(not_(exists([1],
+                from_obj=machine_guest_map
+                    .join(Recipe.__table__.alias('guestrecipe'))
+                    .join(DistroTree.__table__)
+                    .outerjoin(LabControllerDistroTree.__table__,
+                        and_(LabControllerDistroTree.distro_tree_id == DistroTree.id,
+                             LabControllerDistroTree.lab_controller == system.lab_controller)))
+                .where(machine_guest_map.c.machine_recipe_id == Recipe.id)
+                .where(LabControllerDistroTree.id == None)
+                .correlate(Recipe)))
+        # If the system is loaned, it can only run recipes belonging to the loanee.
+        if system.loaned:
+            recipes = recipes.filter(Job.owner == system.loaned)
+        return recipes
 
 class RecipeTag(DeclarativeMappedObject):
     """
@@ -3958,8 +4024,10 @@ class SystemResource(RecipeResource):
         self.reservation = self.system.reserve_for_recipe(
                                          service=u'Scheduler',
                                          user=self.recipe.recipeset.job.owner)
+        self.system.scheduler_status = SystemSchedulerStatus.reserved
 
     def release(self):
+        self.system.scheduler_status = SystemSchedulerStatus.pending
         # system_resource rows for very old recipes may have no reservation
         if not self.reservation or self.reservation.finish_time:
             return

@@ -16,7 +16,7 @@ import lxml.etree
 from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
         Integer, Unicode, UnicodeText, DateTime, String, Boolean, Numeric, Float,
         BigInteger, VARCHAR, TEXT, event, Date)
-from sqlalchemy.sql import select, and_, or_, not_, case, func
+from sqlalchemy.sql import select, and_, or_, not_, case, func, exists
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import (mapper, relationship, synonym,
         column_property, dynamic_loader, contains_eager, validates,
@@ -37,7 +37,7 @@ from bkr.server.installopts import InstallOptions
 from bkr.server.util import is_valid_fqdn, convert_db_lookup_error
 from .base import DeclarativeMappedObject
 from .types import (SystemType, SystemStatus, ReleaseAction, CommandStatus,
-        SystemPermission, TaskStatus)
+        SystemPermission, TaskStatus, SystemSchedulerStatus)
 from .activity import Activity, ActivityMixin
 from .identity import User, Group
 from .lab import LabController
@@ -276,6 +276,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
     user_id = Column(Integer, ForeignKey('tg_user.user_id'))
     user = relationship(User, primaryjoin=user_id == User.user_id)
     type = Column(SystemType.db_type(), nullable=False)
+    scheduler_status = Column(SystemSchedulerStatus.db_type(), nullable=False,
+            default=SystemSchedulerStatus.idle)
     status = Column(SystemStatus.db_type(), nullable=False)
     status_reason = Column(Unicode(4000))
     memory = Column(Integer)
@@ -350,6 +352,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             cascade='all, delete, delete-orphan', order_by='Note.created.desc()')
     queued_recipes = relationship('Recipe', back_populates='systems',
             secondary='system_recipe_map')
+    dyn_queued_recipes = dynamic_loader('Recipe', secondary='system_recipe_map')
 
     custom_access_policy_id = Column(Integer,
                                      ForeignKey('system_access_policy.id',
@@ -1789,6 +1792,57 @@ def add_system_status_duration(system, child, oldchild, initiator):
 @event.listens_for(System.custom_access_policy, 'set')
 def update_active_access_policy(system, policy, old_policy, initiator):
     system.active_access_policy = policy
+
+# When certain attributes change, it may affect whether the system is able to 
+# run a recipe. So we flip its .scheduler_status to pending, to make the 
+# scheduler re-evaluate it.
+
+@event.listens_for(System.lab_controller, 'set')
+def mark_system_pending_when_lab_controller_changes(system, new_value, old_value, initiator):
+    if new_value is not None and system.scheduler_status == SystemSchedulerStatus.idle:
+        system.scheduler_status = SystemSchedulerStatus.pending
+
+@event.listens_for(System.status, 'set')
+def mark_system_pending_when_automated(system, new_value, old_value, initiator):
+    if new_value == SystemStatus.automated and system.scheduler_status == SystemSchedulerStatus.idle:
+        system.scheduler_status = SystemSchedulerStatus.pending
+
+@event.listens_for(System.loaned, 'set')
+def mark_system_pending_when_lent(system, new_value, old_value, initiator):
+    if new_value != old_value and system.scheduler_status == SystemSchedulerStatus.idle:
+        system.scheduler_status = SystemSchedulerStatus.pending
+
+@event.listens_for(System.user, 'set')
+def mark_system_pending_when_manual_reservation_is_returned(system, new_value, old_value, initiator):
+    if new_value is None and system.scheduler_status == SystemSchedulerStatus.idle:
+        system.scheduler_status = SystemSchedulerStatus.pending
+
+@event.listens_for(DistroTree.lab_controller_assocs, 'append')
+def mark_systems_pending_when_distro_tree_added_to_lab(distro_tree, lab_controller_assoc, initiator):
+    # If this distro tree is appearing in a new lab for the first time, there 
+    # may be some idle systems which can now be paired up with queued recipes, 
+    # where previously they were being excluded because the tree was not 
+    # available in the lab.
+    # Rather than finding those directly, let's just look for systems which 
+    # *could* potentially be affected, and set them to "pending" so that the 
+    # scheduler re-evalutes them on its next iteration.
+    lab_controller = lab_controller_assoc.lab_controller
+    assert lab_controller is not None
+    # delayed import to avoid circular dependency
+    from bkr.server.model.scheduler import Recipe, system_recipe_map, machine_guest_map
+    guestrecipe = Recipe.__table__.alias('guestrecipe')
+    System.query\
+            .filter(System.lab_controller == lab_controller)\
+            .filter(System.scheduler_status == SystemSchedulerStatus.idle)\
+            .filter(or_(
+                System.queued_recipes.any(Recipe.distro_tree == distro_tree),
+                exists([1], from_obj=system_recipe_map
+                    .join(Recipe.__table__)
+                    .join(machine_guest_map, Recipe.id == machine_guest_map.c.machine_recipe_id)
+                    .join(guestrecipe, guestrecipe.c.id == machine_guest_map.c.guest_recipe_id))
+                    .where(guestrecipe.c.distro_tree_id == distro_tree.id)
+                    .where(system_recipe_map.c.system_id == System.id)))\
+            .update(dict(scheduler_status=SystemSchedulerStatus.pending), synchronize_session=False)
 
 system_pool_map = Table('system_pool_map', DeclarativeMappedObject.metadata,
         Column('system_id', Integer,

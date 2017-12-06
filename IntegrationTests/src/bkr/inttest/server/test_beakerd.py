@@ -110,8 +110,6 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
         beakerd.update_dirty_jobs()
-        beakerd.schedule_queued_recipes()
-        beakerd.update_dirty_jobs()
         j1_id = j1.id
         with session.begin():
             j1 = Job.by_id(j1_id)
@@ -156,8 +154,6 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
         beakerd.update_dirty_jobs()
-        beakerd.schedule_queued_recipes()
-        beakerd.update_dirty_jobs()
         j1_id = j1.id
         with session.begin():
             j1 = Job.by_id(j1_id)
@@ -182,8 +178,6 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
         beakerd.update_dirty_jobs()
-        beakerd.schedule_queued_recipes()
-        beakerd.update_dirty_jobs()
         j1_id = j1.id
         dt_for_guest_id = dt_for_guest.id
         with session.begin():
@@ -193,7 +187,7 @@ class TestBeakerd(DatabaseTestCase):
             dt_for_guest.lab_controller_assocs.append(
                 LabControllerDistroTree(lab_controller=host_lab_controller,
                     url=u'http://whatevs.com'))
-        beakerd.schedule_queued_recipes()
+        beakerd.schedule_pending_systems()
         beakerd.update_dirty_jobs()
         with session.begin():
             j1 = Job.by_id(j1_id)
@@ -213,19 +207,26 @@ class TestBeakerd(DatabaseTestCase):
             system_B2 = data_setup.create_system(lab_controller=lab_controller_B)
             # Set up a recipe set that can run in either lab
             r1 = data_setup.create_recipe()
+            r1._host_requires = ("""<hostRequires><or>
+                    <hostname op="=" value="%s" />
+                    <hostname op="=" value="%s" />
+                </or></hostRequires>""" % (system_A1, system_B1))
             r2 = data_setup.create_recipe()
+            r2._host_requires = ("""<hostRequires><or>
+                    <hostname op="=" value="%s" />
+                    <hostname op="=" value="%s" />
+                </or></hostRequires>""" % (system_A2, system_B2))
             job = data_setup.create_job_for_recipes([r1,r2])
-            r1.systems[:] = [system_A1, system_B1]
-            r2.systems[:] = [system_A2, system_B2]
             # Ensure both recipes have a free system, but in different labs
             user = data_setup.create_user()
             system_A1.user = user
             system_B2.user = user
-            data_setup.mark_job_queued(job)
 
         # Turn the crank
+        beakerd.process_new_recipes()
         beakerd.update_dirty_jobs()
-        beakerd.schedule_queued_recipes()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
 
         # Check only the first recipe is scheduled at this point
         job_id = job.id
@@ -234,7 +235,6 @@ class TestBeakerd(DatabaseTestCase):
         system_B2_id = system_B2.id
         with session.begin():
             job = Job.by_id(job_id)
-            job.update_status()
             self.assertEqual(job.status, TaskStatus.queued)
             r1 = Recipe.by_id(r1_id)
             self.assertEqual(r1.status, TaskStatus.scheduled)
@@ -245,11 +245,9 @@ class TestBeakerd(DatabaseTestCase):
             user = data_setup.create_user()
             system_B2 = System.by_id(system_B2_id, user)
             system_B2.user = None
-        session.expire_all()
 
         # Check the job is scheduled once the relevant system becomes free
-        beakerd.update_dirty_jobs()
-        beakerd.schedule_queued_recipes()
+        beakerd.schedule_pending_systems()
         beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.by_id(job_id)
@@ -290,13 +288,14 @@ class TestBeakerd(DatabaseTestCase):
             j2 = Job.by_id(j2.id)
             self.assertTrue(j1.status is TaskStatus.queued)
             self.assertTrue(j2.status is TaskStatus.cancelled)
-        beakerd.schedule_queued_recipes()
+        beakerd.schedule_pending_systems()
         beakerd.update_dirty_jobs()
         session.expunge_all()
         # We should still be queued here.
         with session.begin():
             j1 = Job.by_id(j1.id)
             self.assertTrue(j1.status is TaskStatus.queued, j1.status)
+            self.assertEquals(j1.recipesets[0].recipes[0].systems, [])
         beakerd.abort_dead_recipes()
         beakerd.update_dirty_jobs()
         session.expunge_all()
@@ -304,252 +303,8 @@ class TestBeakerd(DatabaseTestCase):
             j1 = Job.by_id(j1.id)
             self.assertTrue(j1.status is TaskStatus.aborted, j1.status)
 
-    def test_serialized_scheduling(self):
-        # This tests that our main recipes loop will schedule
-        # systems correctly, without any need to manually clean
-        # jobs in the test:
-        #
-        # Create R1
-        # <run_loop>
-        # R1 schedules systemB
-        # Create R2, R3 (low priority)
-        # <run_loop>
-        # R3 schedules systemB, R2 waiting for systemA
-        # Create R4, R5 (high priority)
-        # Complete R1, release systemA
-        # <run_loop>
-        # R2 gets systemA over R4 as R2's recipeset already has a lab controller
-        # assert R2, R3 are scheduled. assert R4, R5 are queued.
-        orig_sqrs = beakerd.schedule_queued_recipes
-        orig_psrs = beakerd.provision_scheduled_recipesets
-        try:
-
-            with session.begin():
-                systemB = data_setup.create_system(lab_controller=self.lab_controller)
-                systemA = data_setup.create_system(lab_controller=self.lab_controller)
-                r1 = data_setup.create_recipe()
-                j1 = data_setup.create_job_for_recipes([r1])
-            session.expire_all()
-            r1_id = r1.id
-            j1_id = j1.id
-            sysA_id = systemA.id
-            sysB_id = systemB.id
-
-            def mock_sqrs(run_number, guest_recipe_id=None):
-                with session.begin():
-                    systemA = System.by_id(sysA_id, User.by_user_name(u'admin'))
-                    systemB = System.by_id(sysB_id, User.by_user_name(u'admin'))
-                    if run_number == 1:
-                        r1 = Recipe.by_id(r1_id)
-                        r1.systems[:] = [systemB]
-                    if run_number == 2:
-                        r2 = Recipe.by_id(r2_id)
-                        r2.systems[:] = [systemA]
-                        r3 = Recipe.by_id(r3_id)
-                        r3.systems[:] = [systemB]
-                    if run_number == 3:
-                        r4 = Recipe.by_id(r4_id)
-                        r4.systems[:] = [systemA]
-                        r5 = Recipe.by_id(r5_id)
-                        r5.systems[:] = [systemB]
-                return orig_sqrs()
-
-            def mock_psrs(*args):
-                return False
-
-            def mock_sqrs_run_1():
-                return mock_sqrs(1)
-
-            beakerd.schedule_queued_recipes = mock_sqrs_run_1
-            beakerd.provision_scheduled_recipesets = mock_psrs
-            beakerd._main_recipes()
-            session.expire_all()
-            with session.begin():
-                r1 = Recipe.by_id(r1_id)
-                self.assertEqual(r1.status, TaskStatus.scheduled)
-                r2 = data_setup.create_recipe()
-                r3 = data_setup.create_recipe()
-                j2 = data_setup.create_job_for_recipes([r2, r3])
-                j2.recipesets[0].priority = TaskPriority.low
-            session.expire_all()
-            r2_id = r2.id
-            r3_id = r3.id
-
-            def mock_sqrs_run_2():
-                return mock_sqrs(2)
-
-            beakerd.schedule_queued_recipes = mock_sqrs_run_2
-            beakerd._main_recipes()
-            session.expire_all()
-            with session.begin():
-                r1 = Recipe.by_id(r1_id)
-                r2 = Recipe.by_id(r2_id)
-                r3 = Recipe.by_id(r3_id)
-                self.assertEqual(r1.status, TaskStatus.scheduled)
-                self.assertEqual(r2.status, TaskStatus.scheduled)
-                self.assertEqual(r3.status, TaskStatus.queued)
-                r4 = data_setup.create_recipe()
-                r5 = data_setup.create_recipe()
-                j2 = data_setup.create_job_for_recipes([r4, r5])
-                j2.recipesets[0].priority = TaskPriority.high
-            session.expire_all()
-            r4_id = r4.id
-            r5_id = r5.id
-
-            def mock_sqrs_run_3():
-                return mock_sqrs(3)
-
-            beakerd.schedule_queued_recipes = mock_sqrs_run_3
-            # Release systemA
-            with session.begin():
-                j1 = Job.by_id(j1_id)
-                data_setup.mark_job_waiting(j1, only=True)
-                data_setup.mark_job_running(j1, only=True)
-                data_setup.mark_job_complete(j1, only=True)
-            beakerd._main_recipes()
-
-            with session.begin():
-                r2 = Recipe.by_id(r2_id)
-                r3 = Recipe.by_id(r3_id)
-                r4 = Recipe.by_id(r4_id)
-                r5 = Recipe.by_id(r5_id)
-                self.assertEquals(r4.status, TaskStatus.queued)
-                self.assertEquals(r5.status, TaskStatus.queued)
-                self.assertEquals(r3.status, TaskStatus.scheduled)
-                self.assertEquals(r2.status, TaskStatus.scheduled)
-        finally:
-            beakerd.schedule_queued_recipes = orig_sqrs
-            beakerd.provision_scheduled_recipesets = orig_psrs
-
-    def test_schedule_bad_recipes_dont_fail_all(self):
-        with session.begin():
-            system = data_setup.create_system(lab_controller=self.lab_controller)
-            r1 = data_setup.create_recipe()
-            r2 = data_setup.create_recipe()
-            j1 = data_setup.create_job_for_recipes([r1,r2])
-            r1.systems[:] = [system]
-            r2.systems[:] = [system]
-            r1.process()
-            r1.queue()
-            r2.process()
-            r2.queue()
-        beakerd.update_dirty_jobs()
-        aborted_recipes = [r1,r2]
-        scheduled_recipes = []
-        original_sqr = beakerd.schedule_queued_recipe
-        # Need to pass by ref
-        abort_ = [False]
-        def mock_sqr(recipe_id, guest_id=None):
-            if abort_[0] is True:
-                raise Exception('ouch')
-            else:
-                abort_[0] = True
-            original_sqr(recipe_id)
-            scheduled_recipes = aborted_recipes.pop(
-                aborted_recipes.index(Recipe.by_id(recipe_id)))
-
-        try:
-            beakerd.schedule_queued_recipe = mock_sqr
-            beakerd.schedule_queued_recipes()
-        finally:
-            beakerd.schedule_queued_recipe = original_sqr
-        beakerd.update_dirty_jobs()
-
-        for a in aborted_recipes:
-            a = Recipe.by_id(a.id)
-            self.assertEqual(a.status, TaskStatus.aborted)
-        for s in scheduled_recipes:
-            s = Recipe.by_id(s.id)
-            self.assertEquals(s.status, TaskStatus.scheduled)
-
-    def test_just_in_time_systems(self):
-       # Expected behaviour of this test is (as of 0.11.3) the following:
-       # When scheduled_queued_recipes() is called it retrieves spare_recipe
-       # and r4 as candidate recipes (r2 and r3 are not considered because none of their
-       # candidate systems are free).
-       # During looping in scheduled_queued_recipes(), we complete
-       # holds_deadlocking_resource_recipe, so that its resource (systemB)
-       # is eligible to be the first candidate resource for
-       # r4 (a candidate as it was released in between sessions, and
-       # the first because it is owned by the creator of r4). r4 would
-       # then be assigned this system and fail the assertion.
-
-       # With this patch candidate systems cannot change once scheduled_queued_recipes()
-       # is entered.
-        with session.begin():
-            user = data_setup.create_user()
-            systemA = data_setup.create_system(lab_controller=self.lab_controller)
-            # This gives systemB priority
-            systemB = data_setup.create_system(owner=user, lab_controller=self.lab_controller)
-            system_decoy = data_setup.create_system(lab_controller=self.lab_controller)
-            system_spare = data_setup.create_system(lab_controller=self.lab_controller)
-
-            holds_deadlocking_resource_recipe = data_setup.create_recipe()
-            spare_recipe = data_setup.create_recipe()
-            r1 = data_setup.create_recipe()
-            r2 = data_setup.create_recipe()
-            r3 = data_setup.create_recipe()
-            r4 = data_setup.create_recipe()
-
-            data_setup.create_job_for_recipes([holds_deadlocking_resource_recipe])
-            data_setup.create_job_for_recipes([spare_recipe])
-            j1 = data_setup.create_job_for_recipes([r1,r2])
-            j2 = data_setup.create_job_for_recipes([r3,r4], owner=user)
-
-            spare_recipe.systems[:] = [system_spare]
-            r2.systems[:] = [systemB]
-            r3.systems[:] = [systemA]
-            r4.systems[:] = [systemB, system_decoy]
-
-            # We need this to be the case so that we release
-            # our resource at the correct time
-            assert spare_recipe.id < r4.id
-
-            data_setup.mark_recipe_running(holds_deadlocking_resource_recipe,
-                system=systemB)
-            data_setup.mark_recipe_running(r1, system=systemA)
-
-            spare_recipe.process()
-            spare_recipe.queue()
-
-            r2.process()
-            r2.queue()
-            r3.process()
-            r3.queue()
-            r4.process()
-            r4.queue()
-
-        beakerd.update_dirty_jobs()
-
-        engine = get_engine()
-        SessionFactory = sessionmaker(bind=engine)
-        session1 = SessionFactory()
-
-        original_sqr = beakerd.schedule_queued_recipe
-        def mock_sqr(recipe_id, guest_id=None):
-            if recipe_id == spare_recipe.id:
-                # We need to now release System B
-                # to make sure it is not picked up
-                with session1.begin():
-                    complete_me = session1.query(Recipe).filter(Recipe.id ==
-                        holds_deadlocking_resource_recipe.id).one()
-                    data_setup.mark_recipe_complete(complete_me, only=True)
-            else:
-                pass
-            original_sqr(recipe_id)
-
-        try:
-            beakerd.schedule_queued_recipe = mock_sqr
-            beakerd.schedule_queued_recipes()
-        finally:
-            beakerd.schedule_queued_recipe = original_sqr
-        r4 = Recipe.by_id(r4.id)
-        r4.recipeset.job.update_status()
-        self.assertTrue(r4.status, TaskStatus.scheduled)
-        # This asserts that systemB was not found in the schedule_queued_recipe
-        # loop. If it was it would have been picked due to owner priority
-        self.assertEquals(r4.resource.system.fqdn, system_decoy.fqdn)
-
+    # https://bugzilla.redhat.com/show_bug.cgi?id=889065
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1470959
     def test_just_in_time_systems_multihost(self):
         with session.begin():
             systemA = data_setup.create_system(lab_controller=self.lab_controller)
@@ -557,30 +312,22 @@ class TestBeakerd(DatabaseTestCase):
             r1 = data_setup.create_recipe()
             j1 = data_setup.create_job_for_recipes([r1])
             j1_id = j1.id
-            r1.systems[:] = [systemA]
-            r1.process()
-            r1.queue()
-            r1.recipeset.job.update_status()
-            r1_id = r1.id
-
-        beakerd.schedule_queued_recipes()
-
-        with session.begin():
-            r1 = Recipe.by_id(r1_id)
-            data_setup.mark_recipe_running(r1)
+            data_setup.mark_recipe_running(r1, system=systemA)
             systemA = System.by_fqdn(systemA.fqdn, User.by_user_name(u'admin'))
             systemB = System.by_fqdn(systemB.fqdn, User.by_user_name(u'admin'))
             r2 = data_setup.create_recipe()
+            r2._host_requires = u'<hostRequires force="%s"/>' % systemA.fqdn
             r3 = data_setup.create_recipe()
+            r3._host_requires = u'<hostRequires force="%s"/>' % systemB.fqdn
             j2 = data_setup.create_job_for_recipes([r2,r3])
             j2_id = j2.id
-            r2.systems[:] = [systemA]
-            r3.systems[:] = [systemB]
-            data_setup.mark_job_queued(j2)
             r2_id = r2.id
             r3_id = r3.id
 
-        beakerd.schedule_queued_recipes()
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
         r2 = Recipe.by_id(r2_id)
         r3 = Recipe.by_id(r3_id)
         # First part of deadlock, systemB is scheduled, wait for systemA
@@ -591,26 +338,26 @@ class TestBeakerd(DatabaseTestCase):
             systemA = System.by_fqdn(systemA.fqdn, User.by_user_name(u'admin'))
             systemB = System.by_fqdn(systemB.fqdn, User.by_user_name(u'admin'))
             r4 = data_setup.create_recipe()
+            r4._host_requires = u'<hostRequires force="%s"/>' % systemA.fqdn
             r5 = data_setup.create_recipe()
+            r5._host_requires = u'<hostRequires force="%s"/>' % systemB.fqdn
             j3 = data_setup.create_job_for_recipes([r4,r5])
             r4_id = r4.id
             r5_id = r5.id
             j3_id = j3.id
             j3.recipesets[0].priority = TaskPriority.high
-            r4.systems[:] = [systemA]
-            r5.systems[:] = [systemB]
             j1 = Job.by_id(j1_id)
             data_setup.mark_job_complete(j1, only=True) # Release systemA
             j3 = Job.by_id(j3_id)
             data_setup.mark_job_queued(j3) # Queue higher priority recipes
-            # j2 will be dirty. This can happen in the real scheduler if j2
+            # Make j2 dirty. This can happen in the real scheduler if j2
             # contains *other* unrelated recipe sets which are already running
             # and receiving updates from the harness.
             # But it shouldn't stop r2 from being scheduled.
             j2 = Job.by_id(j2_id)
-            self.assertTrue(j2.is_dirty)
+            j2._mark_dirty()
 
-        beakerd.schedule_queued_recipes()
+        beakerd.schedule_pending_systems()
         r2 = Recipe.by_id(r2_id)
         r3 = Recipe.by_id(r3_id)
         r4 = Recipe.by_id(r4_id)
@@ -653,8 +400,6 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.process_new_recipes()
         beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
-        beakerd.update_dirty_jobs()
-        beakerd.schedule_queued_recipes()
         beakerd.update_dirty_jobs()
 
         with session.begin():
@@ -875,7 +620,7 @@ class TestBeakerd(DatabaseTestCase):
             self.assertEqual(job.status, TaskStatus.queued)
         # Even though the system is free the job should stay queued while
         # the loan is in place.
-        beakerd.schedule_queued_recipes()
+        beakerd.schedule_pending_systems()
         beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job_id)
@@ -890,11 +635,6 @@ class TestBeakerd(DatabaseTestCase):
                     shared=True, loaned=loanee)
         job_id = self.check_user_can_run_job_on_system(loanee, system)
         beakerd.queue_processed_recipesets()
-        beakerd.update_dirty_jobs()
-        with session.begin():
-            job = Job.query.get(job_id)
-            self.assertEqual(job.status, TaskStatus.queued)
-        beakerd.schedule_queued_recipes()
         beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job_id)
@@ -916,7 +656,7 @@ class TestBeakerd(DatabaseTestCase):
             self.assertEqual(job.status, TaskStatus.queued)
         # Even though the system is free the job should stay queued while
         # the loan is in place.
-        beakerd.schedule_queued_recipes()
+        beakerd.schedule_pending_systems()
         beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job_id)
@@ -940,7 +680,7 @@ class TestBeakerd(DatabaseTestCase):
             self.assertEqual(job.status, TaskStatus.queued)
         # Even though the system is free the job should stay queued while
         # the loan is in place.
-        beakerd.schedule_queued_recipes()
+        beakerd.schedule_pending_systems()
         beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job_id)
@@ -961,7 +701,7 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
         beakerd.update_dirty_jobs()
-        beakerd.schedule_queued_recipes()
+        beakerd.schedule_pending_systems()
         beakerd.update_dirty_jobs()
         with session.begin():
             recipeset = RecipeSet.by_id(job.recipesets[0].id)
@@ -969,7 +709,7 @@ class TestBeakerd(DatabaseTestCase):
         # now re-enable it
         with session.begin():
             LabController.query.get(self.lab_controller.id).disabled = False
-        beakerd.schedule_queued_recipes()
+        beakerd.schedule_pending_systems()
         beakerd.update_dirty_jobs()
         with session.begin():
             recipeset = RecipeSet.by_id(job.recipesets[0].id)
@@ -994,8 +734,6 @@ class TestBeakerd(DatabaseTestCase):
             beakerd.process_new_recipes()
             beakerd.update_dirty_jobs()
             beakerd.queue_processed_recipesets()
-            beakerd.update_dirty_jobs()
-            beakerd.schedule_queued_recipes()
             beakerd.update_dirty_jobs()
             beakerd.provision_scheduled_recipesets()
             beakerd.update_dirty_jobs()
@@ -1027,8 +765,6 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
         beakerd.update_dirty_jobs()
-        beakerd.schedule_queued_recipes()
-        beakerd.update_dirty_jobs()
         beakerd.provision_scheduled_recipesets()
         beakerd.update_dirty_jobs()
         with session.begin():
@@ -1057,8 +793,6 @@ class TestBeakerd(DatabaseTestCase):
             beakerd.process_new_recipes()
             beakerd.update_dirty_jobs()
             beakerd.queue_processed_recipesets()
-            beakerd.update_dirty_jobs()
-            beakerd.schedule_queued_recipes()
             beakerd.update_dirty_jobs()
             beakerd.provision_scheduled_recipesets()
             beakerd.update_dirty_jobs()
@@ -1101,43 +835,55 @@ class TestBeakerd(DatabaseTestCase):
             system_no_proc.cpu = None
 
             recipe1 = data_setup.create_recipe()
-            job = data_setup.create_job_for_recipes([recipe1])
-            job.owner = user
-            recipe1.process()
-            recipe1.queue()
-            # Some fodder machines in here as well
-            recipe1.systems[:] = [system_no_proc, system_one_proc,
-                system_one_proc_owner, system_two_proc, system_two_proc_owner]
-        beakerd.schedule_queued_recipe(recipe1.id)
-        session.refresh(recipe1)
-        # Test 2 proc > 1 proc within the owners
-        self.assertEqual(recipe1.resource.system, system_two_proc_owner)
+            recipe1._host_requires = (
+                '<hostRequires><labcontroller value="%s"/></hostRequires>'
+                % self.lab_controller.fqdn)
+            job1 = data_setup.create_job_for_recipes([recipe1], owner=user)
+            recipe1_id = recipe1.id
+
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            recipe1 = Recipe.by_id(recipe1_id)
+            self.assertEquals(recipe1.status, TaskStatus.scheduled)
+            # 2-processor machine beloning to the job owner should be preferred
+            self.assertEquals(recipe1.resource.system.fqdn, system_two_proc_owner.fqdn)
 
         # Test that non group, non owner single processor sorting works
         # and that only bare metal machines are considered in the single
         # processor ordering.
         with session.begin():
             recipe2 = data_setup.create_recipe()
-            data_setup.create_job_for_recipes([recipe2])
-            recipe2.process()
-            recipe2.queue()
-            recipe2.systems[:] = [system_one_proc, system_two_proc,
-                system_one_proc_kvm]
-        beakerd.schedule_queued_recipe(recipe2.id)
-        self.assertNotEqual(recipe2.resource.system, system_one_proc)
+            recipe2._host_requires = '<hostRequires><cpu_count op="=" value="1"/></hostRequires>'
+            job2 = data_setup.create_job_for_recipes([recipe2])
+            recipe2_id = recipe2.id
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            recipe2 = Recipe.by_id(recipe2_id)
+            self.assertEquals(recipe2.status, TaskStatus.scheduled)
+            self.assertEquals(recipe2.resource.system.fqdn, system_one_proc_kvm.fqdn)
 
         # Test that group owner priority higher than dual processor
         with session.begin():
             recipe3 = data_setup.create_recipe()
-            job = data_setup.create_job_for_recipes([recipe3])
-            system_two_proc_again = data_setup.create_system(
-                lab_controller=self.lab_controller, cpu=Cpu(processors=2))
-            job.owner = user
-            recipe3.process()
-            recipe3.queue()
-            recipe3.systems[:] = [system_two_proc_again, system_one_proc_owner]
-        beakerd.schedule_queued_recipe(recipe3.id)
-        self.assertEqual(recipe3.resource.system, system_one_proc_owner)
+            recipe3._host_requires = (
+                '<hostRequires><labcontroller value="%s"/></hostRequires>'
+                % self.lab_controller.fqdn)
+            job = data_setup.create_job_for_recipes([recipe3], owner=user)
+            recipe3_id = recipe3.id
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            recipe3 = Recipe.by_id(recipe3_id)
+            self.assertEquals(recipe3.status, TaskStatus.scheduled)
+            self.assertEquals(recipe3.resource.system.fqdn, system_one_proc_owner.fqdn)
 
     def test_successful_recipe_start(self):
         with session.begin():
@@ -1161,7 +907,6 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
         beakerd.update_dirty_jobs()
-        beakerd.schedule_queued_recipes()
 
         # Scheduled recipe sets should have a recipe specific task repo
         recipe_repo = os.path.join(recipe.repopath, str(recipe.id))
@@ -1171,7 +916,6 @@ class TestBeakerd(DatabaseTestCase):
         self.assert_(os.path.exists(recipe_task_rpm))
 
         # And then continue on to provision the system
-        beakerd.update_dirty_jobs()
         beakerd.provision_scheduled_recipesets()
         beakerd.update_dirty_jobs()
 
@@ -1203,8 +947,6 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
         beakerd.update_dirty_jobs()
-        beakerd.schedule_queued_recipes()
-        beakerd.update_dirty_jobs()
 
         with session.begin():
             job = Job.query.get(job.id)
@@ -1235,6 +977,8 @@ class TestBeakerd(DatabaseTestCase):
                     </or>
                 </hostRequires>
                 """
+            # Both system1 and system2 are initially lent to someone else.
+            system1.loaned = system2.loaned = data_setup.create_user()
         beakerd.process_new_recipes()
         beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
@@ -1248,10 +992,11 @@ class TestBeakerd(DatabaseTestCase):
             self.assertEqual(candidate_systems, [system1, system2])
             # now change acess policy of system1 so that none has any permission
             # and system1 is not picked up as one of the systems in
-            # candidate_systems in schedule_queued_recipes()
+            # candidate_systems in schedule_pending_systems()
             system1.custom_access_policy.rules[:] = []
+            system1.loaned = None
         # first iteration: "recipe no longer has access"
-        beakerd.schedule_queued_recipes()
+        beakerd.schedule_pending_systems()
         beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job.id)
@@ -1259,8 +1004,10 @@ class TestBeakerd(DatabaseTestCase):
             self.assertEqual(job.status, TaskStatus.queued)
             candidate_systems = job.recipesets[0].recipes[0].systems
             self.assertEqual(candidate_systems, [system2])
+            # free up system2
+            system2.loaned = None
         # second iteration: system2 is picked instead
-        beakerd.schedule_queued_recipes()
+        beakerd.schedule_pending_systems()
         beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job.id)
@@ -1288,8 +1035,6 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.process_new_recipes()
         beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
-        beakerd.update_dirty_jobs()
-        beakerd.schedule_queued_recipes()
         beakerd.update_dirty_jobs()
         beakerd.provision_scheduled_recipesets()
         beakerd.update_dirty_jobs()
@@ -1319,8 +1064,6 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.process_new_recipes()
         beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
-        beakerd.update_dirty_jobs()
-        beakerd.schedule_queued_recipes()
         beakerd.update_dirty_jobs()
         beakerd.provision_scheduled_recipesets()
         beakerd.update_dirty_jobs()
@@ -1555,8 +1298,6 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
         beakerd.update_dirty_jobs()
-        beakerd.schedule_queued_recipes()
-        beakerd.update_dirty_jobs()
 
         with session.begin():
             job = Job.query.get(job.id)
@@ -1601,10 +1342,10 @@ class TestBeakerd(DatabaseTestCase):
         with session.begin():
             job = Job.query.get(job1.id)
             self.assertEqual(job.recipesets[0].recipes[0].status,
-                             TaskStatus.queued)
+                             TaskStatus.scheduled)
             job = Job.query.get(job2.id)
             self.assertEqual(job.recipesets[0].recipes[0].status,
-                             TaskStatus.queued)
+                             TaskStatus.scheduled)
             # this job should be aborted because the distro is not available
             # on the LC to which the system is attached
             job = Job.query.get(job3.id)
@@ -1616,17 +1357,6 @@ class TestBeakerd(DatabaseTestCase):
             self.assertEquals(result.log,
                               'Recipe ID %s does not match any systems' % 
                               job.recipesets[0].recipes[0].id)
-
-        beakerd.schedule_queued_recipes()
-        beakerd.update_dirty_jobs()
-
-        with session.begin():
-            job = Job.query.get(job1.id)
-            self.assertEqual(job.recipesets[0].recipes[0].status,
-                             TaskStatus.scheduled)
-            job = Job.query.get(job2.id)
-            self.assertEqual(job.recipesets[0].recipes[0].status,
-                             TaskStatus.scheduled)
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=851354
     def test_force_system_access_policy_obeyed(self):
@@ -1671,8 +1401,6 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
         beakerd.update_dirty_jobs()
-        beakerd.schedule_queued_recipes()
-        beakerd.update_dirty_jobs()
         beakerd.abort_dead_recipes()
         beakerd.update_dirty_jobs()
         with session.begin():
@@ -1696,8 +1424,6 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.process_new_recipes()
         beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
-        beakerd.update_dirty_jobs()
-        beakerd.schedule_queued_recipes()
         beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job.id)

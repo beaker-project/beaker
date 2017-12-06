@@ -17,7 +17,8 @@ from sqlalchemy.sql import func
 from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, User, \
         OSMajor, OSMajorInstallOptions, GroupMembershipType, SystemActivity, \
         Activity, RecipeSetComment, Recipe, RecipeSet, RecipeTaskResult, \
-        Command, CommandStatus, LogRecipeTaskResult, DataMigration, Job
+        Command, CommandStatus, LogRecipeTaskResult, DataMigration, Job, \
+        SystemSchedulerStatus
 
 def has_initial_sublist(larger, prefix):
     """ Return true iff list *prefix* is an initial sublist of list 
@@ -1221,3 +1222,45 @@ class MigrationTest(unittest.TestCase):
             self.assertItemsEqual(arches,
                     [('aarch64',), ('arm',), ('armhfp',), ('i386',), ('ia64',),
                      ('ppc',), ('ppc64',), ('ppc64le',), ('x86_64',)])
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1519589
+    def test_system_scheduler_status(self):
+        with self.migration_metadata.bind.connect() as connection:
+            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
+            # System 1 is removed
+            connection.execute(
+                    "INSERT INTO system (id, fqdn, date_added, owner_id, type, status, kernel_type_id) "
+                    "VALUES (1, 'removed.example.com', '2017-12-06', 1, 'Machine', 'Removed', 1)")
+            # System 2 is idle with Automated status
+            connection.execute(
+                    "INSERT INTO system (id, fqdn, date_added, owner_id, type, status, kernel_type_id) "
+                    "VALUES (2, 'automated.example.com', '2017-12-06', 1, 'Machine', 'Automated', 1)")
+            # System 3 is idle with Manual status
+            connection.execute(
+                    "INSERT INTO system (id, fqdn, date_added, owner_id, type, status, kernel_type_id) "
+                    "VALUES (3, 'manual.example.com', '2017-12-06', 1, 'Machine', 'Manual', 1)")
+            # System 4 is idle with Broken status
+            connection.execute(
+                    "INSERT INTO system (id, fqdn, date_added, owner_id, type, status, kernel_type_id) "
+                    "VALUES (4, 'broken.example.com', '2017-12-06', 1, 'Machine', 'Broken', 1)")
+            # System 5 is reserved by the scheduler
+            connection.execute(
+                    "INSERT INTO system (id, fqdn, date_added, owner_id, type, status, kernel_type_id, user_id) "
+                    "VALUES (5, 'reserved.example.com', '2017-12-06', 1, 'Machine', 'Automated', 1, 1)")
+            connection.execute(
+                    "INSERT INTO reservation (id, system_id, user_id, start_time, type) "
+                    "VALUES (1, 5, 1, '2017-12-06 00:00:00', 'recipe')")
+        # Do the schema upgrades
+        upgrade_db(self.migration_metadata)
+        # Job should be deleted, but not purged, so that beaker-log-delete will purge it again
+        systems = self.migration_session.query(System).order_by(System.id).all()
+        # Removed system should be 'idle', we don't want the scheduler to bother looking at it.
+        self.assertEquals(systems[0].scheduler_status, SystemSchedulerStatus.idle)
+        # Idle systems should be 'pending', so that the scheduler will check if 
+        # there is a queued recipe for them to start. Note that this includes 
+        # Manual and Broken systems since they can be scheduled too!
+        self.assertEquals(systems[1].scheduler_status, SystemSchedulerStatus.pending)
+        self.assertEquals(systems[2].scheduler_status, SystemSchedulerStatus.pending)
+        self.assertEquals(systems[3].scheduler_status, SystemSchedulerStatus.pending)
+        # Reserved systems should be 'reserved'.
+        self.assertEquals(systems[4].scheduler_status, SystemSchedulerStatus.reserved)

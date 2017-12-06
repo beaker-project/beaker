@@ -6,11 +6,12 @@
 
 import urllib
 from sqlalchemy import (Column, ForeignKey, Integer, Unicode, Boolean,
-        DateTime)
+        DateTime, event)
 from sqlalchemy.orm import relationship, synonym, validates
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server.util import is_valid_fqdn
 from .base import DeclarativeMappedObject
+from .types import SystemSchedulerStatus
 from .activity import Activity, ActivityMixin
 from .identity import User
 
@@ -106,3 +107,10 @@ class LabController(DeclarativeMappedObject, ActivityMixin):
         if not is_valid_fqdn(fqdn):
             raise ValueError('Invalid FQDN for lab controller: %s' % fqdn)
         return fqdn
+
+@event.listens_for(LabController.disabled, 'set')
+def mark_systems_pending_when_enabled(labcontroller, new_value, old_value, initiator):
+    if new_value is True:
+        for system in labcontroller.systems:
+            if system.scheduler_status == SystemSchedulerStatus.idle:
+                system.scheduler_status = SystemSchedulerStatus.pending

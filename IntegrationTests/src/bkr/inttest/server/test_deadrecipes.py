@@ -79,16 +79,16 @@ class TestBeakerd(DatabaseTestCase):
     def test_02_abort_dead_recipes(self):
         beakerd.process_new_recipes()
         beakerd.update_dirty_jobs()
-        beakerd.queue_processed_recipesets()
-        beakerd.update_dirty_jobs()
         with session.begin():
             job =  Job.by_id(self.job2.id)
-            self.assertEqual(job.status, TaskStatus.queued)
+            self.assertEqual(job.status, TaskStatus.processed)
             # check if rows in system_recipe_map
             self.assertNotEqual(len(job.recipesets[0].recipes[0].systems), 0)
             # Remove distro_tree2 from lab1, should cause remaining recipe to abort.
             for lca in self.distro_tree2.lab_controller_assocs[:]:
                 session.delete(lca)
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
         beakerd.abort_dead_recipes()
         beakerd.update_dirty_jobs()
         with session.begin():
