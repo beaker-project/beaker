@@ -11,7 +11,7 @@ from selenium.webdriver.support.ui import Select
 from bkr.server.model import SystemStatus, SSHPubKey, RenderedKickstart, \
         ConfigItem, User, Provision, SystemPermission
 from bkr.inttest.server.selenium import WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest.server.webdriver_utils import login, BootstrapSelect
 from bkr.inttest.server.requests_utils import post_json
 from turbogears.database import session
 from bkr.inttest import data_setup, get_server_base
@@ -26,11 +26,19 @@ class SystemProvisionWebUITest(WebDriverTestCase):
                     osmajor=u'RedHatEnterpriseLinux6',
                     lab_controllers=[self.lc])
 
-    def go_to_provision_tab(self, system):
+    def go_to_provision_tab(self, system, refresh=True):
         b = self.browser
-        b.get(get_server_base() + 'view/%s' % system.fqdn)
+        if refresh:
+            b.get(get_server_base() + 'view/%s' % system.fqdn)
         b.find_element_by_link_text('Provision').click()
         return b.find_element_by_id('provision')
+
+    def go_to_essentials_tab(self, system, refresh=True):
+        b = self.browser
+        if refresh:
+            b.get(get_server_base() + 'view/%s' % system.fqdn)
+        b.find_element_by_link_text('Essentials').click()
+        return b.find_element_by_id('essentials')
 
     def select_distro_tree(self, distro_tree):
         provision = self.browser.find_element_by_id('provision')
@@ -40,6 +48,26 @@ class SystemProvisionWebUITest(WebDriverTestCase):
             unicode(self.distro_tree.distro))
         Select(provision.find_element_by_name('distro_tree_id'))\
             .select_by_visible_text(unicode(self.distro_tree))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1189432
+    def test_distro_picker_widget_rerenders_upon_system_model_changes(self):
+        with session.begin():
+            lc = data_setup.create_labcontroller()
+            system = data_setup.create_system(arch=None)
+            new_distro = data_setup.create_distro_tree(distro_name='AnweshasLinux', osmajor='AnweshasLinux',
+                                                       arch=u's390', lab_controllers=[lc])
+        b = self.browser
+        login(b)
+        tab = self.go_to_essentials_tab(system=system)
+        BootstrapSelect(tab.find_element_by_name('lab_controller_id'))\
+            .select_by_visible_text(lc.fqdn.encode())
+        BootstrapSelect(tab.find_element_by_name('arches'))\
+            .select_by_visible_text('s390')
+        tab.find_element_by_xpath('.//button[text()="Save Changes"]').click()
+        b.find_element_by_xpath('//div[@id="essentials"]//span[@class="sync-status" and not(text())]')
+        tab = self.go_to_provision_tab(system=system, refresh=False)
+        self.assertIn(u'AnweshasLinux',
+                      [option.text for option in Select(tab.find_element_by_name('osmajor')).options])
 
     def test_anonymous(self):
         with session.begin():

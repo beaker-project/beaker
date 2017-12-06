@@ -128,6 +128,11 @@ correspond to the similarly-named kickstart option.
     version from the harness repos. This variable has no effect when using 
     alternative harnesses.
 
+``beah_no_console_output``
+    If specified, Beah will not send any log messages to /dev/console. The log 
+    messages will still be available in the systemd journal (on systemd-based 
+    distros).
+
 ``beah_no_ipv6``
     If specified, Beah will function in IPv4 only mode even if IPv6
     connectivity is possible.

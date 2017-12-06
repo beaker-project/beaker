@@ -316,7 +316,7 @@ def create_system(arch=u'i386', type=SystemType.machine, status=None,
                                                           osmajor=osmajor) for osmajor in exclude_osmajor)
             system.excluded_osversion.extend(ExcludeOSVersion(arch=Arch.by_name(a),
                                                               osversion=osversion) for osversion in exclude_osversion)
-    else:
+    elif arch is not None:
         system.arch.append(Arch.by_name(arch))
         system.excluded_osmajor.extend(ExcludeOSMajor(arch=Arch.by_name(arch),
                                                       osmajor=osmajor) for osmajor in exclude_osmajor)
