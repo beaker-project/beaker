@@ -4,6 +4,10 @@
 <head py:match="item.tag=='{http://www.w3.org/1999/xhtml}head'" py:attrs="item.items()">
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
     <title py:replace="''">Your title goes here</title>
+    <link rel="shortcut icon" href="${tg.url('/assets/favicon.ico')}"/>
+    <link rel="icon" href="${tg.url('/assets/favicon.ico')}" sizes="16x16 32x32 64x64"/>
+    <link rel="icon" href="${tg.url('/assets/favicon-32.png')}" sizes="32x32"/>
+    <link rel="icon" href="${tg.url('/assets/favicon-152.png')}" sizes="152x152"/>
     <script type="text/javascript">
     window.beaker_url_prefix = ${tg.to_json(tg.url('/'))};
     </script>

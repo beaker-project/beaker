@@ -19,3 +19,10 @@ clean:
 .PHONY: check
 check:
 	./run-tests.sh
+
+assets/favicon.ico: assets/favicon-16.png assets/favicon-32.png assets/favicon-64.png
+	icotool -c -o $@ $^
+
+assets/favicon-%.png: assets/favicon.svg
+	inkscape -z -e $@ -w $* -h $* $<
+	optipng $@

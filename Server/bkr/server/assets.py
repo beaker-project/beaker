@@ -188,13 +188,18 @@ def list_asset_sources(source_dir):
                 paths.append(os.path.relpath(path, source_dir))
         # site.less should be skipped because it's a symlink
         paths.remove('site.less')
-        # font-awesome is currently not managed by webassets because webassets
+        # images and fonts are currently not managed by webassets because webassets
         # breaks on non-UTF8 input files
         paths.extend([
             'font-awesome/fonts/fontawesome-webfont.eot',
             'font-awesome/fonts/fontawesome-webfont.svg',
             'font-awesome/fonts/fontawesome-webfont.ttf',
             'font-awesome/fonts/fontawesome-webfont.woff',
+            'favicon.ico',
+            'favicon-16.png',
+            'favicon-32.png',
+            'favicon-64.png',
+            'favicon-152.png',
         ])
         return paths
     finally:

@@ -8,9 +8,11 @@ import lxml.etree
 from turbogears.database import session
 from turbogears import expose, flash, widgets, validate, error_handler, validators, paginate, url
 from turbogears import redirect, config
+from flask import redirect as flask_redirect
 import bkr
 import bkr.server.stdvars
 import bkr.server.search_utility as su
+from bkr.server.app import app
 from bkr.server.model import (TaskBase, Device, System,
         SystemActivity, Key, OSMajor, DistroTree, Arch, TaskPriority,
         Group, GroupActivity, RecipeSet, RecipeSetActivity, User, LabInfo,
@@ -59,6 +61,7 @@ from bkr.server.cherrypy_util import PlainTextHTTPException
 from bkr.server.helpers import make_link
 from bkr.server import metrics, identity
 from bkr.server.needpropertyxml import XmlHost
+from bkr.server.util import absolute_url
 from decimal import Decimal
 import bkr.server.recipes
 import bkr.server.rdf
@@ -1079,19 +1082,9 @@ class Root(RPCRoot):
     def robots_txt(self):
         return "User-agent: *\nDisallow: /\n"
 
-    @expose()
-    def favicon_ico(self):
-        static_dir = config.get('static_filter.dir', path="/static")
-        filename = join(os.path.normpath(static_dir), 'images', 'favicon.ico')
-        return serve_file(filename)
-
-
-#    @expose(template='bkr.server.templates.activity')
-#    def activity(self, *args, **kw):
-# TODO This is mainly for testing
-# if it hangs around it should check for admin access
-#        return dict(title="Activity", search_bar=None, activity = Activity.all())
-#
+@app.route('/favicon.ico', methods=['GET'])
+def favicon_ico():
+    return flask_redirect(absolute_url('/assets/favicon.ico'))
 
 _startup_time = None
 def startup_time_start():

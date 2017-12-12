@@ -92,6 +92,7 @@ BuildRequires:  python-turbojson
 BuildRequires:  python-sqlalchemy >= 0.9
 BuildRequires:  python-lxml
 BuildRequires:  python-ldap
+BuildRequires:  python-rdflib >= 3.2.0
 BuildRequires:  python-TurboMail >= 3.0
 BuildRequires:  cracklib-python
 BuildRequires:  rpm-python
