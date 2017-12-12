@@ -10,7 +10,8 @@ import time
 import uuid
 from turbogears import config
 try:
-    import keystoneclient
+    import keystoneclient.v3.client, keystoneclient.session, keystoneclient.auth.identity.v3, \
+            keystoneclient.exceptions
     has_keystoneclient = True
 except ImportError:
     has_keystoneclient = False
@@ -40,7 +41,7 @@ class VirtManager(object):
         self._do_sanity_check()
         self.lab_controller = self.region.lab_controller
         keystone_session = self._create_keystone_session()
-        self.keystoneclient = keystoneclient.v3.client.Client(session=keystone_session)
+        self.keystoneclient = keystoneclient.v3.client.Client(session=keystone_session, interface='public')
         self.novaclient = nova_client.Client('2', session=keystone_session)
         self.neutronclient = neutron_client.Client(session=keystone_session)
 
@@ -184,19 +185,43 @@ class VirtManager(object):
 
 def create_keystone_trust(username, password, project_name):
     auth_url = config.get('openstack.identity_api_url')
-    trustee = keystoneclient.v3.client.Client(
+    trustee_auth = keystoneclient.auth.identity.v3.Password(
             username=config.get('openstack.username'),
             password=config.get('openstack.password'),
+            user_domain_id=u'default',
             auth_url=auth_url)
+    trustee_session = keystoneclient.session.Session(auth=trustee_auth)
+    trustee = keystoneclient.v3.client.Client(session=trustee_session, interface='public')
+    trustee_auth_ref = trustee_auth.get_access(trustee_session)
     try:
-        trustor = keystoneclient.v3.client.Client(username=username,
-                password=password, project_name=project_name, auth_url=auth_url)
-        trust = trustor.trusts.create(trustor_user=trustor.user_id,
-                                      trustee_user=trustee.user_id,
-                                      role_names=trustor.auth_ref.role_names,
-                                      impersonation=True,
-                                      project=trustor.project_id)
-        return trust.id
+        trustor_auth = keystoneclient.auth.identity.v3.Password(
+                username=username,
+                password=password,
+                project_name=project_name,
+                user_domain_id=u'default',
+                project_domain_id=u'default',
+                auth_url=auth_url)
+        trustor_session = keystoneclient.session.Session(auth=trustor_auth)
+        trustor = keystoneclient.v3.client.Client(session=trustor_session, interface='public')
+        trustor_auth_ref = trustor_auth.get_access(trustor_session)
+        if keystoneclient.__version__.startswith('0.11.'):
+            # RHEL6 keystoneclient incorrectly uses the admin URL for all
+            # requests, which is inaccessible to normal clients.
+            # So we have to make a raw HTTP request.
+            body = dict(trust=dict(trustor_user_id=trustor_auth_ref.user_id,
+                                   trustee_user_id=trustee_auth_ref.user_id,
+                                   roles=[dict(name=name) for name in trustor_auth_ref.role_names],
+                                   impersonation=True,
+                                   project_id=trustor_auth_ref.project_id))
+            resp, data = trustor.post('/OS-TRUST/trusts', body=body, management=False)
+            return data['trust']['id']
+        else:
+            trust = trustor.trusts.create(trustor_user=trustor_auth_ref.user_id,
+                                          trustee_user=trustee_auth_ref.user_id,
+                                          role_names=trustor_auth_ref.role_names,
+                                          impersonation=True,
+                                          project=trustor_auth_ref.project_id)
+            return trust.id
     except keystoneclient.exceptions.Unauthorized as exc:
         raise ValueError(exc.message)
 
