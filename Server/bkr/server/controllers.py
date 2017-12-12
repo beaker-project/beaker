@@ -594,37 +594,6 @@ class Root(RPCRoot):
             flash(_(u"Key_Value_Id not Found"))
         redirect("./view/%s" % system.fqdn)
 
-    @expose()
-    @identity.require(identity.not_anonymous())
-    @restrict_http_method('post')
-    def group_remove(self, system_id=None, group_id=None):
-        removed = None
-        if system_id and group_id:
-            try:
-                system = System.by_id(system_id,identity.current.user)
-            except NoResultFound:
-                flash(_(u"Invalid Permision"))
-                redirect("/")
-        else:
-            flash(_(u"system_id and group_id must be provided"))
-            redirect("/")
-        if system.can_edit(identity.current.user):
-            for group in system.groups:
-                if group.group_id == int(group_id):
-                    system.groups.remove(group)
-                    removed = group
-                    system.record_activity(user=identity.current.user, service=u'WEBUI',
-                            action=u'Removed', field=u'Group',
-                            old=group.display_name, new=u"")
-                    gactivity = GroupActivity(identity.current.user, 'WEBUI', 'Removed', 'System', "", system.fqdn)
-                    group.activity.append(gactivity)
-        if removed:
-            system.date_modified = datetime.utcnow()
-            flash(_(u"%s Removed" % removed.display_name))
-        else:
-            flash(_(u"Group ID not found"))
-        redirect("./view/%s" % system.fqdn)
-
     @expose(template="bkr.server.templates.system")
     def _view_system_as_html(self, fqdn=None, **kw):
         if fqdn: 
@@ -803,32 +772,6 @@ class Root(RPCRoot):
             system.record_activity(user=identity.current.user, service=u'WEBUI',
                     action=u'Added', field=u'Key/Value', old=u"",
                     new=u"%s/%s" % (kw['key_name'],kw['key_value']))
-            system.date_modified = datetime.utcnow()
-        redirect("/view/%s" % system.fqdn)
-
-    @expose()
-    @identity.require(identity.not_anonymous())
-    def save_group(self, id, **kw):
-        try:
-            system = System.by_id(id,identity.current.user)
-        except InvalidRequestError:
-            flash( _(u"Unable to Add Group for %s" % id) )
-            redirect("/")
-        # Add a Group
-        if kw.get('group').get('text'):
-            try:
-                group = Group.by_name(kw['group']['text'])
-            except InvalidRequestError:
-                flash(_(u"%s is an Invalid Group" % kw['group']['text']))
-                redirect("/view/%s" % system.fqdn)
-            if group in system.groups:
-                flash(_(u"System '%s' is already in group '%s'" % (system.fqdn, group.group_name)))
-                redirect("/view/%s" % system.fqdn)
-            system.groups.append(group)
-            system.record_activity(user=identity.current.user, service=u'WEBUI',
-                    action=u'Added', field=u'Group', old=u"", new=kw['group']['text'])
-            gactivity = GroupActivity(identity.current.user, 'WEBUI', 'Added', 'System', "", system.fqdn)
-            group.activity.append(gactivity)
             system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
 
