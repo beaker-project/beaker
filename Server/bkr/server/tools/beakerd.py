@@ -397,6 +397,7 @@ def schedule_pending_systems():
 def schedule_pending_system(system_id):
     system = System.query.get(system_id)
     # Do we have any queued recipes which could run on this system?
+    log.debug('Checking for queued recipes which are runnable on %s', system.fqdn)
     recipes = MachineRecipe.runnable_on_system(system)
     # Effective priority is given in the following order:
     # * Multi host recipes with already scheduled siblings
