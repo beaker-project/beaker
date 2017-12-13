@@ -314,7 +314,6 @@ class Task(DeclarativeMappedObject):
     rpm = Column('rpm', Unicode(255), unique=True)
     path = Column('path', Unicode(4096))
     description = Column('description', Unicode(2048))
-    repo = Column(Unicode(256))
     avg_time = Column(Integer, default=0)
     destructive = Column(Boolean(create_constraint=False))
     nda = Column(Boolean(create_constraint=False))
@@ -520,7 +519,7 @@ class Task(DeclarativeMappedObject):
                     rpm = self.rpm,
                     path = self.path,
                     description = self.description,
-                    repo = '%s' % self.repo,
+                    repo = u'None', # for compatibility only
                     max_time = self.avg_time,
                     destructive = self.destructive,
                     nda = self.nda,
