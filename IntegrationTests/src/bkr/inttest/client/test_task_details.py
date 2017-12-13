@@ -64,15 +64,19 @@ class TaskDetailsTest(ClientTestCase):
         self.assertEquals(details['owner'], owner)
         self.assertEquals(details['priority'], u'Low')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=624417
     def test_details_without_owner(self):
-        # We no longer permit empty Owner but older tasks may still lack it
+        # The original bug was that the owner was not filled in, so some older 
+        # task rows would still have None. However for bug 859785 these were 
+        # coerced to empty string.
         with session.begin():
             task = data_setup.create_task()
-            task.owner = None
+            task.owner = ''
         out = run_client(['bkr', 'task-details', task.name])
         details = eval(out[len(task.name) + 1:]) # XXX dodgy
-        self.assertEquals(details['owner'], None)
+        self.assertEquals(details['owner'], '')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=624417
     def test_details_without_uploader(self):
         # We now always record Uploader, but older tasks may lack it
         with session.begin():

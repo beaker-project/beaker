@@ -412,7 +412,7 @@ def create_task(name=None, exclude_arches=None, exclusive_arches=None,
         valid = True
     rpm = u'example%s-%s.noarch.rpm' % (name.replace('/', '-'), version)
 
-    task = Task.lazy_create(name=name)
+    task = Task(name=name)
     task.rpm = rpm
     task.version = version
     task.uploader = uploader
@@ -422,6 +422,7 @@ def create_task(name=None, exclude_arches=None, exclusive_arches=None,
     task.path = path
     task.description = description
     task.avg_time = avg_time
+    task.license = u'GPLv99+'
     if type:
         for t in type:
             task.types.append(TaskType.lazy_create(type=t))
@@ -444,6 +445,9 @@ def create_task(name=None, exclude_arches=None, exclusive_arches=None,
     if runfor:
         for run in runfor:
             task.runfor.append(TaskPackage.lazy_create(package=run))
+    session.add(task)
+    session.flush()
+    log.debug('Created task %s', task.name)
     return task
 
 def create_tasks(xmljob):
@@ -452,7 +456,8 @@ def create_tasks(xmljob):
     for task in xmljob.xpath('recipeSet/recipe/task'):
         names.add(task.get('name'))
     for name in names:
-        create_task(name=name)
+        if not Task.query.filter(Task.name == name).count():
+            create_task(name=name)
 
 def create_recipe(distro_tree=None, task_list=None,
         task_name=u'/distribution/reservesys', num_tasks=None, whiteboard=None,
@@ -490,16 +495,17 @@ def create_recipe(distro_tree=None, task_list=None,
 
     if num_tasks:
         task_list = [create_task() for i in range(0, num_tasks)]
-    if task_list: #don't specify a task_list and a task_name...
-        for t in task_list:
-            rt = RecipeTask.from_task(t)
-            rt.role = u'STANDALONE'
-            recipe.tasks.append(rt)
-        recipe.ttasks = len(task_list)
-    else:
-        rt = RecipeTask.from_task(create_task(name=task_name))
+    if not task_list: #don't specify a task_list and a task_name...
+        try:
+            task = Task.by_name(task_name)
+        except LookupError:
+            task = create_task(name=task_name)
+        task_list = [task]
+    for t in task_list:
+        rt = RecipeTask.from_task(t)
         rt.role = u'STANDALONE'
         recipe.tasks.append(rt)
+    recipe.ttasks = len(task_list)
     return recipe
 
 def create_guestrecipe(host, guestname=None, **kwargs):

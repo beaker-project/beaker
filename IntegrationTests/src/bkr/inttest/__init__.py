@@ -38,7 +38,7 @@ except ImportError:
 from turbogears.database import session
 from bkr.server import dynamic_virt
 from bkr.server.controllers import Root
-from bkr.server.model import OpenStackRegion, ConfigItem, User
+from bkr.server.model import OpenStackRegion, ConfigItem, User, LabController, Task, Distro
 from bkr.server.util import load_config
 from bkr.server.tools import ipxe_image
 from bkr.server.tests import data_setup
@@ -350,17 +350,23 @@ def setup_package():
     if not 'BEAKER_SKIP_INIT_DB' in os.environ:
         data_setup.setup_model()
     with session.begin():
-        data_setup.create_labcontroller() #always need a labcontroller
-        data_setup.create_task(name=u'/distribution/install', requires=
-                u'make gcc nfs-utils wget procmail redhat-lsb ntp '
-                u'@development-tools @development-libs @development '
-                u'@desktop-platform-devel @server-platform-devel '
-                u'libxml2-python expect pyOpenSSL'.split())
-        data_setup.create_task(name=u'/distribution/reservesys',
-                requires=u'emacs vim-enhanced unifdef sendmail'.split())
-        data_setup.create_task(name=u'/distribution/utils/dummy')
-        data_setup.create_task(name=u'/distribution/inventory')
-        data_setup.create_distro()
+        # Fill in the bare minimum data which Beaker assumes will always be present.
+        # Note that this can be called multiple times (for example, the
+        # beaker-server-redhat add-on package reuses this setup function).
+        if not LabController.query.count():
+            data_setup.create_labcontroller()
+        if not Task.query.count():
+            data_setup.create_task(name=u'/distribution/install', requires=
+                    u'make gcc nfs-utils wget procmail redhat-lsb ntp '
+                    u'@development-tools @development-libs @development '
+                    u'@desktop-platform-devel @server-platform-devel '
+                    u'libxml2-python expect pyOpenSSL'.split())
+            data_setup.create_task(name=u'/distribution/reservesys',
+                    requires=u'emacs vim-enhanced unifdef sendmail'.split())
+            data_setup.create_task(name=u'/distribution/utils/dummy')
+            data_setup.create_task(name=u'/distribution/inventory')
+        if not Distro.query.count():
+            data_setup.create_distro()
 
     if os.path.exists(turbogears.config.get('basepath.rpms')):
         # Remove any task RPMs left behind by previous test runs

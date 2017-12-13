@@ -18,6 +18,7 @@ from sqlalchemy.sql.expression import and_, or_, not_, true
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import relationship
 from turbogears.config import get
+from turbogears.database import session
 from bkr.common.helpers import (AtomicFileReplacement, Flock,
                                 makedirs_ignore, unlink_ignore)
 from bkr.server import identity, testinfo
@@ -230,6 +231,8 @@ class TaskLibrary(object):
                         old_rpms.append(old_rpm_name)
                     atomic_file.replace_dest()
                     new_tasks.append(task)
+                    session.add(task)
+                    session.flush()
 
                 try:
                     self._update_locked_repo()
@@ -310,20 +313,21 @@ class Task(DeclarativeMappedObject):
     __tablename__ = 'task'
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, primary_key=True)
-    name = Column('name', Unicode(255), unique=True)
-    rpm = Column('rpm', Unicode(255), unique=True)
-    path = Column('path', Unicode(4096))
-    description = Column('description', Unicode(2048))
-    avg_time = Column(Integer, default=0)
+    name = Column('name', Unicode(255), nullable=False, unique=True)
+    rpm = Column('rpm', Unicode(255), nullable=False, unique=True)
+    path = Column('path', Unicode(4096), nullable=False)
+    description = Column('description', Unicode(2048), nullable=False)
+    avg_time = Column(Integer, nullable=False, default=0)
     destructive = Column(Boolean(create_constraint=False))
     nda = Column(Boolean(create_constraint=False))
-    creation_date = Column(DateTime, default=datetime.utcnow)
-    update_date = Column(DateTime, onupdate=datetime.utcnow)
+    creation_date = Column(DateTime, nullable=False, default=datetime.utcnow)
+    update_date = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # uploader may be NULL on old tasks uploaded before Beaker tracked this
     uploader_id = Column(Integer, ForeignKey('tg_user.user_id'))
     uploader = relationship(User, back_populates='tasks')
-    owner = Column(Unicode(255), index=True)
-    version = Column(Unicode(256))
-    license = Column(Unicode(256))
+    owner = Column(Unicode(255), index=True, nullable=False)
+    version = Column(Unicode(256), nullable=False)
+    license = Column(Unicode(256), nullable=False)
     priority = Column(Unicode(256))
     valid = Column(Boolean, default=True, nullable=False)
     types = relationship('TaskType', secondary=task_type_map, back_populates='tasks')
@@ -422,16 +426,16 @@ class Task(DeclarativeMappedObject):
         if '//' in tinfo.test_name:
             raise BX(_(u'Task name must not contain redundant slashes'))
 
-        task = cls.lazy_create(name=tinfo.test_name)
-
-        # RPM is the same version we have. don't process
-        if task.version == raw_taskinfo['hdr']['ver']:
-            raise BX(_("Failed to import,  %s is the same version we already have" % task.version))
-
-        # if the task is already present, check if a downgrade has been requested
-        if task.version:
+        existing_task = Task.query.filter(Task.name == tinfo.test_name).first()
+        if existing_task is not None:
+            task = existing_task
+            # RPM is the same version we have. don't process
+            if existing_task.version == raw_taskinfo['hdr']['ver']:
+                raise BX(_("Failed to import,  %s is the same version we already have" % task.version))
+            # if the task is already present, check if a downgrade has been requested
             downgrade = cls.check_downgrade(task.version, raw_taskinfo['hdr']['ver'])
         else:
+            task = Task(name=tinfo.test_name)
             downgrade = False
 
         task.version = raw_taskinfo['hdr']['ver']

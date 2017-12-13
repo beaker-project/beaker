@@ -1055,7 +1055,11 @@ class MigrationTest(unittest.TestCase):
             # that either side of arch, task, osmajor is NULL hence orphaned.
             # as well as duplicates.
             # uses the arch for ppc64
-            connection.execute("INSERT INTO task(id, name, rpm, valid) VALUES (1, 'task1', 'rpm1', 1);")
+            connection.execute(
+                    "INSERT INTO task (id, name, rpm, path, valid, description, avg_time, "
+                    "creation_date, update_date, owner, version, license) "
+                    "VALUES (1, 'task1', 'rpm1', '/task1', 1, 'task1', 1, "
+                    "'2017-12-13 00:00:00', '2017-12-13 00:00:00', 'owner1', '1.1-1', 'GPLv99+')")
             connection.execute("INSERT INTO osmajor(id, osmajor) VALUES (1, 'redhat loonix');")
             connection.execute("INSERT INTO task_exclude_arch(task_id, arch_id)"
             "VALUES (1, 5), (NULL, 5), (1, NULL), (1, 5);")
@@ -1192,7 +1196,11 @@ class MigrationTest(unittest.TestCase):
         upgrade_db(self.migration_metadata)
         # We have a task which is exclusive to Fedora26
         with self.migration_metadata.bind.connect() as connection:
-            connection.execute("INSERT INTO task (name, rpm, path) VALUES ('/a', 'a.rpm', '/a')")
+            connection.execute(
+                    "INSERT INTO task (id, name, rpm, path, valid, description, avg_time, "
+                    "creation_date, update_date, owner, version, license) "
+                    "VALUES (1, '/a', 'a.rpm', '/a', 1, 'task1', 1, "
+                    "'2017-12-13 00:00:00', '2017-12-13 00:00:00', 'owner1', '1.1-1', 'GPLv99+')")
             connection.execute("INSERT INTO task_exclusive_osmajor (task_id, osmajor_id) VALUES (1, 1)")
         # Downgrade back to 24
         downgrade_db(self.migration_metadata, '24')
@@ -1208,7 +1216,11 @@ class MigrationTest(unittest.TestCase):
         upgrade_db(self.migration_metadata)
         # We have a task which is exclusive to s390(x)
         with self.migration_metadata.bind.connect() as connection:
-            connection.execute("INSERT INTO task (name, rpm, path) VALUES ('/a', 'a.rpm', '/a')")
+            connection.execute(
+                    "INSERT INTO task (id, name, rpm, path, valid, description, avg_time, "
+                    "creation_date, update_date, owner, version, license) "
+                    "VALUES (1, '/a', 'a.rpm', '/a', 1, 'task1', 1, "
+                    "'2017-12-13 00:00:00', '2017-12-13 00:00:00', 'owner1', '1.1-1', 'GPLv99+')")
             connection.execute("INSERT INTO task_exclusive_arch (task_id, arch_id) "
                     "SELECT 1, arch.id FROM arch WHERE arch.arch IN ('s390', 's390x')")
         # Downgrade back to 24

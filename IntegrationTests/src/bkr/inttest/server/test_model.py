@@ -36,7 +36,7 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
 
 from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, IntegrityError
 import netaddr
 from bkr.inttest import data_setup, DatabaseTestCase, get_server_base
 from bkr.inttest.assertions import assert_datetime_within
@@ -2406,7 +2406,7 @@ class TaskTest(DatabaseTestCase):
         session.begin()
 
     def tearDown(self):
-        session.commit()
+        session.close()
 
     def test_schema_in_task_details_xml_output(self):
         schema_doc = lxml.etree.parse(pkg_resources.resource_stream(
@@ -2428,10 +2428,10 @@ class TaskTest(DatabaseTestCase):
     def test_duplicate_task(self):
 
         task = data_setup.create_task(name=u'Task1')
-        task = data_setup.create_task(name=u'Task1')
-
-        tasks = Task.query.filter(Task.name == u'Task1').all()
-        self.assertEquals(len(tasks), 1)
+        session.flush()
+        with self.assertRaises(IntegrityError):
+            data_setup.create_task(name=u'Task1')
+            session.flush()
 
     def test_compatible_with_osmajor_obeys_excluded_releases(self):
         rhel6 = OSMajor.lazy_create(osmajor=u'RedHatEnterpriseLinux6')
@@ -2522,8 +2522,7 @@ class RecipeTaskTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
-        task = data_setup.create_task(name=u'/distribution/install')
-        recipe = data_setup.create_recipe(task_list=[task])
+        recipe = data_setup.create_recipe(task_name=u'/distribution/install')
         data_setup.create_job_for_recipes([recipe])
         data_setup.mark_recipe_running(recipe)
         self.recipetask = recipe.tasks[0]
@@ -2575,7 +2574,7 @@ class RecipeTaskResultTest(DatabaseTestCase):
         session.rollback()
 
     def test_display_label(self):
-        task = data_setup.create_task(name=u'/distribution/install')
+        task = Task.by_name(u'/distribution/install')
         rt = RecipeTask.from_task(task)
         rtr = RecipeTaskResult(recipetask=rt, path=u'/distribution/install/Sysinfo')
         self.assertEquals(rtr.display_label, u'Sysinfo')
