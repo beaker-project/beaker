@@ -905,3 +905,4 @@ def create_keystone_trust(user):
             os.environ['OPENSTACK_DUMMY_PASSWORD'],
             os.environ['OPENSTACK_DUMMY_PROJECT_NAME'])
     user.openstack_trust_id = trust_id
+    log.debug('Created OpenStack trust %s for %s', trust_id, user)

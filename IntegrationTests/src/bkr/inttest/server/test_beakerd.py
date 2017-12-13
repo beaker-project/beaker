@@ -1559,6 +1559,12 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
             self.virt_manager = dynamic_virt.VirtManager(self.user)
             self.recipe = data_setup.create_recipe()
             data_setup.create_job_for_recipes([self.recipe], owner=self.user)
+            # We want our test recipe to go to OpenStack, so make sure there 
+            # are no shared idle systems left behind by previous tests. If 
+            # there are, the scheduler will prefer to use those instead of 
+            # OpenStack.
+            System.query.filter(System.status == SystemStatus.automated)\
+                    .update(dict(status=SystemStatus.removed), synchronize_session=False)
 
     def tearDown(self):
         with session.begin():
