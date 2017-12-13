@@ -39,9 +39,14 @@ def failed_recipes(job):
             msg = "%s\tRecipeSetID: %s\n" % ( msg, recipeset.id )
             for recipe in recipeset.recipes:
                 if recipe.is_failed():
+                    distro_name = recipe.installation.distro_name if recipe.installation else \
+                        recipe.distro_tree.distro.name if recipe.distro_tree else "Unknown"
+                    arch = recipe.installation.arch.arch if recipe.installation else recipe.distro_tree.arch.arch \
+                        if recipe.distro_tree else "Unknown"
                     msg = "%s\t\tRecipeID: %s Arch: %s System: %s Distro: %s Status: %s Result: %s <%s>\n" \
-                           % (msg, recipe.id, recipe.distro_tree.arch, recipe.resource, recipe.distro_tree.distro,
-                              recipe.status, recipe.result, absolute_url('/recipes/%s' % recipe.id))
+                          % (msg, recipe.id, arch, recipe.resource, distro_name, recipe.status, recipe.result,
+                             absolute_url('/recipes/%s' % recipe.id))
+
                     for task in recipe.tasks:
                         if task.is_failed():
                             msg = "%s\t\t\tTaskID: %s TaskName: %s StartTime: %s Duration: %s Status: %s Result: %s\n" \

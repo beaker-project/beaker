@@ -2068,17 +2068,16 @@ class Recipe(TaskBase, ActivityMixin):
         """
         return repos needed for harness and task install
         """
-        if self.distro_tree:
-            if os.path.exists("%s/%s" % (self.harnesspath,
-                                            self.distro_tree.distro.osversion.osmajor)):
-                return ('beaker-harness',
+        osmajor = self.installation.osmajor
+        if os.path.exists("%s/%s" % (self.harnesspath, osmajor)):
+            return ('beaker-harness',
                     absolute_url('/harness/%s/' %
-                                 self.distro_tree.distro.osversion.osmajor,
+                                 osmajor,
                                  scheme='http',
                                  labdomain=True,
                                  webpath=False,
-                                )
-                       )
+                                 )
+                    )
 
     def generated_install_options(self):
         ks_meta = {
@@ -2225,8 +2224,8 @@ class Recipe(TaskBase, ActivityMixin):
     packages = property(_get_packages)
 
     def _get_arch(self):
-        if self.distro_tree:
-            return self.distro_tree.arch
+        if self.installation:
+            return self.installation.arch
 
     arch = property(_get_arch)
 
@@ -2482,7 +2481,7 @@ class Recipe(TaskBase, ActivityMixin):
         if status_changed and self.is_finished():
             metrics.increment('counters.recipes_%s' % self.status.name)
             if self.is_suspiciously_aborted and \
-                    getattr(self.resource, 'system', None) and \
+                    getattr(self.resource, 'system', None) and self.distro_tree and \
                     get('beaker.reliable_distro_tag', None) in self.distro_tree.distro.tags:
                 self.resource.system.suspicious_abort()
 
@@ -2525,15 +2524,16 @@ class Recipe(TaskBase, ActivityMixin):
     def reduced_install_options(self):
         sources = []
         sources.append(install_options_for_distro(
-                self.distro_tree.distro.osversion.osmajor.osmajor,
-                self.distro_tree.distro.osversion.osminor,
-                self.distro_tree.variant,
-                self.distro_tree.arch))
-        sources.append(self.distro_tree.install_options())
+                self.installation.osmajor,
+                self.installation.osminor,
+                self.installation.variant,
+                self.installation.arch))
+        if self.distro_tree:
+            sources.append(self.distro_tree.install_options())
         if self.resource:
-            sources.extend(self.resource.install_options(arch=self.distro_tree.arch,
-                           osmajor=self.distro_tree.distro.osversion.osmajor.osmajor,
-                           osminor=self.distro_tree.distro.osversion.osminor))
+            sources.extend(self.resource.install_options(arch=self.installation.arch,
+                           osmajor=self.installation.osmajor,
+                           osminor=self.installation.osminor))
         sources.append(self.generated_install_options())
         sources.append(InstallOptions.from_strings(self.ks_meta,
                     self.kernel_options, self.kernel_options_post))
@@ -2542,25 +2542,28 @@ class Recipe(TaskBase, ActivityMixin):
     def provision(self):
         from bkr.server.kickstart import generate_kickstart
         install_options = self.reduced_install_options()
-        self.installation.tree_url = self.distro_tree.url_in_lab(
-            lab_controller=self.recipeset.lab_controller, scheme=install_options.ks_meta.get('method', None))
-        by_kernel = ImageType.kernel
-        by_initrd = ImageType.initrd
-        if getattr(self.resource, 'system', None) and self.resource.system.kernel_type:
-            if self.resource.system.kernel_type.uboot:
-                by_kernel = ImageType.uimage
-                by_initrd = ImageType.uinitrd
-            kernel_type = self.resource.system.kernel_type
-        else:
-            kernel_type = KernelType.by_name(u'default')
-        self.installation.kernel_path = self.distro_tree.image_by_type(
-            by_kernel, kernel_type).path
-        self.installation.initrd_path = self.distro_tree.image_by_type(
-            by_initrd, kernel_type).path
+        if self.distro_tree:
+            self.installation.tree_url = self.distro_tree.url_in_lab(
+                lab_controller=self.recipeset.lab_controller, scheme=install_options.ks_meta.get('method', None))
+            by_kernel = ImageType.kernel
+            by_initrd = ImageType.initrd
+            if getattr(self.resource, 'system', None) and self.resource.system.kernel_type:
+                if self.resource.system.kernel_type.uboot:
+                    by_kernel = ImageType.uimage
+                    by_initrd = ImageType.uinitrd
+                kernel_type = self.resource.system.kernel_type
+            else:
+                kernel_type = KernelType.by_name(u'default')
+            self.installation.kernel_path = self.distro_tree.image_by_type(
+                by_kernel, kernel_type).path
+            self.installation.initrd_path = self.distro_tree.image_by_type(
+                by_initrd, kernel_type).path
         if 'contained_harness' not in install_options.ks_meta \
            and 'ostree_repo_url' not in install_options.ks_meta:
             if 'harness' not in install_options.ks_meta and not self.harness_repo():
-                raise ValueError('Failed to find repo for harness')
+                # raise ValueError only if distro is not user-defined
+                if self.distro_tree:
+                    raise ValueError('Failed to find repo for harness')
         if 'ks' in install_options.kernel_options:
             # Use it as is
             rendered_kickstart = None
@@ -3047,7 +3050,7 @@ class MachineRecipe(Recipe):
         if not self.recipeset.job.owner.openstack_trust_id:
             return RecipeVirtStatus.skipped
         # OpenStack is i386/x86_64 only
-        if self.distro_tree.arch.arch not in [u'i386', u'x86_64']:
+        if self.installation.arch.arch not in [u'i386', u'x86_64']:
             return RecipeVirtStatus.precluded
         # Can't run VMs in a VM
         if self.guests:
@@ -3124,13 +3127,14 @@ class MachineRecipe(Recipe):
         if not host_filter.force:
             systems = host_filter.apply_filter(systems). \
                       filter(System.status == SystemStatus.automated)
-            systems = systems.filter(System.compatible_with_distro_tree(arch=self.distro_tree.arch,
-                                                                        osmajor=self.distro_tree.distro.osversion.osmajor.osmajor,
-                                                                        osminor=self.distro_tree.distro.osversion.osminor))
+            systems = systems.filter(System.compatible_with_distro_tree(arch=self.installation.arch,
+                                                                        osmajor=self.installation.osmajor,
+                                                                        osminor=self.installation.osminor))
         else:
             systems = systems.filter(System.fqdn == host_filter.force). \
                       filter(System.status != SystemStatus.removed)
-        if only_in_lab:
+        # If it's a user-supplied distro, assume we can use any lab.
+        if self.distro_tree and only_in_lab:
             systems = systems.filter(System.in_lab_with_distro_tree(self.distro_tree))
         systems = System.scheduler_ordering(self.recipeset.job.owner, query=systems)
         return systems
@@ -3171,11 +3175,15 @@ class MachineRecipe(Recipe):
         .candidate_systems() query above.
         """
         # The system must be in a lab where this recipe's distro tree is available.
-        eligible_labcontrollers = set(lca.lab_controller for lca in self.distro_tree.lab_controller_assocs)
+        if self.distro_tree:
+            eligible_labcontrollers = set(lca.lab_controller for lca in self.distro_tree.lab_controller_assocs)
+        else:
+            eligible_labcontrollers = set(LabController.query.filter_by(removed=None).all())
         # This recipe's guest recipes' distro trees must also be in the lab.
         for guestrecipe in self.guests:
-            eligible_labcontrollers.intersection_update(lca.lab_controller
-                    for lca in guestrecipe.distro_tree.lab_controller_assocs)
+            if guestrecipe.distro_tree:
+                eligible_labcontrollers.intersection_update(lca.lab_controller
+                        for lca in guestrecipe.distro_tree.lab_controller_assocs)
         # Another recipe in the set might have locked us to a specific lab.
         if self.recipeset.lab_controller:
             eligible_labcontrollers.intersection_update([self.recipeset.lab_controller])
@@ -3206,11 +3214,12 @@ class MachineRecipe(Recipe):
                 RecipeSet.lab_controller == None,
                 RecipeSet.lab_controller == system.lab_controller))
         # The recipe's distro tree must be available in the same lab as the system.
-        recipes = recipes.filter(
+        recipes = recipes.filter(or_(
+                Recipe.distro_tree_id == None,
                 LabControllerDistroTree.query
                 .filter(LabControllerDistroTree.lab_controller == system.lab_controller)
                 .filter(LabControllerDistroTree.distro_tree_id == Recipe.distro_tree_id)
-                .exists().correlate(Recipe))
+                .exists().correlate(Recipe)))
         # All of the recipe's guest recipe's distros must also be available in the lab.
         # We have to use the outer-join-not-NULL trick because we want
         # *all* guests, not *any* guest.

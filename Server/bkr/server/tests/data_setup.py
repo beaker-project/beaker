@@ -723,7 +723,7 @@ def mark_recipe_scheduled(recipe, start_time=None, system=None, fqdn=None,
             if mac_address is not None:
                 recipe.resource.mac_address = netaddr.EUI(mac_address,
                         dialect=mac_unix_padded_dialect)
-    if not recipe.distro_tree.url_in_lab(recipe.recipeset.lab_controller):
+    if recipe.distro_tree and not recipe.distro_tree.url_in_lab(recipe.recipeset.lab_controller):
         add_distro_tree_to_lab(recipe.distro_tree, recipe.recipeset.lab_controller)
     recipe.watchdog = Watchdog()
     log.debug('Marked %s as scheduled with system %s', recipe.t_id, recipe.resource.fqdn)

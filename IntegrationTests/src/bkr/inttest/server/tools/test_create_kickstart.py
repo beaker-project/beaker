@@ -49,6 +49,20 @@ class CreateKickstartTest(DatabaseTestCase):
         self.recipe_id = recipe.id
         return recipe
 
+    def _create_recipe_with_user_defined_distro(self, **kwargs):
+        with session.begin():
+            install_task = Task.by_name(u'/distribution/install')
+            reserve_task = Task.by_name(u'/distribution/reservesys')
+            lc = create_lab_controller()
+            system = create_x86_64_automated(lc)
+            recipe = data_setup.create_recipe(custom_distro=True, osmajor=kwargs['osmajor'],
+                                              task_list=[install_task, reserve_task]) if \
+                'osmajor' in kwargs else data_setup.create_recipe(custom_distro=True, task_list=[install_task, reserve_task])
+            data_setup.create_job_for_recipes([recipe], owner=create_user(), whiteboard=u'')
+            data_setup.mark_recipe_complete(recipe, system=system)
+        self.recipe_id = recipe.id
+        return recipe
+
     def _create_i386_distro(self, lc):
         i386_distro = data_setup.create_distro(
             osmajor=u'RedHatEnterpriseLinux6', arches=[Arch.by_name(u'i386')])
@@ -74,6 +88,12 @@ class CreateKickstartTest(DatabaseTestCase):
         except CommandError as e:
             self.assertIn("RuntimeError: Recipe id '0' does not exist",
                     e.stderr_output)
+
+    def test_create_kickstart_of_unknown_osmajor_does_not_fail(self):
+        system = data_setup.create_system()
+        recipe = self._create_recipe_with_user_defined_distro(osmajor='SomeRandomLinux1')
+        self.assertIsNotNone(self._run_create_kickstart(['--recipe-id', str(recipe.id),
+                '--system', system.fqdn]))
 
     def test_nonexistent_system_fqdn(self):
         recipe = self._create_recipe()

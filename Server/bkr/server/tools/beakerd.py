@@ -132,16 +132,15 @@ def process_new_recipes(*args):
 
 def process_new_recipe(recipe_id):
     recipe = MachineRecipe.by_id(recipe_id)
-    if not recipe.distro_tree:
-        log.info("recipe ID %s moved from New to Aborted", recipe.id)
-        recipe.recipeset.abort(u'Recipe ID %s does not have a distro tree' % recipe.id)
-        return
     recipe.systems = []
 
     # Do the query twice.
 
     # First query verifies that the distro tree 
     # exists in at least one lab that has a matching system.
+    # But if it's a user-supplied distro, we don't have a
+    # distro tree to match the lab against - so it will return
+    # all possible systems
     systems = recipe.candidate_systems(only_in_lab=True)
     # Second query picks up all possible systems so that as 
     # trees appear in other labs those systems will be 

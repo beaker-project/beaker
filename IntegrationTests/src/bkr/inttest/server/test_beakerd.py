@@ -18,7 +18,7 @@ from bkr.server.model import TaskStatus, Job, System, User, \
         Provision, TaskPriority, RecipeSet, RecipeTaskResult, Task, SystemPermission,\
         MachineRecipe, GuestRecipe, LabControllerDistroTree, DistroTree, \
         TaskResult, Command, CommandStatus, GroupMembershipType, \
-        RecipeVirtStatus
+        RecipeVirtStatus, Arch
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import not_
 from turbogears import config
@@ -30,6 +30,8 @@ from bkr.inttest.assertions import assert_datetime_within, \
 from bkr.server.tools import beakerd
 from bkr.server.jobs import Jobs
 from bkr.server import dynamic_virt
+from bkr.server.model import OSMajor
+from bkr.server.model.installation import RenderedKickstart
 from bkr.inttest.assertions import assert_datetime_within
 from unittest2 import SkipTest
 
@@ -1591,6 +1593,133 @@ class TestBeakerd(DatabaseTestCase):
         self.assertEqual(recipe.installation.kernel_path, u'pxeboot/vmlinuz')
         self.assertEqual(recipe.installation.initrd_path, u'pxeboot/initrd')
 
+    def test_user_defined_recipe_provisioning_of_unknown_osmajor_does_not_fail(self):
+        with session.begin():
+            lc = data_setup.create_labcontroller()
+            system = data_setup.create_system(lab_controller=lc)
+            recipe = data_setup.create_recipe(custom_distro=True, osmajor='IDontExist1',
+                                              task_list=[Task.by_name(u'/distribution/install')] * 2)
+            job = data_setup.create_job_for_recipes([recipe])
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        beakerd.schedule_pending_systems()
+        beakerd.update_dirty_jobs()
+        beakerd.provision_scheduled_recipesets()
+        beakerd.update_dirty_jobs()
+
+        with session.begin():
+            job = Job.query.get(job.id)
+            self.assertEqual(job.status, TaskStatus.waiting)
+
+    def test_user_defined_distro_provisioning_uses_correct_exclusions_and_kernel_options(self):
+        with session.begin():
+            osmajor = OSMajor.by_name(u'DansAwesomeLinux6')
+            lc = data_setup.create_labcontroller()
+            # exclude the osmajor used on system 1, not on 2
+            excluded_system = data_setup.create_system(lab_controller=lc, exclude_osmajor=[osmajor])
+            included_system = data_setup.create_system(lab_controller=lc)
+            arch = Arch.by_name('i386')
+            included_system.provisions[arch] = Provision(arch=arch, kernel_options='anwesha')
+            recipe = data_setup.create_recipe(custom_distro=True, osmajor='DansAwesomeLinux6', arch='i386',
+                                              task_list=[Task.by_name(u'/distribution/install')] * 2)
+            job = data_setup.create_job_for_recipes([recipe])
+            job.recipesets[0].recipes[0]._host_requires = (u"""
+                   <hostRequires>
+                     <labcontroller op="=" value="%s"/>
+                   </hostRequires>
+                   """ % (lc.fqdn))
+            session.flush()
+            job_id = job.id
+            excluded_system_id = excluded_system.id
+            included_system_id = included_system.id
+
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+
+        with session.begin():
+            job = Job.query.get(job_id)
+            excluded_system = System.query.get(excluded_system_id)
+            included_system = System.query.get(included_system_id)
+            self.assertEqual(job.status, TaskStatus.processed)
+            candidate_systems = job.recipesets[0].recipes[0].systems
+            # assert that system without excluded osmajor is chosen
+            self.assertEqual(len(candidate_systems), 1)
+            self.assertNotEqual(candidate_systems[0], excluded_system)
+            self.assertEqual(candidate_systems[0], included_system)
+
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        beakerd.schedule_pending_systems()
+        beakerd.update_dirty_jobs()
+
+        with session.begin():
+            job = Job.query.get(job_id)
+            self.assertEqual(job.status, TaskStatus.scheduled)
+
+        beakerd.provision_scheduled_recipesets()
+        beakerd.update_dirty_jobs()
+
+        with session.begin():
+            job = Job.query.get(job_id)
+            self.assertEqual(job.status, TaskStatus.waiting)
+            # assert correct kernel options are used
+            self.assertIn('anwesha', job.recipesets[0].recipes[0].installation.kernel_options)
+
+    def test_recipesets_provisioned_when_guest_recipe_is_user_defined(self):
+        with session.begin():
+            lc = data_setup.create_labcontroller()
+            system = data_setup.create_system(lab_controller=lc)
+            host_recipe = data_setup.create_recipe(arch='i386')
+            guest_recipe = data_setup.create_guestrecipe(host=host_recipe, custom_distro=True,
+                                                         osmajor='DansAwesomeLinux6', arch='i386',
+                                                         task_list=[Task.by_name(u'/distribution/install')] * 2)
+            job = data_setup.create_job_for_recipes([host_recipe, guest_recipe])
+            session.flush()
+            job_id = job.id
+
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        beakerd.schedule_pending_systems()
+        beakerd.update_dirty_jobs()
+
+        with session.begin():
+            job = Job.query.get(job_id)
+            self.assertEqual(job.status, TaskStatus.scheduled)
+
+        beakerd.provision_scheduled_recipesets()
+        beakerd.update_dirty_jobs()
+
+        with session.begin():
+            job = Job.query.get(job_id)
+            self.assertEqual(job.status, TaskStatus.waiting)
+
+
+    def test_recipesets_provisioned_when_host_recipe_is_user_defined(self):
+        with session.begin():
+            lc = data_setup.create_labcontroller()
+            system = data_setup.create_system(lab_controller=lc)
+            host_recipe = data_setup.create_recipe(custom_distro=True, osmajor='DansAwesomeLinux6',
+                                                   task_list=[Task.by_name(u'/distribution/install')] * 2)
+            guest_recipe = data_setup.create_guestrecipe(host=host_recipe, custom_distro=True)
+            job = data_setup.create_job_for_recipes([host_recipe, guest_recipe])
+            session.flush()
+            job_id = job.id
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        beakerd.schedule_pending_systems()
+        beakerd.update_dirty_jobs()
+        beakerd.provision_scheduled_recipesets()
+        beakerd.update_dirty_jobs()
+
+        with session.begin():
+            job = Job.query.get(job_id)
+            self.assertEqual(job.status, TaskStatus.waiting)
 
 class TestProvisionVirtRecipes(DatabaseTestCase):
 
