@@ -94,6 +94,30 @@ def gevent_socket_extend():
         def wait_read(fileno, timeout=None, timeout_exc=None): pass
         ''')
 
+def lxml_builder_extend():
+    return astroid.parse('''
+        import lxml.etree
+        def _make(tag, *args, **kwargs):
+            return lxml.etree.Element()
+        class ElementMaker(object):
+            def __call__(self, name, *args, **kwargs):
+                return _make(name, *args, **kwargs)
+            def __getattr__(self, name):
+                return True
+        E = ElementMaker()
+        ''')
+
+def lxml_builder_transform(node):
+    if node.name == 'lxml.builder':
+        # This is a lie (lxml.builder *is* a Cython compiled module since
+        # lxml 4.0, it's not pure Python) but we need it to convince pylint 
+        # that the ElementMaker.__getattr__ method is actually real. Astroid's 
+        # has_dynamic_getattr() method intentionally ignores a __getattr__ 
+        # method which is present in compiled modules under the assumption that 
+        # it's just a slot that is not necessarily implemented.
+        # https://github.com/PyCQA/astroid/commit/a709fa17650d83d0caea78981e65454cea69f27a
+        node.pure_python = True
+
 def beaker_decl_enum_transform(cls):
     """
     DeclEnum uses some metaclass magic to fill in values as attributes on the type,
@@ -112,4 +136,6 @@ astroid.register_module_extender(astroid.MANAGER, 'alembic.op', alembic_op_exten
 astroid.register_module_extender(astroid.MANAGER, 'formencode.api', formencode_api_extend)
 # XXX should be registered for 'gevent.socket' but pylint gets confused
 astroid.register_module_extender(astroid.MANAGER, 'socket', gevent_socket_extend)
+astroid.register_module_extender(astroid.MANAGER, 'lxml.builder', lxml_builder_extend)
 astroid.MANAGER.register_transform(astroid.ClassDef, beaker_decl_enum_transform)
+astroid.MANAGER.register_transform(astroid.Module, lxml_builder_transform)
