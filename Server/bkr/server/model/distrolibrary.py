@@ -210,7 +210,7 @@ class DistroActivity(Activity):
     __tablename__ = 'distro_activity'
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
-    distro_id = Column(Integer, ForeignKey('distro.id'), index=True)
+    distro_id = Column(Integer, ForeignKey('distro.id'), index=True, nullable=False)
     object_id = synonym('distro_id')
     object = relationship('Distro', back_populates='activity')
     __mapper_args__ = {'polymorphic_identity': u'distro_activity'}
