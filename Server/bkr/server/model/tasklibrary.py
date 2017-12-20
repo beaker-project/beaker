@@ -745,5 +745,5 @@ class TaskBugzilla(DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, primary_key=True)
     bugzilla_id = Column(Integer)
-    task_id = Column(Integer, ForeignKey('task.id'))
+    task_id = Column(Integer, ForeignKey('task.id'), nullable=False)
     task = relationship(Task, back_populates='bugzillas')
