@@ -72,7 +72,7 @@ class RecipeActivity(Activity):
     id = Column(Integer, ForeignKey('activity.id',
         name='recipe_activity_id_fk'), primary_key=True)
     recipe_id = Column(Integer, ForeignKey('recipe.id',
-        name='recipe_activity_recipe_id_fk'))
+        name='recipe_activity_recipe_id_fk'), nullable=False)
     object_id = synonym('recipe_id')
     object = relationship('Recipe', back_populates='activity')
     __mapper_args__ = {'polymorphic_identity': u'recipe_activity'}
