@@ -3687,7 +3687,7 @@ class RecipeTaskParam(DeclarativeMappedObject):
     __tablename__ = 'recipe_task_param'
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, primary_key=True)
-    recipe_task_id = Column(Integer, ForeignKey('recipe_task.id'))
+    recipe_task_id = Column(Integer, ForeignKey('recipe_task.id'), nullable=False)
     name = Column(Unicode(255))
     value = Column(UnicodeText)
 
