@@ -99,7 +99,7 @@ class RecipeSetActivity(Activity):
     __tablename__ = 'recipeset_activity'
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
-    recipeset_id = Column(Integer, ForeignKey('recipe_set.id'))
+    recipeset_id = Column(Integer, ForeignKey('recipe_set.id'), nullable=False)
     object_id = synonym('recipeset_id')
     object = relationship('RecipeSet', back_populates='activity')
     __mapper_args__ = {'polymorphic_identity': u'recipeset_activity'}
