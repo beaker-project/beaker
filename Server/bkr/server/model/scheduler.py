@@ -3278,7 +3278,6 @@ class RecipeTask(TaskBase):
     rpms = relationship('RecipeTaskRpm')
     comments = relationship('RecipeTaskComment', back_populates='recipetask')
     params = relationship('RecipeTaskParam')
-    bugzillas = relationship('RecipeTaskBugzilla', back_populates='recipetask')
     logs = relationship(LogRecipeTask, back_populates='parent',
             cascade='all, delete-orphan')
     watchdog = relationship(Watchdog, uselist=False)
@@ -3756,19 +3755,6 @@ class RecipeKSAppend(DeclarativeMappedObject):
 
     def __repr__(self):
         return self.ks_append
-
-
-class RecipeTaskBugzilla(DeclarativeMappedObject):
-    """
-    Any bugzillas filed/found due to this task execution.
-    """
-
-    __tablename__ = 'recipe_task_bugzilla'
-    __table_args__ = {'mysql_engine': 'InnoDB'}
-    id = Column(Integer, primary_key=True)
-    recipe_task_id = Column(Integer, ForeignKey('recipe_task.id'))
-    recipetask = relationship(RecipeTask, back_populates='bugzillas')
-    bugzilla_id = Column(Integer)
 
 
 class RecipeRpm(DeclarativeMappedObject):
