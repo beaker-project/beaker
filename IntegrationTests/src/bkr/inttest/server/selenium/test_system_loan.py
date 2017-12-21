@@ -7,10 +7,12 @@
 import unittest
 import datetime
 import requests
+import email
 from selenium.webdriver.support.ui import WebDriverWait
 from bkr.server.model import SystemActivity, System, SystemPermission
+from bkr.inttest.mail_capture import MailCaptureThread
 from bkr.inttest.server.selenium import WebDriverTestCase
-from bkr.inttest.server.requests_utils import login as requests_login, post_json
+from bkr.inttest.server.requests_utils import login as requests_login, post_json, patch_json
 from bkr.inttest.server.webdriver_utils import login, logout
 from bkr.inttest import data_setup, with_transaction, get_server_base, DatabaseTestCase
 from turbogears.database import session
@@ -261,6 +263,11 @@ class SystemLoanTest(WebDriverTestCase):
 
 class SystemLoanHTTPTest(DatabaseTestCase):
 
+    def setUp(self):
+        self.mail_capture = MailCaptureThread()
+        self.mail_capture.start()
+        self.addCleanup(self.mail_capture.stop)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1497881
     def test_cannot_lend_to_deleted_user(self):
         with session.begin():
@@ -274,3 +281,50 @@ class SystemLoanHTTPTest(DatabaseTestCase):
         self.assertEquals(response.status_code, 400)
         self.assertEquals(response.text,
                 'Cannot lend to deleted user %s' % deleted_user.user_name)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=996165
+    def test_sends_mail_notification_for_loan(self):
+        with session.begin():
+            owner = data_setup.create_user(user_name='mturnbull', email_address='mturnbull@gov.au')
+            system = data_setup.create_system(fqdn='lya3.aemo.com.au', owner=owner)
+            loanee = data_setup.create_user(user_name='bshorten')
+        s = requests.Session()
+        requests_login(s)
+        response = post_json(get_server_base() + 'systems/%s/loans/' % system.fqdn,
+                session=s, data={'recipient': {'user_name': 'bshorten'}})
+        self.assertEquals(response.status_code, 200)
+        self.assertEquals(len(self.mail_capture.captured_mails), 1)
+        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        msg = email.message_from_string(raw_msg)
+        self.assertEquals(['mturnbull@gov.au'], rcpts)
+        self.assertEquals('mturnbull@gov.au', msg['To'])
+        self.assertEquals('System lya3.aemo.com.au loaned to bshorten', msg['Subject'])
+        self.assertEquals(
+                'Beaker system lya3.aemo.com.au <%sview/lya3.aemo.com.au>\n'
+                'has been loaned to bshorten by admin.'
+                % get_server_base(),
+                msg.get_payload(decode=True))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=996165
+    def test_sends_mail_notification_for_loan_return(self):
+        with session.begin():
+            owner = data_setup.create_user(user_name='mturnbull', email_address='mturnbull@gov.au')
+            system = data_setup.create_system(fqdn='lya4.aemo.com.au', owner=owner)
+            loanee = data_setup.create_user(user_name='bshorten')
+            system.loaned = loanee
+        s = requests.Session()
+        requests_login(s)
+        response = patch_json(get_server_base() + 'systems/%s/loans/+current' % system.fqdn,
+                session=s, data={'finish': 'now'})
+        self.assertEquals(response.status_code, 200)
+        self.assertEquals(len(self.mail_capture.captured_mails), 1)
+        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        msg = email.message_from_string(raw_msg)
+        self.assertEquals(['mturnbull@gov.au'], rcpts)
+        self.assertEquals('mturnbull@gov.au', msg['To'])
+        self.assertEquals('System lya4.aemo.com.au loan returned', msg['Subject'])
+        self.assertEquals(
+                'Beaker system lya4.aemo.com.au <%sview/lya4.aemo.com.au>\n'
+                'loan has been returned by admin.'
+                % get_server_base(),
+                msg.get_payload(decode=True))

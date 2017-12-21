@@ -160,6 +160,29 @@ def broken_system_notify(system, reason, recipe=None):
                         [('X-Arch', arch) for arch in system.arch])
 
 
+def system_loan_notify(system, loanee, agent):
+    if not system.owner.notify_system_loan:
+        return
+    if system.owner == agent:
+        # No need to inform them about their own actions
+        return
+    sender = config.get('beaker_email')
+    if not sender:
+        log.warning("beaker_email not defined in app.cfg; unable to send mail")
+        return
+    # loanee None means that the loan has been returned
+    if loanee is None:
+        subject = _(u'System %s loan returned') % system.fqdn
+    else:
+        subject = _(u'System %s loaned to %s') % (system.fqdn, loanee.user_name)
+    template = template_env.get_template('system-loan.txt')
+    body = template.render(system=system, loanee=loanee, agent=agent, absolute_url=absolute_url)
+    send_mail(sender=sender, to=system.owner.email_address, cc=system.cc,
+              subject=subject, body=body,
+              headers=[('X-Beaker-Notification', 'system-loan'),
+                       ('X-Beaker-System', system.fqdn)])
+
+
 def group_membership_notify(user, group, agent, action):
     """ Send a group membership change notification to the user """
     if user.notify_group_membership:

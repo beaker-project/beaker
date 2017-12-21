@@ -213,6 +213,8 @@ window.UserNotificationsView = Backbone.View.extend({
                 'input[name=notify_job_completion]').is(':checked'),
             'notify_broken_system': this.$(
                 'input[name=notify_broken_system]').is(':checked'),
+            'notify_system_loan': this.$(
+                'input[name=notify_system_loan]').is(':checked'),
             'notify_group_membership': this.$(
                 'input[name=notify_group_membership]').is(':checked'),
             'notify_reservesys': this.$(

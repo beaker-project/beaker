@@ -288,6 +288,8 @@ def update_user(username):
       notifications upon the completion of an owned job.
     :jsonparam boolean notify_broken_system: True if the user receives
       notifications upon a system being automatically marked broken.
+    :jsonparam boolean notify_system_loan: True if the user receives
+      notifications when their systems are loaned or loans are returned.
     :jsonparam boolean notify_group_membership: True if the user receives
       notifications of modifications to the groups the user belongs to.
     :jsonparam boolean notify_reservesys: True if the user receives
@@ -334,6 +336,8 @@ def update_user(username):
                 user.notify_job_completion = data['notify_job_completion']
             if 'notify_broken_system' in data:
                 user.notify_broken_system = data['notify_broken_system']
+            if 'notify_system_loan' in data:
+                user.notify_system_loan = data['notify_system_loan']
             if 'notify_group_membership' in data:
                 user.notify_group_membership = data['notify_group_membership']
             if 'notify_reservesys' in data:

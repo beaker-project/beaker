@@ -1,0 +1,2 @@
+Beaker system {{ system.fqdn }} <{{ absolute_url(system.href) }}>
+{% if loanee %}has been {% if loanee == agent %}borrowed{% else %}loaned to {{ loanee.user_name }}{% endif %}{% else %}loan has been returned{% endif %} by {{ agent.user_name }}.

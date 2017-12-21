@@ -116,6 +116,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
     use_old_job_page = Column(Boolean, nullable=False, default=False)
     notify_job_completion = Column(Boolean, nullable=False, default=True)
     notify_broken_system = Column(Boolean, nullable=False, default=True)
+    notify_system_loan = Column(Boolean, nullable=False, default=True)
     notify_group_membership = Column(Boolean, nullable=False, default=True)
     notify_reservesys = Column(Boolean, nullable=False, default=True)
     created = Column(DateTime, default=datetime.utcnow)
@@ -202,6 +203,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
                 data['use_old_job_page'] = self.use_old_job_page
                 data['notify_job_completion'] = self.notify_job_completion
                 data['notify_broken_system'] = self.notify_broken_system
+                data['notify_system_loan'] = self.notify_system_loan
                 data['notify_group_membership'] = self.notify_group_membership
                 data['notify_reservesys'] = self.notify_reservesys
                 data['openstack_trust_id'] = self.openstack_trust_id

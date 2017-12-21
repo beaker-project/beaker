@@ -226,6 +226,23 @@ class UserPrefs(WebDriverTestCase):
             session.refresh(self.user)
             self.assertEqual(self.user.notify_broken_system, False)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=996165
+    def test_set_system_loan_notify_off(self):
+        with session.begin():
+            self.user.notify_system_loan = True
+        b = self.browser
+        pane = self.go_to_prefs_tab('Notifications')
+        checkbox = pane.find_element_by_name('notify_system_loan')
+        self.assertTrue(checkbox.is_selected())
+        checkbox.click()
+        pane.find_element_by_tag_name('form').submit()
+        # When the button changes back to Save Changes it means it's finished saving
+        pane.find_element_by_xpath('.//button[normalize-space(string(.))'
+                                   '="Save Changes" and @disabled=""]')
+        with session.begin():
+            session.refresh(self.user)
+            self.assertEqual(self.user.notify_system_loan, False)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1136748
     def test_set_group_modify_notify_off(self):
         with session.begin():

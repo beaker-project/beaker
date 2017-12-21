@@ -1165,6 +1165,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
                     old=u'%s' % self.loaned if self.loaned else '',
                     new=u'%s' % user if user else '')
             self.loaned = user
+            mail.system_loan_notify(self, user, identity.current.user)
 
         if self.loan_comment != comment:
             self.record_activity(user=identity.current.user, service=service,
