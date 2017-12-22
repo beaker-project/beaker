@@ -232,6 +232,14 @@ class SystemsController(controllers.Controller):
         installation = Installation(distro_tree=distro_tree,
                 kernel_options=options.kernel_options_str,
                 rendered_kickstart=rendered_kickstart)
+        installation.tree_url = distro_tree.url_in_lab(lab_controller=system.lab_controller)
+        by_kernel = ImageType.uimage if system.kernel_type and system.kernel_type.uboot \
+            else ImageType.kernel
+        by_initrd = ImageType.uinitrd if system.kernel_type and system.kernel_type.uboot \
+            else ImageType.initrd
+        kernel_type = system.kernel_type if system.kernel_type else KernelType.by_name(u'default')
+        installation.kernel_path = distro_tree.image_by_type(by_kernel, kernel_type).path
+        installation.initrd_path = distro_tree.image_by_type(by_initrd, kernel_type).path
         system.installations.append(installation)
         system.configure_netboot(installation=installation, service=u'XMLRPC')
         system.record_activity(user=identity.current.user,
@@ -1177,6 +1185,14 @@ def provision_system(fqdn):
                 kernel_options=install_options.kernel_options_str,
                 rendered_kickstart=kickstart,
                 system=system)
+        installation.tree_url = distro_tree.url_in_lab(lab_controller=system.lab_controller)
+        by_kernel = ImageType.uimage if system.kernel_type and system.kernel_type.uboot \
+            else ImageType.kernel
+        by_initrd = ImageType.uinitrd if system.kernel_type and system.kernel_type.uboot \
+            else ImageType.initrd
+        kernel_type = system.kernel_type if system.kernel_type else KernelType.by_name(u'default')
+        installation.kernel_path = distro_tree.image_by_type(by_kernel, kernel_type).path
+        installation.initrd_path = distro_tree.image_by_type(by_initrd, kernel_type).path
         system.configure_netboot(installation=installation, service=u'HTTP')
         system.record_activity(user=identity.current.user, service=u'HTTP',
                 action=u'Provision', field=u'Distro Tree',

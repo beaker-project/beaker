@@ -37,7 +37,7 @@ from bkr.server.installopts import InstallOptions
 from bkr.server.util import is_valid_fqdn, convert_db_lookup_error
 from .base import DeclarativeMappedObject
 from .types import (SystemType, SystemStatus, ReleaseAction, CommandStatus,
-        SystemPermission, TaskStatus, SystemSchedulerStatus)
+        SystemPermission, TaskStatus, SystemSchedulerStatus, ImageType)
 from .activity import Activity, ActivityMixin
 from .identity import User, Group
 from .lab import LabController
@@ -1527,6 +1527,15 @@ class System(DeclarativeMappedObject, ActivityMixin):
                     installation = Installation(distro_tree=self.reprovision_distro_tree,
                             kernel_options=install_options.kernel_options_str,
                             rendered_kickstart=rendered_kickstart)
+                    installation.tree_url = self.reprovision_distro_tree.url_in_lab(
+                        lab_controller=self.lab_controller)
+                    by_kernel = ImageType.uimage if self.kernel_type and self.kernel_type.uboot \
+                        else ImageType.kernel
+                    by_initrd = ImageType.uinitrd if self.kernel_type and self.kernel_type.uboot \
+                        else ImageType.initrd
+                    kernel_type = self.kernel_type if self.kernel_type else KernelType.by_name(u'default')
+                    installation.kernel_path = self.reprovision_distro_tree.image_by_type(by_kernel, kernel_type).path
+                    installation.initrd_path = self.reprovision_distro_tree.image_by_type(by_initrd, kernel_type).path
                     self.installations.append(installation)
                     self.configure_netboot(installation=installation, service=service)
                     self.action_power(action=u'reboot', installation=installation,
