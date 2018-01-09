@@ -3800,7 +3800,7 @@ class RecipeTaskResult(TaskBase):
     __tablename__ = 'recipe_task_result'
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, primary_key=True)
-    recipe_task_id = Column(Integer, ForeignKey('recipe_task.id'))
+    recipe_task_id = Column(Integer, ForeignKey('recipe_task.id'), nullable=False)
     recipetask = relationship(RecipeTask, back_populates='results')
     path = Column(Unicode(2048))
     result = Column(TaskResult.db_type(), nullable=False, default=TaskResult.new)

@@ -134,20 +134,17 @@ class ExecutedTasksTest(WebDriverTestCase):
 
 class Search(WebDriverTestCase):
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         with session.begin():
-            self.arch_one = u'i386'
-            self.osmajor_one = u'testosmajor'
-            self.task_one = data_setup.create_task(name=u'/a/a/a', exclude_arches=[self.arch_one])
-            self.task_two = data_setup.create_task(name=u'/a/a/b', exclude_arches=[self.arch_one])
-            self.task_three = data_setup.create_task(name=u'/a/a/c', exclude_osmajors=[self.osmajor_one])
-        self.browser = self.get_browser()
+            cls.arch_one = u'i386'
+            cls.osmajor_one = u'testosmajor'
+            cls.task_one = data_setup.create_task(name=u'/a/a/a', exclude_arches=[cls.arch_one])
+            cls.task_two = data_setup.create_task(name=u'/a/a/b', exclude_arches=[cls.arch_one])
+            cls.task_three = data_setup.create_task(name=u'/a/a/c', exclude_osmajors=[cls.osmajor_one])
 
-    def tearDown(self):
-        with session.begin():
-            session.delete(self.task_one)
-            session.delete(self.task_two)
-            session.delete(self.task_three)
+    def setUp(self):
+        self.browser = self.get_browser()
 
     def test_excluded_arch_is(self):
         b = self.browser
@@ -184,27 +181,6 @@ class Search(WebDriverTestCase):
 
 
 class TaskSearchControllerTest(DatabaseTestCase):
-    def setUp(self):
-        with session.begin():
-            self.arch_one = u'i386'
-            self.osmajor_one = u'testosmajor'
-            self.task_one = data_setup.create_task(name=u'/a/b/a', exclude_arches=[self.arch_one])
-            self.task_two = data_setup.create_task(name=u'/a/b/b', exclude_arches=[self.arch_one])
-            self.task_three = data_setup.create_task(name=u'/a/b/c', exclude_osmajors=[self.osmajor_one])
-            data_setup.create_completed_job(task_list=[self.task_one, self.task_two, self.task_three])
-
-        self.recipe_tasks = []
-        t = Tasks()
-        for id in [t.id for t in [self.task_one, self.task_two, self.task_three]]:
-            self.recipe_tasks = self.recipe_tasks + self.get_task_query({'task_id': id}, False).all()
-
-    def tearDown(self):
-        with session.begin():
-            for t in self.recipe_tasks:
-                session.delete(t)
-            session.delete(self.task_one)
-            session.delete(self.task_two)
-            session.delete(self.task_three)
 
     def get_task_query(self, kw, filter_on_recipe_task_ids=True):
         t = Tasks()
@@ -221,6 +197,17 @@ class TaskSearchControllerTest(DatabaseTestCase):
     # Tests to ensure there are no regressions from query refactor
     # https://bugzilla.redhat.com/show_bug.cgi?id=1224848
     def test_search_api_directly(self):
+        with session.begin():
+            self.arch_one = u'i386'
+            self.osmajor_one = u'testosmajor'
+            self.task_one = data_setup.create_task(name=u'/a/b/a', exclude_arches=[self.arch_one])
+            self.task_two = data_setup.create_task(name=u'/a/b/b', exclude_arches=[self.arch_one])
+            self.task_three = data_setup.create_task(name=u'/a/b/c', exclude_osmajors=[self.osmajor_one])
+            data_setup.create_completed_job(task_list=[self.task_one, self.task_two, self.task_three])
+            self.recipe_tasks = []
+            for id in [t.id for t in [self.task_one, self.task_two, self.task_three]]:
+                self.recipe_tasks.extend(self.get_task_query({'task_id': id}, False).all())
+
         all_tasks = self.recipe_tasks
         self.assertEqual(3, len(all_tasks))
 
