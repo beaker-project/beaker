@@ -6,6 +6,9 @@
             Installing <%= installation.getDistroSummary() %>.
         <% } else if (installation && installation.get('rebooted') && status == 'Aborted') { %>
             Installation of <%= installation.getDistroSummary() %> aborted.
+        <%/*  installation can be null on some recipes prior to Beaker 25.0  */%>
+        <% } else if (!installation) { %>
+            No installation progress reported.
         <% } else { %>
             Installation of <%= installation.getDistroSummary() %> not started.
         <% } %>

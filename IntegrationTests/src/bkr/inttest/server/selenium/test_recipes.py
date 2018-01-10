@@ -119,6 +119,21 @@ class TestRecipeView(WebDriverTestCase):
                 recipe.system = self.system
         self.browser = self.get_browser()
 
+    def test_recipe_page_does_not_error_when_installation_is_none(self):
+        with session.begin():
+            recipe = data_setup.create_recipe()
+            job = data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_tasks_finished(recipe, task_status=TaskStatus.cancelled)
+            job.update_status()
+            # old recipes before Beaker 25.0 may have no installation row
+            recipe.installation = None
+        b = self.browser
+        login(b)
+        go_to_recipe_view(b, recipe, tab="Installation")
+        self.assertEqual(
+            b.find_element_by_xpath('//div[@class="recipe-installation-progress"]').text,
+            "No installation progress reported.")
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1362595
     def test_report_system_problem_for_recipe_works(self):
         with session.begin():
