@@ -1083,6 +1083,42 @@ class SystemFilteringTest(DatabaseTestCase):
             present=[system_a, system_ab, system_b],
             absent=[system_0])
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1387795
+    def test_compatible_with_distro(self):
+        distro_tree = data_setup.create_distro_tree(arch=u'ppc64le',
+                osmajor=u'RedHatEnterpriseLinux7', osminor=u'4')
+        excluded_osmajor = data_setup.create_system(arch=u'ppc64le',
+                exclude_osmajor=[distro_tree.distro.osversion.osmajor])
+        excluded_osversion = data_setup.create_system(arch=u'ppc64le',
+                exclude_osversion=[distro_tree.distro.osversion])
+        wrong_arch = data_setup.create_system(arch=u'i386')
+        compatible = data_setup.create_system(arch=u'ppc64le')
+        self.check_filter("""
+            <hostRequires>
+                <system>
+                    <compatible_with_distro
+                        osmajor="RedHatEnterpriseLinux7"
+                        osminor="4"
+                        arch="ppc64le"/>
+                </system>
+            </hostRequires>
+            """,
+            present=[compatible],
+            absent=[excluded_osmajor, excluded_osversion, wrong_arch])
+
+        # osminor attribute is optional
+        self.check_filter("""
+            <hostRequires>
+                <system>
+                    <compatible_with_distro
+                        osmajor="RedHatEnterpriseLinux7"
+                        arch="ppc64le"/>
+                </system>
+            </hostRequires>
+            """,
+            present=[compatible],
+            absent=[excluded_osmajor, excluded_osversion, wrong_arch])
+
 FakeFlavor = namedtuple('FakeFlavor', ['disk', 'ram', 'vcpus'])
 
 class OpenstackFlavorFilteringTest(DatabaseTestCase):

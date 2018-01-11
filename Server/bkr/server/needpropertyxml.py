@@ -9,6 +9,7 @@ import operator
 from sqlalchemy import or_, and_, not_, exists, func
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import aliased
+from sqlalchemy.sql import false
 import datetime
 from lxml import etree
 
@@ -586,6 +587,23 @@ class XmlLastInventoried(ElementWrapper):
         else:
             clause = getattr(col, op)(None)
 
+        return (joins, clause)
+
+class XmlSystemCompatibleWithDistro(ElementWrapper):
+    """
+    Matches systems which are compatible with the given OS version.
+    """
+    def filter(self, joins):
+        arch_name = self.get_xml_attr('arch', unicode, None)
+        try:
+            arch = Arch.by_name(arch_name)
+        except ValueError:
+            return (joins, false())
+        osmajor = self.get_xml_attr('osmajor', unicode, None)
+        if not osmajor:
+            return (joins, false())
+        osminor = self.get_xml_attr('osminor', unicode, None) or None
+        clause = System.compatible_with_distro_tree(arch, osmajor, osminor)
         return (joins, clause)
 
 class XmlSystemLender(ElementWrapper):
@@ -1176,7 +1194,8 @@ class XmlSystem(XmlAnd):
                     'numanodes': XmlNumaNodeCount,
                     'hypervisor': XmlHypervisor,
                     'added': XmlSystemAdded,
-                    'last_inventoried':XmlLastInventoried
+                    'last_inventoried':XmlLastInventoried,
+                    'compatible_with_distro': XmlSystemCompatibleWithDistro,
                    }
 
 

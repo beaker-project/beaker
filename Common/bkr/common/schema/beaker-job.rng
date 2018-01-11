@@ -960,6 +960,36 @@ the Free Software Foundation; either version 2 of the License, or
       <ref name="equality_op" />
       <attribute name="value" />
     </element>
+    <element name="compatible_with_distro">
+      <a:documentation xml:lang="en">
+        Selects systems which are compatible with a particular distro.
+        For example, you can use this element to select systems which are compatible
+        with Red Hat Enterprise Linux 7.4 x86_64.
+      </a:documentation>
+      <attribute name="arch">
+        <a:documentation xml:lang="en">
+          CPU architecture that the system must be compatible with.
+
+          This attribute is mandatory because system exclusions are specified
+          in Beaker on a per-architecture basis.
+        </a:documentation>
+      </attribute>
+      <attribute name="osmajor">
+        <a:documentation xml:lang="en">
+          The OS major version, for example "RedHatEnterpriseLinux7".
+         </a:documentation>
+      </attribute>
+      <optional>
+        <attribute name="osminor">
+          <a:documentation xml:lang="en">
+            The OS minor version, for example "4" for RHEL7.4.
+
+            If this attribute is ommitted, the filter selects only systems
+            which are compatible with *all* minor versions of the OS.
+           </a:documentation>
+        </attribute>
+      </optional>
+    </element>
    </choice>
   </define>
   <define name="req">

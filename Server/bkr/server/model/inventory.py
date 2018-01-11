@@ -701,30 +701,56 @@ class System(DeclarativeMappedObject, ActivityMixin):
             return self.visible_to_user(identity.current.user)
 
     @hybrid_method
-    def compatible_with_distro_tree(self, arch, osmajor, osminor):
-        return (arch in self.arch and
-                not any(e.osmajor.osmajor == osmajor
-                        and e.arch == arch
-                        for e in self.excluded_osmajor) and
-                not any(e.osversion.osmajor.osmajor == osmajor
-                        and e.osversion.osminor == osminor
-                        and e.arch == arch
-                        for e in self.excluded_osversion))
+    def compatible_with_distro_tree(self, arch, osmajor, osminor=None):
+        """
+        Hybrid method matching only systems which are compatible
+        with a particular distro.
 
+        The *osminor* argument is optional, if not given then this only matches
+        systems which are compatible with *every* minor version of the distro.
+        In other words, systems having no exclusions for any minor version.
+        """
+        if arch not in self.arch:
+            return False
+        if any(e.osmajor.osmajor == osmajor and e.arch == arch
+               for e in self.excluded_osmajor):
+            return False
+        if osminor is None:
+            # Only match if no osminors are excluded
+            if any(e.osversion.osmajor.osmajor == osmajor and e.arch == arch
+                   for e in self.excluded_osversion):
+                return False
+        else:
+            if any(e.osversion.osmajor.osmajor == osmajor
+                   and e.osversion.osminor == osminor
+                   and e.arch == arch
+                   for e in self.excluded_osversion):
+                return False
+        return True
 
     @compatible_with_distro_tree.expression
     def compatible_with_distro_tree(cls, arch, osmajor, osminor): #pylint: disable=E0213
-        return and_(cls.arch.contains(arch),
-                    not_(cls.excluded_osmajor.any(and_(
-                        ExcludeOSMajor.osmajor,
-                        OSMajor.osmajor == osmajor,
-                        ExcludeOSMajor.arch == arch))),
-                    not_(cls.excluded_osversion.any(and_(
-                        ExcludeOSVersion.osversion,
-                        OSVersion.osmajor,
-                        OSMajor.osmajor == osmajor,
-                        OSVersion.osminor == osminor,
-                        ExcludeOSVersion.arch == arch))))
+        clauses = []
+        clauses.append(cls.arch.contains(arch))
+        clauses.append(not_(cls.excluded_osmajor.any(and_(
+                ExcludeOSMajor.osmajor,
+                OSMajor.osmajor == osmajor,
+                ExcludeOSMajor.arch == arch))))
+        if osminor is None:
+            # Only match if no osminors are excluded
+            clauses.append(not_(cls.excluded_osversion.any(and_(
+                    ExcludeOSVersion.osversion,
+                    OSVersion.osmajor,
+                    OSMajor.osmajor == osmajor,
+                    ExcludeOSVersion.arch == arch))))
+        else:
+            clauses.append(not_(cls.excluded_osversion.any(and_(
+                    ExcludeOSVersion.osversion,
+                    OSVersion.osmajor,
+                    OSMajor.osmajor == osmajor,
+                    OSVersion.osminor == osminor,
+                    ExcludeOSVersion.arch == arch))))
+        return and_(*clauses)
 
     @hybrid_method
     def in_lab_with_distro_tree(self, distro_tree):
