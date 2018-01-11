@@ -1276,3 +1276,46 @@ class MigrationTest(unittest.TestCase):
         self.assertEquals(systems[3].scheduler_status, SystemSchedulerStatus.pending)
         # Reserved systems should be 'reserved'.
         self.assertEquals(systems[4].scheduler_status, SystemSchedulerStatus.reserved)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=911515
+    def test_queued_recipe_has_installation_column_after_upgrade(self):
+        with self.migration_metadata.bind.connect() as connection:
+            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
+            # add a queued job
+            connection.execute(
+                    "INSERT INTO osmajor (osmajor) "
+                    "VALUES ('Tiara9')")
+            connection.execute(
+                    "INSERT INTO osversion (osmajor_id, osminor) "
+                    "VALUES (1, 9)")
+            connection.execute(
+                    "INSERT INTO distro (name, osversion_id) "
+                    "VALUES ('Tiara9.9', 1)")
+            connection.execute(
+                    "INSERT INTO distro_tree (distro_id, arch_id, variant) "
+                    "VALUES (1, 1, 'Server')")
+            connection.execute(
+                    "INSERT INTO job (owner_id, retention_tag_id, status, dirty_version, clean_version) "
+                    "VALUES (1, 1, 'Queued', '', '2017-07-27 14:28:20')")
+            connection.execute(
+                    "INSERT INTO recipe_set (job_id, status) "
+                    "VALUES (1, 'Queued')")
+            connection.execute(
+                    "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status) "
+                    "VALUES ('machine_recipe', 1, 1, 'Queued')")
+        # Do the schema upgrades
+        upgrade_db(self.migration_metadata)
+        recipe = self.migration_session.query(Recipe).first()
+        self.assertIsNotNone(recipe.installation)
+        self.assertEqual(recipe.installation.distro_tree_id, 1)
+        self.assertEqual(recipe.installation.arch.arch, u'i386')
+        self.assertEqual(recipe.installation.variant, u'Server')
+        self.assertEqual(recipe.installation.distro_name, u'Tiara9.9')
+        self.assertEqual(recipe.installation.osmajor, u'Tiara9')
+        self.assertEqual(recipe.installation.osminor, u'9')
+        downgrade_db(self.migration_metadata, '24')
+        with self.migration_metadata.bind.connect() as connection:
+            self.assertIsNone(
+                connection.scalar('SELECT * FROM installation where recipe_id=1'))
+
+

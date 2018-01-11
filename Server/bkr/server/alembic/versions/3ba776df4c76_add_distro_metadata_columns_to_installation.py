@@ -33,6 +33,24 @@ def upgrade():
             REFERENCES arch (id)
     """)
 
+    op.execute("""
+            INSERT INTO installation
+            (distro_tree_id, recipe_id, arch_id, distro_name, osmajor, osminor, variant)
+            SELECT recipe.distro_tree_id,
+                recipe.id,
+                distro_tree.arch_id,
+                distro.name,
+                osmajor.osmajor,
+                osversion.osminor,
+                distro_tree.variant
+            FROM recipe
+            INNER JOIN distro_tree ON distro_tree.id = recipe.distro_tree_id
+            INNER JOIN distro ON distro.id = distro_tree.distro_id
+            INNER JOIN osversion ON osversion.id = distro.osversion_id
+            INNER JOIN osmajor ON osmajor.id = osversion.osmajor_id
+            WHERE recipe.status IN ('New', 'Processed', 'Queued')
+            """)
+
 
 def downgrade():
     op.execute("""
@@ -46,4 +64,14 @@ def downgrade():
         DROP COLUMN variant,
         DROP FOREIGN KEY installation_arch_id_fk,
         DROP COLUMN arch_id
+    """)
+    # Note: this downgrade is destructive as prior to the implementation of this feature
+    # the installation row was empty before the provisioning step filled it in.
+    # recipe.provision() will therefore be throwing an error if installation is not deleted
+    # in the downgrade
+    op.execute("""
+        DELETE
+        FROM installation
+        USING installation INNER JOIN recipe ON installation.recipe_id = recipe.id
+        WHERE recipe.status IN ('New', 'Processed', 'Queued')
     """)
