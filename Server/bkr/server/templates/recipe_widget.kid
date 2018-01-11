@@ -17,11 +17,13 @@
   </tr>
   <tr>
    <th>Distro</th>
-   <td>${recipe.distro_tree.link}</td>
+   <td py:if="recipe.distro_tree is not None">${recipe.distro_tree.link}</td>
+   <td><span py:if="recipe.distro_tree is None"> ${recipe.installation.distro_name} ${recipe.installation.variant} ${recipe.installation.arch}</span></td>
    <th>Arch</th>
    <td>${recipe.arch}</td>
    <th>Family</th>
-   <td>${recipe.distro_tree.distro.osversion}</td>
+   <td py:if="recipe.distro_tree is not None">${recipe.distro_tree.distro.osversion}</td>
+   <td py:if="recipe.distro_tree is None">${recipe.installation.osmajor}</td>
     <?py action_ = action_widget(task=recipe)?>
    <th py:if="action_">Action(s)</th>
    <td py:if="action_">${action_}</td>

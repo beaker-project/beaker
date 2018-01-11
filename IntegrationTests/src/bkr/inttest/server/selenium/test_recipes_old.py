@@ -42,6 +42,16 @@ class TestRecipeView(WebDriverTestCase):
         b.get(get_server_base() + 'recipes/mine')
         b.find_element_by_link_text(recipe.t_id).click()
 
+    def test_recipe_page_is_visible_when_distro_is_user_defined(self):
+        with session.begin():
+            self.system.user = self.user
+            job = data_setup.create_completed_job(owner=self.user,
+                    custom_distro=True)
+            recipe = job.recipesets[0].recipes[0]
+        b = self.browser
+        self.go_to_recipe_view(recipe)
+        self.assertEqual(b.find_element_by_xpath('//a[@class="recipe-id"]').text, recipe.t_id)
+
     def test_recipe_systems(self):
         with session.begin():
             self.system.user = self.user
