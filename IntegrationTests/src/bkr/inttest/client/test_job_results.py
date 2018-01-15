@@ -63,3 +63,20 @@ class JobResultsTest(ClientTestCase):
         self.assertIn('<log', out)
         out = run_client(['bkr', 'job-results', '--no-logs', self.job.t_id])
         self.assertNotIn('<log', out)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=911515
+    def test_job_result_does_not_fail_from_pre_upgrade_recipes(self):
+        with session.begin():
+            distro_tree = data_setup.create_distro_tree(distro_name=u"DansAwesomeLinux6.9-48",
+                                                        osmajor=u"DansAwesomeLinux6",
+                                                        arch=u"i386", variant=u"Server")
+            job = data_setup.create_completed_job(distro_tree=distro_tree)
+            job.recipesets[0].recipes[0].installation.variant = None
+            job.recipesets[0].recipes[0].installation.arch = None
+            job.recipesets[0].recipes[0].installation.distro_name = None
+            job.recipesets[0].recipes[0].installation.osmajor = None
+        out = run_client(['bkr', 'job-results', job.t_id])
+        self.assertIn('variant="Server"', out)
+        self.assertIn('family="DansAwesomeLinux6"', out)
+        self.assertIn('arch="i386"', out)
+        self.assertIn('distro="DansAwesomeLinux6.9-48"', out)
