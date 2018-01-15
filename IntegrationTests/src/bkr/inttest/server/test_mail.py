@@ -13,6 +13,7 @@ from bkr.server.util import absolute_url
 from bkr.inttest import data_setup, mail_capture, get_server_base, \
         DatabaseTestCase
 import bkr.server.mail
+from bkr.server.mail import failed_recipes
 from datetime import datetime, timedelta
 from bkr.server.tools.usage_reminder import BeakerUsage
 
@@ -228,6 +229,19 @@ class JobCompletionNotificationTest(DatabaseTestCase):
         self.mail_capture = mail_capture.MailCaptureThread()
         self.mail_capture.start()
         self.addCleanup(self.mail_capture.stop)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=911515
+    def test_failed_recipe_mail_started_before_upgrade_does_not_crash(self):
+        with session.begin():
+            job = data_setup.create_completed_job(result=TaskResult.fail)
+            # recipes that started before the upgrade wont have these parameters...
+            job.recipesets[0].recipes[0].installation.arch = None
+            job.recipesets[0].recipes[0].installation.distro_name = None
+            job.recipesets[0].recipes[0].installation.variant = None
+            job.recipesets[0].recipes[0].installation.osmajor = None
+            job.recipesets[0].recipes[0].installation.osminor = None
+        msg = failed_recipes(job)
+        self.assertIn('Completed Result: Fail', msg)
 
     def test_subject_format(self):
         with session.begin():

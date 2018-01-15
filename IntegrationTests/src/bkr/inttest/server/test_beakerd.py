@@ -74,6 +74,31 @@ class TestBeakerd(DatabaseTestCase):
             task = Task.by_id(task_id)
             task.disable()
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=911515
+    def test_failed_recipe_started_before_upgrade_finished_after_upgrade_does_not_fail(self):
+        with session.begin():
+            job = data_setup.create_running_job()
+            job_id = job.id
+
+        self.assertEqual(job.status, TaskStatus.running)
+
+        with session.begin():
+            job = Job.by_id(job_id)
+            recipe = job.recipesets[0].recipes[0]
+            # if recipe was run before the upgrade, it wont have some installation table columns
+            recipe.installation.arch = None
+            recipe.installation.distro_name = None
+            recipe.installation.variant = None
+            recipe.installation.osmajor = None
+            recipe.installation.osminor = None
+            data_setup.mark_recipe_tasks_finished(recipe, only=True, result=TaskResult.fail)
+
+        beakerd.update_dirty_jobs()
+
+        with session.begin():
+            job = Job.by_id(job_id)
+            self.assertEqual(job.status, TaskStatus.completed)
+
     def test_host_uses_latest_guest(self):
         # This tests that the lab controller corresponding to that
         # of the latest guest distro is used.
