@@ -364,18 +364,6 @@ class KickstartTest(unittest.TestCase):
             OSMajorInstallOptions(osmajor=atomic_osmajor, arch=cls.atomic_x86_64.arch,
                 ks_meta=u'has_rpmostree bootloader_type=extlinux')
 
-            cls.rhvh = data_setup.create_distro(name=u'RHVH 4.0',
-                osmajor=u'RHVH4', osminor=u'0')
-            cls.rhvh_x86_64 = data_setup.create_distro_tree(
-                distro=cls.rhvh, variant=u'RHVH', arch=u'x86_64',
-                lab_controllers=[cls.lab_controller],
-                urls=[u'http://lab.test-kickstart.invalid/distros/rhvh/'])
-
-            rhvh_osmajor = cls.rhvh_x86_64.distro.osversion.osmajor
-            OSMajorInstallOptions(osmajor=rhvh_osmajor, arch=cls.rhvh_x86_64.arch,
-                ks_meta=u"autopart_type=thinp")
-
-
         # This forces any subsequent access of the above ORM objects to retrieve
         # the data from the DB, thus ensuring that relationships are ordered correctly.
         # Correct ordering of relationships are needed to ensure that the kickstarts
@@ -3495,25 +3483,6 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
         self.assertNotIn('disable systemd-readahead-collect', ks)
         self.assertNotIn('READAHEAD_COLLECT="no"', ks)
 
-    def test_provision_rhvh(self):
-        recipe = self.provision_recipe('''
-        <job>
-            <whiteboard/>
-            <recipeSet>
-                <recipe ks_meta="liveimg=Packages/redhat-virtualization-host-image-update.noarch.rpm">
-                   <distroRequires>
-                       <distro_name op="=" value="RHVH 4.0" />
-                       <distro_variant op="=" value="RHVH" />
-                       <distro_arch op="=" value="x86_64" />
-                   </distroRequires>
-                   <hostRequires/>
-                  <task name="/distribution/install" />
-                </recipe>
-            </recipeSet>
-        </job>
-        ''', self.system)
-        compare_expected('RHVH-defaults', recipe.id,
-                    recipe.installation.rendered_kickstart.kickstart)
 
     def test_provision_rpmostree(self):
         recipe = self.provision_recipe('''

@@ -4,9 +4,7 @@
 {% snippet snippet_profile %}
 {% endfor  %}
 {% else %}
-{% if liveimg is undefined %}
 {% snippet 'install_method' %}
-{% endif %}
 
 {{ mode|default('text') }}
 {% if manual is defined %}
@@ -26,7 +24,7 @@ bootloader --location={{ boot_loc|default("mbr") }}{% if kernel_options_post %} 
 repo --name=fedora-updates --mirrorlist=https://mirrors.fedoraproject.org/mirrorlist?repo=updates-released-f{{ distro.osversion.osmajor.number }}&arch={{ distro_tree.arch.arch }}
 {% endif %}
 {% endif %}
-{% if has_rpmostree is undefined and liveimg is undefined %}
+{% if has_rpmostree is not defined %}
 {% snippet 'print_anaconda_repos' %}
 {% endif %}
 
@@ -71,11 +69,7 @@ install
 unsupported_hardware
 {% endif %}
 
-{% if has_rpmostree is defined %}
-ostreesetup --osname=atomic-host --remote=atomic-host --url={{ ostree_repo_url }} --ref={{ ostree_ref }} --nogpg
-{% elif liveimg is defined %}
-liveimg --url=file:///tmp/squashfs
-{% else %}
+{% if has_rpmostree is not defined %}
 %packages {{ pkgoptions|default('--ignoremissing') }}
 {%- if not recipe and packages is undefined %} --default
 {% else %}
@@ -87,6 +81,8 @@ liveimg --url=file:///tmp/squashfs
 chrony
 {% endif %}
 %end
+{% else %}
+ostreesetup --osname=atomic-host --remote=atomic-host --url={{ ostree_repo_url }} --ref={{ ostree_ref }} --nogpg
 {% endif %}
 
 {% endif %}{# manual #}
@@ -98,7 +94,6 @@ chrony
 {% snippet (distro.osversion.osmajor.osmajor + '_pre') %}
 {% snippet (distro.osversion.osmajor.name + '_pre') %}
 {% snippet 'system_pre' %}
-{% snippet 'liveimg_pre' %}
 %end
 
 %post --log=/dev/console

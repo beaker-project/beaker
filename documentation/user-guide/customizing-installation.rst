@@ -294,10 +294,6 @@ correspond to the similarly-named kickstart option.
     data collection. If this variable is set, Beaker omits the snippet which 
     disables readahead collection.
 
-``liveimg``
-    Specify a relative path to an image file or rpm that contains a squashfs 
-    image.  For more details, see the `kickstart documentation <http://pykickstart.readthedocs.io/en/latest/kickstart-docs.html#liveimg>`
-
 ``ostree_repo_url``
     Specify the repo location for rpm-ostree. See ``has_rpmostree`` below.
 
