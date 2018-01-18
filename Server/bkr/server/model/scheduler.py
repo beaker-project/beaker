@@ -2591,7 +2591,7 @@ class Recipe(TaskBase, ActivityMixin):
                 beforepackages = "%s\n%%packages --ignoremissing" % beforepackages
                 afterpackages = "{{ end }}\n%s" % afterpackages
             # Fill in basic requirements for RHTS
-            if self.distro_tree.distro.osversion.osmajor.osmajor == u'RedHatEnterpriseLinux3':
+            if self.installation.osmajor == u'RedHatEnterpriseLinux3':
                 kicktemplate = """
 %(beforepackages)s
 {%% snippet 'rhts_packages' %%}

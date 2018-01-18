@@ -366,7 +366,7 @@ def abort_dead_recipe(recipe_id):
     recipe = MachineRecipe.by_id(recipe_id)
     # There are two ways to have your recipe aborted;
     # no distros, or no automated systems available
-    if len(recipe.distro_tree.lab_controller_assocs) == 0:
+    if recipe.distro_tree and len(recipe.distro_tree.lab_controller_assocs) == 0:
         msg = u"R:%s does not have a valid distro tree, aborting." % recipe.id
         log.info(msg)
         recipe.recipeset.abort(msg)

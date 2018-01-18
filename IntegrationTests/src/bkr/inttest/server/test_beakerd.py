@@ -330,6 +330,33 @@ class TestBeakerd(DatabaseTestCase):
             j1 = Job.by_id(j1.id)
             self.assertTrue(j1.status is TaskStatus.aborted, j1.status)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=911515
+    def test_dead_recipe_with_custom_distro_abort_does_not_fail(self):
+        with session.begin():
+            system = data_setup. \
+                create_system(lab_controller=self.lab_controller)
+            r1 = data_setup.create_recipe(custom_distro=True)
+            j1 = data_setup.create_job_for_recipes([r1])
+
+            data_setup.mark_job_queued(j1)
+            r1.virt_status = RecipeVirtStatus.precluded
+            r1.systems[:] = [system]
+
+        # Mark system broken and cancel the job
+        with session.begin():
+            system.status = SystemStatus.broken
+
+        session.expunge_all()
+        with session.begin():
+            j1 = Job.by_id(j1.id)
+            self.assertTrue(j1.status is TaskStatus.queued)
+        beakerd.abort_dead_recipes()
+        beakerd.update_dirty_jobs()
+        session.expunge_all()
+        with session.begin():
+            j1 = Job.by_id(j1.id)
+            self.assertTrue(j1.status is TaskStatus.aborted, j1.status)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=889065
     # https://bugzilla.redhat.com/show_bug.cgi?id=1470959
     def test_just_in_time_systems_multihost(self):
@@ -1617,6 +1644,49 @@ class TestBeakerd(DatabaseTestCase):
                          u'nfs://%s:/distros/MyUniqueLinux5-5/Server/i386/os/' % lc)
         self.assertEqual(recipe.installation.kernel_path, u'pxeboot/vmlinuz')
         self.assertEqual(recipe.installation.initrd_path, u'pxeboot/initrd')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=911515
+    def test_provision_does_not_fail_when_kickstart_element_used_with_custom_distro(self):
+        with session.begin():
+            lc = data_setup.create_labcontroller()
+            system = data_setup.create_system(lab_controller=lc)
+            user = data_setup.create_user(user_name=u'test-job-owner',
+                                          email_address=u'test-job-owner@example.com')
+        jobxml = lxml.etree.fromstring('''
+                    <job>
+                        <whiteboard>
+                            so pretty
+                        </whiteboard>
+                        <recipeSet>
+                            <recipe>
+                            <kickstart> Awesome kickstart stuff </kickstart>
+                                <distro>
+                                    <tree url="ftp://dummylab.example.com/distros/PinkStockingLinux1.0/Server/i386/os/"/>
+                                    <initrd url="pxeboot/initrd"/>
+                                    <kernel url="pxeboot/vmlinuz"/>
+                                    <arch value="i386"/>
+                                    <osversion major="RedHatEnterpriseLinux7" minor="4"/>
+                                    <name value="MyCustomLinux1.0"/>
+                                    <variant value="Server"/>
+                                </distro>
+                                <hostRequires/>
+                                <task name="/distribution/install"/>
+                            </recipe>
+                        </recipeSet>
+                    </job>
+                ''')
+        controller = Jobs()
+        with session.begin():
+            job = controller.process_xmljob(jobxml, user)
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        beakerd.provision_scheduled_recipesets()
+        with session.begin():
+            job = Job.query.get(job.id)
+            recipe = job.recipesets[0].recipes[0]
+        self.assertIn('Awesome kickstart stuff', recipe.installation.rendered_kickstart.kickstart)
 
     def test_user_defined_recipe_provisioning_of_unknown_osmajor_does_not_fail(self):
         with session.begin():
