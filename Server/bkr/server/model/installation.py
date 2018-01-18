@@ -63,15 +63,18 @@ class Installation(DeclarativeMappedObject):
     variant = Column(UnicodeText)
 
     def distro_to_xml(self):
-        return E.distro(
+        distro_xml = E.distro(
             E.tree(url=self.tree_url),
             E.kernel(url=self.kernel_path),
             E.initrd(url=self.initrd_path),
             E.arch(value=self.arch.arch),
-            E.osversion(major=self.osmajor, minor=self.osminor),
-            E.name(value=self.distro_name),
-            E.variant(value=self.variant)
+            E.osversion(major=self.osmajor, minor=self.osminor)
         )
+        if self.distro_name:
+            distro_xml.append(E.name(value=self.distro_name))
+        if self.variant:
+            distro_xml.append(E.variant(value=self.variant))
+        return distro_xml
 
     def __repr__(self):
         return ('%s(created=%r, system=%r, distro_tree=%r, kernel_options=%r, '

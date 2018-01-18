@@ -74,6 +74,18 @@ class GetRecipeTest(LabControllerTestCase):
         recipe_xml = s.get_my_recipe({'recipe_id': self.recipe.id})
         self.check_recipe_xml(recipe_xml)
 
+    def test_xmlrpc_get_recipe_custom_distro(self):
+        with session.begin():
+            self.recipe = data_setup.create_recipe(custom_distro=True)
+            data_setup.create_job_for_recipes([self.recipe])
+            data_setup.mark_recipe_running(self.recipe)
+            # These are optional attributes
+            self.recipe.installation.distro_name = None
+            self.recipe.installation.variant = None
+        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        recipe_xml = s.get_my_recipe({'recipe_id': self.recipe.id})
+        self.check_recipe_xml(recipe_xml)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1279871
     def test_xmlrpc_with_charset_param_is_not_rejected(self):
         # Need to send the XMLRPC request manually with requests, so that we 
