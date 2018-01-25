@@ -35,8 +35,9 @@ def upgrade():
 
     op.execute("""
             INSERT INTO installation
-            (distro_tree_id, recipe_id, arch_id, distro_name, osmajor, osminor, variant)
-            SELECT recipe.distro_tree_id,
+            (created, distro_tree_id, recipe_id, arch_id, distro_name, osmajor, osminor, variant)
+            SELECT UTC_TIMESTAMP(),
+                recipe.distro_tree_id,
                 recipe.id,
                 distro_tree.arch_id,
                 distro.name,
