@@ -93,7 +93,7 @@ class SystemListTest(ClientTestCase):
     def test_predefined_host_filter(self):
         with session.begin():
             matching = data_setup.create_system()
-            matching.cpu = Cpu(family=6, model=47, model_name=u'Intel')
+            matching.cpu = Cpu(vendor=u'GenuineIntel', family=6, model=47, model_name=u'Intel')
             nonmatching = data_setup.create_system()
         out = run_client(['bkr', 'system-list',
                 '--host-filter', 'INTEL__WESTMERE'])
@@ -105,7 +105,7 @@ class SystemListTest(ClientTestCase):
         with session.begin():
             module_key = Key.by_name(u'MODULE')
             matching = data_setup.create_system()
-            matching.cpu = Cpu(family=6, model=47, model_name=u'Intel')
+            matching.cpu = Cpu(vendor=u'GenuineIntel', family=6, model=47, model_name=u'Intel')
             matching.key_values_string.append(
                     Key_Value_String(module_key, u'cciss'))
             nonmatching = data_setup.create_system()
