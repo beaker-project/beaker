@@ -58,7 +58,7 @@ def check_url(url):
     scheme = urlparse.urlparse(url).scheme
     if scheme == 'nfs' or scheme.startswith('nfs+'):
         return check_nfs(url)
-    elif scheme == 'http':
+    elif scheme == 'http' or scheme == 'https':
         return check_http(url)
     elif scheme == 'ftp':
         return check_ftp(url)

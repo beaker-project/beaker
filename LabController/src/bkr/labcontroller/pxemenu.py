@@ -22,11 +22,13 @@ from jinja2 import Environment, PackageLoader
 def _get_url(available):
     for lc, url in available:
         # We prefer http
-        if url.startswith('http:'):
+        if url.startswith('http:') or url.startswith('https:'):
             return url
     for lc, url in available:
         if url.startswith('ftp:'):
             return url
+    raise ValueError('Unrecognised URL scheme found in distro tree URL(s) %s' %
+                     [url for lc, url in available])
 
 def _group_distro_trees(distro_trees):
     grouped = {}

@@ -36,6 +36,19 @@ class PxemenuTest(LabControllerTestCase):
         shutil.rmtree(cls.tftp_dir, ignore_errors=True)
         cls.distro_server.stop()
 
+    def test_distro_tree_with_bad_url_throws_relevant_error(self):
+        with session.begin():
+            lc = self.get_lc()
+            tag = u'test_image_not_found'
+            distro_tree = data_setup.create_distro_tree(
+                    osmajor=u'SuperBadWindows10', osminor=u'1',
+                    distro_name=u'SuperBadWindows10.1', distro_tags=[tag],
+                    arch=u'x86_64', lab_controllers=[lc],
+                    urls=['barf://localhost:19998/error/404'])
+        with self.assertRaises(ValueError) as exc:
+            write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
+        self.assertIn('Unrecognised URL scheme found in distro tree URL(s)', exc.exception.message)
+
     def test_skip_distro_tree_for_which_image_cannot_be_fetched(self):
         with session.begin():
             lc = self.get_lc()
