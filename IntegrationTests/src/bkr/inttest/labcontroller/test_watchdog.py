@@ -73,7 +73,7 @@ class WatchdogConsoleLogTest(TestHelper):
         open(self.console_log, 'w').write(oops_line)
         wait_for_condition(self.check_console_log_registered)
         wait_for_condition(lambda: self.check_cached_log_contents(oops_line))
-        self.assert_panic_detected(u'Oops: ')
+        self.assert_panic_detected(u'Oops')
 
         # Now check our kill_time
         session.expire_all()
@@ -131,6 +131,15 @@ class WatchdogConsoleLogTest(TestHelper):
         wait_for_condition(self.check_console_log_registered)
         wait_for_condition(lambda: self.check_cached_log_contents(long_panic_line))
         self.assert_panic_detected(u'Kernel panic')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1538906
+    def test_detects_arm_Oops_successfully(self):
+        oops_line = 'Internal error: Oops - SP/PC alignment exception: 8a000000 [#1] SMP\n'
+        with open(self.console_log, 'w') as f:
+            f.write(oops_line)
+        wait_for_condition(self.check_console_log_registered)
+        wait_for_condition(lambda: self.check_cached_log_contents(oops_line))
+        self.assert_panic_detected('Oops')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=952661
     def test_install_failure_is_detected(self):
