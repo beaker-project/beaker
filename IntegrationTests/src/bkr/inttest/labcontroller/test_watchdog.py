@@ -104,6 +104,57 @@ class WatchdogConsoleLogTest(TestHelper):
         wait_for_condition(lambda: self.check_cached_log_contents(junk + panic))
         self.assert_panic_detected(u'Kernel panic')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1413827
+    def test_panic_across_chunk_boundaries_with_embedded_new_lines_is_detected(self):
+        # Write some junk followed by a panic string. The panic string will be
+        # split across the chunk boundary and also through the
+        # middle of the actual string.
+        junk = 'z' * (ConsoleWatchFile.blocksize - 10) + '\n'
+        panic = 'Kernel \n\n\npanic - not syncing: Fatal exception in interrupt\n'
+        with open(self.console_log, 'w') as f:
+            f.write(junk + panic)
+        wait_for_condition(self.check_console_log_registered)
+        wait_for_condition(lambda: self.check_cached_log_contents(junk + panic))
+        self.assert_panic_detected(u'Kernel panic')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=975486
+    def test_install_failures_across_chunk_boundaries_detected(self):
+        # Write some junk followed by a install failure string. The failure
+        # string will be split across the chunk boundary
+        junk = 'z' * (ConsoleWatchFile.blocksize - 10) + "\n"
+        install_failure = "This is a fatal error and installation will be aborted\n"
+        with open(self.console_log, 'w') as f:
+            f.write(junk + install_failure)
+        wait_for_condition(self.check_console_log_registered)
+        wait_for_condition(lambda: self.check_cached_log_contents(junk + install_failure))
+        with session.begin():
+            task = self.recipe.tasks[0]
+            session.refresh(task)
+            self.assertEquals(task.status, TaskStatus.aborted)
+            self.assertEquals(len(task.results), 2)
+            # first one is the install failure message
+            self.assertEquals(task.results[0].result, TaskResult.fail)
+            self.assertEquals(task.results[0].log, install_failure.strip())
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1413827
+    def test_install_failures_with_embedded_new_lines_across_chunk_boundaries_detected(self):
+        # Write some junk followed by a install failure string. The failure
+        # string will be split across the chunk boundary and also through the
+        # middle of the actual string
+        junk = 'z' * (ConsoleWatchFile.blocksize - 10) + "\n"
+        install_failure = "This is a fatal error and install\n\n\nation will be aborted\n"
+        with open(self.console_log, 'w') as f:
+            f.write(junk + install_failure)
+        wait_for_condition(self.check_console_log_registered)
+        wait_for_condition(lambda: self.check_cached_log_contents(junk + install_failure))
+        with session.begin():
+            task = self.recipe.tasks[0]
+            session.refresh(task)
+            self.assertEquals(task.status, TaskStatus.aborted)
+            self.assertEquals(len(task.results), 2)
+            self.assertEquals(task.results[0].result, TaskResult.fail)
+            self.assertEquals(task.results[0].log, install_failure.replace("\n", ""))
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1457606
     def test_report_panic_with_nonascii_whiteboard(self):
         with session.begin():

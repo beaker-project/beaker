@@ -224,8 +224,9 @@ class ConsoleLogHelper(object):
         # to the subsequent block.
         lines = (self.incomplete_line + block).split('\n')
         self.incomplete_line = lines.pop()
+        # Guard against a pathological case of the console filling up with
+        # bytes but no newlines. Avoid buffering them into memory forever.
         if len(self.incomplete_line) > self.blocksize * 2:
-            # not a complete line yet but it's getting too big
             lines.append(self.incomplete_line)
             self.incomplete_line = ''
         if self.panic_detector:
@@ -326,16 +327,24 @@ class PanicDetector(object):
     def __init__(self, pattern):
         self.pattern = re.compile(pattern)
         self.fired = False
+        self.previous_line = ''
 
     def feed(self, line):
+        if not line.strip():
+            return
         if self.fired:
             return
-        # Search the line for panics
+        # Search the current line as well as a concatenated
+        # version of the previous and current line for panics
         # The regex is stored in /etc/beaker/proxy.conf
+        # Concatenated line case deals with the issue where
+        # console logs have wrapping and embedded new lines
         match = self.pattern.search(line)
-        if match:
+        match_concat = self.pattern.search(self.previous_line + line)
+        if match or match_concat:
             self.fired = True
-            return match.group()
+            return match.group() if match else match_concat.group()
+        self.previous_line = line
 
 class InstallFailureDetector(object):
 
@@ -350,6 +359,7 @@ class InstallFailureDetector(object):
                 continue
             self.patterns.append(pattern)
         self.fired = False
+        self.previous_line = ''
 
     def _load_patterns(self):
         site_dir = '/etc/beaker/install-failure-patterns'
@@ -381,13 +391,17 @@ class InstallFailureDetector(object):
         return patterns
 
     def feed(self, line):
+        if not line.strip():
+            return
         if self.fired:
             return
         for pattern in self.patterns:
             match = pattern.search(line)
-            if match:
+            match_concat = pattern.search(self.previous_line + line)
+            if match or match_concat:
                 self.fired = True
-                return match.group()
+                return match.group() if match else match_concat.group()
+        self.previous_line = line
 
 
 class Watchdog(ProxyHelper):
