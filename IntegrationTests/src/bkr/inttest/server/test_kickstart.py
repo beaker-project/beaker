@@ -1641,7 +1641,7 @@ END
         self.assert_('# Check in with Beaker Server' in klines, k)
         self.assert_('%post --log=/dev/console' in klines, k)
         self.assert_('# Add Harness Repo' in klines, k)
-        self.assert_('yum -y install beah rhts-test-env beakerlib' in klines, k)
+        self.assert_('yum -y install beah rhts-test-env' in klines, k)
 
     def test_custom_kickstart_rhel7(self):
         recipe = self.provision_recipe('''
@@ -1702,7 +1702,7 @@ END
         self.assert_('# Check in with Beaker Server' in klines, k)
         self.assert_('%post --log=/dev/console' in klines, k)
         self.assert_('# Add Harness Repo' in klines, k)
-        self.assert_('yum -y install beah rhts-test-env beakerlib' in klines, k)
+        self.assert_('yum -y install beah rhts-test-env' in klines, k)
 
     def test_custom_kickstart_fedora_rawhide(self):
         recipe = self.provision_recipe('''
@@ -1762,7 +1762,7 @@ END
         self.assert_('# Check in with Beaker Server' in klines, k)
         self.assert_('%post --log=/dev/console' in klines, k)
         self.assert_('# Add Harness Repo' in klines, k)
-        self.assert_('yum -y install beah rhts-test-env beakerlib' in klines, k)
+        self.assert_('yum -y install beah rhts-test-env' in klines, k)
 
     def test_custom_kickstart_fedora(self):
         recipe = self.provision_recipe('''
@@ -1822,7 +1822,7 @@ END
         self.assert_('# Check in with Beaker Server' in klines, k)
         self.assert_('%post --log=/dev/console' in klines, k)
         self.assert_('# Add Harness Repo' in klines, k)
-        self.assert_('yum -y install beah rhts-test-env beakerlib' in klines, k)
+        self.assert_('yum -y install beah rhts-test-env' in klines, k)
 
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=801676
