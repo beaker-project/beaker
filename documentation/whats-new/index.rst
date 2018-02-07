@@ -18,16 +18,30 @@ version, see :doc:`../admin-guide/upgrading`.
    with an explicit list that puts the subsections in some kind of
    sensible order.
 
-Unreleased changes
-------------------
+.. commented out for release
 
-The following changes will appear in the next Beaker release.
+   Unreleased changes
+   ------------------
+   
+   The following changes will appear in the next Beaker release.
+   
+   .. toctree::
+      :maxdepth: 2
+      :glob:
+   
+      next/*
+
+Beaker 25
+---------
+
+Beaker 25 adds support for provisioning arbitrary distro trees, Anaconda's 
+``liveimg`` command, collecting device firmware versions, and many other new 
+capabilities.
 
 .. toctree::
    :maxdepth: 2
-   :glob:
 
-   next/*
+   release-25
 
 Beaker 24
 ---------
