@@ -133,6 +133,17 @@ def main():
             return 128 + signal.SIGPIPE
         sys.stderr.write('%s\n' % e)
         return 1
+    finally:
+        # If stdout is a closed pipe (as in the EPIPE case above) we will get
+        # a nasty error on shutdown from sys.excepthook, since stdout will fail
+        # to flush when it is being closed. Let's just suppress that here.
+        try:
+            sys.stdout.close()
+        except IOError as e:
+            if e.errno == errno.EPIPE:
+                pass
+            else:
+                raise
 
 
 if __name__ == '__main__':

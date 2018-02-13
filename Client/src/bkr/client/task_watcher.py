@@ -26,16 +26,16 @@ def watch_tasks(hub, task_id_list, indentation_level=0, sleep_time=30, task_url=
     """Watch the task statuses until they finish."""
     if not task_id_list:
         return
+    watcher = TaskWatcher()
+    is_failed = False
     try:
         print "Watching tasks (this may be safely interrupted)..."
-        watcher = TaskWatcher()
         for task_id in sorted(task_id_list):
             watcher.task_list.append(Task(hub, task_id, indentation_level))
             # print task url if task_url is set or TASK_URL exists in config file
             task_url = task_url or hub._conf.get("TASK_URL", None)
             if task_url is not None:
                 print "Task url: %s" % (task_url % task_id)
-        is_failed = False
         while True:
             all_done = True
             changed = False
