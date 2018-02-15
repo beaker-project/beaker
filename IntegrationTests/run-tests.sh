@@ -25,6 +25,7 @@ set -x
 # We need to set BEAKER_CONFIG_FILE here, so that our unit tests in bkr.server don't try and
 # load their own config (subsequent calls to update_config() don't seem to work...)
 env BEAKER_CONFIG_FILE='server-test.cfg' \
+    CAPTURE_SUBPROCESS_OUTPUT=0 \
     PYTHONPATH=../Common:../Server:../LabController/src:../Client/src:../IntegrationTests/src${PYTHONPATH:+:$PYTHONPATH} \
     python -c '__requires__ = ["CherryPy < 3.0"]; import pkg_resources; from nose.core import main; main()' \
-    ${*:--v bkr.inttest}
+    ${*:--v bkr.inttest} 2> /tmp/bkr.inttests.error.log

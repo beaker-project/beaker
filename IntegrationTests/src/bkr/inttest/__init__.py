@@ -154,13 +154,22 @@ class Process(object):
         if self.env:
             env.update(self.env)
         try:
-            self.popen = subprocess.Popen(self.args, stdout=subprocess.PIPE,
+            # Switch on interleaved output from sub-processes and tests. This is
+            # very useful when the tests run in Jenkins. When running locally
+            # however, this should be turned off, as it is by default in the
+            # run-tests.sh script.
+            capture_output = os.environ.get('CAPTURE_SUBPROCESS_OUTPUT')
+            if capture_output is None:
+                self.popen = subprocess.Popen(
+                    self.args, stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT, env=env, cwd=self.exec_dir)
+                self.communicate_thread = CommunicateThread(popen=self.popen)
+                self.communicate_thread.start()
+            else:
+                self.popen = subprocess.Popen(self.args, env=env, cwd=self.exec_dir)
         except:
             log.info('Failed to spawn %s', self.name)
             raise
-        self.communicate_thread = CommunicateThread(popen=self.popen)
-        self.communicate_thread.start()
         if self.listen_port:
             self._wait_for_listen(self.listen_port)
 
