@@ -83,18 +83,33 @@ added by default, to provision test machines from.
 Verifying the server installation
 ---------------------------------
 
-Visiting `http://beaker-server-lc.beaker/bkr/
-<http://beaker-server-lc.beaker/bkr/>`_ from your hosts systems's browser should
-show the beaker systems page.
+All the virtual machines should be configured at this point.
 
-An easy way to schedule a job is by performing a system scan for one of your
-test systems. On the systems page, click on a system and navigate to the
+Visiting `http://beaker-server-lc.beaker/bkr/
+<http://beaker-server-lc.beaker/bkr/>`_ from your host systems's browser should
+show the beaker systems page. The Ansible playbook created an administrator user
+for us. Both the username and password are ``admin``.
+
+Now that you've logged into the web interface, it's time to schedule a job. An
+easy way to schedule a job is by performing a system scan for one of your test
+systems. On the systems page, click on a system and navigate to the
 :guilabel:`Details` tab. Schedule a scan by clicking on the :guilabel:`Scan`
 button.
 
-Configure the :program:`bkr` client to use your local Beaker server (see
-:ref:`installing-bkr-client`). You can run ``bkr whoami`` to check that is
-working.
+The robust web interface exposes many of Beakers features and is easy to work
+with. Beaker also provides several CLI tools to manage your Beaker setup. Attempt
+to ssh into the Beaker server to access the tools directly::
+
+   ssh root@beaker-server-lc.beaker -i ~/.ssh/id_rsa
+
+.. note::
+
+   Remember, the default root password on the Beaker server is ``beaker``.
+
+Or you can install and configure the :program:`bkr` client to use your local
+Beaker server (see :ref:`installing-bkr-client`). After installing and configuring
+the client on your local workstation, run ``bkr whoami`` through the client to
+check that is working.
 
 Next steps
 ----------
