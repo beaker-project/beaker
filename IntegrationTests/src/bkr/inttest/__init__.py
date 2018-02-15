@@ -154,13 +154,20 @@ class Process(object):
         if self.env:
             env.update(self.env)
         try:
-            self.popen = subprocess.Popen(self.args, stdout=subprocess.PIPE,
+            discard_output = os.environ.get('DISCARD_SUBPROCESS_OUTPUT')
+            if discard_output:
+                devnull = open(os.devnull, 'w')
+                self.popen = subprocess.Popen(
+                    self.args, stdout=devnull, stderr=devnull, env=env, cwd=self.exec_dir)
+            else:
+                self.popen = subprocess.Popen(
+                    self.args, stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT, env=env, cwd=self.exec_dir)
+                self.communicate_thread = CommunicateThread(popen=self.popen)
+                self.communicate_thread.start()
         except:
             log.info('Failed to spawn %s', self.name)
             raise
-        self.communicate_thread = CommunicateThread(popen=self.popen)
-        self.communicate_thread.start()
         if self.listen_port:
             self._wait_for_listen(self.listen_port)
 
