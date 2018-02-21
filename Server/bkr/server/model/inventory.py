@@ -580,6 +580,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['access_policy'] = self.custom_access_policy
         else:
             data['access_policy'] = SystemAccessPolicy.empty_json()
+        data['default_distro_tree'] = self.distro_tree_for_inventory()
         # XXX replace with actual access policy data?
         data['can_remove_from_pool'] = {}
         if identity.current.user:
