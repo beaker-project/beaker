@@ -104,6 +104,12 @@ The :guilabel:`Notes` tab of the system page has been re-designed and improved,
 to address some usability issues. (Contributed by Dan Callaghan in 
 :issue:`1016409`.)
 
+A new system-wide permission "change_prio" has been defined. If the Beaker 
+administrator grants this permission to a group, users in the group are allowed 
+to change the priority of any queued Beaker job (including other users' jobs). 
+Previously this capability was only allowed for the undocumented, hardcoded 
+group name "queue_admin". (Contributed by Dan Callaghan in :issue:`1159105`.)
+
 A new kickstart metadata variable ``beah_no_console_output`` has been added. 
 When this variable is defined, the Beah test harness will be configured to 
 suppress its debugging messages which are normally printed to the console. 
