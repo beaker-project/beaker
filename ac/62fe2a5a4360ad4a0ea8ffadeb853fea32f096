@@ -1,0 +1,9 @@
+Ready-for-Checks+1: Roman Joost <rjoost@redhat.com>
+Code-Review+1: Anwesha Chatterjee <achatter@redhat.com>
+Code-Review+2: Matt Tyson <mtyson@redhat.com>
+Verified+1: Roman Joost <rjoost@redhat.com>
+Submitted-by: Roman Joost <rjoost@redhat.com>
+Submitted-at: Fri, 23 Feb 2018 04:24:25 +0000
+Reviewed-on: https://gerrit.beaker-project.org/5995
+Project: beaker
+Branch: refs/heads/develop
