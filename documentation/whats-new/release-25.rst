@@ -123,6 +123,10 @@ be excluded. (Contributed by Shawn Doherty.)
 
 Beaker now has a favicon. (Contributed by Dan Callaghan.)
 
+Beaker's installation failure detector and panic detector now catch failure
+messages even when broken across lines. (Contributed by Anwesha Chatterjee in
+:issue:`1413827`.)
+
 Notable changes
 ---------------
 
