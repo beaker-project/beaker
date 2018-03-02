@@ -18,7 +18,7 @@ from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, User
         OSMajor, OSMajorInstallOptions, GroupMembershipType, SystemActivity, \
         Activity, RecipeSetComment, Recipe, RecipeSet, RecipeTaskResult, \
         Command, CommandStatus, LogRecipeTaskResult, DataMigration, Job, \
-        SystemSchedulerStatus, Permission
+        SystemSchedulerStatus, Permission, Installation, Arch
 
 def has_initial_sublist(larger, prefix):
     """ Return true iff list *prefix* is an initial sublist of list 
@@ -1313,10 +1313,9 @@ class MigrationTest(unittest.TestCase):
         self.assertEqual(recipe.installation.distro_name, u'Tiara9.9')
         self.assertEqual(recipe.installation.osmajor, u'Tiara9')
         self.assertEqual(recipe.installation.osminor, u'9')
-        downgrade_db(self.migration_metadata, '24')
         with self.migration_metadata.bind.connect() as connection:
-            self.assertIsNone(
-                connection.scalar('SELECT * FROM installation where recipe_id=1'))
+            self.assertEqual(1,
+                connection.scalar('SELECT count(*) FROM installation;'))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1159105
     def test_queue_admin_group_is_granted_permission(self):
@@ -1330,3 +1329,86 @@ class MigrationTest(unittest.TestCase):
         change_prio = self.migration_session.query(Permission)\
             .filter_by(permission_name=u'change_prio').one()
         self.assertEquals(group.permissions, [change_prio])
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1550361
+    def test_downgrading_upgrading_distro_element_will_not_leave_NULL_columns(self):
+        init_db(self.migration_metadata)
+        with self.migration_metadata.bind.connect() as connection:
+            connection.execute(
+                "INSERT INTO beaker_tag (id, tag, type) "
+                "VALUES (1, 'scratch', 'retention_tag')")
+            connection.execute(
+                "INSERT INTO retention_tag (id, expire_in_days, needs_product) "
+                "VALUES (1, 0, 0)")
+            connection.execute(
+                "INSERT INTO tg_user (user_id, user_name, display_name, email_address, disabled, removed) "
+                "VALUES (1, 'bob', 'Bob', 'bob@example.com', 1, '2015-12-01 15:43:28')")
+            connection.execute(
+                "INSERT INTO job (owner_id, retention_tag_id, dirty_version, clean_version) "
+                "VALUES (1, 1, '', '')")
+            connection.execute(
+                "INSERT INTO arch (id, arch) "
+                "VALUES (2, 'i386')")
+            connection.execute(
+                "INSERT INTO recipe_set (job_id, queue_time) "
+                "VALUES (1, '2015-11-05 16:31:01')")
+            connection.execute(
+                "INSERT INTO recipe (type, recipe_set_id, autopick_random) "
+                "VALUES ('machine_recipe', 1, FALSE)")
+            connection.execute(
+                "INSERT INTO installation (id, created, recipe_id, tree_url, initrd_path, kernel_path, osmajor, arch_id) "
+                "VALUES (1, '2018-03-02 05:21:45', 1, 'http://download.test/Fedora-27/os', 'initrd.img', 'vmlinuz', 'Fedora27', 2)")
+        downgrade_db(self.migration_metadata, '24.5')
+        upgrade_db(self.migration_metadata)
+        installation = self.migration_session.query(Installation).get(1)
+        self.assertEqual('http://download.test/Fedora-27/os', installation.tree_url)
+        self.assertEqual(datetime.datetime(2018, 3, 2, 5, 21, 45), installation.created)
+        self.assertEqual('initrd.img', installation.initrd_path)
+        self.assertEqual('vmlinuz', installation.kernel_path)
+        self.assertEqual('Fedora27', installation.osmajor)
+        self.assertEqual(u'i386', installation.arch.arch)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1550361
+    def test_upgrade_will_not_insert_duplicate_installation_rows(self):
+        with self.migration_metadata.bind.connect() as connection:
+            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
+            # add a queued job
+            connection.execute(
+                "INSERT INTO osmajor (osmajor) "
+                "VALUES ('Tiara9')")
+            connection.execute(
+                "INSERT INTO osversion (osmajor_id, osminor) "
+                "VALUES (1, 9)")
+            connection.execute(
+                "INSERT INTO distro (name, osversion_id) "
+                "VALUES ('Tiara9.9', 1)")
+            connection.execute(
+                "INSERT INTO distro_tree (distro_id, arch_id, variant) "
+                "VALUES (1, 1, 'Server')")
+            connection.execute(
+                "INSERT INTO job (owner_id, retention_tag_id, status, dirty_version, clean_version) "
+                "VALUES (1, 1, 'Queued', '', '2017-07-27 14:28:20')")
+            connection.execute(
+                "INSERT INTO recipe_set (job_id, status) "
+                "VALUES (1, 'Queued')")
+            # should create an entry in the installation table during migration
+            connection.execute(
+                "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status) "
+                "VALUES ('machine_recipe', 1, 1, 'Queued')")
+            # should create an entry in the installation table during migration
+            connection.execute(
+                "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status) "
+                "VALUES ('machine_recipe', 1, 1, 'Processed')")
+            # should not create an installation entry during migration
+            connection.execute(
+                "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status) "
+                "VALUES ('machine_recipe', 1, 1, 'Aborted')")
+        # Do the schema upgrades
+        upgrade_db(self.migration_metadata)
+        # Scenario: An error occurred so lets downgrade again to the last stable version
+        downgrade_db(self.migration_metadata, '24.5')
+        # All is fixed upgrade again
+        upgrade_db(self.migration_metadata)
+        with self.migration_metadata.bind.connect() as connection:
+            self.assertEqual(2,
+                connection.scalar('SELECT count(*) FROM installation;'))

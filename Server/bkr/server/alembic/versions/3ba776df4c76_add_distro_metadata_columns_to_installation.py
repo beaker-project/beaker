@@ -16,23 +16,36 @@ revision = '3ba776df4c76'
 down_revision = '2441049ac32c'
 
 from alembic import op
+import sqlalchemy as sa
 
+
+def has_migration_run_before():
+    # If we find at least one of the new column names in the existing table, we
+    # assume that the migration has already been run before. If the database
+    # was left with some new columns left in the installation table, all bets
+    # are off.
+    columns = sa.inspect(op.get_bind()).get_columns('installation')
+    return 'tree_url' in [c['name'] for c in columns]
 
 def upgrade():
-    op.execute("""
-        ALTER TABLE installation
-        ADD COLUMN tree_url TEXT DEFAULT NULL,
-        ADD COLUMN initrd_path TEXT DEFAULT NULL,
-        ADD COLUMN kernel_path TEXT DEFAULT NULL,
-        ADD COLUMN distro_name TEXT DEFAULT NULL,
-        ADD COLUMN osmajor TEXT DEFAULT NULL,
-        ADD COLUMN osminor TEXT DEFAULT NULL,
-        ADD COLUMN variant TEXT DEFAULT NULL,
-        ADD COLUMN arch_id INT DEFAULT NULL,
-        ADD CONSTRAINT installation_arch_id_fk FOREIGN KEY (arch_id)
-            REFERENCES arch (id)
-    """)
+    if not has_migration_run_before():
+        op.execute("""
+            ALTER TABLE installation
+            ADD COLUMN tree_url TEXT DEFAULT NULL,
+            ADD COLUMN initrd_path TEXT DEFAULT NULL,
+            ADD COLUMN kernel_path TEXT DEFAULT NULL,
+            ADD COLUMN distro_name TEXT DEFAULT NULL,
+            ADD COLUMN osmajor TEXT DEFAULT NULL,
+            ADD COLUMN osminor TEXT DEFAULT NULL,
+            ADD COLUMN variant TEXT DEFAULT NULL,
+            ADD COLUMN arch_id INT DEFAULT NULL,
+            ADD CONSTRAINT installation_arch_id_fk FOREIGN KEY (arch_id)
+                REFERENCES arch (id)
+        """)
 
+    # Create installation entries for recipes which have just been scheduled,
+    # but don't re-create them in case this migration runs again after a former
+    # downgrade.
     op.execute("""
             INSERT INTO installation
             (created, distro_tree_id, recipe_id, arch_id, distro_name, osmajor, osminor, variant)
@@ -49,30 +62,12 @@ def upgrade():
             INNER JOIN distro ON distro.id = distro_tree.distro_id
             INNER JOIN osversion ON osversion.id = distro.osversion_id
             INNER JOIN osmajor ON osmajor.id = osversion.osmajor_id
+            LEFT OUTER JOIN installation ON installation.recipe_id = recipe.id
             WHERE recipe.status IN ('New', 'Processed', 'Queued')
+            AND installation.recipe_id is NULL;
             """)
 
 
 def downgrade():
-    op.execute("""
-        ALTER TABLE installation
-        DROP COLUMN tree_url,
-        DROP COLUMN initrd_path,
-        DROP COLUMN kernel_path,
-        DROP COLUMN distro_name,
-        DROP COLUMN osmajor,
-        DROP COLUMN osminor,
-        DROP COLUMN variant,
-        DROP FOREIGN KEY installation_arch_id_fk,
-        DROP COLUMN arch_id
-    """)
-    # Note: this downgrade is destructive as prior to the implementation of this feature
-    # the installation row was empty before the provisioning step filled it in.
-    # recipe.provision() will therefore be throwing an error if installation is not deleted
-    # in the downgrade
-    op.execute("""
-        DELETE
-        FROM installation
-        USING installation INNER JOIN recipe ON installation.recipe_id = recipe.id
-        WHERE recipe.status IN ('New', 'Processed', 'Queued')
-    """)
+    """Don't touch the new installation columns, but deal with the new data
+    during the upgrade. See Bug 1550361"""
