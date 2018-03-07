@@ -127,6 +127,10 @@ Beaker's installation failure detector and panic detector now catch failure
 messages even when broken across lines. (Contributed by Anwesha Chatterjee in
 :issue:`1413827`.)
 
+The job page search now defaults to searching based on whiteboard text. You
+can also enter a job ID prefixed with "J:" to search for a specific job
+instead. (Contributed by Anwesha Chatterjee in :issue:`999933`)
+
 Notable changes
 ---------------
 
