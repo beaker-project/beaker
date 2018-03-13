@@ -24,14 +24,14 @@ Description
 Generates a Beaker job for reserving a system.
 
 If you have a specific system you want to reserve, pass its FQDN using the
-:option:`--machine` option. Beaker will pick a suitable distro to provision
-the system, or you can customize it by using the :option:`--arch`,
-:option:`--family`, or :option:`--distro` options.
+:option:`--machine <bkr --machine>` option. Beaker will pick a suitable distro to provision
+the system, or you can customize it by using the :option:`--arch <bkr --arch>`,
+:option:`--family <bkr --family>`, or :option:`--distro <bkr --distro>` options.
 
-If you don't know a specific system you want to reserve, pass :option:`--arch` and
-:option:`--family` or :option:`--distro` and let Beaker's scheduler pick a suitable
-system. You can also narrow the system selection by using various other workflow
-options, see :ref:`Workflow options <workflow-options>`.
+If you don't know a specific system you want to reserve, pass :option:`--arch <bkr --arch>` and
+:option:`--family <bkr --family>` or :option:`--distro <bkr --distro>` and let
+Beaker's scheduler pick a suitable system. You can also narrow the system selection
+by using various other workflow options, see :ref:`Workflow options <workflow-options>`.
 
 Options
 -------
