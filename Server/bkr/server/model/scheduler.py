@@ -4059,10 +4059,11 @@ class SystemResource(RecipeResource):
         self.reservation = self.system.reserve_for_recipe(
                                          service=u'Scheduler',
                                          user=self.recipe.recipeset.job.owner)
-        self.system.scheduler_status = SystemSchedulerStatus.reserved
 
     def release(self):
-        self.system.scheduler_status = SystemSchedulerStatus.pending
+        # Note that this may be called *many* times for a recipe, even when it 
+        # has already been cleaned up, so we have to handle that gracefully 
+        # (and cheaply!)
         # system_resource rows for very old recipes may have no reservation
         if not self.reservation or self.reservation.finish_time:
             return
@@ -4192,6 +4193,9 @@ class VirtResource(RecipeResource):
         yield InstallOptions.from_strings('hwclock_is_utc', u'console=tty0 console=ttyS0,115200n8', '')
 
     def release(self):
+        # Note that this may be called *many* times for a recipe, even when it 
+        # has already been cleaned up, so we have to handle that gracefully 
+        # (and cheaply!)
         if self.instance_deleted:
             return
         try:
@@ -4240,4 +4244,7 @@ class GuestResource(RecipeResource):
         log.debug('Allocated MAC address %s for recipe %s', self.mac_address, self.recipe.id)
 
     def release(self):
+        # Note that this may be called *many* times for a recipe, even when it 
+        # has already been cleaned up, so we have to handle that gracefully 
+        # (and cheaply!)
         pass

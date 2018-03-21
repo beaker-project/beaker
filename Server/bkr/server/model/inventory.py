@@ -1734,6 +1734,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             raise StaleSystemUserException(_(u'System %r is already '
                 'reserved') % self)
         self.user = user # do it here too, so that the ORM is aware
+        self.scheduler_status = SystemSchedulerStatus.reserved
         reservation = Reservation(user=user, type=reservation_type)
         self.reservations.append(reservation)
         self.record_activity(user=user,
@@ -1765,6 +1766,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
         session.expire(reservation, ['finish_time'])
         old_user = self.user
         self.user = None
+        self.scheduler_status = SystemSchedulerStatus.pending
         self.action_release(service=service)
         self.record_activity(user=user,
                 service=service, action=u'Returned', field=u'User',
