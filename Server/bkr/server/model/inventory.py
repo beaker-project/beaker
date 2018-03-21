@@ -1854,21 +1854,25 @@ def update_active_access_policy(system, policy, old_policy, initiator):
 @event.listens_for(System.lab_controller, 'set')
 def mark_system_pending_when_lab_controller_changes(system, new_value, old_value, initiator):
     if new_value is not None and system.scheduler_status == SystemSchedulerStatus.idle:
+        log.debug('Idle system %s changed lab controller, flagging it for scheduling', system)
         system.scheduler_status = SystemSchedulerStatus.pending
 
 @event.listens_for(System.status, 'set')
 def mark_system_pending_when_automated(system, new_value, old_value, initiator):
     if new_value == SystemStatus.automated and system.scheduler_status == SystemSchedulerStatus.idle:
+        log.debug('Idle system %s changed to Automated, flagging it for scheduling', system)
         system.scheduler_status = SystemSchedulerStatus.pending
 
 @event.listens_for(System.loaned, 'set')
 def mark_system_pending_when_lent(system, new_value, old_value, initiator):
     if new_value != old_value and system.scheduler_status == SystemSchedulerStatus.idle:
+        log.debug('Idle system %s changed loan status, flagging it for scheduling', system)
         system.scheduler_status = SystemSchedulerStatus.pending
 
 @event.listens_for(System.user, 'set')
 def mark_system_pending_when_manual_reservation_is_returned(system, new_value, old_value, initiator):
     if new_value is None and system.scheduler_status == SystemSchedulerStatus.idle:
+        log.debug('Idle system %s reservation was returned, flagging it for scheduling', system)
         system.scheduler_status = SystemSchedulerStatus.pending
 
 @event.listens_for(DistroTree.lab_controller_assocs, 'append')
@@ -1882,6 +1886,7 @@ def mark_systems_pending_when_distro_tree_added_to_lab(distro_tree, lab_controll
     # scheduler re-evalutes them on its next iteration.
     lab_controller = lab_controller_assoc.lab_controller
     assert lab_controller is not None
+    log.debug('Flagging idle systems in %s for scheduling due to distro import', lab_controller)
     # delayed import to avoid circular dependency
     from bkr.server.model.scheduler import Recipe, system_recipe_map, machine_guest_map
     guestrecipe = Recipe.__table__.alias('guestrecipe')

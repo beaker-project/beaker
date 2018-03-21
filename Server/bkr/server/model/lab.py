@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import logging
 import urllib
 from sqlalchemy import (Column, ForeignKey, Integer, Unicode, Boolean,
         DateTime, event)
@@ -14,6 +15,8 @@ from .base import DeclarativeMappedObject
 from .types import SystemSchedulerStatus
 from .activity import Activity, ActivityMixin
 from .identity import User
+
+log = logging.getLogger(__name__)
 
 class LabControllerActivity(Activity):
 
@@ -113,4 +116,6 @@ def mark_systems_pending_when_enabled(labcontroller, new_value, old_value, initi
     if new_value is True:
         for system in labcontroller.systems:
             if system.scheduler_status == SystemSchedulerStatus.idle:
+                log.debug('Idle system %s is in newly enabled lab %s, flagging it for scheduling',
+                          system, labcontroller)
                 system.scheduler_status = SystemSchedulerStatus.pending
