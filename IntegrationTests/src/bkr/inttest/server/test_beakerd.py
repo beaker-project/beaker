@@ -35,10 +35,6 @@ from bkr.server.model.installation import RenderedKickstart
 from bkr.inttest.assertions import assert_datetime_within
 from unittest2 import SkipTest
 
-# We capture the sent mail to avoid error spam in the logs rather than to
-# check anything in particular
-from bkr.inttest.mail_capture import MailCaptureThread
-
 log = logging.getLogger(__name__)
 
 class TestBeakerd(DatabaseTestCase):
@@ -47,9 +43,6 @@ class TestBeakerd(DatabaseTestCase):
         with session.begin():
             self.lab_controller = data_setup.create_labcontroller()
         self.task_id, self.rpm_name = self.add_example_task()
-        self.mail_capture = MailCaptureThread()
-        self.mail_capture.start()
-        self.addCleanup(self.mail_capture.stop)
 
     def tearDown(self):
         self.disable_example_task(self.task_id)
@@ -1984,9 +1977,6 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
 class TestBeakerdMetrics(DatabaseTestCase):
 
     def setUp(self):
-        self.mail_capture = MailCaptureThread()
-        self.mail_capture.start()
-        self.addCleanup(self.mail_capture.stop)
         session.begin()
         try:
             # Other tests might have left behind systems and system commands 
