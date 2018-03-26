@@ -373,7 +373,9 @@ def setup_package():
             data_setup.create_task(name=u'/distribution/utils/dummy')
             data_setup.create_task(name=u'/distribution/inventory')
         if not Distro.query.count():
-            data_setup.create_distro()
+            # The 'BlueShoeLinux5-5' string appears in many tests, because it's
+            # the distro name used in complete-job.xml.
+            data_setup.create_distro_tree(osmajor=u'BlueShoeLinux5', distro_name=u'BlueShoeLinux5-5')
 
     if os.path.exists(turbogears.config.get('basepath.rpms')):
         # Remove any task RPMs left behind by previous test runs

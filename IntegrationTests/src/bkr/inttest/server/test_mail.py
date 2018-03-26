@@ -99,7 +99,7 @@ class SystemReservationNotificationTest(DatabaseTestCase):
                     email_address=u'lizlemon@kabletown.com')
             system = data_setup.create_system(fqdn=u'funcooker.ge.invalid',
                     lab_controller=data_setup.create_labcontroller())
-            distro_tree = data_setup.create_distro_tree(distro_name=u'MicrowaveOS',
+            distro_tree = data_setup.create_distro_tree(distro_name=u'MicrowaveOS-20141016.0',
                     variant=u'ThreeHeats', arch=u'x86_64')
             job = data_setup.create_running_job(owner=owner, system=system,
                     distro_tree=distro_tree,
@@ -137,7 +137,7 @@ class SystemReservationNotificationTest(DatabaseTestCase):
                          HOSTNAME=funcooker.ge.invalid
                             JOBID=%(jobid)s
                          RECIPEID=%(recipeid)s
-                           DISTRO=MicrowaveOS ThreeHeats x86_64
+                           DISTRO=MicrowaveOS-20141016.0 ThreeHeats x86_64
                      ARCHITECTURE=x86_64
 
       Job Whiteboard: Chain Reaction of Mental Anguish
@@ -152,7 +152,7 @@ class SystemReservationNotificationTest(DatabaseTestCase):
         with session.begin():
             owner = data_setup.create_user(
                     email_address=u'jackdonaghy@kabletown.com')
-            distro_tree = data_setup.create_distro_tree(distro_name=u'MicrowaveOS',
+            distro_tree = data_setup.create_distro_tree(distro_name=u'MicrowaveOS-20141016.1',
                     variant=u'ThreeHeats', arch=u'x86_64')
             job = data_setup.create_job(owner=owner,
                     distro_tree=distro_tree,
@@ -193,7 +193,7 @@ class SystemReservationNotificationTest(DatabaseTestCase):
                          HOSTNAME=bitenuker.ge.invalid
                             JOBID=%(jobid)s
                          RECIPEID=%(recipeid)s
-                           DISTRO=MicrowaveOS ThreeHeats x86_64
+                           DISTRO=MicrowaveOS-20141016.1 ThreeHeats x86_64
                      ARCHITECTURE=x86_64
 
       Job Whiteboard: Operation Righteous Cowboy Lightning
@@ -211,8 +211,7 @@ class SystemReservationNotificationTest(DatabaseTestCase):
                                            notify_reservesys=False)
             system = data_setup.create_system(fqdn=u'funcooker.ge.valid',
                     lab_controller=data_setup.create_labcontroller())
-            distro_tree = data_setup.create_distro_tree(distro_name=u'MicrowaveOS',
-                    variant=u'ThreeHeats', arch=u'x86_64')
+            distro_tree = data_setup.create_distro_tree(arch=u'x86_64')
             job = data_setup.create_running_job(owner=owner, system=system,
                     distro_tree=distro_tree,
                     whiteboard=u'This is a whiteboard',

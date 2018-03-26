@@ -698,7 +698,6 @@ class NewJobTestWD(WebDriverTestCase):
         self.browser = self.get_browser()
         with session.begin():
             self.user = data_setup.create_user(password=u'password')
-            data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
             data_setup.create_product(product_name=u'the_product')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=949777
@@ -925,7 +924,6 @@ class NewJobTest(WebDriverTestCase):
 
     @with_transaction
     def setUp(self):
-        data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
         data_setup.create_product(product_name=u'the_product')
         self.browser = self.get_browser()
 

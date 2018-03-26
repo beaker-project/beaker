@@ -10,8 +10,10 @@ import re
 import jinja2
 import tempfile
 import difflib
+from sqlalchemy.orm.exc import NoResultFound
 from bkr.inttest import data_setup, get_server_base
-from bkr.server.model import DistroTreeRepo
+from bkr.server.bexceptions import DatabaseLookupError
+from bkr.server.model import session, Distro, DistroTree, Arch, DistroTreeRepo
 
 # This is the name of the system that is used when testing
 # for an expected rendered kickstart. If you are using this
@@ -33,13 +35,21 @@ def create_x86_64_automated(lab_controller):
         lab_controller=lab_controller, return_existing=True)
 
 def create_rhel62():
-    rhel62 = data_setup.create_distro(name=u'RHEL-6.2',
-        osmajor=u'RedHatEnterpriseLinux6', osminor=u'2')
-    return rhel62
+    try:
+        return Distro.by_name(u'RHEL-6.2')
+    except DatabaseLookupError:
+        rhel62 = data_setup.create_distro(name=u'RHEL-6.2',
+                osmajor=u'RedHatEnterpriseLinux6', osminor=u'2')
+        return rhel62
 
-def create_rhel62_server_x86_64(distro, lab_controller):
+def create_rhel62_server_x86_64(lab_controller):
+    rhel62 = create_rhel62()
+    x86_64 = Arch.by_name(u'x86_64')
+    try:
+        return DistroTree.query.filter_by(distro=rhel62, variant=u'Server', arch=x86_64).one()
+    except NoResultFound:
         rhel62_server_x86_64 = data_setup.create_distro_tree(
-                distro=distro, variant=u'Server', arch=u'x86_64',
+                distro=rhel62, variant=u'Server', arch=u'x86_64',
                 lab_controllers=[lab_controller],
                 urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/',
                       u'nfs://lab.test-kickstart.invalid:/distros/RHEL-6.2/Server/x86_64/os/'])

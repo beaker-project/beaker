@@ -29,7 +29,6 @@ class TestUpdateStatus(DatabaseTestCase):
         from bkr.server.jobs import Jobs
         self.controller = Jobs()
         self.user = data_setup.create_user()
-        data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
         session.flush()
 
     def tearDown(self):

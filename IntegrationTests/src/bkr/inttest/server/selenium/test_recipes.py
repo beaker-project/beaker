@@ -110,7 +110,7 @@ class TestRecipeView(WebDriverTestCase):
             self.system = data_setup.create_system(owner=self.system_owner, arch=u'x86_64',
                     lab_controller=self.lab_controller)
             self.distro_tree = data_setup.create_distro_tree(arch=u'x86_64',
-                    distro_name=u'PurpleUmbrellaLinux5.11-20160428',
+                    osmajor=u'PurpleUmbrellaLinux5', osminor=u'11',
                     variant=u'Server')
             self.job = data_setup.create_completed_job(owner=user,
                     distro_tree=self.distro_tree, server_log=True)
@@ -163,7 +163,10 @@ class TestRecipeView(WebDriverTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1335343
     def test_page_updates_itself_while_recipe_is_running(self):
         with session.begin():
-            job = data_setup.create_job(owner=self.user, distro_tree=self.distro_tree)
+            distro_tree = data_setup.create_distro_tree(arch=u'x86_64',
+                    distro_name=u'PurpleUmbrellaLinux5.11-20160428.0',
+                    variant=u'Server')
+            job = data_setup.create_job(owner=self.user, distro_tree=distro_tree)
             recipe = job.recipesets[0].recipes[0]
         b = self.browser
         # Open the recipe page while the recipe is still Queued.
@@ -188,14 +191,14 @@ class TestRecipeView(WebDriverTestCase):
                 'Started a few seconds ago and finished in 00:00:01.')
         self.assertEqual(
                 b.find_element_by_xpath('//div[@class="recipe-summary"]/p[2]').text,
-                'Using PurpleUmbrellaLinux5.11-20160428 Server x86_64\n'
+                'Using PurpleUmbrellaLinux5.11-20160428.0 Server x86_64\n'
                 'on pewlett-hackard-x004.example.com\n.')
         # Check that Report problem button displays
         # https://bugzilla.redhat.com/show_bug.cgi?id=1362595
         b.find_element_by_xpath('//a[@class="report-problem"]')
         self.assertEqual(
                 b.find_element_by_xpath('//div[@class="recipe-installation-summary"]/div[1]').text,
-                'Installation of PurpleUmbrellaLinux5.11-20160428 Server x86_64 finished.')
+                'Installation of PurpleUmbrellaLinux5.11-20160428.0 Server x86_64 finished.')
         b.find_element_by_xpath('//div[@class="recipe-installation-status"]'
                 '/span[@class="label label-success" and text()="Completed"]')
         b.find_element_by_xpath('//div[@class="recipe-installation-progress"]'
@@ -260,13 +263,16 @@ class TestRecipeView(WebDriverTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1364288
     def test_view_virt_recipe(self):
         with session.begin():
-            recipe = data_setup.create_recipe(distro_tree=self.distro_tree)
+            distro_tree = data_setup.create_distro_tree(arch=u'x86_64',
+                    distro_name=u'PurpleUmbrellaLinux5.11-20160428.1',
+                    variant=u'Server')
+            recipe = data_setup.create_recipe(distro_tree=distro_tree)
             data_setup.create_job_for_recipes([recipe])
             data_setup.mark_recipe_installing(recipe, virt=True)
             recipe.resource.fqdn = u'example.openstacklocal.invalid'
         b = self.browser
         go_to_recipe_view(b, recipe)
-        self.assertEqual('Using PurpleUmbrellaLinux5.11-20160428 Server x86_64\n'
+        self.assertEqual('Using PurpleUmbrellaLinux5.11-20160428.1 Server x86_64\n'
             'on example.openstacklocal.invalid\n\n(OpenStack instance %s).' % recipe.resource.instance_id,
             b.find_element_by_xpath('//div[@class="recipe-summary"]/p[2]').text)
 
@@ -277,12 +283,15 @@ class TestRecipeView(WebDriverTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1390409
     def test_view_virt_recipe_when_the_hostname_is_not_known_yet(self):
         with session.begin():
-            recipe = data_setup.create_recipe(distro_tree=self.distro_tree)
+            distro_tree = data_setup.create_distro_tree(arch=u'x86_64',
+                    distro_name=u'PurpleUmbrellaLinux5.11-20160428.2',
+                    variant=u'Server')
+            recipe = data_setup.create_recipe(distro_tree=distro_tree)
             data_setup.create_job_for_recipes([recipe])
             data_setup.mark_recipe_installing(recipe, virt=True)
         b = self.browser
         go_to_recipe_view(b, recipe)
-        self.assertEqual('Using PurpleUmbrellaLinux5.11-20160428 Server x86_64\n'
+        self.assertEqual('Using PurpleUmbrellaLinux5.11-20160428.2 Server x86_64\n'
             'on OpenStack instance %s.' % recipe.resource.instance_id,
             b.find_element_by_xpath('//div[@class="recipe-summary"]/p[2]').text)
 
@@ -712,11 +721,6 @@ class TestRecipeView(WebDriverTestCase):
 class TestRecipeViewInstallationTab(WebDriverTestCase):
 
     def setUp(self):
-        with session.begin():
-            self.recipe = data_setup.create_recipe(
-                    distro_name=u'PurpleUmbrellaLinux5.11-20160428',
-                    variant=u'Server', arch=u'x86_64')
-            data_setup.create_job_for_recipes([self.recipe])
         self.browser = self.get_browser()
 
     def test_shows_installation_in_progress(self):
@@ -724,9 +728,13 @@ class TestRecipeViewInstallationTab(WebDriverTestCase):
         # it's installing. Sounds obvious, I know, but until Beaker 23 it was 
         # Running instead so it didn't actually work this way...
         with session.begin():
-            data_setup.mark_recipe_installing(self.recipe)
+            recipe = data_setup.create_recipe(
+                    distro_name=u'PurpleUmbrellaLinux5.11-20160428',
+                    variant=u'Server', arch=u'x86_64')
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_installing(recipe)
         b = self.browser
-        go_to_recipe_view(b, self.recipe, tab='Installation')
+        go_to_recipe_view(b, recipe, tab='Installation')
         tab = b.find_element_by_id('installation')
         summary = tab.find_element_by_xpath(
                 './/div[@class="recipe-installation-summary"]/div[1]').text
@@ -738,9 +746,11 @@ class TestRecipeViewInstallationTab(WebDriverTestCase):
 
     def test_recipe_start_time_is_displayed_as_positive_zero(self):
         with session.begin():
-            data_setup.mark_recipe_installing(self.recipe)
+            recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_installing(recipe)
         b = self.browser
-        go_to_recipe_view(b, self.recipe, tab='Installation')
+        go_to_recipe_view(b, recipe, tab='Installation')
         tab = b.find_element_by_id('installation')
         rebooted_timestamp = tab.find_element_by_xpath(
                 './/div[@class="recipe-installation-progress"]/table'
@@ -750,14 +760,16 @@ class TestRecipeViewInstallationTab(WebDriverTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1362370
     def test_configure_netboot_progress_is_not_shown_unless_command_is_complete(self):
         with session.begin():
-            data_setup.mark_recipe_scheduled(self.recipe,
+            recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_scheduled(recipe,
                     lab_controller=data_setup.create_labcontroller())
-            self.recipe.provision()
-            configure_netboot_cmd = self.recipe.installation.commands[1]
+            recipe.provision()
+            configure_netboot_cmd = recipe.installation.commands[1]
             self.assertEquals(configure_netboot_cmd.action, u'configure_netboot')
             self.assertEquals(configure_netboot_cmd.status, CommandStatus.queued)
         b = self.browser
-        go_to_recipe_view(b, self.recipe, tab='Installation')
+        go_to_recipe_view(b, recipe, tab='Installation')
         tab = b.find_element_by_id('installation')
         tab.find_element_by_xpath(
                 './/div[@class="recipe-installation-progress" and '
@@ -769,13 +781,15 @@ class TestRecipeViewInstallationTab(WebDriverTestCase):
         # actually running the configure_netboot command, not the time at which 
         # we enqueued the command.
         with session.begin():
-            data_setup.mark_recipe_installing(self.recipe,
+            recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_installing(recipe,
                     start_time=datetime.datetime(2016, 9, 7, 15, 5, 59))
-            configure_netboot_cmd = self.recipe.installation.commands[1]
+            configure_netboot_cmd = recipe.installation.commands[1]
             self.assertEquals(configure_netboot_cmd.action, u'configure_netboot')
             configure_netboot_cmd.finish_time = datetime.datetime(2016, 9, 7, 15, 5, 0)
         b = self.browser
-        go_to_recipe_view(b, self.recipe, tab='Installation')
+        go_to_recipe_view(b, recipe, tab='Installation')
         tab = b.find_element_by_id('installation')
         netboot_configured_timestamp = tab.find_element_by_xpath(
                 './/div[@class="recipe-installation-progress"]/table'

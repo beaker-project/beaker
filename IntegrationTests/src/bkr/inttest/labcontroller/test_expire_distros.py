@@ -42,7 +42,6 @@ class ExpireDistrosTest(LabControllerTestCase):
             self.lc = self.get_lc()
             self.distro_tree = data_setup.create_distro_tree(
                     osmajor=u'MattAwesomelinux9', osminor=u'1',
-                    distro_name=u'MattAwesomelinux9.1',
                     arch=u'x86_64', lab_controllers=[self.lc],
                     urls=['http://localhost:19998/fakedistros/MattAwesomelinux9'])
 

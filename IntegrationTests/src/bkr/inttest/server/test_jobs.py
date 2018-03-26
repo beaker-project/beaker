@@ -28,7 +28,6 @@ class TestJobsController(DatabaseTestCase):
         group = data_setup.create_group(group_name='somegroup')
         group.add_member(self.user)
         testutil.set_identity_user(self.user)
-        data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
         data_setup.create_product(product_name=u'the_product')
         session.flush()
 
@@ -337,7 +336,7 @@ class TestJobsController(DatabaseTestCase):
         self.assertIsNone(recipe.installation.kernel_path)
         self.assertEqual(recipe.installation.arch.arch, u'i386')
         self.assertEqual(recipe.installation.distro_name, u'BlueShoeLinux5-5')
-        self.assertEqual(recipe.installation.osmajor, u'DansAwesomeLinux6')
+        self.assertEqual(recipe.installation.osmajor, u'BlueShoeLinux5')
         self.assertEqual(recipe.installation.osminor, u'9')
         self.assertEqual(recipe.installation.variant, u'Server')
         self.assertNotEqual(recipe.distro_requires, None)
