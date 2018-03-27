@@ -866,6 +866,8 @@ def create_manual_reservation(system, start=None, finish=None, user=None):
                 old_value=user.user_name, new_value=u'')
         activity.created = finish
         system.activity.append(activity)
+    else:
+        system.user = user
 
 def unreserve_manual(system, finish=None):
     if finish is None:

@@ -1540,6 +1540,36 @@ class TestBeakerd(DatabaseTestCase):
             job = Job.query.get(job.id)
             self.assertEqual(job.status, TaskStatus.aborted)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1558828
+    def test_not_enough_systems_logic(self):
+        # LC1 has 1 system: A
+        # LC2 has 2 systems: B, C
+        # The recipe set has 2 recipes which can use any of A, B, or C.
+        # B and C are currently reserved.
+        # LC1 should be excluded, both recipes will remain queued waiting for B and C.
+        with session.begin():
+            lc1 = data_setup.create_labcontroller()
+            lc2 = data_setup.create_labcontroller()
+            system_a = data_setup.create_system(lab_controller=lc1)
+            system_b = data_setup.create_system(lab_controller=lc2)
+            system_c = data_setup.create_system(lab_controller=lc2)
+            pool = data_setup.create_system_pool(systems=[system_a, system_b, system_c])
+            job = data_setup.create_job(num_recipes=2)
+            job.recipesets[0].recipes[0]._host_requires = (
+                    '<hostRequires><pool value="%s"/></hostRequires>' % pool.name)
+            job.recipesets[0].recipes[1]._host_requires = (
+                    '<hostRequires><pool value="%s"/></hostRequires>' % pool.name)
+            data_setup.create_manual_reservation(system_b)
+            data_setup.create_manual_reservation(system_c)
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            job = Job.query.get(job.id)
+            self.assertEquals(job.recipesets[0].recipes[0].status, TaskStatus.queued)
+            self.assertEquals(job.recipesets[0].recipes[1].status, TaskStatus.queued)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1120052
     def test_bz1120052(self):
         # Due to the complexities of the not enough systems logic, the 
