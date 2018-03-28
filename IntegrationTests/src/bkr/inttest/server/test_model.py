@@ -1118,9 +1118,7 @@ class TestJob(DatabaseTestCase):
                       job_xml)
         self.assertIn('<hostRequires force="%s"/>' % system.fqdn,
                       job_xml)
-        self.assertIn('<task name="/distribution/inventory" role="STANDALONE">'
-                      '<params><param name="HOSTNAME" value="%s"/></params>'
-                      '</task>' % system.fqdn,
+        self.assertIn('<task name="/distribution/inventory" role="STANDALONE"/>',
                       job_xml)
 
     def test_completed_n_days_ago(self):

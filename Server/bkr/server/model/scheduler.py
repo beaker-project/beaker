@@ -1003,9 +1003,6 @@ class Job(TaskBase, ActivityMixin):
         recipe.tasks.append(install_task)
         # Add inventory task
         inventory_task = RecipeTask.from_task(Task.by_name(u'/distribution/inventory'))
-        inventory_task.params = [
-            RecipeTaskParam("HOSTNAME", system.fqdn),
-        ]
         recipe.tasks.append(inventory_task)
         recipeSet.recipes.append(recipe)
         job.recipesets.append(recipeSet)
