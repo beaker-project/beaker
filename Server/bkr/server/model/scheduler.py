@@ -3075,8 +3075,25 @@ class MachineRecipe(Recipe):
         host_filter = XmlHost.from_string(self.host_requires)
         if not host_filter.virtualisable():
             return RecipeVirtStatus.precluded
+        # iPXE understands only FTP and HTTP URLs
+        if not self.installation_tree_is_virt_compatible():
+            return RecipeVirtStatus.precluded
         # Checks all passed, so dynamic virt should be attempted
         return RecipeVirtStatus.possible
+
+    def installation_tree_is_virt_compatible(self):
+        """Check if tree_url can be run as a virt guest"""
+        url_compatible = False
+        if self.installation.tree_url:
+            url_compatible = urlparse.urlparse(self.installation.tree_url).scheme in ['http', 'ftp']
+        elif self.distro_tree and not self.recipeset.lab_controller:
+            # No way to determine now
+            url_compatible = True
+        elif self.distro_tree:
+            url_compatible = bool(self.distro_tree.url_in_lab(self.lab_controller,
+                                                              scheme=['http', 'ftp'],
+                                                              required=False))
+        return url_compatible
 
     @classmethod
     def get_queue_stats(cls, recipes=None):

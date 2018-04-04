@@ -1511,7 +1511,20 @@ def ipxe_script(uuid):
         # We need to handle this case because the VM is created and boots up 
         # *before* we generate the kickstart etc
         raise ServiceUnavailable503('Recipe has not been provisioned yet')
-    distro_tree_url = recipe.installation.tree_url
+    distro_tree = recipe.distro_tree
+    if distro_tree:
+        distro_tree_url = distro_tree.url_in_lab(resource.lab_controller,
+                                                scheme=['http', 'ftp'],
+                                                required=False)
+        if not distro_tree_url:
+            raise NotFound404('Lab %s does not provide HTTP or FTP URLs for distro tree: %s'
+                            % (resource.lab_controller.fqdn, distro_tree.id))
+    else:
+        distro_tree_url = recipe.installation.tree_url
+        # This should actually never happen, since we are testing before
+        # already for compatibility.
+        if urlparse.urlparse(distro_tree_url).scheme not in ['http', 'ftp']:
+            raise NotFound404('Given tree URL %s incompatible with iPXE' % distro_tree_url)
     kernel_url = urlparse.urljoin(distro_tree_url, recipe.installation.kernel_path)
     initrd_url = urlparse.urljoin(distro_tree_url, recipe.installation.initrd_path)
     kernel_options = recipe.installation.kernel_options + ' netboot_method=ipxe'

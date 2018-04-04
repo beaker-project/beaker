@@ -394,7 +394,7 @@ class IpxeScriptHTTPTest(DatabaseTestCase):
 
     def setUp(self):
         with session.begin():
-            self.lc = data_setup.create_labcontroller()
+            self.lc = data_setup.create_labcontroller(fqdn='lab.ipxescript.httptest')
 
     def test_unknown_uuid(self):
         response = requests.get(get_server_base() +
@@ -416,12 +416,63 @@ class IpxeScriptHTTPTest(DatabaseTestCase):
                 'systems/by-uuid/%s/ipxe-script' % recipe.resource.instance_id)
         self.assertEquals(response.status_code, 503)
 
+    def test_lab_incompatible_URLs(self):
+        with session.begin():
+            distro_tree = data_setup.create_distro_tree(
+                arch=u'x86_64', osmajor=u'Fedora20',
+                lab_controllers=[self.lc],
+                urls=[u'nfs://example.nfs.test:/path/to/os'])
+            recipe = data_setup.create_recipe(distro_tree=distro_tree)
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_waiting(recipe, virt=True,
+                    lab_controller=self.lc)
+        response = requests.get(get_server_base() +
+                'systems/by-uuid/%s/ipxe-script' % recipe.resource.instance_id)
+        self.assertEqual(response.status_code, 404)
+        self.assertMultiLineEqual(
+            response.text,
+            'Lab lab.ipxescript.httptest does not provide HTTP or FTP URLs for distro tree: %s'
+            % distro_tree.id)
+
+    def test_recipe_provision_with_custom_distro(self):
+        with session.begin():
+            recipe = data_setup.create_recipe(custom_distro=True)
+            self.assertIsNone(recipe.distro_tree)
+            recipe.installation.tree_url = 'http://mydistro.dummylab.test/os/'
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_waiting(recipe, virt=True,
+                    lab_controller=self.lc)
+        response = requests.get(get_server_base() +
+                'systems/by-uuid/%s/ipxe-script' % recipe.resource.instance_id)
+        response.raise_for_status()
+        self.assertMultiLineEqual(response.text, """#!ipxe
+kernel http://mydistro.dummylab.test/os/pxeboot/vmlinuz console=tty0 console=ttyS0,115200n8 ks=%s noverifyssl netboot_method=ipxe
+initrd http://mydistro.dummylab.test/os/pxeboot/initrd
+boot
+""" % recipe.installation.rendered_kickstart.link)
+
+    def test_recipe_provision_with_custom_distro_and_incompatible_url(self):
+        with session.begin():
+            recipe = data_setup.create_recipe(custom_distro=True)
+            self.assertIsNone(recipe.distro_tree)
+            recipe.installation.tree_url = 'nfs://mydistro.dummylab.test:/os/'
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_waiting(recipe, virt=True,
+                    lab_controller=self.lc)
+        response = requests.get(get_server_base() +
+                'systems/by-uuid/%s/ipxe-script' % recipe.resource.instance_id)
+        self.assertEqual(response.status_code, 404)
+        self.assertMultiLineEqual(
+            response.text,
+            'Given tree URL nfs://mydistro.dummylab.test:/os/ incompatible with iPXE')
+
     def test_recipe_provisioned(self):
         with session.begin():
             distro_tree = data_setup.create_distro_tree(
                     arch=u'x86_64', osmajor=u'Fedora20',
                     lab_controllers=[self.lc],
-                    urls=[u'http://example.com/ipxe-test/F20/x86_64/os/'])
+                    urls=[u'nfs://example.nfs.test:/path/to/os',
+                          u'http://example.com/ipxe-test/F20/x86_64/os/'])
             recipe = data_setup.create_recipe(distro_tree=distro_tree)
             data_setup.create_job_for_recipes([recipe])
             data_setup.mark_recipe_waiting(recipe, virt=True,
