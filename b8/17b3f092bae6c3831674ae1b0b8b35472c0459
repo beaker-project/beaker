@@ -1,0 +1,8 @@
+Ready-for-Checks+1: Roman Joost <rjoost@redhat.com>
+Code-Review+2: Dan Callaghan <dcallagh@redhat.com>
+Verified+1: Roman Joost <rjoost@redhat.com>
+Submitted-by: Roman Joost <rjoost@redhat.com>
+Submitted-at: Fri, 06 Apr 2018 02:39:47 +0000
+Reviewed-on: https://gerrit.beaker-project.org/6050
+Project: beaker
+Branch: refs/heads/release-25
