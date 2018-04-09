@@ -247,3 +247,35 @@ A number of bug fixes are also included in this release:
   :issue:`1393186`,
   :issue:`1393191`.
   (Contributed by Dan Callaghan)
+
+
+Maintenance updates
+-------------------
+
+The following fixes have been included in Beaker 25 maintenance updates.
+
+Beaker 25.1
+~~~~~~~~~~~
+
+* :issue:`1563072`: Fixed a regression introduced in Beaker 25.0 which caused
+  the /systems/by-uuid/.../ipxe-script endpoint to return incomplete URLs. This
+  would cause OpenStack instances to fail to boot the installer.
+  (Contributed by Róman Joost)
+* :issue:`1552401`: Beaker now recognizes more installation failure patterns to
+  abort the job during installation.
+  (Contributed by Róman Joost)
+* :issue:`1557847`: When a user deletes the OpenStack Keystone trust in their
+  preferences, Beaker also deletes the trust in Keystone. If this fails, Beaker
+  now ignores the error and considers the trust to be deleted. Previously Beaker
+  would return a 500 error.
+  (Contributed by Róman Joost)
+* :issue:`1558776`: Fixed regression introduced in Beaker 25.0 which caused
+  beakerd to spew a very large amount of log messages which will cause beakerd
+  and rsyslog to consume a lot of CPU.
+  (Contributed by Dan Callaghan)
+* :issue:`1165960`: Beaker client now provides a reserver-workflow subcommand to
+  easily reserve a system.
+  (Contributed by Matt Jia)
+* :issue:`1558828`: Fixed regression in which beakerd tried to assign a system
+  again from a lab controller with not enough systems.
+  (Contributed by Dan Callaghan)
