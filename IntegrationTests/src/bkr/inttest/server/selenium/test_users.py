@@ -645,3 +645,23 @@ class UserHTTPTest(DatabaseTestCase):
                 session=s, data={'openstack_username': u'dummyuser'})
         self.assertEqual(response.status_code, 400)
         self.assertIn('OpenStack Integration is not enabled', response.text)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1557847
+    def test_can_delete_keystone_trust_if_openstack_session_is_invalid(self):
+        # Create a user with an invalid trust id. The bug was caused during the
+        # construction of the DynamicVirt instance, which failed due to an
+        # authentication problem. The user can always update their credentials,
+        # so expect in case Beaker can not create a keystone session that the
+        # trust has been deleted or invalidated somehow by other means.
+        with session.begin():
+            user = data_setup.create_user(password='asdf')
+            user.openstack_trust_id = 'frobfrab'
+        s = requests.Session()
+        requests_login(s)
+        response = s.delete(
+            get_server_base() + 'users/%s/keystone-trust' % user.user_name)
+        self.assertEqual('', response.text)
+        self.assertEqual(response.status_code, 204)
+        with session.begin():
+            session.expire_all()
+            self.assertIsNone(user.openstack_trust_id)

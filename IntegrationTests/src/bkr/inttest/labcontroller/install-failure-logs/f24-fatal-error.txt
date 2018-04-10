@@ -1,0 +1,187 @@
+Creating xfs on /dev/mapper/fedora_dell--pe1850--02-root 
+      
+  
+      
+      
+  
+      
+.      
+  
+      
+      
+  
+      
+
+      
+  
+      
+      
+  
+      
+Running pre-installation scripts      
+  
+       
+      
+  
+      
+
+      
+  
+      
+      
+  
+      
+.      
+  
+      
+      
+  
+      
+
+      
+  
+      
+      
+  
+      
+Starting package installation process 
+      
+  
+      
+      
+  
+      
+Downloading packages 
+      
+  
+      
+      
+  
+      
+Downloading 697 RPMs, 0 B / 408.4 MiB (0%) done. 
+      
+  
+      
+      
+  
+      
+Downloading 697 RPMs, 5.04 MiB / 408.4 MiB (1%) done. 
+      
+  
+      
+      
+  
+      
+Downloading 697 RPMs, 10.21 MiB / 408.4 MiB (2%) done.      
+  
+       
+      
+  
+      
+
+      
+  
+      
+      
+  
+      
+Downloading 697 RPMs, 13.55 MiB / 408.4 MiB (3%) done.      
+  
+       
+      
+  
+      
+
+      
+  
+      
+      
+  
+      
+Downloading 697 RPMs, 17.32 MiB / 408.4 MiB (4%) done.      
+  
+       
+      
+  
+      
+
+      
+  
+      
+      
+  
+      
+================================================================================      
+
+================================================================================      
+
+      
+  
+      
+      
+  
+      
+Error 
+      
+  
+      
+      
+  
+      
+
+      
+  
+      
+      
+  
+      
+The following error occurred while installing.  This is a fatal error and instal      
+
+lation will be aborted. 
+
+Failed to download the following packages: Cannot download Packages/p/perl-MIME-      
+
+Base64-3.15-349.fc24.x86_64.rpm: All mirrors were tried      
+  
+       
+      
+  
+      
+
+      
+  
+      
+      
+  
+      
+Press Enter to exit.      
+  
+       
+[-- MARK -- Fri Jan 13 08:40:00 2017] 
+[-- MARK -- Fri Jan 13 08:45:00 2017] 
+[-- MARK -- Fri Jan 13 08:50:00 2017] 
+[-- MARK -- Fri Jan 13 08:55:00 2017] 
+[-- MARK -- Fri Jan 13 09:00:00 2017] 
+[-- MARK -- Fri Jan 13 09:05:00 2017] 
+[-- MARK -- Fri Jan 13 09:10:00 2017] 
+[-- MARK -- Fri Jan 13 09:15:00 2017] 
+[-- MARK -- Fri Jan 13 09:20:01 2017] 
+[-- MARK -- Fri Jan 13 09:25:00 2017] 
+[-- MARK -- Fri Jan 13 09:30:00 2017] 
+[-- MARK -- Fri Jan 13 09:35:00 2017] 
+[-- MARK -- Fri Jan 13 09:40:00 2017] 
+[-- MARK -- Fri Jan 13 09:45:00 2017] 
+[-- MARK -- Fri Jan 13 09:50:00 2017] 
+[-- MARK -- Fri Jan 13 09:55:00 2017] 
+[-- MARK -- Fri Jan 13 10:00:00 2017] 
+[-- MARK -- Fri Jan 13 10:05:00 2017] 
+[-- MARK -- Fri Jan 13 10:10:00 2017] 
+[-- MARK -- Fri Jan 13 10:15:00 2017] 
+[-- MARK -- Fri Jan 13 10:20:00 2017] 
+[-- MARK -- Fri Jan 13 10:25:00 2017] 
+[-- MARK -- Fri Jan 13 10:30:00 2017] 
+[-- MARK -- Fri Jan 13 10:35:00 2017] 
+[-- MARK -- Fri Jan 13 10:40:00 2017] 
+[-- MARK -- Fri Jan 13 10:45:00 2017] 
+[-- MARK -- Fri Jan 13 10:50:00 2017] 
+[-- MARK -- Fri Jan 13 10:55:00 2017] 

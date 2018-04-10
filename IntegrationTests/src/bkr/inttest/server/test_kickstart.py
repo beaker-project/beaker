@@ -114,7 +114,7 @@ class KickstartTest(unittest.TestCase):
             ]
 
             cls.rhel62 = create_rhel62()
-            cls.rhel62_server_x86_64 = create_rhel62_server_x86_64(cls.rhel62, cls.lab_controller)
+            cls.rhel62_server_x86_64 = create_rhel62_server_x86_64(cls.lab_controller)
             cls.rhel62_server_ppc64 = data_setup.create_distro_tree(
                 distro=cls.rhel62, variant=u'Server', arch=u'ppc64',
                 lab_controllers=[cls.lab_controller],

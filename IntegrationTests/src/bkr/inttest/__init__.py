@@ -43,6 +43,7 @@ from bkr.server.util import load_config
 from bkr.server.tools import ipxe_image
 from bkr.server.tests import data_setup
 from bkr.log import log_to_stream
+from bkr.inttest.mail_capture import MailCaptureThread
 
 # hack to make turbogears.testutil not do dumb stuff at import time
 orig_cwd = os.getcwd()
@@ -65,6 +66,10 @@ class DatabaseTestCase(unittest.TestCase):
         # Putting this in __init__ instead of setUp is kind of cheating, but it 
         # lets us avoid calling super() in every setUp.
         self.addCleanup(self._cleanup_session)
+        # This is even more of a hack because it has nothing to do with the 
+        # database. But we have nowhere nicer to put this for now.
+        # (We should be using pytest fixtures...)
+        self.addCleanup(self._clear_captured_mails)
 
     def _cleanup_session(self):
         # We clear __dict__ as a kind of hack, to try and drop references to 
@@ -74,6 +79,9 @@ class DatabaseTestCase(unittest.TestCase):
             if not name.startswith('_'):
                 del self.__dict__[name]
         session.close()
+
+    def _clear_captured_mails(self):
+        mail_capture_thread.clear()
 
 # workaround for delayed log formatting in nose
 # https://groups.google.com/forum/?fromgroups=#!topic/nose-users/5uZVDfDf1ZI
@@ -282,6 +290,8 @@ def cleanup_slapd():
     shutil.rmtree(slapd_data_dir, ignore_errors=True)
     shutil.rmtree(slapd_config_dir, ignore_errors=True)
 
+mail_capture_thread = MailCaptureThread()
+
 def _glance():
     if not has_keystoneclient:
         raise RuntimeError('python-keystoneclient is not installed')
@@ -373,7 +383,9 @@ def setup_package():
             data_setup.create_task(name=u'/distribution/utils/dummy')
             data_setup.create_task(name=u'/distribution/inventory')
         if not Distro.query.count():
-            data_setup.create_distro()
+            # The 'BlueShoeLinux5-5' string appears in many tests, because it's
+            # the distro name used in complete-job.xml.
+            data_setup.create_distro_tree(osmajor=u'BlueShoeLinux5', distro_name=u'BlueShoeLinux5-5')
 
     if os.path.exists(turbogears.config.get('basepath.rpms')):
         # Remove any task RPMs left behind by previous test runs
@@ -385,6 +397,7 @@ def setup_package():
         os.mkdir(turbogears.config.get('basepath.rpms'))
 
     setup_slapd()
+    mail_capture_thread.start()
 
     if turbogears.config.get('openstack.identity_api_url'):
         setup_openstack()
@@ -430,4 +443,5 @@ def teardown_package():
     if turbogears.config.get('openstack.identity_api_url'):
         cleanup_openstack()
 
+    mail_capture_thread.stop()
     cleanup_slapd()

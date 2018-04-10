@@ -13,7 +13,7 @@ from bkr.server.model import Group, User, Activity, UserGroup, \
     SystemPermission, GroupMembershipType
 from bkr.inttest.server.selenium import WebDriverTestCase, XmlRpcTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction, \
-    mail_capture, DatabaseTestCase
+    mail_capture_thread, DatabaseTestCase
 from bkr.inttest.server.webdriver_utils import login, logout, \
         wait_for_animation, check_group_search_results, BootstrapSelect
 from bkr.inttest.assertions import wait_for_condition
@@ -35,10 +35,6 @@ class TestGroupsWD(WebDriverTestCase):
         self.clear_password = 'gyfrinachol'
         self.hashed_password = '$1$NaCl$O34mAzBXtER6obhoIodu8.'
         self.simple_password = 's3cr3t'
-
-        self.mail_capture = mail_capture.MailCaptureThread()
-        self.mail_capture.start()
-        self.addCleanup(self.mail_capture.stop)
 
     def go_to_group_page(self, group=None, tab=None):
         if group is None:
@@ -115,8 +111,9 @@ class TestGroupsWD(WebDriverTestCase):
             'not(.//li[contains(text(), "%s")])]' % self.perm1.permission_name)
 
     def check_notification(self, user, group, action):
-        self.assertEqual(len(self.mail_capture.captured_mails), 1)
-        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        captured_mails = mail_capture_thread.stop_capturing()
+        self.assertEqual(len(captured_mails), 1)
+        sender, rcpts, raw_msg = captured_mails[0]
         self.assertEqual(rcpts, [user.email_address])
         msg = email.message_from_string(raw_msg)
         self.assertEqual(msg['To'], user.email_address)
@@ -252,6 +249,7 @@ class TestGroupsWD(WebDriverTestCase):
         login(b, user=self.user.user_name, password='password')
         self.go_to_group_page()
 
+        mail_capture_thread.start_capturing()
         b.find_element_by_xpath('//ul[contains(@class, "group-nav")]'
             '//a[text()="Members"]').click()
         b.find_element_by_name('group_member').send_keys(user.user_name)
@@ -278,8 +276,7 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_class_name('add-member').submit()
         b.find_element_by_xpath('//div/ul[@class="list-group group-members-list"]'
             '//li/a[contains(text(), "%s")]' % user.user_name)
-        # clear captured mails
-        self.mail_capture.captured_mails[:] = []
+        mail_capture_thread.start_capturing()
         b.find_element_by_xpath('//li[contains(a/text(), "%s")]/button' % user.user_name).click()
         b.find_element_by_xpath('//div/ul[@class="list-group group-members-list" and '
             'not(.//li/a[contains(text(), "%s")])]' % user.user_name)

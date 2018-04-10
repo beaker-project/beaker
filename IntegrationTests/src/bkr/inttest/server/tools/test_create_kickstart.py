@@ -39,8 +39,7 @@ class CreateKickstartTest(DatabaseTestCase):
             install_task = Task.by_name(u'/distribution/install')
             reserve_task = Task.by_name(u'/distribution/reservesys')
             lc = create_lab_controller()
-            rhel62 = create_rhel62()
-            rhel62_server_x86_64 = create_rhel62_server_x86_64(lab_controller=lc, distro=rhel62)
+            rhel62_server_x86_64 = create_rhel62_server_x86_64(lab_controller=lc)
             if not system:
                 system = create_x86_64_automated(lc)
             recipe = data_setup.create_recipe(distro_tree=rhel62_server_x86_64, task_list=[install_task, reserve_task])
@@ -167,8 +166,7 @@ class CreateKickstartTest(DatabaseTestCase):
         with session.begin():
             lc = create_lab_controller()
             system = create_x86_64_automated(lc)
-            self.rhel62 = create_rhel62()
-            self.rhel62_server_x86_64 = create_rhel62_server_x86_64(lab_controller=lc, distro=self.rhel62)
+            self.rhel62_server_x86_64 = create_rhel62_server_x86_64(lab_controller=lc)
             user = create_user()
         session.expire_all()
         distro_tree_id = self.rhel62_server_x86_64.id

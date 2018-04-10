@@ -288,6 +288,8 @@ def queue_processed_recipeset(recipeset_id):
                     if system in recipe.systems:
                         log.debug("recipe: %s labController: %s Removing system %s" % (recipe.id, l_controller, system))
                         recipe.systems.remove(system)
+        # Make the removal of systems visible to subsequent queries which use .dyn_systems
+        session.flush()
 
         # Are we left with any recipes having no candidate systems?
         dead_recipes = [recipe for recipe in recipeset.machine_recipes if not recipe.systems]

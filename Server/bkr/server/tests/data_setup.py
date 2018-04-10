@@ -206,22 +206,21 @@ def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux
     if distro is None:
         distro = create_distro(name=distro_name, osmajor=osmajor, osminor=osminor,
                 tags=distro_tags, harness_dir=harness_dir, date_created=date_created)
-    distro_tree = DistroTree.lazy_create(distro=distro,
-            arch=Arch.lazy_create(arch=arch), variant=variant)
+    distro_tree = DistroTree(distro=distro, arch=Arch.lazy_create(arch=arch), variant=variant)
     if date_created is not None:
         distro_tree.date_created = date_created
     if distro_tree.arch not in distro.osversion.arches:
         distro.osversion.arches.append(distro_tree.arch)
-    DistroTreeRepo.lazy_create(distro_tree=distro_tree,
-            repo_id=variant, repo_type=u'variant', path=u'')
-    DistroTreeImage.lazy_create(distro_tree=distro_tree,
+    distro_tree.repos.append(DistroTreeRepo(repo_id=variant, repo_type=u'variant', path=u''))
+    distro_tree.images.append(DistroTreeImage(
             image_type=ImageType.kernel,
             kernel_type=KernelType.by_name(u'default'),
-            path=u'pxeboot/vmlinuz')
-    DistroTreeImage.lazy_create(distro_tree=distro_tree,
+            path=u'pxeboot/vmlinuz'))
+    distro_tree.images.append(DistroTreeImage(
             image_type=ImageType.initrd,
             kernel_type=KernelType.by_name(u'default'),
-            path=u'pxeboot/initrd')
+            path=u'pxeboot/initrd'))
+    session.flush() # to get an id
     # make it available in all lab controllers by default
     if lab_controllers is None:
         lab_controllers = LabController.query
@@ -239,18 +238,20 @@ def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux
     return distro_tree
 
 def add_distro_tree_to_lab(distro_tree, lab_controller, urls=None):
-    default_urls = [u'%s://%s%s/distros/%s/%s/%s/os/' % (scheme,
-            lab_controller.fqdn, scheme == 'nfs' and ':' or '',
-            distro_tree.distro.name, distro_tree.variant,
-            distro_tree.arch.arch) for scheme in ['nfs', 'http', 'ftp']]
-    existing_urls = [lc_distro_tree.url for lc_distro_tree in distro_tree.lab_controller_assocs]
-    for url in (urls or default_urls):
-        if url in existing_urls:
-            continue
-        lab_controller_distro_tree = LabControllerDistroTree(
-            lab_controller=lab_controller, url=url)
-        distro_tree.lab_controller_assocs.append(lab_controller_distro_tree)
-
+    if urls is None:
+        urls = [u'%s://%s%s/distros/%s/%s/%s/os/' % (scheme,
+                lab_controller.fqdn, scheme == 'nfs' and ':' or '',
+                distro_tree.distro.name, distro_tree.variant,
+                distro_tree.arch.arch) for scheme in ['nfs', 'http', 'ftp']]
+    # Instead of using the LabControllerDistroTree model like normal,
+    # we hack the rows directly into the database. This is specifically to
+    # avoid firing the mark_systems_pending_when_distro_tree_added_to_lab
+    # event listener, which is not necessary when we are setting up test data,
+    # and can be potentially quite expensive.
+    session.execute(LabControllerDistroTree.__table__.insert().values([
+            {'distro_tree_id': distro_tree.id, 'lab_controller_id': lab_controller.id, 'url': url}
+            for url in urls]))
+    session.expire(distro_tree, ['lab_controller_assocs'])
 
 def get_test_name():
     """Inspects the stack and guess the possible caller name from our test suite."""
@@ -865,6 +866,8 @@ def create_manual_reservation(system, start=None, finish=None, user=None):
                 old_value=user.user_name, new_value=u'')
         activity.created = finish
         system.activity.append(activity)
+    else:
+        system.user = user
 
 def unreserve_manual(system, finish=None):
     if finish is None:

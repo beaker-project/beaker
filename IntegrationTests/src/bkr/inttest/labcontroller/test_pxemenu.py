@@ -39,10 +39,10 @@ class PxemenuTest(LabControllerTestCase):
     def test_distro_tree_with_bad_url_throws_relevant_error(self):
         with session.begin():
             lc = self.get_lc()
-            tag = u'test_image_not_found'
+            tag = u'test_bad_url'
             distro_tree = data_setup.create_distro_tree(
                     osmajor=u'SuperBadWindows10', osminor=u'1',
-                    distro_name=u'SuperBadWindows10.1', distro_tags=[tag],
+                    distro_tags=[tag],
                     arch=u'x86_64', lab_controllers=[lc],
                     urls=['barf://localhost:19998/error/404'])
         with self.assertRaises(ValueError) as exc:
@@ -55,7 +55,7 @@ class PxemenuTest(LabControllerTestCase):
             tag = u'test_image_not_found'
             distro_tree = data_setup.create_distro_tree(
                     osmajor=u'SuperBadWindows10', osminor=u'1',
-                    distro_name=u'SuperBadWindows10.1', distro_tags=[tag],
+                    distro_tags=[tag],
                     arch=u'x86_64', lab_controllers=[lc],
                     urls=['http://localhost:19998/error/404'])
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
@@ -68,7 +68,7 @@ class PxemenuTest(LabControllerTestCase):
             tag = u'test_pxelinux_menu'
             distro_tree = data_setup.create_distro_tree(
                     osmajor=u'PinkUshankaLinux8', osminor=u'1',
-                    distro_name=u'PinkUshankaLinux8.1', distro_tags=[tag],
+                    distro_name=u'PinkUshankaLinux8.1-20140620.0', distro_tags=[tag],
                     arch=u'x86_64', lab_controllers=[lc],
                     urls=['http://localhost:19998/'])
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
@@ -90,8 +90,8 @@ menu title PinkUshankaLinux8
 menu begin
 menu title PinkUshankaLinux8.1
 
-label PinkUshankaLinux8.1-Server-x86_64
-    menu title PinkUshankaLinux8.1 Server x86_64
+label PinkUshankaLinux8.1-20140620.0-Server-x86_64
+    menu title PinkUshankaLinux8.1-20140620.0 Server x86_64
     kernel /distrotrees/{0}/kernel
     append initrd=/distrotrees/{0}/initrd method=http://localhost:19998/ repo=http://localhost:19998/ 
 
@@ -106,7 +106,7 @@ menu end
             tag = u'test_efigrub_menu'
             distro_tree = data_setup.create_distro_tree(
                     osmajor=u'PinkUshankaLinux8', osminor=u'1',
-                    distro_name=u'PinkUshankaLinux8.1', distro_tags=[tag],
+                    distro_name=u'PinkUshankaLinux8.1-20140620.1', distro_tags=[tag],
                     arch=u'x86_64', lab_controllers=[lc],
                     urls=['http://localhost:19998/'])
             # https://bugzilla.redhat.com/show_bug.cgi?id=1420471
@@ -125,7 +125,7 @@ menu end
         menu = open(os.path.join(self.tftp_dir, 'grub', 'efidefault')).read()
         self.assertEquals(menu, '''\
 
-title PinkUshankaLinux8.1 Server x86_64
+title PinkUshankaLinux8.1-20140620.1 Server x86_64
     root (nd)
     kernel /distrotrees/{0}/kernel method=http://localhost:19998/ repo=http://localhost:19998/
     initrd /distrotrees/{0}/initrd
@@ -137,7 +137,7 @@ title PinkUshankaLinux8.1 Server x86_64
             tag = u'test_aarch64_menu'
             distro_tree = data_setup.create_distro_tree(
                     osmajor=u'PinkUshankaLinux8', osminor=u'1',
-                    distro_name=u'PinkUshankaLinux8.1', distro_tags=[tag],
+                    distro_name=u'PinkUshankaLinux8.1-20140620.2', distro_tags=[tag],
                     arch=u'aarch64', lab_controllers=[lc],
                     urls=['http://localhost:19998/'])
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
@@ -153,7 +153,7 @@ submenu "PinkUshankaLinux8" {
 
 submenu "PinkUshankaLinux8.1" {
 
-menuentry "PinkUshankaLinux8.1 Server aarch64" {
+menuentry "PinkUshankaLinux8.1-20140620.2 Server aarch64" {
     linux /distrotrees/%s/kernel method=http://localhost:19998/ repo=http://localhost:19998/
     initrd /distrotrees/%s/initrd
 }
@@ -170,7 +170,7 @@ menuentry "PinkUshankaLinux8.1 Server aarch64" {
             tag = u'test_grub2_menu_for_efi'
             distro_tree = data_setup.create_distro_tree(
                     osmajor=u'PinkUshankaLinux8', osminor=u'1',
-                    distro_name=u'PinkUshankaLinux8.1', distro_tags=[tag],
+                    distro_name=u'PinkUshankaLinux8.1-20140620.3', distro_tags=[tag],
                     arch=u'x86_64', lab_controllers=[lc],
                     urls=['http://localhost:19998/'])
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
@@ -187,7 +187,7 @@ submenu "PinkUshankaLinux8" {
 
 submenu "PinkUshankaLinux8.1" {
 
-menuentry "PinkUshankaLinux8.1 Server x86_64" {
+menuentry "PinkUshankaLinux8.1-20140620.3 Server x86_64" {
     linux /distrotrees/%s/kernel method=http://localhost:19998/ repo=http://localhost:19998/
     initrd /distrotrees/%s/initrd
 }

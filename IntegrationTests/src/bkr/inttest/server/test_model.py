@@ -1998,6 +1998,16 @@ class CheckDynamicVirtTest(DatabaseTestCase):
         data_setup.create_job_for_recipes([recipe], owner=self.user)
         self.assertVirtPrecluded(recipe, 'RHEL4 should be precluded')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1563072
+    def test_recipe_with_invalid_custom_distro_should_not_provision(self):
+        recipe = data_setup.create_recipe(custom_distro=True)
+        # iPXE can only deal with HTTP or FTP URLs
+        recipe.installation.tree_url = 'nfs://my.custom.distro.test/os/'
+        user = data_setup.create_user()
+        user.openstack_trust_id = u'dummpy_openstack_trust_id_%s' % user
+        data_setup.create_job_for_recipes([recipe], owner=user)
+        self.assertVirtPrecluded(recipe, 'NFS is an invalid URL')
+
 
 class MachineRecipeTest(DatabaseTestCase):
 

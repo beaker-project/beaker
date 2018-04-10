@@ -10,7 +10,7 @@ import uuid
 from turbogears.database import session
 from bkr.server.model import Arch, TaskResult
 from bkr.server.util import absolute_url
-from bkr.inttest import data_setup, mail_capture, get_server_base, \
+from bkr.inttest import data_setup, mail_capture_thread, get_server_base, \
         DatabaseTestCase
 import bkr.server.mail
 from bkr.server.mail import failed_recipes
@@ -19,11 +19,6 @@ from bkr.server.tools.usage_reminder import BeakerUsage
 
 
 class BrokenSystemNotificationTest(DatabaseTestCase):
-
-    def setUp(self):
-        self.mail_capture = mail_capture.MailCaptureThread()
-        self.mail_capture.start()
-        self.addCleanup(self.mail_capture.stop)
 
     def test_broken_system_notification_on(self):
         with session.begin():
@@ -36,10 +31,12 @@ class BrokenSystemNotificationTest(DatabaseTestCase):
             data_setup.configure_system_power(system, power_type=u'drac',
                     address=u'pdu2.home-one', power_id=u'42')
 
+        mail_capture_thread.start_capturing()
         with session.begin():
             bkr.server.mail.broken_system_notify(system, reason="It's a tarp!")
-        self.assertEqual(len(self.mail_capture.captured_mails), 1)
-        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        captured_mails = mail_capture_thread.stop_capturing()
+        self.assertEqual(len(captured_mails), 1)
+        sender, rcpts, raw_msg = captured_mails[0]
         self.assertEqual(rcpts, ['ackbar@calamari.gov'])
         msg = email.message_from_string(raw_msg)
         self.assertEqual(msg['To'], 'ackbar@calamari.gov')
@@ -79,19 +76,16 @@ class BrokenSystemNotificationTest(DatabaseTestCase):
             data_setup.configure_system_power(system, power_type=u'drac',
                                               address=u'pdu3.home-one',
                                               power_id=u'42')
+        mail_capture_thread.start_capturing()
         with session.begin():
             bkr.server.mail.broken_system_notify(system, reason="It's not a tarp!")
-            self.assertEqual(len(self.mail_capture.captured_mails), 0)
+        captured_mails = mail_capture_thread.stop_capturing(wait=False)
+        self.assertEqual(len(captured_mails), 0)
 
 
 class SystemReservationNotificationTest(DatabaseTestCase):
 
     maxDiff = None
-
-    def setUp(self):
-        self.mail_capture = mail_capture.MailCaptureThread()
-        self.mail_capture.start()
-        self.addCleanup(self.mail_capture.stop)
 
     def test_system_reserved_notification_on(self):
         with session.begin():
@@ -99,7 +93,7 @@ class SystemReservationNotificationTest(DatabaseTestCase):
                     email_address=u'lizlemon@kabletown.com')
             system = data_setup.create_system(fqdn=u'funcooker.ge.invalid',
                     lab_controller=data_setup.create_labcontroller())
-            distro_tree = data_setup.create_distro_tree(distro_name=u'MicrowaveOS',
+            distro_tree = data_setup.create_distro_tree(distro_name=u'MicrowaveOS-20141016.0',
                     variant=u'ThreeHeats', arch=u'x86_64')
             job = data_setup.create_running_job(owner=owner, system=system,
                     distro_tree=distro_tree,
@@ -107,10 +101,12 @@ class SystemReservationNotificationTest(DatabaseTestCase):
                     recipe_whiteboard=u'Christmas Attack Zone')
             recipe = job.recipesets[0].recipes[0]
 
+        mail_capture_thread.start_capturing()
         with session.begin():
             bkr.server.mail.reservesys_notify(job.recipesets[0].recipes[0])
-        self.assertEqual(len(self.mail_capture.captured_mails), 1)
-        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        captured_mails = mail_capture_thread.stop_capturing()
+        self.assertEqual(len(captured_mails), 1)
+        sender, rcpts, raw_msg = captured_mails[0]
         self.assertEqual(rcpts, [owner.email_address])
         msg = email.message_from_string(raw_msg)
         self.assertEqual(msg['To'], owner.email_address)
@@ -137,7 +133,7 @@ class SystemReservationNotificationTest(DatabaseTestCase):
                          HOSTNAME=funcooker.ge.invalid
                             JOBID=%(jobid)s
                          RECIPEID=%(recipeid)s
-                           DISTRO=MicrowaveOS ThreeHeats x86_64
+                           DISTRO=MicrowaveOS-20141016.0 ThreeHeats x86_64
                      ARCHITECTURE=x86_64
 
       Job Whiteboard: Chain Reaction of Mental Anguish
@@ -152,7 +148,7 @@ class SystemReservationNotificationTest(DatabaseTestCase):
         with session.begin():
             owner = data_setup.create_user(
                     email_address=u'jackdonaghy@kabletown.com')
-            distro_tree = data_setup.create_distro_tree(distro_name=u'MicrowaveOS',
+            distro_tree = data_setup.create_distro_tree(distro_name=u'MicrowaveOS-20141016.1',
                     variant=u'ThreeHeats', arch=u'x86_64')
             job = data_setup.create_job(owner=owner,
                     distro_tree=distro_tree,
@@ -163,10 +159,12 @@ class SystemReservationNotificationTest(DatabaseTestCase):
                     virt=True, instance_id=uuid.UUID('00000000-1111-2222-3333-444444444444'),
                     fqdn=u'bitenuker.ge.invalid')
 
+        mail_capture_thread.start_capturing()
         with session.begin():
             bkr.server.mail.reservesys_notify(recipe)
-        self.assertEqual(len(self.mail_capture.captured_mails), 1)
-        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        captured_mails = mail_capture_thread.stop_capturing()
+        self.assertEqual(len(captured_mails), 1)
+        sender, rcpts, raw_msg = captured_mails[0]
         self.assertEqual(rcpts, [owner.email_address])
         msg = email.message_from_string(raw_msg)
         self.assertEqual(msg['To'], owner.email_address)
@@ -193,7 +191,7 @@ class SystemReservationNotificationTest(DatabaseTestCase):
                          HOSTNAME=bitenuker.ge.invalid
                             JOBID=%(jobid)s
                          RECIPEID=%(recipeid)s
-                           DISTRO=MicrowaveOS ThreeHeats x86_64
+                           DISTRO=MicrowaveOS-20141016.1 ThreeHeats x86_64
                      ARCHITECTURE=x86_64
 
       Job Whiteboard: Operation Righteous Cowboy Lightning
@@ -211,24 +209,20 @@ class SystemReservationNotificationTest(DatabaseTestCase):
                                            notify_reservesys=False)
             system = data_setup.create_system(fqdn=u'funcooker.ge.valid',
                     lab_controller=data_setup.create_labcontroller())
-            distro_tree = data_setup.create_distro_tree(distro_name=u'MicrowaveOS',
-                    variant=u'ThreeHeats', arch=u'x86_64')
+            distro_tree = data_setup.create_distro_tree(arch=u'x86_64')
             job = data_setup.create_running_job(owner=owner, system=system,
                     distro_tree=distro_tree,
                     whiteboard=u'This is a whiteboard',
                     recipe_whiteboard=u'This is another whiteboard')
 
+        mail_capture_thread.start_capturing()
         with session.begin():
             bkr.server.mail.reservesys_notify(job.recipesets[0].recipes[0])
-            self.assertEqual(len(self.mail_capture.captured_mails), 0)
+        captured_mails = mail_capture_thread.stop_capturing(wait=False)
+        self.assertEqual(len(captured_mails), 0)
 
 
 class JobCompletionNotificationTest(DatabaseTestCase):
-
-    def setUp(self):
-        self.mail_capture = mail_capture.MailCaptureThread()
-        self.mail_capture.start()
-        self.addCleanup(self.mail_capture.stop)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=911515
     def test_failed_recipe_mail_started_before_upgrade_does_not_crash(self):
@@ -244,32 +238,37 @@ class JobCompletionNotificationTest(DatabaseTestCase):
         self.assertIn('Completed Result: Fail', msg)
 
     def test_subject_format(self):
+        mail_capture_thread.start_capturing()
         with session.begin():
             job_owner = data_setup.create_user()
             job = data_setup.create_job(owner=job_owner)
             session.flush()
             data_setup.mark_job_complete(job)
 
-        self.assertEqual(len(self.mail_capture.captured_mails), 1)
-        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        captured_mails = mail_capture_thread.stop_capturing()
+        self.assertEqual(len(captured_mails), 1)
+        sender, rcpts, raw_msg = captured_mails[0]
         msg = email.message_from_string(raw_msg)
         self.assert_('[Beaker Job Completion] [Completed/Pass]' in msg['Subject'])
 
     def test_job_owner_is_notified(self):
+        mail_capture_thread.start_capturing()
         with session.begin():
             job_owner = data_setup.create_user()
             job = data_setup.create_job(owner=job_owner)
             session.flush()
             data_setup.mark_job_complete(job)
 
-        self.assertEqual(len(self.mail_capture.captured_mails), 1)
-        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        captured_mails = mail_capture_thread.stop_capturing()
+        self.assertEqual(len(captured_mails), 1)
+        sender, rcpts, raw_msg = captured_mails[0]
         msg = email.message_from_string(raw_msg)
         self.assertEqual([job_owner.email_address], rcpts)
         self.assertEqual(job_owner.email_address, msg['To'])
         self.assert_('[Beaker Job Completion]' in msg['Subject'])
 
     def test_job_cc_list_is_notified(self):
+        mail_capture_thread.start_capturing()
         with session.begin():
             job_owner = data_setup.create_user()
             job = data_setup.create_job(owner=job_owner,
@@ -277,8 +276,9 @@ class JobCompletionNotificationTest(DatabaseTestCase):
             session.flush()
             data_setup.mark_job_complete(job)
 
-        self.assertEqual(len(self.mail_capture.captured_mails), 1)
-        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        captured_mails = mail_capture_thread.stop_capturing()
+        self.assertEqual(len(captured_mails), 1)
+        sender, rcpts, raw_msg = captured_mails[0]
         msg = email.message_from_string(raw_msg)
         self.assertEqual([job_owner.email_address, 'dan@example.com',
                 'ray@example.com'], rcpts)
@@ -287,13 +287,15 @@ class JobCompletionNotificationTest(DatabaseTestCase):
         self.assert_('[Beaker Job Completion]' in msg['Subject'])
 
     def test_contains_job_hyperlink(self):
+        mail_capture_thread.start_capturing()
         with session.begin():
             job = data_setup.create_job()
             session.flush()
             data_setup.mark_job_complete(job)
 
-        self.assertEqual(len(self.mail_capture.captured_mails), 1)
-        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        captured_mails = mail_capture_thread.stop_capturing()
+        self.assertEqual(len(captured_mails), 1)
+        sender, rcpts, raw_msg = captured_mails[0]
         msg = email.message_from_string(raw_msg)
         job_link = u'<%sjobs/%d>' % (get_server_base(), job.id)
         first_line = msg.get_payload(decode=True).splitlines()[0]
@@ -303,12 +305,15 @@ class JobCompletionNotificationTest(DatabaseTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1326968
     def test_contains_recipe_hyperlink(self):
+        mail_capture_thread.start_capturing()
         with session.begin():
             recipe = data_setup.create_recipe()
             job = data_setup.create_job_for_recipes([recipe])
             data_setup.mark_job_complete(job, result=TaskResult.fail)
 
-        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        captured_mails = mail_capture_thread.stop_capturing()
+        self.assertEqual(len(captured_mails), 1)
+        sender, rcpts, raw_msg = captured_mails[0]
         msg = email.message_from_string(raw_msg)
         recipe_link = u'<%srecipes/%d' % (get_server_base(), recipe.id)
         recipe_line = msg.get_payload(decode=True).splitlines()[2]
@@ -316,45 +321,46 @@ class JobCompletionNotificationTest(DatabaseTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=720041
     def test_subject_contains_whiteboard(self):
+        mail_capture_thread.start_capturing()
         with session.begin():
             whiteboard = u'final space shuttle launch'
             job = data_setup.create_job(whiteboard=whiteboard)
             session.flush()
             data_setup.mark_job_complete(job)
 
-        self.assertEqual(len(self.mail_capture.captured_mails), 1)
-        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        captured_mails = mail_capture_thread.stop_capturing()
+        self.assertEqual(len(captured_mails), 1)
+        sender, rcpts, raw_msg = captured_mails[0]
         msg = email.message_from_string(raw_msg)
         # Subject header might be split across multiple lines
         subject = re.sub(r'\s+', ' ', msg['Subject'])
         self.assert_(whiteboard in subject, subject)
 
     def test_distro_name(self):
+        mail_capture_thread.start_capturing()
         with session.begin():
             job = data_setup.create_job()
             data_setup.mark_job_complete(job, result=TaskResult.fail)
-        self.assertEqual(len(self.mail_capture.captured_mails), 1)
-        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        captured_mails = mail_capture_thread.stop_capturing()
+        self.assertEqual(len(captured_mails), 1)
+        sender, rcpts, raw_msg = captured_mails[0]
         msg = email.message_from_string(raw_msg)
         self.assertNotIn('Distro(', msg.get_payload(decode=True))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1136748
     def test_job_completion_notification_off(self):
+        mail_capture_thread.start_capturing()
         with session.begin():
             job_owner = data_setup.create_user(notify_job_completion=False)
             job = data_setup.create_job(owner=job_owner)
             session.flush()
             data_setup.mark_job_complete(job)
 
-        self.assertEqual(len(self.mail_capture.captured_mails), 0)
+        captured_mails = mail_capture_thread.stop_capturing(wait=False)
+        self.assertEqual(len(captured_mails), 0)
 
 
 class GroupMembershipNotificationTest(DatabaseTestCase):
-
-    def setUp(self):
-        self.mail_capture = mail_capture.MailCaptureThread()
-        self.mail_capture.start()
-        self.addCleanup(self.mail_capture.stop)
 
     def test_actions(self):
 
@@ -364,15 +370,18 @@ class GroupMembershipNotificationTest(DatabaseTestCase):
             group = data_setup.create_group(owner=owner)
             group.add_member(member)
 
+        mail_capture_thread.start_capturing()
         bkr.server.mail.group_membership_notify(member, group, owner, 'Added')
-        self.assertEqual(len(self.mail_capture.captured_mails), 1)
+        captured_mails = mail_capture_thread.stop_capturing()
+        self.assertEqual(len(captured_mails), 1)
 
-        self.mail_capture.captured_mails[:] = []
         with session.begin():
             group.remove_member(member)
 
+        mail_capture_thread.start_capturing()
         bkr.server.mail.group_membership_notify(member, group, owner, 'Removed')
-        self.assertEqual(len(self.mail_capture.captured_mails), 1)
+        captured_mails = mail_capture_thread.stop_capturing()
+        self.assertEqual(len(captured_mails), 1)
 
         # invalid action
         try:
@@ -391,16 +400,15 @@ class GroupMembershipNotificationTest(DatabaseTestCase):
             group = data_setup.create_group(owner=owner)
             group.add_member(member)
 
+        mail_capture_thread.start_capturing()
         bkr.server.mail.group_membership_notify(member, group, owner, 'Added')
-        self.assertEqual(len(self.mail_capture.captured_mails), 0)
+        captured_mails = mail_capture_thread.stop_capturing(wait=False)
+        self.assertEqual(len(captured_mails), 0)
 
 
 class UsageReminderTest(DatabaseTestCase):
 
     def setUp(self):
-        self.mail_capture = mail_capture.MailCaptureThread()
-        self.mail_capture.start()
-        self.addCleanup(self.mail_capture.stop)
         self.user = data_setup.create_user()
         self.reservation_expiry = 24
         self.reservation_length = 3
@@ -486,10 +494,12 @@ Start time               Delayed Job
             'delayed_jobs': beaker_usage.delayed_jobs()
         }
 
+        mail_capture_thread.start_capturing()
         with session.begin():
             bkr.server.mail.send_usage_reminder(self.user, data)
-        self.assertEqual(len(self.mail_capture.captured_mails),1)
-        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        captured_mails = mail_capture_thread.stop_capturing()
+        self.assertEqual(len(captured_mails),1)
+        sender, rcpts, raw_msg = captured_mails[0]
         self.assertEqual(rcpts, [self.user.email_address])
         msg = email.message_from_string(raw_msg)
         self.assertEqual(msg['To'], self.user.email_address)

@@ -6,7 +6,7 @@
 
 import email
 import crypt
-from bkr.inttest import data_setup, with_transaction, mail_capture
+from bkr.inttest import data_setup, with_transaction, mail_capture_thread
 from bkr.inttest.client import run_client, ClientError, create_client_config, \
         ClientTestCase
 from bkr.server.model import Group, Activity, User, GroupMembershipType
@@ -33,13 +33,10 @@ class GroupModifyTest(ClientTestCase):
             self.fake_ldap_group = data_setup.create_group(
                     membership_type=GroupMembershipType.ldap)
 
-        self.mail_capture = mail_capture.MailCaptureThread()
-        self.mail_capture.start()
-        self.addCleanup(self.mail_capture.stop)
-
     def check_notification(self, user, group, action):
-        self.assertEqual(len(self.mail_capture.captured_mails), 1)
-        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        captured_mails = mail_capture_thread.stop_capturing()
+        self.assertEqual(len(captured_mails), 1)
+        sender, rcpts, raw_msg = captured_mails[0]
         self.assertEqual(rcpts, [user.email_address])
         msg = email.message_from_string(raw_msg)
         self.assertEqual(msg['To'], user.email_address)
@@ -285,6 +282,8 @@ class GroupModifyTest(ClientTestCase):
         with session.begin():
             user = data_setup.create_user()
 
+        mail_capture_thread.start_capturing()
+
         out = run_client(['bkr', 'group-modify',
                           '--add-member', user.user_name,
                           self.group.group_name],
@@ -362,6 +361,8 @@ class GroupModifyTest(ClientTestCase):
             session.flush()
             self.assert_(user in self.group.users)
 
+        mail_capture_thread.start_capturing()
+
         out = run_client(['bkr', 'group-modify',
                           '--remove-member', user.user_name,
                           self.group.group_name],
@@ -416,7 +417,7 @@ class GroupModifyTest(ClientTestCase):
                          e.stderr_output, e.stderr_output)
 
         # remove the last group member/owner as 'admin'
-        self.mail_capture.captured_mails[:]=[]
+        mail_capture_thread.start_capturing()
         out = run_client(['bkr', 'group-modify',
                           '--remove-member', self.user.user_name,
                           self.group.group_name], config=self.admin_client_config)

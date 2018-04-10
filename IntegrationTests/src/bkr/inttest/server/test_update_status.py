@@ -12,7 +12,8 @@ from turbogears.database import session
 from bkr.server.bexceptions import StaleTaskStatusException
 from bkr.inttest import data_setup, fix_beakerd_repodata_perms, DatabaseTestCase
 from bkr.server.model import TaskStatus, TaskResult, Watchdog, RecipeSet, \
-    Job, Recipe, System, SystemResource, Task, RecipeReservationCondition
+    Job, Recipe, System, SystemResource, Task, RecipeReservationCondition, \
+    SystemSchedulerStatus
 from bkr.server.tools import beakerd
 
 def watchdogs_for_job(job):
@@ -28,7 +29,6 @@ class TestUpdateStatus(DatabaseTestCase):
         from bkr.server.jobs import Jobs
         self.controller = Jobs()
         self.user = data_setup.create_user()
-        data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
         session.flush()
 
     def tearDown(self):
@@ -161,6 +161,26 @@ class TestUpdateStatus(DatabaseTestCase):
         self.assertEqual(recipe.tasks[0].status, TaskStatus.waiting)
         self.assertIsNone(recipe.tasks[0].start_time)
         self.assertEqual(recipe.status, TaskStatus.waiting)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1558776
+    def test_scheduler_status_is_not_reset_on_already_released_systems(self):
+        first_recipe = data_setup.create_recipe()
+        second_recipe = data_setup.create_recipe()
+        job = data_setup.create_job_for_recipesets([
+                data_setup.create_recipeset_for_recipes([first_recipe]),
+                data_setup.create_recipeset_for_recipes([second_recipe])])
+        data_setup.mark_recipe_complete(first_recipe)
+        first_system = first_recipe.resource.system
+        self.assertEquals(first_system.scheduler_status, SystemSchedulerStatus.pending)
+        # Pretend the scheduler has set the system back to idle
+        first_system.scheduler_status = SystemSchedulerStatus.idle
+
+        data_setup.mark_recipe_scheduled(second_recipe)
+        job.update_status()
+        # The bug was that job.update_status() would reset the *first* recipe's 
+        # system back to pending, even though it had already been released and 
+        # could potentially be reserved for another recipe already.
+        self.assertEquals(first_system.scheduler_status, SystemSchedulerStatus.idle)
 
     def test_update_status_can_be_roundtripped_35508(self):
         complete_job_xml = pkg_resources.resource_string('bkr.inttest', 'job_35508.xml')

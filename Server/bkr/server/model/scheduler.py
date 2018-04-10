@@ -3075,8 +3075,25 @@ class MachineRecipe(Recipe):
         host_filter = XmlHost.from_string(self.host_requires)
         if not host_filter.virtualisable():
             return RecipeVirtStatus.precluded
+        # iPXE understands only FTP and HTTP URLs
+        if not self.installation_tree_is_virt_compatible():
+            return RecipeVirtStatus.precluded
         # Checks all passed, so dynamic virt should be attempted
         return RecipeVirtStatus.possible
+
+    def installation_tree_is_virt_compatible(self):
+        """Check if tree_url can be run as a virt guest"""
+        url_compatible = False
+        if self.installation.tree_url:
+            url_compatible = urlparse.urlparse(self.installation.tree_url).scheme in ['http', 'ftp']
+        elif self.distro_tree and not self.recipeset.lab_controller:
+            # No way to determine now
+            url_compatible = True
+        elif self.distro_tree:
+            url_compatible = bool(self.distro_tree.url_in_lab(self.lab_controller,
+                                                              scheme=['http', 'ftp'],
+                                                              required=False))
+        return url_compatible
 
     @classmethod
     def get_queue_stats(cls, recipes=None):
@@ -4059,10 +4076,11 @@ class SystemResource(RecipeResource):
         self.reservation = self.system.reserve_for_recipe(
                                          service=u'Scheduler',
                                          user=self.recipe.recipeset.job.owner)
-        self.system.scheduler_status = SystemSchedulerStatus.reserved
 
     def release(self):
-        self.system.scheduler_status = SystemSchedulerStatus.pending
+        # Note that this may be called *many* times for a recipe, even when it 
+        # has already been cleaned up, so we have to handle that gracefully 
+        # (and cheaply!)
         # system_resource rows for very old recipes may have no reservation
         if not self.reservation or self.reservation.finish_time:
             return
@@ -4192,6 +4210,9 @@ class VirtResource(RecipeResource):
         yield InstallOptions.from_strings('hwclock_is_utc', u'console=tty0 console=ttyS0,115200n8', '')
 
     def release(self):
+        # Note that this may be called *many* times for a recipe, even when it 
+        # has already been cleaned up, so we have to handle that gracefully 
+        # (and cheaply!)
         if self.instance_deleted:
             return
         try:
@@ -4240,4 +4261,7 @@ class GuestResource(RecipeResource):
         log.debug('Allocated MAC address %s for recipe %s', self.mac_address, self.recipe.id)
 
     def release(self):
+        # Note that this may be called *many* times for a recipe, even when it 
+        # has already been cleaned up, so we have to handle that gracefully 
+        # (and cheaply!)
         pass

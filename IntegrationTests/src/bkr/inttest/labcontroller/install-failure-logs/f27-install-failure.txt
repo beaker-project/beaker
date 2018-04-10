@@ -1,0 +1,159 @@
+
+
+
+
+
+     
+Installation      
+1) [x] Language settings                 2) [x] Time settings 
+       (English (United States))                (America/New_York timezone) 
+3) [x] Installation source               4) [x] Software selection 
+       (http://download.eng.bos.redhat.         (Custom software selected) 
+       com/redhat/released/F-27/GOLD/Wo 
+       rkstation/x86_64/os/) 
+5) [x] Installation Destination          6) [x] Network configuration 
+       (Automatic partitioning                  (Connected: enp0s29u1u1u5, 
+       selected)                                enp6s0) 
+7) [ ] User creation 
+       (No user will be created)      
+      
+      
+       
+
+
+      
+================================================================================      
+================================================================================      
+      
+      
+      
+       
+
+
+      
+Progress      
+      
+      
+       
+
+      
+Setting up the installation environment      
+      
+.      
+       
+
+      
+      
+      
+       
+
+      
+Configuring storage      
+      
+      
+       
+
+      
+Creating disklabel on /dev/sda      
+      
+.      
+       
+
+
+      
+Creating ext4 on /dev/sda1      
+      
+.      
+       
+
+
+      
+Creating lvmpv on /dev/sda2      
+      
+.      
+       
+
+
+      
+Creating swap on /dev/mapper/fedora_ibm--x3250m4--18-swap      
+      
+.      
+       
+
+
+      
+Creating ext4 on /dev/mapper/fedora_ibm--x3250m4--18-home      
+      
+[-- MARK -- Wed Mar  7 04:30:00 2018] 
+.      
+       
+
+
+      
+Creating ext4 on /dev/mapper/fedora_ibm--x3250m4--18-root      
+      
+..      
+       
+
+      
+      
+      
+       
+
+      
+Running pre-installation scripts      
+      
+.      
+       
+
+
+      
+Running pre-installation tasks      
+      
+.      
+       
+
+      
+      
+Installing.      
+       
+
+      
+      
+Starting package installation process      
+       
+
+      
+      
+      
+       
+
+
+      
+================================================================================      
+================================================================================      
+      
+      
+      
+       
+
+
+
+
+
+
+
+
+
+
+      
+Error      
+  The following software marked for installation has errors.  This is likely 
+  caused by an error with 
+  your installation source. 
+   
+   
+   Problem: conflicting requests 
+    - nothing provides libisl.so.15()(64bit) needed by gcc-7.3.1-2.fc27.x86_64      
+      
+Press ENTER to exit: [-- MARK -- Wed Mar  7 04:35:00 2018] 

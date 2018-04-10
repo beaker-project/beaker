@@ -18,7 +18,6 @@ class JobSubmitTest(ClientTestCase):
     def setUp(self):
         data_setup.create_product(product_name=u'the_product')
         data_setup.create_group(group_name=u'somegroup')
-        data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
         self.user_foo = data_setup.create_user(password=u'foo')
         self.user_bar = data_setup.create_user(password=u'bar')
         self.bot = data_setup.create_user(password=u'bot')
@@ -61,7 +60,7 @@ class JobSubmitTest(ClientTestCase):
                 <recipeSet>
                     <recipe>
                         <distroRequires>
-                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                            <distro_family op="=" value="BlueShoeLinux5" />
                         </distroRequires>
                         <hostRequires/>
                         <task name="/distribution/install" />
@@ -92,7 +91,7 @@ class JobSubmitTest(ClientTestCase):
                 <recipeSet>
                     <recipe>
                         <distroRequires>
-                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                            <distro_family op="=" value="BlueShoeLinux5" />
                         </distroRequires>
                         <hostRequires/>
                         <task name="/distribution/install" />

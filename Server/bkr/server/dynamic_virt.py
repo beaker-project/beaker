@@ -79,7 +79,12 @@ class VirtManager(object):
                    trust_id=self.user.openstack_trust_id)
         session = keystoneclient.session.Session(auth=auth)
         # ensure this session is valid by getting a token
-        auth.get_token(session)
+        try:
+            auth.get_token(session)
+        except keystoneclient.exceptions.Unauthorized as exc:
+            raise ValueError(
+                'Error authenticating user %s to OpenStack using trust id %s: %s' %
+                (self.user.user_name, self.user.openstack_trust_id, exc.args[0]))
         return session
 
     def available_flavors(self):

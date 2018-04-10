@@ -224,8 +224,9 @@ class ConsoleLogHelper(object):
         # to the subsequent block.
         lines = (self.incomplete_line + block).split('\n')
         self.incomplete_line = lines.pop()
+        # Guard against a pathological case of the console filling up with
+        # bytes but no newlines. Avoid buffering them into memory forever.
         if len(self.incomplete_line) > self.blocksize * 2:
-            # not a complete line yet but it's getting too big
             lines.append(self.incomplete_line)
             self.incomplete_line = ''
         if self.panic_detector:
