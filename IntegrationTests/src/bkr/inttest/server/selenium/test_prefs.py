@@ -9,7 +9,9 @@ from bkr.inttest.server.webdriver_utils import login, logout, is_text_present, \
         delete_and_confirm
 from bkr.inttest import data_setup, get_server_base
 import unittest, time, re, os
+from unittest2 import SkipTest
 from turbogears.database import session
+from turbogears import config
 import crypt
 
 class UserPrefs(WebDriverTestCase):
@@ -300,6 +302,8 @@ class UserPrefs(WebDriverTestCase):
             self.assertEqual(self.user.notify_reservesys, False)
 
     def test_virt_set_keystone_trusts_invalid(self):
+        if not config.get('openstack.identity_api_url'):
+            raise SkipTest('OpenStack Integration is not enabled')
         b = self.browser
         pane = self.go_to_prefs_tab('OpenStack Keystone Trust')
         pane.find_element_by_name('openstack_username').send_keys('invalid')
