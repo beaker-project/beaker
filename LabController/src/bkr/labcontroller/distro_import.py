@@ -48,6 +48,56 @@ def compose_status_matches_expected(url, expected):
         return False
     return status.strip() == expected
 
+def is_modular(parser):
+    return parser.get('product', 'version') == '8.0' and parser.get('product', 'short') == 'RHEL'
+
+
+class ModularCompose(object):
+    """A loose representation of a module for RHEL-8 composes.
+
+    It is instantiated with a parser from the main compose tree in order to
+    puzzle together the relative paths for repositories to this module.
+    """
+
+    def __init__(self, parser, name, product_name_template='{name}-{version}-{date}.n.{respin}'):
+        self.name = name
+
+        product_version = parser.get('product', 'version')
+        compose_date = parser.get('compose', 'date')
+        compose_respin = parser.get('compose', 'respin')
+        self.product_name = product_name_template.format(name=self.name,
+                                                         version=product_version,
+                                                         date=compose_date,
+                                                         respin=compose_respin)
+        self.compose_url = urlparse.urljoin(parser.url.rstrip('/'),
+                                            '../{compose_id}/compose'.format(compose_id=self.product_name))
+        self.parser = Cparser()
+        self.parser.parse(self.compose_url)
+
+    def get_repos(self, repo_base, rpath, arch):
+        repos = []
+        debugrepopath = self.parser.get('variant-{name}.{arch}'.format(name=self.name, arch=arch), 'debuginfo', '')
+        modular_repos = [
+            (self.name,
+             self.parser.get('variant-{0}'.format(self.name), 'type'),
+             os.path.join(rpath, '..', '..', self.product_name, 'compose', self.name, arch, 'os')
+             )
+        ]
+        if debugrepopath:
+            modular_repos.append(
+                ('%s-debuginfo' % self.name,
+                 'debug',
+                 os.path.join(rpath, '..', '..', self.product_name, 'compose', self.name, arch, 'debug', 'tree')
+                 )
+            )
+        for repo in modular_repos:
+            url = os.path.join(repo_base, repo[2], 'repodata')
+            if url_exists(url):
+                repos.append(dict(repoid=repo[0], type=repo[1], path=repo[2]))
+        return repos
+
+    def get_status_url(self):
+        return urlparse.urljoin(self.compose_url, 'STATUS')
 
 class IncompleteTree(BX):
     """
@@ -671,6 +721,13 @@ sources = Workstation/source/SRPMS
                         path=os.path.join(rpath, debugrepopath)))
             else:
                 logging.warn('%s-debuginfo repo found in .composeinfo but does not exist', variant)
+
+        if is_modular(self.parser):
+            modules = [ModularCompose(self.parser, 'AppStream'),
+                       ModularCompose(self.parser, 'Buildroot', 'BUILDROOT-{version}-RHEL-8-{date}.n.{respin}')]
+            for module in modules:
+                self.check_compose_status_and_raise(self.options.skip_unless_status, module.get_status_url())
+                repos.extend(module.get_repos(repo_base, rpath, arch))
         return repos
 
     def check_input(self, options):
@@ -739,6 +796,9 @@ class TreeInfoMixin(object):
     # This is a best guess for the relative iso path
     # for RHEL5/6/7 and Fedora trees
     isos_path = '../iso/'
+
+    def is_installable(self):
+        return True
 
     def check_input(self, options):
         self.check_variants(options.variant, single=False)
@@ -924,10 +984,9 @@ class TreeInfoMixin(object):
 
     def get_images(self):
         images = []
-        images.append(dict(type='kernel',
-                                        path=self.get_kernel_path()))
-        images.append(dict(type='initrd',
-                                        path=self.get_initrd_path()))
+        if self.is_installable():
+            images.append(dict(type='kernel', path=self.get_kernel_path()))
+            images.append(dict(type='initrd', path=self.get_initrd_path()))
         return images
 
     def add_to_beaker(self):
@@ -1613,6 +1672,10 @@ initrd = images/pxeboot/initrd.img
 kernel = images/pxeboot/vmlinuz
 
     """
+    def is_installable(self):
+        return (self.parser.has_option('images-{0}'.format(self.tree['arch']),'kernel') and
+                self.parser.has_option('images-{0}'.format(self.tree['arch']),'initrd'))
+
     @classmethod
     def is_importer_for(cls, url, options=None):
         parser = Tparser()
