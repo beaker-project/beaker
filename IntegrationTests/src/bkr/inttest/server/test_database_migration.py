@@ -1429,3 +1429,50 @@ class MigrationTest(unittest.TestCase):
         with self.migration_metadata.bind.connect() as connection:
             self.assertEqual(2,
                 connection.scalar('SELECT count(*) FROM installation;'))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1568224
+    def test_scheduled_recipe_has_installation_column_after_upgrade(self):
+        with self.migration_metadata.bind.connect() as connection:
+            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/25.sql'))
+            # add a queued job
+            connection.execute(
+                "INSERT INTO osmajor (id, osmajor) "
+                "VALUES (1, 'RedHatEnterpriseLinux6')")
+            connection.execute(
+                "INSERT INTO osversion (osmajor_id, osminor) "
+                "VALUES (1, 9)")
+            connection.execute(
+                "INSERT INTO distro (name, osversion_id) "
+                "VALUES ('RHEL6', 1)")
+            connection.execute(
+                "INSERT INTO distro_tree (distro_id, arch_id, variant) "
+                "VALUES (1, 1, 'Server')")
+            connection.execute(
+                "INSERT INTO job (owner_id, retention_tag_id, status, dirty_version, clean_version) "
+                "VALUES (1, 1, 'Scheduled', '', '2017-07-27 14:28:20')")
+            connection.execute(
+                "INSERT INTO recipe_set (job_id, status) "
+                "VALUES (1, 'Scheduled')")
+            connection.execute(
+                "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status) "
+                "VALUES ('machine_recipe', 1, 1, 'Scheduled')")
+        recipe = self.migration_session.query(Recipe).get(1)
+        # Recipe has been missed by past migration and has no installation row
+        self.assertIsNone(recipe.installation)
+        self.migration_session.close()
+
+        migration = DataMigration(name=u'insert-installation-row-for-scheduled-recipes-before-25')
+        finished = migration.migrate_one_batch(self.migration_metadata.bind)
+        self.assertTrue(finished)
+
+        recipe = self.migration_session.query(Recipe).get(1)
+        self.assertIsNotNone(recipe.installation)
+        self.assertEqual(recipe.installation.distro_tree_id, 1)
+        self.assertEqual(recipe.installation.arch.arch, u'i386')
+        self.assertEqual(recipe.installation.variant, u'Server')
+        self.assertEqual(recipe.installation.distro_name, u'RHEL6')
+        self.assertEqual(recipe.installation.osmajor, u'RedHatEnterpriseLinux6')
+        self.assertEqual(recipe.installation.osminor, u'9')
+        with self.migration_metadata.bind.connect() as connection:
+            self.assertEqual(1,
+                connection.scalar('SELECT count(*) FROM installation;'))
