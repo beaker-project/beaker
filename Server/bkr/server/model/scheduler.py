@@ -2973,12 +2973,24 @@ class GuestRecipe(Recipe):
         recipe.set("guestargs", "%s" % self.guestargs)
         if self.resource and self.resource.mac_address and not clone:
             recipe.set("mac_address", "%s" % self.resource.mac_address)
+        if not clone:
+            if self.installation and self.installation.tree_url:
+                recipe.set('location', self.installation.tree_url)
+            elif self.distro_tree and self.recipeset.lab_controller:
+                # We are producing XML for an old recipe provisioned prior to Beaker 25.
+                # We used to call reduced_install_options() to find the value 
+                # of the method= ksmeta var and use that to pick the right 
+                # distro tree URL. However that code path no longer works for 
+                # old recipes. This is a second-best attempt. Really, people 
+                # should not expect the location="" attribute to be reliable 
+                # after the guest recipe has completed.
+                installopts = InstallOptions.from_strings(self.ks_meta, '', '')
+                method = installopts.ks_meta.get('method', None)
+                location = self.distro_tree.url_in_lab(
+                        self.recipeset.lab_controller, scheme=method)
+                if location:
+                    recipe.set("location", location)
         if self.distro_tree and self.recipeset.lab_controller and not clone:
-            method = self.reduced_install_options().ks_meta.get('method', None)
-            location = self.distro_tree.url_in_lab(
-                    self.recipeset.lab_controller, scheme=method)
-            if location:
-                recipe.set("location", location)
             scheme_locations = {}
             for lca in self.distro_tree.lab_controller_assocs:
                 if lca.lab_controller == self.recipeset.lab_controller:
