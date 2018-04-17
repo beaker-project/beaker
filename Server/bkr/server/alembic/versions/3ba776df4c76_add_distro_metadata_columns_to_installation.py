@@ -63,7 +63,7 @@ def upgrade():
             INNER JOIN osversion ON osversion.id = distro.osversion_id
             INNER JOIN osmajor ON osmajor.id = osversion.osmajor_id
             LEFT OUTER JOIN installation ON installation.recipe_id = recipe.id
-            WHERE recipe.status IN ('New', 'Processed', 'Queued')
+            WHERE recipe.status IN ('New', 'Processed', 'Queued', 'Scheduled')
             AND installation.recipe_id is NULL;
             """)
 

@@ -1302,19 +1302,29 @@ class MigrationTest(unittest.TestCase):
                     "VALUES (1, 'Queued')")
             connection.execute(
                     "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status) "
+                    "VALUES ('machine_recipe', 1, 1, 'New')")
+            connection.execute(
+                    "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status) "
+                    "VALUES ('machine_recipe', 1, 1, 'Processed')")
+            connection.execute(
+                    "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status) "
                     "VALUES ('machine_recipe', 1, 1, 'Queued')")
+            connection.execute(
+                    "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status) "
+                    "VALUES ('machine_recipe', 1, 1, 'Scheduled')")
         # Do the schema upgrades
         upgrade_db(self.migration_metadata)
-        recipe = self.migration_session.query(Recipe).first()
-        self.assertIsNotNone(recipe.installation)
-        self.assertEqual(recipe.installation.distro_tree_id, 1)
-        self.assertEqual(recipe.installation.arch.arch, u'i386')
-        self.assertEqual(recipe.installation.variant, u'Server')
-        self.assertEqual(recipe.installation.distro_name, u'Tiara9.9')
-        self.assertEqual(recipe.installation.osmajor, u'Tiara9')
-        self.assertEqual(recipe.installation.osminor, u'9')
+        self.assertEqual(4, self.migration_session.query(Recipe).count())
+        for recipe in self.migration_session.query(Recipe).all():
+            self.assertIsNotNone(recipe.installation)
+            self.assertEqual(recipe.installation.distro_tree_id, 1)
+            self.assertEqual(recipe.installation.arch.arch, u'i386')
+            self.assertEqual(recipe.installation.variant, u'Server')
+            self.assertEqual(recipe.installation.distro_name, u'Tiara9.9')
+            self.assertEqual(recipe.installation.osmajor, u'Tiara9')
+            self.assertEqual(recipe.installation.osminor, u'9')
         with self.migration_metadata.bind.connect() as connection:
-            self.assertEqual(1,
+            self.assertEqual(4,
                 connection.scalar('SELECT count(*) FROM installation;'))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1159105
