@@ -163,7 +163,7 @@ class Process(object):
             env.update(self.env)
         try:
             discard_output = os.environ.get('DISCARD_SUBPROCESS_OUTPUT')
-            if discard_output:
+            if discard_output == '1':
                 devnull = open(os.devnull, 'w')
                 self.popen = subprocess.Popen(
                     self.args, stdout=devnull, stderr=devnull, env=env, cwd=self.exec_dir)
