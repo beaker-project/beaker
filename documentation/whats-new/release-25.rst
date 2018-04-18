@@ -279,3 +279,19 @@ Beaker 25.1
 * :issue:`1558828`: Fixed regression in which beakerd tried to assign a system
   again from a lab controller with not enough systems.
   (Contributed by Dan Callaghan)
+
+
+Beaker 25.2
+~~~~~~~~~~~
+
+* :issue:`1568217`: Fixed regression in beaker-provision which will fail with an
+  AttributeError if power commands were queued just before a Beaker 25
+  migration. (Contributed by Dan Callaghan)
+* :issue:`1568224`: beakerd would fail to generate an email notification for
+  jobs in the 'Scheduled' state after Beaker has been upgraded to 25.0. The
+  migration has been fixed to include scheduled jobs and add the necessary
+  installation row in the database.
+  (Contributed by Róman Joost)
+* :issue:`1568238`: Fixed regression in the result XML generation for guest
+  recipes.
+  (Contributed by Dan Callaghan)
