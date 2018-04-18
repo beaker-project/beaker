@@ -46,11 +46,11 @@ if command -v curl >/dev/null ; then
     # Older curl versions lack --retry
     if curl --help 2>&1 | grep -q .*--retry ; then
         function fetch() {
-            curl --retry 20 --remote-time -o "$1" "$2"
+            curl -L --retry 20 --remote-time -o "$1" "$2"
         }
     else
         function fetch() {
-            curl --remote-time -o "$1" "$2"
+            curl -L --remote-time -o "$1" "$2"
         }
     fi
 elif command -v wget >/dev/null ; then
@@ -100,11 +100,11 @@ if command -v curl >/dev/null ; then
     # Older curl versions lack --retry
     if curl --help 2>&1 | grep -q .*--retry ; then
         function fetch() {
-            curl --retry 20 --remote-time -o "$1" "$2"
+            curl -L --retry 20 --remote-time -o "$1" "$2"
         }
     else
         function fetch() {
-            curl --remote-time -o "$1" "$2"
+            curl -L --remote-time -o "$1" "$2"
         }
     fi
 elif command -v wget >/dev/null ; then
@@ -354,11 +354,11 @@ if command -v curl >/dev/null ; then
     # Older curl versions lack --retry
     if curl --help 2>&1 | grep -q .*--retry ; then
         function fetch() {
-            curl --retry 20 --remote-time -o "$1" "$2"
+            curl -L --retry 20 --remote-time -o "$1" "$2"
         }
     else
         function fetch() {
-            curl --remote-time -o "$1" "$2"
+            curl -L --remote-time -o "$1" "$2"
         }
     fi
 elif command -v wget >/dev/null ; then
