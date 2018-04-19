@@ -886,6 +886,29 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
         self.assertEquals(queued_commands[1]['netboot']['initrd_url'],
                 u'ftp://mylabmirror.example.invalid/Fedora23/s390x/pxeboot/initrd')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1568217
+    def test_netboot_parameters_for_pre_beaker_25_recipes(self):
+        with session.begin():
+            job = data_setup.create_job(arch=u's390x')
+            recipe = job.recipesets[0].recipes[0]
+            data_setup.mark_recipe_scheduled(recipe, lab_controller=self.lc)
+            recipe.provision()
+            recipe.waiting()
+            # Recipes which were provisioned prior to Beaker 25 but still had 
+            # queued commands at the time of the upgrade, will be missing 
+            # values for these newer columns.
+            recipe.installation.tree_url = None
+            recipe.installation.initrd_path = None
+            recipe.installation.kernel_path = None
+            recipe.installation.distro_name = None
+            recipe.installation.osmajor = None
+            recipe.installation.osminor = None
+            recipe.installation.variant = None
+            recipe.installation.arch = None
+        queued_commands = self.server.labcontrollers.get_queued_command_details()
+        self.assertEquals(queued_commands[1]['action'], 'configure_netboot')
+        self.assertEquals(queued_commands[1]['netboot']['arch'], 's390x')
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1348018
     def test_after_reboot_watchdog_killtime_extended(self):
         with session.begin():

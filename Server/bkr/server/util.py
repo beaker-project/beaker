@@ -158,8 +158,8 @@ def get_reports_engine():
                 if k.startswith('reports_engine.'):
                     engine_args[k[len('reports_engine.'):]] = v
             dburi = engine_args.pop('dburi')
-            log.debug('Creating reports_engine: %r %r', dburi, engine_args)
             _reports_engine = create_engine(dburi, **engine_args)
+            log.debug('Created reports_engine %r', _reports_engine)
         return _reports_engine
     else:
         log.debug('Using default engine for reports_engine')

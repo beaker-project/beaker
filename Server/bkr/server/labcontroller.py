@@ -466,13 +466,19 @@ class LabControllers(RPCRoot):
                     continue
 
                 d['netboot'] = {
-                    'arch': installation.arch.arch,
-                    # distro_tree_id is None for user-defined case
-                    'distro_tree_id': distro_tree.id if distro_tree else None,
                     'kernel_url': urlparse.urljoin(distro_tree_url, installation.kernel_path),
                     'initrd_url': urlparse.urljoin(distro_tree_url, installation.initrd_path),
                     'kernel_options': installation.kernel_options or '',
                 }
+                if distro_tree:
+                    d['netboot']['distro_tree_id'] = distro_tree.id
+                else:
+                    d['netboot']['distro_tree_id'] = None
+                if installation.arch:
+                    d['netboot']['arch'] = installation.arch.arch
+                else:
+                    # It must be a queued command left over after migrating from Beaker < 25.
+                    d['netboot']['arch'] = distro_tree.arch.arch
             result.append(d)
         return result
 
