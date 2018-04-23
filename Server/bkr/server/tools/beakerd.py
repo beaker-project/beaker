@@ -559,10 +559,11 @@ def provision_scheduled_recipeset(recipeset_id):
         try:
             recipe.waiting()
             recipe.provision()
-        except Exception, e:
+        except Exception as e:
             log.exception("Failed to provision recipeid %s", recipe.id)
-            recipe.recipeset.abort(u"Failed to provision recipeid %s, %s"
-                    % (recipe.id, e))
+            session.rollback()
+            session.begin()
+            recipe.recipeset.abort(u"Failed to provision recipeid %s, %s" % (recipe.id, e))
             return
 
 # Online data migration
