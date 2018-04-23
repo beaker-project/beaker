@@ -1476,3 +1476,69 @@ class MigrationTest(unittest.TestCase):
         with self.migration_metadata.bind.connect() as connection:
             self.assertEqual(1,
                 connection.scalar('SELECT count(*) FROM installation;'))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1568224
+    def test_scheduled_recipe_has_installation_column_after_upgrade_when_cancelled(self):
+        with self.migration_metadata.bind.connect() as connection:
+            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/25.sql'))
+            # add a queued job
+            connection.execute(
+                "INSERT INTO osmajor (id, osmajor) "
+                "VALUES (1, 'RedHatEnterpriseLinux6')")
+            connection.execute(
+                "INSERT INTO osversion (osmajor_id, osminor) "
+                "VALUES (1, 9)")
+            connection.execute(
+                "INSERT INTO distro (name, osversion_id) "
+                "VALUES ('RHEL6', 1)")
+            connection.execute(
+                "INSERT INTO distro_tree (distro_id, arch_id, variant) "
+                "VALUES (1, 1, 'Server')")
+            connection.execute(
+                "INSERT INTO job (owner_id, retention_tag_id, status, dirty_version, clean_version) "
+                "VALUES (1, 1, 'Installing', '', '2017-07-27 14:28:20')")
+            connection.execute(
+                "INSERT INTO recipe_set (job_id, status) "
+                "VALUES (1, 'Aborted')")
+            connection.execute(
+                "INSERT INTO recipe (id, type, recipe_set_id, distro_tree_id, status) "
+                "VALUES (1, 'machine_recipe', 1, 1, 'Cancelled')")
+            connection.execute(
+                "INSERT INTO recipe (id, type, recipe_set_id, distro_tree_id, status) "
+                "VALUES (2, 'machine_recipe', 1, 1, 'Aborted')")
+            connection.execute(
+                "INSERT INTO recipe (id, type, recipe_set_id, distro_tree_id, status) "
+                "VALUES (3, 'machine_recipe', 1, 1, 'Installing')")
+            connection.execute(
+                "INSERT INTO installation (created, recipe_id, distro_tree_id, variant, distro_name, initrd_path, kernel_path, osminor, osmajor, arch_id) "
+                "VALUES ('2018-03-02 05:21:45', 3, 1, 'Server', 'RHEL6', 'initrd.img', 'vmlinuz', '9', 'RedHatEnterpriseLinux6', 1)")
+            connection.execute(
+                "INSERT INTO recipe (id, type, recipe_set_id, distro_tree_id, status) "
+                "VALUES (4, 'machine_recipe', 1, 1, 'Waiting')")
+            connection.execute(
+                "INSERT INTO recipe (id, type, recipe_set_id, distro_tree_id, status) "
+                "VALUES (5, 'machine_recipe', 1, 1, 'Running')")
+            connection.execute(
+                "INSERT INTO recipe (id, type, recipe_set_id, distro_tree_id, status) "
+                "VALUES (6, 'machine_recipe', 1, 1, 'Scheduled')")
+        r1, r2, r3, r4, r5, r6 = self.migration_session.query(Recipe).all()
+        for recipe in [r1, r2, r4, r5, r6]:
+            self.assertIsNone(recipe.installation)
+        self.assertIsNotNone(r3.installation)
+        self.migration_session.close()
+
+        migration = DataMigration(name=u'insert-installation-row-for-recipes-before-25-take-2')
+        finished = migration.migrate_one_batch(self.migration_metadata.bind)
+        self.assertTrue(finished)
+
+        for recipe in self.migration_session.query(Recipe).all():
+            self.assertIsNotNone(recipe.installation, 'Installation row for recipeid %s (%s) should exist' % (recipe.id, recipe.status))
+            self.assertEqual(recipe.installation.distro_tree_id, 1)
+            self.assertEqual(recipe.installation.arch.arch, u'i386')
+            self.assertEqual(recipe.installation.variant, u'Server')
+            self.assertEqual(recipe.installation.distro_name, u'RHEL6')
+            self.assertEqual(recipe.installation.osmajor, u'RedHatEnterpriseLinux6')
+            self.assertEqual(recipe.installation.osminor, u'9')
+        with self.migration_metadata.bind.connect() as connection:
+            self.assertEqual(6,
+                connection.scalar('SELECT count(*) FROM installation;'))
