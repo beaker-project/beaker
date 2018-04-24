@@ -1,0 +1,83 @@
+[checksums]
+LiveOS/squashfs.img = sha256:99f63285d2455befa84efb038a6ad3fda7a82fdc68729ad93a7417588520c777
+addons/HighAvailability/repodata/repomd.xml = sha256:2749026fd2f24634af40ad6ac68c4f9199a03bbd416d8aefce996332f8479980
+addons/LoadBalancer/repodata/repomd.xml = sha256:967f8e55137c33a3ad48ee24b107492fd34c6f027103860ee8cc33f903ae3bdf
+addons/ResilientStorage/repodata/repomd.xml = sha256:3c0cd0b3b254b5e49d3a0f2f85d39c7abd0538fbd035ea67583ddbe39a0788e4
+images/boot.iso = sha256:5d0070b15404337c6e519d68c2c092131ff5840670825574dbe04873a1e7e69e
+images/pxeboot/initrd.img = sha256:39d3bb93c7b26c0299f1b9c9826bc1ad10221ef5278c72eec8691bea8cce402f
+images/pxeboot/vmlinuz = sha256:b142d69eebdd59e100e59ffbfe81a062f4760c024d4c908da89c00cec1bad1c8
+repodata/repomd.xml = sha256:ed257d4bca6ccbe128736ceb7b19fc466321db9f16e4dde88bd4f8e82e0355e7
+
+[general]
+; WARNING.0 = THIS SECTION IS DEPRECATED
+; WARNING.1 = See productmd (treeinfo(5)) documentation for more details about the current format
+arch = x86_64
+family = Red Hat Enterprise Linux
+name = Red Hat Enterprise Linux 7.0
+packagedir = Packages
+platforms = x86_64,xen
+repository = .
+timestamp = 1380519663
+variant = Server
+version = 7.0
+
+[header]
+version = 0.3
+
+[images-x86_64]
+boot.iso = images/boot.iso
+initrd = images/pxeboot/initrd.img
+kernel = images/pxeboot/vmlinuz
+
+[images-xen]
+initrd = images/pxeboot/initrd.img
+kernel = images/pxeboot/vmlinuz
+
+[product]
+name = Red Hat Enterprise Linux
+short = RHEL
+version = 7.0
+
+[stage2]
+mainimage = LiveOS/squashfs.img
+
+[tree]
+arch = x86_64
+build_timestamp = 1380519663
+platforms = x86_64,xen
+variants = Server
+
+[variant-Server]
+id = Server
+name = Server
+packages = Packages
+repository = .
+type = variant
+uid = Server
+variants = Server-HighAvailability,Server-LoadBalancer,Server-ResilientStorage
+
+[variant-Server-HighAvailability]
+id = HighAvailability
+name = High Availability
+packages = addons/HighAvailability
+repository = addons/HighAvailability
+type = addon
+uid = Server-HighAvailability
+
+[variant-Server-LoadBalancer]
+id = LoadBalancer
+name = Load Balancer
+packages = addons/LoadBalancer
+repository = addons/LoadBalancer
+type = addon
+uid = Server-LoadBalancer
+
+[variant-Server-ResilientStorage]
+id = ResilientStorage
+name = Resilient Storage
+packages = addons/ResilientStorage
+repository = addons/ResilientStorage
+type = addon
+uid = Server-ResilientStorage
+
+

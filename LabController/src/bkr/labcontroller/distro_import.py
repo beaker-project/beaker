@@ -38,6 +38,16 @@ def url_exists(url):
             raise
     return True
 
+def compose_status_matches_expected(url, expected):
+    status = None
+    try:
+        f = urllib2.urlopen(url)
+        status = f.read()
+        f.close()
+    except urllib2.URLError:
+        return False
+    return status.strip() == expected
+
 
 class IncompleteTree(BX):
     """
@@ -663,9 +673,19 @@ sources = Workstation/source/SRPMS
                 logging.warn('%s-debuginfo repo found in .composeinfo but does not exist', variant)
         return repos
 
+    def check_input(self, options):
+        status_url = urlparse.urljoin(self.parser.url.rstrip('/'), 'STATUS')
+        self.check_compose_status_and_raise(options.skip_unless_status, status_url)
+
+    def check_compose_status_and_raise(self, expected_status, status_url):
+        if not expected_status:
+            return
+
+        if not compose_status_matches_expected(status_url, expected_status):
+            raise BX('Compose at %s is not %s' % (status_url, expected_status))
+
     def process(self, urls, options):
         exit_status = 0
-
         self.options = options
         self.scheduler = SchedulerProxy(self.options)
         self.distro_trees = []
@@ -1913,6 +1933,9 @@ def main():
     description = """Imports distro(s) from the given distro_url.  Valid distro_urls are nfs://, http:// and ftp://.  A primary distro_url of either http:// or ftp:// must be specified. In order for an import to succeed a .treeinfo or a .composeinfo must be present at the distro_url or you can do what is called a "naked" import if you specify the following arguments: --family, --version, --name, --arch, --kernel, --initrd. Only one tree can be imported at a time when doing a naked import."""
 
     parser = OptionParser(usage=usage, description=description)
+    parser.add_option("--skip-unless-status",
+                      default=None,
+                      help="Consume STATUS file and error if STATUS is not equal to the file contents")
     parser.add_option("-j", "--json",
                       default=False,
                       action='store_true',
