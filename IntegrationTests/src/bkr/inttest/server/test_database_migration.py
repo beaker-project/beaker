@@ -1408,15 +1408,12 @@ class MigrationTest(unittest.TestCase):
             connection.execute(
                 "INSERT INTO recipe_set (job_id, status) "
                 "VALUES (1, 'Queued')")
-            # should create an entry in the installation table during migration
             connection.execute(
                 "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status) "
                 "VALUES ('machine_recipe', 1, 1, 'Queued')")
-            # should create an entry in the installation table during migration
             connection.execute(
                 "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status) "
                 "VALUES ('machine_recipe', 1, 1, 'Processed')")
-            # should not create an installation entry during migration
             connection.execute(
                 "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status) "
                 "VALUES ('machine_recipe', 1, 1, 'Aborted')")
@@ -1427,7 +1424,7 @@ class MigrationTest(unittest.TestCase):
         # All is fixed upgrade again
         upgrade_db(self.migration_metadata)
         with self.migration_metadata.bind.connect() as connection:
-            self.assertEqual(2,
+            self.assertEqual(3,
                 connection.scalar('SELECT count(*) FROM installation;'))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1568224
