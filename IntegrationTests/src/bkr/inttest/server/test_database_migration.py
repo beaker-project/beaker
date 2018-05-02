@@ -1461,7 +1461,13 @@ class MigrationTest(unittest.TestCase):
         self.assertIsNone(recipe.installation)
         self.migration_session.close()
 
+        # This migration has become a NOOP
         migration = DataMigration(name=u'insert-installation-row-for-scheduled-recipes-before-25')
+        finished = migration.migrate_one_batch(self.migration_metadata.bind)
+        self.assertTrue(finished)
+
+        # This is the right data migration
+        migration = DataMigration(name=u'insert-installation-row-for-recipes-before-25-take-2')
         finished = migration.migrate_one_batch(self.migration_metadata.bind)
         self.assertTrue(finished)
 
