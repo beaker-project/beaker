@@ -435,7 +435,7 @@ def schedule_recipe_on_system(recipe, system):
     recipe.schedule()
     recipe.createRepo()
     recipe.recipeset.lab_controller = system.lab_controller
-    recipe.systems = []
+    recipe.clear_candidate_systems()
     # Create the watchdog without an Expire time.
     log.debug("Created watchdog for recipe id: %s and system: %s" % (recipe.id, system))
     recipe.watchdog = Watchdog()
@@ -498,7 +498,7 @@ def provision_virt_recipe(recipe_id):
         vm.instance_created = datetime.utcnow()
         try:
             recipe.createRepo()
-            recipe.systems = []
+            recipe.clear_candidate_systems()
             recipe.watchdog = Watchdog()
             recipe.resource = vm
             recipe.recipeset.lab_controller = manager.lab_controller

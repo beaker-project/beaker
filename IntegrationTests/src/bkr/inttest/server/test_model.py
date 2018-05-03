@@ -1907,6 +1907,14 @@ class RecipeTest(DatabaseTestCase):
                 urlparse.urljoin(logs[0].base, logs[0].get('href')),
                 get_server_base() + 'recipes/%s/logs/asdf/log.txt' % recipe.id)
 
+    def test_clear_candidate_systems(self):
+        recipe = data_setup.create_recipe()
+        data_setup.create_job_for_recipes([recipe])
+        recipe.systems = [data_setup.create_system()]
+        session.flush()
+        recipe.clear_candidate_systems()
+        self.assertEquals(recipe.systems, [])
+
 class CheckDynamicVirtTest(DatabaseTestCase):
 
     def setUp(self):
