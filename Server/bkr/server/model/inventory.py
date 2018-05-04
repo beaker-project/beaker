@@ -1612,7 +1612,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             user = identity.current.user
         except Exception:
             user = None
-        activity = Command(user=user, service=service,
+        activity = Command(system=self, user=user, service=service,
                 action=action, status=CommandStatus.queued)
         if installation:
             activity.installation = installation
@@ -1620,7 +1620,12 @@ class System(DeclarativeMappedObject, ActivityMixin):
             activity.quiescent_period = quiescent_period
         if delay:
             activity.delay_until = datetime.utcnow() + timedelta(seconds=delay)
-        self.command_queue.insert(0, activity)
+        session.flush()
+        # Force the 'command_queue' attribute to be re-loaded from the db if
+        # anything else accesses it later, since SQLAlchemy will have put the
+        # newly inserted command at the end instead of at the front where we
+        # expect it to be, according to the custom order_by on 'command_queue'.
+        session.expire(self, ['command_queue'])
         return activity
 
     def __repr__(self):
