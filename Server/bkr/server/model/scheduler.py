@@ -1459,7 +1459,7 @@ class RetentionTag(BeakerTag):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, ForeignKey('beaker_tag.id', onupdate='CASCADE',
             ondelete='CASCADE'), primary_key=True)
-    is_default = Column('default_', Boolean)
+    is_default = Column('default_', Boolean(create_constraint=False))
     expire_in_days = Column(Integer, default=0, nullable=False)
     needs_product = Column(Boolean, default=False, nullable=False)
     __mapper_args__ = {'polymorphic_identity': u'retention_tag'}
