@@ -47,7 +47,8 @@ class Activity(DeclarativeMappedObject):
                 self.service = identity.current.proxied_by_user.user_name
         except identity.RequestRequiredException:
             pass
-        self.field_name = field_name
+        field_name_value_max_length = object_mapper(self).c.field_name.type.length
+        self.field_name = field_name[:field_name_value_max_length]
         self.action = action
         # These values are likely to be truncated by MySQL, so let's make sure 
         # we don't end up with invalid UTF-8 chars at the end
