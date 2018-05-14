@@ -2660,7 +2660,7 @@ class Recipe(TaskBase, ActivityMixin):
         self.installation.kernel_options = install_options.kernel_options_str
         self.installation.rendered_kickstart = rendered_kickstart
         if isinstance(self.resource, SystemResource):
-            self.resource.system.installations.append(self.installation)
+            self.installation.system = self.resource.system
             self.resource.system.configure_netboot(installation=self.installation,
                     service=u'Scheduler')
             self.resource.system.action_power(action=u'reboot',
