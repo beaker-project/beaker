@@ -1013,8 +1013,8 @@ class MigrationTest(unittest.TestCase):
 
             # insert synthetic data into tg_user
             connection.execute(
-                "INSERT INTO tg_user (user_id, user_name, display_name, email_address, disabled, removed) "
-                "VALUES (2, 'bob', 'Bob', 'bob@example.com', 1, '2016-01-01 01:01:01')")
+                "INSERT INTO tg_user (user_id, user_name, display_name, email_address, disabled, removed, use_old_job_page) "
+                "VALUES (2, 'bob', 'Bob', 'bob@example.com', 1, '2015-12-01 15:43:28', 0)")
 
         # run migration
         upgrade_db(self.migration_metadata)
@@ -1174,8 +1174,8 @@ class MigrationTest(unittest.TestCase):
                     "INSERT INTO job (owner_id, retention_tag_id, dirty_version, clean_version, deleted) "
                     "VALUES (1, 1, '', '', '2017-07-27 14:28:20')")
             connection.execute(
-                    "INSERT INTO recipe_set (job_id, queue_time) "
-                    "VALUES (1, '2015-11-09 17:03:04')")
+                    "INSERT INTO recipe_set (job_id, queue_time, waived) "
+                    "VALUES (1, '2015-11-09 17:03:04', 0)")
             connection.execute(
                     "INSERT INTO recipe (type, recipe_set_id, autopick_random) "
                     "VALUES ('machine_recipe', 1, FALSE)")
@@ -1296,29 +1296,29 @@ class MigrationTest(unittest.TestCase):
                     "INSERT INTO osversion (osmajor_id, osminor) "
                     "VALUES (1, 9)")
             connection.execute(
-                    "INSERT INTO distro (name, osversion_id) "
-                    "VALUES ('Tiara9.9', 1)")
+                    "INSERT INTO distro (name, osversion_id, date_created) "
+                    "VALUES ('Tiara9.9', 1, '2017-07-27 14:28:20')")
             connection.execute(
-                    "INSERT INTO distro_tree (distro_id, arch_id, variant) "
-                    "VALUES (1, 1, 'Server')")
+                    "INSERT INTO distro_tree (distro_id, arch_id, variant, date_created) "
+                    "VALUES (1, 1, 'Server', '2017-07-27 14:28:20')")
             connection.execute(
                     "INSERT INTO job (owner_id, retention_tag_id, status, dirty_version, clean_version) "
-                    "VALUES (1, 1, 'Queued', '', '2017-07-27 14:28:20')")
+                    "VALUES (1, 1, 'Queued', '', '')")
             connection.execute(
-                    "INSERT INTO recipe_set (job_id, status) "
-                    "VALUES (1, 'Queued')")
+                    "INSERT INTO recipe_set (job_id, status, queue_time, waived) "
+                    "VALUES (1, 'Queued', '2015-11-05 16:31:01', 0)")
             connection.execute(
-                    "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status) "
-                    "VALUES ('machine_recipe', 1, 1, 'New')")
+                    "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status, autopick_random) "
+                    "VALUES ('machine_recipe', 1, 1, 'New', FALSE)")
             connection.execute(
-                    "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status) "
-                    "VALUES ('machine_recipe', 1, 1, 'Processed')")
+                    "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status, autopick_random) "
+                    "VALUES ('machine_recipe', 1, 1, 'Processed', FALSE)")
             connection.execute(
-                    "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status) "
-                    "VALUES ('machine_recipe', 1, 1, 'Queued')")
+                    "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status, autopick_random) "
+                    "VALUES ('machine_recipe', 1, 1, 'Queued', FALSE)")
             connection.execute(
-                    "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status) "
-                    "VALUES ('machine_recipe', 1, 1, 'Scheduled')")
+                    "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status, autopick_random) "
+                    "VALUES ('machine_recipe', 1, 1, 'Scheduled', FALSE)")
         # Do the schema upgrades
         upgrade_db(self.migration_metadata)
         self.assertEqual(4, self.migration_session.query(Recipe).count())
@@ -1358,8 +1358,8 @@ class MigrationTest(unittest.TestCase):
                 "INSERT INTO retention_tag (id, expire_in_days, needs_product) "
                 "VALUES (1, 0, 0)")
             connection.execute(
-                "INSERT INTO tg_user (user_id, user_name, display_name, email_address, disabled, removed) "
-                "VALUES (1, 'bob', 'Bob', 'bob@example.com', 1, '2015-12-01 15:43:28')")
+                "INSERT INTO tg_user (user_id, user_name, display_name, email_address, disabled, removed, use_old_job_page, notify_job_completion, notify_broken_system, notify_system_loan, notify_group_membership, notify_reservesys) "
+                "VALUES (1, 'bob', 'Bob', 'bob@example.com', 1, '2015-12-01 15:43:28', 0, 0, 0, 0, 0, 0)")
             connection.execute(
                 "INSERT INTO job (owner_id, retention_tag_id, dirty_version, clean_version) "
                 "VALUES (1, 1, '', '')")
@@ -1367,11 +1367,23 @@ class MigrationTest(unittest.TestCase):
                 "INSERT INTO arch (id, arch) "
                 "VALUES (2, 'i386')")
             connection.execute(
-                "INSERT INTO recipe_set (job_id, queue_time) "
-                "VALUES (1, '2015-11-05 16:31:01')")
+                "INSERT INTO recipe_set (job_id, queue_time, waived) "
+                "VALUES (1, '2015-11-05 16:31:01', 0)")
             connection.execute(
                 "INSERT INTO recipe (type, recipe_set_id, autopick_random) "
                 "VALUES ('machine_recipe', 1, FALSE)")
+            connection.execute(
+                "INSERT INTO osmajor (id, osmajor) "
+                "VALUES (1, 'RedHatEnterpriseLinux6')")
+            connection.execute(
+                "INSERT INTO osversion (osmajor_id, osminor) "
+                "VALUES (1, 9)")
+            connection.execute(
+                "INSERT INTO distro (name, osversion_id, date_created) "
+                "VALUES ('RHEL6', 1, '2015-12-01 15:43:28')")
+            connection.execute(
+                "INSERT INTO distro_tree (distro_id, arch_id, variant, date_created) "
+                "VALUES (1, 2, 'Server', '2015-12-01 15:43:28')")
             connection.execute(
                 "INSERT INTO installation (id, created, recipe_id, tree_url, initrd_path, kernel_path, osmajor, arch_id) "
                 "VALUES (1, '2018-03-02 05:21:45', 1, 'http://download.test/Fedora-27/os', 'initrd.img', 'vmlinuz', 'Fedora27', 2)")
@@ -1397,26 +1409,26 @@ class MigrationTest(unittest.TestCase):
                 "INSERT INTO osversion (osmajor_id, osminor) "
                 "VALUES (1, 9)")
             connection.execute(
-                "INSERT INTO distro (name, osversion_id) "
-                "VALUES ('Tiara9.9', 1)")
+                "INSERT INTO distro (name, osversion_id, date_created) "
+                "VALUES ('Tiara9.9', 1, '2017-07-27 14:28:20')")
             connection.execute(
-                "INSERT INTO distro_tree (distro_id, arch_id, variant) "
-                "VALUES (1, 1, 'Server')")
+                "INSERT INTO distro_tree (distro_id, arch_id, variant, date_created) "
+                "VALUES (1, 1, 'Server', '2017-07-27 14:28:20')")
             connection.execute(
                 "INSERT INTO job (owner_id, retention_tag_id, status, dirty_version, clean_version) "
-                "VALUES (1, 1, 'Queued', '', '2017-07-27 14:28:20')")
+                "VALUES (1, 1, 'Queued', '', '')")
             connection.execute(
-                "INSERT INTO recipe_set (job_id, status) "
-                "VALUES (1, 'Queued')")
+                "INSERT INTO recipe_set (job_id, status, queue_time, waived) "
+                "VALUES (1, 'Queued', '2015-11-05 16:31:01', 0)")
             connection.execute(
-                "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status) "
-                "VALUES ('machine_recipe', 1, 1, 'Queued')")
+                "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status, autopick_random) "
+                "VALUES ('machine_recipe', 1, 1, 'Queued', FALSE)")
             connection.execute(
-                "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status) "
-                "VALUES ('machine_recipe', 1, 1, 'Processed')")
+                "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status, autopick_random) "
+                "VALUES ('machine_recipe', 1, 1, 'Processed', FALSE)")
             connection.execute(
-                "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status) "
-                "VALUES ('machine_recipe', 1, 1, 'Aborted')")
+                "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status, autopick_random) "
+                "VALUES ('machine_recipe', 1, 1, 'Aborted', FALSE)")
         # Do the schema upgrades
         upgrade_db(self.migration_metadata)
         # Scenario: An error occurred so lets downgrade again to the last stable version
@@ -1439,20 +1451,20 @@ class MigrationTest(unittest.TestCase):
                 "INSERT INTO osversion (osmajor_id, osminor) "
                 "VALUES (1, 9)")
             connection.execute(
-                "INSERT INTO distro (name, osversion_id) "
-                "VALUES ('RHEL6', 1)")
+                "INSERT INTO distro (name, osversion_id, date_created) "
+                "VALUES ('RHEL6', 1, '2017-07-27 14:28:20')")
             connection.execute(
-                "INSERT INTO distro_tree (distro_id, arch_id, variant) "
-                "VALUES (1, 1, 'Server')")
+                "INSERT INTO distro_tree (distro_id, arch_id, variant, date_created) "
+                "VALUES (1, 1, 'Server', '2017-07-27 14:28:20')")
             connection.execute(
                 "INSERT INTO job (owner_id, retention_tag_id, status, dirty_version, clean_version) "
-                "VALUES (1, 1, 'Scheduled', '', '2017-07-27 14:28:20')")
+                "VALUES (1, 1, 'Scheduled', '', '')")
             connection.execute(
-                "INSERT INTO recipe_set (job_id, status) "
-                "VALUES (1, 'Scheduled')")
+                "INSERT INTO recipe_set (job_id, status, queue_time, waived) "
+                "VALUES (1, 'Scheduled', '2015-11-05 16:31:01', 0)")
             connection.execute(
-                "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status) "
-                "VALUES ('machine_recipe', 1, 1, 'Scheduled')")
+                "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status, autopick_random) "
+                "VALUES ('machine_recipe', 1, 1, 'Scheduled', FALSE)")
         recipe = self.migration_session.query(Recipe).get(1)
         # Recipe has been missed by past migration and has no installation row
         self.assertIsNone(recipe.installation)
@@ -1492,38 +1504,38 @@ class MigrationTest(unittest.TestCase):
                 "INSERT INTO osversion (osmajor_id, osminor) "
                 "VALUES (1, 9)")
             connection.execute(
-                "INSERT INTO distro (name, osversion_id) "
-                "VALUES ('RHEL6', 1)")
+                "INSERT INTO distro (name, osversion_id, date_created) "
+                "VALUES ('RHEL6', 1, '2017-07-27 14:28:20')")
             connection.execute(
-                "INSERT INTO distro_tree (distro_id, arch_id, variant) "
-                "VALUES (1, 1, 'Server')")
+                "INSERT INTO distro_tree (distro_id, arch_id, variant, date_created) "
+                "VALUES (1, 1, 'Server', '2017-07-27 14:28:20')")
             connection.execute(
                 "INSERT INTO job (owner_id, retention_tag_id, status, dirty_version, clean_version) "
-                "VALUES (1, 1, 'Installing', '', '2017-07-27 14:28:20')")
+                "VALUES (1, 1, 'Installing', '', '')")
             connection.execute(
-                "INSERT INTO recipe_set (job_id, status) "
-                "VALUES (1, 'Aborted')")
+                "INSERT INTO recipe_set (job_id, status, queue_time, waived) "
+                "VALUES (1, 'Aborted', '2015-11-05 16:31:01', 0)")
             connection.execute(
-                "INSERT INTO recipe (id, type, recipe_set_id, distro_tree_id, status) "
-                "VALUES (1, 'machine_recipe', 1, 1, 'Cancelled')")
+                "INSERT INTO recipe (id, type, recipe_set_id, distro_tree_id, status, autopick_random) "
+                "VALUES (1, 'machine_recipe', 1, 1, 'Cancelled', FALSE)")
             connection.execute(
-                "INSERT INTO recipe (id, type, recipe_set_id, distro_tree_id, status) "
-                "VALUES (2, 'machine_recipe', 1, 1, 'Aborted')")
+                "INSERT INTO recipe (id, type, recipe_set_id, distro_tree_id, status, autopick_random) "
+                "VALUES (2, 'machine_recipe', 1, 1, 'Aborted', FALSE)")
             connection.execute(
-                "INSERT INTO recipe (id, type, recipe_set_id, distro_tree_id, status) "
-                "VALUES (3, 'machine_recipe', 1, 1, 'Installing')")
+                "INSERT INTO recipe (id, type, recipe_set_id, distro_tree_id, status, autopick_random) "
+                "VALUES (3, 'machine_recipe', 1, 1, 'Installing', FALSE)")
             connection.execute(
                 "INSERT INTO installation (created, recipe_id, distro_tree_id, variant, distro_name, initrd_path, kernel_path, osminor, osmajor, arch_id) "
                 "VALUES ('2018-03-02 05:21:45', 3, 1, 'Server', 'RHEL6', 'initrd.img', 'vmlinuz', '9', 'RedHatEnterpriseLinux6', 1)")
             connection.execute(
-                "INSERT INTO recipe (id, type, recipe_set_id, distro_tree_id, status) "
-                "VALUES (4, 'machine_recipe', 1, 1, 'Waiting')")
+                "INSERT INTO recipe (id, type, recipe_set_id, distro_tree_id, status, autopick_random) "
+                "VALUES (4, 'machine_recipe', 1, 1, 'Waiting', FALSE)")
             connection.execute(
-                "INSERT INTO recipe (id, type, recipe_set_id, distro_tree_id, status) "
-                "VALUES (5, 'machine_recipe', 1, 1, 'Running')")
+                "INSERT INTO recipe (id, type, recipe_set_id, distro_tree_id, status, autopick_random) "
+                "VALUES (5, 'machine_recipe', 1, 1, 'Running', FALSE)")
             connection.execute(
-                "INSERT INTO recipe (id, type, recipe_set_id, distro_tree_id, status) "
-                "VALUES (6, 'machine_recipe', 1, 1, 'Scheduled')")
+                "INSERT INTO recipe (id, type, recipe_set_id, distro_tree_id, status, autopick_random) "
+                "VALUES (6, 'machine_recipe', 1, 1, 'Scheduled', FALSE)")
         r1, r2, r3, r4, r5, r6 = self.migration_session.query(Recipe).all()
         for recipe in [r1, r2, r4, r5, r6]:
             self.assertIsNone(recipe.installation)
