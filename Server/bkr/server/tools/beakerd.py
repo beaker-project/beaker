@@ -181,10 +181,7 @@ def process_new_recipe(recipe_id):
 
 def queue_processed_recipesets(*args):
     work_done = False
-    recipesets = RecipeSet.query.join(RecipeSet.job)\
-            .filter(not_(Job.is_deleted))\
-            .filter(not_(RecipeSet.recipes.any(
-                Recipe.status != TaskStatus.processed)))\
+    recipesets = RecipeSet.by_recipe_status(TaskStatus.processed)\
             .order_by(RecipeSet.priority.desc())\
             .order_by(RecipeSet.id)
     for rs_id, in recipesets.values(RecipeSet.id):
@@ -534,10 +531,7 @@ def provision_scheduled_recipesets(*args):
      Running.
     """
     work_done = False
-    recipesets = RecipeSet.query.join(RecipeSet.job)\
-            .filter(not_(Job.is_deleted))\
-            .filter(not_(RecipeSet.recipes.any(
-                Recipe.status != TaskStatus.scheduled)))
+    recipesets = RecipeSet.by_recipe_status(TaskStatus.scheduled)
     for rs_id, in recipesets.values(RecipeSet.id):
         session.begin()
         try:

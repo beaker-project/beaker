@@ -1748,6 +1748,25 @@ class RecipeSet(TaskBase, ActivityMixin):
         queri = RecipeSet.query.outerjoin('job').filter(Job.id == job_id)
         return queri
 
+    @classmethod
+    def by_recipe_status(cls, status):
+        """
+        Returns a query of RecipeSet objects, filtered to those where *all*
+        the recipes in the set have the given status.
+
+        Selecting any column other than recipe_set_id from this query is not
+        likely to work.
+        """
+        # Previously we used a NOT EXISTS for this but it was too slow because
+        # MySQL did not pick the recipe.status index. bz1573081
+        all_recipes = aliased(Recipe, name='all_recipes')
+        matching_recipes = aliased(Recipe, name='matching_recipes')
+        return RecipeSet.query\
+            .join(all_recipes)\
+            .join(matching_recipes, and_(matching_recipes.recipeset, matching_recipes.status == status))\
+            .group_by(RecipeSet.id)\
+            .having(func.count(all_recipes.id.distinct()) == func.count(matching_recipes.id.distinct()))
+
     def cancel(self, msg=None):
         """
         Method to cancel all unfinished recipes in this recipe set.
