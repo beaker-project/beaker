@@ -295,3 +295,24 @@ Beaker 25.2
 * :issue:`1568238`: Fixed regression in the result XML generation for guest
   recipes.
   (Contributed by Dan Callaghan)
+
+Beaker 25.3
+~~~~~~~~~~~
+
+* :issue:`1568224`: The online migration in 25.2 did not migrate all
+  pending jobs that were missing an installation row. Due to this we
+  found an issue with beakerd incorrectly suppressing an exception.
+  Mishandling this execption caused an SQL transaction to be commited
+  when it should have been rolled back. The end result of this is that
+  beakerd would crash due to recipies being in a half provisioned state.
+  The recipies have been aborted and the exception handling has been fixed.
+  (Contributed by Róman Joost)
+* :issue:`1574311`: The update_dirty_job() routine in the scheduler now
+  avoids an unnecessary SELECT query. This shaves several seconds off
+  each iteration on large Beaker installations.
+  (Contributed by Dan Callaghan)
+* :issue:`1568648`: The invocation of curl in the generated kickstart would
+  not follow redirects, causing the installation to abort if the stage2 image
+  was just a HTML file. This has been fixed and curl will follow a redirect
+  to download the image.
+  (Contributed by Róman Joost)
