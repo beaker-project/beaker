@@ -19,6 +19,7 @@ from bkr.server.model import TaskStatus, Job, System, User, \
         MachineRecipe, GuestRecipe, LabControllerDistroTree, DistroTree, \
         TaskResult, Command, CommandStatus, GroupMembershipType, \
         RecipeVirtStatus, Arch
+from bkr.server.installopts import InstallOptions
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import not_
 from turbogears import config
@@ -42,6 +43,14 @@ class TestBeakerd(DatabaseTestCase):
     def setUp(self):
         with session.begin():
             self.lab_controller = data_setup.create_labcontroller()
+            # Other tests might have left behind recipes which will interfere
+            # with mocking behaviour in these tests. Remove and cancel them so
+            # they don't interfere.
+            running = Recipe.query.filter(not_(Recipe.status.in_(
+                [s for s in TaskStatus if s.finished])))
+            for recipe in running:
+                recipe.recipeset.cancel()
+                recipe.recipeset.job.update_status()
         self.task_id, self.rpm_name = self.add_example_task()
 
     def tearDown(self):
@@ -1838,6 +1847,48 @@ class TestBeakerd(DatabaseTestCase):
         with session.begin():
             job = Job.query.get(job_id)
             self.assertEqual(job.status, TaskStatus.waiting)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1568224c12
+    @patch.object(Recipe, 'reduced_install_options')
+    def test_beakerd_aborts_recipe_when_provision_fails(self, recipe_mock):
+        # provisioning the first recipe will succeed, but the second will blow up with an AttributeError
+        recipe_mock.side_effect = [InstallOptions.from_strings('', '', ''),
+                                   AttributeError("'NoneType' object has no attribute 'distro_name'")]
+
+        with session.begin():
+            lc = data_setup.create_labcontroller()
+            data_setup.create_system(lab_controller=lc)
+            data_setup.create_system(lab_controller=lc)
+            job = data_setup.create_job(num_recipes=2)
+            session.flush()
+            job_id = job.id
+
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        beakerd.schedule_pending_systems()
+        beakerd.update_dirty_jobs()
+        beakerd.provision_scheduled_recipesets()
+        beakerd.update_dirty_jobs()
+
+        with session.begin():
+            job = Job.query.get(job_id)
+            self.assertFalse(job.is_dirty)
+            self.assertEqual(1, len(job.recipesets))
+            recipeset = job.recipesets[0]
+            self.assertEqual(recipeset.status, TaskStatus.aborted)
+            self.assertEqual(2, len(recipeset.recipes))
+            r1, r2 = recipeset.recipes
+            self.assertEqual(r1.status, TaskStatus.aborted)
+            self.assertEqual(r2.status, TaskStatus.aborted)
+
+            msg = u"Failed to provision recipeid %s, 'NoneType' object has no attribute 'distro_name'" % r2.id
+            self.assertEqual(1, len(r1.tasks))
+            self.assertEqual(msg, r1.tasks[0].results[0].log)
+            self.assertEqual(1, len(r2.tasks))
+            self.assertEqual(msg, r2.tasks[0].results[0].log)
+
 
 class TestProvisionVirtRecipes(DatabaseTestCase):
 

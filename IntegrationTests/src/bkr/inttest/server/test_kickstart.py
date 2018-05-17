@@ -9,6 +9,13 @@ import re
 import unittest2 as unittest
 import pipes
 import crypt
+import sys
+import os
+import os.path
+import tempfile
+import pkg_resources
+import subprocess
+import shutil
 from bkr.server import dynamic_virt
 from bkr.server.model import session, DistroTreeRepo, LabControllerDistroTree, \
         Provision, SSHPubKey, ProvisionFamily, OSMajor, Arch, \
@@ -17,10 +24,59 @@ from bkr.server.model.distrolibrary import DistroTreeImage, KernelType
 from bkr.server.model.types import ImageType
 from bkr.server.kickstart import template_env, generate_kickstart
 from bkr.server.jobs import Jobs
-from bkr.inttest import data_setup, get_server_base, with_transaction
+from bkr.inttest import data_setup, get_server_base, with_transaction, Process
 from bkr.inttest.kickstart_helpers import create_rhel62, create_rhel62_server_x86_64, \
     create_x86_64_automated, create_lab_controller, compare_expected, \
     jinja_choice_loader, create_user
+
+
+_snippets_dir = pkg_resources.resource_filename('bkr.server', 'snippets')
+_http_server = pkg_resources.resource_filename('bkr.inttest', 'http_server.py')
+
+
+class HTTPKickstartTest(unittest.TestCase):
+
+    maxDiff = None
+
+    def setUp(self):
+        self.http_base_dir = tempfile.mkdtemp()
+        self.template_dir = tempfile.mkdtemp(dir=self.http_base_dir)
+        self.addCleanup(shutil.rmtree, self.http_base_dir, ignore_errors=True)
+        self.http_server = Process('http_server.py',
+                args=[sys.executable, _http_server, '--base', self.http_base_dir],
+                listen_port=19998)
+        self.http_server.start()
+        self.http_server_url = 'http://localhost:19998/'
+
+    def tearDown(self):
+        session.close()
+        self.http_server.stop()
+
+    def test_fetch_curl_follows_redirect(self):
+        expected_file_contents = 'Welcome to Beaker by redirect'
+        with open(os.path.join(self.http_base_dir, 'liveimg.txt'), 'w') as f:
+            f.write(expected_file_contents)
+
+        img_url = os.path.join(self.http_server_url, 'redirect', '302', 'liveimg.txt')
+        snippet_template = template_env.get_template(os.path.join('snippets', 'fetch_wrapper'))
+        with tempfile.NamedTemporaryFile(dir=self.template_dir) as f:
+            context = {}
+            context['snippet'] = snippet_template.render({})
+            context['url'] = img_url
+
+            template = template_env.from_string("""
+            set -xe
+            {{ snippet }}
+            fetch - {{ url }}""")
+            result = template.render(context)
+            f.write(result)
+            f.flush()
+
+            out, err = subprocess.Popen(
+                ['/bin/sh', f.name], stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT).communicate()
+        self.assertIn(expected_file_contents, out)
+
 
 # Not inheriting from DatabaseTestCase here because we have class-level setup,
 # so we don't want to expunge it from the session after each case

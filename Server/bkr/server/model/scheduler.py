@@ -2399,7 +2399,7 @@ class Recipe(TaskBase, ActivityMixin):
             if not task.is_finished():
                 task._abort_cancel(status, msg)
         # clear rows in system_recipe_map
-        self.systems = []
+        self.clear_candidate_systems()
 
     def abort(self, msg=None):
         """
@@ -2668,6 +2668,16 @@ class Recipe(TaskBase, ActivityMixin):
         if self.watchdog:
             session.delete(self.watchdog)
             self.watchdog = None
+
+    def clear_candidate_systems(self):
+        # The simple approach would be:
+        # self.systems = []
+        # but that triggers a SELECT of all the rows
+        # and then a DELETE of each one indvidually. This is faster.
+        query = delete(system_recipe_map)\
+                .where(system_recipe_map.c.recipe_id == self.id)
+        session.connection(self.__class__).execute(query)
+        session.expire(self, ['systems'])
 
     def task_info(self):
         """
@@ -3461,7 +3471,7 @@ class RecipeTask(TaskBase):
         duration = None
         if self.finish_time and self.start_time:
             duration =  self.finish_time - self.start_time
-        elif self.watchdog and self.watchdog.kill_time:
+        elif self.start_time and self.watchdog and self.watchdog.kill_time:
             delta = self.watchdog.kill_time - datetime.utcnow().replace(microsecond=0)
             duration = 'Time Remaining %s' % delta
         return duration
