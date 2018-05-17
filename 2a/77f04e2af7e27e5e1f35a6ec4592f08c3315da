@@ -1,0 +1,9 @@
+Ready-for-Checks+1: Matt Tyson <mtyson@redhat.com>
+Code-Review+1: Roman Joost <rjoost@redhat.com>
+Code-Review+2: Dan Callaghan <dcallagh@redhat.com>
+Verified+1: Matt Tyson <mtyson@redhat.com>
+Submitted-by: Matt Tyson <mtyson@redhat.com>
+Submitted-at: Thu, 17 May 2018 02:44:32 +0000
+Reviewed-on: https://gerrit.beaker-project.org/6102
+Project: beaker
+Branch: refs/heads/release-25
