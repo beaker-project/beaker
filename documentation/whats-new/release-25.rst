@@ -316,3 +316,25 @@ Beaker 25.3
   was just a HTML file. This has been fixed and curl will follow a redirect
   to download the image.
   (Contributed by Róman Joost)
+
+
+Beaker 25.4
+~~~~~~~~~~~
+
+* :issue:`1573081`: The SQL used by the beakerd scheduler would take
+  approximately 30 seconds to find recipe sets to schedule, even if
+  there are no valid recipes to find.  The SQL for this has been
+  rewritten to use indexes more efficently and as a result query time
+  has been reduced to less than a second.
+  (Contributed by Dan Callaghan)
+* :issue:`1577729`: When MariaDB is configured to be in strict mode, the
+  database will throw an error if Activity.field_name is greater than
+  40 characters.  The SQL model has been updated to truncate at 40
+  characters.
+  (Contributed by Róman Joost)
+* :issue:`1574772`: This is a partial fix for Beaker recipe performance.
+  Beaker would hold an SQL transaction open when processing recipies.
+  If beaker has a large set of recipies to process, this open transaction
+  would negatively impact database performance due to the overhead of
+  the database needing to maintain transaction state.
+  (Contributed by Dan Callaghan)
