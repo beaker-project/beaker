@@ -91,8 +91,13 @@ def get_virt_executor():
 
 def update_dirty_jobs():
     work_done = False
-    dirty_jobs = Job.query.filter(Job.dirty_version != Job.clean_version)
-    for job_id, in dirty_jobs.values(Job.id):
+    with session.begin():
+        dirty_jobs = Job.query.filter(Job.dirty_version != Job.clean_version)
+        job_ids = [job_id for job_id, in dirty_jobs.values(Job.id)]
+    if job_ids:
+        log.debug('Updating dirty jobs [%s ... %s] (%d total)',
+                  job_ids[0], job_ids[-1], len(job_ids))
+    for job_id in job_ids:
         session.begin()
         try:
             update_dirty_job(job_id)
@@ -114,10 +119,15 @@ def update_dirty_job(job_id):
 
 def process_new_recipes(*args):
     work_done = False
-    recipes = MachineRecipe.query\
-            .join(MachineRecipe.recipeset).join(RecipeSet.job)\
-            .filter(Recipe.status == TaskStatus.new)
-    for recipe_id, in recipes.values(MachineRecipe.id):
+    with session.begin():
+        recipes = MachineRecipe.query\
+                .join(MachineRecipe.recipeset).join(RecipeSet.job)\
+                .filter(Recipe.status == TaskStatus.new)
+        recipe_ids = [recipe_id for recipe_id, in recipes.values(MachineRecipe.id)]
+    if recipe_ids:
+        log.debug('Processing new recipes [%s ... %s] (%d total)',
+                  recipe_ids[0], recipe_ids[-1], len(recipe_ids))
+    for recipe_id in recipe_ids:
         session.begin()
         try:
             process_new_recipe(recipe_id)
@@ -181,10 +191,15 @@ def process_new_recipe(recipe_id):
 
 def queue_processed_recipesets(*args):
     work_done = False
-    recipesets = RecipeSet.by_recipe_status(TaskStatus.processed)\
-            .order_by(RecipeSet.priority.desc())\
-            .order_by(RecipeSet.id)
-    for rs_id, in recipesets.values(RecipeSet.id):
+    with session.begin():
+        recipesets = RecipeSet.by_recipe_status(TaskStatus.processed)\
+                .order_by(RecipeSet.priority.desc())\
+                .order_by(RecipeSet.id)
+        recipeset_ids = [rs_id for rs_id, in recipesets.values(RecipeSet.id)]
+    if recipeset_ids:
+        log.debug('Queuing processed recipe sets [%s ... %s] (%d total)',
+                  recipeset_ids[0], recipeset_ids[-1], len(recipeset_ids))
+    for rs_id in recipeset_ids:
         session.begin()
         try:
             queue_processed_recipeset(rs_id)
@@ -336,19 +351,24 @@ def queue_processed_recipeset(recipeset_id):
 
 def abort_dead_recipes(*args):
     work_done = False
-    filters = [not_(DistroTree.lab_controller_assocs.any())]
-    if _virt_enabled():
-        filters.append(and_(not_(Recipe.systems.any()),
-                Recipe.virt_status != RecipeVirtStatus.possible))
-    else:
-        filters.append(not_(Recipe.systems.any()))
-    recipes = MachineRecipe.query\
-            .join(MachineRecipe.recipeset).join(RecipeSet.job)\
-            .filter(Job.dirty_version == Job.clean_version)\
-            .outerjoin(Recipe.distro_tree)\
-            .filter(Recipe.status == TaskStatus.queued)\
-            .filter(or_(*filters))
-    for recipe_id, in recipes.values(MachineRecipe.id):
+    with session.begin():
+        filters = [not_(DistroTree.lab_controller_assocs.any())]
+        if _virt_enabled():
+            filters.append(and_(not_(Recipe.systems.any()),
+                    Recipe.virt_status != RecipeVirtStatus.possible))
+        else:
+            filters.append(not_(Recipe.systems.any()))
+        recipes = MachineRecipe.query\
+                .join(MachineRecipe.recipeset).join(RecipeSet.job)\
+                .filter(Job.dirty_version == Job.clean_version)\
+                .outerjoin(Recipe.distro_tree)\
+                .filter(Recipe.status == TaskStatus.queued)\
+                .filter(or_(*filters))
+        recipe_ids = [recipe_id for recipe_id, in recipes.values(MachineRecipe.id)]
+    if recipe_ids:
+        log.debug('Aborting dead recipes [%s ... %s] (%d total)',
+                  recipe_ids[0], recipe_ids[-1], len(recipe_ids))
+    for recipe_id in recipe_ids:
         session.begin()
         try:
             abort_dead_recipe(recipe_id)
@@ -376,11 +396,15 @@ def abort_dead_recipe(recipe_id):
 
 def schedule_pending_systems():
     work_done = False
-    systems = System.query\
-            .join(System.lab_controller)\
-            .filter(LabController.disabled == False)\
-            .filter(System.scheduler_status == SystemSchedulerStatus.pending)
-    for system_id, in systems.values(System.id):
+    with session.begin():
+        systems = System.query\
+                .join(System.lab_controller)\
+                .filter(LabController.disabled == False)\
+                .filter(System.scheduler_status == SystemSchedulerStatus.pending)
+        system_ids = [system_id for system_id, in systems.values(System.id)]
+    if system_ids:
+        log.debug('Scheduling pending systems (%d total)', len(system_ids))
+    for system_id in system_ids:
         session.begin()
         try:
             schedule_pending_system(system_id)
@@ -449,17 +473,22 @@ def schedule_recipe_on_system(recipe, system):
 
 def provision_virt_recipes(*args):
     work_done = False
-    recipes = MachineRecipe.query\
-            .join(Recipe.recipeset).join(RecipeSet.job)\
-            .join(Recipe.distro_tree, DistroTree.lab_controller_assocs, LabController)\
-            .filter(Recipe.status == TaskStatus.queued)\
-            .filter(Recipe.virt_status == RecipeVirtStatus.possible)\
-            .filter(LabController.disabled == False)\
-            .filter(or_(RecipeSet.lab_controller == None,
-                RecipeSet.lab_controller_id == LabController.id))\
-            .order_by(RecipeSet.priority.desc(), Recipe.id.asc())
+    with session.begin():
+        recipes = MachineRecipe.query\
+                .join(Recipe.recipeset).join(RecipeSet.job)\
+                .join(Recipe.distro_tree, DistroTree.lab_controller_assocs, LabController)\
+                .filter(Recipe.status == TaskStatus.queued)\
+                .filter(Recipe.virt_status == RecipeVirtStatus.possible)\
+                .filter(LabController.disabled == False)\
+                .filter(or_(RecipeSet.lab_controller == None,
+                    RecipeSet.lab_controller_id == LabController.id))\
+                .order_by(RecipeSet.priority.desc(), Recipe.id.asc())
+        recipe_ids = [recipe_id for recipe_id, in recipes.values(Recipe.id.distinct())]
+    if recipe_ids:
+        log.debug('Provisioning dynamic virt guests for recipes [%s ... %s] (%d total)',
+                  recipe_ids[0], recipe_ids[-1], len(recipe_ids))
     futures = [get_virt_executor().submit(provision_virt_recipe, recipe_id)
-            for recipe_id, in recipes.values(Recipe.id.distinct())]
+               for recipe_id in recipe_ids]
     if futures:
         concurrent.futures.wait(futures)
         work_done = True
@@ -531,8 +560,13 @@ def provision_scheduled_recipesets(*args):
      Running.
     """
     work_done = False
-    recipesets = RecipeSet.by_recipe_status(TaskStatus.scheduled)
-    for rs_id, in recipesets.values(RecipeSet.id):
+    with session.begin():
+        recipesets = RecipeSet.by_recipe_status(TaskStatus.scheduled)
+        recipeset_ids = [rs_id for rs_id, in recipesets.values(RecipeSet.id)]
+    if recipeset_ids:
+        log.debug('Provisioning scheduled recipe sets [%s ... %s] (%d total)',
+                  recipeset_ids[0], recipeset_ids[-1], len(recipeset_ids))
+    for rs_id in recipeset_ids:
         session.begin()
         try:
             provision_scheduled_recipeset(rs_id)
