@@ -27,8 +27,8 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_column('device', 'fw_version')
     op.drop_constraint('device_uix_1', 'device', type_='unique')
+    op.drop_column('device', 'fw_version')
     op.create_unique_constraint('device_uix_1', 'device', ['vendor_id',
             'device_id', 'subsys_device_id', 'subsys_vendor_id', 'bus',
             'driver', 'description', 'device_class_id'])

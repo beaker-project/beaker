@@ -1459,7 +1459,7 @@ class RetentionTag(BeakerTag):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, ForeignKey('beaker_tag.id', onupdate='CASCADE',
             ondelete='CASCADE'), primary_key=True)
-    is_default = Column('default_', Boolean)
+    is_default = Column('default_', Boolean(create_constraint=False))
     expire_in_days = Column(Integer, default=0, nullable=False)
     needs_product = Column(Boolean, default=False, nullable=False)
     __mapper_args__ = {'polymorphic_identity': u'retention_tag'}
@@ -1747,6 +1747,25 @@ class RecipeSet(TaskBase, ActivityMixin):
     def by_job_id(cls,job_id):
         queri = RecipeSet.query.outerjoin('job').filter(Job.id == job_id)
         return queri
+
+    @classmethod
+    def by_recipe_status(cls, status):
+        """
+        Returns a query of RecipeSet objects, filtered to those where *all*
+        the recipes in the set have the given status.
+
+        Selecting any column other than recipe_set_id from this query is not
+        likely to work.
+        """
+        # Previously we used a NOT EXISTS for this but it was too slow because
+        # MySQL did not pick the recipe.status index. bz1573081
+        all_recipes = aliased(Recipe, name='all_recipes')
+        matching_recipes = aliased(Recipe, name='matching_recipes')
+        return RecipeSet.query\
+            .join(all_recipes)\
+            .join(matching_recipes, and_(matching_recipes.recipeset, matching_recipes.status == status))\
+            .group_by(RecipeSet.id)\
+            .having(func.count(all_recipes.id.distinct()) == func.count(matching_recipes.id.distinct()))
 
     def cancel(self, msg=None):
         """
@@ -2641,7 +2660,7 @@ class Recipe(TaskBase, ActivityMixin):
         self.installation.kernel_options = install_options.kernel_options_str
         self.installation.rendered_kickstart = rendered_kickstart
         if isinstance(self.resource, SystemResource):
-            self.resource.system.installations.append(self.installation)
+            self.installation.system = self.resource.system
             self.resource.system.configure_netboot(installation=self.installation,
                     service=u'Scheduler')
             self.resource.system.action_power(action=u'reboot',

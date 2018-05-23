@@ -21,4 +21,6 @@ def upgrade():
     op.drop_column('system', 'deleted')
 
 def downgrade():
-    op.add_column('system', Column('deleted', Boolean, nullable=True))
+    op.add_column('system', Column('deleted', Boolean, nullable=False, default=False))
+    op.alter_column('system', 'deleted', existing_type=Boolean, nullable=True)
+
