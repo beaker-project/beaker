@@ -627,8 +627,7 @@ class Job(TaskBase, ActivityMixin):
     __tablename__ = 'job'
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, primary_key=True)
-    dirty_version = Column(UUID, nullable=False)
-    clean_version = Column(UUID, nullable=False)
+    is_dirty = Column(Boolean, nullable=False, index=True)
     owner_id = Column(Integer, ForeignKey('tg_user.user_id'), index=True)
     owner = relationship(User, back_populates='jobs',
             primaryjoin=owner_id == User.user_id)
@@ -685,8 +684,7 @@ class Job(TaskBase, ActivityMixin):
         self.whiteboard = whiteboard
         self.retention_tag = retention_tag
         self.product = product
-        self.dirty_version = uuid.uuid4()
-        self.clean_version = self.dirty_version
+        self.is_dirty = False
 
     stop_types = ['abort','cancel']
     max_by_whiteboard = 20
@@ -1258,14 +1256,12 @@ class Job(TaskBase, ActivityMixin):
         self._mark_clean()
 
     def _mark_dirty(self):
-        self.dirty_version = uuid.uuid4()
+        self.is_dirty = True
 
     def _mark_clean(self):
-        self.clean_version = self.dirty_version
-
-    @hybrid_property
-    def is_dirty(self):
-        return (self.dirty_version != self.clean_version)
+        # NOTE: this is only race-free if the transaction issued a SELECT...FOR UPDATE
+        # on this job row before doing any other work.
+        self.is_dirty = False
 
     def _update_status(self):
         """
@@ -1366,9 +1362,6 @@ class Job(TaskBase, ActivityMixin):
             self.submitter == user
 
     cc = association_proxy('_job_ccs', 'email_address')
-
-# for fast dirty_version != clean_version comparisons:
-Index('ix_job_dirty_clean_version', Job.dirty_version, Job.clean_version)
 
 class JobCc(DeclarativeMappedObject):
 

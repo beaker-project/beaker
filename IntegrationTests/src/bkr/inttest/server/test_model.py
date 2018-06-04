@@ -1029,7 +1029,7 @@ class TestJob(DatabaseTestCase):
         job = data_setup.create_job()
         data_setup.mark_job_waiting(job)
         job.cancel()
-        self.assertNotEquals(job.dirty_version, job.clean_version)
+        self.assertTrue(job.is_dirty)
         job.update_status()
         self.assertEquals(job.status, TaskStatus.cancelled)
         self.assertEquals(job.result, TaskResult.warn)

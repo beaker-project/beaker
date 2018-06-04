@@ -883,8 +883,8 @@ class MigrationTest(unittest.TestCase):
             upgrade_db(self.migration_metadata)
             # create a job in Installing state
             connection.execute(
-                    "INSERT INTO job (owner_id, retention_tag_id, dirty_version, clean_version, status) "
-                    "VALUES (1, 1, '', '', 'Installing')")
+                    "INSERT INTO job (owner_id, retention_tag_id, is_dirty, status) "
+                    "VALUES (1, 1, FALSE, 'Installing')")
             connection.execute(
                     "INSERT INTO recipe_set (job_id, queue_time, waived, status) "
                     "VALUES (1, '2015-11-09 17:03:04', FALSE, 'Installing')")
@@ -1361,8 +1361,8 @@ class MigrationTest(unittest.TestCase):
                 "INSERT INTO tg_user (user_id, user_name, display_name, email_address, disabled, removed, use_old_job_page, notify_job_completion, notify_broken_system, notify_system_loan, notify_group_membership, notify_reservesys) "
                 "VALUES (1, 'bob', 'Bob', 'bob@example.com', 1, '2015-12-01 15:43:28', 0, 0, 0, 0, 0, 0)")
             connection.execute(
-                "INSERT INTO job (owner_id, retention_tag_id, dirty_version, clean_version) "
-                "VALUES (1, 1, '', '')")
+                "INSERT INTO job (owner_id, retention_tag_id, is_dirty) "
+                "VALUES (1, 1, FALSE)")
             connection.execute(
                 "INSERT INTO arch (id, arch) "
                 "VALUES (2, 'i386')")

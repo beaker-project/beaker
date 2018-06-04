@@ -92,7 +92,7 @@ def get_virt_executor():
 def update_dirty_jobs():
     work_done = False
     with session.begin():
-        dirty_jobs = Job.query.filter(Job.dirty_version != Job.clean_version)
+        dirty_jobs = Job.query.filter(Job.is_dirty)
         job_ids = [job_id for job_id, in dirty_jobs.values(Job.id)]
     if job_ids:
         log.debug('Updating dirty jobs [%s ... %s] (%d total)',
@@ -114,7 +114,7 @@ def update_dirty_jobs():
 
 def update_dirty_job(job_id):
     log.debug('Updating dirty job %s', job_id)
-    job = Job.by_id(job_id)
+    job = Job.query.filter(Job.id == job_id).with_lockmode('update').one()
     job.update_status()
 
 def process_new_recipes(*args):
@@ -360,7 +360,7 @@ def abort_dead_recipes(*args):
             filters.append(not_(Recipe.systems.any()))
         recipes = MachineRecipe.query\
                 .join(MachineRecipe.recipeset).join(RecipeSet.job)\
-                .filter(Job.dirty_version == Job.clean_version)\
+                .filter(not_(Job.is_dirty))\
                 .outerjoin(Recipe.distro_tree)\
                 .filter(Recipe.status == TaskStatus.queued)\
                 .filter(or_(*filters))
