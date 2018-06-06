@@ -14,6 +14,7 @@ import shutil
 import urlparse
 import lxml.etree
 import email
+from decimal import Decimal
 from mock import patch
 import inspect
 import kid
@@ -2636,6 +2637,31 @@ class RecipeTaskResultTest(DatabaseTestCase):
         self.assertEquals(rtr.display_label, u'Cancelled it')
         rtr = RecipeTaskResult(recipetask=rt, path=u'/', log='Cancelled it')
         self.assertEquals(rtr.display_label, u'Cancelled it')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1586049
+    def test_coerces_string_for_score(self):
+        task = Task.by_name(u'/distribution/install')
+        rt = RecipeTask.from_task(task)
+        rt.recipe_id = self.recipe.id
+        rt._result(TaskResult.pass_, path='.', score='', summary='empty string')
+        rt._result(TaskResult.pass_, path='.', score='123foo', summary='numbered string')
+        rt._result(TaskResult.pass_, path='.', score='/foo/bar', summary='path')
+        rt._result(TaskResult.pass_, path='.', score='8.88', summary='truncated')
+        rt._result(TaskResult.pass_, path='.', score='8.8.8', summary='invalid decimal')
+        rt._result(TaskResult.pass_, path='.', score='-1', summary='negative')
+        rt._result(TaskResult.pass_, path='.', score='10', summary='correct')
+        session.flush()
+
+        session.refresh(rt)
+        expected = [(u'empty string', Decimal(0)),
+                    (u'numbered string', Decimal(123)),
+                    (u'path', Decimal(0)),
+                    (u'truncated', Decimal(9)),
+                    (u'invalid decimal', Decimal(9)),
+                    (u'negative', Decimal(-1)),
+                    (u'correct', Decimal(10)),
+        ]
+        self.assertEquals(expected, [(x.log, x.score) for x in rt.results])
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=915319
     def test_logs_appear_in_results_xml(self):

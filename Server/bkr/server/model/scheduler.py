@@ -21,6 +21,7 @@ import urlparse
 import urllib
 import netaddr
 import numbers
+import decimal
 from kid import Element
 from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
         Integer, Unicode, DateTime, Boolean, UnicodeText, String, Numeric,
@@ -3671,6 +3672,16 @@ class RecipeTask(TaskBase):
         """
         if self.is_finished():
             raise ValueError('Cannot record result for finished task %s' % self.t_id)
+        # see https://bugzilla.redhat.com/show_bug.cgi?id=1586049
+        # MySQL 5.x (non-strict) was coercing whatever string passed in to an
+        # int value, while MariaDB (strict) will raise an error. This is a
+        # backwards compatible "hack" for the same MySQL 5.x behaviour.
+        if isinstance(score, basestring):
+            number_match = re.match('-?\d+(\.\d+)?', score)
+            if not number_match:
+                score = 0
+            else:
+                score = round(decimal.Decimal(number_match.group()))
         recipeTaskResult = RecipeTaskResult(recipetask=self,
                                    path=path,
                                    result=result,
