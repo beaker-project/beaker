@@ -359,6 +359,19 @@ class JobCompletionNotificationTest(DatabaseTestCase):
         captured_mails = mail_capture_thread.stop_capturing(wait=False)
         self.assertEqual(len(captured_mails), 0)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1588263
+    def test_headers_for_avoiding_autoreplies(self):
+        mail_capture_thread.start_capturing()
+        with session.begin():
+            job = data_setup.create_job()
+            data_setup.mark_job_complete(job)
+        captured_mails = mail_capture_thread.stop_capturing()
+        self.assertEqual(len(captured_mails), 1)
+        sender, rcpts, raw_msg = captured_mails[0]
+        msg = email.message_from_string(raw_msg)
+        self.assertEquals(msg['Auto-Submitted'], 'auto-generated')
+        self.assertEquals(msg['Precedence'], 'bulk')
+
 
 class GroupMembershipNotificationTest(DatabaseTestCase):
 

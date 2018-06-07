@@ -20,10 +20,15 @@ template_env = Environment(loader=PackageLoader('bkr.server', 'mail-templates'),
 log = logging.getLogger(__name__)
 
 
-def send_mail(sender, to, subject, body, **kwargs):
+def send_mail(sender, to, subject, body, bulk=True, **kwargs):
     from turbomail import MailNotEnabledException
     try:
         message = turbomail.Message(sender, to, subject, **kwargs)
+        if bulk:
+            message.headers.extend([
+                ('Auto-Submitted', 'auto-generated'),
+                ('Precedence', 'bulk'),
+            ])
         message.plain = body
         turbomail.send(message)
     except MailNotEnabledException:
@@ -93,7 +98,7 @@ def system_loan_request(system, message, requester, requestee_email):
     headers.extend(arch_headers)
     cc = [requester.email_address] + system.cc
     send_mail(sender, requestee_email, _(u'Loan request for %s') % system.fqdn,
-        '\n'.join(body), cc=cc, headers=headers)
+        '\n'.join(body), cc=cc, bulk=False, headers=headers)
 
 def system_problem_report(system, description, recipe=None, reporter=None):
     if reporter is not None:
@@ -127,7 +132,7 @@ def system_problem_report(system, description, recipe=None, reporter=None):
     cc.extend(system.cc)
     send_mail(sender, system.owner.email_address,
             _(u'Problem reported for %s') % system.fqdn, '\n'.join(body),
-            cc=cc, headers=headers)
+            cc=cc, bulk=False, headers=headers)
 
 def broken_system_notify(system, reason, recipe=None):
     if system.owner.notify_broken_system:
