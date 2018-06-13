@@ -49,6 +49,12 @@ Resources
    * `Beaker development documentation <../dev/guide>`_
 
 
+Downloadable documentation
+==========================
+
+You can also download the `User Guide <user-guide.pdf>`_ or `Administration
+Guide <admin-guide.pdf>`_ in PDF format in order to read it offline.
+
 Getting further help
 ====================
 
