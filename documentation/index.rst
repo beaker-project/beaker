@@ -63,9 +63,8 @@ The best way to interact with Beaker developers and users is in the `#beaker
 developers monitor this channel, and development discussions often happen 
 there.
 
-You can also ask your question in the `"beaker-testing" tag on Stack Overflow 
-<http://stackoverflow.com/questions/ask?tags=beaker-testing>`__, or post it to 
-the `beaker-devel <https://lists.fedorahosted.org/archives/list/beaker-devel@lists.fedorahosted.org/>`_ 
+You can also ask your question by posting it to our `beaker-devel
+<https://lists.fedorahosted.org/archives/list/beaker-devel@lists.fedorahosted.org/>`_
 mailing list.
 
 If you've found a bug in Beaker, please report it in `Red Hat Bugzilla 
