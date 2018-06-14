@@ -38,6 +38,15 @@ def url_exists(url):
             raise
     return True
 
+def is_rhel8_alpha(parser):
+    result = False
+    try:
+        result = (parser.get('compose', 'label') == 'Alpha-1.2' and
+                  parser.get('product', 'short') == 'RHEL' and
+                  parser.get('product', 'version') == '8.0')
+    except ConfigParser.Error:
+        pass
+    return result
 
 class IncompleteTree(BX):
     """
@@ -661,6 +670,29 @@ sources = Workstation/source/SRPMS
                         path=os.path.join(rpath, debugrepopath)))
             else:
                 logging.warn('%s-debuginfo repo found in .composeinfo but does not exist', variant)
+        if is_rhel8_alpha(self.parser):
+            name = 'AppStream'
+            directory_name = '8.0-AppStream-Alpha'
+            appstream_repos = [
+                (name,
+                'variant',
+                os.path.join(rpath, '..', directory_name, name, arch, 'os')
+                )
+            ]
+            if debugrepopath:
+                appstream_repos.append(
+                    ('{0}-debuginfo'.format(name),
+                    'debug',
+                    os.path.join(rpath, '..', directory_name, name, arch, 'debug', 'tree')
+                    )
+                )
+            for repo in appstream_repos:
+                url = os.path.join(repo_base, repo[2], 'repodata')
+                if url_exists(url):
+                    repos.append(dict(repoid=repo[0], type=repo[1], path=repo[2]))
+                else:
+                    raise ValueError("Expected {0} compose at {1} but it doesn't exist".format(repo[0], url))
+
         return repos
 
     def process(self, urls, options):
