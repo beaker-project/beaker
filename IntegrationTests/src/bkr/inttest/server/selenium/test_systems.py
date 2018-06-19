@@ -850,3 +850,20 @@ class SystemHTTPTest(DatabaseTestCase):
         self.assertEquals(response.status_code, 400)
         self.assertEquals(response.text,
                 'Cannot change owner to deleted user %s' % deleted_user.user_name)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1591391
+    def test_system_owner_username_is_truncated(self):
+        with session.begin():
+            system = data_setup.create_system()
+            max_new_value_length = 60
+            long_username = 'z' * max_new_value_length + 's'
+            user_with_long_username = data_setup.create_user(user_name=long_username)
+        s = requests.Session()
+        requests_login(s)
+        response = patch_json(get_server_base() + 'systems/%s/' % system.fqdn,
+                session=s, data={'owner': {'user_name': user_with_long_username.user_name}})
+        self.assertEquals(response.status_code, 200)
+        with session.begin():
+            self.assertEquals(system.activity[0].field_name, u'Owner')
+            self.assertEquals(system.activity[0].action, u'Changed')
+            self.assertEquals(system.activity[0].new_value, u'z' * max_new_value_length)

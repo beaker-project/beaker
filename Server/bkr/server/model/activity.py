@@ -46,13 +46,18 @@ class Activity(DeclarativeMappedObject):
                 self.service = identity.current.proxied_by_user.user_name
         except identity.RequestRequiredException:
             pass
+
         field_name_value_max_length = object_mapper(self).c.field_name.type.length
+        old_value_max_length        = object_mapper(self).c.old_value.type.length
+        new_value_max_length        = object_mapper(self).c.new_value.type.length
         self.field_name = field_name[:field_name_value_max_length]
         self.action = action
-        if old_value and isinstance(old_value, unicode):
-            old_value = old_value[:object_mapper(self).c.old_value.type.length]
-        if new_value and isinstance(new_value, unicode):
-            new_value = new_value[:object_mapper(self).c.new_value.type.length]
+
+        if old_value is not None:
+            old_value = unicode(old_value)[:old_value_max_length]
+        if new_value is not None:
+            new_value = unicode(new_value)[:new_value_max_length]
+
         self.old_value = old_value
         self.new_value = new_value
 
