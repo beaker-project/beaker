@@ -26,9 +26,16 @@
     // auto-refresh while the job is not finished
     var autofetch = function () {
         if (!job.get('is_finished')) {
-            job.fetch();
-            _.delay(autofetch, 30000);
-        }
+            job.fetch({
+                timeout: 600000,
+                success: () => {
+                    _.delay(autofetch, 30000);
+                },
+                error: () => {
+                    _.delay(autofetch, 30000);
+                }
+            });
+        };
     };
     _.delay(autofetch, 30000);
   </script>
