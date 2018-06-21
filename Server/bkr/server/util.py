@@ -137,16 +137,6 @@ def absolute_url(tgpath, tgparams=None, scheme=None,
     scheme = scheme or config.get('tg.url_scheme', 'http')
     return '%s://%s%s' % (scheme, host_port, theurl)
 
-# http://stackoverflow.com/questions/1809531/_/1820949#1820949
-def unicode_truncate(s, bytes_length, encoding='utf8'):
-    """
-    Returns a copy of the given unicode string, truncated to fit within the 
-    given number of bytes when encoded.
-    """
-    if len(s) * 4 < bytes_length: return s # fast path
-    encoded = s.encode(encoding)[:bytes_length]
-    return encoded.decode(encoding, 'ignore')
-
 _reports_engine = None
 def get_reports_engine():
     global _reports_engine
