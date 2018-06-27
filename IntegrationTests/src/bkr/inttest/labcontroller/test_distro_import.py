@@ -1118,7 +1118,69 @@ class DistroImportTest(LabControllerTestCase):
             ],
             u'tags': [u'Alpha-1.2'],
             u'tree_build_time': u'1523757763',
-            u'urls': [u'http://localhost:19998/RHEL8Alpha/8.0-Alpha/BaseOS/x86_64/os/'],
+            u'urls': [u'http://localhost:19998/RHEL8Alpha/RHT/8.0-Alpha/BaseOS/x86_64/os/'],
+            u'variant': u'BaseOS',
+        }
+
+        self.x86_64_rhel8_unified_partner_compose = {
+            u'arch': u'x86_64',
+            u'arches': [],
+            u'images': [{u'path': u'images/pxeboot/vmlinuz', u'type': u'kernel'},
+                        {u'path': u'images/pxeboot/initrd.img', u'type': u'initrd'}],
+            u'kernel_options': None,
+            u'kernel_options_post': None,
+            u'ks_meta': None,
+            u'name': u'RHEL-8.0-20180531.2',
+            u'osmajor': u'RedHatEnterpriseLinux8',
+            u'osminor': u'0',
+            u'repos': [
+                {u'path': u'../../../AppStream/x86_64/os',
+                 u'repoid': u'AppStream',
+                 u'type': u'variant'},
+                {u'path': u'../../../AppStream/x86_64/debug/tree',
+                 u'repoid': u'AppStream-debuginfo',
+                 u'type': u'debug'},
+                {u'path': u'../../../BaseOS/x86_64/os',
+                 u'repoid': u'BaseOS',
+                 u'type': u'variant'},
+                {u'path': u'../../../BaseOS/x86_64/debug/tree',
+                 u'repoid': u'BaseOS-debuginfo',
+                 u'type': u'debug'},
+            ],
+            u'tags': [u'Alpha-1.2'],
+            u'tree_build_time': u'1523757763',
+            u'urls': [u'http://localhost:19998/RHEL8Alpha/Unified/RHEL-8.0-20180531.2/compose/BaseOS/x86_64/os/'],
+            u'variant': u'BaseOS',
+        }
+
+        self.x86_64_rhel8_partner = {
+            u'arch': u'x86_64',
+            u'arches': [],
+            u'images': [{u'path': u'images/pxeboot/vmlinuz', u'type': u'kernel'},
+                        {u'path': u'images/pxeboot/initrd.img', u'type': u'initrd'}],
+            u'kernel_options': None,
+            u'kernel_options_post': None,
+            u'ks_meta': None,
+            u'name': u'RHEL-8.0-20180531.2',
+            u'osmajor': u'RedHatEnterpriseLinux8',
+            u'osminor': u'0',
+            u'repos': [
+                {u'path': u'../../../BaseOS/x86_64/os',
+                 u'repoid': u'BaseOS',
+                 u'type': u'variant'},
+                {u'path': u'../../../BaseOS/x86_64/debug/tree',
+                 u'repoid': u'BaseOS-debuginfo',
+                 u'type': u'debug'},
+                {u'path': u'../../../../../AppStream-8.0-20180531.0/compose/AppStream/x86_64/os',
+                 u'repoid': u'AppStream',
+                 u'type': u'variant'},
+                {u'path': u'../../../../../AppStream-8.0-20180531.0/compose/AppStream/x86_64/debug/tree',
+                 u'repoid': u'AppStream-debuginfo',
+                 u'type': u'debug'},
+            ],
+            u'tags': [u'Alpha-1.2'],
+            u'tree_build_time': u'1523757763',
+            u'urls': [u'http://localhost:19998/RHEL8Alpha/Partners/RHEL-8.0-20180531.2/compose/BaseOS/x86_64/os/'],
             u'variant': u'BaseOS',
         }
 
@@ -1443,5 +1505,13 @@ class DistroImportTest(LabControllerTestCase):
                          e.stderr_output, e.stderr_output)
 
     def test_rhel8_import(self):
-        trees = self.dry_run_import_trees(['%sRHEL8Alpha/8.0-Alpha/' % self.distro_url])
+        trees = self.dry_run_import_trees(['%sRHEL8Alpha/RHT/8.0-Alpha/' % self.distro_url])
         self.assertItemsEqual(trees, [self.x86_64_rhel8])
+
+    def test_rhel8_unified_partner_import(self):
+        trees = self.dry_run_import_trees(['%sRHEL8Alpha/Unified/RHEL-8.0-20180531.2/compose' % self.distro_url])
+        self.assertItemsEqual(trees, [self.x86_64_rhel8_unified_partner_compose])
+
+    def test_rhel8_partner_import(self):
+        trees = self.dry_run_import_trees(['%sRHEL8Alpha/Partners/RHEL-8.0-20180531.2/compose' % self.distro_url])
+        self.assertItemsEqual(trees, [self.x86_64_rhel8_partner])

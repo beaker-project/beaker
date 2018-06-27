@@ -1,0 +1,37 @@
+[general]
+; WARNING.0 = This section provides compatibility with pre-productmd treeinfos.
+; WARNING.1 = Read productmd documentation for details about new format.
+arch = x86_64
+family = AppStream
+name = AppStream 8.0
+packagedir = Packages
+platforms = x86_64
+repository = .
+timestamp = 1523754763
+variant = AppStream
+variants = AppStream
+version = 8.0
+
+[header]
+type = productmd.treeinfo
+version = 1.2
+
+[release]
+name = AppStream
+short = AppStream
+version = 8.0
+
+[tree]
+arch = x86_64
+build_timestamp = 1523754763
+platforms = x86_64
+variants = AppStream
+
+[variant-AppStream]
+id = AppStream
+name = AppStream
+packages = Packages
+repository = .
+type = variant
+uid = AppStream
+

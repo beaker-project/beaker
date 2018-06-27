@@ -43,7 +43,16 @@ def is_rhel8_alpha(parser):
     try:
         result = (parser.get('compose', 'label') == 'Alpha-1.2' and
                   parser.get('product', 'short') == 'RHEL' and
-                  parser.get('product', 'version') == '8.0')
+                  parser.get('product', 'version') == '8.0' and
+                  # If the partner has made adjustments to the composeinfo
+                  # files so that the compose looks like a unified compose,
+                  # don't execute the extra code we would normally do for RHEL8
+                  # Alpha on partner servers. Instead assume that the code
+                  # which can import RHEL7 will do. This is the best guess at
+                  # the moment, since there is nothing really explicit which
+                  # distinguishes the ordinary partner sync from a non-adjusted
+                  # composeinfo.
+                  not parser.has_option('variant-BaseOS', 'variants'))
     except ConfigParser.Error:
         pass
     return result
@@ -671,21 +680,10 @@ sources = Workstation/source/SRPMS
             else:
                 logging.warn('%s-debuginfo repo found in .composeinfo but does not exist', variant)
         if is_rhel8_alpha(self.parser):
-            name = 'AppStream'
-            directory_name = '8.0-AppStream-Alpha'
-            appstream_repos = [
-                (name,
-                'variant',
-                os.path.join(rpath, '..', directory_name, name, arch, 'os')
-                )
-            ]
-            if debugrepopath:
-                appstream_repos.append(
-                    ('{0}-debuginfo'.format(name),
-                    'debug',
-                    os.path.join(rpath, '..', directory_name, name, arch, 'debug', 'tree')
-                    )
-                )
+            appstream_repos = self._guess_appstream_repos(rpath, arch, repo_base)
+            if not debugrepopath:
+                appstream_repos.pop()
+
             for repo in appstream_repos:
                 url = os.path.join(repo_base, repo[2], 'repodata')
                 if url_exists(url):
@@ -694,6 +692,44 @@ sources = Workstation/source/SRPMS
                     raise ValueError("Expected {0} compose at {1} but it doesn't exist".format(repo[0], url))
 
         return repos
+
+    def _guess_appstream_repos(self, rpath, arch, repo_base):
+        """Iterate over possible layouts to guess which one fits and return a list of repositories."""
+        repo_layout = {
+            '8.0-AppStream-Alpha': [
+                ('AppStream',
+                    'variant',
+                    os.path.join(rpath, '..', '8.0-AppStream-Alpha', 'AppStream', arch, 'os')
+                ),
+                ('AppStream-debuginfo',
+                    'debug',
+                    os.path.join(rpath, '..', '8.0-AppStream-Alpha', 'AppStream', arch, 'debug', 'tree')
+                )
+            ],
+            'AppStream-8.0-20180531.0': [
+                ('AppStream',
+                    'variant',
+                    os.path.join(rpath, '..', '..', 'AppStream-8.0-20180531.0', 'compose', 'AppStream', arch, 'os')
+                ),
+                ('AppStream-debuginfo',
+                    'debug',
+                    os.path.join(rpath, '..', '..', 'AppStream-8.0-20180531.0', 'compose', 'AppStream', arch, 'debug', 'tree')
+                ),
+            ]
+        }
+
+        appstream_repos = []
+        for dirname, repos in repo_layout.items():
+            url = os.path.join(repo_base, repos[0][2], 'repodata')
+            logging.debug('Trying to import %s', repos[0][2])
+            if not url_exists(url):
+                continue
+            else:
+                appstream_repos = repos
+
+        if not appstream_repos:
+            raise ValueError("Could not determine repository layout to import AppStream repo")
+        return appstream_repos
 
     def process(self, urls, options):
         exit_status = 0
