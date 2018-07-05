@@ -9,11 +9,10 @@
 %bcond_without labcontroller
 %bcond_without inttests
 %global _lc_services beaker-proxy beaker-provision beaker-watchdog beaker-transfer
-# systemd?
 %if 0%{?fedora} >= 18 || 0%{?rhel} >= 7
-%global with_systemd 1
+%bcond_without systemd
 %else
-%global with_systemd 0
+%bcond_with systemd
 %endif
 
 # This will not necessarily match the RPM Version if the real version number is 
@@ -70,7 +69,7 @@ BuildRequires:  python-prettytable
 %if 0%{?fedora} || 0%{?rhel} >= 7
 BuildRequires:  pkgconfig(bash-completion)
 %endif
-%if %{with_systemd}
+%if %{with systemd}
 BuildRequires:  pkgconfig(systemd)
 %endif
 
@@ -108,7 +107,7 @@ BuildRequires:  python-passlib
 BuildRequires:  python-alembic
 BuildRequires:  python-daemon
 BuildRequires:  python-futures
-%if %{with_systemd}
+%if %{with systemd}
 BuildRequires:  systemd
 %endif
 
@@ -194,7 +193,7 @@ Requires:       /usr/bin/uglifyjs
 Requires:       python-passlib
 Requires:       python-alembic
 Requires:       python-futures
-%if %{with_systemd}
+%if %{with systemd}
 Requires:       systemd-units
 Requires(post): systemd
 Requires(pre):  systemd
@@ -256,7 +255,7 @@ Requires:       python-gevent >= 1.0
 Requires:       python-daemon
 Requires:       python-werkzeug
 Requires:       python-flask
-%if %{with_systemd}
+%if %{with systemd}
 Requires:       systemd-units
 Requires(post): systemd
 Requires(pre):  systemd
@@ -365,7 +364,7 @@ make \
 %if %{with server}
 
 %post server
-%if %{with_systemd}
+%if %{with systemd}
 %systemd_post beakerd.service
 %else
 /sbin/chkconfig --add beakerd
@@ -385,7 +384,7 @@ fi
 %if %{with labcontroller}
 
 %post lab-controller
-%if %{with_systemd}
+%if %{with systemd}
 %systemd_post %{_lc_services}
 %else
 for service in %{_lc_services}; do
@@ -402,7 +401,7 @@ chmod go-w %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 
 %if %{with server}
 %postun server
-%if %{with_systemd}
+%if %{with systemd}
 %systemd_postun_with_restart beakerd.service
 %else
 if [ "$1" -ge "1" ]; then
@@ -413,7 +412,7 @@ fi
 
 %if %{with labcontroller}
 %postun lab-controller
-%if %{with_systemd}
+%if %{with systemd}
 %systemd_postun_with_restart %{_lc_services}
 %else
 if [ "$1" -ge "1" ]; then
@@ -426,7 +425,7 @@ fi
 
 %if %{with server}
 %preun server
-%if %{with_systemd}
+%if %{with systemd}
 %systemd_preun beakerd.service
 %else
 if [ "$1" -eq "0" ]; then
@@ -438,7 +437,7 @@ fi
 
 %if %{with labcontroller}
 %preun lab-controller
-%if %{with_systemd}
+%if %{with systemd}
 %systemd_preun %{_lc_services}
 %else
 if [ "$1" -eq "0" ]; then
@@ -482,7 +481,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_mandir}/man8/beaker-repo-update.8.gz
 %{_mandir}/man8/beaker-usage-reminder.8.gz
 
-%if %{with_systemd}
+%if %{with systemd}
 %{_unitdir}/beakerd.service
 %attr(0644,apache,apache) %{_tmpfilesdir}/beaker-server.conf
 %attr(-,apache,root) %dir /run/%{name}
@@ -570,7 +569,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %attr(-,apache,root) %dir %{_var}/www/%{name}/logs
 %dir %{_localstatedir}/log/%{name}
 
-%if %{with_systemd}
+%if %{with systemd}
 %{_unitdir}/beaker-proxy.service
 %{_unitdir}/beaker-provision.service
 %{_unitdir}/beaker-watchdog.service
