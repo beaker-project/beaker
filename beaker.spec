@@ -64,16 +64,44 @@ BuildRequires:  python-sphinx10
 BuildRequires:  python-sphinx >= 1.0
 %endif
 BuildRequires:  python-sphinxcontrib-httpdomain
-BuildRequires:  python-prettytable
+
+
+%package common
+Summary:        Common components for Beaker packages
+Group:          Applications/Internet
+Provides:       %{name} = %{version}-%{release}
+Obsoletes:      %{name} < 0.17.0-1
+
+
+%package client
+Summary:        Command-line client for interacting with Beaker
+Group:          Applications/Internet
 # setup.py uses pkg-config to find the right installation paths
 %if 0%{?fedora} || 0%{?rhel} >= 7
 BuildRequires:  pkgconfig(bash-completion)
 %endif
-%if %{with systemd}
-BuildRequires:  pkgconfig(systemd)
-%endif
+# These client dependencies are needed in build because of sphinx
+BuildRequires:  python-krbV
+BuildRequires:  python-lxml
+BuildRequires:  libxslt-python
+BuildRequires:  python-prettytable
+Requires:       python
+Requires:       python-setuptools
+Requires:       %{name}-common = %{version}-%{release}
+Requires:       python-krbV
+Requires:       python-lxml
+Requires:       python-requests
+Requires:       libxslt-python
+Requires:       libxml2-python
+Requires:       python-prettytable
+Requires:       python-jinja2
+# beaker-wizard was moved from rhts-devel to here in 4.52
+Conflicts:      rhts-devel < 4.52
 
 %if %{with server}
+%package server
+Summary:        Beaker scheduler and web interface
+Group:          Applications/Internet
 BuildRequires:  python-kid
 # These runtime dependencies are needed at build time as well, because
 # the unit tests and Sphinx autodoc import the server code as part of the
@@ -107,51 +135,6 @@ BuildRequires:  python-passlib
 BuildRequires:  python-alembic
 BuildRequires:  python-daemon
 BuildRequires:  python-futures
-%if %{with systemd}
-BuildRequires:  systemd
-%endif
-
-%endif
-
-%if %{with labcontroller}
-# These LC dependencies are needed in build due to tests
-BuildRequires:  python-gevent >= 1.0
-BuildRequires:  python-lxml
-%endif
-
-# As above, these client dependencies are needed in build because of sphinx
-BuildRequires:  python-krbV
-BuildRequires:  python-lxml
-BuildRequires:  libxslt-python
-
-
-%package common
-Summary:        Common components for Beaker packages
-Group:          Applications/Internet
-Provides:       %{name} = %{version}-%{release}
-Obsoletes:      %{name} < 0.17.0-1
-
-
-%package client
-Summary:        Command-line client for interacting with Beaker
-Group:          Applications/Internet
-Requires:       python
-Requires:       python-setuptools
-Requires:       %{name}-common = %{version}-%{release}
-Requires:       python-krbV
-Requires:       python-lxml
-Requires:       python-requests
-Requires:       libxslt-python
-Requires:       libxml2-python
-Requires:       python-prettytable
-Requires:       python-jinja2
-# beaker-wizard was moved from rhts-devel to here in 4.52
-Conflicts:      rhts-devel < 4.52
-
-%if %{with server}
-%package server
-Summary:        Beaker scheduler and web interface
-Group:          Applications/Internet
 Requires:       TurboGears >= 1.1.3
 %if 0%{?rhel} == 6
 Requires:       python-turbojson13
@@ -194,6 +177,8 @@ Requires:       python-passlib
 Requires:       python-alembic
 Requires:       python-futures
 %if %{with systemd}
+BuildRequires:  systemd
+BuildRequires:  pkgconfig(systemd)
 Requires:       systemd-units
 Requires(post): systemd
 Requires(pre):  systemd
@@ -236,6 +221,9 @@ Requires:       python-cssselect
 %package lab-controller
 Summary:        Daemons for controlling a Beaker lab
 Group:          Applications/Internet
+# These LC dependencies are needed in build due to tests
+BuildRequires:  python-gevent >= 1.0
+BuildRequires:  python-lxml
 Requires:       python
 Requires:       crontabs
 Requires:       httpd
@@ -256,6 +244,8 @@ Requires:       python-daemon
 Requires:       python-werkzeug
 Requires:       python-flask
 %if %{with systemd}
+BuildRequires:  systemd
+BuildRequires:  pkgconfig(systemd)
 Requires:       systemd-units
 Requires(post): systemd
 Requires(pre):  systemd
