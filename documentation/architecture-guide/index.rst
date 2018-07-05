@@ -39,3 +39,4 @@ Contents
    provisioning-process
    job-monitoring
    log-storage
+   beaker-differences
