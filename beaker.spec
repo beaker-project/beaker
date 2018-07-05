@@ -50,7 +50,6 @@ Source13:       https://github.com/eternicode/bootstrap-datepicker/archive/b374f
 Source14:       https://github.com/chjj/marked/archive/2b5802f258c5e23e48366f2377fbb4c807f47658/marked-2b5802f258c5e23e48366f2377fbb4c807f47658.tar.gz
 Source15:       https://github.com/jsmreese/moment-duration-format/archive/8d0bf29a1eab180cb83d0f13f93f6974faedeafd/moment-duration-format-8d0bf29a1eab180cb83d0f13f93f6974faedeafd.tar.gz
 
-BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 BuildRequires:  make
 BuildRequires:  python-setuptools
@@ -60,7 +59,7 @@ BuildRequires:  python-mock
 BuildRequires:  python-setuptools
 BuildRequires:  python2-devel
 BuildRequires:  python-docutils >= 0.6
-%if 0%{?rhel} == 5 || 0%{?rhel} == 6
+%if 0%{?rhel} == 6
 BuildRequires:  python-sphinx10
 %else
 BuildRequires:  python-sphinx >= 1.0
@@ -142,14 +141,8 @@ Requires:       python-setuptools
 Requires:       %{name}-common = %{version}-%{release}
 Requires:       python-krbV
 Requires:       python-lxml
-%if 0%{?rhel} >= 6 || 0%{?fedora}
-# some client commands use requests, they are unsupported on RHEL5
 Requires:       python-requests
-%endif
 Requires:       libxslt-python
-%if !(0%{?rhel} >= 6 || 0%{?fedora} >= 14)
-Requires:       python-simplejson
-%endif
 Requires:       libxml2-python
 Requires:       python-prettytable
 Requires:       python-jinja2
@@ -459,7 +452,6 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %files common
-%defattr(-,root,root,-)
 %dir %{python2_sitelib}/bkr/
 %{python2_sitelib}/bkr/__init__.py*
 %{python2_sitelib}/bkr/timeout_xmlrpclib.py*
@@ -470,7 +462,6 @@ rm -rf %{_var}/lib/beaker/osversion_data
 
 %if %{with server}
 %files server
-%defattr(-,root,root,-)
 %dir %{_sysconfdir}/%{name}
 %doc documentation/_build/text/whats-new/
 %{python2_sitelib}/bkr/server/
@@ -530,7 +521,6 @@ rm -rf %{_var}/lib/beaker/osversion_data
 
 %if %{with inttests}
 %files integration-tests
-%defattr(-,root,root,-)
 %{python2_sitelib}/bkr/inttest/
 %{python2_sitelib}/beaker_integration_tests-*-nspkg.pth
 %{python2_sitelib}/beaker_integration_tests-*.egg-info/
@@ -538,7 +528,6 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %files client
-%defattr(-,root,root,-)
 %dir %{_sysconfdir}/%{name}
 %doc Client/client.conf.example
 %{python2_sitelib}/bkr/client/
@@ -557,7 +546,6 @@ rm -rf %{_var}/lib/beaker/osversion_data
 
 %if %{with labcontroller}
 %files lab-controller
-%defattr(-,root,root,-)
 %dir %{_sysconfdir}/%{name}
 %config(noreplace) %{_sysconfdir}/%{name}/labcontroller.conf
 %{_sysconfdir}/%{name}/power-scripts/
@@ -602,7 +590,6 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %config(noreplace) %{_sysconfdir}/logrotate.d/beaker
 
 %files lab-controller-addDistro
-%defattr(-,root,root,-)
 %{_var}/lib/%{name}/addDistro.sh
 %{_var}/lib/%{name}/addDistro.d/*
 %else
