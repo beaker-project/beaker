@@ -94,8 +94,8 @@ class Recipes(RPCRoot):
         register file and return path to store
         """
         try:
-            recipe = Recipe.by_id(recipe_id)
-        except InvalidRequestError:
+            recipe = Recipe.by_id(recipe_id, lockmode='update')
+        except NoResultFound:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
         if recipe.is_finished():
             raise BX('Cannot register file for finished recipe %s'
@@ -155,8 +155,8 @@ class Recipes(RPCRoot):
          used to move from lab controller cache to archive storage.
         """
         try:
-            recipe = Recipe.by_id(recipe_id)
-        except InvalidRequestError:
+            recipe = Recipe.by_id(recipe_id, lockmode='update')
+        except NoResultFound:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
         for mylog in recipe.all_logs():
             mylog.server = '%s/%s/' % (server, mylog.parent.filepath)

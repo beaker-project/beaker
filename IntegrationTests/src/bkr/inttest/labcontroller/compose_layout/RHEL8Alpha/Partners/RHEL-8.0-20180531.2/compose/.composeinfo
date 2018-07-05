@@ -1,0 +1,114 @@
+[compose]
+date = 20180415
+id = RHEL-8.0-20180531.2
+label = Alpha-1.2
+respin = 2
+type = production
+
+[product]
+family = Red Hat Enterprise Linux
+name = RHEL-8.0-20180531.2
+short = RHEL
+type = ga
+variants = BaseOS
+version = 8.0
+
+[variant-BaseOS]
+arches = x86_64
+id = BaseOS
+name = BaseOS
+type = variant
+uid = BaseOS
+
+[variant-BaseOS.aarch64]
+debug_dir = BaseOS/aarch64/debug/tree
+debug_packages = BaseOS/aarch64/debug/tree/Packages
+debug_repository = BaseOS/aarch64/debug/tree
+debug_tree = BaseOS/aarch64/debug/tree
+debuginfo = BaseOS/aarch64/debug/tree
+iso_dir = BaseOS/aarch64/iso
+isos = BaseOS/aarch64/iso
+jigdo_dir = BaseOS/aarch64/jigdo
+jigdos = BaseOS/aarch64/jigdo
+os_dir = BaseOS/aarch64/os
+os_tree = BaseOS/aarch64/os
+packages = BaseOS/aarch64/os/Packages
+repository = BaseOS/aarch64/os
+source_dir = BaseOS/source/tree
+source_iso_dir = BaseOS/source/iso
+source_isos = BaseOS/source/iso
+source_jigdo_dir = BaseOS/source/jigdo
+source_jigdos = BaseOS/source/jigdo
+source_packages = BaseOS/source/tree/Packages
+source_repository = BaseOS/source/tree
+source_tree = BaseOS/source/tree
+
+[variant-BaseOS.ppc64le]
+debug_dir = BaseOS/ppc64le/debug/tree
+debug_packages = BaseOS/ppc64le/debug/tree/Packages
+debug_repository = BaseOS/ppc64le/debug/tree
+debug_tree = BaseOS/ppc64le/debug/tree
+debuginfo = BaseOS/ppc64le/debug/tree
+iso_dir = BaseOS/ppc64le/iso
+isos = BaseOS/ppc64le/iso
+jigdo_dir = BaseOS/ppc64le/jigdo
+jigdos = BaseOS/ppc64le/jigdo
+os_dir = BaseOS/ppc64le/os
+os_tree = BaseOS/ppc64le/os
+packages = BaseOS/ppc64le/os/Packages
+repository = BaseOS/ppc64le/os
+source_dir = BaseOS/source/tree
+source_iso_dir = BaseOS/source/iso
+source_isos = BaseOS/source/iso
+source_jigdo_dir = BaseOS/source/jigdo
+source_jigdos = BaseOS/source/jigdo
+source_packages = BaseOS/source/tree/Packages
+source_repository = BaseOS/source/tree
+source_tree = BaseOS/source/tree
+
+[variant-BaseOS.s390x]
+debug_dir = BaseOS/s390x/debug/tree
+debug_packages = BaseOS/s390x/debug/tree/Packages
+debug_repository = BaseOS/s390x/debug/tree
+debug_tree = BaseOS/s390x/debug/tree
+debuginfo = BaseOS/s390x/debug/tree
+iso_dir = BaseOS/s390x/iso
+isos = BaseOS/s390x/iso
+jigdo_dir = BaseOS/s390x/jigdo
+jigdos = BaseOS/s390x/jigdo
+os_dir = BaseOS/s390x/os
+os_tree = BaseOS/s390x/os
+packages = BaseOS/s390x/os/Packages
+repository = BaseOS/s390x/os
+source_dir = BaseOS/source/tree
+source_iso_dir = BaseOS/source/iso
+source_isos = BaseOS/source/iso
+source_jigdo_dir = BaseOS/source/jigdo
+source_jigdos = BaseOS/source/jigdo
+source_packages = BaseOS/source/tree/Packages
+source_repository = BaseOS/source/tree
+source_tree = BaseOS/source/tree
+
+[variant-BaseOS.x86_64]
+debug_dir = BaseOS/x86_64/debug/tree
+debug_packages = BaseOS/x86_64/debug/tree/Packages
+debug_repository = BaseOS/x86_64/debug/tree
+debug_tree = BaseOS/x86_64/debug/tree
+debuginfo = BaseOS/x86_64/debug/tree
+iso_dir = BaseOS/x86_64/iso
+isos = BaseOS/x86_64/iso
+jigdo_dir = BaseOS/x86_64/jigdo
+jigdos = BaseOS/x86_64/jigdo
+os_dir = BaseOS/x86_64/os
+os_tree = BaseOS/x86_64/os
+packages = BaseOS/x86_64/os/Packages
+repository = BaseOS/x86_64/os
+source_dir = BaseOS/source/tree
+source_iso_dir = BaseOS/source/iso
+source_isos = BaseOS/source/iso
+source_jigdo_dir = BaseOS/source/jigdo
+source_jigdos = BaseOS/source/jigdo
+source_packages = BaseOS/source/tree/Packages
+source_repository = BaseOS/source/tree
+source_tree = BaseOS/source/tree
+

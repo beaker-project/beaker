@@ -116,7 +116,7 @@ class MappedObject(object):
         return "%s(%s)" % (self.__class__.__name__, attrStr)
 
     @classmethod
-    def by_id(cls, id):
-        return cls.query.filter_by(id=id).one()
+    def by_id(cls, id, lockmode=False):
+        return cls.query.filter_by(id=id).with_lockmode(lockmode).one()
 
 DeclarativeMappedObject = declarative_base(cls=MappedObject, metadata=metadata, constructor=None)

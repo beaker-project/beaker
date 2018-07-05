@@ -146,7 +146,10 @@ def log_delete(print_logs=False, dry=False, limit=None):
         session.close()
 
     logger.info('Fetching deleted jobs to be purged')
-    for jobid, in Job.query.filter(and_(Job.is_deleted, Job.purged == None)).limit(limit).values(Job.id):
+    with session.begin():
+        jobs = Job.query.filter(and_(Job.is_deleted, Job.purged == None)).limit(limit)
+        job_ids = [job_id for job_id, in jobs.values(Job.id)]
+    for jobid in job_ids:
         logger.info('Purging logs for deleted job %s', jobid)
         try:
             session.begin()

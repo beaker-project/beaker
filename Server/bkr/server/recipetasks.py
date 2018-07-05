@@ -20,7 +20,8 @@ import cherrypy
 from bkr.server.model import (session, RecipeTask, LogRecipeTask,
                               RecipeTaskResult, LogRecipeTaskResult,
                               LabController, Watchdog, ResourceType,
-                              RecipeTaskComment, RecipeTaskResultComment)
+                              RecipeTaskComment, RecipeTaskResultComment,
+                              Recipe)
 from flask import redirect, request, jsonify
 from bkr.server.app import app
 from bkr.server.flask_util import auth_required, convert_internal_errors, \
@@ -79,9 +80,10 @@ class RecipeTasks(RPCRoot):
         register file and return path to store
         """
         try:
-            recipetask = RecipeTask.by_id(task_id)
-        except InvalidRequestError:
+            recipetask = RecipeTask.by_id(task_id, lockmode='update')
+        except NoResultFound:
             raise BX(_('Invalid task ID: %s' % task_id))
+        Recipe.by_id(recipetask.recipe_id, lockmode='update')
         if recipetask.is_finished():
             raise BX('Cannot register file for finished task %s'
                     % recipetask.t_id)
@@ -104,9 +106,11 @@ class RecipeTasks(RPCRoot):
         register file and return path to store
         """
         try:
-            result = RecipeTaskResult.by_id(result_id)
-        except InvalidRequestError:
+            result = RecipeTaskResult.by_id(result_id, lockmode='update')
+        except NoResultFound:
             raise BX(_('Invalid result ID: %s' % result_id))
+        RecipeTask.by_id(result.recipe_task_id, lockmode='update')
+        Recipe.by_id(result.recipetask.recipe_id, lockmode='update')
         if result.recipetask.is_finished():
             raise BX('Cannot register file for finished task %s'
                     % result.recipetask.t_id)

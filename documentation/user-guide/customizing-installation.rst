@@ -445,6 +445,8 @@ overridden if necessary for custom distros.
     Unset, except on older distros which require the yum package to be fetched 
     and installed.
 
+.. _ksappend:
+
 Appended kickstart content
 --------------------------
 

@@ -8,4 +8,5 @@ Workflow
    contained-test-harness
    atomic-host
    provisioning
+   customizing-partitions
    customizing-installation

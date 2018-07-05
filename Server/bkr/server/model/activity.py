@@ -10,7 +10,6 @@ from sqlalchemy import Column, Integer, ForeignKey, DateTime, Unicode
 from sqlalchemy.orm import object_mapper, relationship
 from turbogears.database import session
 from bkr.server import identity
-from bkr.server.util import unicode_truncate
 from .base import DeclarativeMappedObject
 
 log = logging.getLogger(__name__)
@@ -47,17 +46,18 @@ class Activity(DeclarativeMappedObject):
                 self.service = identity.current.proxied_by_user.user_name
         except identity.RequestRequiredException:
             pass
+
         field_name_value_max_length = object_mapper(self).c.field_name.type.length
+        old_value_max_length        = object_mapper(self).c.old_value.type.length
+        new_value_max_length        = object_mapper(self).c.new_value.type.length
         self.field_name = field_name[:field_name_value_max_length]
         self.action = action
-        # These values are likely to be truncated by MySQL, so let's make sure 
-        # we don't end up with invalid UTF-8 chars at the end
-        if old_value and isinstance(old_value, unicode):
-            old_value = unicode_truncate(old_value,
-                bytes_length=object_mapper(self).c.old_value.type.length)
-        if new_value and isinstance(new_value, unicode):
-            new_value = unicode_truncate(new_value,
-                bytes_length=object_mapper(self).c.new_value.type.length)
+
+        if old_value is not None:
+            old_value = unicode(old_value)[:old_value_max_length]
+        if new_value is not None:
+            new_value = unicode(new_value)[:new_value_max_length]
+
         self.old_value = old_value
         self.new_value = new_value
 
