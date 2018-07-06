@@ -47,8 +47,10 @@ def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
             'CentOS'):
         rhel = version
     if osmajor_name in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3',
-            'RedHatGlusterStorage3'):
+                        'RedHatGlusterStorage3'):
         rhel = '6'
+    if osmajor_name in ('RHVH4',):
+        rhel = '7'
     if name == 'Fedora':
         fedora = version
 
@@ -57,6 +59,14 @@ def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
     # distros will be assumed to support all features. The admin can 
     # override these in OS major or distro install options if necessary.
     ks_meta = {}
+
+    # Default harness is set to restraint. We opt out of restraint for any
+    # distro prior to RHEL8 and Fedora 29.
+    ks_meta['harness'] = 'restraint-rhts'
+    if (rhel and int(rhel) < 8 or \
+        fedora and fedora != 'rawhide' and int(fedora) < 29):
+        ks_meta['harness'] = 'beah'
+
     # %end
     ks_meta['end'] = '%end'
     if rhel in ('3', '4', '5'):

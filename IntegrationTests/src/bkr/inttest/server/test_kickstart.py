@@ -1818,7 +1818,7 @@ END
         self.assert_('# Check in with Beaker Server' in klines, k)
         self.assert_('%post --log=/dev/console' in klines, k)
         self.assert_('# Add Harness Repo' in klines, k)
-        self.assert_('yum -y install beah rhts-test-env' in klines, k)
+        self.assert_('yum -y install restraint-rhts' in klines, k)
 
     def test_custom_kickstart_fedora(self):
         recipe = self.provision_recipe('''
@@ -3435,7 +3435,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
             <job>
                 <whiteboard/>
                 <recipeSet>
-                    <recipe ks_meta="no_default_harness_repo contained_harness selinux=--disabled">
+                    <recipe ks_meta="no_default_harness_repo harness=restraint-rhts contained_harness selinux=--disabled">
                         <repos> <repo name="restraint" url="http://my/repo/"/> </repos>
                         <distroRequires>
                             <distro_name op="=" value="Fedora-18" />
@@ -3456,7 +3456,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
             <job>
                 <whiteboard/>
                 <recipeSet>
-                    <recipe ks_meta="no_default_harness_repo contained_harness contained_harness_entrypoint=/usr/bin/mybinary harness_docker_base_image=docker-registry.mysys.com/fedora:latest selinux=--disabled">
+                    <recipe ks_meta="no_default_harness_repo harness=restraint-rhts contained_harness contained_harness_entrypoint=/usr/bin/mybinary harness_docker_base_image=docker-registry.mysys.com/fedora:latest selinux=--disabled">
                         <distroRequires>
                             <distro_name op="=" value="Fedora-18" />
                             <distro_arch op="=" value="x86_64" />
@@ -3475,7 +3475,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
             <job>
                 <whiteboard/>
                 <recipeSet>
-                    <recipe ks_meta="no_default_harness_repo contained_harness selinux=--disabled">
+                    <recipe ks_meta="no_default_harness_repo harness=restraint-rhts contained_harness selinux=--disabled">
                         <repos> <repo name="restraint" url="http://my/repo/"/> </repos>
                         <distroRequires>
                             <distro_name op="=" value="Fedora-rawhide" />

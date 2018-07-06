@@ -122,7 +122,7 @@ EOF
 # This speeds up yum because of a bug where it will update stdout too often.
 # http://lists.baseurl.org/pipermail/yum-devel/2011-December/008857.html
 yum check-update > /dev/null 2>&1 || true
-{% if harness|default('beah') == 'beah' %}
+{% if harness == 'beah' %}
 {% snippet 'beah' %}
 {% else %}
 {% snippet 'harness' %}
