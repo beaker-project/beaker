@@ -51,6 +51,17 @@ Source15:       https://github.com/jsmreese/moment-duration-format/archive/8d0bf
 
 BuildArch:      noarch
 BuildRequires:  make
+%if 0%{?fedora} >= 29 || 0%{?rhel} >= 8
+BuildRequires:  python2-setuptools
+BuildRequires:  python2-nose
+BuildRequires:  python2-unittest2
+BuildRequires:  python2-mock
+BuildRequires:  python2-setuptools
+BuildRequires:  python2-devel
+BuildRequires:  python2-docutils
+BuildRequires:  python2-sphinx
+BuildRequires:  python2-sphinxcontrib-httpdomain
+%else
 BuildRequires:  python-setuptools
 BuildRequires:  python-nose >= 0.10
 BuildRequires:  python-unittest2
@@ -64,6 +75,7 @@ BuildRequires:  python-sphinx10
 BuildRequires:  python-sphinx >= 1.0
 %endif
 BuildRequires:  python-sphinxcontrib-httpdomain
+%endif
 
 
 %package common
@@ -76,10 +88,26 @@ Obsoletes:      %{name} < 0.17.0-1
 %package client
 Summary:        Command-line client for interacting with Beaker
 Group:          Applications/Internet
+Requires:       %{name}-common = %{version}-%{release}
 # setup.py uses pkg-config to find the right installation paths
 %if 0%{?fedora} || 0%{?rhel} >= 7
 BuildRequires:  pkgconfig(bash-completion)
 %endif
+%if 0%{?fedora} >= 29 || 0%{?rhel} >= 8
+# These client dependencies are needed in build because of sphinx
+BuildRequires:  python2-krbv
+BuildRequires:  python2-lxml
+BuildRequires:  python2-libxslt
+BuildRequires:  python2-prettytable
+Requires:       python2-setuptools
+Requires:       python2-krbv
+Requires:       python2-lxml
+Requires:       python2-requests
+Requires:       python2-libxslt
+Requires:       python2-libxml2
+Requires:       python2-prettytable
+Requires:       python2-jinja2
+%else # old style Python package names
 # These client dependencies are needed in build because of sphinx
 BuildRequires:  python-krbV
 BuildRequires:  python-lxml
@@ -87,7 +115,6 @@ BuildRequires:  libxslt-python
 BuildRequires:  python-prettytable
 Requires:       python
 Requires:       python-setuptools
-Requires:       %{name}-common = %{version}-%{release}
 Requires:       python-krbV
 Requires:       python-lxml
 Requires:       python-requests
@@ -95,6 +122,7 @@ Requires:       libxslt-python
 Requires:       libxml2-python
 Requires:       python-prettytable
 Requires:       python-jinja2
+%endif
 # beaker-wizard was moved from rhts-devel to here in 4.52
 Conflicts:      rhts-devel < 4.52
 
@@ -102,12 +130,74 @@ Conflicts:      rhts-devel < 4.52
 %package server
 Summary:        Beaker scheduler and web interface
 Group:          Applications/Internet
+Requires:       %{name}-common = %{version}-%{release}
 BuildRequires:  python-kid
 # These runtime dependencies are needed at build time as well, because
 # the unit tests and Sphinx autodoc import the server code as part of the
 # build process.
 BuildRequires:  createrepo
 BuildRequires:  createrepo_c
+BuildRequires:  ipxe-bootimgs
+BuildRequires:  syslinux
+BuildRequires:  mtools
+Requires:       createrepo_c
+Requires:       ipxe-bootimgs
+Requires:       syslinux
+Requires:       mtools
+Requires:       intltool
+Requires:       crontabs
+Requires:       mod_wsgi
+Requires:       httpd
+Requires:       yum-utils
+Requires:       nodejs-less >= 1.7
+Requires:       /usr/bin/cssmin
+Requires:       /usr/bin/uglifyjs
+%if 0%{?fedora} >= 29 || 0%{?rhel} >= 8
+BuildRequires:  python2-requests
+BuildRequires:  TurboGears
+BuildRequires:  python2-turbojson
+BuildRequires:  python2-sqlalchemy
+BuildRequires:  python2-lxml
+BuildRequires:  python2-ldap
+BuildRequires:  python2-rdflib
+BuildRequires:  python2-turbomail
+BuildRequires:  python2-cracklib
+BuildRequires:  python2-rpm
+BuildRequires:  python2-netaddr
+BuildRequires:  python2-itsdangerous
+BuildRequires:  python2-decorator
+BuildRequires:  python2-webassets
+BuildRequires:  python2-flask
+BuildRequires:  python2-markdown
+BuildRequires:  python2-passlib
+BuildRequires:  python2-alembic
+BuildRequires:  python2-daemon
+BuildRequires:  python2-futures
+Requires:       TurboGears
+Requires:       python2-turbojson
+Requires:       python2-sqlalchemy
+Requires:       python2-decorator
+Requires:       python2-lxml
+Requires:       python2-ldap
+Requires:       python2-rdflib
+Requires:       python2-daemon
+Requires:       python2-lockfile
+Requires:       python2-krbV
+Requires:       python2-TurboMail
+Requires:       python2-cracklib
+Requires:       python2-jinja2
+Requires:       python2-netaddr
+Requires:       python2-requests
+Requires:       python2-requests-kerberos
+Requires:       python2-itsdangerous
+Requires:       python2-decorator
+Requires:       python2-flask
+Requires:       python2-markdown
+Requires:       python2-webassets
+Requires:       python2-passlib
+Requires:       python2-alembic
+Requires:       python2-futures
+%else # old style Python package names
 BuildRequires:  python-requests
 BuildRequires:  TurboGears >= 1.1.3
 %if 0%{?rhel} == 6
@@ -123,9 +213,6 @@ BuildRequires:  python-TurboMail >= 3.0
 BuildRequires:  cracklib-python
 BuildRequires:  rpm-python
 BuildRequires:  python-netaddr
-BuildRequires:  ipxe-bootimgs
-BuildRequires:  syslinux
-BuildRequires:  mtools
 BuildRequires:  python-itsdangerous
 BuildRequires:  python-decorator
 BuildRequires:  python-webassets
@@ -142,40 +229,28 @@ Requires:       python-turbojson13
 Requires:       python-turbojson
 %endif
 Requires:       python-sqlalchemy >= 0.9
-Requires:       intltool
 Requires:       python-decorator
 Requires:       python-lxml
 Requires:       python-ldap
 Requires:       python-rdflib >= 3.2.0
 Requires:       python-daemon
 Requires:       python-lockfile >= 0.9
-Requires:       crontabs
-Requires:       mod_wsgi
-Requires:       httpd
 Requires:       python-krbV
-Requires:       %{name}-common = %{version}-%{release}
 Requires:       python-TurboMail >= 3.0
-Requires:       createrepo_c
-Requires:       yum-utils
 Requires:       cracklib-python
 Requires:       python-jinja2
 Requires:       python-netaddr
 Requires:       python-requests >= 1.0
 Requires:       python-requests-kerberos
-Requires:       ipxe-bootimgs
-Requires:       syslinux
-Requires:       mtools
 Requires:       python-itsdangerous
 Requires:       python-decorator
 Requires:       python-flask
 Requires:       python-markdown
 Requires:       python-webassets
-Requires:       nodejs-less >= 1.7
-Requires:       /usr/bin/cssmin
-Requires:       /usr/bin/uglifyjs
 Requires:       python-passlib
 Requires:       python-alembic
 Requires:       python-futures
+%endif
 %if %{with systemd}
 BuildRequires:  systemd
 BuildRequires:  pkgconfig(systemd)
@@ -195,18 +270,27 @@ Requires:       %{name}-common = %{version}-%{release}
 Requires:       %{name}-server = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
 Requires:       %{name}-lab-controller = %{version}-%{release}
+Requires:       Xvfb
+Requires:       firefox
+Requires:       lsof
+Requires:       openldap-servers
+%if 0%{?fedora} >= 29 || 0%{?rhel} >= 8
+Requires:       python2-nose
+Requires:       python2-selenium
+Requires:       python2-requests
+Requires:       python2-requests-kerberos
+Requires:       python2-unittest2
+Requires:       python2-gunicorn
+Requires:       python2-mock
+%else # old style Python package names
 Requires:       python-nose >= 0.10
 %if 0%{?rhel}
 Requires:       selenium-python >= 2.12
 %else
 Requires:       python-selenium >= 2.12
 %endif
-Requires:       Xvfb
-Requires:       firefox
-Requires:       lsof
 Requires:       python-requests >= 1.0
 Requires:       python-requests-kerberos
-Requires:       openldap-servers
 Requires:       python-unittest2
 Requires:       python-gunicorn
 Requires:       python-mock
@@ -215,15 +299,14 @@ Requires:       python-mock
 Requires:       python-cssselect
 %endif
 %endif
+%endif
 
 
 %if %{with labcontroller}
 %package lab-controller
 Summary:        Daemons for controlling a Beaker lab
 Group:          Applications/Internet
-# These LC dependencies are needed in build due to tests
-BuildRequires:  python-gevent >= 1.0
-BuildRequires:  python-lxml
+Requires:       %{name}-common = %{version}-%{release}
 Requires:       python
 Requires:       crontabs
 Requires:       httpd
@@ -234,8 +317,23 @@ Requires:       ipmitool
 Requires:       wsmancli
 Requires:       telnet
 Requires:       sudo
+%if 0%{?fedora} >= 29 || 0%{?rhel} >= 8
+# These LC dependencies are needed in build due to tests
+BuildRequires:  python2-lxml
+BuildRequires:  python2-gevent
+Requires:       python2-cpio
+Requires:       python2-setuptools
+Requires:       python2-lxml
+Requires:       python2-krbv
+Requires:       python2-gevent
+Requires:       python2-daemon
+Requires:       python2-werkzeug
+Requires:       python2-flask
+%else # old style Python package names
+# These LC dependencies are needed in build due to tests
+BuildRequires:  python-lxml
+BuildRequires:  python-gevent >= 1.0
 Requires:       python-cpio
-Requires:       %{name}-common = %{version}-%{release}
 Requires:       python-setuptools
 Requires:       python-lxml
 Requires:       python-krbV
@@ -243,6 +341,7 @@ Requires:       python-gevent >= 1.0
 Requires:       python-daemon
 Requires:       python-werkzeug
 Requires:       python-flask
+%endif
 %if %{with systemd}
 BuildRequires:  systemd
 BuildRequires:  pkgconfig(systemd)
