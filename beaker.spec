@@ -419,9 +419,6 @@ ln -s /dev/null %{buildroot}%{_datadir}/bkr/server/assets/site.less
 %check
 make check
 
-%clean
-%{__rm} -rf %{buildroot}
-
 %post server
 %if %{with systemd}
 %systemd_post beakerd.service
