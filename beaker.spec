@@ -140,6 +140,7 @@ BuildRequires:  createrepo_c
 BuildRequires:  ipxe-bootimgs
 BuildRequires:  syslinux
 BuildRequires:  mtools
+BuildRequires:  yum
 Requires:       createrepo_c
 Requires:       ipxe-bootimgs
 Requires:       syslinux
@@ -148,6 +149,7 @@ Requires:       intltool
 Requires:       crontabs
 Requires:       mod_wsgi
 Requires:       httpd
+Requires:       yum
 Requires:       yum-utils
 Requires:       nodejs-less >= 1.7
 Requires:       /usr/bin/cssmin
