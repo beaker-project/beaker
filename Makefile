@@ -6,16 +6,7 @@
 
 DEPCMD  :=  $(shell if [ -f /usr/bin/dnf ]; then echo "dnf builddep"; else echo "yum-builddep"; fi)
 
-SUBDIRS := Common Client documentation
-ifdef WITH_SERVER
-    SUBDIRS += Server
-endif
-ifdef WITH_LABCONTROLLER
-    SUBDIRS += LabController
-endif
-ifdef WITH_INTTESTS
-    SUBDIRS += IntegrationTests
-endif
+SUBDIRS := Common Client documentation Server LabController IntegrationTests
 
 .PHONY: build
 build:

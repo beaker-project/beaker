@@ -3,11 +3,6 @@
 %{!?python2_sitelib: %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
 %endif
 
-# The server, lab controller, and integration test subpackages can be conditionally built.
-# Use rpmbuild --without to override.
-%bcond_without server
-%bcond_without labcontroller
-%bcond_without inttests
 %global _lc_services beaker-proxy beaker-provision beaker-watchdog beaker-transfer
 %if 0%{?fedora} >= 18 || 0%{?rhel} >= 7
 %bcond_without systemd
@@ -126,7 +121,6 @@ Requires:       python-jinja2
 # beaker-wizard was moved from rhts-devel to here in 4.52
 Conflicts:      rhts-devel < 4.52
 
-%if %{with server}
 %package server
 Summary:        Beaker scheduler and web interface
 Group:          Applications/Internet
@@ -261,10 +255,8 @@ Requires(post): systemd
 Requires(pre):  systemd
 Requires(postun):  systemd
 %endif
-%endif
 
 
-%if %{with inttests}
 %package integration-tests
 Summary:        Integration tests for Beaker
 Group:          Applications/Internet
@@ -301,10 +293,8 @@ Requires:       python-mock
 Requires:       python-cssselect
 %endif
 %endif
-%endif
 
 
-%if %{with labcontroller}
 %package lab-controller
 Summary:        Daemons for controlling a Beaker lab
 Group:          Applications/Internet
@@ -359,7 +349,6 @@ Group:          Applications/Internet
 Requires:       %{name}-common = %{version}-%{release}
 Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
-%endif
 
 %description
 Beaker is a full stack software and hardware integration testing system, with 
@@ -372,7 +361,6 @@ Python modules which are used by other Beaker packages.
 The bkr client is a command-line tool for interacting with Beaker servers. You 
 can use it to submit Beaker jobs, fetch results, and perform many other tasks.
 
-%if %{with server}
 %description server
 This package provides the central server components for Beaker, which 
 consist of:
@@ -380,15 +368,11 @@ consist of:
   well as a web interface for Beaker users; 
 * the beakerd scheduling daemon, which schedules recipes on systems; and 
 * command-line tools for managing a Beaker installation.
-%endif
 
-%if %{with inttests}
 %description integration-tests
 This package contains integration tests for Beaker, which require a running 
 database and Beaker server.
-%endif
 
-%if %{with labcontroller}
 %description lab-controller
 The lab controller daemons connect to a central Beaker server in order to 
 manage a local lab of test systems.
@@ -403,7 +387,6 @@ The daemons and associated lab controller tools:
 addDistro.sh can be called after distros have been imported into Beaker. You 
 can install this on your lab controller to automatically launch jobs against 
 newly imported distros.
-%endif
 
 %prep
 %setup -q -n %{name}-%{upstream_version}
@@ -424,35 +407,20 @@ tar -C Server/assets/marked --strip-components=1 -xzf %{SOURCE14}
 tar -C Server/assets/moment-duration-format --strip-components=1 -xzf %{SOURCE15}
 
 %build
-make \
-    %{?with_server:WITH_SERVER=1} \
-    %{?with_labcontroller:WITH_LABCONTROLLER=1} \
-    %{?with_inttests:WITH_INTTESTS=1}
+make
 
 %install
-DESTDIR=%{buildroot} make \
-    %{?with_server:WITH_SERVER=1} \
-    %{?with_labcontroller:WITH_LABCONTROLLER=1} \
-    %{?with_inttests:WITH_INTTESTS=1} \
-    install
+DESTDIR=%{buildroot} make install
 
-%if %{with server}
 # Newer RPM fails if site.less doesn't exist, even though it's marked %%ghost 
 # and therefore is not included in the RPM. Seems like an RPM bug...
 ln -s /dev/null %{buildroot}%{_datadir}/bkr/server/assets/site.less
-%endif
 
 %check
-make \
-    %{?with_server:WITH_SERVER=1} \
-    %{?with_labcontroller:WITH_LABCONTROLLER=1} \
-    %{?with_inttests:WITH_INTTESTS=1} \
-    check
+make check
 
 %clean
 %{__rm} -rf %{buildroot}
-
-%if %{with server}
 
 %post server
 %if %{with systemd}
@@ -470,9 +438,6 @@ chmod go-w %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 if [ ! -f %{_datadir}/bkr/server/assets/site.less ] ; then
     ln -s /dev/null %{_datadir}/bkr/server/assets/site.less || :
 fi
-%endif
-
-%if %{with labcontroller}
 
 %post lab-controller
 %if %{with systemd}
@@ -488,9 +453,7 @@ chown root:root %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 chmod go-w %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 # Restart rsyslog so that it notices the config which we ship
 /sbin/service rsyslog condrestart >/dev/null 2>&1 || :
-%endif
 
-%if %{with server}
 %postun server
 %if %{with systemd}
 %systemd_postun_with_restart beakerd.service
@@ -499,9 +462,7 @@ if [ "$1" -ge "1" ]; then
     /sbin/service beakerd condrestart >/dev/null 2>&1 || :
 fi
 %endif
-%endif
 
-%if %{with labcontroller}
 %postun lab-controller
 %if %{with systemd}
 %systemd_postun_with_restart %{_lc_services}
@@ -512,9 +473,7 @@ if [ "$1" -ge "1" ]; then
    done
 fi
 %endif
-%endif
 
-%if %{with server}
 %preun server
 %if %{with systemd}
 %systemd_preun beakerd.service
@@ -524,9 +483,7 @@ if [ "$1" -eq "0" ]; then
         /sbin/chkconfig --del beakerd || :
 fi
 %endif
-%endif
 
-%if %{with labcontroller}
 %preun lab-controller
 %if %{with systemd}
 %systemd_preun %{_lc_services}
@@ -539,7 +496,6 @@ if [ "$1" -eq "0" ]; then
 fi
 rm -rf %{_var}/lib/beaker/osversion_data
 %endif
-%endif
 
 %files common
 %dir %{python2_sitelib}/bkr/
@@ -550,7 +506,6 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{python2_sitelib}/beaker_common-*.egg-info/
 %doc COPYING
 
-%if %{with server}
 %files server
 %dir %{_sysconfdir}/%{name}
 %doc documentation/_build/text/whats-new/
@@ -598,24 +553,12 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/rpms
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/repos
 %attr(-,apache,root) %dir %{_localstatedir}/lib/%{name}
-%else
-# If we're not building the -server subpackage we need to tell RPM to ignore 
-# the server man pages. They will always be present because the docs build 
-# always installs them all.
-%exclude %{_mandir}/man8/beaker-create-ipxe-image.8.gz
-%exclude %{_mandir}/man8/beaker-create-kickstart.8.gz
-%exclude %{_mandir}/man8/beaker-init.8.gz
-%exclude %{_mandir}/man8/beaker-repo-update.8.gz
-%exclude %{_mandir}/man8/beaker-usage-reminder.8.gz
-%endif
 
-%if %{with inttests}
 %files integration-tests
 %{python2_sitelib}/bkr/inttest/
 %{python2_sitelib}/beaker_integration_tests-*-nspkg.pth
 %{python2_sitelib}/beaker_integration_tests-*.egg-info/
 %{_datadir}/beaker-integration-tests
-%endif
 
 %files client
 %dir %{_sysconfdir}/%{name}
@@ -634,7 +577,6 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_sysconfdir}/bash_completion.d
 %endif
 
-%if %{with labcontroller}
 %files lab-controller
 %dir %{_sysconfdir}/%{name}
 %config(noreplace) %{_sysconfdir}/%{name}/labcontroller.conf
@@ -682,8 +624,5 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %files lab-controller-addDistro
 %{_var}/lib/%{name}/addDistro.sh
 %{_var}/lib/%{name}/addDistro.d/*
-%else
-%exclude %{_mandir}/man8/beaker-import.8.gz
-%endif
 
 %changelog
