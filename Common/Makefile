@@ -6,14 +6,14 @@
 
 .PHONY: build
 build:
-	python setup.py build
+	python2 setup.py build
 	# Workaround for https://bitbucket.org/pypa/setuptools/issue/2/
 	# See adjacent setup.py for more details
 	echo bkr > build/namespace_packages.txt
 
 .PHONY: install
 install: build
-	python setup.py install -O1 --skip-build --root $(DESTDIR)
+	python2 setup.py install -O1 --skip-build --root $(DESTDIR)
 	# Workaround for https://bitbucket.org/pypa/setuptools/issue/2/
 	# See adjacent setup.py for more details
 	install -m0644 build/namespace_packages.txt \
@@ -21,7 +21,7 @@ install: build
 
 .PHONY: clean
 clean:
-	python setup.py clean
+	python2 setup.py clean
 	rm -rf build
 
 .PHONY: check
