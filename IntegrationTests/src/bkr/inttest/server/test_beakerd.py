@@ -836,7 +836,7 @@ class TestBeakerd(DatabaseTestCase):
             distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20')
             job = data_setup.create_job(owner=user, distro_tree=distro_tree)
             recipe = job.recipesets[0].recipes[0]
-            recipe.ks_meta = "harness='myharness'"
+            recipe.ks_meta = "harness='myharness' no_default_harness_repo"
             recipe._host_requires = (
                     u'<hostRequires><and><hostname op="=" value="%s"/></and></hostRequires>'
                     % system.fqdn)
@@ -865,7 +865,7 @@ class TestBeakerd(DatabaseTestCase):
             distro_tree = data_setup.create_distro_tree(osmajor=u'MyAwesomeNewLinux', 
                                                         harness_dir=False)
             recipe = data_setup.create_recipe(distro_tree=distro_tree)
-            recipe.ks_meta = "contained_harness"
+            recipe.ks_meta = "contained_harness no_default_harness_repo"
             job = data_setup.create_job_for_recipes([recipe])
             data_setup.mark_recipe_waiting(recipe)
         # The test is just checking that recipe.provision() can be called 

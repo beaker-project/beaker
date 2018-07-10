@@ -2582,11 +2582,9 @@ class Recipe(TaskBase, ActivityMixin):
                 by_kernel, kernel_type).path
             self.installation.initrd_path = self.distro_tree.image_by_type(
                 by_initrd, kernel_type).path
-        if 'contained_harness' not in install_options.ks_meta \
-           and 'ostree_repo_url' not in install_options.ks_meta:
-            if 'harness' not in install_options.ks_meta and not self.harness_repo():
-                # raise ValueError only if distro is not user-defined
-                if self.distro_tree:
+
+            if 'no_default_harness_repo' not in install_options.ks_meta \
+                and not self.harness_repo():
                     raise ValueError('Failed to find repo for harness')
         if 'ks' in install_options.kernel_options:
             # Use it as is

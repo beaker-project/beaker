@@ -281,18 +281,23 @@ correspond to the similarly-named kickstart option.
     for a particular distro tree under the :guilabel:`Repos` tab on the distro 
     tree page.
 
-``no_updates_repos``
-    Omits the fedora-updates repo for Fedora.
-
 ``no_clock_sync``
     Omits additional packages and scripts which ensure the system clock is 
     synchronized after installation.
+
+``no_default_harness_repo``
+    If you have your own repository providing a test harness, this
+    variable can be used to prevent Beaker from configuring the default Beaker
+    harness repository in the kickstart.
 
 ``no_disable_readahead``
     By default Beaker disables readahead collection, because it is not 
     generally useful in Beaker recipes and the harness interferes with normal 
     data collection. If this variable is set, Beaker omits the snippet which 
     disables readahead collection.
+
+``no_updates_repos``
+    Omits the fedora-updates repo for Fedora.
 
 ``liveimg``
     Specify a relative path to an image file or rpm that contains a squashfs 

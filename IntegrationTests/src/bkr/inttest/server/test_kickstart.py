@@ -3435,7 +3435,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
             <job>
                 <whiteboard/>
                 <recipeSet>
-                    <recipe ks_meta="contained_harness selinux=--disabled">
+                    <recipe ks_meta="no_default_harness_repo contained_harness selinux=--disabled">
                         <repos> <repo name="restraint" url="http://my/repo/"/> </repos>
                         <distroRequires>
                             <distro_name op="=" value="Fedora-18" />
@@ -3456,7 +3456,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
             <job>
                 <whiteboard/>
                 <recipeSet>
-                    <recipe ks_meta="contained_harness contained_harness_entrypoint=/usr/bin/mybinary harness_docker_base_image=docker-registry.mysys.com/fedora:latest selinux=--disabled">
+                    <recipe ks_meta="no_default_harness_repo contained_harness contained_harness_entrypoint=/usr/bin/mybinary harness_docker_base_image=docker-registry.mysys.com/fedora:latest selinux=--disabled">
                         <distroRequires>
                             <distro_name op="=" value="Fedora-18" />
                             <distro_arch op="=" value="x86_64" />
@@ -3475,7 +3475,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
             <job>
                 <whiteboard/>
                 <recipeSet>
-                    <recipe ks_meta="contained_harness selinux=--disabled">
+                    <recipe ks_meta="no_default_harness_repo contained_harness selinux=--disabled">
                         <repos> <repo name="restraint" url="http://my/repo/"/> </repos>
                         <distroRequires>
                             <distro_name op="=" value="Fedora-rawhide" />
@@ -3576,7 +3576,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
         <job>
             <whiteboard/>
             <recipeSet>
-                <recipe ks_meta="ostree_repo_url=http://foo/bar/repo ostree_ref=my/remote/ref harness_docker_base_image=registry.hub.docker.com/fedora:20 selinux=--disabled">
+                <recipe ks_meta="no_default_harness_repo ostree_repo_url=http://foo/bar/repo ostree_ref=my/remote/ref harness_docker_base_image=registry.hub.docker.com/fedora:20 selinux=--disabled">
                    <repos> <repo name="restraint" url="http://my/repo/"/> </repos>2728
                    <distroRequires>
                        <distro_name op="=" value="Atomic-Host" />
@@ -3671,3 +3671,24 @@ volgroup bootvg --pesize=32768 pv.01
             ''', self.system)
         ks = recipe.installation.rendered_kickstart.kickstart
         self.assertIn('%packages --excludedocs --resolvedeps --instLangs=en_US', ks)
+
+    def test_no_default_harness_repo(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="no_default_harness_repo">
+                        <distroRequires>
+                            <distro_name op="=" value="Atomic-Host" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        ks = recipe.installation.rendered_kickstart.kickstart
+        self.assertIn("The default Beaker harness repository is not included, because you set 'no_default_harness_repo' via ks_meta", ks)
+        self.assertNotIn('[beaker-harness]', ks)

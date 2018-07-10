@@ -96,7 +96,7 @@ popd
 {% endif %}
 
 
-{% if harnessrepo and contained_harness is not defined and has_rpmostree is not defined %}
+{% if harnessrepo and no_default_harness_repo is not defined %}
 # Add Harness Repo
 {% set reponame, repourl = harnessrepo.split(',', 1) %}
 cat <<"EOF" >/etc/yum.repos.d/{{ reponame }}.repo
@@ -106,6 +106,9 @@ baseurl={{ repourl }}
 enabled=1
 gpgcheck=0
 EOF
+{% endif %}
+{% if no_default_harness_repo is defined %}
+# The default Beaker harness repository is not included, because you set 'no_default_harness_repo' via ks_meta.
 {% endif %}
 
 # Add distro and custom Repos

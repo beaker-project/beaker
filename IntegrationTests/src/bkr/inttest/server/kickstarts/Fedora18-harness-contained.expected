@@ -247,6 +247,7 @@ fi
 
 
 
+# The default Beaker harness repository is not included, because you set 'no_default_harness_repo' via ks_meta.
 
 # Add distro and custom Repos
 cat <<"EOF" >/etc/yum.repos.d/beaker-debug.repo

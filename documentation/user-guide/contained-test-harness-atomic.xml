@@ -1,4 +1,4 @@
-<recipe kernel_options="" kernel_options_post="" ks_meta="harness_docker_base_image=registry.hub.docker.com/centos:centos7 ostree_repo_url=http://link/to/ostree/repo/ ostree_ref=my-atomic-host/20/x86_64/standard" role="RECIPE_MEMBERS" whiteboard="">
+<recipe kernel_options="" kernel_options_post="" ks_meta="no_default_harness_repo harness_docker_base_image=registry.hub.docker.com/centos:centos7 ostree_repo_url=http://link/to/ostree/repo/ ostree_ref=my-atomic-host/20/x86_64/standard" role="RECIPE_MEMBERS" whiteboard="">
   <autopick random="false"/>
   <watchdog panic="ignore"/>
   <packages/>

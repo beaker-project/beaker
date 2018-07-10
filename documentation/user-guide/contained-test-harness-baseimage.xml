@@ -1,5 +1,5 @@
 <recipeSet priority="Normal">
-<recipe kernel_options="" kernel_options_post="" ks_meta="contained_harness harness_docker_base_image=registry.hub.docker.com/centos:centos7" role="None" whiteboard="">
+<recipe kernel_options="" kernel_options_post="" ks_meta="no_default_harness_repo contained_harness harness_docker_base_image=registry.hub.docker.com/centos:centos7" role="None" whiteboard="">
     <autopick random="false"/>
     <watchdog panic="ignore"/>
     <packages/>

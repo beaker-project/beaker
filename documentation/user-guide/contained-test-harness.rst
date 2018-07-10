@@ -23,6 +23,8 @@ An example Beaker job using this feature is as follows:
 
 The key points in the above recipe worth noting are:
 
+- The ``no_default_harness_repo`` ksmeta variable tells Beaker to not include
+  the repository for Beaker's test harness.
 - ``contained_harness`` ksmeta variable: This tells beaker that we want to run 
   the test harness in a Docker container.
 - The host distro as specified by ``<distroRequires/>`` is Fedora 20.
