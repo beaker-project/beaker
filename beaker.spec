@@ -24,7 +24,7 @@ Group:          Applications/Internet
 License:        GPLv2+ and BSD
 URL:            https://beaker-project.org/
 
-Source0:        https://beaker-project.org/releases/%{name}-%{upstream_version}.tar.gz
+Source0:        https://beaker-project.org/releases/%{name}-%{upstream_version}.tar.xz
 # Third-party JS/CSS libraries which are built into Beaker's generated JS/CSS
 # (these are submodules in Beaker's git tree, the commit hashes here should
 # correspond to the submodule commits)
