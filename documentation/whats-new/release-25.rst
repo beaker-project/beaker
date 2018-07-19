@@ -338,3 +338,55 @@ Beaker 25.4
   would negatively impact database performance due to the overhead of
   the database needing to maintain transaction state.
   (Contributed by Dan Callaghan)
+
+
+Beaker 25.5
+-----------
+
+* :issue:`1505207`: Beaker's new job page is using an automatic update mechanism
+  which loads JSON data from the Beaker server in intervals. For jobs with many
+  recipes, the amount of data can be very big which was putting a lot of load on
+  the server when it happened in short intervals. This has been fixed. A new
+  request is only sent to the server, if the previous request has responded
+  therefore removing any potential for unnecessary load.
+  (Contributed by Jacob McKenzie)
+* :issue:`1574317`: Beaker's kernel panic detection regular expression which
+  triggers on an ``Oops`` word found in the log output has been slightly tweaked.
+  We adjusted the expression from ``\bOops\b`` to ``Oops[\s:[]`` to avoid it
+  falsely triggering on data with the same word appearing in the log
+  output.
+  (Contributed by Jacob McKenzie)
+* :issue:`1588263`: Beaker now sets ``Auto-Submitted: auto-generated`` and
+  ``Precedence: bulk`` headers when it sends automated emails (such as job
+  completion notifications). This avoids triggering vacation auto-replies, which
+  are meaningless noise for the Beaker administrator.
+  (Contributed by Dan Callaghan)
+* :issue:`1065202`: The XMLRPC API for registering new recipe log files now
+  correctly acquires an exclusive lock on the relevant recipe row. This avoids a
+  deadlock which could occur if the scheduler was attempting to update the
+  recipe at the same time. Note that the deadlock was harmless, but it would
+  produce an error in ``beakerd.log``.
+  (Contributed by Dan Callaghan)
+* :issue:`1591391`: Beaker now truncates usernames to 60 characters before
+  storing them in the activity tables of the database. Previously, when the
+  database was using MySQL "strict mode", some HTTP requests would fail with an
+  Internal Server Error if the user performing the action had a username longer
+  than 60 characters.
+  (Contributed by Jacob McKenzie)
+* :issue:`1593042`: The beaker-import tool now supports importing RHEL8 Alpha
+  composes synced to partner labs.
+  (Contributed by Róman Joost)
+* :issue:`1586049`: In order to keep backwards compatibility
+  with non-strict MySQL deployments, Beaker now coerces the score value to an
+  integer similar to what MySQL non-strict is doing. Previously, if tests
+  mistakenly reported the score as a non-integer value, Beaker was returning an
+  internal server error, because a MySQL database configured in strict mode is
+  rejecting the wrong score.
+  (Contributed by Róman Joost)
+* :issue:`1369590`: Fixed a problem with the LESS stylesheets which would cause
+  the application to fail to start if lessc 2.7 is installed.
+  (Contributed by Dan Callaghan)
+
+The lshw package in the Beaker harness repositories has also been updated
+to incorporate the latest upstream fixes. It is now based on lshw commit 028f6b2
+from 14 June 2018.
