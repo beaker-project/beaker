@@ -2227,18 +2227,14 @@ class Recipe(TaskBase, ActivityMixin):
             return None
     duration = property(_get_duration)
 
-    def _get_packages(self):
-        """ return all packages for all tests
+    @property
+    def task_requirements(self):
+        """ return all packages required by tasks
         """
-        packages = []
-        packages.extend(TaskPackage.query
+        return (TaskPackage.query
                 .select_from(RecipeTask).join(Task).join(Task.required)
                 .filter(RecipeTask.recipe == self)
-                .order_by(TaskPackage.package).distinct())
-        packages.extend(self.custom_packages)
-        return packages
-
-    packages = property(_get_packages)
+                .order_by(TaskPackage.package).distinct().all())
 
     def _get_arch(self):
         if self.installation:

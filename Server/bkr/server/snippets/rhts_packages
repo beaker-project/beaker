@@ -15,9 +15,16 @@ just install docker-io
 {% endfor %}
 {% else %}
 {% if recipe %}
-{% for recipe_package in recipe.packages %}
+{% for recipe_package in recipe.custom_packages %}
 {{ recipe_package.package }}
 {% endfor %}
+{% if install_task_requires is defined %}
+{% for recipe_package in recipe.task_requirements %}
+{{ recipe_package.package }}
+{% endfor %}
+{% else %}
+# Task requirements will be installed by the harness
+{% endif %}
 {% endif %}
 {% endif %}
 {% endif %}

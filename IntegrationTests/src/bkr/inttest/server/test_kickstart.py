@@ -1137,6 +1137,82 @@ class KickstartTest(unittest.TestCase):
         compare_expected('Fedorarawhide-scheduler-defaults', recipe.id,
                          recipe.installation.rendered_kickstart.kickstart)
 
+    def test_fedora_rawhide_force_task_requirements(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="install_task_requires">
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-rawhide" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <packages>
+                          <package name="python-glanceclient" />
+                        </packages>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assertIn('%packages --ignoremissing\npython-glanceclient\n@desktop-platform-devel',
+                      recipe.installation.rendered_kickstart.kickstart)
+        self.assertIn('python-glanceclient',
+                      recipe.installation.rendered_kickstart.kickstart)
+        self.assertNotIn('# Task requirements will be installed by the harness',
+                         recipe.installation.rendered_kickstart.kickstart)
+
+    def test_fedora_rawhide_replace_packages_by_ksmeta(self):
+        """Packages ks_meta variable replaces kickstart %packages contents"""
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="packages=vim-enhanced:emacs">
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-rawhide" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assertIn('%packages --ignoremissing\nvim-enhanced\nemacs\n# no snippet data for packages\nchrony\n%end',
+                      recipe.installation.rendered_kickstart.kickstart)
+
+    def test_fedora_rawhide_add_packages(self):
+        """Test that additional packages can be installed"""
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-rawhide" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <packages>
+                          <package name="python-glanceclient" />
+                          <package name="-mariadb-galera-server" />
+                        </packages>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assertIn('''
+%packages --ignoremissing
+python-glanceclient
+-mariadb-galera-server
+''', recipe.installation.rendered_kickstart.kickstart)
+
     def test_fedora_rawhide_autopart_type(self):
         recipe = self.provision_recipe('''
             <job>

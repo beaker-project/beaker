@@ -240,6 +240,19 @@ correspond to the similarly-named kickstart option.
     ``ignoredisk=--drives=sdb,sdc``, or to use only certain disks for the 
     installation, for example ``ignoredisk=--only-use=sda,sdb``.
 
+``install_task_requires``
+    If defined, Beaker will include the packages required by every task in the
+    recipe. The packages will be populated in the kickstart ``%packages`` section,
+    causing Anaconda to install them.
+
+    For Fedora 29 and RHEL8 and later versions, this variable is *not* defined
+    by default. The default harness, Restraint, will install task requirements
+    before executing each task.
+
+    This variable *is* defined by default for older distros, where the default harness is Beah.
+    Beah does not install task requirements, instead it relies on the requirements being
+    populated in %packages and installed by Anaconda.
+
 ``keyboard=<layout>``
     Keyboard layout to use. Default is ``us``.
 

@@ -66,6 +66,7 @@ def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
     if (rhel and int(rhel) < 8 or \
         fedora and fedora != 'rawhide' and int(fedora) < 29):
         ks_meta['harness'] = 'beah'
+        ks_meta['install_task_requires'] = True
 
     # %end
     ks_meta['end'] = '%end'

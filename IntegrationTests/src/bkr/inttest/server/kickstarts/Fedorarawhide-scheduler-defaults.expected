@@ -37,25 +37,7 @@ autopart
 # no snippet data for system
 
 %packages --ignoremissing
-@desktop-platform-devel
-@development
-@development-libs
-@development-tools
-@server-platform-devel
-emacs
-expect
-gcc
-libxml2-python
-make
-nfs-utils
-ntp
-procmail
-pyOpenSSL
-redhat-lsb
-sendmail
-unifdef
-vim-enhanced
-wget
+# Task requirements will be installed by the harness
 # no snippet data for packages
 chrony
 %end
