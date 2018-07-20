@@ -162,6 +162,25 @@ class ReserveWorkflow(WebDriverTestCase):
         b.find_element_by_xpath('//td[normalize-space(string(.))="%s Server i386"]'
                 % self.distro.name)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1188539
+    def test_uses_new_check_install_task(self):
+        login(self.browser)
+        b = self.browser
+        b.get(get_server_base() + 'reserveworkflow/')
+        Select(b.find_element_by_name('osmajor'))\
+            .select_by_visible_text(self.distro.osversion.osmajor.osmajor)
+        Select(b.find_element_by_name('distro')).select_by_visible_text(self.distro.name)
+        Select(b.find_element_by_name('distro_tree_id'))\
+            .select_by_visible_text('%s Server i386' % self.distro.name)
+        b.find_element_by_xpath('//button[normalize-space(text())="Submit job"]').click()
+        # should end up on the job page
+        jid = b.find_element_by_xpath('//h1//span[@class="job-id"]').text
+        with session.begin():
+            job = TaskBase.get_by_t_id(jid)
+            # first task in the recipe should be our new check-install task
+            first_task = job.recipesets[0].recipes[0].tasks[0]
+            self.assertEquals(first_task.task.name, '/distribution/check-install')
+
     def test_reserve_time(self):
         login(self.browser)
         b = self.browser

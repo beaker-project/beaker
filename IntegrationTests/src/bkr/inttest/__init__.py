@@ -378,6 +378,7 @@ def setup_package():
                     u'@development-tools @development-libs @development '
                     u'@desktop-platform-devel @server-platform-devel '
                     u'libxml2-python expect pyOpenSSL'.split())
+            data_setup.create_task(name=u'/distribution/check-install')
             data_setup.create_task(name=u'/distribution/reservesys',
                     requires=u'emacs vim-enhanced unifdef sendmail'.split())
             data_setup.create_task(name=u'/distribution/utils/dummy')

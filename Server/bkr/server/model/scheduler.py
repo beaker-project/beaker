@@ -943,7 +943,7 @@ class Job(TaskBase, ActivityMixin):
             # Eventually we will want the option to add more tasks.
             # Add Install task
             recipe.tasks.append(RecipeTask.from_task(
-                    Task.by_name(u'/distribution/install')))
+                    Task.by_name(u'/distribution/check-install')))
             # Add Reserve task
             reserveTask = RecipeTask.from_task(
                     Task.by_name(u'/distribution/reservesys'))
