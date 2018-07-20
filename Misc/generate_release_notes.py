@@ -35,6 +35,7 @@ _email_to_name = {
     'bmcivor@redhat.com': 'Blake McIvor',
     'jorris@redhat.com': 'Jon Orris',
     'achatter@redhat.com': 'Anwesha Chatterjee',
+    'jmckenzi@redhat.com': 'Jacob McKenzie',
 }
 
 def main():
