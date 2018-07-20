@@ -4,28 +4,40 @@ Tasks provided with Beaker
 Besides the custom tasks which Beaker users would write for a specific
 testing scenario, there are a number of tasks which are distributed
 and maintained along with Beaker. Among these,
-``/distribution/install`` and ``/distribution/reservesys`` are
-essential for Beaker's operation. ``/distribution/inventory`` is not
+the ``/distribution/check-install``, ``/distribution/install``, and 
+``/distribution/reservesys`` tasks are
+essential for Beaker's operation. The ``/distribution/inventory`` task is not
 essential for Beaker's operation, but it is required for accurate
 functioning of Beaker's ability to schedule jobs on test systems
-meeting user specified hardware criteria. The task,
-``/distribution/beaker/dogfood`` runs Beaker's test suite (hence, the
+meeting user specified hardware criteria. The
+``/distribution/beaker/dogfood`` task runs Beaker's test suite (hence, the
 name `dogfood`) and is perhaps only useful for meeting certain
 specific requirements of the Beaker developers.
 
 
-/distribution/install
-=====================
+/distribution/check-install
+===========================
 
 The purpose of this task is to report back on the system install
 (provisioning). It is usually added before any scenario specific tasks
 so that it is run immediately after the system has been provisioned.
 
-This task uploads the kickstart used by the Anaconda installation
-program to provision the system, the boot loader configuration file,
-error logs, a file containing the list of packages which were
-installed and other files. If there is a problem in the installation,
-the data in these files can often be used to determine the cause.
+This task collects and reports various information about the installed system 
+which may be useful in debugging any problems with the installer or the distro.
+
+/distribution/install
+=====================
+
+This task is deprecated. Use ``/distribution/check-install`` instead.
+
+This is the original implementation of the installation checking task, but its 
+name has proved confusing, and it carried a very large (and unnecessary) set of 
+package requirements for historical reasons.
+
+This task is still maintained for backwards compatibility. Note that the 
+:program:`bkr` workflow commands will schedule this older task (instead of its 
+replacement ``/distribution/check-install``) for recipes running Fedora 28 and 
+older, or RHEL7 and older.
 
 .. _reservesys-task:
 
