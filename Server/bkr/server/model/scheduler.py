@@ -998,7 +998,7 @@ class Job(TaskBase, ActivityMixin):
         recipe.host_requires = u'<hostRequires force="%s" />' % system.fqdn
         recipe.systems.append(system)
         # Add Install task
-        install_task = RecipeTask.from_task(Task.by_name(u'/distribution/install'))
+        install_task = RecipeTask.from_task(Task.by_name(u'/distribution/check-install'))
         recipe.tasks.append(install_task)
         # Add inventory task
         inventory_task = RecipeTask.from_task(Task.by_name(u'/distribution/inventory'))

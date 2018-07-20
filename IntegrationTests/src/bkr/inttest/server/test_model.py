@@ -1119,6 +1119,8 @@ class TestJob(DatabaseTestCase):
                       job_xml)
         self.assertIn('<hostRequires force="%s"/>' % system.fqdn,
                       job_xml)
+        self.assertIn('<task name="/distribution/check-install" role="STANDALONE"/>',
+                      job_xml)
         self.assertIn('<task name="/distribution/inventory" role="STANDALONE"/>',
                       job_xml)
 
