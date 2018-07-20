@@ -31,7 +31,7 @@ Here is a complete job description corresponding to the above skeleton:
 .. literalinclude:: virtualization-workflow-sample-job.xml
 
 The above job sets up two guest systems ``guest1`` and ``guest2``
-and runs the ``/distribution/install`` task in each of them to
+and runs the ``/distribution/check-install`` task in each of them to
 indicate whether or not the installation worked and upload the
 relevant log files.
 

@@ -23,7 +23,7 @@ You can use the :ref:`harness API<harness-http-api>`::
 Troubleshooting checklist for an aborted job
 ============================================
 
-#. Has /distribution/install task passed?
+#. Has the first task in the recipe passed?
 
     Yes.
         Installation has passed in this case, beaker performed provisioning and test

@@ -123,7 +123,7 @@ a virtual machine (defined as a 'guest recipe' in Beaker). It does this via
 ``virt-install``. The task is defined in the host recipe, often along with
 ``/distribution/virt/start``. For example::
 
-  <task name="/distribution/install" role="SERVERS">
+  <task name="/distribution/check-install" role="SERVERS">
     <params/>
   </task>
   <task name="/distribution/virt/install" role="SERVERS">

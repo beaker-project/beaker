@@ -374,7 +374,7 @@ assigned to a new environment variable specified by ``name``.
               <distro_virt op="=" value=""/>
             </distroRequires>
 
-            <task name="/distribution/install" role="STANDALONE">
+            <task name="/distribution/check-install" role="STANDALONE">
               <params>
                     <param name="My_ENV_VAR" value="foo"/>
                </params>

@@ -84,11 +84,11 @@ In its simplest form, a job with multihost testing may look something like::
     <job>
       <RecipeSet>
          <recipe role='SERVERS'>
-            <task name='/distribution/install'/>
+            <task name='/distribution/check-install'/>
             <task name='/my/multihost/test'/>
          </recipe>
          <recipe role='CLIENTS'>
-            <task name='/distribution/install'/>
+            <task name='/distribution/check-install'/>
             <task name='/my/multihost/test'/>
          </recipe>
       </RecipeSet>
@@ -190,12 +190,12 @@ order aligns correctly on all machines. For example, the below will fail:
 ::
 
               <recipe>
-                <task role='STANDALONE' name='/distribution/install'/>
+                <task role='STANDALONE' name='/distribution/check-install'/>
                 <task role='STANDALONE' name='/my/test/number1'/>
                 <task role='SERVERS'    name='/my/multihost/test'/>
               </recipe>
               <recipe>
-                <task role='STANDALONE' name='/distribution/install'/>
+                <task role='STANDALONE' name='/distribution/check-install'/>
                 <task role='CLIENTS'    name='/my/multihost/test'/>
               </recipe>
 
@@ -208,12 +208,12 @@ the above can be fixed as:
 ::
 
               <recipe>
-               <task role='STANDALONE' name='/distribution/install'/>
+               <task role='STANDALONE' name='/distribution/check-install'/>
                <task role='STANDALONE' name='/my/test/number1'/>
                <task role='SERVERS'    name='/my/multihost/test'/>
               </recipe>
               <recipe>
-               <task role='STANDALONE' name='/distribution/install'/>
+               <task role='STANDALONE' name='/distribution/check-install'/>
                <task role='STANDALONE' name='/distribution/utils/dummy'/>
                <task role='CLIENTS'    name='/my/multihost/test'/>
               </recipe>
