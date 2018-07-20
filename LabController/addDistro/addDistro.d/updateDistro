@@ -30,4 +30,4 @@ IFS=" "
 
 # Run Add Distro Test in the background and tag the distro with STABLE 
 # if it succeeds
-(bkr workflow-simple --suppress-install-task --task /distribution/install --distro $DISTRO $ARCH_ARG $VARIANT_ARG --whiteboard "Add Distro Test $DISTRO $ARCHES" --wait && bkr distros-tag --name $DISTRO STABLE) >/dev/null 2>&1 &
+(bkr workflow-simple --suppress-install-task --task /distribution/check-install --distro $DISTRO $ARCH_ARG $VARIANT_ARG --whiteboard "Add Distro Test $DISTRO $ARCHES" --wait && bkr distros-tag --name $DISTRO STABLE) >/dev/null 2>&1 &
