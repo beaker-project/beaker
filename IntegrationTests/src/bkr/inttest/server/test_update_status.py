@@ -44,7 +44,7 @@ class TestUpdateStatus(DatabaseTestCase):
                             <distro_name op="=" value="BlueShoeLinux5-5" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" role="STANDALONE">
+                        <task name="/distribution/check-install" role="STANDALONE">
                             <params/>
                         </task>
                     </recipe>
@@ -55,7 +55,7 @@ class TestUpdateStatus(DatabaseTestCase):
                             <distro_name op="=" value="BlueShoeLinux5-5" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" role="STANDALONE">
+                        <task name="/distribution/check-install" role="STANDALONE">
                             <params/>
                         </task>
                     </recipe>

@@ -339,7 +339,7 @@ class TestRecipeView(WebDriverTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1326562
     def test_recipe_view_shows_external_task_results(self):
         with session.begin():
-            recipe = data_setup.create_recipe(task_name=u'/distribution/install')
+            recipe = data_setup.create_recipe(task_name=u'/distribution/check-install')
             external_task = RecipeTask.from_fetch_url(
                 url='git://example.com/externaltasks/example#master',
                 subdir='examples')
@@ -504,7 +504,7 @@ class TestRecipeView(WebDriverTestCase):
     def test_first_failed_task_should_expand_when_first_loading(self):
         with session.begin():
             recipe = data_setup.create_recipe(task_list=[
-                Task.by_name(u'/distribution/install'),
+                Task.by_name(u'/distribution/check-install'),
                 Task.by_name(u'/distribution/reservesys')
             ])
             job = data_setup.create_job_for_recipes([recipe])
@@ -521,7 +521,7 @@ class TestRecipeView(WebDriverTestCase):
     def test_task_without_failed_results_should_not_expand(self):
         with session.begin():
             recipe = data_setup.create_recipe(task_list=[
-                Task.by_name(u'/distribution/install'),
+                Task.by_name(u'/distribution/check-install'),
                 Task.by_name(u'/distribution/reservesys')
             ])
             job = data_setup.create_job_for_recipes([recipe])

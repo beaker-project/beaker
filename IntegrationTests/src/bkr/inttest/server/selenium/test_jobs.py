@@ -721,7 +721,7 @@ class NewJobTestWD(WebDriverTestCase):
                            </system>
                            <system_type value="Machine"/>
                         </hostRequires>
-                        <task name="/distribution/install" role="STANDALONE"/>
+                        <task name="/distribution/check-install" role="STANDALONE"/>
                     </recipe>
                 </recipeSet>
             </job>
@@ -754,7 +754,7 @@ class NewJobTestWD(WebDriverTestCase):
                            </system>
                            <system_type value="Machine"/>
                         </hostRequires>
-                        <task name="/distribution/install" role="STANDALONE"/>
+                        <task name="/distribution/check-install" role="STANDALONE"/>
                     </recipe>
                 </recipeSet>
             </job>
@@ -787,7 +787,7 @@ class NewJobTestWD(WebDriverTestCase):
                         <hostRequires>
                            <system_type value="Machine"/>
                         </hostRequires>
-                        <task name="/distribution/install" role="STANDALONE"/>
+                        <task name="/distribution/check-install" role="STANDALONE"/>
                     </recipe>
                 </recipeSet>
             </job>
@@ -823,7 +823,7 @@ class NewJobTestWD(WebDriverTestCase):
                            </system>
                            <system_type value="Machine"/>
                         </hostRequires>
-                        <task name="/distribution/install" role="STANDALONE"/>
+                        <task name="/distribution/check-install" role="STANDALONE"/>
                     </recipe>
                 </recipeSet>
             </job>
@@ -857,7 +857,7 @@ class NewJobTestWD(WebDriverTestCase):
                            </system>
                            <system_type value="Machine"/>
                         </hostRequires>
-                        <task name="/distribution/install" role="STANDALONE"/>
+                        <task name="/distribution/check-install" role="STANDALONE"/>
                     </recipe>
                 </recipeSet>
             </job>
@@ -904,7 +904,7 @@ class NewJobTestWD(WebDriverTestCase):
                             <package name="system-config-kdump"/>
                             <package name="system-config-kdump"/>
                         </packages>
-                        <task name="/distribution/install" role="STANDALONE"/>
+                        <task name="/distribution/check-install" role="STANDALONE"/>
                     </recipe>
                 </recipeSet>
             </job>
@@ -942,7 +942,7 @@ class NewJobTest(WebDriverTestCase):
                             <distro_name op="=" value="BlueShoeLinux5-5" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" role="STANDALONE">
+                        <task name="/distribution/check-install" role="STANDALONE">
                             <params/>
                         </task>
                         <brokenElement/>
@@ -1017,7 +1017,7 @@ class NewJobTest(WebDriverTestCase):
                             <distro_arch op="=" value="ia64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" role="STANDALONE">
+                        <task name="/distribution/check-install" role="STANDALONE">
                             <params/>
                         </task>
                         <task name="%s" role="STANDALONE">
@@ -1053,7 +1053,7 @@ class NewJobTest(WebDriverTestCase):
                         <partitions>
                             <partition name="/" size="4" type="part"/>
                         </partitions>
-                        <task name="/distribution/install" role="STANDALONE"/>
+                        <task name="/distribution/check-install" role="STANDALONE"/>
                     </recipe>
                 </recipeSet>
             </job>
@@ -1087,7 +1087,7 @@ class NewJobTest(WebDriverTestCase):
                             <distro_name op="=" value="BlueShoeLinux5-5" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" role="STANDALONE"/>
+                        <task name="/distribution/check-install" role="STANDALONE"/>
                     </recipe>
                 </recipeSet>
             </job>
@@ -1121,7 +1121,7 @@ class NewJobTest(WebDriverTestCase):
                             <distro_name op="=" value="BlueShoeLinux5-5" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" role="STANDALONE"/>
+                        <task name="/distribution/check-install" role="STANDALONE"/>
                     </recipe>
                 </recipeSet>
             </job>
@@ -1151,7 +1151,7 @@ class NewJobTest(WebDriverTestCase):
                             <distro_name op="=" value="BlueShoeLinux5-5" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" role="STANDALONE"/>
+                        <task name="/distribution/check-install" role="STANDALONE"/>
                     </recipe>
                 </recipeSet>
             </job>
@@ -1189,7 +1189,7 @@ class NewJobTest(WebDriverTestCase):
                             <distro_name op="=" value="BlueShoeLinux5-5" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" role="STANDALONE"/>
+                        <task name="/distribution/check-install" role="STANDALONE"/>
                     </recipe>
                 </recipeSet>
             </job>
@@ -1221,7 +1221,7 @@ class NewJobTest(WebDriverTestCase):
                             <distro_name op="=" value="BlueShoeLinux5-5" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -1264,7 +1264,7 @@ class NewJobTest(WebDriverTestCase):
                                 <distro_name op="=" value="BlueShoeLinux5-5" />
                             </distroRequires>
                             <hostRequires/>
-                            <task name="/distribution/install" />
+                            <task name="/distribution/check-install" />
                         </guestrecipe>
                         <ks_appends>
                             <ks_append>append2</ks_append>
@@ -1279,7 +1279,7 @@ class NewJobTest(WebDriverTestCase):
                             <distro_name op="=" value="BlueShoeLinux5-5" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -1307,7 +1307,7 @@ class NewJobTest(WebDriverTestCase):
                             <distro_name op="=" value="BlueShoeLinux5-5" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install"/>
+                        <task name="/distribution/check-install"/>
                     </recipe>
                 </recipeSet>
             </job>
@@ -1339,7 +1339,7 @@ class NewJobTest(WebDriverTestCase):
                             <distro_name op="=" value="BlueShoeLinux5-5" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install"/>
+                        <task name="/distribution/check-install"/>
                     </recipe>
                 </recipeSet>
             </job>

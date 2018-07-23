@@ -55,7 +55,7 @@ class TestJobsController(DatabaseTestCase):
                         <hostRequires>
                             <memory op=">=" value="500MB" />
                         </hostRequires>
-                        <task name="/distribution/install" role="STANDALONE">
+                        <task name="/distribution/check-install" role="STANDALONE">
                             <params/>
                         </task>
                     </recipe>
@@ -90,7 +90,7 @@ class TestJobsController(DatabaseTestCase):
                                     <osversion major="RedHatEnterpriseLinux7"/>
                                 </distro>
                                 <hostRequires/>
-                                <task name="/distribution/install"/>
+                                <task name="/distribution/check-install"/>
                             </recipe>
                         </recipeSet>
                     </job>
@@ -162,7 +162,7 @@ class TestJobsController(DatabaseTestCase):
                             <distro_name op="=" value="BlueShoeLinux5-5"/>
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" role="STANDALONE"/>
+                        <task name="/distribution/check-install" role="STANDALONE"/>
                     </recipe>
                 </recipeSet>
             </job>
@@ -182,7 +182,7 @@ class TestJobsController(DatabaseTestCase):
                     </distroRequires>
                     <hostRequires/>
                     <installPackage>libbeer</installPackage>
-                    <task name="/distribution/install" role="STANDALONE"/>
+                    <task name="/distribution/check-install" role="STANDALONE"/>
                 </recipe>
             </recipeSet>
         </job>
@@ -202,7 +202,7 @@ class TestJobsController(DatabaseTestCase):
                             <distro_name />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" role="STANDALONE"/>
+                        <task name="/distribution/check-install" role="STANDALONE"/>
                     </rawcipe>
                 </recipeSet>
             </job>
@@ -231,7 +231,7 @@ class TestJobsController(DatabaseTestCase):
                 <recipeSet>
                     <recipe>
                         <distroRequires/> <hostRequires/>
-                        <task name="/distribution/install"/>
+                        <task name="/distribution/check-install"/>
                         <reservesys/>
                     </recipe>
                 </recipeSet>
@@ -248,7 +248,7 @@ class TestJobsController(DatabaseTestCase):
                 <recipeSet>
                     <recipe>
                         <distroRequires/> <hostRequires/>
-                        <task name="/distribution/install"/>
+                        <task name="/distribution/check-install"/>
                         <reservesys duration="600"/>
                     </recipe>
                 </recipeSet>
@@ -267,7 +267,7 @@ class TestJobsController(DatabaseTestCase):
                 <recipeSet>
                     <recipe>
                         <distroRequires/> <hostRequires/>
-                        <task name="/distribution/install"/>
+                        <task name="/distribution/check-install"/>
                     </recipe>
                 </recipeSet>
             </job>
@@ -294,7 +294,7 @@ class TestJobsController(DatabaseTestCase):
                             <variant value="Server"/>
                         </distro>
                         <hostRequires/>
-                        <task name="/distribution/install"/>
+                        <task name="/distribution/check-install"/>
                     </recipe>
                 </recipeSet>
             </job>
@@ -324,7 +324,7 @@ class TestJobsController(DatabaseTestCase):
                             <distro_name op="=" value="BlueShoeLinux5-5" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install"/>
+                        <task name="/distribution/check-install"/>
                     </recipe>
                 </recipeSet>
             </job>
@@ -359,7 +359,7 @@ class TestJobsController(DatabaseTestCase):
                             <variant value="Server"/>
                         </distro>
                         <hostRequires/>
-                        <task name="/distribution/install"/>
+                        <task name="/distribution/check-install"/>
                     </recipe>
                 </recipeSet>
             </job>
@@ -384,7 +384,7 @@ class TestJobsController(DatabaseTestCase):
                             <name value="MyCustomLinux1.0"/>
                         </distro>
                         <hostRequires/>
-                        <task name="/distribution/install"/>
+                        <task name="/distribution/check-install"/>
                     </recipe>
                 </recipeSet>
             </job>
@@ -409,7 +409,7 @@ class TestJobsController(DatabaseTestCase):
                             <name value="MyCustomLinux1.0"/>
                         </distro>
                         <hostRequires/>
-                        <task name="/distribution/install"/>
+                        <task name="/distribution/check-install"/>
                     </recipe>
                 </recipeSet>
             </job>
@@ -431,7 +431,7 @@ class TestJobsController(DatabaseTestCase):
                             <name value="MyCustomLinux1.0"/>
                         </distro>
                         <hostRequires/>
-                        <task name="/distribution/install"/>
+                        <task name="/distribution/check-install"/>
                     </recipe>
                 </recipeSet>
             </job>
@@ -453,7 +453,7 @@ class TestJobsController(DatabaseTestCase):
                             <name value="MyCustomLinux1.0"/>
                         </distro>
                         <hostRequires/>
-                        <task name="/distribution/install"/>
+                        <task name="/distribution/check-install"/>
                     </recipe>
                 </recipeSet>
             </job>

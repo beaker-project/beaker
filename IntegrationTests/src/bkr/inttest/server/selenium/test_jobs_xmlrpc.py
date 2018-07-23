@@ -33,7 +33,7 @@ class JobUploadTest(XmlRpcTestCase):
                             <distro_name op="=" value="BlueShoeLinux5-5" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/asdf/notexist" />
                         <task name="/distribution/reservesys" />
                     </recipe>
@@ -48,7 +48,7 @@ class JobUploadTest(XmlRpcTestCase):
             self.assertEqual(job.ttasks, 2) # not 3
             recipe = job.recipesets[0].recipes[0]
             self.assertEqual(len(recipe.tasks), 2)
-            self.assertEqual(recipe.tasks[0].task.name, u'/distribution/install')
+            self.assertEqual(recipe.tasks[0].task.name, u'/distribution/check-install')
             # /asdf/notexist is silently dropped
             self.assertEqual(recipe.tasks[1].task.name, u'/distribution/reservesys')
 
@@ -64,7 +64,7 @@ class JobUploadTest(XmlRpcTestCase):
                             <distro_arch op="=" value="i386" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/asdf/notexist1" />
                         <task name="/asdf/notexist2" />
                         <task name="/asdf/notexist3" />
@@ -96,7 +96,7 @@ class JobUploadTest(XmlRpcTestCase):
                             <distro_arch op="=" value="i386" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -119,7 +119,7 @@ class JobUploadTest(XmlRpcTestCase):
                             <distro_name op="=" value="BlueShoeLinux5-5" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -136,7 +136,7 @@ class JobUploadTest(XmlRpcTestCase):
                             <distro_name op="=" value="BlueShoeLinux5-5" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/example">
                             <fetch url="git://example.com/externaltasks/example#master"/>
                         </task>
@@ -160,8 +160,8 @@ class JobUploadTest(XmlRpcTestCase):
             job = TaskBase.get_by_t_id(job_tid)
             recipe = job.recipesets[0].recipes[0]
             self.assertEquals(len(recipe.tasks), 5)
-            self.assertEquals(recipe.tasks[0].name, u'/distribution/install')
-            self.assertEquals(recipe.tasks[0].task.name, u'/distribution/install')
+            self.assertEquals(recipe.tasks[0].name, u'/distribution/check-install')
+            self.assertEquals(recipe.tasks[0].task.name, u'/distribution/check-install')
             self.assertEquals(recipe.tasks[0].fetch_url, None)
             self.assertEquals(recipe.tasks[1].name, u'/distribution/example')
             self.assertEquals(recipe.tasks[1].task, None)
@@ -196,7 +196,7 @@ class JobUploadTest(XmlRpcTestCase):
                             <distro_arch op="=" value="i386" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>

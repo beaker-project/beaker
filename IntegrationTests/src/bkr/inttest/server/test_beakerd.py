@@ -1491,7 +1491,7 @@ class TestBeakerd(DatabaseTestCase):
     def test_recipe_state_reserved(self):
         with session.begin():
             recipe = data_setup.create_recipe(
-                task_list=[Task.by_name(u'/distribution/install')] * 2,
+                task_list=[Task.by_name(u'/distribution/check-install')] * 2,
                 reservesys=True, 
                 reservesys_duration=3600,
             )
@@ -1530,7 +1530,7 @@ class TestBeakerd(DatabaseTestCase):
 
         with session.begin():
             recipe = data_setup.create_recipe(
-                task_list=[Task.by_name(u'/distribution/install')] * 2,
+                task_list=[Task.by_name(u'/distribution/check-install')] * 2,
                 reservesys=True)
             recipe._host_requires = (
                 u'<hostRequires><hostname op="=" value="Ineverexisted.fqdn"/></hostRequires>')
@@ -1656,7 +1656,7 @@ class TestBeakerd(DatabaseTestCase):
                                     <distro_name op="=" value="MyUniqueLinux5-5" />
                                 </distroRequires>
                                 <hostRequires/>
-                                <task name="/distribution/install"/>
+                                <task name="/distribution/check-install"/>
                             </recipe>
                         </recipeSet>
                     </job>
@@ -1702,7 +1702,7 @@ class TestBeakerd(DatabaseTestCase):
                                     <variant value="Server"/>
                                 </distro>
                                 <hostRequires/>
-                                <task name="/distribution/install"/>
+                                <task name="/distribution/check-install"/>
                             </recipe>
                         </recipeSet>
                     </job>
@@ -1725,7 +1725,7 @@ class TestBeakerd(DatabaseTestCase):
             lc = data_setup.create_labcontroller()
             system = data_setup.create_system(lab_controller=lc)
             recipe = data_setup.create_recipe(custom_distro=True, osmajor='IDontExist1',
-                                              task_list=[Task.by_name(u'/distribution/install')] * 2)
+                                              task_list=[Task.by_name(u'/distribution/check-install')] * 2)
             job = data_setup.create_job_for_recipes([recipe])
         beakerd.process_new_recipes()
         beakerd.update_dirty_jobs()
@@ -1750,7 +1750,7 @@ class TestBeakerd(DatabaseTestCase):
             arch = Arch.by_name('i386')
             included_system.provisions[arch] = Provision(arch=arch, kernel_options='anwesha')
             recipe = data_setup.create_recipe(custom_distro=True, osmajor='DansAwesomeLinux6', arch='i386',
-                                              task_list=[Task.by_name(u'/distribution/install')] * 2)
+                                              task_list=[Task.by_name(u'/distribution/check-install')] * 2)
             job = data_setup.create_job_for_recipes([recipe])
             job.recipesets[0].recipes[0]._host_requires = (u"""
                    <hostRequires>
@@ -1801,7 +1801,7 @@ class TestBeakerd(DatabaseTestCase):
             host_recipe = data_setup.create_recipe(arch='i386')
             guest_recipe = data_setup.create_guestrecipe(host=host_recipe, custom_distro=True,
                                                          osmajor='DansAwesomeLinux6', arch='i386',
-                                                         task_list=[Task.by_name(u'/distribution/install')] * 2)
+                                                         task_list=[Task.by_name(u'/distribution/check-install')] * 2)
             job = data_setup.create_job_for_recipes([host_recipe, guest_recipe])
             session.flush()
             job_id = job.id
@@ -1830,7 +1830,7 @@ class TestBeakerd(DatabaseTestCase):
             lc = data_setup.create_labcontroller()
             system = data_setup.create_system(lab_controller=lc)
             host_recipe = data_setup.create_recipe(custom_distro=True, osmajor='DansAwesomeLinux6',
-                                                   task_list=[Task.by_name(u'/distribution/install')] * 2)
+                                                   task_list=[Task.by_name(u'/distribution/check-install')] * 2)
             guest_recipe = data_setup.create_guestrecipe(host=host_recipe, custom_distro=True)
             job = data_setup.create_job_for_recipes([host_recipe, guest_recipe])
             session.flush()

@@ -50,7 +50,7 @@ class TestBeakerd(DatabaseTestCase):
                         <hostRequires>
                             <hypervisor value=""/>
                         </hostRequires>
-                        <task name="/distribution/install" role="STANDALONE">
+                        <task name="/distribution/check-install" role="STANDALONE">
                             <params/>
                         </task>
                     </recipe>

@@ -1823,21 +1823,21 @@ class RecipeTest(DatabaseTestCase):
         system.status = SystemStatus.broken
         job = data_setup.create_job()
         recipe1 = data_setup.create_recipe(
-            task_list=[Task.by_name(u'/distribution/install')] * 2,
+            task_list=[Task.by_name(u'/distribution/check-install')] * 2,
             reservesys=True)
         recipe2 = data_setup.create_recipe(
-            task_list=[Task.by_name(u'/distribution/install')] * 2,
+            task_list=[Task.by_name(u'/distribution/check-install')] * 2,
             reservesys=True,
             reservesys_duration=3600)
         job = data_setup.create_job_for_recipes([recipe1, recipe2])
         xml = lxml.etree.tostring(job.recipesets[0].recipes[0].to_xml(clone=True), encoding=unicode)
-        reservation_string = u'<task name="/distribution/install" role="STANDALONE"/>' +  \
-                             u'<task name="/distribution/install" role="STANDALONE"/>' + \
+        reservation_string = u'<task name="/distribution/check-install" role="STANDALONE"/>' +  \
+                             u'<task name="/distribution/check-install" role="STANDALONE"/>' + \
                              u'<reservesys duration="86400" when="always"/>'
         self.assertIn(reservation_string, xml)
         xml = lxml.etree.tostring(job.recipesets[0].recipes[1].to_xml(clone=True), encoding=unicode)
-        reservation_string = u'<task name="/distribution/install" role="STANDALONE"/>' +  \
-                             u'<task name="/distribution/install" role="STANDALONE"/>' + \
+        reservation_string = u'<task name="/distribution/check-install" role="STANDALONE"/>' +  \
+                             u'<task name="/distribution/check-install" role="STANDALONE"/>' + \
                              u'<reservesys duration="3600" when="always"/>'
         self.assertIn(reservation_string, xml)
 
@@ -2565,7 +2565,7 @@ class RecipeTaskTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
-        recipe = data_setup.create_recipe(task_name=u'/distribution/install')
+        recipe = data_setup.create_recipe(task_name=u'/distribution/check-install')
         data_setup.create_job_for_recipes([recipe])
         data_setup.mark_recipe_running(recipe)
         self.recipetask = recipe.tasks[0]
@@ -2617,15 +2617,15 @@ class RecipeTaskResultTest(DatabaseTestCase):
         session.rollback()
 
     def test_display_label(self):
-        task = Task.by_name(u'/distribution/install')
+        task = Task.by_name(u'/distribution/check-install')
         rt = RecipeTask.from_task(task)
-        rtr = RecipeTaskResult(recipetask=rt, path=u'/distribution/install/Sysinfo')
+        rtr = RecipeTaskResult(recipetask=rt, path=u'/distribution/check-install/Sysinfo')
         self.assertEquals(rtr.display_label, u'Sysinfo')
         rtr = RecipeTaskResult(recipetask=rt, path=u'/start')
         self.assertEquals(rtr.display_label, u'/start')
-        rtr = RecipeTaskResult(recipetask=rt, path=u'/distribution/install')
+        rtr = RecipeTaskResult(recipetask=rt, path=u'/distribution/check-install')
         self.assertEquals(rtr.display_label, u'./')
-        rtr = RecipeTaskResult(recipetask=rt, path=u'/distribution/install/')
+        rtr = RecipeTaskResult(recipetask=rt, path=u'/distribution/check-install/')
         self.assertEquals(rtr.display_label, u'./')
         rtr = RecipeTaskResult(recipetask=rt, path=None)
         self.assertEquals(rtr.display_label, u'./')
@@ -2642,7 +2642,7 @@ class RecipeTaskResultTest(DatabaseTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1586049
     def test_coerces_string_for_score(self):
-        task = Task.by_name(u'/distribution/install')
+        task = Task.by_name(u'/distribution/check-install')
         rt = RecipeTask.from_task(task)
         rt.recipe_id = self.recipe.id
         rt._result(TaskResult.pass_, path='.', score='', summary='empty string')

@@ -1087,7 +1087,7 @@ class SystemViewTestWD(WebDriverTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1232979
     def test_external_task_name_on_executed_tasks_grid(self):
         with session.begin():
-            recipe = data_setup.create_recipe(task_name=u'/distribution/install')
+            recipe = data_setup.create_recipe(task_name=u'/distribution/check-install')
             external_task = RecipeTask.from_fetch_url(url='git://example.com/externaltasks/example#master',
                                         subdir='examples')
             recipe.tasks.extend([external_task])

@@ -381,7 +381,7 @@ class UpdateTaskTest(LabControllerTestCase):
 
     def setUp(self):
         with session.begin():
-            self.recipe = data_setup.create_recipe(task_name=u'/distribution/install')
+            self.recipe = data_setup.create_recipe(task_name=u'/distribution/check-install')
             self.recipe.tasks.extend([
                 RecipeTask.from_task(data_setup.create_task()),
                 RecipeTask.from_fetch_url(u'http://example.com/tasks/example.tar.bz2'),

@@ -1128,7 +1128,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1224,7 +1224,7 @@ python-glanceclient
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1423,7 +1423,7 @@ python-glanceclient
                             <distro_arch op="=" value="ppc64le" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1860,7 +1860,7 @@ bootloader --location=mbr
 mysillypackage
 %end
                         ]]></kickstart>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -3400,7 +3400,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3558,7 +3558,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3659,7 +3659,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                        <distro_arch op="=" value="x86_64" />
                    </distroRequires>
                    <hostRequires/>
-                  <task name="/distribution/install" />
+                  <task name="/distribution/check-install" />
                 </recipe>
             </recipeSet>
         </job>
@@ -3739,7 +3739,7 @@ volgroup bootvg --pesize=32768 pv.01
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -3759,7 +3759,7 @@ volgroup bootvg --pesize=32768 pv.01
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>

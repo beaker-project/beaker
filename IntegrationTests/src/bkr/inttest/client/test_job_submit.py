@@ -44,7 +44,7 @@ class JobSubmitTest(ClientTestCase):
                 <recipeSet>
                     <recipe>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -63,7 +63,7 @@ class JobSubmitTest(ClientTestCase):
                             <distro_family op="=" value="BlueShoeLinux5" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -94,7 +94,7 @@ class JobSubmitTest(ClientTestCase):
                             <distro_family op="=" value="BlueShoeLinux5" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>

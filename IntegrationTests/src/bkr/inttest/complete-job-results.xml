@@ -39,7 +39,7 @@
         <logs>
           <log href="${BEAKER_SERVER_BASE_URL}recipes/2/logs/recipe_path/dummy.txt" name="recipe_path/dummy.txt"/>
         </logs>
-        <task name="/distribution/install" role="STANDALONE" id="3" result="Pass" status="Completed" start_time="2016-01-31 23:30:00" finish_time="2016-01-31 23:30:04" duration="0:00:04">
+        <task name="/distribution/check-install" role="STANDALONE" id="3" result="Pass" status="Completed" start_time="2016-01-31 23:30:00" finish_time="2016-01-31 23:30:04" duration="0:00:04">
           <fetch url="git://example.com/externaltasks#master" subdir="install"/>
           <roles>
             <role value="STANDALONE">
@@ -51,7 +51,7 @@
             <log href="${BEAKER_SERVER_BASE_URL}recipes/2/tasks/3/logs/tasks/dummy.txt" name="tasks/dummy.txt"/>
           </logs>
           <results>
-            <result path="/distribution/install" start_time="2016-01-31 23:30:00" score="0" result="Pass" id="1">(Pass)<logs><log href="${BEAKER_SERVER_BASE_URL}recipes/2/tasks/3/results/1/logs/result.txt" name="result.txt"/></logs></result>
+            <result path="/distribution/check-install" start_time="2016-01-31 23:30:00" score="0" result="Pass" id="1">(Pass)<logs><log href="${BEAKER_SERVER_BASE_URL}recipes/2/tasks/3/results/1/logs/result.txt" name="result.txt"/></logs></result>
           </results>
         </task>
       </guestrecipe>
@@ -81,8 +81,8 @@
       <logs>
         <log href="${BEAKER_SERVER_BASE_URL}recipes/1/logs/recipe_path/dummy.txt" name="recipe_path/dummy.txt"/>
       </logs>
-      <task name="/distribution/install" role="STANDALONE" id="1" result="Pass" status="Completed" avg_time="1200" start_time="2016-01-31 23:00:04" finish_time="2016-01-31 23:59:00" duration="0:58:56">
-        <rpm name="example-distribution-install" path="/mnt/tests//distribution/install"/>
+      <task name="/distribution/check-install" role="STANDALONE" id="1" result="Pass" status="Completed" avg_time="1200" start_time="2016-01-31 23:00:04" finish_time="2016-01-31 23:59:00" duration="0:58:56">
+        <rpm name="example-distribution-check-install" path="/mnt/tests//distribution/check-install"/>
         <roles>
           <role value="STANDALONE">
             <system value="system.test-complete-job-results"/>
@@ -93,7 +93,7 @@
           <log href="${BEAKER_SERVER_BASE_URL}recipes/1/tasks/1/logs/tasks/dummy.txt" name="tasks/dummy.txt"/>
         </logs>
         <results>
-          <result path="/distribution/install" start_time="2016-01-31 23:00:04" score="0" result="Pass" id="2">(Pass)<logs><log href="${BEAKER_SERVER_BASE_URL}recipes/1/tasks/1/results/2/logs/result.txt" name="result.txt"/></logs></result>
+          <result path="/distribution/check-install" start_time="2016-01-31 23:00:04" score="0" result="Pass" id="2">(Pass)<logs><log href="${BEAKER_SERVER_BASE_URL}recipes/1/tasks/1/results/2/logs/result.txt" name="result.txt"/></logs></result>
         </results>
       </task>
       <task name="/distribution/reservesys" role="STANDALONE" id="2" result="Pass" status="Completed" avg_time="1200" start_time="2016-01-31 23:00:04" finish_time="2016-01-31 23:59:00" duration="0:58:56">

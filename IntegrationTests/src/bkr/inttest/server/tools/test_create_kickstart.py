@@ -50,7 +50,7 @@ class CreateKickstartTest(DatabaseTestCase):
 
     def _create_recipe_with_user_defined_distro(self, **kwargs):
         with session.begin():
-            install_task = Task.by_name(u'/distribution/install')
+            install_task = Task.by_name(u'/distribution/check-install')
             reserve_task = Task.by_name(u'/distribution/reservesys')
             lc = create_lab_controller()
             system = create_x86_64_automated(lc)
