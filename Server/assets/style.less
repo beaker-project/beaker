@@ -87,6 +87,16 @@
 // overrides for FontAwesome variables
 @fa-font-path: "font-awesome/fonts";
 
+// workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1369590
+// https://stackoverflow.com/a/28182792/120202
+#grid {
+    .core {
+        .span (@gridColumns) {
+            width: (@gridColumnWidth * @gridColumns) + (@gridGutterWidth * (@gridColumns - 1));
+        }
+    }
+}
+
 // workaround for https://github.com/twitter/typeahead.js/issues/147
 .modal-body {
     overflow: visible;

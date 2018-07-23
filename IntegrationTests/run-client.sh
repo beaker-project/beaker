@@ -4,4 +4,4 @@
 # building or installing anything. Used by integration tests.
 
 exec env PYTHONPATH=$(dirname "$0")/../Common:$(dirname "$0")/../Client/src${PYTHONPATH:+:$PYTHONPATH} \
-    python -u $(dirname "$0")/../Client/src/bkr/client/main.py "$@"
+    python2 -u $(dirname "$0")/../Client/src/bkr/client/main.py "$@"
