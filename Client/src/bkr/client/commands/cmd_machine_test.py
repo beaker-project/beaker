@@ -141,11 +141,8 @@ class Machine_Test(BeakerWorkflow):
 
         for family, arches in families.items():
             kwargs['family'] = family
-            # Start with install task
-            requestedTasks = [dict(name='/distribution/install', arches=[])]
-
             # get all tasks requested
-            requestedTasks.extend(self.getTasks(*args, **kwargs))
+            requestedTasks = self.getTasks(*args, **kwargs)
             # If arch is specified on command line limit to just those. (if they match)
             if kwargs['arches']:
                 arches = set(kwargs['arches']).intersection(set(arches))
@@ -162,6 +159,7 @@ class Machine_Test(BeakerWorkflow):
                 recipeSet.addRecipe(self.processTemplate(recipeTemplate,
                                                          requestedTasks,
                                                          taskParams=taskParams,
+                                                         allow_empty_recipe=True,
                                                          distroRequires=arch_node, **temp))
                 job.addRecipeSet(recipeSet)
 

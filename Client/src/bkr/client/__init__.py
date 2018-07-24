@@ -328,7 +328,7 @@ class BeakerWorkflow(BeakerCommand):
             dest="suppress_install_task",
             action="store_true",
             default=False,
-            help="Omit /distribution/install which is included by default",
+            help="Omit /distribution/check-install which is included by default",
         )
         # for compat only
         task_options.add_option("--type", action="append",
@@ -584,6 +584,35 @@ class BeakerWorkflow(BeakerCommand):
             tasks.extend(ntasks)
         return tasks
 
+    def getInstallTaskName(self, *args, **kwargs):
+        """
+        Returns the name of the task which is injected at the start of the recipe.
+        Its job is to check for any problems in the installation.
+        We have two implementations:
+            /distribution/check-install is used by default
+            /distribution/install is used on RHEL <= 7 and Fedora <= 28
+        """
+        older_families = [
+            'RedHatEnterpriseLinux3',
+            'RedHatEnterpriseLinux4',
+            'RedHatEnterpriseLinuxServer5',
+            'RedHatEnterpriseLinuxServerGrid5',
+            'RedHatEnterpriseLinuxClient5',
+            'RedHatEnterpriseLinux6',
+            'RedHatEnterpriseLinux7',
+            'CentOS4',
+            'CentOS5',
+            'CentOS6',
+            'CentOS7',
+            'RedHatStorage2',
+            'RedHatStorageSoftwareAppliance3',
+            'RedHatGlusterStorage3',
+            'RHVH4'] + ['Fedora%d' % n for n in range(1, 29)]
+        family = self.getFamily(*args, **kwargs)
+        if family in older_families:
+            return '/distribution/install'
+        return '/distribution/check-install'
+
     def processTemplate(self, recipeTemplate,
                          requestedTasks,
                          taskParams=[],
@@ -602,7 +631,7 @@ class BeakerWorkflow(BeakerCommand):
             if arch not in task['arches']:
                 actualTasks.append(task['name'])
         # Don't create empty recipes
-        if actualTasks or reserve:
+        if actualTasks or reserve or kwargs.get('allow_empty_recipe', False):
             # Copy basic requirements
             recipe = recipeTemplate.clone()
             if whiteboard:
@@ -612,10 +641,11 @@ class BeakerWorkflow(BeakerCommand):
             if hostRequires:
                 recipe.addHostRequires(hostRequires)
             add_install_task = not kwargs.get("suppress_install_task", False)
-            if add_install_task and \
-               dict(name='/distribution/install', arches=[]) not \
-               in requestedTasks:
-                recipe.addTask('/distribution/install')
+            if add_install_task:
+                install_task_name = self.getInstallTaskName(**kwargs)
+                # Don't add it if it's already explicitly requested
+                if dict(name=install_task_name, arches=[]) not in requestedTasks:
+                    recipe.addTask(install_task_name)
             if install:
                 paramnode = self.doc.createElement('param')
                 paramnode.setAttribute('name' , 'PKGARGNAME')

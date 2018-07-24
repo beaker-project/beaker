@@ -115,15 +115,15 @@ class Harness_Test(BeakerWorkflow):
 
         job = BeakerJob(**kwargs)
         for family, variant, arch in sorted(fva):
-            requestedTasks = [dict(name='/distribution/install', arches=[])]
-            requestedTasks.extend(self.getTasks(family=family, **kwargs))
+            requestedTasks = self.getTasks(family=family, **kwargs)
             recipe = BeakerRecipe()
             recipe.addBaseRequires(family=family, variant=variant, arch=arch, **kwargs)
             arch_node = self.doc.createElement('distro_arch')
             arch_node.setAttribute('op', '=')
             arch_node.setAttribute('value', arch)
-            recipe = self.processTemplate(recipe, requestedTasks,
-                    taskParams=taskParams, distroRequires=arch_node, arch=arch)
+            recipe = self.processTemplate(recipe, requestedTasks, taskParams=taskParams,
+                                          distroRequires=arch_node, arch=arch, family=family,
+                                          allow_empty_recipe=True, **kwargs)
             recipe.whiteboard = ' '.join([family, variant, arch])
             recipeset = BeakerRecipeSet(**kwargs)
             recipeset.addRecipe(recipe)

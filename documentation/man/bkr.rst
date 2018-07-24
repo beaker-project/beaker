@@ -264,7 +264,17 @@ Options for selecting tasks:
 
 .. option:: --suppress-install-task
 
-   Omit ``/distribution/install`` which is included by default.
+   Omit the installation checking task.
+
+   By default, the first task in the recipe will be 
+   ``/distribution/check-install`` (or the previous implementation 
+   ``/distribution/install`` on RHEL7 and older). The purpose of this task is 
+   to check that the operating system was installed successfully and report 
+   back on any potential problems, and to collect information about the 
+   installed system for debugging.
+
+   Pass this option if you do not want this task to be implicitly inserted at 
+   the start of the recipe.
 
 Options for job configuration:
 

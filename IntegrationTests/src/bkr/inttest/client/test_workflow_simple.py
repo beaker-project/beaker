@@ -550,3 +550,39 @@ install
         self.assertEqual('WARNING: task %s not applicable for distro, ignoring\n' % ignored_task.name, err)
         self.assertNotIn(ignored_task.name, out)
         self.assertIn(included_task.name, out)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1188539
+    def test_uses_new_check_install_task_by_default(self):
+        with session.begin():
+            distro = data_setup.create_distro(osmajor=u'Fedora29')
+            data_setup.create_distro_tree(distro=distro)
+        out = run_client(['bkr', 'workflow-simple',
+                          '--distro', distro.name,
+                          '--task', self.task.name])
+        self.assertIn('Submitted:', out)
+        m = re.search('J:(\d+)', out)
+        job_id = m.group(1)
+        with session.begin():
+            job = Job.by_id(job_id)
+            tasks = job.recipesets[0].recipes[0].tasks
+            self.assertEqual(len(tasks), 2)
+            self.assertEqual(tasks[0].name, '/distribution/check-install')
+            self.assertEqual(tasks[1].name, self.task.name)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1188539
+    def test_uses_original_install_task_on_older_distros(self):
+        with session.begin():
+            distro = data_setup.create_distro(osmajor=u'RedHatEnterpriseLinux7')
+            data_setup.create_distro_tree(distro=distro)
+        out = run_client(['bkr', 'workflow-simple',
+                          '--distro', distro.name,
+                          '--task', self.task.name])
+        self.assertIn('Submitted:', out)
+        m = re.search('J:(\d+)', out)
+        job_id = m.group(1)
+        with session.begin():
+            job = Job.by_id(job_id)
+            tasks = job.recipesets[0].recipes[0].tasks
+            self.assertEqual(len(tasks), 2)
+            self.assertEqual(tasks[0].name, '/distribution/install')
+            self.assertEqual(tasks[1].name, self.task.name)

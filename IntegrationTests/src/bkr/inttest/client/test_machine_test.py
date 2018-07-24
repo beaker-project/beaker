@@ -13,7 +13,7 @@ class MachineTestTest(ClientTestCase):
 
     @with_transaction
     def setUp(self):
-        self.system = data_setup.create_system()
+        self.system = data_setup.create_system(arch=u'i386')
         self.distro = data_setup.create_distro(tags=[u'STABLE'])
         data_setup.create_distro_tree(distro=self.distro)
 
@@ -28,7 +28,7 @@ class MachineTestTest(ClientTestCase):
             self.assertEqual(new_job.whiteboard, u'Test '+ self.system.fqdn)
             tasks = new_job.recipesets[0].recipes[0].tasks
             self.assertEqual(len(tasks), 2)
-            self.assertEqual(tasks[0].name, u'/distribution/install')
+            self.assertEqual(tasks[0].name, u'/distribution/check-install')
             self.assertEqual(tasks[1].name, u'/distribution/inventory')
 
         #https://bugzilla.redhat.com/show_bug.cgi?id=893878
@@ -100,8 +100,39 @@ class MachineTestTest(ClientTestCase):
         with session.begin():
             new_job = Job.query.order_by(Job.id.desc()).first()
             self.assertEqual(new_job.whiteboard, u'Test '+ self.system.fqdn)
-            tasks = new_job.recipesets[0].recipes[0].tasks
-            self.assertEqual(len(tasks), 3)
-            self.assertEqual(tasks[0].name, u'/distribution/install')
-            self.assertEqual(tasks[1].name, str(task.name))
-            self.assertEqual(tasks[2].name, u'/distribution/inventory')
+            # It produces one recipe set per family
+            for recipeset in new_job.recipesets:
+                tasks = recipeset.recipes[0].tasks
+                self.assertEqual(len(tasks), 3)
+                # First task will be /distribution/install or
+                # /distribution/check-install depending on the family
+                self.assertIn(tasks[0].name,
+                              ['/distribution/install', '/distribution/check-install'])
+                self.assertEqual(tasks[1].name, str(task.name))
+                self.assertEqual(tasks[2].name, u'/distribution/inventory')
+
+    def test_no_requested_tasks(self):
+        # If you don't request any tasks (by passing the --task or --inventory
+        # options) each recipe should contain only the install checking task
+        # and nothing more.
+        with session.begin():
+            # This one will use /distribution/check-install
+            data_setup.create_distro_tree(osmajor=u'Fedorarawhide')
+            # This one will use /distribution/install
+            data_setup.create_distro_tree(osmajor=u'RedHatEnterpriseLinux7')
+        out = run_client(['bkr', 'machine-test',
+                          '--machine', self.system.fqdn,
+                          '--arch', 'i386',
+                          '--family', 'Fedorarawhide',
+                          '--family', 'RedHatEnterpriseLinux7'])
+        self.assertIn("Submitted:", out)
+        with session.begin():
+            new_job = Job.query.order_by(Job.id.desc()).first()
+            rawhide_recipe = new_job.recipesets[0].recipes[0]
+            self.assertEqual(rawhide_recipe.installation.osmajor, u'Fedorarawhide')
+            self.assertEqual(len(rawhide_recipe.tasks), 1)
+            self.assertEqual(rawhide_recipe.tasks[0].name, '/distribution/check-install')
+            rhel7_recipe = new_job.recipesets[1].recipes[0]
+            self.assertEqual(rhel7_recipe.installation.osmajor, u'RedHatEnterpriseLinux7')
+            self.assertEqual(len(rhel7_recipe.tasks), 1)
+            self.assertEqual(rhel7_recipe.tasks[0].name, '/distribution/install')
