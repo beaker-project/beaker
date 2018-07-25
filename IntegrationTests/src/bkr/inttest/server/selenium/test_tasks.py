@@ -30,8 +30,8 @@ class TestSubmitTask(WebDriverTestCase):
             # below are already known to Beaker, otherwise they will be ignored.
             OSMajor.lazy_create(osmajor=u'RedHatEnterpriseLinuxServer5')
             OSMajor.lazy_create(osmajor=u'RedHatEnterpriseLinuxClient5')
-            OSMajor.lazy_create(osmajor=u'RedHatEnterpriseLinux6')
             OSMajor.lazy_create(osmajor=u'RedHatEnterpriseLinux7')
+            OSMajor.lazy_create(osmajor=u'RedHatEnterpriseLinux6')
         self.browser = self.get_browser()
         login(self.browser, user=self.uploader.user_name, password=u'upload')
 
@@ -253,8 +253,8 @@ class TestSubmitTask(WebDriverTestCase):
         b.find_element_by_xpath('//button[text()="Upload"]').click()
         self.assert_task_upload_task_header('/distribution/beaker/excluded-releases')
         self.assertEqual(self.get_task_info_field('Excluded OSMajors'),
-                'RedHatEnterpriseLinuxServer5\n'
-                'RedHatEnterpriseLinuxClient5')
+                'RedHatEnterpriseLinuxClient5\n'
+                'RedHatEnterpriseLinuxServer5')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=800455
     def test_exclusive_releases(self):

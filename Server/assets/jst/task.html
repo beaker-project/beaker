@@ -61,7 +61,7 @@
         <th>Needs</th>
         <td>
             <ul class="unstyled">
-                <% _.each(needs, function(elem) { %>
+                <% _.each(_.sortBy(needs, _.identity), function(elem) { %>
                 <li><%- elem %></li>
                 <% }) %>
             </ul>
@@ -73,7 +73,7 @@
         <th>Bugzillas</th>
         <td>
             <ul class="unstyled">
-                <% _.each(bugzillas, function(elem) { %>
+                <% _.each(_.sortBy(bugzillas, _.identity), function(elem) { %>
                 <li><a href="https://bugzilla.redhat.com/show_bug.cgi?id=<%- elem %>">
                         <%- elem %>
                     </a>
@@ -88,7 +88,7 @@
         <th>Types</th>
         <td>
             <ul class="unstyled">
-                <% _.each(types, function(elem) { %>
+                <% _.each(_.sortBy(types, _.identity), function(elem) { %>
                 <li><%- elem %></li>
                 <% }) %>
             </ul>
@@ -100,7 +100,7 @@
         <th>Run For</th>
         <td>
             <ul class="unstyled">
-                <% _.each(runfor, function(elem) { %>
+                <% _.each(_.sortBy(runfor, _.identity), function(elem) { %>
                 <li><%- elem %></li>
                 <% }) %>
             </ul>
@@ -120,7 +120,7 @@
         <th>Requires</th>
         <td>
             <ul class="unstyled">
-                <% _.each(required, function(elem) { %>
+                <% _.each(_.sortBy(required, _.identity), function(elem) { %>
                 <li><%- elem %></li>
                 <% }) %>
             </ul>
@@ -132,7 +132,7 @@
         <th>Excluded OSMajors</th>
         <td>
             <ul class="unstyled">
-                <% _.each(excluded_osmajor, function(elem) { %>
+                <% _.each(_.sortBy(excluded_osmajor, _.identity), function(elem) { %>
                 <li><%- elem %></li>
                 <% }) %>
             </ul>
@@ -144,7 +144,7 @@
         <th>Exclusive OSMajors</th>
         <td>
             <ul class="unstyled">
-                <% _.each(exclusive_osmajor, function(elem) { %>
+                <% _.each(_.sortBy(exclusive_osmajor, _.identity), function(elem) { %>
                 <li><%- elem %></li>
                 <% }) %>
             </ul>
@@ -156,7 +156,7 @@
         <th>Excluded Arches</th>
         <td>
             <ul class="unstyled">
-                <% _.each(excluded_arch, function(elem) { %>
+                <% _.each(_.sortBy(excluded_arch, _.identity), function(elem) { %>
                 <li><%- elem %></li>
                 <% }) %>
             </ul>
@@ -168,7 +168,7 @@
         <th>Exclusive Arches</th>
         <td>
             <ul class="unstyled">
-                <% _.each(exclusive_arch, function(elem) { %>
+                <% _.each(_.sortBy(exclusive_arch, _.identity), function(elem) { %>
                 <li><%- elem %></li>
                 <% }) %>
             </ul>
