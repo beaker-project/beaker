@@ -102,7 +102,7 @@ dev_wizard_command = os.path.join(os.path.dirname(__file__),
                                   '..', '..', '..', '..', 'run-wizard.sh')
 wizard_command = os.environ.get('BEAKER_WIZARD_COMMAND', dev_wizard_command)
 
-def start_wizard(args, config=None, env=None, **kwargs):
+def start_wizard(args, config=None, env=None, extra_env=None, **kwargs):
     if config is None:
         global default_wizard_config
         config = default_wizard_config
@@ -111,6 +111,7 @@ def start_wizard(args, config=None, env=None, **kwargs):
     env = dict(env or os.environ)
     env['PYTHONUNBUFFERED'] = '1'
     env['BEAKER_WIZARD_CONF'] = config.name
+    env.update(extra_env or {})
     return subprocess.Popen(args,
                             executable=wizard_command,
                             stdout=subprocess.PIPE,

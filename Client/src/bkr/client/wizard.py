@@ -369,10 +369,10 @@ SuggestedTestTypes = """Regression Performance Stress Certification
             KernelReporting Sanity Library""".split()
 
 # Guesses
-GuessAuthorLogin = pwd.getpwuid(os.getuid())[0]
+GuessAuthorLogin = pwd.getpwuid(os.getuid())[0].decode(sys.getfilesystemencoding())
 GuessAuthorDomain = re.sub("^.*\.([^.]+\.[^.]+)$", "\\1", os.uname()[1])
 GuessAuthorEmail = "%s@%s" % (GuessAuthorLogin, GuessAuthorDomain)
-GuessAuthorName = pwd.getpwuid(os.getuid())[4]
+GuessAuthorName = pwd.getpwuid(os.getuid())[4].decode(sys.getfilesystemencoding())
 
 # Make sure guesses are valid values
 if not RegExpEmail.match(GuessAuthorEmail):
@@ -433,7 +433,7 @@ PreferencesTemplate = """<?xml version="1.0" ?>
         </skeleton>
     </skeletons>
 </wizard>
-""" % (GuessAuthorName, GuessAuthorEmail)
+""" % (GuessAuthorName.encode('utf8'), GuessAuthorEmail.encode('utf8'))
 
 
 def wrapText(text):
@@ -1241,7 +1241,11 @@ class Inquisitor:
         return self.data not in ["?", ""]
 
     def suggestion(self):
-        """ Provide user with a suggestion or detailed description """
+        """
+        Provide user with a suggestion or detailed description.
+
+        Note that the return value is already encoded as bytes for display.
+        """
         # if current data is valid, offer is as a suggestion
         if self.valid():
             if self.options.verbose(): self.describe()
@@ -1269,7 +1273,7 @@ class Inquisitor:
         self.heading()
         # keep asking until we get sane answer
         while self.confirm or not self.valid():
-            sys.stdout.write("[%s] " % self.suggestion().encode("utf-8"))
+            sys.stdout.write("[%s] " % self.suggestion())
             self.read()
             self.confirm = False
 

@@ -268,6 +268,7 @@ Requires:       Xvfb
 Requires:       firefox
 Requires:       lsof
 Requires:       openldap-servers
+Requires:       nss_wrapper
 %if 0%{?fedora} >= 29 || 0%{?rhel} >= 8
 Requires:       python2-nose
 Requires:       python2-selenium
