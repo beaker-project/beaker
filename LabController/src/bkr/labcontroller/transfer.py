@@ -13,7 +13,7 @@ import socket
 import daemon
 from daemon import pidfile
 from optparse import OptionParser
-from bkr.labcontroller.proxy import Watchdog
+from bkr.labcontroller.proxy import LogArchiver
 from bkr.labcontroller.config import get_conf, load_conf
 from bkr.labcontroller.exceptions import ShutdownException
 from bkr.log import log_to_stream, log_to_syslog
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 def daemon_shutdown(*args, **kwargs):
     raise ShutdownException()
 
-def main_loop(transfer, conf=None):
+def main_loop(logarchiver, conf=None):
     """infinite daemon loop"""
 
     # define custom signal handlers
@@ -32,8 +32,8 @@ def main_loop(transfer, conf=None):
     while True:
         try:
             # Look for logs to transfer if none transfered then sleep
-            if not transfer.transfer_logs():
-                transfer.sleep()
+            if not logarchiver.transfer_logs():
+                logarchiver.sleep()
 
             # write to stdout / stderr
             sys.stdout.flush()
@@ -53,7 +53,7 @@ def main_loop(transfer, conf=None):
         except:
             # this is a little extreme: log the exception and continue
             logger.exception('Error in main loop')
-            transfer.sleep()
+            logarchiver.sleep()
 
 
 
@@ -84,21 +84,21 @@ def main():
     # temporarily here, and configure it again below.
     log_to_stream(sys.stderr, level=logging.WARNING)
     try:
-        transfer = Watchdog(conf=conf)
+        logarchiver = LogArchiver(conf=conf)
     except Exception, ex:
         sys.stderr.write("Error starting beaker-transfer: %s\n" % ex)
         sys.exit(1)
 
     if opts.foreground:
         log_to_stream(sys.stderr, level=logging.DEBUG)
-        main_loop(transfer=transfer, conf=conf)
+        main_loop(logarchiver=logarchiver, conf=conf)
     else:
         # See BZ#977269
-        transfer.close()
+        logarchiver.close()
         with daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(
                 pid_file, acquire_timeout=0), detach_process=True):
             log_to_syslog('beaker-transfer')
-            main_loop(transfer=transfer, conf=conf)
+            main_loop(logarchiver=logarchiver, conf=conf)
 
 if __name__ == '__main__':
     main()

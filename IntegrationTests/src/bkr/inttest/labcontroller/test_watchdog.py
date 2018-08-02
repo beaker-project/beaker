@@ -9,11 +9,13 @@
 import os, os.path
 import time
 import pkg_resources
+import gevent.hub
 from turbogears.database import session
 from bkr.common.helpers import makedirs_ignore
 from bkr.labcontroller.config import get_conf
 from bkr.labcontroller.proxy import ConsoleWatchFile, InstallFailureDetector, \
-        PanicDetector, Watchdog, ProxyHelper
+        PanicDetector, ProxyHelper, Monitor
+from bkr.labcontroller.watchdog import Watchdog
 from bkr.server.model import LogRecipe, TaskResult, TaskStatus
 from bkr.inttest import data_setup
 from bkr.inttest.assertions import wait_for_condition
@@ -239,7 +241,6 @@ class WatchdogConsoleLogTest(TestHelper):
 class WatchdogVirtConsoleLogTest(TestHelper):
     def setUp(self):
         with session.begin():
-            self.watchdog = Watchdog()
             self.recipe = data_setup.create_recipe()
             job = data_setup.create_job_for_recipes([self.recipe])
             self.addCleanup(self.cleanup_job, job)
@@ -248,15 +249,15 @@ class WatchdogVirtConsoleLogTest(TestHelper):
                                                    'recipes',
                                                    str(self.recipe.id // 1000) + '+',
                                                    str(self.recipe.id), 'console.log')
+        self.watchdog = Watchdog()
+        self.monitor = Monitor({'recipe_id': self.recipe.id, 'is_virt_recipe': True}, self.watchdog)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=950903
     @patch.object(ProxyHelper, 'get_console_log')
     def test_stores_virt_console_logs(self, test_get_console_log):
         # set return value since we did not configure the OpenStack Identity APIs
         test_get_console_log.return_value = 'foo'
-        active_watchdogs = self.watchdog.hub.recipes.tasks.watchdogs('active')
-        self.watchdog.active_watchdogs(active_watchdogs)
-        self.watchdog.run()
+        self.monitor.run()
         self.assert_(self.check_console_log_registered())
         self.assert_(self.check_cached_log_contents('foo'))
 
@@ -267,9 +268,7 @@ class WatchdogVirtConsoleLogTest(TestHelper):
         # Hence this two-byte UTF-8 sequence for U+00AE becomes U+FFFD U+FFFD.
         log_contents = u'Firmware for Intel\ufffd\ufffd Wireless 5150 A/G/N network adaptors\n'
         test_get_console_log.return_value = log_contents
-        active_watchdogs = self.watchdog.hub.recipes.tasks.watchdogs('active')
-        self.watchdog.active_watchdogs(active_watchdogs)
-        self.watchdog.run()
+        self.monitor.run()
         self.assert_(self.check_console_log_registered())
         self.assertEquals(open(self.cached_console_log).read().decode('utf8'), log_contents)
 

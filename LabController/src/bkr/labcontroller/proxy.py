@@ -391,33 +391,7 @@ class InstallFailureDetector(object):
                 return match.group()
 
 
-class Watchdog(ProxyHelper):
-
-    watchdogs = dict()
-
-    def get_active_watchdogs(self):
-        logger.debug('Polling for active watchdogs')
-        try:
-            return self.hub.recipes.tasks.watchdogs('active')
-        except xmlrpclib.Fault as fault:
-            if 'not currently logged in' in fault.faultString:
-                logger.debug('Session expired, re-authenticating')
-                self.hub._login()
-                return self.hub.recipes.tasks.watchdogs('active')
-            else:
-                raise
-
-    def get_expired_watchdogs(self):
-        logger.debug('Polling for expired watchdogs')
-        try:
-            return self.hub.recipes.tasks.watchdogs('expired')
-        except xmlrpclib.Fault as fault:
-            if 'not currently logged in' in fault.faultString:
-                logger.debug('Session expired, re-authenticating')
-                self.hub._login()
-                return self.hub.recipes.tasks.watchdogs('expired')
-            else:
-                raise
+class LogArchiver(ProxyHelper):
 
     def transfer_logs(self):
         transfered = False
@@ -510,83 +484,9 @@ class Watchdog(ProxyHelper):
             return False
         return True
 
-    def purge_old_watchdog(self, watchdog_systems):
-        try:
-            del self.watchdogs[watchdog_systems]
-        except KeyError, e:
-            logger.error('Trying to remove a watchdog that is already removed')
-
-    def expire_watchdogs(self, watchdogs):
-        """Clear out expired watchdog entries"""
-
-        logger.info("Entering expire_watchdogs")
-        for watchdog in watchdogs:
-            try:
-                self.abort(watchdog)
-            except xmlrpclib.Fault:
-                # Catch xmlrpc.Fault's here so we keep iterating the loop
-                logger.exception('Failed to abort expired watchdog')
-
-    def active_watchdogs(self, watchdogs, purge=True):
-        """Monitor active watchdog entries"""
-
-        logger.info("Entering active_watchdogs")
-        active_watchdogs = []
-        for watchdog in watchdogs:
-            watchdog_key = '%s:%s' % (watchdog['system'], watchdog['recipe_id'])
-            active_watchdogs.append(watchdog_key)
-            if watchdog_key not in self.watchdogs:
-                self.watchdogs[watchdog_key] = Monitor(watchdog, self)
-        # Remove Monitor if watchdog does not exist.
-        if purge is True:
-            for watchdog_system in self.watchdogs.copy():
-                if watchdog_system not in active_watchdogs:
-                    self.purge_old_watchdog(watchdog_system)
-                    logger.info("Removed Monitor for %s", watchdog_system)
-
-    def run(self):
-        updated = False
-        for monitor in self.watchdogs.values():
-            try:
-                updated |= monitor.run()
-            except (xmlrpclib.Fault, OSError):
-                logger.exception('Failed to run monitor for %s', monitor.watchdog['system'])
-        return bool(updated)
-
     def sleep(self):
         # Sleep between polling
         time.sleep(self.conf.get("SLEEP_TIME", 20))
-
-    def abort(self, watchdog):
-        """ Abort expired watchdog entry
-        """
-        logger.info("External Watchdog Expired for %s", watchdog['system'])
-        if self.conf.get("WATCHDOG_SCRIPT"):
-            job = lxml.etree.fromstring(self.get_my_recipe(
-                    dict(recipe_id=watchdog['recipe_id'])))
-            recipe = job.find('recipeSet/guestrecipe')
-            if recipe is None:
-                recipe = job.find('recipeSet/recipe')
-            for task in recipe.iterfind('task'):
-                if task.get('status') == 'Running':
-                    break
-            task_id = task.get('id')
-            try:
-                args = [self.conf.get('WATCHDOG_SCRIPT'),
-                        str(watchdog['system']),
-                        str(watchdog['recipe_id']), str(task_id),
-                       ]
-                output = check_output(args)
-                logger.debug("Extending T:%s watchdog %d" % (task_id,
-                                                             int(output)))
-                self.extend_watchdog(task_id, int(output))
-                return
-            except Exception:
-                logger.exception('Error in watchdog script: %r', args)
-
-        self.recipe_stop(watchdog['recipe_id'],
-                         'abort',
-                         'External Watchdog Expired')
 
 class Monitor(ProxyHelper):
     """ Upload console log if present to Scheduler
@@ -600,13 +500,14 @@ class Monitor(ProxyHelper):
         self.conf = obj.conf
         self.hub = obj.hub
         self.log_storage = obj.log_storage
-        logger.info("Initialize monitor for system: %s", self.watchdog['system'])
         if(self.watchdog['is_virt_recipe']):
+            logger.info('Watching OpenStack console for recipe %s', self.watchdog['recipe_id'])
             self.console_watch = ConsoleWatchVirt(
                     self.watchdog, self, self.conf["PANIC_REGEX"])
         else:
-            self.console_watch = ConsoleWatchFile(
-                    "%s/%s" % (self.conf["CONSOLE_LOGS"], self.watchdog["system"]),
+            console_path = '%s/%s' % (self.conf['CONSOLE_LOGS'], self.watchdog['system'])
+            logger.info('Watching console log file %s for recipe %s', console_path, watchdog['recipe_id'])
+            self.console_watch = ConsoleWatchFile(console_path,
                     self.watchdog, self, self.conf["PANIC_REGEX"])
 
     def run(self):

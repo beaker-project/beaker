@@ -11,70 +11,173 @@ import logging
 import time
 import socket
 import xmlrpclib
+import subprocess
+import lxml.etree
 import daemon
 from daemon import pidfile
 from optparse import OptionParser
-from bkr.common.helpers import RepeatTimer
-from bkr.labcontroller.proxy import Watchdog
+import gevent, gevent.hub, gevent.event, gevent.monkey
+from bkr.labcontroller.proxy import ProxyHelper, Monitor
 from bkr.labcontroller.config import load_conf, get_conf
 from bkr.log import log_to_stream, log_to_syslog
-from bkr.labcontroller.exceptions import ShutdownException
+
+# Like beaker-provision and beaker-transfer, this daemon is structured as
+# a polling loop. Each iteration of the loop, it asks Beaker for the list of
+# "active watchdogs" (the corresponding recipe is running, thus we should be
+# monitoring its console output) and "expired watchdogs" (the timer has expired
+# so we need to abort the corresponding recipe).
+#
+# For each active watchdog, we also run a separate greenlet which has its own
+# loop to watch the console log and upload it back to Beaker, and also check for
+# kernel panic messages and installation failure messages if requested.
 
 logger = logging.getLogger(__name__)
 
-def daemon_shutdown(*args, **kwargs):
-    raise ShutdownException()
+# This is a gevent.event.Event which will be set in a signal handler,
+# indicating that all our loops should cleanly terminate.
+# Note that we must construct it *after* we daemonize, inside the main loop below.
+shutting_down = None
+
+def shutdown_handler(signum, frame):
+    logger.info('Received signal %s, shutting down', signum)
+    shutting_down.set()
+
+def run_monitor(monitor):
+    while True:
+        updated = monitor.run()
+        # If the console was updated, yield and then check it again immediately.
+        # If the console was not updated, yield and then sleep for SLEEP_TIME.
+        if updated:
+            if shutting_down.is_set():
+                break
+        else:
+            if shutting_down.wait(timeout=monitor.conf.get('SLEEP_TIME', 20)):
+                break
+
+class Watchdog(ProxyHelper):
+
+    def __init__(self, *args, **kwargs):
+        super(Watchdog, self).__init__(*args, **kwargs)
+        self.monitor_greenlets = {} #: dict of (recipe id -> greenlet which is monitoring its console log)
+
+    def get_active_watchdogs(self):
+        logger.debug('Polling for active watchdogs')
+        try:
+            return self.hub.recipes.tasks.watchdogs('active')
+        except xmlrpclib.Fault as fault:
+            if 'not currently logged in' in fault.faultString:
+                logger.debug('Session expired, re-authenticating')
+                self.hub._login()
+                return self.hub.recipes.tasks.watchdogs('active')
+            else:
+                raise
+
+    def get_expired_watchdogs(self):
+        logger.debug('Polling for expired watchdogs')
+        try:
+            return self.hub.recipes.tasks.watchdogs('expired')
+        except xmlrpclib.Fault as fault:
+            if 'not currently logged in' in fault.faultString:
+                logger.debug('Session expired, re-authenticating')
+                self.hub._login()
+                return self.hub.recipes.tasks.watchdogs('expired')
+            else:
+                raise
+
+    def abort(self, recipe_id, system):
+        # Don't import this at global scope. It triggers gevent to create its default hub,
+        # but we need to ensure the gevent hub is not created until *after* we have daemonized.
+        from bkr.labcontroller.async import MonitoredSubprocess
+        logger.info('External Watchdog Expired for recipe %s on system %s', recipe_id, system)
+        if self.conf.get("WATCHDOG_SCRIPT"):
+            job = lxml.etree.fromstring(self.get_my_recipe(dict(recipe_id=recipe_id)))
+            recipe = job.find('recipeSet/guestrecipe')
+            if recipe is None:
+                recipe = job.find('recipeSet/recipe')
+            for task in recipe.iterfind('task'):
+                if task.get('status') == 'Running':
+                    break
+            task_id = task.get('id')
+            args = [self.conf.get('WATCHDOG_SCRIPT'), str(system), str(recipe_id), str(task_id)]
+            logger.debug('Invoking external watchdog script %r', args)
+            p = MonitoredSubprocess(args,
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                    timeout=300)
+            logger.debug('Waiting on external watchdog script pid %s', p.pid)
+            p.dead.wait()
+            output = p.stdout_reader.get()
+            if p.returncode != 0:
+                logger.error('External watchdog script exited with status %s:\n%s',
+                        p.returncode, output)
+            else:
+                try:
+                    extend_seconds = int(output)
+                except ValueError:
+                    logger.error('Expected external watchdog script to print number of seconds '
+                            'to extend watchdog by, got:\n%s', output)
+                else:
+                    logger.debug('Extending T:%s watchdog %d', task_id, extend_seconds)
+                    self.extend_watchdog(task_id, extend_seconds)
+                    # Don't abort it here, we assume the script took care of things.
+                    return
+        self.recipe_stop(recipe_id, 'abort', 'External Watchdog Expired')
+
+    def spawn_monitor(self, watchdog):
+        monitor = Monitor(watchdog, self)
+        greenlet = gevent.spawn(run_monitor, monitor)
+        self.monitor_greenlets[watchdog['recipe_id']] = greenlet
+        def completion_callback(greenlet):
+            if greenlet.exception:
+                logger.error('Monitor greenlet %r had unhandled exception: %r',
+                        greenlet, greenlet.exception)
+            del self.monitor_greenlets[watchdog['recipe_id']]
+        greenlet.link(completion_callback)
+
+    def poll(self):
+        for expired_watchdog in self.get_expired_watchdogs():
+            try:
+                recipe_id = expired_watchdog['recipe_id']
+                system = expired_watchdog['system']
+                self.abort(recipe_id, system)
+            except Exception:
+                # catch and ignore here, so that we keep going through the loop
+                logger.exception('Failed to abort expired watchdog')
+            if shutting_down.is_set():
+                return
+        # Get active watchdogs *after* we finish running
+        # expired_watchdogs, depending on the configuration
+        # we may have extended the watchdog and it's therefore
+        # no longer expired!
+        active_watchdogs = self.get_active_watchdogs()
+        # Start a new monitor for any active watchdog we are not already monitoring.
+        for watchdog in active_watchdogs:
+            if watchdog['recipe_id'] not in self.monitor_greenlets:
+                self.spawn_monitor(watchdog)
+        # Kill any running monitors that are gone from the list.
+        active_recipes = set(w['recipe_id'] for w in active_watchdogs)
+        for recipe_id, greenlet in self.monitor_greenlets.iteritems():
+            if recipe_id not in active_recipes:
+                logger.info('Stopping monitor for recipe %s', recipe_id)
+                greenlet.kill()
 
 def main_loop(watchdog, conf):
-    """infinite daemon loop"""
+    global shutting_down
+    shutting_down = gevent.event.Event()
+    gevent.monkey.patch_all(thread=False)
 
-    # define custom signal handlers
-    signal.signal(signal.SIGTERM, daemon_shutdown)
+    signal.signal(signal.SIGINT, shutdown_handler)
+    signal.signal(signal.SIGTERM, shutdown_handler)
 
-    time_of_last_check = 0
+    logger.debug('Entering main watchdog loop')
     while True:
         try:
-            now = time.time()
-            # Poll for watchdogs
-            if now - time_of_last_check > conf.get('SLEEP_TIME', 60):
-                time_of_last_check = now
-                try:
-                    expired_watchdogs = watchdog.get_expired_watchdogs()
-                except xmlrpclib.Fault:
-                    # catch any xmlrpc errors
-                    expired_watchdogs = []
-                    logger.exception('Error fetching list of expired watchdogs')
-                watchdog.expire_watchdogs(expired_watchdogs)
-
-                # Get active watchdogs *after* we finish running
-                # expired_watchdogs, depending on the configuration
-                # we may have extended the watchdog and its therefore
-                # no longer expired!
-                try:
-                    active_watchdogs = watchdog.get_active_watchdogs()
-                except xmlrpclib.Fault:
-                    # catch any xmlrpc errors
-                    active_watchdogs = []
-                    logger.exception('Error fetching list of active watchdogs')
-                watchdog.active_watchdogs(active_watchdogs)
-
-            if not watchdog.run():
-                logger.debug(80 * '-')
-                watchdog.sleep()
-            # FIXME: Check for recipes that match systems under
-            #        this lab controller, if so take recipe and provision
-            #        system.
-            # write to stdout / stderr
-            sys.stdout.flush()
-            sys.stderr.flush()
-        except (socket.sslerror, xmlrpclib.ProtocolError):
-            logger.exception('Error in main loop')
-        except (ShutdownException, KeyboardInterrupt):
-            # ignore keyboard interrupts and sigterm
-            signal.signal(signal.SIGINT, signal.SIG_IGN)
-            signal.signal(signal.SIGTERM, signal.SIG_IGN)
-            logger.info('Exiting...')
+            watchdog.poll()
+        except:
+            logger.exception('Failed to poll for watchdogs')
+        if shutting_down.wait(timeout=conf.get('SLEEP_TIME', 20)):
+            gevent.hub.get_hub().join() # let running greenlets terminate
             break
+    logger.debug('Exited main watchdog loop')
 
 def main():
     parser = OptionParser()
@@ -113,9 +216,11 @@ def main():
         with daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(
                 pid_file, acquire_timeout=0), detach_process=True):
             log_to_syslog('beaker-watchdog')
-            main_loop(watchdog, conf)
-
-    print 'exiting program'
+            try:
+                main_loop(watchdog, conf)
+            except Exception:
+                logger.exception('Unhandled exception in main_loop')
+                raise
 
 if __name__ == '__main__':
     main()
