@@ -16,10 +16,7 @@ from optparse import OptionParser
 from bkr.labcontroller.proxy import Watchdog
 from bkr.labcontroller.config import get_conf, load_conf
 from bkr.labcontroller.exceptions import ShutdownException
-from bkr.labcontroller.tback import Traceback, set_except_hook
 from bkr.log import log_to_stream, log_to_syslog
-
-set_except_hook()
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +52,7 @@ def main_loop(transfer, conf=None):
 
         except:
             # this is a little extreme: log the exception and continue
-            traceback = Traceback()
-            logger.error(traceback.get_traceback())
+            logger.exception('Error in main loop')
             transfer.sleep()
 
 

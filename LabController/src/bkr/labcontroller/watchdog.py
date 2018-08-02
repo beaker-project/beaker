@@ -19,9 +19,6 @@ from bkr.labcontroller.proxy import Watchdog
 from bkr.labcontroller.config import load_conf, get_conf
 from bkr.log import log_to_stream, log_to_syslog
 from bkr.labcontroller.exceptions import ShutdownException
-from bkr.labcontroller.tback import Traceback, set_except_hook
-
-set_except_hook()
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +43,7 @@ def main_loop(watchdog, conf):
                 except xmlrpclib.Fault:
                     # catch any xmlrpc errors
                     expired_watchdogs = []
-                    traceback = Traceback()
-                    logger.error(traceback.get_traceback())
+                    logger.exception('Error fetching list of expired watchdogs')
                 watchdog.expire_watchdogs(expired_watchdogs)
 
                 # Get active watchdogs *after* we finish running
@@ -58,9 +54,8 @@ def main_loop(watchdog, conf):
                     active_watchdogs = watchdog.get_active_watchdogs()
                 except xmlrpclib.Fault:
                     # catch any xmlrpc errors
-                    traceback = Traceback()
-                    logger.error(traceback.get_traceback())
                     active_watchdogs = []
+                    logger.exception('Error fetching list of active watchdogs')
                 watchdog.active_watchdogs(active_watchdogs)
 
             if not watchdog.run():
@@ -72,12 +67,8 @@ def main_loop(watchdog, conf):
             # write to stdout / stderr
             sys.stdout.flush()
             sys.stderr.flush()
-        except socket.sslerror:
-            traceback = Traceback()
-            logger.error(traceback.get_traceback())
-        except xmlrpclib.ProtocolError:
-            traceback = Traceback()
-            logger.error(traceback.get_traceback())
+        except (socket.sslerror, xmlrpclib.ProtocolError):
+            logger.exception('Error in main loop')
         except (ShutdownException, KeyboardInterrupt):
             # ignore keyboard interrupts and sigterm
             signal.signal(signal.SIGINT, signal.SIG_IGN)
