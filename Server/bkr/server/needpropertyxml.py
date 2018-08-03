@@ -1088,7 +1088,7 @@ class XmlDiskSectorSize(ElementWrapper):
         value = self.get_xml_attr('value', int, None)
         units = self.get_xml_attr('units', unicode, 'bytes')
         if value:
-            return getattr(Disk.phys_sector_size, op)(
+            return getattr(Disk.sector_size, op)(
                     value * bytes_multiplier(units))
         return None
 
