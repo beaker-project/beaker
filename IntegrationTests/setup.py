@@ -24,6 +24,7 @@ setup(
         '*.ldif',
         'client/workflow_kickstart.cfg.tmpl',
         'client/.beaker_client/*',
+        'labcontroller/watchdog-script-test.sh',
         'labcontroller/install-failure-logs/*',
         'labcontroller/pxemenu-templates/*',
         'server/*.sql',

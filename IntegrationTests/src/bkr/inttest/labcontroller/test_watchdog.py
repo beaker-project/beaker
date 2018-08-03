@@ -272,6 +272,57 @@ class WatchdogVirtConsoleLogTest(TestHelper):
         self.assert_(self.check_console_log_registered())
         self.assertEquals(open(self.cached_console_log).read().decode('utf8'), log_contents)
 
+
+class ExternalWatchdogScriptTest(LabControllerTestCase):
+
+    # Note that these test cases use specially crafted system FQDNs,
+    # which trigger different magic behaviour in the watchdog script
+    # that is configured for the test suite.
+    # If you change or add any systems here, ensure the
+    # watchdog-script-test.sh file is kept up to date as well!
+
+    def check_watchdog_extended(self, recipe, by_seconds):
+        with session.begin():
+            session.refresh(recipe)
+            self.assertEquals(recipe.status, TaskStatus.running)
+            # 5 seconds tolerance
+            return (by_seconds - recipe.status_watchdog()) <= 5
+
+    def check_watchdog_expiry(self, recipe):
+        with session.begin():
+            task = recipe.tasks[-1]
+            session.refresh(task)
+            if task.status != TaskStatus.aborted:
+                return False
+            self.assertEquals(task.results[0].result, TaskResult.warn)
+            self.assertEquals(task.results[0].log, 'External Watchdog Expired')
+            return True
+
+    def test_recipe_is_extended(self):
+        # The external watchdog script is supposed to print the number of seconds
+        # by which the watchdog timer should be extended.
+        with session.begin():
+            system = data_setup.create_system(lab_controller=self.get_lc(),
+                    fqdn='watchdog.script.please.extend.600')
+            job = data_setup.create_running_job(system=system)
+            self.addCleanup(self.cleanup_job, job)
+            recipe = job.recipesets[0].recipes[0]
+            recipe.extend(-1)
+        wait_for_condition(lambda: self.check_watchdog_extended(recipe, 600))
+
+    def test_recipe_is_aborted_on_script_failure(self):
+        # If the external watchdog script exits non-zero,
+        # beaker-watchdog ignores its output and aborts the recipe.
+        with session.begin():
+            system = data_setup.create_system(lab_controller=self.get_lc(),
+                    fqdn='watchdog.script.please.crash')
+            job = data_setup.create_running_job(system=system)
+            self.addCleanup(self.cleanup_job, job)
+            recipe = job.recipesets[0].recipes[0]
+            recipe.extend(-1)
+        wait_for_condition(lambda: self.check_watchdog_expiry(recipe))
+
+
 # These cases are really unit tests but they are here because I don't want to 
 # ship all these failure logs in the beaker-lab-controller package.
 
