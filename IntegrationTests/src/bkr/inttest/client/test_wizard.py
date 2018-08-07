@@ -11,6 +11,7 @@ import os.path
 import re
 import shutil
 import tempfile
+import textwrap
 import unittest2 as unittest
 
 from bkr.inttest.client import run_wizard
@@ -175,3 +176,28 @@ class TestWizard(BaseWizardTestCase):
         self.assertIn(
                 '\t@echo "Owner:           Gęśla Jaźń <gj@example.com>" > $(METADATA)\n',
                 makefile_contents)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1607515
+    def test_accepts_non_ascii_gecos(self):
+        uid = os.geteuid()
+        passwd_file = tempfile.NamedTemporaryFile(prefix='beaker-inttest-passwd-', delete=True)
+        passwd_file.write(textwrap.dedent(u"""\
+            svejk:x:{0}:{0}:Josef Švejk:/home/svejk:/sbin/nologin
+            """.format(uid).encode('UTF-8')))
+        passwd_file.flush()
+        group_file = tempfile.NamedTemporaryFile(prefix='beaker-inttest-group-', delete=True)
+        group_file.write(textwrap.dedent(u"""\
+            svejk:x:{0}
+            """.format(uid).encode('UTF-8')))
+        group_file.flush()
+
+        # The bug only occurs on "first run", where beaker-wizard prompts you if
+        # the default author name (which it pulls from the GECOS field of
+        # passwd) is acceptable.
+        out = run_wizard(['beaker-wizard', 'wget/Sanity/test-it-works'],
+                         cwd=self.tempdir,
+                         extra_env={'BEAKER_WIZARD_CONF': 'some-nonexistent-filename',
+                                    'LD_PRELOAD': 'libnss_wrapper.so',
+                                    'NSS_WRAPPER_PASSWD': passwd_file.name,
+                                    'NSS_WRAPPER_GROUP': group_file.name})
+        self.assertIn(u'Author : Josef Švejk', out.decode('utf8'))

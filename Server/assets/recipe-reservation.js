@@ -67,7 +67,15 @@ var RecipeRunningReservation = Backbone.View.extend({
         }
     },
     initialize: function (options) {
-        this.listenTo(this.model, 'change:can_edit change:time_remaining_seconds', this.render);
+        this.listenTo(this.model, 'change:can_edit', this.render);
+        // As an optimisation, only re-render when the time remaining crosses
+        // over the zero threshold, since that is all the template cares about.
+        // This avoids re-rendering once per second for no reason.
+        this.listenTo(this.model, 'change:time_remaining_seconds', function (model, new_value) {
+            if (Math.sign(model.previous('time_remaining_seconds')) != Math.sign(new_value)) {
+                this.render();
+            }
+        });
         this.listenTo(this.model.get('reservation_request'), 'change', this.render);
         this.render();
     },

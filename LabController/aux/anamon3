@@ -155,6 +155,10 @@ def anamon_loop():
         WatchedFile("/tmp/modprobe.conf", "modprobe.conf"),
         WatchedFile("/tmp/ifcfg.log", "ifcfg.log"),
         WatchedFile("/tmp/packaging.log", "packaging.log"),
+        WatchedFile("/tmp/yum.log", "yum.log"),
+        WatchedFile("/tmp/dnf.librepo.log", "dnf.librepo.log"),
+        WatchedFile("/tmp/hawkey.log", "hawkey.log"),
+        WatchedFile("/tmp/lvm.log", "lvm.log"),
     ]
 
     # Setup '/mnt/sysimage' watcher

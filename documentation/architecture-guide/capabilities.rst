@@ -150,6 +150,7 @@ Reviewing results is optional. If all results in the recipe set are Pass, its
 response is set to "ack" by default. Otherwise the recipe set is marked "needs 
 review" until a reviewer updates the response to "ack" or "nak".
 
+.. _watchdog-timer-capability:
 
 Watchdog timers
 ~~~~~~~~~~~~~~~
@@ -243,6 +244,8 @@ appropriate operating system and test harness installed.
 Beaker currently handles these operations through PXE booting (for the
 initial operating system installation) and Anaconda kickstart files.
 
+
+.. _lab-controller-capability:
 
 Lab controllers
 ~~~~~~~~~~~~~~~

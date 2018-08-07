@@ -53,7 +53,7 @@ trap "rm -rf $workdir" EXIT
 outdir="$(readlink -f ./rpmbuild-output)"
 mkdir -p "$outdir"
 
-git archive --format=tar --prefix="beaker-${version}/" HEAD | gzip >"$workdir/beaker-${version}.tar.gz"
+git archive --format=tar --prefix="beaker-${version}/" HEAD | xz >"$workdir/beaker-${version}.tar.xz"
 git ls-tree -r HEAD | grep ^160000 | while read mode type sha path ; do
     # for submodules we produce a tar archive that mimics the style of the 
     # GitHub archives we are expecting in the RPM build
