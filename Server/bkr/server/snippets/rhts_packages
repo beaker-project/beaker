@@ -15,7 +15,7 @@ just install docker-io
 {% endfor %}
 {% else %}
 {% if recipe %}
-{% for recipe_package in recipe.custom_packages %}
+{% for recipe_package in recipe.custom_packages|sort(attribute='package') %}
 {{ recipe_package.package }}
 {% endfor %}
 {% if install_task_requires is defined %}

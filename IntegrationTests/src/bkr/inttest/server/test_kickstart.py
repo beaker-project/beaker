@@ -1209,8 +1209,8 @@ class KickstartTest(unittest.TestCase):
             ''', self.system)
         self.assertIn('''
 %packages --ignoremissing
-python-glanceclient
 -mariadb-galera-server
+python-glanceclient
 ''', recipe.installation.rendered_kickstart.kickstart)
 
     def test_fedora_rawhide_autopart_type(self):
