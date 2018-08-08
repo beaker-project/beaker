@@ -426,6 +426,12 @@ class MigrationTest(unittest.TestCase):
         if hasattr(expected.type, 'length'):
             self.assertEquals(actual.type.length, expected.type.length,
                     '%r has wrong length' % actual)
+        if hasattr(expected.type, 'precision'):
+            self.assertEquals(actual.type.precision, expected.type.precision,
+                    '%r has wrong numeric precision' % actual)
+        if hasattr(expected.type, 'scale'):
+            self.assertEquals(actual.type.scale, expected.type.scale,
+                    '%r has wrong numeric scale' % actual)
         if hasattr(expected.type, 'enums'):
             self.assertItemsEqual(actual.type.enums, expected.type.enums)
         self.assertEquals(actual.nullable, expected.nullable,

@@ -2381,9 +2381,9 @@ class LabInfo(DeclarativeMappedObject):
     orig_cost = Column(Numeric(precision=16, scale=2, asdecimal=True))
     curr_cost = Column(Numeric(precision=16, scale=2, asdecimal=True))
     dimensions = Column(String(255))
-    weight = Column(Numeric(asdecimal=False))
-    wattage = Column(Numeric(asdecimal=False))
-    cooling = Column(Numeric(asdecimal=False))
+    weight = Column(Numeric(10, 0, asdecimal=False))
+    wattage = Column(Numeric(10, 0, asdecimal=False))
+    cooling = Column(Numeric(10, 0, asdecimal=False))
 
     fields = ['orig_cost', 'curr_cost', 'dimensions', 'weight', 'wattage', 'cooling']
 

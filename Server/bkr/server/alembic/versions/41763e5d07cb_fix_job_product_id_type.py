@@ -17,11 +17,11 @@ down_revision = '2c03c52950bf'
 
 from alembic import op
 import sqlalchemy as sa
+from bkr.server.alembic.migration_utils import find_column_type
 
 def upgrade():
-    column_info, = [info for info in sa.inspect(op.get_bind()).get_columns('job')
-            if info['name'] == 'product_id']
-    if not isinstance(column_info['type'], sa.Integer):
+    column_type = find_column_type('job', 'product_id')
+    if not isinstance(column_type, sa.Integer):
         op.execute("""
             UPDATE job
             SET product_id = NULL

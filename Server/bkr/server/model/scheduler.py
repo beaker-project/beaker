@@ -3867,7 +3867,7 @@ class RecipeTaskResult(TaskBase):
     recipetask = relationship(RecipeTask, back_populates='results')
     path = Column(Unicode(2048))
     result = Column(TaskResult.db_type(), nullable=False, default=TaskResult.new)
-    score = Column(Numeric(10))
+    score = Column(Numeric(10, 0))
     log = Column(UnicodeText)
     start_time = Column(DateTime, default=datetime.utcnow)
     logs = relationship(LogRecipeTaskResult, back_populates='parent',
@@ -3875,10 +3875,7 @@ class RecipeTaskResult(TaskBase):
     comments = relationship('RecipeTaskResultComment', back_populates='recipetaskresult')
 
     #: Maximum allowable value for the score column.
-    #: (This *should* be 10 digits since the column is Numeric(10), but due to
-    #: a mistake in the Red Hat production database schema this is actually only
-    #: 8 digits. This will be fixed in Beaker 26.0.)
-    max_score = 99999999
+    max_score = 10 ** score.type.precision - 1
 
     def __init__(self, recipetask=None, path=None, result=None,
             score=None, log=None):

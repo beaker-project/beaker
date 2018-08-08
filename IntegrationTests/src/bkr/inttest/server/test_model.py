@@ -2666,9 +2666,9 @@ class RecipeTaskResultTest(DatabaseTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1600281
     def test_caps_very_large_score(self):
-        self.recipe_task.pass_(path=u'/distribution/kernelinstall/Sysinfo', score='123456789', summary=None)
+        self.recipe_task.pass_(path=u'/distribution/kernelinstall/Sysinfo', score='12345678900', summary=None)
         session.refresh(self.recipe_task)
-        self.assertEquals(self.recipe_task.results[0].score, 99999999)
+        self.assertEquals(self.recipe_task.results[0].score, 9999999999)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=915319
     def test_logs_appear_in_results_xml(self):
