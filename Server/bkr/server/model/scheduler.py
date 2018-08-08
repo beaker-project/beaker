@@ -3673,8 +3673,10 @@ class RecipeTask(TaskBase):
         if self.is_finished():
             raise ValueError('Cannot record result for finished task %s' % self.t_id)
         # see https://bugzilla.redhat.com/show_bug.cgi?id=1586049
+        # and https://bugzilla.redhat.com/show_bug.cgi?id=1600281
         # MySQL 5.x (non-strict) was coercing whatever string passed in to an
-        # int value, while MariaDB (strict) will raise an error. This is a
+        # int value, and silently capping it at the maximum representable
+        # value, whereas MariaDB (strict) will raise an error. This is a
         # backwards compatible "hack" for the same MySQL 5.x behaviour.
         if isinstance(score, basestring):
             number_match = re.match('-?\d+(\.\d+)?', score)
@@ -3682,6 +3684,7 @@ class RecipeTask(TaskBase):
                 score = 0
             else:
                 score = round(decimal.Decimal(number_match.group()))
+        score = min(score, RecipeTaskResult.max_score)
         recipeTaskResult = RecipeTaskResult(recipetask=self,
                                    path=path,
                                    result=result,
@@ -3883,6 +3886,12 @@ class RecipeTaskResult(TaskBase):
     logs = relationship(LogRecipeTaskResult, back_populates='parent',
             cascade='all, delete-orphan')
     comments = relationship('RecipeTaskResultComment', back_populates='recipetaskresult')
+
+    #: Maximum allowable value for the score column.
+    #: (This *should* be 10 digits since the column is Numeric(10), but due to
+    #: a mistake in the Red Hat production database schema this is actually only
+    #: 8 digits. This will be fixed in Beaker 26.0.)
+    max_score = 99999999
 
     def __init__(self, recipetask=None, path=None, result=None,
             score=None, log=None):

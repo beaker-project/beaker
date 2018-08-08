@@ -2606,10 +2606,9 @@ class RecipeTaskResultTest(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
-        self.job = data_setup.create_completed_job()
+        self.job = data_setup.create_running_job()
         self.recipe = self.job.recipesets[0].recipes[0]
         self.recipe_task = self.recipe.tasks[0]
-        self.rtr = self.recipe_task.results[0]
 
     def tearDown(self):
         session.rollback()
@@ -2663,16 +2662,24 @@ class RecipeTaskResultTest(DatabaseTestCase):
         ]
         self.assertEquals(expected, [(x.log, x.score) for x in rt.results])
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1600281
+    def test_caps_very_large_score(self):
+        self.recipe_task.pass_(path=u'/distribution/kernelinstall/Sysinfo', score='123456789', summary=None)
+        session.refresh(self.recipe_task)
+        self.assertEquals(self.recipe_task.results[0].score, 99999999)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=915319
     def test_logs_appear_in_results_xml(self):
-        self.rtr.logs = [LogRecipeTaskResult(path=u'asdf', filename=u'log.txt')]
-        root = self.rtr.to_xml(clone=False)
+        rtr_id = self.recipe_task.pass_(path=u'.', score=None, summary=None)
+        rtr = RecipeTaskResult.query.get(rtr_id)
+        rtr.logs = [LogRecipeTaskResult(path=u'asdf', filename=u'log.txt')]
+        root = rtr.to_xml(clone=False)
         logs = root.find('logs').findall('log')
         self.assertEqual(logs[0].get('name'), 'asdf/log.txt')
         self.assertEqual(
                 urlparse.urljoin(logs[0].base, logs[0].get('href')),
                 get_server_base() + 'recipes/%s/tasks/%s/results/%s/logs/asdf/log.txt'
-                    % (self.rtr.recipetask.recipe.id, self.rtr.recipetask.id, self.rtr.id))
+                    % (self.recipe.id, self.recipe_task.id, rtr.id))
 
 
 class TestSystemInventoryDistro(DatabaseTestCase):
