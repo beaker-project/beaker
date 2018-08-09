@@ -839,6 +839,9 @@ class SystemFilteringTest(DatabaseTestCase):
         big_disk = data_setup.create_system()
         big_disk.disks[:] = [Disk(size=2000000000000,
                 sector_size=4096, phys_sector_size=4096)]
+        big_512e_disk = data_setup.create_system()
+        big_512e_disk.disks[:] = [Disk(size=2000000000000,
+                sector_size=512, phys_sector_size=4096)]
         two_disks = data_setup.create_system()
         two_disks.disks[:] = [
                 Disk(size=500000000000, sector_size=512, phys_sector_size=512),
@@ -854,7 +857,7 @@ class SystemFilteringTest(DatabaseTestCase):
                 </disk>
             </hostRequires>
             """,
-            present=[big_disk], absent=[small_disk, two_disks])
+            present=[big_disk, big_512e_disk], absent=[small_disk, two_disks])
 
         # separate <disk/> elements can match separate disks
         self.check_filter("""
@@ -863,7 +866,7 @@ class SystemFilteringTest(DatabaseTestCase):
                 <disk><phys_sector_size op="=" value="4" units="KiB" /></disk>
             </hostRequires>
             """,
-            present=[big_disk, two_disks], absent=[small_disk])
+            present=[big_disk, big_512e_disk, two_disks], absent=[small_disk])
 
         # <not/> combined with a negative filter can be used to filter against 
         # all disks (e.g. "give me systems with only 512-byte-sector disks")
@@ -872,7 +875,7 @@ class SystemFilteringTest(DatabaseTestCase):
                 <not><disk><sector_size op="!=" value="512" /></disk></not>
             </hostRequires>
             """,
-            present=[small_disk], absent=[big_disk, two_disks])
+            present=[small_disk, big_512e_disk], absent=[big_disk, two_disks])
 
         # https://bugzilla.redhat.com/show_bug.cgi?id=1197074
         # use logical operators inside <disk>
@@ -886,7 +889,7 @@ class SystemFilteringTest(DatabaseTestCase):
                 </disk>
             </hostRequires>
             """,
-            present=[big_disk], absent=[small_disk, two_disks])
+            present=[big_disk, big_512e_disk], absent=[small_disk, two_disks])
 
         self.check_filter("""
             <hostRequires>
@@ -898,7 +901,7 @@ class SystemFilteringTest(DatabaseTestCase):
                 </disk>
             </hostRequires>
             """,
-            present=[big_disk, two_disks], absent=[small_disk])
+            present=[big_disk, big_512e_disk, two_disks], absent=[small_disk])
 
         self.check_filter("""
             <hostRequires>
@@ -910,7 +913,21 @@ class SystemFilteringTest(DatabaseTestCase):
                 </disk>
             </hostRequires>
             """,
-            present=[small_disk, two_disks], absent=[big_disk])
+            present=[small_disk, two_disks, big_512e_disk], absent=[big_disk])
+
+        self.check_filter("""
+            <hostRequires>
+                <disk><sector_size op="=" value="4096" /></disk>
+            </hostRequires>
+            """,
+            present=[big_disk, two_disks], absent=[small_disk, big_512e_disk])
+
+        self.check_filter("""
+            <hostRequires>
+                <disk><sector_size op="!=" value="4096" /></disk>
+            </hostRequires>
+            """,
+            present=[small_disk, big_512e_disk, two_disks], absent=[big_disk])
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1187402
     def test_filtering_by_diskspace(self):
