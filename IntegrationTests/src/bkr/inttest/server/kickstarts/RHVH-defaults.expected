@@ -82,7 +82,7 @@ elif [ -f /usr/libexec/platform-python ] ; then
    python_command="/usr/libexec/platform-python"
 else
    fetch /tmp/anamon http://lab.test-kickstart.invalid/beaker/anamon
-   python_command="python2"
+   python_command="python"
 fi
 $python_command /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstart.invalid:8000/RPC2'
 # no snippet data for RHVH4_pre

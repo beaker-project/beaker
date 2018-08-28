@@ -8,7 +8,7 @@ elif [ -f /usr/libexec/platform-python ] ; then
    python_command="/usr/libexec/platform-python"
 else
    fetch /tmp/anamon {{ anamon_url |shell_quoted }}
-   python_command="python2"
+   python_command="python"
 fi
 $python_command /tmp/anamon --recipe-id {{ recipe.id }} --xmlrpc-url 'http://{{ lab_controller.fqdn }}:8000/RPC2'
 {% endif %}
