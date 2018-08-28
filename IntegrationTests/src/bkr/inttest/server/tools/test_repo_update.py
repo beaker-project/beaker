@@ -120,3 +120,26 @@ class RepoUpdate(DatabaseTestCase):
                 ignore_stderr=True)
         self.assertTrue(os.path.exists(os.path.join(local_harness_dir, osmajor.osmajor)))
         self.assertFalse(os.path.exists(os.path.join(local_harness_dir, nonexistent_osmajor.osmajor)))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1619969
+    def test_replaces_bad_packages(self):
+        osmajor = u'MauveBeanieLinux3'
+        package = 'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm'
+        with session.begin():
+            data_setup.create_distro_tree(osmajor=osmajor)
+        self._create_remote_harness(osmajor)
+        local_harness_dir = tempfile.mkdtemp(suffix='local')
+        self.addCleanup(shutil.rmtree, local_harness_dir)
+
+        # Local harness dir has a corrupted copy of the package
+        os.mkdir(os.path.join(local_harness_dir, osmajor))
+        orig_size = os.path.getsize(os.path.join(self.harness_repo_dir, osmajor, package))
+        with open(os.path.join(local_harness_dir, osmajor, package), 'wb') as f:
+            f.write(b'a' * orig_size)
+
+        run_command('repo_update.py', 'beaker-repo-update',
+                ['--debug', '-b', self.harness_repo_url, '-d', local_harness_dir],
+                ignore_stderr=True)
+        self.assertEquals(
+                open(os.path.join(self.harness_repo_dir, osmajor, package), 'rb').read(),
+                open(os.path.join(local_harness_dir, osmajor, package), 'rb').read())

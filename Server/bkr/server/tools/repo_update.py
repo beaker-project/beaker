@@ -108,12 +108,20 @@ class RepoSyncer(yum.YumBase):
             os.makedirs(self.output_dir)
         for package in package_sack.returnNewestByNameArch():
             dest = os.path.join(self.output_dir, os.path.basename(package.relativepath))
-            if os.path.exists(dest) and os.path.getsize(dest) == package.size:
-                log.info('Skipping %s', dest)
-                continue
-            log.info('Fetching %s', dest)
             package.localpath = dest
+            if os.path.exists(dest):
+                if package.verifyLocalPkg():
+                    log.info('Skipping %s', dest)
+                    continue
+                else:
+                    log.info('Unlinking bad package %s', dest)
+                    os.unlink(dest)
+            log.info('Fetching %s', dest)
             cached_package = repo.getPackage(package)
+            if not package.verifyLocalPkg():
+                raise ValueError('Package %s checksum did not match '
+                        'expected checksum from repodata %s'
+                        % (dest, package.checksum))
             has_new_packages = True
             # Based on some confusing cache configuration, yum may or may not 
             # have fetched the package to the right place for us already
