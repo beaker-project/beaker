@@ -8,6 +8,9 @@ import os
 import sys
 import pkg_resources
 import subprocess
+import logging
+
+log = logging.getLogger(__name__)
 
 class CommandError(Exception):
     def __init__(self, command, status, stderr_output):
@@ -31,4 +34,6 @@ def run_command(script_filename, executable_filename, args=None, ignore_stderr=F
         raise CommandError(cmdline, p.returncode, err)
     if not ignore_stderr:
         assert err == '', err
+    else:
+        log.debug('Command %r completed successfully with stderr:\n%s', cmdline, err)
     return out
