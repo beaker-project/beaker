@@ -361,6 +361,15 @@ correspond to the similarly-named kickstart option.
     Time zone to use. Default is ``America/New_York`` unless overridden by the 
     administrator.
 
+``yum_install_extra_opts``
+    Extra command-line options which will be passed to all invocations of ``yum 
+    install`` which Beaker produces in the generated kickstart.
+    
+    On RHEL3 and RHEL4 this variable defaults to "-d 1" which inhibits Yum's 
+    progress bar made up of hashes which can take a long time to print. On 
+    newer releases, where Yum's progress bar produces less output, this 
+    variable is undefined.
+
 .. _kickstart-metadata-distro-features:
 
 Distro features

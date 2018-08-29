@@ -111,6 +111,9 @@ def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
         ks_meta['yum'] = 'yum-2.2.2-1.rhts.EL3.noarch.rpm'
     elif rhel == '4':
         ks_meta['yum'] = 'yum-2.2.2-1.rhts.EL4.noarch.rpm'
+    # extra options for 'yum install' invocations
+    if rhel in ('3', '4'):
+        ks_meta['yum_install_extra_opts'] = '-d 1'
     # mode
     if rhel == '6':
         ks_meta['mode'] = 'cmdline'

@@ -292,10 +292,10 @@ EOF
 # This speeds up yum because of a bug where it will update stdout too often.
 # http://lists.baseurl.org/pipermail/yum-devel/2011-December/008857.html
 yum check-update > /dev/null 2>&1 || true
-yum -y install beah rhts-test-env
-yum -y install beakerlib
+yum -d 1 -y install beah rhts-test-env
+yum -d 1 -y install beakerlib
 # This may fail if you are outside of Red Hat..
-yum -y install beakerlib-redhat
+yum -d 1 -y install beakerlib-redhat
 
 cp /etc/beah_beaker.conf{,.default}
 cat << EOF > /etc/beah_beaker.conf

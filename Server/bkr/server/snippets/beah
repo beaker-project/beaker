@@ -1,7 +1,7 @@
-yum -y install {{ beah_rpm|default('beah') }} rhts-test-env
-yum -y install beakerlib
+yum{{ ' ' + yum_install_extra_opts if yum_install_extra_opts is defined else '' }} -y install {{ beah_rpm|default('beah') }} rhts-test-env
+yum{{ ' ' + yum_install_extra_opts if yum_install_extra_opts is defined else '' }} -y install beakerlib
 # This may fail if you are outside of Red Hat..
-yum -y install beakerlib-redhat
+yum{{ ' ' + yum_install_extra_opts if yum_install_extra_opts is defined else '' }} -y install beakerlib-redhat
 
 cp /etc/beah_beaker.conf{,.default}
 cat << EOF > /etc/beah_beaker.conf
