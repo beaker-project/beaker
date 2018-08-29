@@ -10,6 +10,7 @@ import pkg_resources
 import sqlalchemy
 from turbogears import config
 from turbogears.database import metadata
+from bkr.common import __version__
 from bkr.server.tools.init import upgrade_db, downgrade_db, check_db, doit, \
         init_db
 from sqlalchemy.orm import create_session
@@ -102,6 +103,45 @@ class MigrationTest(unittest.TestCase):
         # Should also accept RPM version-releases, this makes our playbooks simpler
         downgrade_db(self.migration_metadata, '21.1-1.el6eng')
         self.assertTrue(check_db(self.migration_metadata, '171c07fb4970'))
+
+    def test_can_downgrade_to_current_version(self):
+        # Downgrading to the current version should just be a no-op.
+        # The purpose of this to test is actually to make sure that beaker-init
+        # knows about the version number. If this test fails, it means we have
+        # tagged a new release but we forgot to record the schema version in
+        # the table that lives in beaker-init (and in the docs).
+        # It will also ensure that we have remembered to add a corresponding
+        # schema dump to the tests here.
+        #
+        # There is an added wrinkle. During the normal development cycle, on
+        # the develop branch our version will look like this:
+        #   26.0.git.82.3ffb9167e
+        # In this case, the database schema is not yet frozen and we do not
+        # expect to be able to downgrade to version 26 yet. Once a release
+        # candidate is tagged and the version becomes:
+        #   26.0rc1
+        # or on a maintenance branch like release-26, where the version is:
+        #   26.1.git.9.3ffb9167e
+        # the schema should be frozen and we should be able to downgrade to it.
+        # Therefore this test will check either the current major version or
+        # the previous major version based on the above conditions.
+        major, minor = __version__.split('.')[:2]
+        if minor == '0' and 'git' in __version__:
+            # schema is not frozen yet, test the previous major version
+            major_version_to_test = str(int(major) - 1)
+        else:
+            # schema should be frozen now
+            major_version_to_test = major
+        dump_filename = 'database-dumps/%s.sql' % major_version_to_test
+        if not pkg_resources.resource_exists('bkr.inttest.server', dump_filename):
+            raise AssertionError('Schema dump for version %s not found '
+                    'in IntegrationTests/src/bkr/inttest/server/database-dumps'
+                    % major_version_to_test)
+        with self.migration_engine.connect() as connection:
+            connection.execute(pkg_resources.resource_string(
+                    'bkr.inttest.server', dump_filename))
+        downgrade_db(self.migration_metadata, major_version_to_test)
+        self.check_migrated_schema()
 
     def test_full_upgrade(self):
         with self.migration_engine.connect() as connection:
