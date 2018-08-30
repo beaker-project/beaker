@@ -390,3 +390,53 @@ Beaker 25.5
 The lshw package in the Beaker harness repositories has also been updated
 to incorporate the latest upstream fixes. It is now based on lshw commit 028f6b2
 from 14 June 2018.
+
+
+Beaker 25.6
+~~~~~~~~~~~
+
+* :issue:`1619482`: The :program:`anamon` installer monitoring script now works
+  correctly on RHEL8 where neither :file:`/usr/bin/python` nor 
+  :file:`/usr/bin/python3` exist in the installer image. Previously the script 
+  would fail to start and Anaconda logs would not be captured and shown on the 
+  :guilabel:`Installation` tab of the recipe page. (Contributed by Jacob 
+  McKenzie)
+* :issue:`1619969`: The :program:`beaker-repo-update` command now correctly
+  verifies checksums after downloading harness packages to the Beaker server, 
+  and also correctly discards any incomplete or corrupted packages which exist 
+  on disk. Previously, if there was an incomplete or corrupted package already 
+  on disk, it would be further corrupted. (Contributed by Dan Callaghan)
+* :issue:`1612338`: The ``<disk><sector_size>`` XML element for host filtering
+  now correctly filters disks by their logical sector size, as documented. 
+  Previously it was filtering on physical sector size instead. (Contributed by 
+  Pavel Cahyna)
+* :issue:`1600281`: If a task reports a result with a score of more than
+  8 digits, the score is now capped at 99999999, to prevent a ``DataError`` 
+  when the database is using MySQL "strict mode". This matches the existing 
+  behaviour when the Beaker database is MySQL in non-strict mode. (Contributed 
+  by Dan Callaghan)
+* :issue:`1591244`: Beaker now captures some additional Anaconda logs and
+  displays them on the :guilabel:`Installation` tab of the recipe page: 
+  :file:`yum.log` on RHEL6, and :file:`dnf.librepo.log`, :file:`hawkey.log`, 
+  and :file:`lvm.log` on recent Fedora releases. (Contributed by Matt Tyson)
+* :issue:`1607515`: The :program:`beaker-wizard` utility now correctly fills in
+  the task Author field if the GECOS (display name) field of the user account 
+  running it contains non-ASCII characters. Previously it would crash with 
+  a ``UnicodeDecodeError`` exception. (Contributed by Dan Callaghan)
+
+Version 0.7.13 of the Beah test harness has also been released:
+
+* :issue:`1610621`: The RPM package now depends on ``python2-*`` versioned
+  package names (``python2-twisted-web`` instead of ``python-twisted-web``, 
+  etc) in releases where they are available. Previously Beah was not usable for 
+  Fedora 29 recipes because virtual provides for the unversioned package names 
+  have been removed from Fedora 29 onwards. (Contributed by Dan Callaghan)
+* :issue:`1622756`: Version 0.7.13-3 fixes a packaging mistake introduced in
+  0.7.13-1, which would cause Beah services to fail to start on RHEL4. 
+  (Contributed by Róman Joost)
+
+Version 2.3 of the :program:`beaker-system-scan` hardware scanning utility has 
+also been released:
+
+* :issue:`1609597`: Uses Python 3 on Fedora 29 onwards and RHEL8 onwards.
+  (Contributed by Dan Callaghan)

@@ -22,6 +22,7 @@ import urlparse
 import shutil
 import yum, yum.misc, yum.packages
 import urllib
+import requests
 import logging
 
 __description__ = 'Script to update harness repos'
@@ -48,6 +49,17 @@ def get_parser():
 def usage():
     print USAGE_TEXT
     sys.exit(-1)
+
+# Use a single global requests.Session for this process
+# for connection pooling.
+requests_session = requests.Session()
+
+# We distinguish this particular situation from other errors which may occur
+# while fetching packages, because it's "expected" in some cases -- for example
+# Atomic Host or RHVH which can be imported into Beaker, but cannot have
+# harness packages and thus there will be no corresponding directory to
+# download from.
+class HarnessRepoNotFoundError(ValueError): pass
 
 # Can't use /usr/bin/reposync for this, because it tries to replicate the 
 # ../../ in rpm paths and generally makes a mess of things.
@@ -78,6 +90,11 @@ class RepoSyncer(yum.YumBase):
         yum.packages.base = None
 
     def sync(self):
+        # First check if the harness repo exists.
+        response = requests_session.head(urlparse.urljoin(self.repo_url, 'repodata/repomd.xml'))
+        if response.status_code != 200:
+            raise HarnessRepoNotFoundError()
+
         has_new_packages = False
         log.info('Syncing packages from %s to %s', self.repo_url, self.output_dir)
         self.doRepoSetup()
@@ -91,12 +108,20 @@ class RepoSyncer(yum.YumBase):
             os.makedirs(self.output_dir)
         for package in package_sack.returnNewestByNameArch():
             dest = os.path.join(self.output_dir, os.path.basename(package.relativepath))
-            if os.path.exists(dest) and os.path.getsize(dest) == package.size:
-                log.info('Skipping %s', dest)
-                continue
-            log.info('Fetching %s', dest)
             package.localpath = dest
+            if os.path.exists(dest):
+                if package.verifyLocalPkg():
+                    log.info('Skipping %s', dest)
+                    continue
+                else:
+                    log.info('Unlinking bad package %s', dest)
+                    os.unlink(dest)
+            log.info('Fetching %s', dest)
             cached_package = repo.getPackage(package)
+            if not package.verifyLocalPkg():
+                raise ValueError('Package %s checksum did not match '
+                        'expected checksum from repodata %s'
+                        % (dest, package.checksum))
             has_new_packages = True
             # Based on some confusing cache configuration, yum may or may not 
             # have fetched the package to the right place for us already
@@ -118,8 +143,8 @@ def update_repos(baseurl, basepath):
             has_new_packages = syncer.sync()
         except KeyboardInterrupt:
             raise
-        except Exception, e:
-            log.warning('%s', e)
+        except HarnessRepoNotFoundError:
+            log.warning('Harness packages not found for OS major %s, ignoring', osmajor)
             continue
         if has_new_packages:
             createrepo_results = run_createrepo(cwd=dest)

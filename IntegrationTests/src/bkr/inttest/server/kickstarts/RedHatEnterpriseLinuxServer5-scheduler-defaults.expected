@@ -96,13 +96,16 @@ fi
 fetch - http://lab.test-kickstart.invalid:8000/install_start/@RECIPEID@
 
 if command -v python3 >/dev/null ; then
-    fetch /tmp/anamon http://lab.test-kickstart.invalid/beaker/anamon3
-    python_ver="3"
+   fetch /tmp/anamon http://lab.test-kickstart.invalid/beaker/anamon3
+   python_command="python3"
+elif [ -f /usr/libexec/platform-python ] ; then
+   fetch /tmp/anamon http://lab.test-kickstart.invalid/beaker/anamon3
+   python_command="/usr/libexec/platform-python"
 else
-    fetch /tmp/anamon http://lab.test-kickstart.invalid/beaker/anamon
-    python_ver=""
+   fetch /tmp/anamon http://lab.test-kickstart.invalid/beaker/anamon
+   python_command="python"
 fi
-python$python_ver /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstart.invalid:8000/RPC2'
+$python_command /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstart.invalid:8000/RPC2'
 # no snippet data for RedHatEnterpriseLinuxServer5_pre
 # no snippet data for system_pre
 
@@ -180,6 +183,9 @@ fi
 
 if command -v python3 >/dev/null ; then
     fetch /usr/local/sbin/anamon http://lab.test-kickstart.invalid/beaker/anamon3
+elif [ -f /usr/libexec/platform-python ] ; then
+    fetch /usr/local/sbin/anamon http://lab.test-kickstart.invalid/beaker/anamon3
+    sed -i 's/#!\/usr\/bin\/python3/#!\/usr\/libexec\/platform-python/' /usr/local/sbin/anamon
 else
     fetch /usr/local/sbin/anamon http://lab.test-kickstart.invalid/beaker/anamon
 fi

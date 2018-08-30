@@ -1,11 +1,14 @@
 {% if recipe %}
 {% set anamon_url = anamon|default('http://' + lab_controller.fqdn + '/beaker/anamon') %}
 if command -v python3 >/dev/null ; then
-    fetch /tmp/anamon {{ (anamon_url + '3')|shell_quoted }}
-    python_ver="3"
+   fetch /tmp/anamon {{ (anamon_url + '3')|shell_quoted }}
+   python_command="python3"
+elif [ -f /usr/libexec/platform-python ] ; then
+   fetch /tmp/anamon {{ (anamon_url + '3')|shell_quoted }}
+   python_command="/usr/libexec/platform-python"
 else
-    fetch /tmp/anamon {{ anamon_url|shell_quoted }}
-    python_ver=""
+   fetch /tmp/anamon {{ anamon_url |shell_quoted }}
+   python_command="python"
 fi
-python$python_ver /tmp/anamon --recipe-id {{ recipe.id }} --xmlrpc-url 'http://{{ lab_controller.fqdn }}:8000/RPC2'
+$python_command /tmp/anamon --recipe-id {{ recipe.id }} --xmlrpc-url 'http://{{ lab_controller.fqdn }}:8000/RPC2'
 {% endif %}
