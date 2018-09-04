@@ -3,7 +3,8 @@
 if command -v python3 >/dev/null ; then
    fetch /tmp/anamon {{ (anamon_url + '3')|shell_quoted }}
    python_command="python3"
-elif [ -f /usr/libexec/platform-python ] ; then
+elif [ -f /usr/libexec/platform-python ] && \
+     /usr/libexec/platform-python --version 2>&1 | grep -q "Python 3" ; then
    fetch /tmp/anamon {{ (anamon_url + '3')|shell_quoted }}
    python_command="/usr/libexec/platform-python"
 else
