@@ -1,0 +1,9 @@
+Ready-for-Checks+1: Jacob McKenzie <jmckenzi@redhat.com>
+Verified+1: Dan Callaghan <dcallagh@redhat.com>
+Code-Review+2: Dan Callaghan <dcallagh@redhat.com>
+Code-Review+1: Roman Joost <rjoost@redhat.com>
+Submitted-by: Dan Callaghan <dcallagh@redhat.com>
+Submitted-at: Wed, 19 Sep 2018 00:13:18 +0000
+Reviewed-on: https://gerrit.beaker-project.org/6291
+Project: beaker
+Branch: refs/heads/release-25
