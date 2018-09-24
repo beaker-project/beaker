@@ -824,6 +824,20 @@ class PushXmlRpcTest(XmlRpcTestCase):
             self.assertEquals(system.devices[0].subsys_device_id, '1478')
             self.assertEquals(system.devices[0].fw_version, 'ABCD')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1630884
+    def test_long_bios_version(self):
+        with session.begin():
+            system = data_setup.create_system()
+        self.server.push(system.fqdn, {'Devices': [{
+            'type': 'BUS', 'bus': 'Unknown', 'driver': 'Unknown', 'description': 'BIOS',
+            'vendorID': '0000', 'deviceID': '0000',
+            'subsysVendorID': '0000', 'subsysDeviceID': '0000',
+            'fw_version': 'Hisilicon D06 UEFI RC0 - B051 (V0.51)'
+        }]})
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals(system.devices[0].fw_version, 'Hisilicon D06 UEFI RC0 - B051 (V0.51)')
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1253111
     def test_unrecognised_arches_are_not_automatically_created(self):
         with session.begin():

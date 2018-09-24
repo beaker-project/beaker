@@ -2523,7 +2523,7 @@ class Device(DeclarativeMappedObject):
     device_class = relationship(DeviceClass)
     date_added = Column(DateTime, default=datetime.utcnow, nullable=False)
     systems = relationship(System, secondary=system_device_map, back_populates='devices')
-    fw_version = Column(Unicode(32))
+    fw_version = Column(Unicode(241))
 
 Index('ix_device_pciid', Device.vendor_id, Device.device_id)
 
