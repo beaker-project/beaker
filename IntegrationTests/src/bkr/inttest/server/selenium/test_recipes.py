@@ -15,7 +15,7 @@ from turbogears.database import session
 
 from bkr.server.model import TaskStatus, TaskResult, RecipeTaskResult, \
     Task, RecipeTaskComment, RecipeTaskResultComment, RecipeTask, \
-    CommandStatus, RecipeReservationCondition
+    CommandStatus, RecipeReservationCondition, LogRecipeTask
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_text_present
 from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
@@ -1165,6 +1165,24 @@ class RecipeHTTPTest(DatabaseTestCase):
                 allow_redirects=False)
         self.assertEqual(response.status_code, 404)
         self.assertRegexpMatches(response.text, 'Recipe log .* not found')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1622805
+    def test_redirects_beah_log_to_restraint(self):
+        with session.begin():
+            job = data_setup.create_completed_job(server_log=True)
+            recipe = job.recipesets[0].recipes[0]
+            rt = recipe.tasks[0]
+            rt.logs = [LogRecipeTask(server=u'http://dummy-archive-server/',
+                                     filename=u'taskout.log')]
+        # Client is looking for TESTOUT.log (old filename from Beah)
+        # but the task only has taskout.log (new filename from Restraint)
+        # so we expect to be redirected to that.
+        response = requests.get(get_server_base() +
+                'recipes/%s/tasks/%s/logs/TESTOUT.log' % (recipe.id, rt.id),
+                allow_redirects=False)
+        self.assertEqual(response.status_code, 307)
+        self.assertEqual(response.headers['Location'],
+                'http://dummy-archive-server/taskout.log')
 
     def test_anonymous_cannot_update_recipe(self):
         response = patch_json(get_server_base() +

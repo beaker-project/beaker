@@ -293,6 +293,11 @@ def get_recipe_task_log(recipeid, taskid, path):
     for log in task.logs:
         if log.combined_path == path:
             return redirect(log.absolute_url, code=307)
+    # If the caller requested TESTOUT.log but only taskout.log exists, give them that instead.
+    if path == 'TESTOUT.log':
+        for log in task.logs:
+            if log.combined_path == 'taskout.log':
+                return redirect(log.absolute_url, code=307)
     return NotFound404('Task log %s for recipe %s task %s not found' % (path, recipeid, taskid))
 
 @app.route('/recipes/<recipeid>/tasks/<taskid>/comments/', methods=['GET'])
