@@ -341,7 +341,7 @@ Beaker 25.4
 
 
 Beaker 25.5
------------
+~~~~~~~~~~~
 
 * :issue:`1505207`: Beaker's new job page is using an automatic update mechanism
   which loads JSON data from the Beaker server in intervals. For jobs with many
