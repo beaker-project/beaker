@@ -18,16 +18,29 @@ version, see :doc:`../admin-guide/upgrading`.
    with an explicit list that puts the subsections in some kind of
    sensible order.
 
-Unreleased changes
-------------------
+.. Commented out for release:
 
-The following changes will appear in the next Beaker release.
+    Unreleased changes
+    ------------------
+
+    The following changes will appear in the next Beaker release.
+
+    .. toctree::
+       :maxdepth: 2
+       :glob:
+
+       next/*
+
+Beaker 26
+---------
+
+Beaker 26 uses Restraint as the default test harness for newer OS releases, 
+along with a number of other changes in default behaviour.
 
 .. toctree::
    :maxdepth: 2
-   :glob:
 
-   next/*
+   release-26
 
 Beaker 25
 ---------
