@@ -19,8 +19,8 @@ EOF
 # the environment clean. (multilib_policy=best is the default in RHEL6+.)
 cp -p /etc/yum.conf{,.orig}
 echo multilib_policy=best >>/etc/yum.conf
-yum -y install {{ harness }}
+yum{{ ' ' + yum_install_extra_opts if yum_install_extra_opts is defined else '' }} -y install {{ harness }}
 mv /etc/yum.conf{.orig,}
 {% else %}
-yum -y install {{ harness }}
+yum{{ ' ' + yum_install_extra_opts if yum_install_extra_opts is defined else '' }} -y install {{ harness }}
 {% endif %}

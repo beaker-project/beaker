@@ -201,3 +201,12 @@ class TestWizard(BaseWizardTestCase):
                                     'NSS_WRAPPER_PASSWD': passwd_file.name,
                                     'NSS_WRAPPER_GROUP': group_file.name})
         self.assertIn(u'Author : Josef Švejk', out.decode('utf8'))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1624909
+    def test_cve_number_syntax_change(self):
+        out = run_wizard(['beaker-wizard',
+                          '--current-directory',
+                          'wget/Sanity/http/test-it-works',
+                          'CVE-2018-123456789'])
+        self.assertIn('Bug or CVE numbers : CVE-2018-123456789', out)
+        self.assertNotIn('2018-123456789 is not a valid bug or cve number', out)

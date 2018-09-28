@@ -18,10 +18,6 @@ import time
 import re
 import base64
 import shlex
-try:
-    from hashlib import md5
-except ImportError:
-    from md5 import md5
 
 # on older installers (EL 2) we might not have xmlrpclib
 # and can't do logging, however this is more widely
@@ -86,15 +82,14 @@ class WatchedFile:
             size = len(contents)
             if size == 0:
                 break
-            md5sum = md5(contents).hexdigest()
             data = base64.encodestring(contents)
             del contents
             tries = 0
             while tries <= retries:
                 debug("recipe_upload_file(%r, '/', %r, %r, %r, %r, ...)\n"
-                        % (recipe_id, self.alias, size, md5sum, ofs))
+                        % (recipe_id, self.alias, size, '', ofs))
                 if session.recipe_upload_file(recipe_id, '/', self.alias,
-                        size, md5sum, ofs, data):
+                        size, '', ofs, data):
                     break
                 else:
                     tries = tries + 1
