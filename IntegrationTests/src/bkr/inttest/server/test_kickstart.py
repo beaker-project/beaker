@@ -265,6 +265,26 @@ class KickstartTest(unittest.TestCase):
                 DistroTreeRepo(repo_id=u'repos_Server', repo_type=u'os', path=u'.'),
             ]
 
+            cls.rhel7_alt_nightly = data_setup.create_distro(name=u'RHEL-ALT-7.6-20181023.n.0',
+                osmajor=u'RedHatEnterpriseLinuxAlternateArchitectures7', osminor=u'0')
+            cls.rhel7_alt_workstation_x86_64 = data_setup.create_distro_tree(
+                distro=cls.rhel7_alt_nightly, variant=u'Workstation', arch=u'x86_64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-ALT-7.6-20181023.n.0/compose/Workstation/x86_64/os/',
+                      u'nfs+iso://lab.test-kickstart.invalid/distros/RHEL-ALT-7.6-20181023.n.0/compose/Workstation/x86_64/iso/'])
+            cls.rhel7_alt_workstation_x86_64.repos[:] = [
+                DistroTreeRepo(repo_id=u'repos_debug_Workstation_optional',
+                    repo_type=u'debug',
+                    path=u'../../../Workstation-optional/x86_64/debuginfo'),
+                DistroTreeRepo(repo_id=u'repos_debug_Workstation', repo_type=u'debug',
+                    path=u'../debuginfo'),
+                DistroTreeRepo(repo_id=u'repos_Workstation-optional', repo_type=u'addon',
+                    path=u'../../../Workstation-optional/x86_64/os'),
+                DistroTreeRepo(repo_id=u'repos_Workstation', repo_type=u'os', path=u'.'),
+                DistroTreeRepo(repo_id=u'repos_addons_ScalableFileSystem',
+                    repo_type=u'addon', path=u'addons/ScalableFileSystem'),
+            ]
+
             cls.centos7 = data_setup.create_distro(name=u'CentOS-7',
                 osmajor=u'CentOS7', osminor=u'0')
             cls.centos7_x86_64 = data_setup.create_distro_tree(
@@ -1050,6 +1070,27 @@ class KickstartTest(unittest.TestCase):
             ''', self.system)
         self.assertIn('\nautopart --type xfs\n',
                       recipe.installation.rendered_kickstart.kickstart)
+
+    def test_rhel7_alt_defaults(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-ALT-7.6-20181023.n.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        compare_expected('RedHatEnterpriseLinuxAlternateArchitectures7-scheduler-defaults', recipe.id,
+                recipe.installation.rendered_kickstart.kickstart)
 
     def test_fedora18_defaults(self):
         recipe = self.provision_recipe('''

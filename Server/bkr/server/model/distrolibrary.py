@@ -44,7 +44,7 @@ def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
     rhel, fedora = False, False
     if name in ('RedHatEnterpriseLinux', 'RedHatEnterpriseLinuxServer',
             'RedHatEnterpriseLinuxClient', 'RedHatEnterpriseLinuxServerGrid',
-            'CentOS'):
+            'RedHatEnterpriseLinuxAlternateArchitectures', 'CentOS'):
         rhel = version
     if osmajor_name in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3',
                         'RedHatGlusterStorage3'):
