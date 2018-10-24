@@ -294,7 +294,14 @@ def upgrade_db(metadata):
 
 def beaker_version_to_schema_version(version):
     # This table is also part of the docs, ensure they stay in sync!
+    #   Doc: beaker/documentation/admin-guide/upgrading.rst
+    #
+    # Get schema ID (alembic version identifier) with commands:
+    #   cd ~/beaker/Server/bkr/server/alembic/versions
+    #   git log -n 1 --stat -- .
+    # And use the prefix of the file that changed 
     beaker_versions = {
+        '26': '348daa35773c',
         '25': '1ce53a2af0ed',
         '24': 'f18df089261',
         '23': '2e171e6198e6',
