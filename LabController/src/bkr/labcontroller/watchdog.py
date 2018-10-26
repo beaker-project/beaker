@@ -155,7 +155,7 @@ class Watchdog(ProxyHelper):
                 self.spawn_monitor(watchdog)
         # Kill any running monitors that are gone from the list.
         active_recipes = set(w['recipe_id'] for w in active_watchdogs)
-        for recipe_id, greenlet in self.monitor_greenlets.iteritems():
+        for recipe_id, greenlet in list(self.monitor_greenlets.items()):
             if recipe_id not in active_recipes:
                 logger.info('Stopping monitor for recipe %s', recipe_id)
                 greenlet.kill()

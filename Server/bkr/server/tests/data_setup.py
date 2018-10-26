@@ -623,6 +623,14 @@ def mark_recipe_complete(recipe, result=TaskResult.pass_,
         recipe.recipeset.job.update_status()
     if isinstance(recipe.resource, VirtResource):
         recipe.resource.instance_deleted = datetime.datetime.utcnow()
+    if hasattr(recipe.resource, 'system'):
+        # Similar to the hack in mark_recipe_waiting, we do not want beaker-provision
+        # to try and run the power commands that were just enqueued.
+        session.flush()
+        for cmd in recipe.resource.system.command_queue:
+            if cmd.status == CommandStatus.queued:
+                cmd.change_status(CommandStatus.running)
+                cmd.change_status(CommandStatus.completed)
     log.debug('Marked %s as complete with result %s', recipe.t_id, result)
 
 def mark_recipe_tasks_finished(recipe, result=TaskResult.pass_,

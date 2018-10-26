@@ -69,6 +69,27 @@ class WatchdogConsoleLogTest(TestHelper):
         wait_for_condition(lambda: self.check_cached_log_contents(
                 first_line + second_line))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1643139
+    def test_stops_collecting_console_log_when_recipe_aborted(self):
+        first_line = 'Here is the first line of the log file.\n'
+        open(self.console_log, 'w').write(first_line)
+        wait_for_condition(self.check_console_log_registered)
+        wait_for_condition(lambda: self.check_cached_log_contents(first_line))
+
+        # Abort the recipe
+        with session.begin():
+            data_setup.mark_recipe_complete(self.recipe, only=True)
+
+        # Wait for the watchdog to determine recipe aborted
+        # Give beaker-watchdog a chance to notice
+        time.sleep(get_conf().get('SLEEP_TIME') * 2)
+
+        second_line = 'Here is the second line of the log file. FNORD FNORD FNORD\n'
+        open(self.console_log, 'a').write(second_line)
+        time.sleep(get_conf().get('SLEEP_TIME') * 2)
+        self.assertTrue(self.check_cached_log_contents(first_line),
+                        "Log should just contain first log line")
+
     def test_panic_not_doubly_detected(self):
         # Write a panic string to the console log and wait for panic.
         oops_line = 'Oops: 0002 [#1] PREEMPT SMP\n'
