@@ -1,0 +1,10 @@
+Ready-for-Checks+1: Christopher Beer <cbeer@redhat.com>
+Code-Review+1: Dan Callaghan <dcallagh@redhat.com>
+Code-Review+2: Bill Peck <bpeck@redhat.com>
+Code-Review+1: Brendan Reilly <breilly@redhat.com>
+Verified+1: Christopher Beer <cbeer@redhat.com>
+Submitted-by: Christopher Beer <cbeer@redhat.com>
+Submitted-at: Tue, 30 Oct 2018 19:13:36 +0000
+Reviewed-on: https://gerrit.beaker-project.org/6322
+Project: beaker
+Branch: refs/heads/release-26
