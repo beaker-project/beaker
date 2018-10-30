@@ -136,3 +136,29 @@ A number of bug fixes are also included in this release:
 
 .. internal workflow so it is not published in the release notes:
    :issue:`1626316`
+
+Maintenance updates
+-------------------
+The following fixes have been included in Beaker 26 maintenance updates.
+
+Beaker 26.1
+~~~~~~~~~~~
+* :issue:`1618344`: Previously, the /distribution/virt/install task would fail
+  to install the guest on RHEL8 because Python 2 was not available. The task
+  now correctly requires a Python 2 interpreter. 
+  (Contributed by Dan Callaghan)
+* :issue:`1619545`: Previously, the /distribution/reservesys task would fail
+  to send email when the system was ready on RHEL8 recipes. The task now 
+  correctly starts the Postfix MTA on RHEL8.
+  (Contributed by Dan Callaghan)
+* :issue:`1640892`: In Beaker 26.0, the default harness for RHEL-ALT-7 was
+  unintentionally changed to Restraint. The default harness for RHEL-ALT-7 has
+  been fixed to use Beah.
+  (Contributed by Bill Peck)
+* :issue:`1642525`: The :program:`beaker-init` tool now recognizes 26 as a
+  valid Beaker version.
+  (Contributed by Chris Beer)
+* :issue:`1643139`: Fixed a regression introduced in Beaker 26 which caused a
+  'RuntimeError: dictionary changed size during iteration' failure to appear
+  in the :program:`beaker-watchdog` logs. 
+  (Contributed by Chris Beer)
