@@ -154,6 +154,10 @@ def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
         ]
     else:
         ks_meta['conflicts_groups'] = []
+    #clearpart --cdl
+    if arch.arch == 's390x' and (rhel == '7' and int(osminor) >= 6
+                                 or rhel == '8' and int(osminor) >= 0):
+        ks_meta['has_clearpart_cdl'] = True
 
     kernel_options = {}
     # set arch specific default netboot loader paths

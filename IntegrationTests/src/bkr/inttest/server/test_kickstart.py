@@ -285,6 +285,38 @@ class KickstartTest(unittest.TestCase):
                     repo_type=u'addon', path=u'addons/ScalableFileSystem'),
             ]
 
+            cls.rhel76_alt_nightly = data_setup.create_distro(name=u'RHEL-ALT-7.6-20181031.n.0',
+                osmajor=u'RedHatEnterpriseLinuxAlternateArchitectures7', osminor=u'6')
+
+            cls.rhel76_server_s390x = data_setup.create_distro_tree(
+                distro=cls.rhel76_alt_nightly, variant=u'Server', arch=u's390x',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-ALT-7.6-20181031.n.0/compose/Server/s390x/os/'])
+
+            cls.rhel76_server_s390x.repos[:] = [
+                DistroTreeRepo(
+                    repo_id=u'Server-optional-debuginfo',
+                    repo_type=u'debug',
+                    path=u'../../../Server-optional/s390x/debug/tree'
+                ),
+                DistroTreeRepo(
+                    repo_id=u'Server-debuginfo',
+                    repo_type=u'debug',
+                    path=u'../../../Server/s390x/debug/tree'
+                ),
+                DistroTreeRepo(
+                    repo_id=u'Server-optional',
+                    repo_type=u'optional',
+                    path=u'../../../Server-optional/s390x/os'
+                ),
+                DistroTreeRepo(
+                    repo_id=u'Server',
+                    repo_type=u'variant',
+                    path=u'../../../Server/s390x/os'
+                )
+            ]
+
+
             cls.centos7 = data_setup.create_distro(name=u'CentOS-7',
                 osmajor=u'CentOS7', osminor=u'0')
             cls.centos7_x86_64 = data_setup.create_distro_tree(
@@ -723,7 +755,7 @@ class KickstartTest(unittest.TestCase):
             </job>
             ''', self.system)
 
-        ondisk_lines = [r'''clearpart --drives /dev/sda --all --initlabel''',
+        ondisk_lines = [r'''clearpart --all --initlabel --drives /dev/sda''',
                        r'''part /boot --size 250 --recommended --asprimary --ondisk=/dev/sda''',
                        r'''part / --size 1024 --grow --ondisk=/dev/sda''',
                        r'''part swap --recommended --ondisk=/dev/sda''']
@@ -1048,6 +1080,32 @@ class KickstartTest(unittest.TestCase):
                      recipe.installation.rendered_kickstart.kickstart)
 
         self.assert_(r'''vmcp ipl''' not in recipe.installation.rendered_kickstart.kickstart,
+                     recipe.installation.rendered_kickstart.kickstart)
+
+        self.assert_(r'''clearpart --all --initlabel --cdl''' not in recipe.installation.rendered_kickstart.kickstart,
+                     recipe.installation.rendered_kickstart.kickstart)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1636550
+    def test_rhel76_alt_s390x(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-ALT-7.6-20181031.n.0" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="s390x" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system_s390x)
+
+        self.assert_(r'''clearpart --all --initlabel --cdl''' in recipe.installation.rendered_kickstart.kickstart,
                      recipe.installation.rendered_kickstart.kickstart)
 
     def test_rhel7_autopart_type(self):
