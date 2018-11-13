@@ -27,5 +27,5 @@ set -x
 env BEAKER_CONFIG_FILE='server-test.cfg' \
     DISCARD_SUBPROCESS_OUTPUT=${DISCARD_SUBPROCESS_OUTPUT:-0} \
     PYTHONPATH=../Common:../Server:../LabController/src:../Client/src:../IntegrationTests/src${PYTHONPATH:+:$PYTHONPATH} \
-    python2 -c '__requires__ = ["CherryPy < 3.0"]; import pkg_resources; from nose.core import main; main()' \
+    python2 -c '__requires__ = ["CherryPy < 3.0", "Jinja2 >= 2.6"]; import pkg_resources; from nose.core import main; main()' \
     ${*:--v bkr.inttest}
