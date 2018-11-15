@@ -316,6 +316,27 @@ class KickstartTest(unittest.TestCase):
                 )
             ]
 
+            cls.rhel8_nightly = data_setup.create_distro(name=u'RHEL-8.0-20181114.n.0',
+                osmajor=u'RedHatEnterpriseLinux8', osminor=u'0')
+
+            cls.rhel8_nightly_server = data_setup.create_distro_tree(
+                distro=cls.rhel8_nightly, variant=u'BaseOS', arch=u'x86_64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-8.0-20181114.n.0/compose/BaseOS/x86_64/os/'])
+
+            cls.rhel8_nightly_server.repos[:] = [
+                DistroTreeRepo(
+                    repo_id=u'BaseOS-debuginfo',
+                    repo_type=u'debug',
+                    path=u'../../../BaseOS/x86_64/debug/tree'
+                ),
+                DistroTreeRepo(
+                    repo_id=u'AppStream-debuginfo',
+                    repo_type=u'debug',
+                    path=u'../../../AppStream/x86_64/debug/tree'
+                )
+            ]
+
 
             cls.centos7 = data_setup.create_distro(name=u'CentOS-7',
                 osmajor=u'CentOS7', osminor=u'0')
@@ -1149,6 +1170,36 @@ class KickstartTest(unittest.TestCase):
             ''', self.system)
         compare_expected('RedHatEnterpriseLinuxAlternateArchitectures7-scheduler-defaults', recipe.id,
                 recipe.installation.rendered_kickstart.kickstart)
+
+    def test_rhel8_manual(self):
+        system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
+                                          fqdn='test-manual-1.test-kickstart.invalid',
+                                          lab_controller=self.lab_controller)
+        system.provisions[system.arch[0]] = Provision(arch=system.arch[0],
+                ks_meta=u'manual')
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-8.0-20181114.n.0" />
+                            <distro_variant op="=" value="BaseOS" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+
+        self.assert_(r'''ignoredisk --interactive''' not in recipe.installation.rendered_kickstart.kickstart,
+                     recipe.installation.rendered_kickstart.kickstart)
+
+        self.assert_(r'''ignoredisk''' in recipe.installation.rendered_kickstart.kickstart,
+                     recipe.installation.rendered_kickstart.kickstart)
 
     def test_fedora18_defaults(self):
         recipe = self.provision_recipe('''
