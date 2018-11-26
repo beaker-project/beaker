@@ -4,60 +4,69 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-# Function expands options from main option (like workflow-tcms)
-_bkr_complete()
-{
-    local GREP=`which grep --skip-alias`
-    local component=$( echo $COMP_LINE | cut -d' ' -f2 )
-    if [ $component != "" ] ; then
-        local opts=$(echo $( bkr $component --help 2>/dev/null | $GREP -v "Usage:" | $GREP -o -- '--[^ =,]*' | sort | uniq ) --help )
-
-        [[ $COMP_LINE == bkr\ $component* ]] && \
-            printf %s "$opts"
-    fi
-}
-
 # Main for bkr
 _bkr()
 {
-    COMPREPLY=()
-    local GREP=`which grep --skip-alias`
-    local bkr=$1
-    local cur prev
-    local -a words
-    if type _get_comp_words_by_ref &>/dev/null; then
-        _get_comp_words_by_ref cur prev words
+    local cur prev words cword
+    _init_completion || return
+
+    local bkr_help
+    # Using a cache dir can greatly speed up the bash completions, but only use
+    # it if the user has created the directory.
+    local bkr_help_cache_dir=~/.cache/bkr/bash_completion/
+    if [[ -d ${bkr_help_cache_dir} ]]; then
+        local bkr_help_file=${bkr_help_cache_dir}/bkr.help.txt
+        if [[ ! -f ${bkr_help_file} ]]; then
+            \bkr --help 2>/dev/null > ${bkr_help_file}
+        fi
+        bkr_help=$( \cat ${bkr_help_file} )
     else
-        cur=$2 prev=$3 words=("${COMP_WORDS[@]}")
+        # Only run 'bkr --help' once as the time it takes is perceptible
+        bkr_help=$( \bkr --help 2>/dev/null )
     fi
 
     # Commands offered as completions for bkr
-    local cmds=( $( bkr --help 2>/dev/null | $GREP "  " | cut -d' ' -f3 | sed '1d' | cut -d'=' -f1 ) -h --help )
+    local commands=( $( echo "${bkr_help}" | \grep "  " | \cut -d' ' -f3 | \cut -d'=' -f1 | \grep -v '^-' ) )
+    # General options available
+    local base_options=$( echo "${bkr_help}" | _parse_help -)
 
-    local i c cmd
-    for (( i=1; i < ${#words[@]}-1; i++ )) ; do
-        [[ -n $cmd ]] && break
-        # Recognize additional commands and aliases
-        for c in ${cmds[@]} ; do
-            [[ ${words[i]} == $c ]] && cmd=$c && break
-        done
-    done
-
-    # Check if element is command
-    exists=0
-    for i in ${cmds[@]} ; do
-        if [[ $cmd == $i ]] ; then
-            exists=1
+    local i cmd
+    # Determine if we already have a command, for example 'job-submit' or 'distros-list'
+    for (( i=1; i < ${cword}; i++ )) ; do
+        if [[ "${commands[@]}" =~ " ${words[i]} " ]]; then
+            cmd=${words[i]}
+            break
         fi
     done
 
-    # Check for main option choices
-    if [[ $cmd =~ [a-z]* && $exists == 1 ]] ; then
-       COMPREPLY=( $( compgen -W '$( _bkr_complete )' -- "$cur" ) )
-       return 0
+    # If we don't have a command yet, provide them as completion choices
+    if [[ -z "${cmd}" ]]; then
+        COMPREPLY=( $( compgen -W ' ${commands[@]} ${base_options[@]}' -- "${cur}" ) )
+        return
     fi
 
-    # Check for main options
-    COMPREPLY=( $( compgen -W ' ${cmds[@]}' -- "$cur" ) )
+    # We have a command, provide the options for that command
+    local extra_opts=""
+    local bkr_usage
+    # Use the cache dir if we have it
+    if [[ -d ${bkr_help_cache_dir} ]]; then
+        local bkr_help_file=${bkr_help_cache_dir}/bkr.help.${cmd}.txt
+        if [[ ! -f ${bkr_help_file} ]]; then
+            \bkr ${cmd} --help 2>/dev/null > ${bkr_help_file}
+        fi
+        bkr_usage=$( \cat ${bkr_help_file} )
+    else
+        bkr_usage=$( \bkr ${cmd} --help 2>/dev/null )
+    fi
+    # Determine if our command accepts files, such as the 'job-submit' command,
+    # if so then we will add the '-f' flag.
+    if echo "${bkr_usage}" | \grep -q "^Usage:.*<.*>"; then
+        extra_opts="-f"
+    fi
+
+    local options=$( echo "${bkr_usage}" | _parse_help -)
+    COMPREPLY=( $( compgen -W ' ${options[@]}' ${extra_opts} -- "${cur}" ) )
+
+    return 0
 } &&
 complete -F _bkr -o filenames bkr bkrmain.py
