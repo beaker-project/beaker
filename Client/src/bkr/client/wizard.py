@@ -2417,10 +2417,10 @@ class Skeleton(SingleChoice):
 
             =head1 DESCRIPTION
 
-            This is a trivial example of a BeakerLib library. It's main goal
+            This is a trivial example of a BeakerLib library. Its main goal
             is to provide a minimal template which can be used as a skeleton
             when creating a new library. It implements function fileCreate().
-            Please note, that all library functions must begin with the same
+            Please note that all library functions must begin with the same
             prefix which is defined at the beginning of the library.
 
             =cut
