@@ -65,7 +65,7 @@ def check_url(url):
     else:
         raise ValueError('Unrecognised URL scheme %s for tree %s' % (scheme, url))
 
-def check_all_trees(ignore_errors=False):
+def check_all_trees(ignore_errors=False, dry_run=False):
     proxy = xmlrpclib.ServerProxy('http://localhost:8000', allow_none=True)
     rdistro_trees = []
     distro_trees = proxy.get_distro_trees()
@@ -93,23 +93,31 @@ def check_all_trees(ignore_errors=False):
     # if all distro_trees are expired then something is probably wrong.
     if len(distro_trees) != len(rdistro_trees):
         for distro_tree in rdistro_trees:
-            print "Removing distro %s:%d" % (distro_tree['distro_name'],
-                                             distro_tree['distro_tree_id'])
-            proxy.remove_distro_trees([distro_tree['distro_tree_id']])
+            if dry_run:
+                print('No longer accessible distro %s:%d' % (distro_tree['distro_name'],
+                                                             distro_tree['distro_tree_id']))
+            else:
+                print "Removing distro %s:%d" % (distro_tree['distro_name'],
+                                                 distro_tree['distro_tree_id'])
+                proxy.remove_distro_trees([distro_tree['distro_tree_id']])
     else:
         sys.stderr.write("All distros are missing! Please check your server!!\n")
         sys.exit(1)
+
 
 def main():
     from optparse import OptionParser
     parser = OptionParser()
     parser.add_option('--ignore-errors', default=False, action='store_true',
             help='Ignore all network errors when communicating with mirrors')
+    parser.add_option('--dry-run', default=False, action='store_true',
+                      help='Prints no longer accessible distro without updating the database.')
     options, args = parser.parse_args()
     try:
-        check_all_trees(options.ignore_errors)
+        check_all_trees(options.ignore_errors, options.dry_run)
     except KeyboardInterrupt:
         pass
+
 
 if __name__ == '__main__':
     main()
