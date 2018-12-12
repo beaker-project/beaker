@@ -154,6 +154,14 @@ def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
         ]
     else:
         ks_meta['conflicts_groups'] = []
+    #clearpart --cdl
+    if arch.arch == 's390x' and (rhel == '7' and int(osminor) >= 6
+                                 or rhel == '8' and int(osminor) >= 0):
+        ks_meta['has_clearpart_cdl'] = True
+
+    ks_meta['has_ignoredisk_interactive'] = False  # --interactive is deprecated
+    if (rhel and int(rhel) < 8) or (fedora and fedora != 'rawhide' and int(fedora) < 29):
+        ks_meta['has_ignoredisk_interactive'] = True
 
     kernel_options = {}
     # set arch specific default netboot loader paths

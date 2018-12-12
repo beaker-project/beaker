@@ -30,7 +30,7 @@ Options
 
 .. option:: --limit <number>
 
-   Return at most <number> groups.
+   Return at most <number> groups. The default is 50.
 
 Common :program:`bkr` options are described in the :ref:`Options
 <common-options>` section of :manpage:`bkr(1)`.

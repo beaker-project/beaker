@@ -2,11 +2,10 @@
 ignoredisk {{ ignoredisk }}
 {% endif %}
 zerombr
-{% if ondisk %}
-clearpart --drives {{ ondisk }} --all --initlabel
-{% else %}
 clearpart --all --initlabel
-{% endif %}
+{%- if ondisk %} --drives {{ ondisk }}{% endif %}
+{%- if has_clearpart_cdl is defined %} --cdl{% endif %}
+
 
 {% if partitions or ondisk or rootfstype or fstype or swapsize %}
 

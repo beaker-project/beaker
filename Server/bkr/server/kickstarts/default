@@ -10,7 +10,8 @@
 
 {{ mode|default('text') }}
 {% if manual is defined %}
-ignoredisk --interactive
+ignoredisk{%- if has_ignoredisk_interactive %} --interactive{% endif %}
+
 {% endif %}
 {% if manual is undefined %}
 {% if auth %}

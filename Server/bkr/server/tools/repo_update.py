@@ -35,7 +35,7 @@ def get_parser():
     usage = "usage: %prog [options]"
     parser = OptionParser(usage, description=__description__,version=__version__)
     parser.add_option("--baseurl", "-b",
-                      default="http://beaker-project.org/yum/harness/",
+                      default="https://beaker-project.org/yum/harness/",
                       help="This should be url location of the repos")
     parser.add_option("--basepath", "-d",
                       default=None,

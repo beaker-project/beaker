@@ -162,3 +162,32 @@ Beaker 26.1
   'RuntimeError: dictionary changed size during iteration' failure to appear
   in the :program:`beaker-watchdog` logs. 
   (Contributed by Chris Beer)
+
+
+Beaker 26.2
+~~~~~~~~~~~
+* :issue:`1638258`: Fixed: ks_meta=manual adds "ignoredisk --interactive" to 
+  the kickstart even if this is deprecated
+  (Contributed by Martin Styk)
+* :issue:`1644032`: Fixed: RESERVE_IF_FAIL always reserves all systems 
+  (including PASSing ones) [rhel-8]
+  (Contributed by Martin Styk)
+* :issue:`1636550`: Fixed: s390x: add "--cdl" parameter to "clearpart" 
+  kickstart command
+  (Contributed by Martin Styk)
+* :issue:`1652476`: Fixed: beaker-repo-update did not fetch harness for 
+  distros
+  (Contributed by Martin Styk)
+* :issue:`1650337`: Updated internal test code to use new URL for dogfood jobs
+  (Contributed by Chris Beer)
+* :issue:`1657864`: Fixed: Beaker checkbugs failing after Bugzilla v5 upgrade
+  (Contributed by Chris Beer)
+* :issue:`1579161`: Added option dry-run to beaker-expire-distros
+  (Contributed by Martin Styk)
+* :issue:`1656272`: beaker-wizard: grammar improvements in the library skeleton
+  description
+  (Contributed by Martin Styk)
+* :issue:`1653339`: Documented bkr group-list default limit
+  (Contributed by Martin Styk)
+* :issue:`1652641`: Fixed: unable to add a task with binary database data
+  (Contributed by Martin Styk)
