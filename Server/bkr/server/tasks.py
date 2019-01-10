@@ -364,8 +364,7 @@ class Tasks(RPCRoot):
                 #This is the simplest way of dealing with it
                 redirect("/tasks/%s" % task.id)
         except DatabaseLookupError as e:
-            flash(unicode(e))
-            redirect("/tasks")
+            raise cherrypy.HTTPError(status=404, message='%s' % e)
 
         attributes = task.to_dict()
         attributes['can_disable'] = bool(
@@ -448,11 +447,20 @@ def get_tasks():
     })
     return result
 
+# This route is used whenever user enters any integer past /tasks/.
+# Paths that don't match this template are rerouted by either default function or their specific function
+# eq. path  .../tasks//custom/name/of/task - will NOT be picked up (processed by default function)
+#           .../tasks/custom_name          - will NOT be picked up
+#           .../tasks/name/with/slash      - will NOT be picked up
+#           .../tasks/123456               - will be picked up
 @app.route('/tasks/<int:task_id>', methods=['GET'])
 def get_task(task_id):
     # Dummy handler to fall back to CherryPy
     # so that other methods such as PATCH/DELETE work.
-    raise NotFound404('Fall back to CherryPy')
+    # ---
+    # Because Flask defined 404 has priority before CherryPy's 404,
+    # message defined in here will be presented to user when CherryPy's 404 is raised.
+    raise NotFound404('No such task with ID: %s' % task_id)
 
 @app.route('/tasks/<int:task_id>', methods=['PATCH'])
 @admin_auth_required
