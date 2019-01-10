@@ -2,7 +2,10 @@
 {% set repo_base = distro_tree.url_in_lab(lab_controller, scheme=['http', 'ftp']) %}
 {% if repo_base %}
 {% for repo in distro_tree.repos %}
-{% if var('no_%s_repos' % repo.repo_type) is undefined %}
+{% if var('no_%s_repos' % repo.repo_type) is undefined
+    and var('disable_%s_repos' % repo.repo_type) is undefined
+    and var('no_repo_%s' % repo.repo_id) is undefined
+    and var('disable_repo_%s' % repo.repo_id) is undefined %}
 repo --name=beaker-{{ repo.repo_id }} --cost=100 --baseurl={{ repo_base|urljoin(repo.path) }}
 {% endif %}
 {% endfor %}
