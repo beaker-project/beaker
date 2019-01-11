@@ -19,6 +19,10 @@ Distros must be imported separately on each lab controller, and you can import
 from a different set of URLs in each lab. This allows you to import distros 
 from the nearest mirror in each lab.
 
+When importing, at least one of the URLs has to be type of ``http``, ``https``
+or ``ftp``. Specifying only ``nfs`` won't work, since it's currently not supported
+as a valid primary install method.
+
 Normally a distro will have a :file:`.composeinfo` or :file:`.treeinfo` file, which
 provides metadata required by :program:`beaker-import`. If those files are not available
 you can perform a "naked" import by specifying ``--family``,
