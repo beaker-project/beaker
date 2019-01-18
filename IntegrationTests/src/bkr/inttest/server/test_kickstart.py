@@ -334,7 +334,27 @@ class KickstartTest(unittest.TestCase):
                     repo_id=u'AppStream-debuginfo',
                     repo_type=u'debug',
                     path=u'../../../AppStream/x86_64/debug/tree'
-                )
+                ),
+                DistroTreeRepo(
+                    repo_id=u'CRB-debuginfo',
+                    repo_type=u'debug',
+                    path=u'../../../CRB/x86_64/debug/tree'
+                ),
+                DistroTreeRepo(
+                    repo_id=u'CRB',
+                    repo_type=u'variant',
+                    path=u'../../../CRB/x86_64/os'
+                ),
+                DistroTreeRepo(
+                    repo_id=u'BaseOS',
+                    repo_type=u'variant',
+                    path=u'../../../BaseOS/x86_64/os'
+                ),
+                DistroTreeRepo(
+                    repo_id=u'AppStream',
+                    repo_type=u'variant',
+                    path=u'../../../AppStream/x86_64/os'
+                ),
             ]
 
 
@@ -2349,6 +2369,171 @@ install
         self.assert_('repo --name=beaker-optional-x86_64-debug' not in k, k)
         self.assert_('/etc/yum.repos.d/beaker-debug.repo' not in k, k)
         self.assert_('/etc/yum.repos.d/beaker-optional-x86_64-debug.repo' not in k, k)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1664750
+    def test_no_repo_CRB(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="no_repo_CRB">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-8.0-20181114.n.0" />
+                            <distro_variant op="=" value="BaseOS" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.installation.rendered_kickstart.kickstart
+        self.assert_('repo --name=beaker-CRB --cost' not in k, k)
+        self.assert_('repo --name=beaker-CRB-debuginfo' in k, k)
+        self.assert_('/etc/yum.repos.d/beaker-CRB.repo' not in k, k)
+        self.assert_('/etc/yum.repos.d/beaker-CRB-debuginfo.repo' in k, k)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1664750
+    def test_no_repo_CRB_disable_repo_CRB(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="no_repo_CRB disable_repo_CRB">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-8.0-20181114.n.0" />
+                            <distro_variant op="=" value="BaseOS" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.installation.rendered_kickstart.kickstart
+        self.assert_('repo --name=beaker-CRB --cost' not in k, k)
+        self.assert_('repo --name=beaker-CRB-debuginfo' in k, k)
+        self.assert_('/etc/yum.repos.d/beaker-CRB.repo' not in k, k)
+        self.assert_('/etc/yum.repos.d/beaker-CRB-debuginfo.repo' in k, k)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1664750
+    def test_disable_repo_CRB(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="disable_repo_CRB">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-8.0-20181114.n.0" />
+                            <distro_variant op="=" value="BaseOS" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.installation.rendered_kickstart.kickstart
+        self.assert_('repo --name=beaker-CRB --cost' not in k, k)
+        self.assert_('repo --name=beaker-CRB-debuginfo' in k, k)
+        self.assert_('/etc/yum.repos.d/beaker-CRB.repo' in k, k)
+        self.assert_('/etc/yum.repos.d/beaker-CRB-debuginfo.repo' in k, k)
+        self.assert_('CRB/x86_64/os\nenabled=0\n' in k, k)
+        self.assert_('CRB/x86_64/debug/tree\nenabled=1\n' in k, k)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1664750
+    def test_disable_debug_repos(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="disable_debug_repos">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-8.0-20181114.n.0" />
+                            <distro_variant op="=" value="BaseOS" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.installation.rendered_kickstart.kickstart
+        self.assert_('repo --name=beaker-CRB --cost' in k, k)
+        self.assert_('repo --name=beaker-CRB-debuginfo' not in k, k)
+        self.assert_('repo --name=beaker-AppStream-debuginfo' not in k, k)
+        self.assert_('repo --name=beaker-BaseOS-debuginfo' not in k, k)
+        self.assert_('/etc/yum.repos.d/beaker-CRB.repo' in k, k)
+        self.assert_('/etc/yum.repos.d/beaker-CRB-debuginfo.repo' in k, k)
+        self.assert_('/etc/yum.repos.d/beaker-AppStream-debuginfo.repo' in k, k)
+        self.assert_('/etc/yum.repos.d/beaker-BaseOS-debuginfo.repo' in k, k)
+        self.assert_('CRB/x86_64/os\nenabled=1\n' in k, k)
+        self.assert_('CRB/x86_64/debug/tree\nenabled=0\n' in k, k)
+        self.assert_('AppStream/x86_64/debug/tree\nenabled=0\n' in k, k)
+        self.assert_('BaseOS/x86_64/debug/tree\nenabled=0\n' in k, k)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1664750
+    def test_disable_repo_CRB_and_debuginfo(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="disable_repo_CRB disable_repo_CRB-debuginfo">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-8.0-20181114.n.0" />
+                            <distro_variant op="=" value="BaseOS" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.installation.rendered_kickstart.kickstart
+        self.assert_('repo --name=beaker-CRB --cost' not in k, k)
+        self.assert_('repo --name=beaker-CRB-debuginfo' not in k, k)
+        self.assert_('/etc/yum.repos.d/beaker-CRB.repo' in k, k)
+        self.assert_('/etc/yum.repos.d/beaker-CRB-debuginfo.repo' in k, k)
+        self.assert_('CRB/x86_64/os\nenabled=0\n' in k, k)
+        self.assert_('CRB/x86_64/debug/tree\nenabled=0\n' in k, k)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1664750
+    def test_no_debug_repos_disable_repo_CRB(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="no_debug_repos disable_repo_CRB">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-8.0-20181114.n.0" />
+                            <distro_variant op="=" value="BaseOS" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.installation.rendered_kickstart.kickstart
+        self.assert_('repo --name=beaker-CRB --cost' not in k, k)
+        self.assert_('repo --name=beaker-CRB-debuginfo' not in k, k)
+        self.assert_('repo --name=beaker-AppStream-debuginfo' not in k, k)
+        self.assert_('/etc/yum.repos.d/beaker-CRB.repo' in k, k)
+        self.assert_('/etc/yum.repos.d/beaker-CRB-debuginfo.repo' not in k, k)
+        self.assert_('/etc/yum.repos.d/beaker-AppSteam-debuginfo.repo' not in k, k)
+        self.assert_('CRB/x86_64/os\nenabled=0\n' in k, k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=874191
     def test_no_updates_repos_fedora(self):

@@ -192,6 +192,23 @@ correspond to the similarly-named kickstart option.
    For example, ``harness_rw_host_volumes='/myvolume'`` will then only
    mount the ``/myvolume`` with write permissions.
 
+``disable_repo_<id>``
+    Disable repo of the given id. By default, the kickstart will include repo.
+    Repo is also created in yum.repos.d/ and enabled. Set this variable if you
+    want to omit ``repo`` command in kickstart and disable it in yum.repos.d/.
+    You can find repo id for a particular distro tree under the
+    :guilabel:`Repos` tab on the distro tree page.
+    For example disable_repo_CRB.
+
+``disable_<type>_repos``
+    Disable repos of the given types. Valid types include ``variant``, ``addon``,
+    ``optional``, and ``debug``. By default, the kickstart will include all repos
+    of the given type. Repos are also created in yum.repos.d/ and enabled.
+    Set this variable if you want to omit ``repo`` command in kickstart and
+    disable them in yum.repos.d/. You can find repo id for a particular distro
+    tree under the :guilabel:`Repos` tab on the distro tree page.
+    For example disable_debug_repos.
+
 ``ethdevices=<module>[,<module>...]``
     Comma-separated list of network modules to be loaded during installation.
 
@@ -287,6 +304,11 @@ correspond to the similarly-named kickstart option.
     the installer to automatically select a suitable partition layout. Set this
     variable if you want to supply explicit partitioning commands in some other
     way, for example in a ``<ks_append/>`` section.
+
+``no_repo_<id>``
+    Omits repo of the given id. You can find repo id for a particular distro
+    tree under the :guilabel:`Repos` tab on the distro tree page.
+    For example no_repo_CRB-debuginfo.
 
 ``no_<type>_repos``
     Omits repos of the given type. Valid types include ``variant``, ``addon``, 

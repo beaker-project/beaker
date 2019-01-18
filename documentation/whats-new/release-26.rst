@@ -143,51 +143,78 @@ The following fixes have been included in Beaker 26 maintenance updates.
 
 Beaker 26.1
 ~~~~~~~~~~~
-* :issue:`1618344`: Previously, the /distribution/virt/install task would fail
-  to install the guest on RHEL8 because Python 2 was not available. The task
-  now correctly requires a Python 2 interpreter. 
-  (Contributed by Dan Callaghan)
-* :issue:`1619545`: Previously, the /distribution/reservesys task would fail
-  to send email when the system was ready on RHEL8 recipes. The task now 
-  correctly starts the Postfix MTA on RHEL8.
-  (Contributed by Dan Callaghan)
-* :issue:`1640892`: In Beaker 26.0, the default harness for RHEL-ALT-7 was
-  unintentionally changed to Restraint. The default harness for RHEL-ALT-7 has
-  been fixed to use Beah.
-  (Contributed by Bill Peck)
-* :issue:`1642525`: The :program:`beaker-init` tool now recognizes 26 as a
-  valid Beaker version.
-  (Contributed by Chris Beer)
-* :issue:`1643139`: Fixed a regression introduced in Beaker 26 which caused a
-  'RuntimeError: dictionary changed size during iteration' failure to appear
-  in the :program:`beaker-watchdog` logs. 
-  (Contributed by Chris Beer)
+* | :issue:`1618344`: Previously, the /distribution/virt/install task would fail
+    to install the guest on RHEL8 because Python 2 was not available. The task
+    now correctly requires a Python 2 interpreter. 
+  | (Contributed by Dan Callaghan)
+* | :issue:`1619545`: Previously, the /distribution/reservesys task would fail
+    to send email when the system was ready on RHEL8 recipes. The task now 
+    correctly starts the Postfix MTA on RHEL8.
+  | (Contributed by Dan Callaghan)
+* | :issue:`1640892`: In Beaker 26.0, the default harness for RHEL-ALT-7 was
+    unintentionally changed to Restraint. The default harness for RHEL-ALT-7 has
+    been fixed to use Beah.
+  | (Contributed by Bill Peck)
+* | :issue:`1642525`: The :program:`beaker-init` tool now recognizes 26 as a
+    valid Beaker version.
+  | (Contributed by Chris Beer)
+* | :issue:`1643139`: Fixed a regression introduced in Beaker 26 which caused a
+    'RuntimeError: dictionary changed size during iteration' failure to appear
+    in the :program:`beaker-watchdog` logs. 
+  | (Contributed by Chris Beer)
 
 
 Beaker 26.2
 ~~~~~~~~~~~
-* :issue:`1638258`: Fixed: ks_meta=manual adds "ignoredisk --interactive" to 
-  the kickstart even if this is deprecated
-  (Contributed by Martin Styk)
-* :issue:`1644032`: Fixed: RESERVE_IF_FAIL always reserves all systems 
-  (including PASSing ones) [rhel-8]
-  (Contributed by Martin Styk)
-* :issue:`1636550`: Fixed: s390x: add "--cdl" parameter to "clearpart" 
-  kickstart command
-  (Contributed by Martin Styk)
-* :issue:`1652476`: Fixed: beaker-repo-update did not fetch harness for 
-  distros
-  (Contributed by Martin Styk)
-* :issue:`1650337`: Updated internal test code to use new URL for dogfood jobs
-  (Contributed by Chris Beer)
-* :issue:`1657864`: Fixed: Beaker checkbugs failing after Bugzilla v5 upgrade
-  (Contributed by Chris Beer)
-* :issue:`1579161`: Added option dry-run to beaker-expire-distros
-  (Contributed by Martin Styk)
-* :issue:`1656272`: beaker-wizard: grammar improvements in the library skeleton
-  description
-  (Contributed by Martin Styk)
-* :issue:`1653339`: Documented bkr group-list default limit
-  (Contributed by Martin Styk)
-* :issue:`1652641`: Fixed: unable to add a task with binary database data
-  (Contributed by Martin Styk)
+* | :issue:`1638258`: Previously, kickstart installation would fail
+    with ks_meta=manual. Kickstart command ignoredisk --interactive
+    is used in manual mode, however option --interactive is deprecated.
+    Beaker kickstart file now correctly contains kickstart command ignoredisk
+    without --interactive option.
+  | (Contributed by Martin Styk)
+* | :issue:`1644032`: Previously, the /distribution/reservesys task would fail
+    with option RESERVE_IF_FAIL and always reserves all systems. The task now
+    correctly reserves a system only when one of the previous task fail. 
+  | (Contributed by Martin Styk)
+* | :issue:`1636550`: To increase the reliability of installations on S390x
+    Beaker added --cdl option to the clearpart kickstart command.
+  | (Contributed by Martin Styk)
+* | :issue:`1652476`: Previously, :program:`beaker-repo-update` would fail to
+    update repositories because the default URL was incorrect. 
+    :program:`beaker-repo-update` now uses correct default URL.
+  | (Contributed by Martin Styk)
+* | :issue:`1650337`: Updated internal test code to use new URL for dogfood jobs
+  | (Contributed by Chris Beer)
+* | :issue:`1579161`: The :program:`beaker-expire-distros` tool now accepts
+    dry-run parameter.
+  | (Contributed by Martin Styk)
+* | :issue:`1656272`: Improved grammar in :program:`beaker-wizard`.
+  | (Contributed by Martin Styk)
+* | :issue:`1653339`: Added documentation for limit parameter in :program:`bkr`
+    group-list.
+  | (Contributed by Martin Styk)
+* | :issue:`1652641`: Previously, beaker client would fail to add a task to 
+    Beaker task library because the task contained binary data. 
+    Beaker client now allows adding a task containing binary data. 
+  | (Contributed by Martin Styk)
+
+
+Beaker 26.3
+~~~~~~~~~~~
+* | :issue:`1566859`: Retired Piwik integration with Beaker.
+  | (Contributed by Martin Styk)
+* | :issue:`1614171`: Beaker now gives 404 when accessing a non-existent task.
+  | (Contributed by Tomas Klohna)
+* | :issue:`1663317`: Previously, Beaker Jenkins Jobs (BJJ) contained deprecated
+    commands. BJJ now uses up-to-date commands.
+  | (Contributed by Chris Beer)
+* | :issue:`968828`: Created documentation for :program:`beaker-log-delete`.
+  | (Contributed by Martin Styk)
+* | :issue:`1663121`: BJJ now uses unified Koji instance.
+  | (Contributed by Martin Styk)
+* | :issue:`978824`: Extended documentation for importing distros.
+  | (Contributed by Tomas Klohna)
+* | :issue:`1664750`: Beaker now allows to remove/disable repo by Repo ID. You
+    can find which repo IDs are available for a particular distro tree under the 
+    Repos tab on the distro tree page.
+  | (Contributed by Martin Styk)

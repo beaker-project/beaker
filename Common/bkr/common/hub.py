@@ -56,6 +56,13 @@ class HubProxy(object):
                     ssl_context = ssl.create_default_context()
                     ssl_context.load_verify_locations(cafile=self._conf['CA_CERT'])
                     transport_args['context'] = ssl_context
+                elif (hasattr(ssl, '_create_unverified_context')
+                      and not self._conf.get('SSL_VERIFY', True)):
+                    # Python 2.6 doesn't have context argument for xmlrpclib.ServerProxy
+                    # therefore transport needs to be modified
+                    ssl_context = ssl._create_unverified_context()
+                    transport_args['context'] = ssl_context
+
             else:
                 TransportClass = retry_request_decorator(CookieTransport)
             self._transport = TransportClass(**transport_args)

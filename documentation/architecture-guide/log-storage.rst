@@ -16,7 +16,7 @@ You can configure the lab controller to work with an
 :ref:`archive server <archive-server>`.
 Beaker requires the archive server to be running a HTTP server and
 `rsyncd <http://linux.die.net/man/5/rsyncd.conf>`_.
-If you wish to be able to delete log files via `beaker-log-delete`,
+If you wish to be able to delete log files via :ref:`beaker-log-delete <beaker-log-delete>`,
 you must `configure <http://httpd.apache.org/docs/2.2/mod/mod_dav.html>`_
 the HTTP server to handle WebDAV DELETE operations on the log directory's
 base path (HTTP digest and kerberos authentication are supported by
