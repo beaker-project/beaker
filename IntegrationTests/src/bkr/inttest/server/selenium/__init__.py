@@ -7,9 +7,11 @@
 import sys
 import os
 import re
+import time
 import logging
 import subprocess
 from selenium import webdriver
+from selenium.common.exceptions import ErrorInResponseException
 import xmlrpclib
 from urlparse import urljoin
 from bkr.common.xmlrpc import CookieTransport, SafeCookieTransport
@@ -32,21 +34,43 @@ class WebDriverTestCase(DatabaseTestCase):
 
     def get_browser(self):
         """
-        Returns a new WebDriver browser instance. The browser will be cleaned 
+        Returns a new WebDriver browser instance. The browser will be cleaned
         up after the test case finishes.
         """
-        p = webdriver.FirefoxProfile()
+        profile = webdriver.FirefoxProfile()
         # clicking on element may be ignored if native events is enabled
         # https://bugzilla.redhat.com/show_bug.cgi?id=915695
         # http://code.google.com/p/selenium/issues/detail?id=2864
-        p.native_events_enabled = False
-        b = webdriver.Firefox(p)
-        _spawned_browsers.append(b)
-        self.addCleanup(b.quit)
-        b.implicitly_wait(10) # XXX is this really what we want???
-        b.set_window_position(0, 0)
-        b.set_window_size(1920, 1200)
-        return b
+        profile.native_events_enabled = False
+
+        # 2019/01/28 - Intermittent failures 'error: [Errno 111] Connection refused'
+        # Issue appears to be that the server is getting saturated from all
+        # the connections being created and closed by the test code. So, if
+        # the call fails with a server error we wait a couple of seconds and
+        # retry. If it fails a second time the retry throws an exception and
+        # the test fails. Any other type of exception fails right away.
+        driver = None
+        try:
+            driver = webdriver.Firefox(profile)
+        except ErrorInResponseException as errorInResponse:
+            if "Connection refused" in str(errorInResponse):
+                log.debug('Connection refused when attempting to create ' +
+                          'new instance of the Firefox driver')
+                log.debug('Sleep for 2 seconds and retry...')
+                time.sleep(2)
+                driver = webdriver.Firefox(profile)
+            else:
+                log.debug('ErrorInResponseException raised when attempting ' +
+                          'to create new instance of the Firefox driver, ' +
+                          'exception text did not contain "Connection refused"')
+                raise errorInResponse
+
+        _spawned_browsers.append(driver)
+        self.addCleanup(driver.quit)
+        driver.implicitly_wait(15)
+        driver.set_window_position(0, 0)
+        driver.set_window_size(1920, 1200)
+        return driver
 
 class XmlRpcTestCase(DatabaseTestCase):
 

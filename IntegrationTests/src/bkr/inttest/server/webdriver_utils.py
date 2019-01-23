@@ -38,7 +38,8 @@ def logout(browser):
            .find_element_by_link_text('Log out')\
            .click()
     # check we have been logged out
-    browser.find_element_by_link_text('Log in')
+    wait = WebDriverWait(browser, 30)
+    wait.until(lambda browser: browser.find_element_by_link_text('Log in'))
 
 def is_text_present(browser, text):
     return bool(browser.find_elements_by_xpath(
@@ -57,7 +58,7 @@ def wait_for_animation(browser, selector):
     """
     Waits until jQuery animations have finished for the given jQuery selector.
     """
-    WebDriverWait(browser, 10).until(lambda browser: browser.execute_script(
+    WebDriverWait(browser, 30).until(lambda browser: browser.execute_script(
             'return jQuery(%s).is(":animated")' % json.dumps(selector))
             == False)
 
@@ -65,7 +66,8 @@ def wait_for_ajax_loading(browser, class_name):
     """
     Waits until the ajax loading indicator disappears.
     """
-    WebDriverWait(browser, 10).until(lambda browser: len(browser.find_elements_by_class_name(
+    wait = WebDriverWait(browser, 30)
+    wait.until(lambda browser: len(browser.find_elements_by_class_name(
             class_name)) == 0)
 
 def _activity_row_xpath(activity):
@@ -208,8 +210,8 @@ def find_policy_checkbox(browser, row, column):
 
 class BootstrapSelect(object):
     """
-    Like selenium.webdriver.ui.support.Select but for bootstrap-select, 
-    which uses Bootstrap buttons and drop-downs rather than a real <select/> 
+    Like selenium.webdriver.ui.support.Select but for bootstrap-select,
+    which uses Bootstrap buttons and drop-downs rather than a real <select/>
     control.
     """
 
@@ -224,7 +226,7 @@ class BootstrapSelect(object):
 
     @property
     def options(self):
-        # Need to open the menu in order to grab the options -- I think this is 
+        # Need to open the menu in order to grab the options -- I think this is
         # due to Webdriver hiding "invisible" elements from us
         self.element.find_element_by_tag_name('button').click()
         options = [span.text for span in self.element.find_elements_by_xpath(

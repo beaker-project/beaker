@@ -56,24 +56,24 @@ CONFIG_FILE = os.environ.get('BEAKER_CONFIG_FILE')
 class DatabaseTestCase(unittest.TestCase):
 
     """
-    Tests which touch the database in any way (session.begin()) should inherit 
-    from this, so that the session is cleaned up at the end of each test. This 
+    Tests which touch the database in any way (session.begin()) should inherit
+    from this, so that the session is cleaned up at the end of each test. This
     prevents ORM objects from accumulating in memory during the test run.
     """
 
     def __init__(self, *args, **kwargs):
         super(DatabaseTestCase, self).__init__(*args, **kwargs)
-        # Putting this in __init__ instead of setUp is kind of cheating, but it 
+        # Putting this in __init__ instead of setUp is kind of cheating, but it
         # lets us avoid calling super() in every setUp.
         self.addCleanup(self._cleanup_session)
-        # This is even more of a hack because it has nothing to do with the 
+        # This is even more of a hack because it has nothing to do with the
         # database. But we have nowhere nicer to put this for now.
         # (We should be using pytest fixtures...)
         self.addCleanup(self._clear_captured_mails)
 
     def _cleanup_session(self):
-        # We clear __dict__ as a kind of hack, to try and drop references to 
-        # ORM instances which the test has stored as attributes on itself 
+        # We clear __dict__ as a kind of hack, to try and drop references to
+        # ORM instances which the test has stored as attributes on itself
         # (TestCase instances are kept for the life of the test runner!)
         for name in self.__dict__.keys():
             if not name.startswith('_'):
@@ -102,7 +102,7 @@ def get_server_base():
 
 def with_transaction(func):
     """
-    Runs the decorated function inside a transaction. Apply to setUp or other 
+    Runs the decorated function inside a transaction. Apply to setUp or other
     methods as needed.
     """
     def _decorated(*args, **kwargs):
@@ -112,12 +112,12 @@ def with_transaction(func):
 
 def fix_beakerd_repodata_perms():
     # This is ugly, but I can't come up with anything better...
-    # Any tests which invoke beakerd code directly will create 
-    # /var/www/beaker/rpms/repodata if it doesn't already exist. But the 
-    # tests might be running as root (as in the dogfood task, for example) 
-    # so the repodata directory could end up owned by root, whereas it 
+    # Any tests which invoke beakerd code directly will create
+    # /var/www/beaker/rpms/repodata if it doesn't already exist. But the
+    # tests might be running as root (as in the dogfood task, for example)
+    # so the repodata directory could end up owned by root, whereas it
     # needs to be owned by apache.
-    # The hacky fix is to just delete the repodata at the end of the test, and 
+    # The hacky fix is to just delete the repodata at the end of the test, and
     # let the application (running as apache) re-create it later.
     # Call this in a tearDown or tearDownClass method.
     repodata = os.path.join(turbogears.config.get('basepath.rpms'), 'repodata')
@@ -139,7 +139,7 @@ def check_listen(port):
 
 class Process(object):
     """
-    Thin wrapper around subprocess.Popen which supports starting and killing 
+    Thin wrapper around subprocess.Popen which supports starting and killing
     the process in setup/teardown.
     """
 
@@ -297,14 +297,28 @@ def _glance():
         raise RuntimeError('python-keystoneclient is not installed')
     if not has_glanceclient:
         raise RuntimeError('python-glanceclient is not installed')
-    # We upload the ipxe image to Glance using the same dummy credentials and 
+    # We upload the ipxe image to Glance using the same dummy credentials and
     # tenant on whose behalf we will be creating VMs later.
     username = os.environ['OPENSTACK_DUMMY_USERNAME']
     password = os.environ['OPENSTACK_DUMMY_PASSWORD']
     project_name = os.environ['OPENSTACK_DUMMY_PROJECT_NAME']
     auth_url = turbogears.config.get('openstack.identity_api_url')
-    keystone = keystoneclient.v3.client.Client(username=username, password=password,
-            project_name=project_name, auth_url=auth_url)
+
+    # 2019/01/30 - Based on the URL below, using the method call
+    # keystoneclient.v3.client.Client to get the keystone is deprecated and
+    # will be removed in v2.0 of the code.
+    # Ticket filed to fix: bug #1671054
+    # https://docs.openstack.org/python-keystoneclient/latest/using-api-v3.html
+    user_domain_name = None
+    if 'OPENSTACK_USER_DOMAIN_NAME' in os.environ:
+        user_domain_name = os.environ['OPENSTACK_USER_DOMAIN_NAME']
+    keystone = keystoneclient.v3.client.Client(
+            username=username,
+            password=password,
+            user_domain_name=user_domain_name,
+            project_name=project_name,
+            auth_url=auth_url)
+
     glance_url = keystone.service_catalog.url_for(
             service_type='image', endpoint_type='publicURL')
     return glanceclient.v2.client.Client(glance_url, token=keystone.auth_token)
@@ -313,7 +327,7 @@ def setup_openstack():
     with session.begin():
         data_setup.create_openstack_region()
         session.flush()
-        # Use a distinctive guest name prefix to give us a greater chance of 
+        # Use a distinctive guest name prefix to give us a greater chance of
         # tracking instances back to the test run which created them.
         admin_user = User.by_user_name(data_setup.ADMIN_USER)
         guest_name_prefix = u'beaker-testsuite-%s-%s-' % (
