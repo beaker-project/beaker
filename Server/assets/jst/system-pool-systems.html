@@ -6,7 +6,7 @@ The following systems are members of this pool:
 (none)
 <% } %>
 <ul class="list-group pool-systems-list">
-    <% _.each(systems, function (system) { %>
+    <% _.each(_.sortBy(systems, function (name) {return name}), function (system) { %>
     <li>
       <% if (system == '<restricted>') { %>
           <em>(system with restricted visibility)</em>
