@@ -176,7 +176,7 @@ fetch - http://lab.test-kickstart.invalid:8000/nopxe/test01.test-kickstart.inval
 echo @RECIPEID@ > /root/RECIPE.TXT
 
 # If netboot_method= is found in /proc/cmdline record it to /root
-netboot_method=$(perl -n -e'/netboot_method=([^\s]+)/ && print $1' /proc/cmdline)
+netboot_method=$(grep -oP "(?<=netboot_method=)[^\s]+(?=)" /proc/cmdline)
 if [ -n "$netboot_method" ]; then
 echo $netboot_method >/root/NETBOOT_METHOD.TXT
 fi
