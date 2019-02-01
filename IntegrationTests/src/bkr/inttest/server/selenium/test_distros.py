@@ -112,7 +112,7 @@ class DistroExpireXmlRpcTest(XmlRpcTestCase):
     def setUp(self):
         self.group = data_setup.create_group()
         # grant the group distro_expire permission
-        self.group.permissions.append(Permission.by_name('distro_expire'))
+        self.group.permissions.append(Permission.by_name(u'distro_expire'))
         self.user = data_setup.create_user(password=u'password')
         self.group.add_member(self.user)
         self.lc = data_setup.create_labcontroller(user=self.user)
@@ -124,7 +124,7 @@ class DistroExpireXmlRpcTest(XmlRpcTestCase):
 
     def test_activity_created_with_expire(self):
         self.server.auth.login_password(self.user.user_name, u'password')
-        self.server.distros.expire(self.distro.name, 'CUSTOMSERVICE')
+        self.server.distros.expire(self.distro.name, u'CUSTOMSERVICE')
         session.expire_all()
         with session.begin():
             activity = self.distro_tree.activity[0]

@@ -82,7 +82,7 @@ class JobUploadTest(XmlRpcTestCase):
 
     def test_reject_expired_root_password(self):
         with session.begin():
-            ConfigItem.by_name('root_password_validity').set(90,
+            ConfigItem.by_name(u'root_password_validity').set(90,
                     user=User.by_user_name(data_setup.ADMIN_USER))
             self.user.root_password = 'donttellanyone'
             self.user.rootpw_changed = datetime.datetime.utcnow() - datetime.timedelta(days=99)

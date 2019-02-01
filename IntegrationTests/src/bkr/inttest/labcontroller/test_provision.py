@@ -123,7 +123,7 @@ class PowerTest(LabControllerTestCase):
         try:
             provision_process.start_output_capture()
             with session.begin():
-                system = System.by_id(system.id, User.by_user_name('admin'))
+                system = System.by_id(system.id, User.by_user_name(u'admin'))
                 system.power.power_quiescent_period = 10
                 system.action_power(action=u'on', service=u'testdata')
             wait_for_commands_to_finish(system, timeout=15)
@@ -158,7 +158,7 @@ class PowerTest(LabControllerTestCase):
         try:
             provision_process.start_output_capture()
             with session.begin():
-                system = System.by_id(system.id, User.by_user_name('admin'))
+                system = System.by_id(system.id, User.by_user_name(u'admin'))
                 system.action_power(action=u'off', service=u'testdata')
             wait_for_commands_to_finish(system, timeout=10)
         finally:
@@ -241,7 +241,7 @@ class PowerTest(LabControllerTestCase):
                 system.power.power_id = u'' # make power script not sleep
                 system.power.power_passwd = None
                 system.action_power(action=u'off', service=u'testdata')
-            wait_for_commands_to_finish(system, timeout=2 * get_conf().get('SLEEP_TIME'))
+            wait_for_commands_to_finish(system, timeout=2 * get_conf().get(u'SLEEP_TIME'))
         finally:
             provision_output = provision_process.finish_output_capture()
         # The None type is passed in from the db. Later in the code it is converted
@@ -308,7 +308,7 @@ class ConfigureNetbootTest(LabControllerTestCase):
             distro_tree = data_setup.create_distro_tree(arch=u'x86_64',
                     lab_controllers=[lc],
                     # /slow/600 means the response will be delayed 10 minutes
-                    urls=['http://localhost:19998/slow/600/'])
+                    urls=[u'http://localhost:19998/slow/600/'])
             installation = distro_tree.create_installation_from_tree()
             installation.tree_url = distro_tree.url_in_lab(lab_controller=lc)
             installation.kernel_options = u''
@@ -328,7 +328,7 @@ class ConfigureNetbootTest(LabControllerTestCase):
             self.addCleanup(self.cleanup_system, system)
             distro_tree = data_setup.create_distro_tree(arch=u'x86_64',
                     lab_controllers=[lc],
-                    urls=['http://localhost:19998/error/404/'])
+                    urls=[u'http://localhost:19998/error/404/'])
             installation = distro_tree.create_installation_from_tree()
             installation.tree_url = distro_tree.url_in_lab(lab_controller=lc)
             installation.kernel_options = u''

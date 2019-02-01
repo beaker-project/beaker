@@ -22,9 +22,9 @@ class DistroTreeViewTest(WebDriverTestCase):
     def setUp(self):
         with session.begin():
             self.distro_tree = data_setup.create_distro_tree()
-            self.distro_tree.ks_meta = 'no_debug_repos'
-            self.distro_tree.kernel_options = 'repo=asdf'
-            self.distro_tree.kernel_options_post = 'norhgb'
+            self.distro_tree.ks_meta = u'no_debug_repos'
+            self.distro_tree.kernel_options = u'repo=asdf'
+            self.distro_tree.kernel_options_post = u'norhgb'
         self.browser = self.get_browser()
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=972397

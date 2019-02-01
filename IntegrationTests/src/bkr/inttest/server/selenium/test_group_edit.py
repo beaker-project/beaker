@@ -388,8 +388,8 @@ class TestGroupsWD(WebDriverTestCase):
     def test_add_user_to_admin_group(self):
         with session.begin():
             user = data_setup.create_user(password='password')
-            Group.by_name('admin').add_member(user)
-            group = data_setup.create_group(group_name='aaaaaaaaaaaabcc')
+            Group.by_name(u'admin').add_member(user)
+            group = data_setup.create_group(group_name=u'aaaaaaaaaaaabcc')
 
         b = self.browser
         login(b, user=user.user_name, password='password')
@@ -633,11 +633,11 @@ class TestGroupsWD(WebDriverTestCase):
     #https://bugzilla.redhat.com/show_bug.cgi?id=990860
     def test_show_group_owners(self):
         with session.begin():
-            owner = data_setup.create_user(user_name='zzzz', password='password')
+            owner = data_setup.create_user(user_name=u'zzzz', password='password')
             group = data_setup.create_group(owner=owner)
-            member1 = data_setup.create_user(user_name='aaaa', password='password')
+            member1 = data_setup.create_user(user_name=u'aaaa', password='password')
             group.add_member(member1)
-            member2 = data_setup.create_user(user_name='bbbb', password='password')
+            member2 = data_setup.create_user(user_name=u'bbbb', password='password')
             group.add_member(member2)
 
         b = self.browser

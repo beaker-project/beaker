@@ -159,7 +159,7 @@ class CSVImportTest(WebDriverTestCase):
     #https://bugzilla.redhat.com/show_bug.cgi?id=1058549
     def test_keyvalue_non_existent_system_valid(self):
         login(self.browser)
-        fqdn = data_setup.unique_name('system%s.idonot.exist')
+        fqdn = data_setup.unique_name(u'system%s.idonot.exist')
         self.import_csv((u'csv_type,fqdn,key,key_value,deleted\n'
                          u'keyvalue,%s,COMMENT,acomment,False' % fqdn)
                         .encode('utf8'))
@@ -175,7 +175,7 @@ class CSVImportTest(WebDriverTestCase):
     #https://bugzilla.redhat.com/show_bug.cgi?id=1058549
     def test_keyvalue_non_existent_system_valid_invalid(self):
         login(self.browser)
-        fqdn = data_setup.unique_name('system%s.idonot.exist')
+        fqdn = data_setup.unique_name(u'system%s.idonot.exist')
         self.import_csv((u'csv_type,fqdn,key,key_value,deleted\n'
                          u'keyvalue,%s,COMMENT,acomment,False\n' 
                          u'keyvalue,%s,COMMENT,acomment,False' % (fqdn, '--'+fqdn))
@@ -193,7 +193,7 @@ class CSVImportTest(WebDriverTestCase):
     #https://bugzilla.redhat.com/show_bug.cgi?id=1058549
     def test_labinfo_non_existent_system(self):
         login(self.browser)
-        fqdn = data_setup.unique_name('system%s.idonot.exist')
+        fqdn = data_setup.unique_name(u'system%s.idonot.exist')
         self.import_csv((u'csv_type,fqdn,orig_cost,curr_cost,dimensions,weight,wattage,cooling\n'
                          u'labinfo,%s,10000,10000,3000,4000.0,5001.0,6000.0' % fqdn)
                         .encode('utf8'))
@@ -209,7 +209,7 @@ class CSVImportTest(WebDriverTestCase):
     #https://bugzilla.redhat.com/show_bug.cgi?id=1058549
     def test_power_non_existent_system(self):
         login(self.browser)
-        fqdn = data_setup.unique_name('system%s.idonot.exist')
+        fqdn = data_setup.unique_name(u'system%s.idonot.exist')
         self.import_csv((u'csv_type,fqdn,power_address,power_user,power_password,power_id,power_type\n'
                          u'power,%s,qemu+tcp://%s,admin,admin,%s,virsh' % ((fqdn, )*3))
                         .encode('utf8'))
@@ -222,7 +222,7 @@ class CSVImportTest(WebDriverTestCase):
     #https://bugzilla.redhat.com/show_bug.cgi?id=1058549
     def test_excluded_family_non_existent_system(self):
         login(self.browser)
-        fqdn = data_setup.unique_name('system%s.idonot.exist')
+        fqdn = data_setup.unique_name(u'system%s.idonot.exist')
         with session.begin():
             osmajor = OSMajor.lazy_create(osmajor=u'MyEnterpriseLinux')
         self.import_csv((u'csv_type,fqdn,arch,family,update,excluded\n'
@@ -238,9 +238,9 @@ class CSVImportTest(WebDriverTestCase):
     #https://bugzilla.redhat.com/show_bug.cgi?id=1058549
     def test_install_options_non_existent_system(self):
         login(self.browser)
-        fqdn = data_setup.unique_name('system%s.idonot.exist')
+        fqdn = data_setup.unique_name(u'system%s.idonot.exist')
         with session.begin():
-            distro_tree = data_setup.create_distro_tree(osmajor='MyEnterpriseLinux',
+            distro_tree = data_setup.create_distro_tree(osmajor=u'MyEnterpriseLinux',
                                                         arch=u'x86_64')
         self.import_csv((u'csv_type,fqdn,arch,family,update,ks_meta,kernel_options,kernel_options_post\n'
                          u'install,%s,x86_64,MyEnterpriseLinux,,mode=cmdline,,console=ttyS0' % 

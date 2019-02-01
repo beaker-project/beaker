@@ -324,7 +324,7 @@ class ExternalWatchdogScriptTest(LabControllerTestCase):
         # by which the watchdog timer should be extended.
         with session.begin():
             system = data_setup.create_system(lab_controller=self.get_lc(),
-                    fqdn='watchdog.script.please.extend.600')
+                                              fqdn=u'watchdog.script.please.extend.600')
             job = data_setup.create_running_job(system=system)
             self.addCleanup(self.cleanup_job, job)
             recipe = job.recipesets[0].recipes[0]
@@ -336,7 +336,7 @@ class ExternalWatchdogScriptTest(LabControllerTestCase):
         # beaker-watchdog ignores its output and aborts the recipe.
         with session.begin():
             system = data_setup.create_system(lab_controller=self.get_lc(),
-                    fqdn='watchdog.script.please.crash')
+                                              fqdn=u'watchdog.script.please.crash')
             job = data_setup.create_running_job(system=system)
             self.addCleanup(self.cleanup_job, job)
             recipe = job.recipesets[0].recipes[0]

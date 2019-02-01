@@ -70,7 +70,7 @@ class TaskDetailsTest(ClientTestCase):
         # coerced to empty string.
         with session.begin():
             task = data_setup.create_task()
-            task.owner = ''
+            task.owner = u''
         out = run_client(['bkr', 'task-details', task.name])
         details = eval(out[len(task.name) + 1:]) # XXX dodgy
         self.assertEquals(details['owner'], '')

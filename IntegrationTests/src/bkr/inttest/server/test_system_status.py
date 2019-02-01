@@ -103,4 +103,4 @@ class SystemStatusTest(DatabaseTestCase):
         system.lab_controller = None
         self.assert_commands_in_same_state(system, CommandStatus.aborted)
         for c in system.command_queue:
-            self.assertEqual("System disassociated from lab controller", c.error_message)
+            self.assertEqual(u"System disassociated from lab controller", c.error_message)

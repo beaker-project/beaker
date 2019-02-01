@@ -43,7 +43,7 @@ class ExpireDistrosTest(LabControllerTestCase):
             self.distro_tree = data_setup.create_distro_tree(
                     osmajor=u'MattAwesomelinux9', osminor=u'1',
                     arch=u'x86_64', lab_controllers=[self.lc],
-                    urls=['http://localhost:19998/fakedistros/MattAwesomelinux9'])
+                    urls=[u'http://localhost:19998/fakedistros/MattAwesomelinux9'])
 
     def test_200(self):
         check_all_trees(ignore_errors=True)
@@ -58,7 +58,7 @@ class ExpireDistrosTest(LabControllerTestCase):
             lc = self.get_lc()
             distro_tree = data_setup.create_distro_tree(
                     lab_controllers=[lc],
-                    urls=['http://localhost:19998/error/403'])
+                    urls=[u'http://localhost:19998/error/403'])
         check_all_trees(ignore_errors=True)
         with session.begin():
             session.expire_all()
@@ -70,7 +70,7 @@ class ExpireDistrosTest(LabControllerTestCase):
         with session.begin():
             distro_tree = data_setup.create_distro_tree(
                     lab_controllers=[self.lc],
-                    urls=['http://localhost:19998/error/404'])
+                    urls=[u'http://localhost:19998/error/404'])
         check_all_trees(ignore_errors=True)
         with session.begin():
             session.expire_all()
@@ -83,7 +83,7 @@ class ExpireDistrosTest(LabControllerTestCase):
             lc = self.get_lc()
             distro_tree = data_setup.create_distro_tree(
                     lab_controllers=[lc],
-                    urls=['http://localhost:19998/error/500'])
+                    urls=[u'http://localhost:19998/error/500'])
         check_all_trees(ignore_errors=True)
         with session.begin():
             session.expire_all()

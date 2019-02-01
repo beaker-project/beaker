@@ -94,7 +94,7 @@ class LabControllerModifyTest(ClientTestCase):
 
     def test_create_the_lab_controller_if_it_does_not_exist(self):
         with session.begin():
-            fqdn = data_setup.unique_name('lc%s.com')
+            fqdn = data_setup.unique_name(u'lc%s.com')
             user = data_setup.create_user()
         run_client(['bkr', 'labcontroller-modify',
                     '--user', user.user_name,
