@@ -115,7 +115,7 @@ class SearchColumns(WebDriverTestCase):
         b.find_element_by_link_text('Select Default').click()
         b.find_element_by_xpath("//form[@id='searchform']").submit()
         columns = b.find_elements_by_xpath("//table[@id='widget']//th")
-        self.assertEquals(len(columns), 7)
+        self.assertEquals(len(columns), 8)
 
         b.find_element_by_link_text('Toggle Result Columns').click()
         wait_for_animation(b, '#selectablecolumns')
@@ -123,7 +123,7 @@ class SearchColumns(WebDriverTestCase):
         b.find_element_by_link_text('Select All').click()
         b.find_element_by_xpath("//form[@id='searchform']").submit()
         columns = b.find_elements_by_xpath("//table[@id='widget']//th")
-        self.assertGreater(len(columns), 7)
+        self.assertGreater(len(columns), 8)
 
 
 def perform_search(browser, searchcriteria, search_url=''):

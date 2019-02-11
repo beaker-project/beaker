@@ -314,6 +314,7 @@ def field_is_sortable(column):
         'location',
         'status',
         'user',
+        'loanedto',
         'reserved',
         'type',
         'powertype',
