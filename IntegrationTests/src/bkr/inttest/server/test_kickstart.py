@@ -1191,12 +1191,13 @@ class KickstartTest(unittest.TestCase):
         compare_expected('RedHatEnterpriseLinuxAlternateArchitectures7-scheduler-defaults', recipe.id,
                 recipe.installation.rendered_kickstart.kickstart)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1676571
     def test_rhel8_manual(self):
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
                                           fqdn='test-manual-1.test-kickstart.invalid',
                                           lab_controller=self.lab_controller)
         system.provisions[system.arch[0]] = Provision(arch=system.arch[0],
-                ks_meta=u'manual')
+                                                      ks_meta=u'manual')
         recipe = self.provision_recipe('''
             <job>
                 <whiteboard/>
@@ -1218,7 +1219,41 @@ class KickstartTest(unittest.TestCase):
         self.assert_(r'''ignoredisk --interactive''' not in recipe.installation.rendered_kickstart.kickstart,
                      recipe.installation.rendered_kickstart.kickstart)
 
-        self.assert_(r'''ignoredisk''' in recipe.installation.rendered_kickstart.kickstart,
+        self.assert_(r'''ignoredisk''' not in recipe.installation.rendered_kickstart.kickstart,
+                     recipe.installation.rendered_kickstart.kickstart)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1676571
+    def test_rhel8_manual_vnc(self):
+        system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
+                                          fqdn='test-manual-1.test-kickstart.invalid',
+                                          lab_controller=self.lab_controller)
+        system.provisions[system.arch[0]] = Provision(arch=system.arch[0],
+                                                      ks_meta=u'manual mode=vnc')
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-8.0-20181114.n.0" />
+                            <distro_variant op="=" value="BaseOS" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+
+        self.assert_(r'''ignoredisk --interactive''' not in recipe.installation.rendered_kickstart.kickstart,
+                     recipe.installation.rendered_kickstart.kickstart)
+
+        self.assert_(r'''ignoredisk''' not in recipe.installation.rendered_kickstart.kickstart,
+                     recipe.installation.rendered_kickstart.kickstart)
+
+        self.assert_(r'''vnc''' in recipe.installation.rendered_kickstart.kickstart,
                      recipe.installation.rendered_kickstart.kickstart)
 
     def test_fedora18_defaults(self):
