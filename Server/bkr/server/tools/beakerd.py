@@ -358,11 +358,19 @@ def abort_dead_recipes(*args):
                     Recipe.virt_status != RecipeVirtStatus.possible))
         else:
             filters.append(not_(Recipe.systems.any()))
+
+        # Following query is looking for recipes stuck in Queued state.
+        # This may be caused by no longer valid distribution in Lab Controller
+        # or no machines available.
+        # However, we have to account that custom distribution can be
+        # used and this distribution is not stored in Database at all.
         recipes = MachineRecipe.query\
                 .join(MachineRecipe.recipeset).join(RecipeSet.job)\
                 .filter(not_(Job.is_dirty))\
                 .outerjoin(Recipe.distro_tree)\
+                .outerjoin(Recipe.systems) \
                 .filter(Recipe.status == TaskStatus.queued)\
+                .filter(or_(DistroTree.id.isnot(None), System.status == SystemStatus.broken)) \
                 .filter(or_(*filters))
         recipe_ids = [recipe_id for recipe_id, in recipes.values(MachineRecipe.id)]
     if recipe_ids:
