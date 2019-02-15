@@ -1,0 +1,9 @@
+Ready-for-Checks+1: Martin Styk <mastyk@redhat.com>
+Code-Review+1: Tomas Klohna <tklohna@redhat.com>
+Code-Review+2: Bill Peck <bpeck@redhat.com>
+Verified+1: Martin Styk <mastyk@redhat.com>
+Submitted-by: Martin Styk <mastyk@redhat.com>
+Submitted-at: Fri, 15 Feb 2019 15:46:19 +0000
+Reviewed-on: https://gerrit.beaker-project.org/6427
+Project: beaker
+Branch: refs/heads/release-26
