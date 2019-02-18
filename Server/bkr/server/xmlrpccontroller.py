@@ -46,7 +46,7 @@ class RPCRoot(controllers.Controller):
 
     @turbogears.expose()
     def RPC2(self, *args, **kw):
-        params, method = xmlrpclib.loads(cherrypy.request.body.read(), use_datetime=True)
+        params, method = xmlrpclib.loads(cherrypy.request.body.read(), use_datetime=True) # pylint:disable=no-member
         if str(method).startswith('auth.'):
             log.debug('Handling %s', str(method))
         else:

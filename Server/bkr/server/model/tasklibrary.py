@@ -109,8 +109,8 @@ class TaskLibrary(object):
 
     def _update_locked_repo(self):
         # Internal call that assumes the flock is already held
-        # If the createrepo command crashes for some reason it may leave behind 
-        # its work directories. createrepo refuses to run if .olddata exists, 
+        # If the createrepo command crashes for some reason it may leave behind
+        # its work directories. createrepo refuses to run if .olddata exists,
         # createrepo_c refuses to run if .repodata exists.
         workdirs = [os.path.join(self.rpmspath, dirname) for dirname in
                 ['.repodata', '.olddata']]
@@ -423,7 +423,7 @@ class Task(DeclarativeMappedObject):
             raise BX(_("Task name should be <= 255 characters"))
         if tinfo.test_name.endswith('/'):
             raise BX(_(u'Task name must not end with slash'))
-        if '//' in tinfo.test_name:
+        if '//' in tinfo.test_name: # pylint:disable=unsupported-membership-test
             raise BX(_(u'Task name must not contain redundant slashes'))
 
         existing_task = Task.query.filter(Task.name == tinfo.test_name).first()
@@ -626,7 +626,7 @@ class Task(DeclarativeMappedObject):
 
     def expected_time(self, suffixes=(' year',' week',' day',' hour',' minute',' second'), add_s=True, separator=', '):
         """
-        Takes an amount of seconds and turns it into a human-readable amount of 
+        Takes an amount of seconds and turns it into a human-readable amount of
         time.
         """
         seconds = self.avg_time
@@ -643,7 +643,7 @@ class Task(DeclarativeMappedObject):
                 (suffixes[4], 60),
                 (suffixes[5], 1)]
 
-        # for each time piece, grab the value and remaining seconds, 
+        # for each time piece, grab the value and remaining seconds,
         # and add it to the time string
         for suffix, length in parts:
             value = seconds / length
