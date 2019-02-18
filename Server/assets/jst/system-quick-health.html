@@ -34,7 +34,12 @@
   <a href="#scheduler-settings" class="btn btn-block">Remove from service</a>
 <% } else if (_.isEmpty(window.beaker_current_user)) { %>
   <button type="button" class="btn btn-block" disabled="disabled">Not logged in</button>
-<% } else if (status != 'Broken' && status != 'Removed') { %>
-  <button type="button" class="btn btn-block report-problem">Report problem</button>
+<% } %>
+<!-- If user is logged in, allow him to report a problem with system.
+     The button is disabled if system is already marked as `Broken` or `Removed`. -->
+<% if (!_.isEmpty(window.beaker_current_user)) { %>
+  <button type="button" class="btn btn-block report-problem"
+        <% if (status == 'Broken' || status == 'Removed') { %> disabled <% } %>
+        >Report problem</button>
 <% } %>
 </p>
