@@ -1,0 +1,9 @@
+Ready-for-Checks+1: Christopher Beer <cbeer@redhat.com>
+Verified+1: Christopher Beer <cbeer@redhat.com>
+Code-Review+1: Martin Styk <mastyk@redhat.com>
+Code-Review+2: Tomas Klohna <tklohna@redhat.com>
+Submitted-by: Martin Styk <mastyk@redhat.com>
+Submitted-at: Tue, 19 Feb 2019 15:06:45 +0000
+Reviewed-on: https://gerrit.beaker-project.org/6431
+Project: beaker
+Branch: refs/heads/release-26
