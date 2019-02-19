@@ -303,6 +303,7 @@ class Utility:
 
         return fields
 
+# TODO: Modify query for sorting to support aliases or multiple identical values. Bugzilla: 1680536
 def field_is_sortable(column):
     sortable_fields = (
         'name',
@@ -314,7 +315,6 @@ def field_is_sortable(column):
         'location',
         'status',
         'user',
-        'loanedto',
         'reserved',
         'type',
         'powertype',
