@@ -6,7 +6,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-# pkg_resources.requires() does not work if multiple versions are installed in 
+# pkg_resources.requires() does not work if multiple versions are installed in
 # parallel. This semi-supported hack using __requires__ is the workaround.
 # http://bugs.python.org/setuptools/issue139
 # (Fedora/EPEL has python-cherrypy2 = 2.3 and python-cherrypy = 3)
@@ -102,7 +102,7 @@ def update_dirty_jobs():
         try:
             update_dirty_job(job_id)
             session.commit()
-        except Exception, e:
+        except Exception as e:
             log.exception('Error in update_dirty_job(%s)', job_id)
             session.rollback()
         finally:
@@ -132,7 +132,7 @@ def process_new_recipes(*args):
         try:
             process_new_recipe(recipe_id)
             session.commit()
-        except Exception, e:
+        except Exception as e:
             log.exception('Error in process_new_recipe(%s)', recipe_id)
             session.rollback()
         finally:
@@ -146,14 +146,14 @@ def process_new_recipe(recipe_id):
 
     # Do the query twice.
 
-    # First query verifies that the distro tree 
+    # First query verifies that the distro tree
     # exists in at least one lab that has a matching system.
     # But if it's a user-supplied distro, we don't have a
     # distro tree to match the lab against - so it will return
     # all possible systems
     systems = recipe.candidate_systems(only_in_lab=True)
-    # Second query picks up all possible systems so that as 
-    # trees appear in other labs those systems will be 
+    # Second query picks up all possible systems so that as
+    # trees appear in other labs those systems will be
     # available.
     all_systems = recipe.candidate_systems(only_in_lab=False)
     # based on above queries, condition on systems but add
@@ -204,7 +204,7 @@ def queue_processed_recipesets(*args):
         try:
             queue_processed_recipeset(rs_id)
             session.commit()
-        except Exception, e:
+        except Exception as e:
             log.exception('Error in queue_processed_recipeset(%s)', rs_id)
             session.rollback()
         finally:
@@ -249,7 +249,7 @@ def queue_processed_recipeset(recipeset_id):
                 # locks
                 enough_systems = True
             if not enough_systems:
-                log.debug("recipe: %s labController:%s entering not enough systems logic" % 
+                log.debug("recipe: %s labController:%s entering not enough systems logic" %
                                       (recipe.id, l_controller))
                 # Eliminate bad choices.
                 for recipe in recipeset.machine_recipes_orderby(l_controller)[:]:
@@ -381,7 +381,7 @@ def abort_dead_recipes(*args):
         try:
             abort_dead_recipe(recipe_id)
             session.commit()
-        except exceptions.Exception, e:
+        except exceptions.Exception as e:
             log.exception('Error in abort_dead_recipe(%s)', recipe_id)
             session.rollback()
         finally:
@@ -417,7 +417,7 @@ def schedule_pending_systems():
         try:
             schedule_pending_system(system_id)
             session.commit()
-        except Exception, e:
+        except Exception as e:
             log.exception('Error in schedule_pending_system(%s)', system_id)
             session.rollback()
         finally:
@@ -448,7 +448,7 @@ def schedule_pending_system(system_id):
     # Remember the mapping of available systems could have happend hours or even
     # days ago and groups or loans could have been put in place since.
     if not recipe.candidate_systems().filter(System.id == system.id).first():
-        log.debug("System : %s recipe: %s no longer has access. removing" % (system, 
+        log.debug("System : %s recipe: %s no longer has access. removing" % (system,
                                                                              recipe.id))
         recipe.systems.remove(system)
         # Try again on the next pass.
@@ -507,7 +507,8 @@ def provision_virt_recipe(recipe_id):
     session.begin()
     try:
         recipe = Recipe.by_id(recipe_id)
-        manager = dynamic_virt.VirtManager(recipe.recipeset.job.owner)
+        job_owner = recipe.recipeset.job.owner
+        manager = dynamic_virt.VirtManager(job_owner)
         available_flavors = manager.available_flavors()
         # We want them in order of smallest to largest, so that we can pick the
         # smallest flavor that satisfies the recipe's requirements. Sorting by RAM
@@ -515,7 +516,7 @@ def provision_virt_recipe(recipe_id):
         possible_flavors = XmlHost.from_string(recipe.host_requires)\
             .filter_openstack_flavors(available_flavors, manager.lab_controller)
         if not possible_flavors:
-            log.debug('No OpenStack flavors matched recipe %s, marking precluded',
+            log.info('No OpenStack flavors matched recipe %s, marking precluded',
                     recipe.id)
             recipe.virt_status = RecipeVirtStatus.precluded
             return
@@ -524,10 +525,7 @@ def provision_virt_recipe(recipe_id):
         vm_name = '%srecipe-%s' % (
                 ConfigItem.by_name(u'guest_name_prefix').current_value(u'beaker-'),
                 recipe.id)
-        # FIXME can we control use of virtio?
-        #virtio_possible = True
-        #if self.recipe.distro_tree.distro.osversion.osmajor.osmajor == "RedHatEnterpriseLinux3":
-        #    virtio_possible = False
+        log.debug('Creating VM named %s as flavor %s', vm_name, flavor)
         vm = manager.create_vm(vm_name, flavor)
         vm.instance_created = datetime.utcnow()
         try:
@@ -538,21 +536,23 @@ def provision_virt_recipe(recipe_id):
             recipe.recipeset.lab_controller = manager.lab_controller
             recipe.virt_status = RecipeVirtStatus.succeeded
             recipe.schedule()
-            log.info("recipe ID %s moved from Queued to Scheduled by provision_virt_recipe" % recipe.id)
+            log.info("recipe ID %s moved from Queued to Scheduled by provision_virt_recipe",
+                     recipe.id)
             recipe.waiting()
             recipe.provision()
-            log.info("recipe ID %s moved from Scheduled to Waiting by provision_virt_recipe" % recipe.id)
+            log.info("recipe ID %s moved from Scheduled to Waiting by provision_virt_recipe",
+                     recipe.id)
         except:
             exc_type, exc_value, exc_tb = sys.exc_info()
             try:
                 manager.destroy_vm(vm)
             except Exception:
-                log.exception('Failed to clean up vm %s '
-                        'during provision_virt_recipe, leaked!', vm.instance_id)
+                log.exception('Failed to clean up VM %s during provision_virt_recipe, leaked!',
+                              vm.instance_id)
                 # suppress this exception so the original one is not masked
             raise exc_type, exc_value, exc_tb
         session.commit()
-    except Exception, e:
+    except Exception as e:
         log.exception('Error in provision_virt_recipe(%s)', recipe_id)
         session.rollback()
         # As an added precaution, let's try and avoid this recipe in future
@@ -604,7 +604,7 @@ def provision_scheduled_recipeset(recipeset_id):
 
 # Online data migration
 
-# This is populated by schedule() on startup, and then updated by 
+# This is populated by schedule() on startup, and then updated by
 # run_data_migrations() as migrations are completed.
 _outstanding_data_migrations = []
 
@@ -697,7 +697,7 @@ def system_command_metrics():
 def dirty_job_metrics():
     metrics.measure('gauges.dirty_jobs', Job.query.filter(Job.is_dirty).count())
 
-# These functions are run in separate threads, so we want to log any uncaught 
+# These functions are run in separate threads, so we want to log any uncaught
 # exceptions instead of letting them be written to stderr and lost to the ether
 
 @log_traceback(log)

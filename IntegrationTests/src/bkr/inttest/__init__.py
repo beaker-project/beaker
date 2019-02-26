@@ -303,22 +303,16 @@ def _glance():
     password = os.environ['OPENSTACK_DUMMY_PASSWORD']
     project_name = os.environ['OPENSTACK_DUMMY_PROJECT_NAME']
     auth_url = turbogears.config.get('openstack.identity_api_url')
+    user_domain_name = os.environ.get('OPENSTACK_DUMMY_USER_DOMAIN_NAME')
+    project_domain_name = os.environ.get('OPENSTACK_DUMMY_PROJECT_DOMAIN_NAME')
 
-    # 2019/01/30 - Based on the URL below, using the method call
-    # keystoneclient.v3.client.Client to get the keystone is deprecated and
-    # will be removed in v2.0 of the code.
-    # Ticket filed to fix: bug #1671054
-    # https://docs.openstack.org/python-keystoneclient/latest/using-api-v3.html
-    user_domain_name = None
-    if 'OPENSTACK_USER_DOMAIN_NAME' in os.environ:
-        user_domain_name = os.environ['OPENSTACK_USER_DOMAIN_NAME']
     keystone = keystoneclient.v3.client.Client(
-            username=username,
-            password=password,
-            user_domain_name=user_domain_name,
-            project_name=project_name,
-            auth_url=auth_url)
-
+        username=username,
+        password=password,
+        project_name=project_name,
+        user_domain_name=user_domain_name,
+        project_domain_name=project_domain_name,
+        auth_url=auth_url)
     glance_url = keystone.service_catalog.url_for(
             service_type='image', endpoint_type='publicURL')
     return glanceclient.v2.client.Client(glance_url, token=keystone.auth_token)

@@ -4,14 +4,17 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import os
 import sys
 import logging
 import time
 import uuid
 from turbogears import config
 try:
-    import keystoneclient.v3.client, keystoneclient.session, keystoneclient.auth.identity.v3, \
-            keystoneclient.exceptions
+    import keystoneclient.v3.client
+    import keystoneclient.session
+    import keystoneclient.auth.identity.v3
+    import keystoneclient.exceptions
     has_keystoneclient = True
 except ImportError:
     has_keystoneclient = False
@@ -34,14 +37,20 @@ class VirtManager(object):
     def __init__(self, user):
         self.user = user
         self.auth_url = config.get('openstack.identity_api_url')
+        self.beaker_os_user_domain_name = config.get('openstack.user_domain_name')
         self.beaker_os_username = config.get('openstack.username')
         self.beaker_os_password = config.get('openstack.password')
+
+        if not self.beaker_os_user_domain_name:
+            self.beaker_os_user_domain_name = os.environ.get('OPENSTACK_DUMMY_USER_DOMAIN_NAME')
+
         # For now we just support a single region, in future this could be expanded.
         self.region = OpenStackRegion.query.first()
         self._do_sanity_check()
         self.lab_controller = self.region.lab_controller
         keystone_session = self._create_keystone_session()
-        self.keystoneclient = keystoneclient.v3.client.Client(session=keystone_session, interface='public')
+        self.keystoneclient = keystoneclient.v3.client.Client(
+            session=keystone_session, interface='public')
         self.novaclient = nova_client.Client('2', session=keystone_session)
         self.neutronclient = neutron_client.Client(session=keystone_session)
 
@@ -71,12 +80,24 @@ class VirtManager(object):
             raise RuntimeError('No Keystone trust created by %s' % self.user)
 
     def _create_keystone_session(self):
-        auth = keystoneclient.auth.identity.v3.Password(
-                   username=self.beaker_os_username,
-                   password=self.beaker_os_password,
-                   user_domain_id=u'default',
-                   auth_url=self.auth_url,
-                   trust_id=self.user.openstack_trust_id)
+        log.debug('_create_keystone_session user_domain_name: %s username: %s',
+                  self.beaker_os_user_domain_name, self.beaker_os_username)
+
+        if self.beaker_os_user_domain_name:
+            auth = keystoneclient.auth.identity.v3.Password(
+                user_domain_name=self.beaker_os_user_domain_name,
+                username=self.beaker_os_username,
+                password=self.beaker_os_password,
+                auth_url=self.auth_url,
+                trust_id=self.user.openstack_trust_id)
+        else:
+            auth = keystoneclient.auth.identity.v3.Password(
+                user_domain_id=u'default',
+                username=self.beaker_os_username,
+                password=self.beaker_os_password,
+                auth_url=self.auth_url,
+                trust_id=self.user.openstack_trust_id)
+
         session = keystoneclient.session.Session(auth=auth)
         # ensure this session is valid by getting a token
         try:
@@ -142,11 +163,12 @@ class VirtManager(object):
 
     def _wait_for_delete(self, instance):
         is_deleted = False
-        for __ in range(20):
-            time.sleep(5)
-            log.debug('%r still deleting', instance)
+        for attempt in range(5, 50, 5):
+            time.sleep(attempt)
             try:
                 instance.get()
+                log.debug('%r still deleting, status %s',
+                          instance, instance.status)
             except:
                 is_deleted = True
                 break
@@ -188,26 +210,71 @@ class VirtManager(object):
     def delete_keystone_trust(self):
         self.keystoneclient.trusts.delete(self.user.openstack_trust_id)
 
-def create_keystone_trust(username, password, project_name):
+def create_keystone_trust(trustor_username,
+                          trustor_password,
+                          trustor_project_name,
+                          trustor_user_domain_name,
+                          trustor_project_domain_name):
+
     auth_url = config.get('openstack.identity_api_url')
-    trustee_auth = keystoneclient.auth.identity.v3.Password(
-            username=config.get('openstack.username'),
+
+    openstack_user_domain_name = config.get('openstack.user_domain_name',
+                                            trustor_user_domain_name)
+    openstack_user_name = config.get('openstack.username')
+    if openstack_user_domain_name:
+        trustee_auth = keystoneclient.auth.identity.v3.Password(
+            username=openstack_user_name,
+            password=config.get('openstack.password'),
+            user_domain_name=openstack_user_domain_name,
+            auth_url=auth_url)
+    else:
+        trustee_auth = keystoneclient.auth.identity.v3.Password(
+            username=openstack_user_name,
             password=config.get('openstack.password'),
             user_domain_id=u'default',
             auth_url=auth_url)
+
     trustee_session = keystoneclient.session.Session(auth=trustee_auth)
-    trustee = keystoneclient.v3.client.Client(session=trustee_session, interface='public')
-    trustee_auth_ref = trustee_auth.get_access(trustee_session)
+    trustee = keystoneclient.v3.client.Client(session=trustee_session,
+                                              interface='public')
     try:
-        trustor_auth = keystoneclient.auth.identity.v3.Password(
-                username=username,
-                password=password,
-                project_name=project_name,
-                user_domain_id=u'default',
-                project_domain_id=u'default',
-                auth_url=auth_url)
+        trustee_auth_ref = trustee_auth.get_access(trustee_session)
+        if trustor_user_domain_name and trustor_project_domain_name:
+            trustor_auth = keystoneclient.auth.identity.v3.Password(
+                    username=trustor_username,
+                    password=trustor_password,
+                    project_name=trustor_project_name,
+                    user_domain_name=trustor_user_domain_name,
+                    project_domain_name=trustor_project_domain_name,
+                    auth_url=auth_url)
+        elif trustor_user_domain_name and not trustor_project_domain_name:
+            trustor_auth = keystoneclient.auth.identity.v3.Password(
+                    username=trustor_username,
+                    password=trustor_password,
+                    project_name=trustor_project_name,
+                    user_domain_name=trustor_user_domain_name,
+                    project_domain_id=u'default',
+                    auth_url=auth_url)
+        elif not trustor_user_domain_name and trustor_project_domain_name:
+            trustor_auth = keystoneclient.auth.identity.v3.Password(
+                    username=trustor_username,
+                    password=trustor_password,
+                    project_name=trustor_project_name,
+                    user_domain_id=u'default',
+                    project_domain_name=trustor_project_domain_name,
+                    auth_url=auth_url)
+        else:
+            trustor_auth = keystoneclient.auth.identity.v3.Password(
+                    username=trustor_username,
+                    password=trustor_password,
+                    project_name=trustor_project_name,
+                    user_domain_id=u'default',
+                    project_domain_id=u'default',
+                    auth_url=auth_url)
+
         trustor_session = keystoneclient.session.Session(auth=trustor_auth)
-        trustor = keystoneclient.v3.client.Client(session=trustor_session, interface='public')
+        trustor = keystoneclient.v3.client.Client(session=trustor_session,
+                                                  interface='public')
         trustor_auth_ref = trustor_auth.get_access(trustor_session)
         if keystoneclient.__version__.startswith('0.11.'):
             # RHEL6 keystoneclient incorrectly uses the admin URL for all
@@ -254,7 +321,7 @@ class VirtNetwork(object):
                  'name': self.name,
                  'admin_state_up': True}
         router = self.neutron.create_router({'router': external_gateway_info})
-        log.info('Created router %r',router)
+        log.info('Created router %r', router)
         return router['router']['id']
 
     def _create_network(self):

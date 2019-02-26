@@ -41,11 +41,12 @@ To enable OpenStack integration, configure the Identity API (Keystone) endpoint,
 dashboard (Horizon) URL and an OpenStack account of Beaker in :file:`/etc/beaker/server.cfg`::
 
     # Use OpenStack for running recipes on dynamically created guests.
-    openstack.identity_api_url = 'https://openstack.example.com:5000/v2.0'
+    openstack.identity_api_url = 'https://openstack.example.com:13000/v3/'
     openstack.dashboard_url = 'https://openstack.example.com/dashboard/'
     # Credentials of the OpenStack account of Beaker for authorization-based on
     # OpenStack identity trusts. Beaker uses the trust delegated by users to authenticate
     # to OpenStack when creating OpenStack instances on behalf of users.
+    openstack.user_domain_name = ""
     openstack.username = ""
     openstack.password = ""
 

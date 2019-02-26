@@ -20,6 +20,8 @@ Synopsis
 |       :option:`--os-username` <username>
 |       :option:`--os-password` <password>
 |       :option:`--os-project-name` <project-name>
+|       [:option:`--os-user-domain-name` <user-domain-name>]
+|       [:option:`--os-project-domain-name` <project-domain-name>]
 
 Description
 -----------
@@ -34,9 +36,30 @@ OpenStack integration (see :ref:`openstack`).
 Options
 -------
 
-.. option:: --os-username <username>, --os-password <password>, --os-project-name <project-name>
+.. option:: --os-username <username>
 
-   OpenStack credentials for establishing a new trust between Beaker and the given user.
+   OpenStack user name for establishing a new trust between Beaker and the
+   given user.
+
+.. option:: --os-password <password>
+
+   OpenStack user password for establishing a new trust between Beaker and
+   the given user.
+
+.. option:: --os-project-name <project-name>
+
+   OpenStack project name for establishing a new trust between Beaker and
+   the given user.
+
+.. option:: --os-user-domain-name <user-domain-name>
+
+   OpenStack user domain name for establishing a new trust between Beaker
+   and the given user.
+
+.. option:: --os-project-domain-name <project-domain-name>
+
+   OpenStack project domain name for establishing a new trust between Beaker
+   and the given user.
 
 Common :program:`bkr` options are described in the :ref:`Options
 <common-options>` section of :manpage:`bkr(1)`.
@@ -51,15 +74,18 @@ Examples
 
 Add a new OpenStack trust to your user::
 
-    bkr update-openstack-trust --os-username=user1 --os-password='supersecret' \\
-        --os-project-name=test-project
+    bkr update-openstack-trust \
+        --os-username=user1 \
+        --os-password='supersecret' \
+        --os-project-name=beaker \
+        --os-user-domain-name=domain.com \
+        --os-project-domain-name=domain.com
 
 See also
 --------
 
 :manpage:`bkr(1)`
 """
-
 
 from bkr.client import BeakerCommand
 
@@ -82,16 +108,31 @@ class Update_Openstack_Trust(BeakerCommand):
                                action='store',
                                type='string',
                                help='OpenStack project name')
+        self.parser.add_option('--os-project-domain-name',
+                               action='store',
+                               type='string',
+                               help='OpenStack project domain name')
+        self.parser.add_option('--os-user-domain-name',
+                               action='store',
+                               type='string',
+                               help='OpenStack user domain name')
 
     def run(self, *args, **kwargs):
         self.set_hub(**kwargs)
         requests_session = self.requests_session()
         data = {'openstack_username': kwargs.get('os_username'),
                 'openstack_password': kwargs.get('os_password'),
-                'openstack_project_name': kwargs.get('os_project_name'),
-                }
+                'openstack_project_name': kwargs.get('os_project_name')}
         if not all(data.values()):
-            self.parser.error('All options are required: --os-username, --os-password and --os-project-name')
+            self.parser.error('The following options are required: '
+                              ' --os-username, --os-password and --os-project-name')
+
+        # These command line arguments are optional because they were not
+        # required for all OpenStack instances.
+        if kwargs.get('os_project_domain_name'):
+            data["openstack_project_domain_name"] = kwargs.get('os_project_domain_name')
+        if kwargs.get('os_user_domain_name'):
+            data["openstack_user_domain_name"] = kwargs.get('os_user_domain_name')
 
         res = requests_session.put('users/+self/keystone-trust', json=data)
         res.raise_for_status()
