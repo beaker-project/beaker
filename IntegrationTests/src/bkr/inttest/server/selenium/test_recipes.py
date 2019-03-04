@@ -366,9 +366,29 @@ class TestRecipeView(WebDriverTestCase):
                 '//a[normalize-space(text())="1 possible system"]').click()
         # Make sure our system link is there
         b.find_element_by_link_text(self.system.fqdn)
-        # Make sure out user link is there
+        # Make sure our user link is there
         b.find_element_by_link_text(self.system.user.user_name)
-        # Make sure the Reserved column is showing a link to the current user
+        # Make sure the System count is correct
+        system_rows = b.find_elements_by_xpath('//table[@id="widget"]/tbody/tr')
+        self.assert_(len(system_rows) == 1)
+
+    def test_possible_systems_including_loans(self):
+        with session.begin():
+            self.system.loaned = self.user
+            queued_job = data_setup.create_job(owner=self.user,
+                                               distro_tree=self.distro_tree)
+            data_setup.mark_job_queued(queued_job)
+            recipe = queued_job.recipesets[0].recipes[0]
+            recipe.systems[:] = [self.system]
+        b = self.browser
+        go_to_recipe_view(b, recipe)
+        b.find_element_by_xpath('//div[@class="recipe-summary"]'
+                                '//a[normalize-space(text())="1 possible system"]').click()
+        # Make sure our system link is there
+        b.find_element_by_link_text(self.system.fqdn)
+        # Make sure loaned user is there
+        b.find_element_by_xpath("//td[contains(text(), '%s')]" % self.system.loaned.user_name)
+        # Make sure the System count is correct
         system_rows = b.find_elements_by_xpath('//table[@id="widget"]/tbody/tr')
         self.assert_(len(system_rows) == 1)
 
