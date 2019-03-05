@@ -59,7 +59,7 @@ Repo Layout
     + `apache/404.html`  
       Custom 404 error page for logs.
 
-    + `aux/anamon`, `aux/anamon.init`  
+    + `aux/anamon`, `aux/anamon.init`, `aux/anamon.service`  
       "Anamon", the Anaconda monitoring script. This runs during Anaconda
       installations and periodically uploads Anaconda logs to Beaker.
 

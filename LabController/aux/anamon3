@@ -291,7 +291,8 @@ if daemon:
         os.dup2(0, 2)               # Duplicate standard input to standard error (2)
 
         anamon_loop()
-        sys.exit(1)
+        # Child process should exit using _exit
+        os._exit(1)
     sys.exit(0)
 else:
     anamon_loop()
