@@ -325,12 +325,20 @@ Requires:       python2-flask
 %else # old style Python package names
 # These LC dependencies are needed in build due to tests
 BuildRequires:  python-lxml
+%if 0%{?rhel} == 7
+BuildRequires:  python-gevent102
+%else
 BuildRequires:  python-gevent >= 1.0
+%endif
 Requires:       python-cpio
 Requires:       python-setuptools
 Requires:       python-lxml
 Requires:       python-krbV
+%if 0%{?rhel} == 7
+Requires:       python-gevent102
+%else
 Requires:       python-gevent >= 1.0
+%endif
 Requires:       python-daemon
 Requires:       python-werkzeug
 Requires:       python-flask
