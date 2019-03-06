@@ -24,7 +24,6 @@ class UserPrefs(WebDriverTestCase):
 
         self.clear_password = 'gyfrinachol'
         self.hashed_password = '$1$NaCl$O34mAzBXtER6obhoIodu8.'
-        self.simple_password = 's3cr3t'
 
     def go_to_prefs_tab(self, tab):
         b = self.browser
@@ -129,13 +128,23 @@ class UserPrefs(WebDriverTestCase):
         new_hash = pane.find_element_by_xpath('p[1]/code').text
         self.failUnless(crypt.crypt(self.clear_password, new_hash) == self.hashed_password)
 
+    def test_too_short_password_is_rejected(self):
+        b = self.browser
+        pane = self.go_to_prefs_tab(tab='Root Password')
+        e = pane.find_element_by_name('root_password')
+        e.send_keys('s3cr3t')
+        pane.find_element_by_tag_name('form').submit()
+        self.assertIn('The root password is shorter than 7 characters',
+                pane.find_element_by_class_name('alert-error').text)
+
     def test_dictionary_password_rejected(self):
         b = self.browser
         pane = self.go_to_prefs_tab(tab='Root Password')
         e = pane.find_element_by_name('root_password')
-        e.send_keys(self.simple_password)
+        e.send_keys('s3cr3tive')
         pane.find_element_by_tag_name('form').submit()
-        self.assertIn('Root password is based on a dictionary word',
+        self.assertIn('The root password fails the dictionary check - '
+                'it is based on a dictionary word',
                 pane.find_element_by_class_name('alert-error').text)
 
     def test_ssh_key_allows_whitespace_in_description(self):

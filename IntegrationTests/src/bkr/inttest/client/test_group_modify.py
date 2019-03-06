@@ -189,13 +189,13 @@ class GroupModifyTest(ClientTestCase):
             self.assertEquals(group.activity[-1].service, u'HTTP')
 
         # Test unsuccessful cleartext password change
-        short_password = 'fail'
+        short_password = 'fa1l'
         try:
             run_client(['bkr', 'group-modify', '--root-password', short_password,
                 self.group.group_name], config=self.client_config)
             self.fail('Should fail with short password')
         except ClientError, e:
-            self.assertTrue('password is too short' in str(e))
+            self.assertTrue('The group root password is shorter than 7 characters' in str(e))
             session.expire(self.group)
             with session.begin():
                 group = self.group

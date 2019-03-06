@@ -123,11 +123,11 @@ class GroupCreateTest(ClientTestCase):
 
         try:
             out = run_client(['bkr', 'group-create',
-                              '--root-password', 'fail',
+                              '--root-password', 'fa1l',
                               group_name])
             self.fail('Expected to fail due to short password')
         except ClientError, e:
-            self.assertTrue('Root password is too short' in e.stderr_output,
+            self.assertTrue('The group root password is shorter than 7 characters' in e.stderr_output,
                 e.stderr_output)
 
         try:
@@ -137,7 +137,7 @@ class GroupCreateTest(ClientTestCase):
 
             self.fail('Expected to fail due to dictionary words')
         except ClientError, e:
-            self.assertTrue('Root password is based on a dictionary word' in
+            self.assertTrue('The group root password fails the dictionary check' in
                 e.stderr_output, e.stderr_output)
         out = run_client(['bkr', 'group-create',
                           '--root-password', 'Borrow or rob?',

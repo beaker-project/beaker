@@ -11,7 +11,7 @@ import crypt
 import random
 import string
 import re
-import cracklib
+import pwquality
 import urllib
 from kid import Element
 import passlib.context
@@ -442,9 +442,9 @@ class User(DeclarativeMappedObject, ActivityMixin):
         if password:
             if len(password.split('$')) != 4:
                 try:
-                    cracklib.VeryFascistCheck(password)
-                except ValueError as e:
-                    msg = re.sub(r'^it', 'Root password', str(e))
+                    pwquality.PWQSettings().check(password)
+                except pwquality.PWQError as e:
+                    msg = re.sub(r'The password', 'The root password', e.args[1])
                     raise ValueError(msg)
                 salt = ''.join(random.choice(string.digits + string.ascii_letters)
                                 for i in range(8))
@@ -658,9 +658,9 @@ class Group(DeclarativeMappedObject, ActivityMixin):
         """
         if password:
             try:
-                cracklib.VeryFascistCheck(password)
-            except ValueError, msg:
-                msg = re.sub(r'^it', 'Root password', str(msg))
+                pwquality.PWQSettings().check(password)
+            except pwquality.PWQError as e:
+                msg = re.sub(r'The password', 'The group root password', e.args[1])
                 raise ValueError(msg)
             else:
                 self._root_password = password

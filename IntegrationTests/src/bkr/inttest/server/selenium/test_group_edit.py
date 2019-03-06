@@ -34,7 +34,6 @@ class TestGroupsWD(WebDriverTestCase):
         self.browser = self.get_browser()
         self.clear_password = 'gyfrinachol'
         self.hashed_password = '$1$NaCl$O34mAzBXtER6obhoIodu8.'
-        self.simple_password = 's3cr3t'
 
     def go_to_group_page(self, group=None, tab=None):
         if group is None:
@@ -131,15 +130,26 @@ class TestGroupsWD(WebDriverTestCase):
         for keyword in [action, group.group_name]:
             self.assert_(keyword in msg_payload, (keyword, msg_payload))
 
+    def test_too_short_password_rejected(self):
+        b = self.browser
+        login(b, user=self.user.user_name, password='password')
+        self.go_to_group_page(tab='Root Password')
+        tab = b.find_element_by_id('rootpassword')
+        tab.find_element_by_name('root_password').send_keys('s3cr3t')
+        tab.find_element_by_tag_name('form').submit()
+        self.assertIn('The group root password is shorter than 7 characters',
+                      tab.find_element_by_class_name('alert-error').text)
+
     def test_dictionary_password_rejected(self):
         b = self.browser
         login(b, user=self.user.user_name, password='password')
         self.go_to_group_page(tab='Root Password')
         tab = b.find_element_by_id('rootpassword')
-        tab.find_element_by_name('root_password').send_keys(self.simple_password)
+        tab.find_element_by_name('root_password').send_keys('s3cr3tive')
         tab.find_element_by_tag_name('form').submit()
-        self.assertIn('Root password is based on a dictionary word',
-                tab.find_element_by_class_name('alert-error').text)
+        self.assertIn('The group root password fails the dictionary check - '
+                      'it is based on a dictionary word',
+                      tab.find_element_by_class_name('alert-error').text)
 
     def test_set_hashed_password(self):
         b = self.browser
