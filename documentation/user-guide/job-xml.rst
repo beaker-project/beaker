@@ -307,6 +307,29 @@ The above specification will try to find a host which is a Machine
 with a network interface (with description as "Extreme Gigabit
 Ethernet") and with a video device with the description as "VD 0190".
 
+If you want your recipe to run on a particular system and you know its FQDN,
+you can configure host filtering by setting ``hostname`` and assign FQDN to it.
+The job will run on that machine provided it is in available state.  The following
+example allows you to configure a machine with a specific host name::
+
+    <hostRequires>
+      <and>
+        <system_type op="=" value="Machine"/>
+        <hostname op="=" value="my.hostx123.example.com"/>
+      </and>
+    </hostRequires>
+
+Another option to using ``hostname`` is entering wildcard '%' syntax in the name
+for chosing system(s)::
+
+    <hostRequires>
+      <and>
+        <system_type op="=" value="Machine"/>
+        <hostname op="like" value="my.%hostx%"/>
+      </and>
+    </hostRequires>
+
+
 .. admonition:: Inventoried Systems Only
 
    It is worthwhile to note here that if you submit device
@@ -317,17 +340,26 @@ Ethernet") and with a video device with the description as "VD 0190".
    your job specification has been submitted. What this basically
    means is that unless a system has been inventoried, Beaker won't be
    able to find it, even if it has the particular device you are
-   requesting. It may be a good idea to first search if there is any
+   requesting. It's a good idea to first search if there is any
    system at all with the device you want to run your recipe on. (See:
    :ref:`system-searching`).
 
 .. _forced-system:
 
-If you want your recipe to run on a particular system and you know its
-FQDN, you can skip the host filtering described above and force the
-scheduler to pick a particular system for your recipe by using the
-``force=""`` attribute. For example, the following XML will force the
-recipe to be scheduled on ``my.host.example.com``::
+.. warning::
+    There is an ability to force a job to run on a specific system.
+    This capability is intended for administrators to perform
+    troubleshooting.  It will cause the job to run on a machine
+    even if the system is in `broken, manual, or excluded` condition.
+    This is not the desired behavior for the majority users so this
+    configuration should be avoided.  Use of ``force=`` configuration
+    is documented below but it's intended for use by system administrators.
+
+To force your recipe to run on a particular system and you know its FQDN,
+skip the host filtering described earlier and force the scheduler to pick
+a particular system for your recipe using the ``force=""`` attribute. For
+example, the following XML will force the recipe to be scheduled on
+``my.host.example.com``::
 
     <hostRequires force="my.host.example.com" />
 

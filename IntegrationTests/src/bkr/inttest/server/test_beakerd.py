@@ -475,6 +475,31 @@ class TestBeakerd(DatabaseTestCase):
             job = Job.query.get(job.id)
             self.assertEqual(job.status, TaskStatus.processed)
 
+    def test_like_named_machine(self):
+
+        with session.begin():
+            user = data_setup.create_user()
+            system1 = data_setup.create_system(status=u'Automated',
+                    fqdn='boston1.redhat.com',
+                    lab_controller=self.lab_controller)
+            # Notice name change s/bos/boz/ in next system create
+            system2 = data_setup.create_system(status=u'Automated',
+                    fqdn='bozton2.redhat.com',
+                    lab_controller=self.lab_controller)
+            job = data_setup.create_job(owner=user)
+            job.recipesets[0].recipes[0]._host_requires = (
+                    u'<hostRequires><hostname op="like" value="%bos%"/></hostRequires>')
+
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+
+        with session.begin():
+            job = Job.query.get(job.id)
+            self.assertEqual(job.status, TaskStatus.processed)
+            self.assertEqual(len(job.recipesets[0].recipes[0].systems), 1)
+            system = job.recipesets[0].recipes[0].systems[0]
+            self.assertEqual(system.fqdn, u'boston1.redhat.com')
+
     def test_reservations_are_created(self):
         with session.begin():
             user = data_setup.create_user()
