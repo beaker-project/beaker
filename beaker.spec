@@ -90,12 +90,12 @@ BuildRequires:  pkgconfig(bash-completion)
 %endif
 %if 0%{?fedora} >= 29 || 0%{?rhel} >= 8
 # These client dependencies are needed in build because of sphinx
-BuildRequires:  python2-krbv
+BuildRequires:  python2-gssapi
 BuildRequires:  python2-lxml
 BuildRequires:  python2-libxslt
 BuildRequires:  python2-prettytable
 Requires:       python2-setuptools
-Requires:       python2-krbv
+Requires:       python2-gssapi
 Requires:       python2-lxml
 Requires:       python2-requests
 Requires:       python2-libxslt
@@ -104,13 +104,13 @@ Requires:       python2-prettytable
 Requires:       python2-jinja2
 %else # old style Python package names
 # These client dependencies are needed in build because of sphinx
-BuildRequires:  python-krbV
+BuildRequires:  python-gssapi
 BuildRequires:  python-lxml
 BuildRequires:  libxslt-python
 BuildRequires:  python-prettytable
 Requires:       python
 Requires:       python-setuptools
-Requires:       python-krbV
+Requires:       python-gssapi
 Requires:       python-lxml
 Requires:       python-requests
 Requires:       libxslt-python
@@ -178,7 +178,7 @@ Requires:       python2-ldap
 Requires:       python2-rdflib
 Requires:       python2-daemon
 Requires:       python2-lockfile
-Requires:       python2-krbV
+Requires:       python2-gssapi
 Requires:       python2-TurboMail
 Requires:       python2-cracklib
 Requires:       python2-jinja2
@@ -196,11 +196,7 @@ Requires:       python2-futures
 %else # old style Python package names
 BuildRequires:  python-requests
 BuildRequires:  TurboGears >= 1.1.3
-%if 0%{?rhel} == 6
-BuildRequires:  python-turbojson13
-%else
 BuildRequires:  python-turbojson
-%endif
 BuildRequires:  python-sqlalchemy >= 0.9
 BuildRequires:  python-lxml
 BuildRequires:  python-ldap
@@ -219,11 +215,7 @@ BuildRequires:  python-alembic
 BuildRequires:  python-daemon
 BuildRequires:  python-futures
 Requires:       TurboGears >= 1.1.3
-%if 0%{?rhel} == 6
-Requires:       python-turbojson13
-%else
 Requires:       python-turbojson
-%endif
 Requires:       python-sqlalchemy >= 0.9
 Requires:       python-decorator
 Requires:       python-lxml
@@ -231,7 +223,7 @@ Requires:       python-ldap
 Requires:       python-rdflib >= 3.2.0
 Requires:       python-daemon
 Requires:       python-lockfile >= 0.9
-Requires:       python-krbV
+Requires:       python-gssapi
 Requires:       python-TurboMail >= 3.0
 Requires:       cracklib-python
 Requires:       python-jinja2
@@ -317,7 +309,7 @@ BuildRequires:  python2-gevent
 Requires:       python2-cpio
 Requires:       python2-setuptools
 Requires:       python2-lxml
-Requires:       python2-krbv
+Requires:       python2-gssapi
 Requires:       python2-gevent
 Requires:       python2-daemon
 Requires:       python2-werkzeug
@@ -329,7 +321,7 @@ BuildRequires:  python-gevent >= 1.0
 Requires:       python-cpio
 Requires:       python-setuptools
 Requires:       python-lxml
-Requires:       python-krbV
+Requires:       python-gssapi
 Requires:       python-gevent >= 1.0
 Requires:       python-daemon
 Requires:       python-werkzeug

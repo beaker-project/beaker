@@ -12,7 +12,7 @@ import base64
 import ssl
 import xmlrpclib
 import urlparse
-import tempfile
+import gssapi
 from bkr.common.pyconfig import PyConfigParser, ImproperlyConfigured
 from bkr.common.xmlrpc import CookieTransport, SafeCookieTransport, \
     retry_request_decorator
@@ -130,7 +130,7 @@ class HubProxy(object):
         self._hub.auth.login_oauth2(access_token)
 
     def _login_krbv(self):
-        """Login using kerberos credentials (uses python-krbV)."""
+        """Login using kerberos credentials (uses python-gssapi)."""
 
         def get_server_principal(service=None, realm=None):
             """Convert hub url to kerberos principal."""
@@ -153,48 +153,37 @@ class HubProxy(object):
         realm = self._conf.get("KRB_REALM")
         ccache = self._conf.get("KRB_CCACHE")
         proxyuser = self._conf.get("PROXY_USER")
+        krb5kdc_err_s_principal_unknown = 2529638919  # Server not found in Kerberos database
 
-        import krbV
-        ctx = krbV.default_context()
+        name = None
+        if principal:
+            name = gssapi.Name(principal, gssapi.NameType.kerberos_principal)
 
-        if ccache is not None:
-            ccache = krbV.CCache(name='FILE:' + ccache, context=ctx)
-        elif keytab is not None:
-            # If we will be init'ing the ccache using a keytab, we need to 
-            # always avoid using the default shared ccache, as a workaround for 
-            # a race condition in krb5_cc_initialize() between unlink() and open()
-            # (see RHBZ#1313580).
-            ccache_tmpfile = tempfile.NamedTemporaryFile(prefix='krb5cc_bkr_')
-            ccache = krbV.CCache(name='FILE:' + ccache_tmpfile.name, context=ctx)
-        else:
-            ccache = ctx.default_ccache()
+        store = None # Default ccache
+        if keytab:
+            store = {'client_keytab': keytab}
+        elif ccache:
+            store = {'ccache': ccache}
 
-        if principal is not None:
-            if keytab is not None:
-                cprinc = krbV.Principal(name=principal, context=ctx)
-                keytab = krbV.Keytab(name=keytab, context=ctx)
-                ccache.init(cprinc)
-                ccache.init_creds_keytab(principal=cprinc, keytab=keytab)
-            else:
-                raise ImproperlyConfigured("Cannot specify a principal without a keytab")
-        else:
-            # connect using existing credentials
-            cprinc = ccache.principal()
+        creds = gssapi.Credentials(name=name, store=store, usage='initiate')
 
-        sprinc = krbV.Principal(name=get_server_principal(service=service, realm=realm), context=ctx)
+        target_name = gssapi.Name(get_server_principal(service, realm))
 
-        ac = krbV.AuthContext(context=ctx)
-        ac.flags = krbV.KRB5_AUTH_CONTEXT_DO_SEQUENCE | krbV.KRB5_AUTH_CONTEXT_DO_TIME
-        ac.rcache = ctx.default_rcache()
-
-        # create and encode the authentication request
         try:
-            ac, req = ctx.mk_req(server=sprinc, client=cprinc, auth_context=ac, ccache=ccache, options=krbV.AP_OPTS_MUTUAL_REQUIRED)
-        except krbV.Krb5Error, ex:
-            if getattr(ex, "err_code", None) == -1765328377:
+            res = gssapi.raw.init_sec_context(target_name, creds, flags=(
+                    gssapi.RequirementFlag.out_of_sequence_detection |
+                    gssapi.RequirementFlag.replay_detection |
+                    gssapi.RequirementFlag.mutual_authentication |
+                    # This is a hack which causes GSSAPI to give us back a raw
+                    # KRB_AP_REQ token value, without GSSAPI header wrapping, which
+                    # is what the Beaker server is expecting in auth.login_krbv.
+                    gssapi.RequirementFlag.dce_style)
+            )
+        except gssapi.raw.GSSError as ex:
+            if ex.min_code == krb5kdc_err_s_principal_unknown:  # pylint: disable=no-member
                 ex.message += ". Make sure you correctly set KRB_REALM (current value: %s)." % realm
-                ex.args = (ex.err_code, ex.message)
+                ex.args = (ex.message, )
             raise ex
-        req_enc = base64.encodestring(req)
+        req_enc = base64.encodestring(res.token)
 
         self._hub.auth.login_krbv(req_enc, proxyuser)

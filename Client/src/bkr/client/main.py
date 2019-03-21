@@ -15,7 +15,7 @@ import logging
 from optparse import Option, IndentedHelpFormatter, SUPPRESS_HELP
 import xmlrpclib
 import cgi
-import krbV
+import gssapi
 from bkr.client.command import CommandOptionParser, ClientCommandContainer, BeakerClientConfigurationError
 from bkr.common import __version__
 from bkr.log import log_to_stream
@@ -99,14 +99,21 @@ def main():
     except ImportError:
         maybe_http_error = ()
 
+    krb5_fcc_nofile = 2529639107  # No credentials cache found
+    krb5krb_ap_err_tkt_expired = 2529638944  # Ticket expired
+    kg_empty_ccache = 39756044  # Credential cache is empty
+
     try:
         return cmd.run(*cmd_args, **cmd_opts.__dict__)
-    except krbV.Krb5Error, e:
-        if e.args[0] == krbV.KRB5KRB_AP_ERR_TKT_EXPIRED:
+    except gssapi.raw.GSSError as e:
+        if e.min_code == krb5krb_ap_err_tkt_expired:  # pylint: disable=no-member
             sys.stderr.write('Kerberos ticket expired (run kinit to obtain a new ticket)\n')
             return 1
-        elif e.args[0] == krbV.KRB5_FCC_NOFILE:
-            sys.stderr.write('No Kerberos credential cache found (run kinit to create one)\n')
+        elif e.min_code == krb5_fcc_nofile:  # pylint: disable=no-member
+            sys.stderr.write('No Kerberos credential cache file found (run kinit to create one)\n')
+            return 1
+        elif e.min_code == kg_empty_ccache:  # pylint: disable=no-member
+            sys.stderr.write('Kerberos credential cache is empty (run kinit to create one)\n')
             return 1
         else:
             raise
