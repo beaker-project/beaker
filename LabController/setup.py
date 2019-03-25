@@ -49,7 +49,7 @@ else:
 
 setup(
     name='beaker-lab-controller',
-    version='26.3',
+    version='26.4',
     description='Daemons for controlling a Beaker lab',
     author='Red Hat, Inc.',
     author_email='beaker-devel@lists.fedorahosted.org',

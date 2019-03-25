@@ -12,7 +12,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='beaker-common',
-    version='26.3',
+    version='26.4',
     description='Common components for Beaker packages',
     author='Red Hat, Inc.',
     author_email='beaker-devel@lists.fedorahosted.org',
