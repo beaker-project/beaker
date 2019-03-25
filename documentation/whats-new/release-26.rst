@@ -218,3 +218,34 @@ Beaker 26.3
     can find which repo IDs are available for a particular distro tree under the 
     Repos tab on the distro tree page.
   | (Contributed by Martin Styk)
+
+
+Beaker 26.4
+~~~~~~~~~~~
+* | :issue:`1181320`: All logged in users can now report a problem with working 
+    system.
+  | (Contributed by Tomas Klohna)
+* | :issue:`1676571`: Removed command ignoredisk from kickstart for RHEL8+ and
+    Fedora 29+.
+  | (Contributed by Martin Styk)
+* | :issue:`1635309`: Fixed a regression in scheduler which caused job abort in 
+    case of using <distro> tag and specific host machine.
+  | (Contributed by Martin Styk)
+* | :issue:`1602251`: Beaker now captures syslog/journal messages produced 
+    during the installation.
+  | (Contributed by Martin Styk)
+* | :issue:`1655770`: System pages show LoanedTo column for easier readability.
+  | (Contributed by Tomas Klohna)
+* | :issue:`1685598`: Added support for systemd :program:`anamon`.
+  | (Contributed by Tomas Klohna)
+* | :issue:`1604418`: Beaker now correctly populates 
+    :file:`/root/NETBOOT_METHOD.TXT` even when perl is missing.
+  | (Contributed by Martin Styk)
+* | :issue:`1667340`: Pool names are sorted alphabetically.
+  | (Contributed by Tomas Klohna)
+* | :issue:`1616163`: Possible systems page shows LoanedTo column for easier
+    readability.
+  | (Contributed by Tomas Klohna)
+* | :issue:`1689926`: Updated :program:`restraint` BJJ to use static build 
+    from fetched tarballs.
+  | (Contributed by Martin Styk)
