@@ -16,7 +16,7 @@ addFilter(r'non-readable /etc/beaker/server\.cfg')
 addFilter(r'non-readable /etc/sudoers\.d/beaker_proxy_clear_netboot')
 
 # These are intentionally non-executable, they are executed on test systems instead
-addFilter(r'non-executable-script /usr/share/bkr/lab-controller/(anamon|anamon\.init)')
+addFilter(r'non-executable-script /usr/share/bkr/lab-controller/(anamon|anamon\.init|anamon\.service)')
 
 # On RHEL6 bash completions are indeed stored in /etc even though they are not 
 # config. Newer bash-completion moved this to /usr/lib and the problem goes 

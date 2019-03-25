@@ -12,89 +12,109 @@ install back to Beaker. Derived from Cobbler's anamon.
 
 import os
 import errno
+import subprocess
 import sys
-import string
+import threading
 import time
-import re
 import base64
 import shlex
-from xmlrpc.client import Server as xmlrpc_server
+from xmlrpc.client import Server
 
-# shlex.split support arrived in python-2.3, the following will provide some
-# accomodation for older distros (e.g. RHEL3)
-if not hasattr(shlex, "split"):
-    shlex.split = lambda s: s.split(" ")
 
-class WatchedFile:
-    def __init__(self, fn, alias):
-        self.fn = fn
+class UploadCommand(object):
+
+    def __init__(self, alias):
+        self.size = 0
+        self.data = ''
+        self.last_length = 0
         self.alias = alias
-        self.reset()
+        self.session = Server(xmlrpc_url, allow_none=True)
 
-    def reset(self):
-        self.where = 0
-        self.last_size = 0
-        self.lfrag=''
-        self.re_list={}
-        self.seen_line={}
+    def upload(self):
+        tries = 1
+        retries = 3
+        while tries <= retries:
+            debug("recipe_upload_file(%r, '/', %r, %r, %r, %r, ...)\n"
+                  % (recipe_id, self.alias, self.size, '', self.last_length))
+            if self.session.recipe_upload_file(recipe_id, '/', self.alias,
+                                               self.size, '', self.last_length, self.data):
+                self.last_length += self.size
+                return True
+            tries += 1
+        return False
+
+
+class WatchedCommand(UploadCommand):
+    """ Reads stdout of a subprocess and uploads changes via XMLRPC. Works
+        with regular (tail) and interactive (tail -f) commands. """
+
+    def __init__(self, command, args_list, alias):
+        super(WatchedCommand, self).__init__(alias)
+        self.command = command
+        self.args_list = args_list
+        self.output = ''
+
+    def watch(self):
+        try:
+            proc = subprocess.Popen([self.command] + self.args_list, stdout=subprocess.PIPE)
+        except OSError as e:
+            debug("'%s' failed to run; got '%s'. Closing thread..." % (self.command, e))
+            return
+
+        while True:
+            self.output = proc.stdout.readline()
+            # If the process dies, let's stop
+            if not self.output and proc.poll() is not None:
+                break
+            self.upload()
+
+    def upload(self):
+        self.size = len(self.output)
+        self.data = base64.encodebytes(self.output).decode('ascii')
+        super(WatchedCommand, self).upload()
+
+
+class WatchedFile(UploadCommand):
+    def __init__(self, fn, alias):
+        super(WatchedFile, self).__init__(alias)
+        self.fn = fn
 
     def exists(self):
         return os.access(self.fn, os.F_OK)
-
-    def lookfor(self,pattern):
-        self.re_list[pattern] = re.compile(pattern,re.MULTILINE)
-        self.seen_line[pattern] = 0
-
-    def seen(self,pattern):
-        if pattern in self.seen_line:
-            return self.seen_line[pattern]
-        else:
-            return 0
 
     def changed(self):
         if not self.exists():
             return 0
         size = os.stat(self.fn)[6]
-        if size > self.last_size:
-            self.last_size = size
-            return 1
-        else:
-            return 0
 
-    def uploadWrapper(self, blocksize = 262144):
-        """upload a file in chunks using the uploadFile call"""
-        retries = 3
-        fo = open(self.fn, "rb")
-        totalsize = os.path.getsize(self.fn)
-        ofs = 0
-        while True:
-            contents = fo.read(blocksize)
-            size = len(contents)
-            if size == 0:
-                break
-            data = base64.encodestring(contents)
-            del contents
-            tries = 0
-            while tries <= retries:
-                debug("recipe_upload_file(%r, '/', %r, %r, %r, %r, ...)\n"
-                        % (recipe_id, self.alias, size, None, ofs))
-                if session.recipe_upload_file(recipe_id, '/', self.alias,
-                        size, None, ofs, data.decode('ascii')):
+        return size > self.last_length
+
+    def upload(self, block_size=262144):
+        """
+        Upload a file in chunks via XMLRPC
+        """
+
+        with open(self.fn, 'rb') as fd:
+            while True:
+                fd.seek(self.last_length, os.SEEK_SET)
+                contents = fd.read(block_size)
+                self.size = len(contents)
+                if self.size == 0:
                     break
-                else:
-                    tries = tries + 1
-            ofs += size
-        fo.close()
+                self.data = base64.encodebytes(contents).decode('ascii')
+                del contents
+                status = super(WatchedFile, self).upload()
+                if not status:
+                    break
 
     def update(self):
-        if not self.exists():
-            return
         if not self.changed():
             return
         try:
-            self.uploadWrapper()
+            self.upload()
         except:
             raise
+
 
 class MountWatcher:
 
@@ -136,12 +156,11 @@ class MountWatcher:
         else:
             return 0
 
+
 def anamon_loop():
-    alog = WatchedFile("/tmp/anaconda.log", "anaconda.log")
-    alog.lookfor("step installpackages$")
 
     default_watchlist = [
-        alog,
+        WatchedFile("/tmp/anaconda.log", "anaconda.log"),
         WatchedFile("/tmp/syslog", "sys.log"),
         WatchedFile("/tmp/X.log", "X.log"),
         WatchedFile("/tmp/lvmout", "lvmout.log"),
@@ -170,6 +189,7 @@ def anamon_loop():
     package_logs.append(WatchedFile("/mnt/sysimage/tmp/install.log", "tmp+install.log"))
     package_logs.append(WatchedFile("/mnt/sysimage/root/upgrade.log", "upgrade.log"))
     package_logs.append(WatchedFile("/mnt/sysimage/tmp/upgrade.log", "tmp+upgrade.log"))
+    package_logs.append(WatchedFile("/mnt/sysimage/root/install.log.syslog", "install.log.syslog"))
 
     # Monitor for bootloader configuration changes
     bootloader_cfgs = list()
@@ -177,6 +197,14 @@ def anamon_loop():
     bootloader_cfgs.append(WatchedFile("/mnt/sysimage/boot/etc/yaboot.conf", "yaboot.conf"))
     bootloader_cfgs.append(WatchedFile("/mnt/sysimage/boot/efi/efi/redhat/elilo.conf", "elilo.conf"))
     bootloader_cfgs.append(WatchedFile("/mnt/sysimage/etc/zipl.conf", "zipl.conf"))
+
+    watched_commands = [
+        WatchedCommand("journalctl", ["-f"], "systemd_journal.log"),
+    ]
+
+    for proc in watched_commands:
+        t = threading.Thread(target=proc.watch)
+        t.start()
 
     # Were we asked to watch specific files?
     watchlist = list()
@@ -209,9 +237,9 @@ def anamon_loop():
 
         # Not all log files are available at the start, we'll loop through the
         # waitlist to determine when each file can be added to the watchlist
-        for watch in waitlist:
-            if alog.seen("step installpackages$") or (sysimage.stable() and watch.exists()):
-                debug("Adding %s to watch list\n" % watch.alias)
+        for watch in waitlist[:]:
+            if sysimage.stable() and watch.exists():
+                debug("Adding %s from wait list to watch list\n" % watch.alias)
                 watchlist.append(watch)
                 waitlist.remove(watch)
 
@@ -252,8 +280,6 @@ while n < len(sys.argv):
         daemon = 0
     n = n+1
 
-# Create an xmlrpc session handle
-session = xmlrpc_server(xmlrpc_url, allow_none=True)
 
 # Fork and loop
 if daemon:
@@ -265,7 +291,8 @@ if daemon:
         os.dup2(0, 2)               # Duplicate standard input to standard error (2)
 
         anamon_loop()
-        sys.exit(1)
+        # Child process should exit using _exit
+        os._exit(1)
     sys.exit(0)
 else:
     anamon_loop()

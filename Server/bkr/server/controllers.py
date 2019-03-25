@@ -490,7 +490,7 @@ class Root(RPCRoot):
 
         default_result_columns = kw.get('default_result_columns',
                 ('System/Name', 'System/Status', 'System/Vendor',
-                 'System/Model','System/Arch', 'System/User', 'System/Type'))
+                 'System/Model','System/Arch', 'System/User', 'System/Type', 'System/LoanedTo'))
 
         if kw.get('xmlsearch'):
             try:

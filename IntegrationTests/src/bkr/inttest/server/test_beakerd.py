@@ -76,6 +76,38 @@ class TestBeakerd(DatabaseTestCase):
             task = Task.by_id(task_id)
             task.disable()
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1635309
+    def test_dont_abort_custom_distro(self):
+        with session.begin():
+            system = data_setup. \
+                create_system(lab_controller=self.lab_controller)
+            r1 = data_setup.create_recipe(custom_distro=True)
+            r2 = data_setup.create_recipe(custom_distro=True)
+            j1 = data_setup.create_job_for_recipes([r1])
+            j2 = data_setup.create_job_for_recipes([r2])
+
+            r1.systems[:] = [system]
+            r2.systems[:] = [system]
+            data_setup.mark_job_installing(j1)
+
+        with session.begin():
+            data_setup.mark_job_queued(j2)
+
+        session.expunge_all()
+        with session.begin():
+            j1 = Job.by_id(j1.id)
+            j2 = Job.by_id(j2.id)
+            self.assertTrue(j1.status is TaskStatus.installing, j1.status)
+            self.assertTrue(j2.status is TaskStatus.queued, j2.status)
+        beakerd.abort_dead_recipes()
+        beakerd.update_dirty_jobs()
+        session.expunge_all()
+        with session.begin():
+            j1 = Job.by_id(j1.id)
+            j2 = Job.by_id(j2.id)
+            self.assertTrue(j1.status is TaskStatus.installing, j1.status)
+            self.assertTrue(j2.status is TaskStatus.queued, j2.status)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=911515
     def test_failed_recipe_started_before_upgrade_finished_after_upgrade_does_not_fail(self):
         with session.begin():

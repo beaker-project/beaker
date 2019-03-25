@@ -471,7 +471,8 @@ class Recipes(RPCRoot):
             redirect(url("/recipes"))
         PDC = widgets.PaginateDataGrid.Column
         fields = [PDC(name='fqdn', getter=lambda x: x.link, title='Name'),
-            PDC(name='user', getter=lambda x: x.user.email_link if x.user else None, title='User'),]
+                  PDC(name='loanedto', getter=lambda x: x.loaned.user_name if x.loaned else None, title='Loaned'),
+                  PDC(name='user', getter=lambda x: x.user.email_link if x.user else None, title='User'),]
         grid = myPaginateDataGrid(fields=fields)
         return dict(title='Recipe Systems', grid=grid, list=recipe.systems,
             search_bar=None)

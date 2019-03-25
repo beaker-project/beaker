@@ -1,0 +1,13 @@
+[Unit]
+Description=Anaconda Monitoring (anamon) post-boot notification program
+After=network-online.target
+Requires=network-online.target
+
+[Service]
+ExecStart=/usr/local/sbin/anamon --watchfile $LOGFILES --recipe-id $RECIPE_ID --xmlrpc-url $XMLRPC_URL --exit
+Type=simple
+KillMode=process
+EnvironmentFile=/etc/sysconfig/anamon
+
+[Install]
+WantedBy=multi-user.target

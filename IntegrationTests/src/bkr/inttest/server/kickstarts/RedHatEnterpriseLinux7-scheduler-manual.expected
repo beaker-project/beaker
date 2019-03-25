@@ -123,7 +123,7 @@ fetch - http://lab.test-kickstart.invalid:8000/nopxe/test-manual-1.test-kickstar
 echo @RECIPEID@ > /root/RECIPE.TXT
 
 # If netboot_method= is found in /proc/cmdline record it to /root
-netboot_method=$(perl -n -e'/netboot_method=([^\s]+)/ && print $1' /proc/cmdline)
+netboot_method=$(grep -oP "(?<=netboot_method=)[^\s]+(?=)" /proc/cmdline)
 if [ -n "$netboot_method" ]; then
 echo $netboot_method >/root/NETBOOT_METHOD.TXT
 fi
@@ -139,14 +139,22 @@ elif [ -f /usr/libexec/platform-python ] && \
 else
     fetch /usr/local/sbin/anamon http://lab.test-kickstart.invalid/beaker/anamon
 fi
-fetch /etc/rc.d/init.d/anamon http://lab.test-kickstart.invalid/beaker/anamon.init
+chmod 755 /usr/local/sbin/anamon
 
-chmod 755 /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
-if selinuxenabled &>/dev/null ; then
-    restorecon /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
+# OS without `initscripts` need to use systemd
+if [ -e /etc/init.d/functions ]; then
+    fetch /etc/rc.d/init.d/anamon http://lab.test-kickstart.invalid/beaker/anamon.init
+
+    chmod 755 /etc/rc.d/init.d/anamon
+    if selinuxenabled &>/dev/null ; then
+        restorecon /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
+    fi
+
+    chkconfig --add anamon
+else
+    fetch /etc/systemd/system/anamon.service http://lab.test-kickstart.invalid/beaker/anamon.service
+    systemctl enable anamon
 fi
-
-chkconfig --add anamon
 
 cat << __EOT__ > /etc/sysconfig/anamon
 XMLRPC_URL="http://lab.test-kickstart.invalid:8000/RPC2"
