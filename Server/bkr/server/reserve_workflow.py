@@ -35,15 +35,18 @@ def doit():
             raise BadRequest400('Distro tree %r does not exist' % id)
     job_details = {}
     job_details['pick'] = request.form.get('pick') or 'auto'
+    system_choice = 'any system'
     if job_details['pick'] == 'fqdn':
         try:
             job_details['system'] = System.by_fqdn(request.form.get('system'),
                     identity.current.user)
+            system_choice = 'a specific system'
         except DatabaseLookupError:
             raise BadRequest400('System %s not found' % request.form.get('system'))
     elif job_details['pick'] == 'lab':
         try:
             job_details['lab'] = LabController.by_name(request.form.get('lab'))
+            system_choice = 'any lab system'
         except NoResultFound:
             raise BadRequest400('Lab controller %s not found' % request.form.get('lab'))
     reservetime = int(request.form.get('reserve_duration') or DEFAULT_RESERVE_SECONDS)
@@ -51,6 +54,12 @@ def doit():
         raise BadRequest400('Reservation time exceeds maximum time of %s hours' % MAX_HOURS_PROVISION)
     job_details['reservetime'] = reservetime
     job_details['whiteboard'] = request.form.get('whiteboard')
+    if not job_details['whiteboard']:
+        job_details['whiteboard'] = (
+            "Reserve Workflow provision of distro %s on %s for %d seconds" %
+            (request.form.get('distro'), system_choice,
+            job_details['reservetime']))
+
     job_details['ks_meta'] = request.form.get('ks_meta')
     job_details['koptions'] = request.form.get('koptions')
     job_details['koptions_post'] = request.form.get('koptions_post')
