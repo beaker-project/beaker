@@ -15,7 +15,7 @@ class SystemReleaseTest(ClientTestCase):
         with session.begin():
             system = data_setup.create_system()
         try:
-            res = run_client(['bkr', 'system-release', system.fqdn])
+            run_client(['bkr', 'system-release', system.fqdn])
             self.fail('Must fail')
         except ClientError as e:
             self.assertIn('System %s is not currently reserved' % system.fqdn,
@@ -36,6 +36,6 @@ class SystemReleaseTest(ClientTestCase):
         try:
             run_client(['bkr', 'system-release', 'test.invalid.nonexistent.com'])
             self.fail('Should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assertEqual(e.status, 1)
             self.assertIn('System not found', e.stderr_output)

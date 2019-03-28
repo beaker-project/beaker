@@ -51,8 +51,7 @@ class TaskDetailsTest(ClientTestCase):
         pretty_out = run_client(['bkr', 'task-details', '--prettyxml', task.name])
         pretty_minus_leading_name = re.sub(task.name, '', pretty_out, count=1)
         task_elem_pretty = lxml.etree.tostring(task_elem, pretty_print=True, encoding='utf8')
-        self.assert_(task_elem_pretty.strip() == 
-            pretty_minus_leading_name.strip())
+        self.assert_(task_elem_pretty.strip() == pretty_minus_leading_name.strip())
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=624417
     def test_details_include_owner_and_priority(self):
@@ -66,8 +65,8 @@ class TaskDetailsTest(ClientTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=624417
     def test_details_without_owner(self):
-        # The original bug was that the owner was not filled in, so some older 
-        # task rows would still have None. However for bug 859785 these were 
+        # The original bug was that the owner was not filled in, so some older
+        # task rows would still have None. However for bug 859785 these were
         # coerced to empty string.
         with session.begin():
             task = data_setup.create_task()
@@ -126,5 +125,5 @@ class TaskDetailsTest(ClientTestCase):
         try:
             run_client(['bkr', 'task-details', 'idontexist'])
             self.fail('Must fail or die')
-        except ClientError, e:
+        except ClientError as e:
             self.assertIn('No such task: idontexist', e.stderr_output)

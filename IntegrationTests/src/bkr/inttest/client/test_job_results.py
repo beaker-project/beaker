@@ -38,8 +38,8 @@ class JobResultsTest(ClientTestCase):
     def test_invalid_taskspec(self):
         try:
             run_client(['bkr', 'job-results', '12345'])
-            fail('should raise')
-        except ClientError, e:
+            self.fail('should raise')
+        except ClientError as e:
             self.assert_('Invalid taskspec' in e.stderr_output)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1014623

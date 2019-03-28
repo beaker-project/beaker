@@ -114,8 +114,8 @@ class JobModifyTest(ClientTestCase):
     def test_invalid_taskspec(self):
         try:
             run_client(['bkr', 'job-modify', '12345', '--response', 'ack'])
-            fail('should raise')
-        except ClientError, e:
+            self.fail('should raise')
+        except ClientError as e:
             self.assert_('Invalid taskspec' in e.stderr_output)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=995012
@@ -174,7 +174,7 @@ class JobModifyTest(ClientTestCase):
             self.assertEquals(recipe.whiteboard, u'found himself transformed')
 
     def test_processes_all_arguments_even_if_one_fails(self):
-        # This behaviour is actually contrary to what the other subcommands do, 
+        # This behaviour is actually contrary to what the other subcommands do,
         # but it's what we have, so let's test it anyway...
         p = start_client(['bkr', 'job-modify', 'J:thiswillfail', self.job.t_id,
                     '--whiteboard', 'uneasy dreams'])

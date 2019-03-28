@@ -15,7 +15,7 @@ class JobListTest(ClientTestCase):
 
     @with_transaction
     def setUp(self):
-        jobs_to_generate = 2;
+        jobs_to_generate = 2
         self.products = [data_setup.create_product() for product in range(jobs_to_generate)]
         self.users = [data_setup.create_user(password='mypass') for user in range(jobs_to_generate)]
         self.jobs = [data_setup.create_completed_job(product=self.products[x], owner=self.users[x]) for x in range(jobs_to_generate)]
@@ -33,8 +33,8 @@ class JobListTest(ClientTestCase):
         self.assert_(len(out[0]) == 1, out)
         out = run_client(['bkr', 'job-list', '--owner', 'foobar'])
         self.assert_(self.jobs[0].t_id not in out, out)
-        out = run_client(['bkr', 'job-list', '--owner', self.users[0].user_name, '--min-id', \
-                              '{0}'.format(self.jobs[0].id), '--max-id', '{0}'.format(self.jobs[0].id)])
+        out = run_client(['bkr', 'job-list', '--owner', self.users[0].user_name, '--min-id',
+                          '{0}'.format(self.jobs[0].id), '--max-id', '{0}'.format(self.jobs[0].id)])
         self.assert_(self.jobs[0].t_id in out and self.jobs[1].t_id not in out)
 
     def test_list_jobs_by_whiteboard(self):
@@ -52,8 +52,8 @@ class JobListTest(ClientTestCase):
         listed_job_ids = out.splitlines()
         self.assertIn(included_job.t_id, listed_job_ids)
         self.assertNotIn(excluded_job.t_id, listed_job_ids)
-        # This was accidental undocumented functionality supported by the 
-        # original implementation of jobs.filter. Some people are probably 
+        # This was accidental undocumented functionality supported by the
+        # original implementation of jobs.filter. Some people are probably
         # relying on it.
         out = run_client(['bkr', 'job-list', '--format=list', '--whiteboard=p%z_nce'])
         listed_job_ids = out.splitlines()
@@ -94,15 +94,15 @@ class JobListTest(ClientTestCase):
         out = json.loads(out)
         self.assertIn(self.jobs[0].t_id, out)
         self.assertNotIn(self.jobs[1].t_id, out)
-        self.assertRaises(ClientError, run_client, ['bkr', 'job-list', '--mine', \
-                                                        '--username', 'xyz',\
-                                                        '--password','xyz'])
+        self.assertRaises(ClientError, run_client, ['bkr', 'job-list', '--mine',
+                                                    '--username', 'xyz',
+                                                    '--password','xyz'])
 
     def test_cannot_specify_finished_and_unfinished_at_the_same_time (self):
         try:
             run_client(['bkr', 'job-list', '--finished', '--unfinished'])
             self.fail('should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assertEqual(e.status, 2)
             self.assertIn("Only one of --finished or --unfinished may be specified", e.stderr_output)
 

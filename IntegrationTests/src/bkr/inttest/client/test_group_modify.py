@@ -5,11 +5,10 @@
 # (at your option) any later version.
 
 import email
-import crypt
-from bkr.inttest import data_setup, with_transaction, mail_capture_thread
+from bkr.inttest import data_setup, mail_capture_thread
 from bkr.inttest.client import run_client, ClientError, create_client_config, \
         ClientTestCase
-from bkr.server.model import Group, Activity, User, GroupMembershipType
+from bkr.server.model import Group, Activity, GroupMembershipType
 from turbogears.database import session
 
 class GroupModifyTest(ClientTestCase):
@@ -60,7 +59,7 @@ class GroupModifyTest(ClientTestCase):
                               self.group.group_name],
                              config = self.client_config)
             self.fail('Must fail or die')
-        except ClientError, e:
+        except ClientError as e:
             self.assert_('Please specify an attribute to modify'
                          in e.stderr_output, e.stderr_output)
 
@@ -85,7 +84,7 @@ class GroupModifyTest(ClientTestCase):
                               'random', self.group.group_name],
                              config = self.client_config)
             self.fail('Must fail or die')
-        except ClientError, e:
+        except ClientError as e:
             self.assert_('Exactly one group name must be specified' in
                          e.stderr_output, e.stderr_output)
 
@@ -125,7 +124,7 @@ class GroupModifyTest(ClientTestCase):
                               self.group.group_name],
                              config = self.client_config)
             self.fail('Must fail or die')
-        except ClientError,e:
+        except ClientError as e:
             self.assertIn(
                     'Group display name must be not more than 255 characters long',
                     e.stderr_output)
@@ -154,7 +153,7 @@ class GroupModifyTest(ClientTestCase):
                               self.group.group_name],
                              config = self.client_config)
             self.fail('Must fail or die')
-        except ClientError,e:
+        except ClientError as e:
             self.assertIn(
                     'Group name must be not more than 255 characters long',
                     e.stderr_output)
@@ -194,7 +193,7 @@ class GroupModifyTest(ClientTestCase):
             run_client(['bkr', 'group-modify', '--root-password', short_password,
                 self.group.group_name], config=self.client_config)
             self.fail('Should fail with short password')
-        except ClientError, e:
+        except ClientError as e:
             self.assertTrue('password is too short' in str(e))
             session.expire(self.group)
             with session.begin():
@@ -245,7 +244,7 @@ class GroupModifyTest(ClientTestCase):
                               '--display-name', 'this is also unchanged',
                               protected_group_name])
             self.fail('Must fail or die')
-        except ClientError, e:
+        except ClientError as e:
             self.assert_('Cannot rename protected group' in
                          e.stderr_output, e.stderr_output)
 
@@ -303,7 +302,7 @@ class GroupModifyTest(ClientTestCase):
                               self.group.group_name],
                              config = self.client_config)
             self.fail('Must fail or die')
-        except ClientError, e:
+        except ClientError as e:
             self.assert_('User idontexist does not exist' in
                          e.stderr_output, e.stderr_output)
 
@@ -313,7 +312,7 @@ class GroupModifyTest(ClientTestCase):
                               self.group.group_name],
                              config = self.client_config)
             self.fail('Must fail or die')
-        except ClientError, e:
+        except ClientError as e:
             self.assert_('User %s is already a member of group %s'
                 % (user.user_name, self.group.group_name)
                 in e.stderr_output, e.stderr_output)
@@ -333,7 +332,7 @@ class GroupModifyTest(ClientTestCase):
                               '--add-member', user.user_name,
                               self.fake_ldap_group.group_name])
             self.fail('Must fail or die')
-        except ClientError, e:
+        except ClientError as e:
             self.assert_('Cannot edit membership of group %s'
                          % self.fake_ldap_group.group_name
                          in e.stderr_output,e.stderr_output)
@@ -392,7 +391,7 @@ class GroupModifyTest(ClientTestCase):
                               self.group.group_name],
                              config = self.client_config)
             self.fail('Must fail or die')
-        except ClientError, e:
+        except ClientError as e:
             self.assert_('User idontexist does not exist' in
                          e.stderr_output, e.stderr_output)
         try:
@@ -401,7 +400,7 @@ class GroupModifyTest(ClientTestCase):
                               self.group.group_name],
                              config = self.client_config)
             self.fail('Must fail or die')
-        except ClientError, e:
+        except ClientError as e:
             self.assert_('User %s is not a member of group %s'
                          % (user.user_name, self.group.group_name)
                         in e.stderr_output, e.stderr_output)
@@ -412,7 +411,7 @@ class GroupModifyTest(ClientTestCase):
                               self.group.group_name],
                              config = self.client_config)
             self.fail('Must fail or die')
-        except ClientError, e:
+        except ClientError as e:
             self.assert_('Cannot remove user' in
                          e.stderr_output, e.stderr_output)
 
@@ -438,7 +437,7 @@ class GroupModifyTest(ClientTestCase):
             out = run_client(['bkr', 'group-modify',
                               '--remove-member', 'admin', 'admin'])
             self.fail('Must fail or die')
-        except ClientError, e:
+        except ClientError as e:
             self.assert_('Cannot remove user' in
                          e.stderr_output, e.stderr_output)
 
@@ -447,7 +446,7 @@ class GroupModifyTest(ClientTestCase):
                               '--remove-member', user.user_name,
                               self.fake_ldap_group.group_name])
             self.fail('Must fail or die')
-        except ClientError, e:
+        except ClientError as e:
             self.assert_('Cannot edit membership of group %s'
                           % self.fake_ldap_group.group_name
                           in e.stderr_output, e.stderr_output)
@@ -491,7 +490,7 @@ class GroupModifyTest(ClientTestCase):
                               self.group.group_name],
                              config=self.client_config)
             self.fail('Must fail or die')
-        except ClientError, e:
+        except ClientError as e:
             self.assert_('User %s is not a member of group %s'
                          % (user1.user_name, self.group.group_name)
                          in e.stderr_output, e.stderr_output)
@@ -514,7 +513,7 @@ class GroupModifyTest(ClientTestCase):
                               self.group.group_name],
                              config=self.client_config)
             self.fail('should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assert_('User %s is already a member of group %s'
                          % (user1.user_name, self.group.group_name)
                          in e.stderr_output, e.stderr_output)
@@ -566,8 +565,8 @@ class GroupModifyTest(ClientTestCase):
                               self.fake_ldap_group.group_name],
                              config = self.client_config)
             self.fail('Must fail or die')
-        except ClientError, e:
-            self.assert_('Cannot modify group ownership')
+        except ClientError as e:
+            self.assert_('Cannot edit ownership of group' in e.stderr_output, e.stderr_output)
 
     def test_inverted_group_modify_grant_owner(self):
         with session.begin():
@@ -636,7 +635,7 @@ class GroupModifyTest(ClientTestCase):
                               self.group.group_name],
                              config = self.client_config)
             self.fail('Must fail or die')
-        except ClientError, e:
+        except ClientError as e:
             self.assert_('User is not a member of group' in e.stderr_output)
         try:
             out = run_client(['bkr', 'group-modify',
@@ -644,8 +643,8 @@ class GroupModifyTest(ClientTestCase):
                               self.fake_ldap_group.group_name],
                              config = self.client_config)
             self.fail('Must fail or die')
-        except ClientError, e:
-            self.assert_('Cannot modify group ownership')
+        except ClientError as e:
+            self.assert_('Cannot edit ownership of group' in e.stderr_output, e.stderr_output)
 
     def test_escapes_uri_characters_in_group_name(self):
         bad_group_name = u'!@#$%^&*()_+{}|:><?'

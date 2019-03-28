@@ -30,8 +30,8 @@ class SystemDeleteTest(ClientTestCase):
         try:
             out = run_client(['bkr', 'system-delete', self.system.fqdn],
                     config=self.client_config2)
-            fail('should raise')
-        except ClientError, e:
+            self.fail('should raise')
+        except ClientError as e:
             self.assertEqual(e.status, 1)
             self.assert_(e.stderr_output.find("you don't own") != -1)
 
@@ -55,8 +55,8 @@ class SystemDeleteTest(ClientTestCase):
         try:
             out = run_client(['bkr', 'system-delete', self.system.fqdn],
                     config=self.client_config)
-            fail('should raise')
-        except ClientError, e:
+            self.fail('should raise')
+        except ClientError as e:
             self.assertEqual(e.status, 1)
             self.assert_(e.stderr_output.find('with reservations') != -1)
 
@@ -65,6 +65,6 @@ class SystemDeleteTest(ClientTestCase):
         try:
             run_client(['bkr', 'system-delete', fqdn])
             self.fail('should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assertEqual(e.status, 1)
             self.assertIn("System %s does not exist" % fqdn, e.stderr_output)

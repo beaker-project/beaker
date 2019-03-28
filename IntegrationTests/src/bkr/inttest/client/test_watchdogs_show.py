@@ -9,7 +9,7 @@ import datetime
 from turbogears.database import session
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientTestCase
-from bkr.server.model import RecipeTask
+
 
 class WatchdogShowTest(ClientTestCase):
 

@@ -48,5 +48,5 @@ class UpdateOpenStackTrustTest(ClientTestCase):
                         '--os-project-name=invalid-project'],
                        config=self.client_config)
             self.fail('should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assertIn('Could not authenticate with OpenStack using your credentials', e.stderr_output)

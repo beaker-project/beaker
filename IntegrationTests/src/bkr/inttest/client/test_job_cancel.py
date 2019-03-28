@@ -34,7 +34,7 @@ class JobCancelTest(ClientTestCase):
             run_client(['bkr', 'job-cancel',
                     self.job.recipesets[0].recipes[0].t_id])
             self.fail('should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assert_('Taskspec type must be one of'
                     in e.stderr_output, e.stderr_output)
 
@@ -42,8 +42,8 @@ class JobCancelTest(ClientTestCase):
     def test_invalid_taskspec(self):
         try:
             run_client(['bkr', 'job-cancel', '12345'])
-            fail('should raise')
-        except ClientError, e:
+            self.fail('should raise')
+        except ClientError as e:
             self.assert_('Invalid taskspec' in e.stderr_output)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=649608
@@ -56,7 +56,7 @@ class JobCancelTest(ClientTestCase):
         try:
             run_client(['bkr', 'job-cancel', '--username', user1.user_name, '--password', 'abc', job.t_id])
             self.fail('should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assertEquals(e.status, 1)
             self.assert_('You don\'t have permission to cancel'
                     in e.stderr_output, e.stderr_output)
@@ -113,5 +113,5 @@ class JobCancelTest(ClientTestCase):
         try:
             run_client(['bkr', 'job-cancel', 'T:9q9999q'])
             self.fail('should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assertIn('Invalid T 9q9999q', e.stderr_output)

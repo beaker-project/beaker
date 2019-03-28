@@ -164,7 +164,7 @@ class PolicyListTest(ClientTestCase):
     def test_list_policy_filter_multiple(self):
         try:
             run_client(['bkr', 'policy-list',
-                        '--mine', 
+                        '--mine',
                         '--group', self.group.group_name,
                         self.system.fqdn])
             self.fail('Must fail or die')

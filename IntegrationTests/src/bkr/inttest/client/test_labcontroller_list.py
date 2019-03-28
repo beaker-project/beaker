@@ -5,7 +5,6 @@
 # (at your option) any later version.
 
 from datetime import datetime
-from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client, ClientTestCase
 

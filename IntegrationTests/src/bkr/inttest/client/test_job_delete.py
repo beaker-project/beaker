@@ -4,11 +4,8 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import os
-from unittest2 import SkipTest
 from turbogears.database import session
-from bkr.inttest import data_setup, with_transaction, start_process, \
-    stop_process, CONFIG_FILE, edit_file
+from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client, create_client_config, ClientError, \
     ClientTestCase
 
@@ -50,13 +47,13 @@ class JobDeleteTest(ClientTestCase):
         try:
             out = run_client(['bkr', 'job-delete', other_job.t_id],
                              config=self.client_config)
-            fail('should raise')
-        except ClientError, e:
+            self.fail('should raise')
+        except ClientError as e:
             self.assert_("don't have permission" in e.stderr_output)
 
     def test_cant_delete_group_mates_job(self):
-        # The test_delete_group_job case above is similar, but here the job is 
-        # *not* declared as a group job, therefore we don't have permission to 
+        # The test_delete_group_job case above is similar, but here the job is
+        # *not* declared as a group job, therefore we don't have permission to
         # delete it.
         with session.begin():
             group = data_setup.create_group()
@@ -69,7 +66,7 @@ class JobDeleteTest(ClientTestCase):
                 config=self.client_config)
             self.fail('We should not have permission to delete %s' % \
                 test_job.t_id)
-        except ClientError, e:
+        except ClientError as e:
             self.assertIn("You don't have permission to delete job %s" %
             test_job.t_id, e.stderr_output)
 
@@ -78,7 +75,7 @@ class JobDeleteTest(ClientTestCase):
             other_user = data_setup.create_user(password=u'asdf')
             tag = data_setup.create_retention_tag(name=u'myblahtag')
             job1 = data_setup.create_completed_job(owner=other_user)
-            job2 = data_setup.create_completed_job(owner=other_user, \
+            job2 = data_setup.create_completed_job(owner=other_user,
                                                    retention_tag=tag.tag)
 
         # As the default admin user
@@ -96,8 +93,8 @@ class JobDeleteTest(ClientTestCase):
     def test_invalid_taskspec(self):
         try:
             run_client(['bkr', 'job-delete', '12345'])
-            fail('should raise')
-        except ClientError, e:
+            self.fail('should raise')
+        except ClientError as e:
             self.assert_('Invalid taskspec' in e.stderr_output)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=990943

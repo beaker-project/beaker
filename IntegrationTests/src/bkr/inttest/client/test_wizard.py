@@ -42,7 +42,7 @@ class TestWizard(BaseWizardTestCase):
         self.assertRegexpMatches(out, re.compile(r'\bBeaker Wizard\b', re.I), out)
 
     def test_wizard_guesses_package_from_cwd(self):
-        # When run with no args, beaker-wizard guesses the package from the cwd 
+        # When run with no args, beaker-wizard guesses the package from the cwd
         # and uses defaults for everything else.
         package = 'bash'
         test_path = os.path.join(self.tempdir, package)
@@ -52,9 +52,9 @@ class TestWizard(BaseWizardTestCase):
         self.assertIn('Package : %s' % package, out)
 
     def test_wizard_guesses_values_from_test_name(self):
-        # When given a test name, beaker-wizard creates its output in that 
-        # subdirectory and also guesses some values based on the directory 
-        # structure. Here we cover each of the possibilities described in the 
+        # When given a test name, beaker-wizard creates its output in that
+        # subdirectory and also guesses some values based on the directory
+        # structure. Here we cover each of the possibilities described in the
         # man page.
 
         # TESTNAME

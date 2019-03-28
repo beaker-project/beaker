@@ -9,7 +9,7 @@
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client, create_client_config, ClientTestCase, ClientError
-from bkr.server.model import Distro, Job
+from bkr.server.model import Job
 import pkg_resources
 
 class JobSubmitTest(ClientTestCase):

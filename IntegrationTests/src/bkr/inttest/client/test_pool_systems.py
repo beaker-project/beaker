@@ -1,4 +1,4 @@
-from bkr.server.model import session, SystemPool
+from bkr.server.model import session
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientTestCase, ClientError
 
@@ -31,7 +31,7 @@ class PoolSystems(ClientTestCase):
             out = run_client(['bkr', 'pool-systems',
                               pool_name])
             self.fail('Must fail or die')
-        except ClientError, e:
+        except ClientError as e:
             self.assertIn('System pool %s does not exist' % pool_name,
                          e.stderr_output)
 
@@ -39,6 +39,6 @@ class PoolSystems(ClientTestCase):
         try:
             out = run_client(['bkr', 'pool-systems'])
             self.fail('Must fail or die')
-        except ClientError, e:
+        except ClientError as e:
                 self.assertIn('Exactly one pool name must be specified',
                               e.stderr_output)

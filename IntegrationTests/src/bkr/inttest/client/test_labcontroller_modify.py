@@ -14,7 +14,7 @@ class LabControllerModifyTest(ClientTestCase):
     def test_change_fqdn(self):
         with session.begin():
             lc = data_setup.create_labcontroller()
-            another_lc = data_setup.create_labcontroller()
+            data_setup.create_labcontroller()
         new_fqdn = data_setup.unique_name(u'lab%s.testdata.invalid')
         run_client(['bkr', 'labcontroller-modify',
                     '--fqdn', new_fqdn,
@@ -27,7 +27,7 @@ class LabControllerModifyTest(ClientTestCase):
         with session.begin():
             lc = data_setup.create_labcontroller()
             another_lc = data_setup.create_labcontroller()
-        new_fqdn = data_setup.unique_name(u'lab%s.testdata.invalid')
+        data_setup.unique_name(u'lab%s.testdata.invalid')
         try:
             run_client(['bkr', 'labcontroller-modify',
                         '--fqdn', another_lc.fqdn,

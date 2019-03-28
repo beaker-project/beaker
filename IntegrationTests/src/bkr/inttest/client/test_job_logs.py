@@ -6,7 +6,6 @@
 
 import sys
 import os
-import urlparse
 import shutil
 import tempfile
 import pkg_resources
@@ -96,8 +95,8 @@ class JobLogsTest(ClientTestCase):
     def test_invalid_taskspec(self):
         try:
             run_client(['bkr', 'job-logs', '12345'])
-            fail('should raise')
-        except ClientError, e:
+            self.fail('should raise')
+        except ClientError as e:
             self.assert_('Invalid taskspec' in e.stderr_output)
 
     def test_prints_sizes(self):

@@ -8,6 +8,7 @@ from turbogears.database import session
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError, ClientTestCase
 
+
 class WatchdogsExtend(ClientTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=906803
@@ -22,7 +23,7 @@ class WatchdogsExtend(ClientTestCase):
         with session.begin():
             user1 = data_setup.create_user(password='abc')
         try:
-            out = run_client(['bkr', 'watchdogs-extend',\
-                                  '--username',user1.user_name,'--password','abc'])
-        except ClientError, e:
+            run_client(['bkr', 'watchdogs-extend',
+                        '--username',user1.user_name,'--password','abc'])
+        except ClientError as e:
             self.assert_('Not member of group: admin' in e.stderr_output)
