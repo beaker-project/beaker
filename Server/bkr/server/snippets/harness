@@ -11,6 +11,11 @@ setenv BEAKER_RECIPE_ID {{ recipe.id }}
 setenv BEAKER_HUB_URL "{{ absolute_url('/', labdomain=True) }}"
 EOF
 
+if command -v dnf >/dev/null ; then
+   package_command="dnf"
+else
+   package_command="yum"
+fi
 {% if distro_tree is arch('ia64') %}
 # We want to avoid installing i386/i686 harness packages on ia64, because ia64
 # "multilib" support is kind of crazy and broken. See RHBZ#1328153 for details.
@@ -19,8 +24,8 @@ EOF
 # the environment clean. (multilib_policy=best is the default in RHEL6+.)
 cp -p /etc/yum.conf{,.orig}
 echo multilib_policy=best >>/etc/yum.conf
-yum{{ ' ' + yum_install_extra_opts if yum_install_extra_opts is defined else '' }} -y install {{ harness }}
+$package_command{{ ' ' + yum_install_extra_opts if yum_install_extra_opts is defined else '' }} -y install {{ harness }}
 mv /etc/yum.conf{.orig,}
 {% else %}
-yum{{ ' ' + yum_install_extra_opts if yum_install_extra_opts is defined else '' }} -y install {{ harness }}
+$package_command{{ ' ' + yum_install_extra_opts if yum_install_extra_opts is defined else '' }} -y install {{ harness }}
 {% endif %}

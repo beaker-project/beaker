@@ -289,10 +289,15 @@ skip_if_unavailable=1
 EOF
 
 
+if command -v dnf >/dev/null ; then
+   package_command="dnf"
+else
+   package_command="yum"
+fi
 # fill the yum cache and redirect output to /dev/null
 # This speeds up yum because of a bug where it will update stdout too often.
 # http://lists.baseurl.org/pipermail/yum-devel/2011-December/008857.html
-yum check-update > /dev/null 2>&1 || true
+$package_command check-update > /dev/null 2>&1 || true
 cat <<"EOF" >/etc/profile.d/beaker-harness-env.sh
 export BEAKER_LAB_CONTROLLER_URL="http://lab.test-kickstart.invalid:8000/"
 export BEAKER_LAB_CONTROLLER=lab.test-kickstart.invalid
@@ -306,7 +311,12 @@ setenv BEAKER_RECIPE_ID @RECIPEID@
 setenv BEAKER_HUB_URL "@BEAKER@"
 EOF
 
-yum -y install restraint-rhts
+if command -v dnf >/dev/null ; then
+   package_command="dnf"
+else
+   package_command="yum"
+fi
+$package_command -y install restraint-rhts
 
 #Add test user account
 useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test

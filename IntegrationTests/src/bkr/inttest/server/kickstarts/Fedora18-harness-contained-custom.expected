@@ -299,20 +299,26 @@ cp /etc/yum.repos.d/beaker-tasks.repo /root/
 # Create the Dockerfile for the container
 cat << EOF > /root/Dockerfile
 
+if command -v dnf >/dev/null ; then
+   export package_command="dnf"
+else
+   export package_command="yum"
+fi
+
 FROM docker-registry.mysys.com/fedora:latest
 MAINTAINER Beaker Developers <beaker-devel@lists.fedoraproject.org>
 ENV container docker
 ADD beaker-tasks.repo /etc/yum.repos.d/
 ADD customrepos/ /etc/yum.repos.d/
 ADD beaker-harness-env.sh /etc/profile.d/beaker-harness-env.sh
-RUN yum -y update; yum clean all
+RUN $package_command -y update; $package_command clean all
 
 
 # Install the harness
-RUN yum -y install restraint-rhts
-RUN yum -y install coreutils
-RUN yum -y install beakerlib || true
-RUN yum -y install beakerlib-redhat || true
+RUN $package_command -y install restraint-rhts
+RUN $package_command -y install coreutils
+RUN $package_command -y install beakerlib || true
+RUN $package_command -y install beakerlib-redhat || true
 CMD /usr/bin/mybinary
 EOF
 

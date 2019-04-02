@@ -1978,7 +1978,7 @@ END
         self.assert_('# Check in with Beaker Server' in klines, k)
         self.assert_('%post --log=/dev/console' in klines, k)
         self.assert_('# Add Harness Repo' in klines, k)
-        self.assert_('yum -y install beah rhts-test-env' in klines, k)
+        self.assert_('$package_command -y install beah rhts-test-env' in klines, k)
 
     def test_custom_kickstart_rhel7(self):
         recipe = self.provision_recipe('''
@@ -2039,7 +2039,7 @@ END
         self.assert_('# Check in with Beaker Server' in klines, k)
         self.assert_('%post --log=/dev/console' in klines, k)
         self.assert_('# Add Harness Repo' in klines, k)
-        self.assert_('yum -y install beah rhts-test-env' in klines, k)
+        self.assert_('$package_command -y install beah rhts-test-env' in klines, k)
 
     def test_custom_kickstart_fedora_rawhide(self):
         recipe = self.provision_recipe('''
@@ -2099,7 +2099,7 @@ END
         self.assert_('# Check in with Beaker Server' in klines, k)
         self.assert_('%post --log=/dev/console' in klines, k)
         self.assert_('# Add Harness Repo' in klines, k)
-        self.assert_('yum -y install restraint-rhts' in klines, k)
+        self.assert_('$package_command -y install restraint-rhts' in klines, k)
 
     def test_custom_kickstart_fedora(self):
         recipe = self.provision_recipe('''
@@ -2159,7 +2159,7 @@ END
         self.assert_('# Check in with Beaker Server' in klines, k)
         self.assert_('%post --log=/dev/console' in klines, k)
         self.assert_('# Add Harness Repo' in klines, k)
-        self.assert_('yum -y install beah rhts-test-env' in klines, k)
+        self.assert_('$package_command -y install beah rhts-test-env' in klines, k)
 
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=801676
@@ -3121,7 +3121,7 @@ done
         self.assert_('export BEAKER_LAB_CONTROLLER=%s' % self.lab_controller.fqdn in k, k)
         self.assert_('export BEAKER_RECIPE_ID=%s' % recipe.id in k, k)
         self.assert_('export BEAKER_HUB_URL="%s"' % get_server_base() in k, k)
-        self.assert_('yum -y install my-alternative-harness' in k, k)
+        self.assert_('$package_command -y install my-alternative-harness' in k, k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1328153
     def test_harness_is_installed_with_multilib_policy_best_on_ia64(self):
@@ -3142,7 +3142,7 @@ done
         self.assertIn(
                 'cp -p /etc/yum.conf{,.orig}\n'
                 'echo multilib_policy=best >>/etc/yum.conf\n'
-                'yum -y install restraint-rhts\n'
+                '$package_command -y install restraint-rhts\n'
                 'mv /etc/yum.conf{.orig,}\n',
                 recipe.installation.rendered_kickstart.kickstart)
 
@@ -3695,7 +3695,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                 </recipeSet>
             </job>''')
         ks = recipe.installation.rendered_kickstart.kickstart
-        self.assertIn('yum -y install beah-0.6.48 ', ks)
+        self.assertIn('$package_command -y install beah-0.6.48 ', ks)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1065811
     def test_disable_ipv6_beah(self):

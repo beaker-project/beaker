@@ -38,13 +38,19 @@ cat << EOF > /root/Dockerfile
 {% set harness_docker_base_image=docker_registry + "/" + docker_image + ":" + docker_tag %}
 {% endif %}
 
+if command -v dnf >/dev/null ; then
+   export package_command="dnf"
+else
+   export package_command="yum"
+fi
+
 FROM {{ harness_docker_base_image }}
 MAINTAINER Beaker Developers <beaker-devel@lists.fedoraproject.org>
 ENV container docker
 ADD beaker-tasks.repo /etc/yum.repos.d/
 ADD customrepos/ /etc/yum.repos.d/
 ADD beaker-harness-env.sh /etc/profile.d/beaker-harness-env.sh
-RUN yum -y update; yum clean all
+RUN $package_command -y update; $package_command clean all
 
 {% if contained_harness_entrypoint is not defined %}
 # We assume that if the contained harness entrypoint is not
@@ -52,8 +58,8 @@ RUN yum -y update; yum clean all
 # for us
 # Reference: http://developerblog.redhat.com/2014/05/05/running-systemd-within-docker-container/
 {# In case we have fakesystemd installed, remove it #}
-RUN yum -y remove fakesystemd || true
-RUN yum -y install systemd; \
+RUN $package_command -y remove fakesystemd || true
+RUN $package_command -y install systemd; \
 (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ "\$i" == systemd-tmpfiles-setup.service ] || rm -f "\$i"; done); \
 rm -f /lib/systemd/system/multi-user.target.wants/*;\
 rm -f /etc/systemd/system/*.wants/*;\
@@ -66,10 +72,10 @@ VOLUME [ "/sys/fs/cgroup" ]
 {% endif %}
 
 # Install the harness
-RUN yum -y install {{ harness|default('restraint restraint-rhts') }}
-RUN yum -y install coreutils
-RUN yum -y install beakerlib || true
-RUN yum -y install beakerlib-redhat || true
+RUN $package_command -y install {{ harness|default('restraint restraint-rhts') }}
+RUN $package_command -y install coreutils
+RUN $package_command -y install beakerlib || true
+RUN $package_command -y install beakerlib-redhat || true
 CMD {{ contained_harness_entrypoint|default('["/usr/sbin/init"]') }}
 EOF
 
