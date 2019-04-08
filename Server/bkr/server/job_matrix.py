@@ -57,7 +57,7 @@ class JobMatrix:
         if ('job_ids' in kw or 'whiteboard' in kw):
             job_ids = []
             if 'job_ids' in kw:
-                job_ids = [int(j) for j in kw['job_ids'].split()]
+                job_ids = [int(j) if j.isdigit() else None for j in kw['job_ids'].split()]
                 # Filter out ids of deleted jobs
                 query = model.Job.query.filter(not_(model.Job.is_deleted)).filter(model.Job.id.in_(job_ids))
                 job_ids = [job_id for job_id, in query.values(model.Job.id)]
