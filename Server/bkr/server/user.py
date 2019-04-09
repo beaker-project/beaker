@@ -404,6 +404,9 @@ def add_ssh_public_key(username):
         elements = keytext.split(None, 2)
         if len(elements) != 3:
             raise ValueError('Invalid SSH public key')
+        # 0 - key type; 1 - key; 2 - identity
+        if elements[1] in [ssh_key.pubkey for ssh_key in user.sshpubkeys]:
+            raise ValueError('Duplicate SSH public key')
         key = SSHPubKey(*elements)
         user.sshpubkeys.append(key)
         session.flush() # to populate id
