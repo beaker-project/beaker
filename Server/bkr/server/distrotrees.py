@@ -6,6 +6,7 @@
 
 import urlparse
 import cherrypy
+import os
 from kid import Element
 from sqlalchemy.sql import exists
 from sqlalchemy.orm import contains_eager
@@ -158,21 +159,16 @@ gpgcheck=0
             flash(_(u'Invalid lab controller id %s') % lab_controller_id)
             redirect(str(distro_tree.id))
 
-        url = url.strip()
-        if not url.endswith('/'):
-            url = url + '/'
-        if not urlparse.urlparse(url).scheme:
-            flash(_(u'URL %r is not absolute') % url)
+        # make sure the url ends with /
+        url = os.path.join(url.strip(),'')
+        try:
+            self.add_distro_urls(distro_tree, lab_controller, [url])
+        except ValueError as e:
+            flash(_(u'%s') % e)
             redirect(str(distro_tree.id))
-        distro_tree.lab_controller_assocs.append(
-                LabControllerDistroTree(lab_controller=lab_controller, url=url))
-        distro_tree.activity.append(DistroTreeActivity(
-                user=identity.current.user, service=u'WEBUI',
-                action=u'Added', field_name=u'lab_controller_assocs',
-                old_value=None, new_value=u'%s %s' % (lab_controller, url)))
-        flash(_(u'Added %s %s') % (lab_controller, url))
-        redirect(str(distro_tree.id))
 
+        flash(_(u'Changed/Added %s %s') % (lab_controller, url))
+        redirect(str(distro_tree.id))
 
     @expose()
     @identity.require(identity.in_group('admin'))
@@ -225,31 +221,61 @@ gpgcheck=0
         flash(_(u'Updated install options'))
         redirect(str(distro_tree.id))
 
+    @staticmethod
+    def add_distro_urls(distro_tree, lab_controller, urls):
+        """
+        Adds supplied URLs to specific distro tree under specific lab controller.
+        Old URL will be replaced if new URL uses the same scheme
+        """
+        new_urls_by_scheme = dict(
+            (urlparse.urlparse(url, scheme=None).scheme, url) for url in urls)
+        if None in new_urls_by_scheme:
+            raise ValueError('URL %r is not absolute' % new_urls_by_scheme[None])
+        for lca in distro_tree.lab_controller_assocs:
+            if lca.lab_controller == lab_controller:
+                scheme = urlparse.urlparse(lca.url).scheme
+                new_url = new_urls_by_scheme.pop(scheme, None)
+                # replace old url if it's the same scheme
+                if new_url is not None and lca.url != new_url:
+                    distro_tree.activity.append(DistroTreeActivity(
+                        user=identity.current.user, service=u'XMLRPC',
+                        action=u'Changed', field_name=u'lab_controller_assocs',
+                        old_value=u'%s %s' % (lca.lab_controller, lca.url),
+                        new_value=u'%s %s' % (lca.lab_controller, new_url)))
+                    lca.url = new_url
+        for url in new_urls_by_scheme.values():
+            distro_tree.lab_controller_assocs.append(LabControllerDistroTree(
+                lab_controller=lab_controller, url=url))
+            distro_tree.activity.append(DistroTreeActivity(
+                user=identity.current.user, service=u'XMLRPC',
+                action=u'Added', field_name=u'lab_controller_assocs',
+                old_value=None, new_value=u'%s %s' % (lab_controller, url)))
+
     # XMLRPC method for listing distro trees
     @cherrypy.expose
     def filter(self, filter):
         """
         Returns a list of details for distro trees filtered by the given criteria.
 
-        The *filter* argument must be an XML-RPC structure (dict) specifying 
+        The *filter* argument must be an XML-RPC structure (dict) specifying
         filter criteria. The following keys are recognised:
 
             'name'
-                Distro name. May include % SQL wildcards, for example 
+                Distro name. May include % SQL wildcards, for example
                 ``'%20101121.nightly'``.
             'family'
-                Distro family name, for example ``'RedHatEnterpriseLinuxServer5'``. 
+                Distro family name, for example ``'RedHatEnterpriseLinuxServer5'``.
                 Matches are exact.
             'tags'
-                List of distro tags, for example ``['STABLE', 'RELEASED']``. All given 
+                List of distro tags, for example ``['STABLE', 'RELEASED']``. All given
                 tags must be present on the distro for it to match.
             'arch'
                 Architecture name, for example ``'x86_64'``.
             'treepath'
-                Tree path (on any lab controller). May include % SQL wildcards, for 
+                Tree path (on any lab controller). May include % SQL wildcards, for
                 example ``'nfs://nfs.example.com:%'``.
             'labcontroller'
-                FQDN of lab controller. Limit to distro trees which are 
+                FQDN of lab controller. Limit to distro trees which are
                 available on this lab controller. May include % SQL wildcards.
             'distro_id'
                 Distro id.
@@ -258,14 +284,14 @@ gpgcheck=0
                 Distro Tree id.
                 Matches are exact.
             'xml'
-                XML filter criteria in the same format allowed inside 
+                XML filter criteria in the same format allowed inside
                 ``<distroRequires/>`` in a job, for example
                 ``<or><distro_tag value="RELEASED"/><distro_tag value="STABLE"/></or>``.
             'limit'
                 Integer limit to number of distro trees returned.
 
-        The return value is an array with one element per distro (up to the 
-        maximum number of distros given by 'limit'). Each element is an XML-RPC 
+        The return value is an array with one element per distro (up to the
+        maximum number of distros given by 'limit'). Each element is an XML-RPC
         structure (dict) describing a distro tree.
 
         .. versionadded:: 0.9

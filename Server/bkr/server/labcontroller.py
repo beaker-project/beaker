@@ -307,7 +307,7 @@ class LabControllers(RPCRoot):
         except NoResultFound:
             pass
         else:
-            raise BX(_('Cannot import distro as %s: it is configured as an alias for %s' 
+            raise BX(_('Cannot import distro as %s: it is configured as an alias for %s'
                        % (new_distro['osmajor'], osmajor.osmajor)))
 
         osversion = OSVersion.lazy_create(osmajor=osmajor, osminor=new_distro['osminor'])
@@ -358,28 +358,7 @@ class LabControllers(RPCRoot):
                         image_type=image_type, kernel_type=kernel_type,
                         path=image['path'])
 
-        new_urls_by_scheme = dict((urlparse.urlparse(url).scheme, url)
-                for url in new_distro['urls'])
-        if None in new_urls_by_scheme:
-            raise ValueError('URL %r is not absolute' % new_urls_by_scheme[None])
-        for lca in distro_tree.lab_controller_assocs:
-            if lca.lab_controller == lab_controller:
-                scheme = urlparse.urlparse(lca.url).scheme
-                new_url = new_urls_by_scheme.pop(scheme, None)
-                if new_url != None and lca.url != new_url:
-                    distro_tree.activity.append(DistroTreeActivity(
-                            user=identity.current.user, service=u'XMLRPC',
-                            action=u'Changed', field_name=u'lab_controller_assocs',
-                            old_value=u'%s %s' % (lca.lab_controller, lca.url),
-                            new_value=u'%s %s' % (lca.lab_controller, new_url)))
-                    lca.url = new_url
-        for url in new_urls_by_scheme.values():
-            distro_tree.lab_controller_assocs.append(LabControllerDistroTree(
-                    lab_controller=lab_controller, url=url))
-            distro_tree.activity.append(DistroTreeActivity(
-                    user=identity.current.user, service=u'XMLRPC',
-                    action=u'Added', field_name=u'lab_controller_assocs',
-                    old_value=None, new_value=u'%s %s' % (lab_controller, url)))
+        DistroTrees.add_distro_urls(distro_tree, lab_controller, new_distro['urls'])
 
         return distro_tree.id
 
@@ -648,7 +627,7 @@ class LabControllers(RPCRoot):
         """
         Called by beaker-proxy. returns all active distro_trees
         for the lab controller that made the call.
-        We have the lab controller do this because it may have access to 
+        We have the lab controller do this because it may have access to
         distros that the scheduler can't reach.
         """
         lab_controller = identity.current.user.lab_controller

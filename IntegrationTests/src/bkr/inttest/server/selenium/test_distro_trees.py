@@ -54,6 +54,14 @@ class DistroTreeViewTest(WebDriverTestCase):
             'norhgb')
 
     def test_labcontroller(self):
+
+        def select_labcontroller_and_submit(lab_controller_fqdn, url):
+            self.browser.find_element_by_xpath("//select[@id='lab_controller_id']/"
+                                               "option[normalize-space(text())='%s']" % lab_controller_fqdn).click()
+            self.browser.find_element_by_xpath("//input[@id='url']"). \
+                send_keys(url)
+            self.browser.find_element_by_name('lab_controller_add_form').submit()
+
         # Add
         with session.begin():
             lc = data_setup.create_labcontroller()
@@ -61,21 +69,28 @@ class DistroTreeViewTest(WebDriverTestCase):
         b = self.browser
         login(b)
         go_to_distro_tree_view(b, distro_tree)
-        b.find_element_by_xpath("//select[@id='lab_controller_id']/"
-            "option[normalize-space(text())='%s']" % lc.fqdn).click()
-        b.find_element_by_xpath("//input[@id='url']"). \
-            send_keys('http://blah.com')
-        b.find_element_by_name('lab_controller_add_form').submit()
+        select_labcontroller_and_submit(lab_controller_fqdn=lc.fqdn, url='http://blah.com/')
         # A trailing '/' is added automatically if it's not present. RHBZ#912242
         self.assertEqual(
             b.find_element_by_class_name('flash').text,
-            'Added %s http://blah.com/' % lc.fqdn)
+            'Changed/Added %s http://blah.com/' % lc.fqdn)
+        b.find_element_by_xpath("//td[preceding-sibling::td/a[@href='http://blah.com/']]/form")
 
-        # Delete
-        delete_and_confirm(b, "//td[preceding-sibling::td/a[@href='http://blah.com/']]/form")
+        # Test same schema replace
+        select_labcontroller_and_submit(lab_controller_fqdn=lc.fqdn, url='http://domain.com/')
         self.assertEqual(
             b.find_element_by_class_name('flash').text,
-            'Deleted %s http://blah.com/' % lc.fqdn)
+            'Changed/Added %s http://domain.com/' % lc.fqdn)
+        b.find_element_by_xpath("//td[preceding-sibling::td/a[@href='http://domain.com/']]/form")
+        # verify that http://blah.com got replaced and is no longer present
+        self.assertFalse(
+            b.find_elements_by_xpath("//td[preceding-sibling::td/a[@href='http://blah.com/']]/form"))
+
+        # Delete
+        delete_and_confirm(b, "//td[preceding-sibling::td/a[@href='http://domain.com/']]/form")
+        self.assertEqual(
+            b.find_element_by_class_name('flash').text,
+            'Deleted %s http://domain.com/' % lc.fqdn)
 
     def test_update_install_options(self):
         b = self.browser
