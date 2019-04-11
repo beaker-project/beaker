@@ -157,7 +157,7 @@ BuildRequires:  python2-lxml
 BuildRequires:  python2-ldap
 BuildRequires:  python2-rdflib
 BuildRequires:  python2-turbomail
-BuildRequires:  python2-cracklib
+BuildRequires:  python2-pwquality
 BuildRequires:  python2-rpm
 BuildRequires:  python2-netaddr
 BuildRequires:  python2-itsdangerous
@@ -180,7 +180,7 @@ Requires:       python2-daemon
 Requires:       python2-lockfile
 Requires:       python2-gssapi
 Requires:       python2-TurboMail
-Requires:       python2-cracklib
+Requires:       python2-pwquality
 Requires:       python2-jinja2
 Requires:       python2-netaddr
 Requires:       python2-requests
