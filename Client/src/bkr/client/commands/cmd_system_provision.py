@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -113,30 +112,34 @@ See also
 :manpage:`bkr-workflow-simple(1)`, :manpage:`bkr-system-power(1)`, :manpage:`bkr(1)`
 """
 
-import sys
 import optparse
+import sys
+
 from bkr.client import BeakerCommand
 
+
 class System_Provision(BeakerCommand):
-    """Provision a system with a distro"""
+    """
+    Provision a system with a distro
+    """
     enabled = True
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <fqdn>" % self.normalized_name
         self.parser.add_option('--distro-tree', metavar='ID',
-                help='Provision distro tree identified by ID')
+                               help='Provision distro tree identified by ID')
         self.parser.add_option('--distro', help=optparse.SUPPRESS_HELP)
         self.parser.add_option('--ks-meta', metavar='OPTS',
-                help='Pass OPTS as kickstart metadata')
+                               help='Pass OPTS as kickstart metadata')
         self.parser.add_option('--kernel-options', metavar='OPTS',
-                help='Pass OPTS as kernel options during installation')
+                               help='Pass OPTS as kernel options during installation')
         self.parser.add_option('--kernel-options-post', metavar='OPTS',
-                help='Pass OPTS as kernel options after installation')
+                               help='Pass OPTS as kernel options after installation')
         self.parser.add_option('--kickstart', metavar='FILENAME',
-                help='Read complete kickstart from FILENAME (- for stdin)')
+                               help='Read complete kickstart from FILENAME (- for stdin)')
         self.parser.add_option('--no-reboot',
-                action='store_false', dest='reboot',
-                help="Configure installation but don't reboot system")
+                               action='store_false', dest='reboot',
+                               help="Configure installation but don't reboot system")
         self.parser.set_defaults(reboot=True)
 
     def run(self, *args, **kwargs):
@@ -160,5 +163,5 @@ class System_Provision(BeakerCommand):
 
         self.set_hub(**kwargs)
         self.hub.systems.provision(fqdn, kwargs['distro_tree'],
-                kwargs['ks_meta'], kwargs['kernel_options'],
-                kwargs['kernel_options_post'], kickstart, kwargs['reboot'])
+                                   kwargs['ks_meta'], kwargs['kernel_options'],
+                                   kwargs['kernel_options_post'], kickstart, kwargs['reboot'])

@@ -1,10 +1,10 @@
-
+import six
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinx.ext.todo',
     'sphinx.ext.extlinks',
     'sphinxcontrib.httpdomain', 'sphinxcontrib.autohttp.flask']
 master_doc = 'index'
 project = u'Beaker'
-copyright = u'2013, Red Hat, Inc'
+copyright = u'2013-2019 Red Hat, Inc.'
 
 try:
     import bkr.common
@@ -29,23 +29,28 @@ man_pages = [
         [u'David Sommerseth <davids@redhat.com>'], 1),
     ('man/beaker-wizard', 'beaker-wizard', 'Tool to ease the creation of a new Beaker task',
         [u'Petr Splichal <psplicha@redhat.com>'], 1),
-    ('admin-guide/man/beaker-create-kickstart', 'beaker-create-kickstart', 'Generate Anaconda kickstarts',
-        [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 8),
-    ('admin-guide/man/beaker-create-ipxe-image', 'beaker-create-ipxe-image',
-        'Generate and upload iPXE boot image to Glance',
-        [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 8),
-    ('admin-guide/man/beaker-import', 'beaker-import', 'Import distros',
-        [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 8),
-    ('admin-guide/man/beaker-init', 'beaker-init',
-        'Initialize and populate the Beaker database',
-        [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 8),
-    ('admin-guide/man/beaker-repo-update', 'beaker-repo-update',
-        'Update cached harness packages',
-        [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 8),
-    ('admin-guide/man/beaker-usage-reminder', 'beaker-usage-reminder',
-        'Send Beaker usage reminder',
-        [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 8),
 ]
+man_server_pages = [
+    ('admin-guide/man/beaker-create-kickstart',
+     'beaker-create-kickstart', 'Generate Anaconda kickstarts',
+     [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 8),
+    ('admin-guide/man/beaker-create-ipxe-image', 'beaker-create-ipxe-image',
+     'Generate and upload iPXE boot image to Glance',
+     [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 8),
+    ('admin-guide/man/beaker-import', 'beaker-import', 'Import distros',
+     [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 8),
+    ('admin-guide/man/beaker-init', 'beaker-init',
+     'Initialize and populate the Beaker database',
+     [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 8),
+    ('admin-guide/man/beaker-repo-update', 'beaker-repo-update',
+     'Update cached harness packages',
+     [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 8),
+    ('admin-guide/man/beaker-usage-reminder', 'beaker-usage-reminder',
+     'Send Beaker usage reminder',
+     [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 8),
+]
+if six.PY2:  # Server supported only for Python 2
+    man_pages += man_server_pages
 man_show_urls = True
 
 latex_documents = [
@@ -61,6 +66,9 @@ intersphinx_mapping = {'python': ('http://docs.python.org/', None),
 extlinks = {
     'issue': ('https://bugzilla.redhat.com/show_bug.cgi?id=%s', '#'),
 }
+
+if six.PY3:
+    exclude_patterns = ['server-api/*.rst']
 
 # This config is also a Sphinx extension with some Beaker-specific customisations:
 

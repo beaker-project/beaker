@@ -56,10 +56,12 @@ See also
 """
 
 from bkr.client import BeakerCommand
-from optparse import OptionValueError
+
 
 class Job_Comment(BeakerCommand):
-    """Comment on RecipeSet/RecipeTask/RecipeTaskResult"""
+    """
+    Comment on RecipeSet/RecipeTask/RecipeTaskResult
+    """
     enabled = True
 
     def options(self):

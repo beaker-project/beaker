@@ -64,16 +64,22 @@ See also
 :manpage:`bkr(1)`
 """
 
+from __future__ import print_function
 
-from bkr.client.task_watcher import *
-from bkr.client import BeakerCommand, BeakerWorkflow, BeakerJob, BeakerRecipeSet, BeakerRecipe
-from optparse import OptionValueError
 import sys
-import copy
 import xml.dom.minidom
 
+from bkr.client import BeakerJob
+from bkr.client import BeakerRecipe
+from bkr.client import BeakerRecipeSet
+from bkr.client import BeakerWorkflow
+from bkr.client.task_watcher import *
+
+
 class Machine_Test(BeakerWorkflow):
-    """Workflow to generate job to test machines"""
+    """
+    Workflow to generate job to test machines
+    """
     enabled = True
     doc = xml.dom.minidom.Document()
 
@@ -106,11 +112,11 @@ class Machine_Test(BeakerWorkflow):
     def run(self, *args, **kwargs):
         self.set_hub(**kwargs)
 
-        debug  = kwargs.get("debug", False)
+        debug = kwargs.get("debug", False)
         dryrun = kwargs.get("dryrun", False)
         wait = kwargs.get("wait", False)
         machine = kwargs.get("machine", None)
-        families = kwargs.get("family", [])
+        family = kwargs.get("family", [])
         taskParams = kwargs.get("taskparam", [])
 
         # Add in Inventory if requested
@@ -124,16 +130,17 @@ class Machine_Test(BeakerWorkflow):
             kwargs["whiteboard"] = "Test %s" % machine
 
         # If family is specified on command line just do it.
-        if kwargs['family']:
+        if family:
             if not kwargs['arches']:
                 self.parser.error("If family is specified you must specify arches as well")
-            families = dict((family, [arch for arch in kwargs['arches']]) for family in kwargs['family'])
+            families = dict(
+                (family, [arch for arch in kwargs['arches']]) for family in family)
         else:
-            families = self.getSystemOsMajorArches(*args, **kwargs)
+            families = self.get_system_os_major_arches(*args, **kwargs)
 
         # Exit early
         if not families:
-            print >>sys.stderr, 'Could not find an appropriate distro to provision system with.'
+            sys.stderr.write('Could not find an appropriate distro to provision system with.')
             sys.exit(1)
 
         # Create Job
@@ -142,32 +149,32 @@ class Machine_Test(BeakerWorkflow):
         for family, arches in families.items():
             kwargs['family'] = family
             # get all tasks requested
-            requestedTasks = self.getTasks(*args, **kwargs)
+            requestedTasks = self.get_tasks(*args, **kwargs)
             # If arch is specified on command line limit to just those. (if they match)
             if kwargs['arches']:
                 arches = set(kwargs['arches']).intersection(set(arches))
             for arch in arches:
-                recipeTemplate =  BeakerRecipe()
+                recipeTemplate = BeakerRecipe()
                 # Add Distro Requirements
                 temp = dict(kwargs)
                 temp['family'] = family
-                recipeTemplate.addBaseRequires(*args, **temp)
+                recipeTemplate.add_base_requires(*args, **temp)
                 arch_node = self.doc.createElement('distro_arch')
                 arch_node.setAttribute('op', '=')
                 arch_node.setAttribute('value', arch)
-                recipeSet = BeakerRecipeSet(**kwargs)
-                recipeSet.addRecipe(self.processTemplate(recipeTemplate,
-                                                         requestedTasks,
-                                                         taskParams=taskParams,
-                                                         allow_empty_recipe=True,
-                                                         distroRequires=arch_node, **temp))
-                job.addRecipeSet(recipeSet)
+                recipe_set = BeakerRecipeSet(**kwargs)
+                recipe_set.add_recipe(self.process_template(recipeTemplate,
+                                                            requestedTasks,
+                                                            taskParams=taskParams,
+                                                            allow_empty_recipe=True,
+                                                            distroRequires=arch_node, **temp))
+                job.add_recipe_set(recipe_set)
 
         # jobxml
         jobxml = job.toxml(**kwargs)
 
         if debug:
-            print jobxml
+            print(jobxml)
 
         submitted_jobs = []
         failed = False
@@ -175,11 +182,11 @@ class Machine_Test(BeakerWorkflow):
         if not dryrun:
             try:
                 submitted_jobs.append(self.hub.jobs.upload(jobxml))
-            except Exception, ex:
+            except Exception as ex:
                 failed = True
-                print >>sys.stderr, ex
+                sys.stderr.write(ex)
         if not dryrun:
-            print "Submitted: %s" % submitted_jobs
+            print("Submitted: %s" % submitted_jobs)
             if wait:
                 watch_tasks(self.hub, submitted_jobs)
             if failed:

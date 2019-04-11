@@ -56,17 +56,21 @@ See also
 :manpage:`bkr(1)`
 """
 
-import sys
+from __future__ import print_function
+
 from bkr.client import BeakerCommand
 
+
 class Job_Logs(BeakerCommand):
-    """Print URLs of recipe log files"""
+    """
+    Print URLs of recipe log files
+    """
     enabled = True
     requires_login = False
 
     def options(self):
         self.parser.add_option('--size', action='store_true',
-                help='Print file size alongside each log file')
+                               help='Print file size alongside each log file')
         self.parser.usage = "%%prog %s [options] <taskspec>..." % self.normalized_name
 
     def _log_size(self, url):
@@ -74,7 +78,7 @@ class Job_Logs(BeakerCommand):
         if response.status_code in (404, 410):
             return '<missing>'
         elif response.status_code >= 400:
-            return '<error:%s>' % (response.status_code)
+            return '<error:%s>' % response.status_code
         try:
             return '%6d' % int(response.headers['Content-Length'])
         except ValueError:
@@ -89,6 +93,6 @@ class Job_Logs(BeakerCommand):
             logfiles = self.hub.taskactions.files(task)
             for log in logfiles:
                 if kwargs.get('size'):
-                    print self._log_size(log['url']), log['url']
+                    print(self._log_size(log['url']), log['url'])
                 else:
-                    print log['url']
+                    print(log['url'])

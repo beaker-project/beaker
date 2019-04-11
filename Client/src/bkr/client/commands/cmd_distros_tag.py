@@ -41,9 +41,9 @@ Non-zero on error, otherwise zero.
 Examples
 --------
 
-Tags all RHEL5.6 Server nightly trees from a particular date with the "INSTALLS" tag::
+Tags all RHEL8.0.0 nightly trees from a particular date with the "INSTALLS" tag::
 
-    bkr distros-tag --name RHEL5.6-Server-20101110% INSTALLS
+    bkr distros-tag --name RHEL-8.0.0-20190410% INSTALLS
 
 Notes
 -----
@@ -56,14 +56,16 @@ See also
 :manpage:`bkr-distros-untag(1)`, :manpage:`bkr(1)`
 """
 
+from __future__ import print_function
 
 from bkr.client import BeakerCommand
 
 
 class Distros_Tag(BeakerCommand):
-    """tag distros"""
+    """
+    Tag distros
+    """
     enabled = True
-
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <tag>" % self.normalized_name
@@ -73,7 +75,6 @@ class Distros_Tag(BeakerCommand):
             default=None,
             help="tag by name, use % for wildcard",
         )
-
 
     def run(self, *args, **kwargs):
         if len(args) < 1:
@@ -86,7 +87,7 @@ class Distros_Tag(BeakerCommand):
 
         self.set_hub(**kwargs)
         distros = self.hub.distros.tag(name, tag)
-        print "Tagged the following distros with tag: %s" % tag
-        print "------------------------------------------------------"
+        print("Tagged the following distros with tag: %s" % tag)
+        print("------------------------------------------------------")
         for distro in distros:
-            print distro
+            print(distro)

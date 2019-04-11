@@ -42,12 +42,19 @@ Non-zero on error, otherwise zero.
 
 """
 
-from bkr.client import BeakerCommand
-import urllib
+from __future__ import print_function
+
 import json
 
+from six.moves.urllib import parse
+
+from bkr.client import BeakerCommand
+
+
 class Group_Members(BeakerCommand):
-    """List group members"""
+    """
+    List group members
+    """
     enabled = True
     requires_login = False
 
@@ -72,7 +79,8 @@ class Group_Members(BeakerCommand):
         self.set_hub(**kwargs)
         requests_session = self.requests_session()
 
-        res = requests_session.get('groups/%s' % urllib.quote(group), headers={'Accept': 'application/json'})
+        res = requests_session.get('groups/%s' % parse.quote(group),
+                                   headers={'Accept': 'application/json'})
         res.raise_for_status()
         members = []
 
@@ -90,7 +98,7 @@ class Group_Members(BeakerCommand):
                 else:
                     output_tuple = (m['username'], m['email'], 'Member')
 
-                print '%s %s %s' % output_tuple
+                print('%s %s %s' % output_tuple)
 
         if format == 'json':
-            print json.dumps(members)
+            print(json.dumps(members))

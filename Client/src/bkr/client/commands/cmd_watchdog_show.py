@@ -51,12 +51,15 @@ See also
 :manpage:`bkr(1)`
 """
 
+from __future__ import print_function
+
 from bkr.client import BeakerCommand
-from optparse import OptionValueError
 
 
 class Watchdog_Show(BeakerCommand):
-    """Display Task's Watchdog"""
+    """
+    Display Task's Watchdog
+    """
     enabled = True
     requires_login = False
 
@@ -68,5 +71,5 @@ class Watchdog_Show(BeakerCommand):
         self.set_hub(**kwargs)
         for task_id in args:
             seconds_left = self.hub.recipes.tasks.watchdog(task_id)
-            print "%s: %s" % (task_id, seconds_left or 'N/A')
+            print("%s: %s" % (task_id, seconds_left or 'N/A'))
 

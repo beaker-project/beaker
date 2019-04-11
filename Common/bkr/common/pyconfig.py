@@ -26,20 +26,29 @@ PyConfigParser accepts following python-like syntax:
    - from <file_without_suffix> import *
    - from <file_without_suffix> import var1, var2
 """
+
+from __future__ import print_function
+
 import os
 import fnmatch
 import itertools
 import keyword
 import token
 import tokenize
-from cStringIO import StringIO
+import six
+from six.moves import StringIO
 
 class ImproperlyConfigured(Exception):
-    """Program is improperly configured."""
+    """
+    Program is improperly configured.
+    """
     pass
 
 def get_dict_value(dictionary, key):
-    """Return a value from a dictionary, if not found, use 'glob' keys (*, ? metachars), then use default value with '*' key."""
+    """
+    Return a value from a dictionary, if not found,
+    use 'glob' keys (*, ? metachars), then use default value with '*' key.
+    """
     if dictionary is None:
         return None
 
@@ -51,7 +60,7 @@ def get_dict_value(dictionary, key):
     except KeyError:
         if isinstance(key, str):
             matches = []
-            for pattern in dictionary.iterkeys():
+            for pattern in six.iterkeys(dictionary):
                 if pattern == '*' or not isinstance(pattern, str):
                     # exclude '*', because it would match every time
                     continue
@@ -67,7 +76,9 @@ def get_dict_value(dictionary, key):
 
 
 class PyConfigParser(dict):
-    """Python-like syntax config parser."""
+    """
+    Python-like syntax config parser.
+    """
 
     get_dict_value = staticmethod(get_dict_value)
 
@@ -81,6 +92,7 @@ class PyConfigParser(dict):
         self._config_file_suffix = config_file_suffix
         self._debug = debug
         self._open_file = None
+        self._tokens = None
 
     def __getitem__(self, name):
         if name.startswith("_"):
@@ -93,7 +105,9 @@ class PyConfigParser(dict):
         return dict.__setitem__(self, name, value)
 
     def load_from_file(self, file_name):
-        """Load data data from a file."""
+        """
+        Load data data from a file.
+        """
         fo = open(file_name, "r")
         data = fo.read()
         fo.close()
@@ -101,23 +115,31 @@ class PyConfigParser(dict):
         self.load_from_string(data)
 
     def load_from_string(self, input_string):
-        """Load data from a string."""
+        """
+        Load data from a string.
+        """
         if input_string:
             self._tokens = tokenize.generate_tokens(StringIO(input_string).readline)
             for key, value in self._parse():
                 self[key] = value
 
     def load_from_dict(self, input_dict):
-        """Load data from a dictionary."""
+        """
+        Load data from a dictionary.
+        """
         if input_dict is not None:
             self.update(input_dict)
 
     def load_from_conf(self, conf):
-        """Load data from another config."""
+        """
+        Load data from another config.
+        """
         self.load_from_dict(conf)
 
     def _parse(self):
-        """Parse config file and store results to this object."""
+        """
+        Parse config file and store results to this object.
+        """
         while True:
             self._get_token()
 
@@ -141,7 +163,8 @@ class PyConfigParser(dict):
             yield key, value
 
     def _assert_token(self, *args):
-        """Check if token has proper name and value.
+        """
+        Check if token has proper name and value.
 
         *args are tuples (name, value), (name, )
         """
@@ -153,12 +176,14 @@ class PyConfigParser(dict):
         raise SyntaxError("Invalid syntax: file: %s, begin: %s, end: %s, text: %s" % (self._open_file, self._tok_begin, self._tok_end, self._tok_line))
 
     def _get_token(self, skip_newline=True):
-        """Get a new token from token generator."""
-        self._tok_number, self._tok_value, self._tok_begin, self._tok_end, self._tok_line = self._tokens.next()
+        """
+        Get a new token from token generator.
+        """
+        self._tok_number, self._tok_value, self._tok_begin, self._tok_end, self._tok_line = next(self._tokens)
         self._tok_name = token.tok_name.get(self._tok_number, None)
 
         if self._debug:
-            print "%2s %16s %s" % (self._tok_number, self._tok_name, self._tok_value.strip())
+            print("%2s %16s %s" % (self._tok_number, self._tok_name, self._tok_value.strip()))
 
         # skip some tokens
         if self._tok_name in ["COMMENT", "INDENT", "DEDENT"]:
@@ -168,7 +193,9 @@ class PyConfigParser(dict):
             self._get_token()
 
     def _get_NAME(self):
-        """Return a NAME token value."""
+        """
+        Return a NAME token value.
+        """
         if self._tok_value == "False":
             return False
 
@@ -182,13 +209,16 @@ class PyConfigParser(dict):
         return self[self._tok_value]
 
     def _get_STRING(self):
-        """Return a STRING token value."""
+        """
+        Return a STRING token value.
+        """
+
         # remove apostrophes or quotation marks
         result = self._tok_value[1:-1]
 
         # look at next token if "%s" follows the string
         self._tokens, tmp = itertools.tee(self._tokens)
-        if tmp.next()[1:2] != ("%", ):
+        if next(tmp)[1:2] != ("%", ):
             # just a regular string
             return result
 
@@ -199,7 +229,9 @@ class PyConfigParser(dict):
         return result % values
 
     def _get_NUMBER(self, negative=False):
-        """Return a NUMER token value."""
+        """
+        Return a NUMBER token value.
+        """
         if self._tok_value.find(".") != -1:
             result = float(self._tok_value)
         else:
@@ -210,7 +242,9 @@ class PyConfigParser(dict):
         return result
 
     def _get_value(self, get_next=True, basic_types_only=False):
-        """Get a value (number, string, other variable value, ...)."""
+        """
+        Get a value (number, string, other variable value, ...).
+        """
         if get_next:
             self._get_token()
 
@@ -237,7 +271,10 @@ class PyConfigParser(dict):
         self._assert_token(("FOO", ))
 
     def _get_from_import(self):
-        """Parse 'from <config> import <variables/*>' and import <config> data to this object."""
+        """
+        Parse 'from <config> import <variables/*>'
+        and import <config> data to this object.
+        """
 
         file_name = ""
         while True:
@@ -271,12 +308,16 @@ class PyConfigParser(dict):
                     raise KeyError("Can't import %s from %s." % (key, file_name))
 
     def _skip_commas(self, skip_newline=True):
-        """Skip OP tokens which contain commas."""
+        """
+        Skip OP tokens which contain commas.
+        """
         while (self._tok_name, self._tok_value) == ("OP", ","):
             self._get_token(skip_newline)
 
     def _get_dict(self):
-        """Get a dictionary content."""
+        """
+        Get a dictionary content.
+        """
         result = {}
         while True:
             self._get_token()
@@ -296,7 +337,9 @@ class PyConfigParser(dict):
         return result
 
     def _get_list(self):
-        """Get a list content."""
+        """
+        Get a list content.
+        """
         result = []
         while True:
             self._get_token()
@@ -311,7 +354,9 @@ class PyConfigParser(dict):
         return result
 
     def _get_tuple(self):
-        """Get a tuple content."""
+        """
+        Get a tuple content.
+        """
         result = []
         while True:
             self._get_token()
@@ -331,5 +376,5 @@ if "PROJECT_CONFIG_FILE" in os.environ:
     try:
         settings = PyConfigParser()
         settings.load_from_file(os.environ.get("PROJECT_CONFIG_FILE"))
-    except Exception, ex:
+    except Exception as ex:
         raise ImproperlyConfigured("Could not load config file: %s" % ex)

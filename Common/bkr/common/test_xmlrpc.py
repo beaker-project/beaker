@@ -4,27 +4,39 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
 import socket
-import bkr.common.xmlrpc
+import unittest
+
+import six
+
+if six.PY2:
+    from bkr.common import xmlrpc2 as xmlrpc_interface
+if six.PY3:
+    from bkr.common import xmlrpc3 as xmlrpc_interface
+
 
 class DummyTransport:
-    """Helper to test retry_request_decorator"""
+    """
+    Helper to test retry_request_decorator
+    """
     def __init__(self):
         self.request_count = 0
         self.close_count = 0
 
     def request(self, hostname, failures=0):
-       self.request_count += 1
-       if self.request_count <= failures:
-           raise socket.error
-       return self.request_count
+        self.request_count += 1
+        if self.request_count <= failures:
+            raise socket.error
+        return self.request_count
 
     def close(self):
-       self.close_count += 1
+        self.close_count += 1
+
 
 class DummyLogger:
-    """Helper to test retry_request_decorator"""
+    """
+    Helper to test retry_request_decorator
+    """
     def __init__(self):
         self.messages = []
 
@@ -36,14 +48,14 @@ class RetryTransportMixin:
     DEFAULT_RETRY_COUNT = 5
 
     def make_transport(self):
-        return bkr.common.xmlrpc.retry_request_decorator(DummyTransport)(
+        return xmlrpc_interface.retry_request_decorator(DummyTransport)(
                 retry_timeout=0.001)
 
 
 class RetryTransportTestCase(RetryTransportMixin, unittest.TestCase):
     # Check with the standard library logger in place
     def test_default_retry_settings(self):
-        transport = bkr.common.xmlrpc.retry_request_decorator(DummyTransport)()
+        transport = xmlrpc_interface.retry_request_decorator(DummyTransport)()
         self.assertEqual(transport.retry_count, self.DEFAULT_RETRY_COUNT)
         self.assertEqual(transport.retry_timeout, 30)
 
@@ -65,11 +77,11 @@ class RetryTransportTestCase(RetryTransportMixin, unittest.TestCase):
 class RetryTransportLoggingTestCase(RetryTransportMixin, unittest.TestCase):
     # Check we're logging the right things
     def setUp(self):
-        self.orig_logger = bkr.common.xmlrpc.logger
-        self.logger = bkr.common.xmlrpc.logger = DummyLogger()
+        self.orig_logger = xmlrpc_interface.logger
+        self.logger = xmlrpc_interface.logger = DummyLogger()
 
     def tearDown(self):
-        bkr.common.xmlrpc.logger = self.orig_logger
+        xmlrpc_interface.logger = self.orig_logger
 
     def test_immediate_success(self):
         transport = self.make_transport()
@@ -83,7 +95,7 @@ class RetryTransportLoggingTestCase(RetryTransportMixin, unittest.TestCase):
         transport = self.make_transport()
         self.assertEqual(transport.request("dummy", failures=2), 3)
         max_retries = self.DEFAULT_RETRY_COUNT
-        expected = range(max_retries, max_retries-2, -1)
+        expected = list(range(max_retries, max_retries-2, -1))
         self.assertEqual(self.get_retry_counts(), expected)
         self.assertTrue(self.logger.messages[0][2]["exc_info"])
 
@@ -91,5 +103,5 @@ class RetryTransportLoggingTestCase(RetryTransportMixin, unittest.TestCase):
         transport = self.make_transport()
         self.assertRaises(socket.error, transport.request, "dummy",
                           failures = self.DEFAULT_RETRY_COUNT + 1)
-        expected = range(self.DEFAULT_RETRY_COUNT, 0, -1)
+        expected = list(range(self.DEFAULT_RETRY_COUNT, 0, -1))
         self.assertEqual(self.get_retry_counts(), expected)

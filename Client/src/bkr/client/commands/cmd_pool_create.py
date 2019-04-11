@@ -75,10 +75,12 @@ See also
 
 
 from bkr.client import BeakerCommand
-import json
+
 
 class Pool_Create(BeakerCommand):
-    """Creates a system pool"""
+    """
+    Creates a system pool
+    """
     enabled = True
 
     def options(self):

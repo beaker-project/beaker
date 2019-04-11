@@ -51,11 +51,17 @@ See also
 
 """
 
-from bkr.client import BeakerCommand
+from __future__ import print_function
+
 import json
 
+from bkr.client import BeakerCommand
+
+
 class Pool_Systems(BeakerCommand):
-    """List systems in a pool"""
+    """
+    List systems in a pool
+    """
     enabled = True
 
     def options(self):
@@ -84,7 +90,7 @@ class Pool_Systems(BeakerCommand):
         systems = attributes['systems']
 
         if kwargs['format'] == 'json':
-            print json.dumps(systems)
+            print(json.dumps(systems))
         else:
             for system in systems:
                 print(system)

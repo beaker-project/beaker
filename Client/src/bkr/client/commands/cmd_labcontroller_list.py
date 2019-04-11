@@ -39,24 +39,29 @@ See also
 :manpage:`bkr(1)`
 """
 
+from __future__ import print_function
 
 from bkr.client import BeakerCommand
 
 
 class LabController_List(BeakerCommand):
-    """list labcontrollers"""
+    """
+    List lab controllers
+    """
     enabled = True
     requires_login = False
 
     def options(self):
         self.parser.usage = "%%prog %s" % self.normalized_name
 
-
     def run(self, *args, **kwargs):
         self.set_hub(**kwargs)
         for lab_controller in self.hub.lab_controllers():
-            print lab_controller
+            print(lab_controller)
+
 
 class List_LabControllers(LabController_List):
-    """To provide backwards compatibility"""
+    """
+    To provide backwards compatibility
+    """
     hidden = True

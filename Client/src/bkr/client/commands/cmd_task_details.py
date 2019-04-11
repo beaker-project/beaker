@@ -52,18 +52,15 @@ See also
 :manpage:`bkr(1)`
 """
 
+from __future__ import print_function
 
-from bkr.client.task_watcher import *
 from bkr.client import BeakerCommand
-from optparse import OptionValueError
-import sys
-import os.path
-import xmlrpclib
-from xml.dom.minidom import Document, parseString
 
 
 class Task_Details(BeakerCommand):
-    """Show details about Task"""
+    """
+    Show details about Task
+    """
     enabled = True
 
     def options(self):
@@ -89,7 +86,6 @@ class Task_Details(BeakerCommand):
         )
 
     def run(self, *args, **kwargs):
-        filter = dict()
         xml = kwargs.pop("xml")
         prettyxml = kwargs.pop("prettyxml")
         valid = True
@@ -99,8 +95,8 @@ class Task_Details(BeakerCommand):
         self.set_hub(**kwargs)
         for task in args:
             if xml:
-                print "%s\n%s" % (task, self.hub.tasks.to_xml(task, prettyxml, valid))
+                print("%s\n%s" % (task, self.hub.tasks.to_xml(task, prettyxml, valid)))
             elif prettyxml:
-               print "%s\n%s" % (task, self.hub.tasks.to_xml(task, prettyxml, valid))
+               print("%s\n%s" % (task, self.hub.tasks.to_xml(task, prettyxml, valid)))
             else:
-                print "%s %s" % (task, self.hub.tasks.to_dict(task,valid))
+                print("%s %s" % (task, self.hub.tasks.to_dict(task,valid)))

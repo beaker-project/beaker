@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -61,15 +60,20 @@ See also
 
 :manpage:`bkr(1)`
 """
-from bkr.client import BeakerCommand
-from xmlrpclib import Fault
+
+from __future__ import print_function
+
 from sys import exit
+
+from bkr.client import BeakerCommand
 
 
 class User_Modify(BeakerCommand):
-    """Modify certain user properties"""
+    """
+    Modify certain user properties
+    """
 
-    enabled=True
+    enabled = True
 
     def options(self):
         self.parser.usage = "%%prog %s [options]" % self.normalized_name
@@ -92,9 +96,9 @@ class User_Modify(BeakerCommand):
         if delegate_to_remove:
             self.hub.prefs. \
                 remove_submission_delegate_by_name(delegate_to_remove)
-            print 'Removed submission delegate %s' % delegate_to_remove
+            print('Removed submission delegate %s' % delegate_to_remove)
         if delegate_to_add:
             self.hub.prefs. \
                 add_submission_delegate_by_name(delegate_to_add)
-            print 'Added submission delegate %s' % delegate_to_add
+            print('Added submission delegate %s' % delegate_to_add)
         exit(0)

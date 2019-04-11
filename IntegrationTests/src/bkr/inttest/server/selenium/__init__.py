@@ -4,22 +4,18 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import sys
 import os
-import re
 import time
 import logging
-import subprocess
 from selenium import webdriver
 from selenium.common.exceptions import ErrorInResponseException
 import xmlrpclib
 from urlparse import urljoin
-from bkr.common.xmlrpc import CookieTransport, SafeCookieTransport
-from datetime import datetime
-from bkr.inttest import data_setup, get_server_base, Process, DatabaseTestCase
-from bkr.inttest.assertions import wait_for_condition
-from bkr.server.bexceptions import BX
-from time import sleep
+from bkr.common.xmlrpc2 import CookieTransport
+from bkr.common.xmlrpc2 import SafeCookieTransport
+from bkr.inttest import get_server_base
+from bkr.inttest import Process
+from bkr.inttest import DatabaseTestCase
 import pkg_resources
 
 pkg_resources.require('selenium >= 2.0b2')

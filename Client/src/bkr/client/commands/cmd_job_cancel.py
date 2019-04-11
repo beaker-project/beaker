@@ -59,13 +59,15 @@ See also
 :manpage:`bkr(1)`
 """
 
+from __future__ import print_function
 
 from bkr.client import BeakerCommand
-from optparse import OptionValueError
 
 
 class Job_Cancel(BeakerCommand):
-    """Cancel Jobs/Recipes"""
+    """
+    Cancel Jobs/Recipes
+    """
     enabled = True
 
     def options(self):
@@ -88,4 +90,4 @@ class Job_Cancel(BeakerCommand):
         self.set_hub(**kwargs)
         for task in args:
             self.hub.taskactions.stop(task, 'cancel', msg)
-            print 'Cancelled %s' % task
+            print('Cancelled %s' % task)

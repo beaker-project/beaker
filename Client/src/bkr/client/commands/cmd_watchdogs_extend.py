@@ -49,11 +49,15 @@ See also
 :manpage:`bkr(1)`
 """
 
+from __future__ import print_function
+
 from bkr.client import BeakerCommand
-from optparse import OptionValueError
+
 
 class Watchdogs_Extend(BeakerCommand):
-    """Extend the Watchdog for all Tasks"""
+    """
+    Extend the Watchdog for all Tasks
+    """
     enabled = True
 
     def options(self):
@@ -65,9 +69,8 @@ class Watchdogs_Extend(BeakerCommand):
 
         self.parser.usage = "%%prog %s [options]" % self.normalized_name
 
-
     def run(self, *args, **kwargs):
         extend_by = kwargs.pop("by", None)
 
         self.set_hub(**kwargs)
-        print self.hub.watchdogs.extend(extend_by)
+        print(self.hub.watchdogs.extend(extend_by))

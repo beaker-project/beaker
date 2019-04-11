@@ -65,10 +65,15 @@ See also
 
 """
 
-import urllib
+from six.moves.urllib import parse
+
 from bkr.client import BeakerCommand
+
+
 class Pool_Add(BeakerCommand):
-    """Adds systems to an existing system pool"""
+    """
+    Adds systems to an existing system pool
+    """
     enabled = True
 
     def options(self):
@@ -95,5 +100,5 @@ class Pool_Add(BeakerCommand):
 
         for s in systems:
             res = requests_session.post('pools/%s/systems/' %
-                                        urllib.quote(pool), json={'fqdn':s})
+                                        parse.quote(pool), json={'fqdn':s})
             res.raise_for_status()

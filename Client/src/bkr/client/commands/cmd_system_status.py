@@ -51,13 +51,17 @@ See also
 :manpage:`bkr(1)`
 """
 
-import urllib
-from bkr.client import BeakerCommand
+from __future__ import print_function
+
 from json import loads
 
-class System_Status(BeakerCommand):
+from six.moves.urllib import parse
 
-    enabled=True
+from bkr.client import BeakerCommand
+
+
+class System_Status(BeakerCommand):
+    enabled = True
 
     def options(self):
         self.parser.usage = "%%prog %s <options> <fqdn>" % self.normalized_name
@@ -66,7 +70,7 @@ class System_Status(BeakerCommand):
                                choices=['tabular', 'json'],
                                default='tabular',
                                help='Display results in FORMAT: '
-                               'tabular, json [default: %default]')
+                                    'tabular, json [default: %default]')
 
     def run(self, *args, **kwargs):
         if len(args) != 1:
@@ -75,11 +79,11 @@ class System_Status(BeakerCommand):
         format = kwargs.get('format')
         self.set_hub(**kwargs)
         requests_session = self.requests_session()
-        status_url = 'systems/%s/status' % urllib.quote(fqdn, '')
+        status_url = 'systems/%s/status' % parse.quote(fqdn, '')
         res = requests_session.get(status_url)
         res.raise_for_status()
         if format == 'json':
-            print res.text
+            print(res.text)
         else:
             system_status = loads(res.text)
             condition = system_status.get('condition')
@@ -112,4 +116,4 @@ class System_Status(BeakerCommand):
                     msg.append('%4sComment: %s' % ('', loan_comment))
             else:
                 msg.append('Current loan: %s' % None)
-            print '\n'.join(msg)
+            print('\n'.join(msg))

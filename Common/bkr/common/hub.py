@@ -5,23 +5,31 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-# Mostly copy and pasted from kobo.client.__init__ (version 0.4.2-1)
-# Removed upload_task_log() and upload_file()
 import os
 import base64
 import ssl
-import xmlrpclib
-import urlparse
+import six
+from six.moves import xmlrpc_client
+from six.moves import urllib_parse as urlparse
 import gssapi
 from bkr.common.pyconfig import PyConfigParser, ImproperlyConfigured
-from bkr.common.xmlrpc import CookieTransport, SafeCookieTransport, \
-    retry_request_decorator
+if six.PY2:
+    from bkr.common.xmlrpc2 import CookieTransport, SafeCookieTransport, retry_request_decorator
+if six.PY3:
+    from bkr.common.xmlrpc3 import CookieTransport, SafeCookieTransport, retry_request_decorator
+
 
 class AuthenticationError(Exception):
-    """Authentication failed for some reason."""
+    """
+    Authentication failed for some reason.
+    """
     pass
+
+
 class HubProxy(object):
-    """A Hub client (thin ServerProxy wrapper)."""
+    """
+    A Hub client (thin ServerProxy wrapper).
+    """
 
     def __init__(self, conf, client_type=None, logger=None, transport=None,
             auto_login=True, timeout=120, **kwargs):
@@ -67,7 +75,7 @@ class HubProxy(object):
                 TransportClass = retry_request_decorator(CookieTransport)
             self._transport = TransportClass(**transport_args)
 
-        self._hub = xmlrpclib.ServerProxy(
+        self._hub = xmlrpc_client.ServerProxy(
                 "%s/%s/" % (self._hub_url, self._client_type),
                 allow_none=True, transport=self._transport,
                 verbose=self._conf.get("DEBUG_XMLRPC"))
@@ -103,7 +111,7 @@ class HubProxy(object):
             self._logged_in = True
         except KeyboardInterrupt:
             raise
-        except Exception, ex:
+        except Exception as ex:
             self._logger and self._logger.error("Failed to create new session: %s" % ex)
             raise
         else:
@@ -185,5 +193,8 @@ class HubProxy(object):
                 ex.args = (ex.message, )
             raise ex
         req_enc = base64.encodestring(res.token)
-
+        try:
+            req_enc = str(req_enc, 'utf-8')  # bytes to string
+        except TypeError:
+            pass
         self._hub.auth.login_krbv(req_enc, proxyuser)

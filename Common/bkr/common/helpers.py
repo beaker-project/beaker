@@ -4,16 +4,18 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+from __future__ import division
+
 from threading import Thread, Event
-import Queue, copy
 from logging import getLogger
-from contextlib import contextmanager
 import tempfile
 import os
 import fcntl
 import errno
+from six.moves import queue
 
 log = getLogger(__name__)
+
 
 class _QueueAccess:
 
@@ -23,17 +25,21 @@ class _QueueAccess:
 
 
 class BkrThreadPool:
+
     _qpool = {}
     _tpool = {}
+
+    def __init__(self):
+        pass
 
     @classmethod
     def create_and_run(cls, name, target_f, target_args, num=30, *args, **kw):
         if name in cls._qpool:
             raise Exception('%s has already been initialised in the BkrThreadPool' % name)
 
-        out_q = Queue.Queue()
-        in_q = Queue.Queue()
-        cls._qpool[name] =  _QueueAccess(in_q, out_q)
+        out_q = queue.Queue()
+        in_q = queue.Queue()
+        cls._qpool[name] = _QueueAccess(in_q, out_q)
         cls._tpool[name] = []
         for i in range(num):
             t = Thread(target=target_f, args=target_args)
@@ -56,8 +62,14 @@ class BkrThreadPool:
 
 class RepeatTimer(Thread):
 
-    def __init__(self, interval, function, stop_on_exception=True, args=[], kwargs={}):
+    def __init__(self, interval, function, stop_on_exception=True, args=None, kwargs=None):
         Thread.__init__(self)
+
+        if kwargs is None:
+            kwargs = {}
+        if args is None:
+            args = []
+
         self.interval = interval
         self.function = function
         self.args = args
@@ -79,11 +91,11 @@ class RepeatTimer(Thread):
             if not self.finished.is_set():
                 try:
                     self.function(*self.args, **self.kwargs)
-                except Exception, e:
+                except Exception as e:
                     if self.stop_on_exception:
                         self.finished.clear()
                         raise
-                    # XXX Not strictly for auth'ing, think of something better
+                    # TODO: Not strictly for auth'ing, think of something better
                     log.exception('Login Fail')
             self.finished.clear()
 
@@ -91,24 +103,29 @@ class RepeatTimer(Thread):
 class SensitiveUnicode(unicode):
     def __repr__(self):
         return '<repr blocked>'
+
     def encode(self, *args, **kwargs):
         return SensitiveStr(super(SensitiveUnicode, self).encode(*args, **kwargs))
+
 
 class SensitiveStr(str):
     def __repr__(self):
         return '<repr blocked>'
+
     def decode(self, *args, **kwargs):
         return SensitiveUnicode(super(SensitiveStr, self).decode(*args, **kwargs))
 
+
 # Would be nice if Python did this for us: http://bugs.python.org/issue8604
 class AtomicFileReplacement(object):
-    """Replace a file atomically
+    """
+    Replace a file atomically
 
     Easiest usage is as a context manager, but create_temp, destroy_temp
     and replace_dest can also be called directly if needed
     """
 
-    def __init__(self, dest_path, mode=0644):
+    def __init__(self, dest_path, mode=0o644):
         self.dest_path = dest_path
         self.mode = mode
         self._temp_info = None
@@ -168,6 +185,7 @@ class AtomicFileReplacement(object):
 # Backwards compatibility alias
 atomically_replaced_file = AtomicFileReplacement
 
+
 def atomic_link(source, dest):
     temp_path = tempfile.mktemp(prefix=os.path.basename(dest),
             dir=os.path.dirname(dest))
@@ -182,6 +200,7 @@ def atomic_link(source, dest):
             pass
         # Now re-raise the original exception
         raise
+
 
 def atomic_symlink(source, dest):
     temp_path = tempfile.mktemp(prefix=os.path.basename(dest),
@@ -198,6 +217,7 @@ def atomic_symlink(source, dest):
         # Now re-raise the original exception
         raise
 
+
 def makedirs_ignore(path, mode):
     """
     Creates the given directory (and any parents), but succeeds if it already
@@ -205,9 +225,10 @@ def makedirs_ignore(path, mode):
     """
     try:
         os.makedirs(path, mode)
-    except OSError, e:
+    except OSError as e:
         if e.errno != errno.EEXIST:
             raise
+
 
 def siphon(src, dest):
     while True:
@@ -216,15 +237,17 @@ def siphon(src, dest):
             break
         dest.write(chunk)
 
+
 def unlink_ignore(path):
     """
     Unlinks the given path, but succeeds if it doesn't exist.
     """
     try:
         os.unlink(path)
-    except OSError, e:
+    except OSError as e:
         if e.errno != errno.ENOENT:
             raise
+
 
 class Flock(object):
     """
@@ -245,6 +268,7 @@ class Flock(object):
     def __exit__(self, type, value, traceback):
         os.close(self.fd)
         del self.fd
+
 
 # This is a method on timedelta in Python 2.7+
 def total_seconds(td):

@@ -54,16 +54,24 @@ See also
 :manpage:`bkr(1)`
 """
 
+from __future__ import print_function
 
-from bkr.client.task_watcher import *
-from bkr.client import BeakerCommand, BeakerWorkflow, BeakerJob, BeakerRecipeSet, BeakerRecipe
-import xmlrpclib
-from optparse import OptionValueError
 import sys
 import xml.dom.minidom
 
+from six.moves.xmlrpc_client import Fault
+
+from bkr.client import BeakerJob
+from bkr.client import BeakerRecipe
+from bkr.client import BeakerRecipeSet
+from bkr.client import BeakerWorkflow
+from bkr.client.task_watcher import *
+
+
 class Workflow_Simple(BeakerWorkflow):
-    """Simple workflow to generate job to scheduler"""
+    """
+    Simple workflow to generate job to scheduler
+    """
     enabled = True
     doc = xml.dom.minidom.Document()
 
@@ -94,15 +102,15 @@ class Workflow_Simple(BeakerWorkflow):
 
         if not arches:
             # Get default arches that apply for this distro/family
-            arches = self.getArches(*args, **kwargs)
+            arches = self.get_arches(*args, **kwargs)
 
         # get all tasks requested
         try:
-            requestedTasks = self.getTasks(*args, **kwargs)
-        except xmlrpclib.Fault:
-            requestedTasks = None
+            requested_tasks = self.get_tasks(*args, **kwargs)
+        except Fault:
+            requested_tasks = None
 
-        if not requestedTasks:
+        if not requested_tasks:
             sys.stderr.write("No tasks match the specified option(s)\n")
             sys.exit(1)
 
@@ -110,61 +118,58 @@ class Workflow_Simple(BeakerWorkflow):
         job = BeakerJob(*args, **kwargs)
 
         # Create Base Recipe
-        recipeTemplate = BeakerRecipe()
+        recipe_template = BeakerRecipe()
 
         # Add Distro Requirements
-        recipeTemplate.addBaseRequires(*args, **kwargs)
+        recipe_template.add_base_requires(*args, **kwargs)
 
         # Add Host Requirements
-
-
         for arch in arches:
             arch_node = self.doc.createElement('distro_arch')
             arch_node.setAttribute('op', '=')
             arch_node.setAttribute('value', arch)
-            recipeSet = BeakerRecipeSet(**kwargs)
+            recipe_set = BeakerRecipeSet(**kwargs)
             if self.multi_host:
                 for i in range(self.n_servers):
-                    recipeSet.addRecipe(self.processTemplate(recipeTemplate, 
-                                                             requestedTasks,
-                                                             taskParams=taskParams,
-                                                             distroRequires=arch_node, 
-                                                             role='SERVERS',
-                                                             arch=arch,
-                                                             **kwargs))
+                    recipe_set.add_recipe(self.process_template(recipe_template,
+                                                                requested_tasks,
+                                                                taskParams=taskParams,
+                                                                distroRequires=arch_node,
+                                                                role='SERVERS',
+                                                                arch=arch,
+                                                                **kwargs))
                 for i in range(self.n_clients):
-                    recipeSet.addRecipe(self.processTemplate(recipeTemplate, 
-                                                             requestedTasks,
-                                                             taskParams=taskParams,
-                                                             distroRequires=arch_node, 
-                                                             role='CLIENTS',
-                                                             arch=arch,
-                                                             **kwargs))
+                    recipe_set.add_recipe(self.process_template(recipe_template,
+                                                                requested_tasks,
+                                                                taskParams=taskParams,
+                                                                distroRequires=arch_node,
+                                                                role='CLIENTS',
+                                                                arch=arch,
+                                                                **kwargs))
             else:
-                recipeSet.addRecipe(self.processTemplate(recipeTemplate,
-                                                         requestedTasks,
-                                                         taskParams=taskParams,
-                                                         distroRequires=arch_node,
-                                                         arch=arch,
-                                                         **kwargs))
-            job.addRecipeSet(recipeSet)
+                recipe_set.add_recipe(self.process_template(recipe_template,
+                                                            requested_tasks,
+                                                            taskParams=taskParams,
+                                                            distroRequires=arch_node,
+                                                            arch=arch,
+                                                            **kwargs))
+            job.add_recipe_set(recipe_set)
 
         # jobxml
         jobxml = job.toxml(**kwargs)
 
         if debug:
-            print jobxml
+            print(jobxml)
 
         submitted_jobs = []
         is_failed = False
-
         if not dryrun:
             try:
                 submitted_jobs.append(self.hub.jobs.upload(jobxml))
-                print "Submitted: %s" % submitted_jobs
+                print("Submitted: %s" % submitted_jobs)
             except (KeyboardInterrupt, SystemExit):
                 raise
-            except Exception, ex:
+            except Exception as ex:
                 is_failed = True
                 sys.stderr.write('Exception: %s\n' % ex)
             if wait:

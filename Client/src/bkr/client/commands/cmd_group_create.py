@@ -61,10 +61,15 @@ See also
 :manpage:`bkr(1)`
 """
 
+from __future__ import print_function
+
 from bkr.client import BeakerCommand
 
+
 class Group_Create(BeakerCommand):
-    """Create a Group"""
+    """
+    Create a Group
+    """
     enabled = True
 
     def options(self):

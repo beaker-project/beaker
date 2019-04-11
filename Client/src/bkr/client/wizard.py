@@ -4,6 +4,11 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+from __future__ import division
+from __future__ import print_function
+
+import math
+
 DESCRIPTION = """Beaker Wizard is a tool which can transform that
 "create all the necessary files with correct names, values, and paths"
 boring phase of every test creation into one-line joy. For power
@@ -339,7 +344,7 @@ import re
 import os
 
 # Version
-WizardVersion = "2.3.0"
+WizardVersion = "2.3.1"
 
 # Regular expressions
 RegExpPackage    = re.compile("^(?![._+-])[.a-zA-Z0-9_+-]+(?<![._-])$")
@@ -369,10 +374,17 @@ SuggestedTestTypes = """Regression Performance Stress Certification
             KernelReporting Sanity Library""".split()
 
 # Guesses
-GuessAuthorLogin = pwd.getpwuid(os.getuid())[0].decode(sys.getfilesystemencoding())
+pwd_uinfo = pwd.getpwuid(os.getuid())
+try:
+    GuessAuthorLogin = pwd_uinfo.pw_name.decode(sys.getfilesystemencoding())
+except AttributeError:
+    GuessAuthorLogin = pwd_uinfo.pw_name
+try:
+    GuessAuthorName = pwd_uinfo.pw_gecos.decode(sys.getfilesystemencoding())
+except AttributeError:
+    GuessAuthorName = pwd_uinfo.pw_gecos
 GuessAuthorDomain = re.sub("^.*\.([^.]+\.[^.]+)$", "\\1", os.uname()[1])
 GuessAuthorEmail = "%s@%s" % (GuessAuthorLogin, GuessAuthorDomain)
-GuessAuthorName = pwd.getpwuid(os.getuid())[4].decode(sys.getfilesystemencoding())
 
 # Make sure guesses are valid values
 if not RegExpEmail.match(GuessAuthorEmail):
@@ -475,24 +487,33 @@ def unique(seq):
     dictionary = {}
     for i in seq:
         dictionary[i] = 1
-    return dictionary.keys()
+    return list(dictionary.keys())
 
 def hr(width = 70):
     """ Return simple ascii horizontal rule """
     if width < 2: return ""
     return "# " + (width - 2) * "~"
 
-def comment(text, width = 70, comment = "#", top = True, bottom = True, padding = 3):
-    """ Create nicely formated comment """
+
+def comment(text, width=70, comment="#", top=True, bottom=True, padding=3):
+    """
+    Create nicely formatted comment
+    """
     result = ""
+
     # top hrule & padding
-    if width and top: result += hr(width) + "\n"
-    result += int(padding/3) * (comment + "\n")
+    if width and top:
+        result += hr(width) + "\n"
+    result += int(math.floor(padding/3)) * (comment + "\n")
+
     # prepend lines with the comment char and padding
     result += re.compile("^(?!#)", re.M).sub(comment + padding * " ", text)
+
     # bottom padding & hrule
-    result += int(padding/3) * ("\n" + comment)
-    if width and bottom: result += "\n" + hr(width)
+    result += int(math.floor(padding/3)) * ("\n" + comment)
+    if width and bottom:
+        result += "\n" + hr(width)
+
     # remove any trailing spaces
     result = re.compile("\s+$", re.M).sub("", result)
     return result
@@ -563,8 +584,8 @@ def addToGit(path):
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,)
         out, err = process.communicate()
         if process.wait():
-            print "Sorry, failed to add %s to git :-(" % path
-            print out, err
+            print("Sorry, failed to add %s to git :-(" % path)
+            print(out, err)
             sys.exit(1)
     except OSError:
         print("Unable to run %s, is %s installed?"
@@ -606,7 +627,7 @@ class Preferences:
             exec("self.%s = findNode(self.author, '%s')" % (node, node))
             # if the node cannot be found get the default from template
             if not eval("self." + node):
-                print "Could not find <%s> in preferences, using default" % node
+                print("Could not find <%s> in preferences, using default" % node)
                 exec("self.%s = findNode(self.template, '%s').cloneNode(True)"
                         % (node, node))
                 exec("self.author.appendChild(self.%s)" % node)
@@ -617,19 +638,21 @@ class Preferences:
             exec("self.%s = findNode(self.test, '%s')" % (node, node))
             # if the node cannot be found get the default from template
             if not eval("self." + node):
-                print "Could not find <%s> in preferences, using default" % node
+                print("Could not find <%s> in preferences, using default" % node)
                 exec("self.%s = findNode(self.template, '%s').cloneNode(True)" % (node, node))
                 exec("self.test.appendChild(self.%s)" % node)
 
     def load(self):
-        """ Load user preferences (or set to defaults) """
+        """
+        Load user preferences (or set to defaults)
+        """
         preferences_file = os.environ.get("BEAKER_WIZARD_CONF", PreferencesFile)
         try:
             self.xml = parse(preferences_file)
         except:
             if os.path.exists(preferences_file):
-                print "I'm sorry, the preferences file seems broken.\n" \
-                        "Did you do something ugly to %s?" % preferences_file
+                print("I'm sorry, the preferences file seems broken.\n" \
+                        "Did you do something ugly to %s?" % preferences_file)
                 sleep(3)
             else:
                 self.firstRun = True
@@ -639,14 +662,16 @@ class Preferences:
             try:
                 self.parse()
             except:
-                print "Failed to parse %s, falling to defaults." % preferences_file
+                print("Failed to parse %s, falling to defaults." % preferences_file)
                 sleep(3)
                 self.xml = self.template
                 self.parse()
 
-    def update(self, author, email, confirm, type, namespace, \
-            time, priority, confidential, destructive, prefix, license, skeleton):
-        """ Update preferences with current settings """
+    def update(self, author, email, confirm, type, namespace,
+               time, priority, confidential, destructive, prefix, license, skeleton):
+        """
+        Update preferences with current settings
+        """
         setNode(self.name, author)
         setNode(self.email, email)
         setNode(self.confirm, confirm)
@@ -665,22 +690,22 @@ class Preferences:
         # try to create directory
         try:
             os.makedirs(PreferencesDir)
-        except OSError, e:
+        except OSError as e:
             if e.errno == 17:
                 pass
             else:
-                print "Cannot create preferences directory %s :-(" % PreferencesDir
+                print("Cannot create preferences directory %s :-(" % PreferencesDir)
                 return
 
         # try to write the file
         try:
             file = open(PreferencesFile, "w")
         except:
-            print "Cannot write to %s" % PreferencesFile
+            print("Cannot write to %s" % PreferencesFile)
         else:
             file.write((self.xml.toxml() + "\n").encode("utf-8"))
             file.close()
-            print "Preferences saved to %s" % PreferencesFile
+            print("Preferences saved to %s" % PreferencesFile)
         sleep(1)
 
     def getAuthor(self): return getNode(self.name)
@@ -713,23 +738,27 @@ class Help:
         if options:
             # display expert usage page only
             if options.expert():
-                print self.expert();
+                print(self.expert())
                 sys.exit(0)
             # show version info
             elif options.ver():
-                print self.version();
+                print(self.version())
                 sys.exit(0)
 
-    def usage(self):
+    @staticmethod
+    def usage():
         return "beaker-wizard [options] [TESTNAME] [BUG/CVE...] or beaker-wizard Makefile"
 
-    def version(self):
+    @staticmethod
+    def version():
         return "beaker-wizard %s" % WizardVersion
 
-    def description(self):
+    @staticmethod
+    def description():
         return DESCRIPTION
 
-    def expert(self):
+    @staticmethod
+    def expert():
         os.execv('/usr/bin/man', ['man', 'beaker-wizard'])
         sys.exit(1)
 
@@ -745,10 +774,9 @@ class Makefile:
         self.path = options.arg[0]
         try:
             # open and read the whole content into self.text
-            print "Reading the Makefile..."
-            file = open(self.path)
-            self.text = "".join(file.readlines())
-            file.close()
+            print("Reading the Makefile...")
+            with open(self.path) as fd:
+                self.text = ''.join(fd.readlines())
 
             # substitute the old style $TEST sub-variables if present
             for var in "TOPLEVEL_NAMESPACE PACKAGE_NAME RELATIVE_PATH".split():
@@ -756,18 +784,18 @@ class Makefile:
                 if m: self.text = re.sub("\$\(%s\)" % var, m.group(1), self.text)
 
             # locate the metadata section
-            print "Inspecting the metadata section..."
+            print("Inspecting the metadata section...")
             m = RegExpMetadata.search(self.text)
             self.metadata = m.group(1)
 
             # parse the $TEST and $TESTVERSION
-            print "Checking for the full test name and version..."
+            print("Checking for the full test name and version...")
             m = RegExpTest.search(self.text)
             options.arg = [m.group(1)]
             m = RegExpVersion.search(self.text)
             options.opt.version = m.group(1)
         except:
-            print "Failed to parse the original Makefile"
+            print("Failed to parse the original Makefile")
             sys.exit(6)
 
         # disable test name prefixing and set confirm to nothing
@@ -786,7 +814,7 @@ class Makefile:
         }
 
         # parse info from metadata line by line
-        print "Parsing the individual metadata..."
+        print("Parsing the individual metadata...")
         for line in self.metadata.split("\n"):
             m = re.search("echo\s+[\"'](\w+):\s*(.*)[\"']", line)
             # skip non-@echo lines
@@ -825,7 +853,7 @@ class Makefile:
             options.arg.extend(options.opt.bug)
 
         # success
-        print "Makefile successfully parsed."
+        print("Makefile successfully parsed.")
 
     def save(self, test, version, content):
         # possibly update the $TEST and $TESTVERSION
@@ -846,10 +874,10 @@ class Makefile:
             file.write(self.text.encode("utf-8"))
             file.close()
         except:
-            print "Cannot write to %s" % self.path
+            print("Cannot write to %s" % self.path)
             sys.exit(3)
         else:
-            print "Makefile successfully written"
+            print("Makefile successfully written")
 
 
 class Options:
@@ -1018,7 +1046,11 @@ class Options:
         # convert all args to unicode
         uniarg = []
         for arg in argv[1:]:
-             uniarg.append(unicode(arg, "utf-8"))
+            try:
+                uarg = unicode(arg, 'utf-8')
+            except NameError:
+                uarg = arg
+            uniarg.append(uarg)
 
         # and parse it!
         (self.opt, self.arg) = parser.parse_args(uniarg)
@@ -1067,16 +1099,16 @@ class Options:
             try:
                 from bugzilla import Bugzilla
             except:
-                print "Sorry, the bugzilla interface is not available right now, try:\n" \
-                        "    yum install python-bugzilla\n" \
-                        "Use 'bugzilla login' command if you wish to access restricted bugs."
+                print("Sorry, the bugzilla interface is not available right now, try:\n"
+                        "    yum install python-bugzilla\n"
+                        "Use 'bugzilla login' command if you wish to access restricted bugs.")
                 sys.exit(8)
             else:
                 try:
-                    print "Contacting bugzilla..."
+                    print("Contacting bugzilla...")
                     self.bugzilla = Bugzilla(url=BugzillaXmlrpc)
                 except:
-                    print "Cannot connect to bugzilla, check your net connection."
+                    print("Cannot connect to bugzilla, check your net connection.")
                     sys.exit(9)
 
     # command-line-only option interface
@@ -1181,17 +1213,19 @@ class Inquisitor:
         self.data = re.sub("\s+", " ", self.data)
 
     def read(self):
-        """ Read an answer from user """
+        """
+        Read an answer from user
+        """
         try:
-            answer = unicode(sys.stdin.readline().strip(), "utf-8")
+            answer = u'{}'.format(sys.stdin.readline().strip())
         except KeyboardInterrupt:
-            print "\nOk, finishing for now. See you later ;-)"
+            print("\nOk, finishing for now. See you later ;-)")
             sys.exit(4)
         # if just enter pressed, we leave self.data as it is (confirmed)
         if answer != "":
             # append the data if the answer starts with a "+"
             m = re.search("^\+\s*(.*)", answer)
-            if m and type(self.data) is list:
+            if m and isinstance(self.data, list):
                 self.data.append(m.group(1))
             else:
                 self.data = answer
@@ -1199,7 +1233,7 @@ class Inquisitor:
 
     def heading(self):
         """ Display nice heading with question """
-        print "\n" + self.question + "\n" + 77 * "~";
+        print("\n" + self.question + "\n" + 77 * "~")
 
     def value(self):
         """ Return current value """
@@ -1223,11 +1257,11 @@ class Inquisitor:
 
     def describe(self):
         if self.description is not None:
-            print wrapText(self.description)
+            print(wrapText(self.description))
 
     def format(self, data = None):
         """ Display in a nicely indented style """
-        print self.name.rjust(ReviewWidth), ":", (data or self.show())
+        print(self.name.rjust(ReviewWidth), ":", (data or self.show()))
 
     def formatMakefileLine(self, name = None, value = None):
         """ Format testinfo line for Makefile inclusion """
@@ -1312,7 +1346,8 @@ class SingleChoice(Inquisitor):
 
     def heading(self):
         Inquisitor.heading(self)
-        if self.list: print wrapText("Possible values: " + ", ".join(self.list))
+        if self.list:
+            print(wrapText("Possible values: " + ", ".join(self.list)))
 
 
 class YesNo(SingleChoice):
@@ -1531,8 +1566,11 @@ DEFINED_LICENSES = {
 "other" : PROPRIETARY_LICENSE_TEMPLATE,
 }
 
+
 class License(Inquisitor):
-    """ License to be included in test files """
+    """
+    License to be included in test files
+    """
 
     def init(self):
         self.name = "License"
@@ -1543,17 +1581,20 @@ class License(Inquisitor):
         self.licenses = DEFINED_LICENSES
 
     def get(self):
-        """ Return license corresponding to user choice """
-        if self.data != "other" and self.data in self.licenses.keys():
+        """
+        Return license corresponding to user choice
+        """
+
+        if self.data != "other" and self.data in self.licenses:
             return dedentText(self.licenses[self.data])
         else:
             license = self.options.pref.getLicenseContent(self.data)
-            if license: # user defined license from preferences
-                return dedentText(self.licenses["other"] % (
-                        license,), count = 12)
-            else: # anything else
-                return dedentText(self.licenses["other"] % (
-                        "PROVIDE YOUR LICENSE TEXT HERE.",))
+            if license:  # user defined license from preferences
+                return dedentText(self.licenses["other"]
+                                  % (license,), count=12)
+            else:  # anything else
+                return dedentText(self.licenses["other"]
+                                  % ("PROVIDE YOUR LICENSE TEXT HERE.",))
 
 
 class Time(Inquisitor):
@@ -1725,8 +1766,8 @@ class Type(Inquisitor):
 
     def heading(self):
         Inquisitor.heading(self)
-        print wrapText("Recommended values: " + ", ".join(sorted(self.dirs)))
-        print wrapText("Possible values: " + ", ".join(self.list))
+        print(wrapText("Recommended values: " + ", ".join(sorted(self.dirs))))
+        print(wrapText("Possible values: " + ", ".join(self.list)))
 
     def propose(self):
         """ Try to find nearest match in the list"""
@@ -1845,17 +1886,17 @@ class Bugs(MultipleChoice):
                 bugid = self.data[0]
             # contact bugzilla and try to fetch the details
             try:
-                print "Fetching details for", self.showItem(self.data[0])
+                print("Fetching details for", self.showItem(self.data[0]))
                 self.bug = self.options.bugzilla.getbug(bugid,
                         include_fields=['id', 'alias', 'component', 'summary',
                                         'attachments'])
-            except Exception, e:
+            except Exception as e:
                 if re.search('not authorized to access', str(e)):
-                    print "Sorry, %s has a restricted access.\n"\
-                        "Use 'bugzilla login' command to set up cookies "\
-                        "then try again." % self.showItem(self.data[0])
+                    print("Sorry, %s has a restricted access.\n"
+                        "Use 'bugzilla login' command to set up cookies "
+                        "then try again." % self.showItem(self.data[0]))
                 else:
-                    print "Sorry, could not get details for %s\n%s" % (bugid, e)
+                    print("Sorry, could not get details for %s\n%s" % (bugid, e))
                 sleep(3)
                 return
             # successfully fetched
@@ -2006,7 +2047,7 @@ class Reproducers(MultipleChoice):
         # Provide "None" as a possible choice for attachment download
         self.list.append("None")
 
-        print "Examining attachments for possible reproducers"
+        print("Examining attachments for possible reproducers")
         for attachment in self.bug.attachments:
             # skip obsolete and patch attachments
             is_patch = attachment.get("is_patch", attachment.get("ispatch"))
@@ -2020,10 +2061,10 @@ class Reproducers(MultipleChoice):
                         RegExpReproducer.search(filename):
                     self.data.append(filename)
                     self.pref.append(filename)
-                    print "Adding",
+                    print("Adding"),
                 else:
-                    print "Skipping",
-                print "%s (%s)" % (filename, attachment['description'])
+                    print("Skipping",)
+                print("%s (%s)" % (filename, attachment['description']))
                 sleep(1)
 
     def download(self, path):
@@ -2036,7 +2077,7 @@ class Reproducers(MultipleChoice):
             is_obsolete = attachment.get(
                     "is_obsolete", attachment.get("isobsolete"))
             if attachment_filename in self.data and is_obsolete == 0:
-                print "Attachment", attachment_filename,
+                print("Attachment", attachment_filename,)
                 try:
                     dirfiles = os.listdir(path)
                     filename = path + "/" + attachment_filename
@@ -2045,12 +2086,11 @@ class Reproducers(MultipleChoice):
                     # rename the attachment if it has the same name as one
                     # of the files in the current directory
                     if attachment_filename in dirfiles:
-                        print "- file already exists in {0}/".format(path)
+                        print("- file already exists in {0}/".format(path))
                         new_name = ""
                         while new_name == "":
-                            print "Choose a new filename for the attachment: ",
-                            new_name = unicode(
-                                    sys.stdin.readline().strip(), "utf-8")
+                            print("Choose a new filename for the attachment: ",)
+                            new_name = u'{}'.format(sys.stdin.readline().strip())
                         filename = path + "/" + new_name
 
                     local = open(filename, 'w')
@@ -2065,11 +2105,11 @@ class Reproducers(MultipleChoice):
                     else:
                         addedToGit = ""
                 except:
-                    print "download failed"
-                    print "python-bugzilla-0.5 or higher required"
+                    print("download failed")
+                    print("python-bugzilla-0.5 or higher required")
                     sys.exit(5)
                 else:
-                    print "downloaded" + addedToGit
+                    print("downloaded" + addedToGit)
 
 
 class RunFor(MultipleChoice):
@@ -2626,7 +2666,7 @@ class Skeleton(SingleChoice):
             rhtsrequires = skeleton.getAttribute("rhtsrequires")
             return rhtsrequires
         except:
-            print "getRhtsRequires exception"
+            print("getRhtsRequires exception")
 
     def getMakefile(self, type, testname, version, author, reproducers, meta):
         """ Return Makefile skeleton """
@@ -2727,13 +2767,13 @@ class Test(SingleChoice):
 
         # possibly print first time welcome message
         if self.options.pref.firstRun:
-            print dedentText("""
+            print(dedentText("""
                 Welcome to The Beaker Wizard!
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                 It seems, you're running the beaker-wizard for the first time.
                 I'll try to be a little bit more verbose. Should you need
                 any help in the future, just try using the "?" character.
-                """, count = 16)
+                """, count = 16))
 
         # gather all test data
         self.testname = Name(self.options)
@@ -2777,21 +2817,21 @@ class Test(SingleChoice):
 
     def format(self):
         """ Format all test fields into nice table """
-        print
-        print self.fullPath()
-        print
+        print()
+        print(self.fullPath())
+        print()
         self.namespace.format()
         self.package.format()
         self.type.format()
         self.path.format()
         self.testname.format()
         self.desc.format()
-        print
+        print()
         self.testname.bugs.format()
         if not self.options.makefile: # skip in makefile edit mode
             self.testname.prefix.format()
             self.testname.bugs.reproducers.format()
-        print
+        print()
         self.runfor.format()
         self.requires.format()
         self.rhtsrequires.format()
@@ -2799,17 +2839,17 @@ class Test(SingleChoice):
         self.releases.format()
         self.version.format()
         self.time.format()
-        print
+        print()
         self.priority.format()
         self.license.format()
         self.confidential.format()
         self.destructive.format()
-        print
+        print()
         if not self.options.makefile:
             self.skeleton.format() # irrelevant in makefile edit mode
         self.author.format()
         self.email.format()
-        print
+        print()
 
     def heading(self):
         SingleChoice.heading(self)
@@ -2821,7 +2861,7 @@ class Test(SingleChoice):
 
         # quit
         if re.match("q|exit", self.data, re.I):
-            print "Ok, quitting for now. See you later ;-)"
+            print("Ok, quitting for now. See you later ;-)")
             sys.exit(0)
         # no (seems the user is beginner -> turn on verbosity)
         elif re.match("no?$", self.data, re.I):
@@ -2956,12 +2996,12 @@ class Test(SingleChoice):
         if os.path.exists(fullpath):
             sys.stdout.write(fullpath + " already exists, ")
             if self.options.force():
-                print "force on -> overwriting"
+                print("force on -> overwriting")
             else:
                 sys.stdout.write("overwrite? [y/n] ")
-                answer = unicode(sys.stdin.readline(), "utf-8")
+                answer = u'{}'.format(sys.stdin.readline())
                 if not re.match("y", answer, re.I):
-                    print "Ok skipping. Next time use -f if you want to overwrite files."
+                    print("Ok skipping. Next time use -f if you want to overwrite files.")
                     return
 
         # let's write it
@@ -2978,10 +3018,10 @@ class Test(SingleChoice):
                 addToGit(fullpath)
                 addedToGit = ", added to git"
         except IOError:
-            print "Cannot write to %s" % fullpath
+            print("Cannot write to %s" % fullpath)
             sys.exit(3)
         else:
-            print "File", fullpath, "written" + addedToGit
+            print("File", fullpath, "written" + addedToGit)
 
     def create(self):
         """ Create all necessary test files """
@@ -3009,13 +3049,13 @@ class Test(SingleChoice):
             # otherwise attempt to create the whole hiearchy
             else:
                 os.makedirs(path)
-        except OSError, e:
-            print "Bad, cannot create test directory %s :-(" % path
+        except OSError:
+            print("Bad, cannot create test directory %s :-(" % path)
             sys.exit(1)
         except AlreadyExists:
-            print "Well, directory %s already exists, let's see..." % path
+            print("Well, directory %s already exists, let's see..." % path)
         else:
-            print "Directory %s created%s" % (path, addedToGit)
+            print("Directory %s created %s" % (path, addedToGit))
 
         # if test type is Library, create lib.sh and don't include PURPOSE
         if self.type.value() == "Library":
@@ -3040,7 +3080,7 @@ class Test(SingleChoice):
             comment(self.formatHeader("runtest.sh")) + "\n" +
             comment(self.license.get(), top = False) + "\n" +
             self.skeleton.getRuntest(self),
-            mode=0755
+            mode=0o755
             )
 
         # Makefile

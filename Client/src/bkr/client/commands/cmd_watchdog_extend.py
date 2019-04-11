@@ -62,12 +62,15 @@ See also
 :manpage:`bkr(1)`
 """
 
-import urllib
+from six.moves.urllib import parse
+
 from bkr.client import BeakerCommand
-from optparse import OptionValueError
+
 
 class Watchdog_Extend(BeakerCommand):
-    """Extend Recipe's Watchdog"""
+    """
+    Extend Recipe's Watchdog
+    """
     enabled = True
 
     def options(self):
@@ -78,11 +81,11 @@ class Watchdog_Extend(BeakerCommand):
         )
         self.parser.usage = "%%prog %s [options] [<taskspec> | <fqdn>]..." % self.normalized_name
 
-
     def run(self, *args, **kwargs):
         extend_by = kwargs.pop("by", None)
         if not args:
-            self.parser.error('Please either specify one or more <taskspec> arguments or system FQDNs')
+            self.parser.error(
+                'Please either specify one or more <taskspec> arguments or system FQDNs')
         taskspecs = []
         systems = []
         for arg in args:
@@ -99,10 +102,10 @@ class Watchdog_Extend(BeakerCommand):
         requests_session = self.requests_session()
         for s in systems:
             res = requests_session.post('recipes/by-fqdn/%s/watchdog' %
-                                        urllib.quote(s, ''), json={'kill_time': extend_by})
+                                        parse.quote(s, ''), json={'kill_time': extend_by})
             res.raise_for_status()
 
         for t in taskspecs:
             res = requests_session.post('recipes/by-taskspec/%s/watchdog' %
-                                        urllib.quote(t), json={'kill_time': extend_by})
+                                        parse.quote(t), json={'kill_time': extend_by})
             res.raise_for_status()

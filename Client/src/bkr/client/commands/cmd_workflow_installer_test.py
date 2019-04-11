@@ -12,7 +12,7 @@ Synopsis
 --------
 
 :program:`bkr workflow-installer-test` [*workflow options*] [*options*]
-|    [:option:`--template` <kickstart_template>] 
+|    [:option:`--template` <kickstart_template>]
 
 Description
 -----------
@@ -65,20 +65,28 @@ See also
 :manpage:`bkr(1)`
 """
 
+from __future__ import print_function
+
 import os
-import sys
 import string
+import sys
 import xml.dom.minidom
+
+from jinja2 import Environment
+from jinja2 import FileSystemLoader
 from jinja2.ext import Extension
-from optparse import OptionValueError
-from jinja2 import Environment, FileSystemLoader
-from bkr.client import BeakerCommand, BeakerWorkflow, BeakerJob, BeakerRecipeSet, BeakerRecipe
+
+from bkr.client import BeakerJob
+from bkr.client import BeakerRecipe
+from bkr.client import BeakerRecipeSet
+from bkr.client import BeakerWorkflow
+
 
 class SkipBlockExtension(Extension):
     """
-        Jinja2 extenstion to skip template blocks.
-        To use add it to Environment and set
-        env.skip_blocks to a list of block names to skip.
+    Jinja2 extension to skip template blocks.
+    To use add it to Environment and set
+    env.skip_blocks to a list of block names to skip.
     """
 
     def __init__(self, environment):
@@ -91,26 +99,25 @@ class SkipBlockExtension(Extension):
         in_endblock = False
 
         for token in stream:
-            if (token.type == 'block_begin'):
-                if (stream.current.value == 'block'):
+            if token.type == 'block_begin':
+                if stream.current.value == 'block':
                     block_level += 1
-                    if (stream.look().value in self.environment.skip_blocks):
+                    if stream.look().value in self.environment.skip_blocks:
                         skip_level = block_level
 
-            if (token.value == 'endblock' ):
+            if token.value == 'endblock':
                 in_endblock = True
 
             if skip_level == 0:
                 yield token
 
-            if (token.type == 'block_end'):
+            if token.type == 'block_end':
                 if in_endblock:
                     in_endblock = False
                     block_level -= 1
 
-                    if skip_level == block_level+1:
+                    if skip_level == block_level + 1:
                         skip_level = 0
-
 
 
 def generateKickstart(template_file, args):
@@ -119,20 +126,20 @@ def generateKickstart(template_file, args):
         blocks named 'kernel_options'.
     """
 
-    abs_path  = os.path.abspath(template_file)
-    dir_name  = os.path.dirname(abs_path)
+    abs_path = os.path.abspath(template_file)
+    dir_name = os.path.dirname(abs_path)
     base_name = os.path.basename(abs_path)
 
     env = Environment(
-                    loader=FileSystemLoader(dir_name),
-                    extensions = [SkipBlockExtension],
-                    cache_size = 0,
-                    line_comment_prefix = '##',
-                )
-    env.skip_blocks.append('kernel_options') #pylint: disable=no-member
+        loader=FileSystemLoader(dir_name),
+        extensions=[SkipBlockExtension],
+        cache_size=0,
+        line_comment_prefix='##',
+    )
+    env.skip_blocks.append('kernel_options')  # pylint: disable=no-member
 
     template = env.get_template(base_name)
-    return "\n"+template.render(args)
+    return "\n" + template.render(args)
 
 
 def generateKernelOptions(template_file, args):
@@ -141,19 +148,19 @@ def generateKernelOptions(template_file, args):
         'kernel_options' block if it exists.
     """
 
-    abs_path  = os.path.abspath(template_file)
-    dir_name  = os.path.dirname(abs_path)
+    abs_path = os.path.abspath(template_file)
+    dir_name = os.path.dirname(abs_path)
     base_name = os.path.basename(abs_path)
 
     env = Environment(
-                    loader=FileSystemLoader(dir_name),
-                    cache_size = 0,
-                    line_comment_prefix = '##',
-                )
+        loader=FileSystemLoader(dir_name),
+        cache_size=0,
+        line_comment_prefix='##',
+    )
     template = env.get_template(base_name)
 
     lines = []
-    if template.blocks.has_key('kernel_options'):
+    if 'kernel_options' in template.blocks:
         # there is a {% block kernel_options %} defined
         for line in template.blocks['kernel_options'](template.new_context(args)):
             lines.append(line.strip())
@@ -173,7 +180,9 @@ def generateKernelOptions(template_file, args):
 
 
 class Workflow_Installer_Test(BeakerWorkflow):
-    """Workflow which generates kickstart configuration based on Jinja2 templates"""
+    """
+    Workflow which generates kickstart configuration based on Jinja2 templates
+    """
     enabled = True
     doc = xml.dom.minidom.Document()
 
@@ -184,7 +193,7 @@ class Workflow_Installer_Test(BeakerWorkflow):
             "--template",
             default="",
             help="Kickstart template to use for installation"
-            )
+        )
         self.parser.usage = "%%prog %s [options]" % self.normalized_name
 
     def _get_os_major_version(self, os_major):
@@ -194,9 +203,10 @@ class Workflow_Installer_Test(BeakerWorkflow):
         return os_major
 
     def run(self, *args, **kwargs):
-        sys.stderr.write('workflow-installer-test is deprecated, use --kickstart with workflow-simple or any other workflow command')
+        sys.stderr.write('workflow-installer-test is deprecated, use '
+                         '--kickstart with workflow-simple or any other workflow command')
 
-        debug  = kwargs.get("debug", False)
+        debug = kwargs.get("debug", False)
         dryrun = kwargs.get("dryrun", False)
         family = kwargs.get("family", None)
         distro = kwargs.get("distro", None)
@@ -219,20 +229,19 @@ class Workflow_Installer_Test(BeakerWorkflow):
 
         if family:
             kwargs['os_major'] = int(self._get_os_major_version(family))
-        else: # get family data based on distro
-            if not hasattr(self,'hub'):
+        else:  # get family data based on distro
+            if not hasattr(self, 'hub'):
                 self.set_hub(**kwargs)
 
             # this will return info about all arches and variants
             # but the family string is the same so break after the first iteration
             for distro in self.hub.distrotrees.filter({'name': distro, 'family': family}):
-                family = distro["distro_osmajor"] # e.g. RedHatEnterpriseLinux6
-                os_version = distro["distro_osversion"]     # e.g. RedHatEnterpriseLinux6.3
+                family = distro["distro_osmajor"]  # e.g. RedHatEnterpriseLinux6
+                os_version = distro["distro_osversion"]  # e.g. RedHatEnterpriseLinux6.3
                 kwargs["os_major"] = int(self._get_os_major_version(family))
                 kwargs["family"] = family
                 kwargs["os_minor"] = int(os_version.replace(family, "").replace(".", ""))
                 break
-
 
         # Add kickstart and kernel options
         ks_args = {}
@@ -250,7 +259,7 @@ class Workflow_Installer_Test(BeakerWorkflow):
                 ks_args[name.upper()] = value
                 ks_args[name] = value
         except:
-            print >>sys.stderr, "Every task param has to have a value."
+            sys.stderr.write("Every task param has to have a value.")
             sys.exit(1)
 
         if kwargs['kernel_options'] is None:
@@ -286,29 +295,29 @@ class Workflow_Installer_Test(BeakerWorkflow):
             recipeSet = BeakerRecipeSet(**kwargs)
             if self.multi_host:
                 for i in range(self.n_servers):
-                    recipeSet.addRecipe(self.processTemplate(recipeTemplate, 
+                    recipeSet.addRecipe(self.processTemplate(recipeTemplate,
                                                              requestedTasks,
                                                              taskParams=taskParams,
-                                                             distroRequires=arch_node, 
+                                                             distroRequires=arch_node,
                                                              role='SERVERS',
                                                              arch=arch,
                                                              **kwargs))
                 for i in range(self.n_clients):
-                    recipeSet.addRecipe(self.processTemplate(recipeTemplate, 
+                    recipeSet.addRecipe(self.processTemplate(recipeTemplate,
                                                              requestedTasks,
                                                              taskParams=taskParams,
-                                                             distroRequires=arch_node, 
+                                                             distroRequires=arch_node,
                                                              role='CLIENTS',
                                                              arch=arch,
                                                              **kwargs))
                 job.addRecipeSet(recipeSet)
             else:
                 recipe = self.processTemplate(recipeTemplate,
-                                                   requestedTasks,
-                                                   taskParams=taskParams,
-                                                   distroRequires=arch_node,
-                                                   arch=arch,
-                                                   **kwargs)
+                                              requestedTasks,
+                                              taskParams=taskParams,
+                                              distroRequires=arch_node,
+                                              arch=arch,
+                                              **kwargs)
                 recipeSet.addRecipe(recipe)
                 job.addRecipeSet(recipeSet)
 
@@ -316,15 +325,15 @@ class Workflow_Installer_Test(BeakerWorkflow):
         jobxml = job.toxml(**kwargs)
 
         if debug:
-            print jobxml
+            print(jobxml)
 
         if not dryrun:
-            if not hasattr(self,'hub'):
+            if not hasattr(self, 'hub'):
                 self.set_hub(**kwargs)
             try:
                 job = self.hub.jobs.upload(jobxml)
-            except Exception, ex:
-                print >>sys.stderr, unicode(ex)
+            except Exception as ex:
+                sys.stderr.write(ex)
                 sys.exit(1)
             else:
-                print "Submitted: %s" % job
+                print("Submitted: %s" % job)

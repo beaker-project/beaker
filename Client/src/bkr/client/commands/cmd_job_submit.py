@@ -100,29 +100,43 @@ See also
 :manpage:`bkr(1)`
 """
 
+from __future__ import print_function
 
-from bkr.client.task_watcher import *
-from bkr.client.convert import Convert
-from bkr.client import BeakerCommand
-from optparse import OptionValueError
-import lxml.etree
-import pkg_resources
 import sys
 import xml.dom.minidom
 
-def combineTag(olddoc, newdoc, tag_name):
+import lxml.etree
+import pkg_resources
+import six
+
+from bkr.client import BeakerCommand
+from bkr.client.convert import Convert
+from bkr.client.task_watcher import *
+
+
+def combine_tag(olddoc, newdoc, tag_name):
     # Take the tag from the first olddoc and add it to the newdoc.
     tags = olddoc.getElementsByTagName(tag_name)
     if tags and not newdoc.getElementsByTagName(tag_name):
         newdoc.appendChild(tags[0])
 
-def combineAttr(olddoc, newdoc, attr_name):
+
+combineTag = combine_tag
+
+
+def combine_attr(olddoc, newdoc, attr_name):
     # Take the attr from the first olddoc and set it to the newdoc.
     if attr_name not in newdoc._attrs and attr_name in olddoc._attrs:
         newdoc.setAttribute(attr_name, olddoc.getAttribute(attr_name))
 
+
+combineAttr = combine_attr
+
+
 class Job_Submit(BeakerCommand):
-    """Submit job(s) to scheduler"""
+    """
+    Submit job(s) to scheduler
+    """
     enabled = True
 
     def options(self):
@@ -205,7 +219,11 @@ stdin."""
         jobxmls = []
         for job in jobs:
             if job == '-':
-                mystring = sys.stdin.read()
+                if six.PY3:  # Handle piped non UTF-8 data
+                    with open(0, 'rb') as f:
+                        mystring = f.read()
+                else:
+                    mystring = sys.stdin.read()
             else:
                 mystring = open(job, "r").read()
             try:
@@ -223,11 +241,11 @@ stdin."""
             combined = xml.dom.minidom.Document().createElement("job")
             for jobxml in jobxmls:
                 doc = xml.dom.minidom.parseString(jobxml)
-                combineTag(doc,combined,"whiteboard")
-                combineTag(doc,combined,"notify")
-                combineAttr(doc.getElementsByTagName("job")[0], combined, "retention_tag")
-                combineAttr(doc.getElementsByTagName("job")[0], combined, "product")
-                combineAttr(doc.getElementsByTagName("job")[0], combined, "user")
+                combine_tag(doc, combined, "whiteboard")
+                combine_tag(doc, combined, "notify")
+                combine_attr(doc.getElementsByTagName("job")[0], combined, "retention_tag")
+                combine_attr(doc.getElementsByTagName("job")[0], combined, "product")
+                combine_attr(doc.getElementsByTagName("job")[0], combined, "user")
                 # Add all recipeSet(s) to combined job.
                 for recipeSet in doc.getElementsByTagName("recipeSet"):
                     combined.appendChild(recipeSet)
@@ -239,21 +257,21 @@ stdin."""
             if convert:
                 jobxml = Convert.rhts2beaker(jobxml)
             if debug or print_xml:
-                print jobxml
+                print(jobxml)
             try:
                 job_schema.assertValid(lxml.etree.fromstring(jobxml))
-            except Exception, e:
+            except Exception as e:
                 sys.stderr.write('WARNING: job xml validation failed: %s\n' % e)
             if not dryrun:
                 try:
                     submitted_jobs.append(self.hub.jobs.upload(jobxml, ignore_missing_tasks))
                 except (KeyboardInterrupt, SystemExit):
                     raise
-                except Exception, ex:
+                except Exception as ex:
                     is_failed = True
                     sys.stderr.write('Exception: %s\n' % ex)
         if not dryrun:
-            print "Submitted: %s" % submitted_jobs
+            print("Submitted: %s" % submitted_jobs)
             if wait:
                 is_failed |= watch_tasks(self.hub, submitted_jobs)
         sys.exit(is_failed)

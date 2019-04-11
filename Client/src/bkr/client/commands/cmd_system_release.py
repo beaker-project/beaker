@@ -57,11 +57,15 @@ See also
 :manpage:`bkr(1)`
 """
 
-import urllib
+from six.moves.urllib import parse
+
 from bkr.client import BeakerCommand
 
+
 class System_Release(BeakerCommand):
-    """Release a reserved system"""
+    """
+    Release a reserved system
+    """
     enabled = True
 
     def options(self):
@@ -70,7 +74,7 @@ class System_Release(BeakerCommand):
     def run(self, *args, **kwargs):
         self.set_hub(**kwargs)
         for fqdn in args:
-            update_url = 'systems/%s/reservations/+current' % urllib.quote(fqdn, '')
+            update_url = 'systems/%s/reservations/+current' % parse.quote(fqdn, '')
             requests_session = self.requests_session()
             res = requests_session.patch(update_url, json={'finish_time': 'now'})
             res.raise_for_status()

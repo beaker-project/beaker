@@ -61,10 +61,14 @@ See also
 
 :manpage:`bkr(1)`
 """
+
 from bkr.client import BeakerCommand
 
+
 class Remove_Account(BeakerCommand):
-    """Remove user accounts"""
+    """
+    Remove user accounts
+    """
 
     enabled=True
 

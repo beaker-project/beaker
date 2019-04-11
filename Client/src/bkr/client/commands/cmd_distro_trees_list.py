@@ -50,7 +50,7 @@ Options
 .. option:: --family <family>
 
    Limit to distros of the given family (major version), for example 
-   ``RedHatEnterpriseLinuxServer5``.
+   ``RedHatEnterpriseLinuxServer8``.
 
 .. option:: --arch <arch>
 
@@ -93,9 +93,9 @@ the exit status will be 1.
 Examples
 --------
 
-List details of all RHEL5.6 Server nightly trees from a particular date::
+List details of all RHEL 8.0.0 nightly trees from a particular date::
 
-    bkr distro-trees-list --name "RHEL5.6-Server-20101110%"
+    bkr distro-trees-list --name "RHEL-8.0.0-20190410%"
 
 See also
 --------
@@ -103,13 +103,18 @@ See also
 :manpage:`bkr(1)`, :manpage:`bkr-distros-list(1)`
 """
 
+from __future__ import print_function
 
-import sys
 import json
+import sys
+
 from bkr.client import BeakerCommand
 
+
 class Distro_Trees_List(BeakerCommand):
-    """List distro trees"""
+    """
+    List distro trees
+    """
     enabled = True
     requires_login = False
 
@@ -174,7 +179,6 @@ class Distro_Trees_List(BeakerCommand):
             help='filter by XML criteria, as in <distroRequires/>',
         )
 
-
     def run(self, *args, **kwargs):
         filter = dict( limit    = kwargs.pop("limit", None),
                        name     = kwargs.pop("name", None),
@@ -192,20 +196,21 @@ class Distro_Trees_List(BeakerCommand):
         self.set_hub(**kwargs)
         distro_trees = self.hub.distrotrees.filter(filter)
         if format == 'json':
-            print json.dumps(distro_trees, indent=4)
+            print(json.dumps(distro_trees, indent=4))
         elif format == 'tabular':
             if distro_trees:
-                print "-"*70
+                print("-" * 70)
                 for dt in distro_trees:
-                    print "       ID: %s" % dt['distro_tree_id']
-                    print "     Name: %-34.34s Arch: %s" % (dt['distro_name'], dt['arch'])
-                    print "OSVersion: %-34.34s Variant: %s" % (dt['distro_osversion'], dt['variant'])
-                    print "     Tags: %s" % ", ".join(dt['distro_tags'])
-                    print
-                    print "  Lab controller/URLs:"
+                    print("       ID: %s" % dt['distro_tree_id'])
+                    print("     Name: %-34.34s Arch: %s" % (dt['distro_name'], dt['arch']))
+                    print("OSVersion: %-34.34s Variant: %s" % (
+                        dt['distro_osversion'], dt['variant']))
+                    print("     Tags: %s" % ", ".join(dt['distro_tags']))
+                    print()
+                    print("  Lab controller/URLs:")
                     for labc, url in dt['available']:
-                        print "     %-32s: %s" % (labc, url)
-                    print "-"*70
+                        print("     %-32s: %s" % (labc, url))
+                    print("-" * 70)
             else:
                 sys.stderr.write("Nothing Matches\n")
         if not distro_trees:

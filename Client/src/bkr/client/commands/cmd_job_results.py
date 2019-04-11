@@ -74,14 +74,18 @@ See also
 :manpage:`bkr(1)`
 """
 
+from __future__ import print_function
+
+import lxml.etree
+import six
 
 from bkr.client import BeakerCommand
-from optparse import OptionValueError
-from bkr.client.task_watcher import *
-from xml.dom.minidom import Document, parseString
+
 
 class Job_Results(BeakerCommand):
-    """Get Jobs/Recipes Results"""
+    """
+    Get Jobs/Recipes Results
+    """
     enabled = True
     requires_login = False
 
@@ -106,12 +110,11 @@ class Job_Results(BeakerCommand):
             help='Omit logs from results XML',
         )
 
-
     def run(self, *args, **kwargs):
         self.check_taskspec_args(args)
 
-        format      = kwargs.pop("format")
-        prettyxml   = kwargs.pop("prettyxml", None)
+        format = kwargs.pop("format")
+        prettyxml = kwargs.pop("prettyxml", None)
         include_logs = kwargs.pop('include_logs')
 
         self.set_hub(**kwargs)
@@ -122,16 +125,19 @@ class Job_Results(BeakerCommand):
                 # XML is really bytes, the fact that the server is sending the bytes as an
                 # XML-RPC Unicode string is just a mistake in Beaker's API
                 myxml = myxml.encode('utf8')
-                if prettyxml:
-                    print parseString(myxml).toprettyxml(encoding='utf8')
-                else:
-                    print myxml
+                str_xml = lxml.etree.tostring(lxml.etree.fromstring(myxml),
+                                              pretty_print=prettyxml,
+                                              xml_declaration=prettyxml,
+                                              encoding='utf-8')
+                if six.PY3:  # Decode bytes to string (otherwise print will be broken)
+                    str_xml = str_xml.decode('utf-8')
+                print(str_xml)
             elif format == 'junit-xml':
                 type, colon, id = task.partition(':')
                 if type != 'J':
                     self.parser.error('JUnit XML format is only available for jobs')
                 response = requests_session.get('jobs/%s.junit.xml' % id)
                 response.raise_for_status()
-                print response.content
+                print(response.content)
             else:
                 raise RuntimeError('Format %s not implemented' % format)

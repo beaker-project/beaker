@@ -63,12 +63,15 @@ See also
 """
 
 import sys
+
 from bkr.client import BeakerCommand
-from optparse import OptionValueError
 from bkr.client.task_watcher import *
 
+
 class Job_Watch(BeakerCommand):
-    """Watch Jobs/Recipes"""
+    """
+    Watch Jobs/Recipes
+    """
     enabled = True
     requires_login = False
 
@@ -82,7 +85,6 @@ class Job_Watch(BeakerCommand):
                   Ignored if not using message bus. Must be lower than task watching.\
                   Undetermined behaviour when listening on multiple tasks",
         )
-
 
     def run(self, *args, **kwargs):
         if not args:

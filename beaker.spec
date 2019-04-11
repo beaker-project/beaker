@@ -1,6 +1,12 @@
 %if 0%{?rhel} && 0%{?rhel} <= 6
 %{!?__python2: %global __python2 /usr/bin/python2}
-%{!?python2_sitelib: %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
+%{!?python2_sitelib: %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
+%endif
+
+%if 0%{?fedora} >= 30 || 0%{?rhel} >= 8
+%bcond_without python3
+%else
+%bcond_with python3
 %endif
 
 %global _lc_services beaker-proxy beaker-provision beaker-watchdog beaker-transfer
@@ -10,9 +16,9 @@
 %bcond_with systemd
 %endif
 
-# This will not necessarily match the RPM Version if the real version number is 
-# not representable in RPM. For example, a release candidate might be 0.15.0rc1 
-# but that is not usable for the RPM Version because it sorts higher than 
+# This will not necessarily match the RPM Version if the real version number is
+# not representable in RPM. For example, a release candidate might be 0.15.0rc1
+# but that is not usable for the RPM Version because it sorts higher than
 # 0.15.0, so the RPM will have Version 0.15.0 and Release 0.rc1 in that case.
 %global upstream_version 26.4
 
@@ -46,7 +52,18 @@ Source15:       https://github.com/jsmreese/moment-duration-format/archive/8d0bf
 
 BuildArch:      noarch
 BuildRequires:  make
-%if 0%{?fedora} >= 29 || 0%{?rhel} >= 8
+%if %{with python3}
+BuildRequires:  python3-setuptools
+BuildRequires:  python3-nose
+BuildRequires:  python3-unittest2
+BuildRequires:  python3-mock
+BuildRequires:  python3-setuptools
+BuildRequires:  python3-devel
+BuildRequires:  python3-docutils
+BuildRequires:  python3-sphinx
+BuildRequires:  python3-sphinxcontrib-httpdomain
+%else
+%if 0%{?fedora} == 29
 BuildRequires:  python2-setuptools
 BuildRequires:  python2-nose
 BuildRequires:  python2-unittest2
@@ -71,14 +88,13 @@ BuildRequires:  python-sphinx >= 1.0
 %endif
 BuildRequires:  python-sphinxcontrib-httpdomain
 %endif
-
+%endif
 
 %package common
 Summary:        Common components for Beaker packages
 Group:          Applications/Internet
 Provides:       %{name} = %{version}-%{release}
 Obsoletes:      %{name} < 0.17.0-1
-
 
 %package client
 Summary:        Command-line client for interacting with Beaker
@@ -88,17 +104,30 @@ Requires:       %{name}-common = %{version}-%{release}
 %if 0%{?fedora} || 0%{?rhel} >= 7
 BuildRequires:  pkgconfig(bash-completion)
 %endif
-%if 0%{?fedora} >= 29 || 0%{?rhel} >= 8
+%if %{with python3}
+# These client dependencies are needed in build because of sphinx
+BuildRequires:  python3-gssapi
+BuildRequires:  python3-lxml
+BuildRequires:  python3-prettytable
+BuildRequires:  python3-libxml2
+Requires:       python3-setuptools
+Requires:       python3-gssapi
+Requires:       python3-lxml
+Requires:       python3-requests
+Requires:       python3-libxml2
+Requires:       python3-prettytable
+Requires:       python3-jinja2
+%else
+%if 0%{?fedora} == 29
 # These client dependencies are needed in build because of sphinx
 BuildRequires:  python2-gssapi
 BuildRequires:  python2-lxml
-BuildRequires:  python2-libxslt
 BuildRequires:  python2-prettytable
+BuildRequires:  python2-libxml2
 Requires:       python2-setuptools
 Requires:       python2-gssapi
 Requires:       python2-lxml
 Requires:       python2-requests
-Requires:       python2-libxslt
 Requires:       python2-libxml2
 Requires:       python2-prettytable
 Requires:       python2-jinja2
@@ -118,9 +147,11 @@ Requires:       libxml2-python
 Requires:       python-prettytable
 Requires:       python-jinja2
 %endif
+%endif
 # beaker-wizard was moved from rhts-devel to here in 4.52
 Conflicts:      rhts-devel < 4.52
 
+%if %{without python3}
 %package server
 Summary:        Beaker scheduler and web interface
 Group:          Applications/Internet
@@ -148,7 +179,7 @@ Requires:       yum-utils
 Requires:       nodejs-less >= 1.7
 Requires:       /usr/bin/cssmin
 Requires:       /usr/bin/uglifyjs
-%if 0%{?fedora} >= 29 || 0%{?rhel} >= 8
+%if 0%{?fedora} == 29
 BuildRequires:  python2-requests
 BuildRequires:  TurboGears
 BuildRequires:  python2-turbojson
@@ -247,8 +278,9 @@ Requires(post): systemd
 Requires(pre):  systemd
 Requires(postun):  systemd
 %endif
+%endif
 
-
+%if %{without python3}
 %package integration-tests
 Summary:        Integration tests for Beaker
 Group:          Applications/Internet
@@ -261,7 +293,7 @@ Requires:       firefox
 Requires:       lsof
 Requires:       openldap-servers
 Requires:       nss_wrapper
-%if 0%{?fedora} >= 29 || 0%{?rhel} >= 8
+%if 0%{?fedora} == 29
 Requires:       python2-nose
 Requires:       python2-selenium
 Requires:       python2-requests
@@ -286,8 +318,9 @@ Requires:       python-mock
 Requires:       python-cssselect
 %endif
 %endif
+%endif
 
-
+%if %{without python3}
 %package lab-controller
 Summary:        Daemons for controlling a Beaker lab
 Group:          Applications/Internet
@@ -302,7 +335,7 @@ Requires:       ipmitool
 Requires:       wsmancli
 Requires:       telnet
 Requires:       sudo
-%if 0%{?fedora} >= 29 || 0%{?rhel} >= 8
+%if 0%{?fedora} == 29
 # These LC dependencies are needed in build due to tests
 BuildRequires:  python2-lxml
 BuildRequires:  python2-gevent
@@ -335,39 +368,48 @@ Requires(post): systemd
 Requires(pre):  systemd
 Requires(postun):  systemd
 %endif
+%endif
 
+%if %{without python3}
 %package lab-controller-addDistro
 Summary:        Optional hooks for distro import on Beaker lab controllers
 Group:          Applications/Internet
 Requires:       %{name}-common = %{version}-%{release}
 Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
+%endif
+
 
 %description
-Beaker is a full stack software and hardware integration testing system, with 
+Beaker is a full stack software and hardware integration testing system, with
 the ability to manage a globally distributed network of test labs.
 
 %description common
 Python modules which are used by other Beaker packages.
 
 %description client
-The bkr client is a command-line tool for interacting with Beaker servers. You 
+The bkr client is a command-line tool for interacting with Beaker servers. You
 can use it to submit Beaker jobs, fetch results, and perform many other tasks.
 
+%if %{without python3}
 %description server
-This package provides the central server components for Beaker, which 
+This package provides the central server components for Beaker, which
 consist of:
-* a Python web application, providing services to remote lab controllers as 
-  well as a web interface for Beaker users; 
-* the beakerd scheduling daemon, which schedules recipes on systems; and 
+* a Python web application, providing services to remote lab controllers as
+  well as a web interface for Beaker users;
+* the beakerd scheduling daemon, which schedules recipes on systems; and
 * command-line tools for managing a Beaker installation.
+%endif
 
+%if %{without python3}
 %description integration-tests
-This package contains integration tests for Beaker, which require a running 
+This package contains integration tests for Beaker, which require a running
 database and Beaker server.
+%endif
 
+%if %{without python3}
 %description lab-controller
-The lab controller daemons connect to a central Beaker server in order to 
+The lab controller daemons connect to a central Beaker server in order to
 manage a local lab of test systems.
 
 The daemons and associated lab controller tools:
@@ -375,11 +417,14 @@ The daemons and associated lab controller tools:
 * control power for test systems
 * collect logs and results from test runs
 * track distros available from the lab's local mirror
+%endif
 
+%if %{without python3}
 %description lab-controller-addDistro
-addDistro.sh can be called after distros have been imported into Beaker. You 
-can install this on your lab controller to automatically launch jobs against 
+addDistro.sh can be called after distros have been imported into Beaker. You
+can install this on your lab controller to automatically launch jobs against
 newly imported distros.
+%endif
 
 %prep
 %setup -q -n %{name}-%{upstream_version}
@@ -400,18 +445,24 @@ tar -C Server/assets/marked --strip-components=1 -xzf %{SOURCE14}
 tar -C Server/assets/moment-duration-format --strip-components=1 -xzf %{SOURCE15}
 
 %build
+export BKR_PY3=%{with python3}
 make
 
 %install
+export BKR_PY3=%{with python3}
 DESTDIR=%{buildroot} make install
 
-# Newer RPM fails if site.less doesn't exist, even though it's marked %%ghost 
+%if %{without python3}
+# Newer RPM fails if site.less doesn't exist, even though it's marked %%ghost
 # and therefore is not included in the RPM. Seems like an RPM bug...
 ln -s /dev/null %{buildroot}%{_datadir}/bkr/server/assets/site.less
+%endif
 
 %check
+export BKR_PY3=%{with python3}
 make check
 
+%if %{without python3}
 %post server
 %if %{with systemd}
 %systemd_post beakerd.service
@@ -428,7 +479,9 @@ chmod go-w %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 if [ ! -f %{_datadir}/bkr/server/assets/site.less ] ; then
     ln -s /dev/null %{_datadir}/bkr/server/assets/site.less || :
 fi
+%endif
 
+%if %{without python3}
 %post lab-controller
 %if %{with systemd}
 %systemd_post %{_lc_services}
@@ -443,7 +496,9 @@ chown root:root %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 chmod go-w %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 # Restart rsyslog so that it notices the config which we ship
 /sbin/service rsyslog condrestart >/dev/null 2>&1 || :
+%endif
 
+%if %{without python3}
 %postun server
 %if %{with systemd}
 %systemd_postun_with_restart beakerd.service
@@ -452,7 +507,9 @@ if [ "$1" -ge "1" ]; then
     /sbin/service beakerd condrestart >/dev/null 2>&1 || :
 fi
 %endif
+%endif
 
+%if %{without python3}
 %postun lab-controller
 %if %{with systemd}
 %systemd_postun_with_restart %{_lc_services}
@@ -463,7 +520,9 @@ if [ "$1" -ge "1" ]; then
    done
 fi
 %endif
+%endif
 
+%if %{without python3}
 %preun server
 %if %{with systemd}
 %systemd_preun beakerd.service
@@ -473,7 +532,9 @@ if [ "$1" -eq "0" ]; then
         /sbin/chkconfig --del beakerd || :
 fi
 %endif
+%endif
 
+%if %{without python3}
 %preun lab-controller
 %if %{with systemd}
 %systemd_preun %{_lc_services}
@@ -486,16 +547,26 @@ if [ "$1" -eq "0" ]; then
 fi
 rm -rf %{_var}/lib/beaker/osversion_data
 %endif
+%endif
 
 %files common
+%if %{with python3}
+%dir %{python3_sitelib}/bkr/
+%{python3_sitelib}/bkr/__init__.py*
+%{python3_sitelib}/bkr/common/
+%{python3_sitelib}/bkr/log.py*
+%{python3_sitelib}/bkr/__pycache__/*
+%{python3_sitelib}/beaker_common-*.egg-info/
+%else
 %dir %{python2_sitelib}/bkr/
 %{python2_sitelib}/bkr/__init__.py*
-%{python2_sitelib}/bkr/timeout_xmlrpclib.py*
 %{python2_sitelib}/bkr/common/
 %{python2_sitelib}/bkr/log.py*
 %{python2_sitelib}/beaker_common-*.egg-info/
+%endif
 %doc COPYING
 
+%if %{without python3}
 %files server
 %dir %{_sysconfdir}/%{name}
 %doc documentation/_build/text/whats-new/
@@ -543,19 +614,28 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/rpms
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/repos
 %attr(-,apache,root) %dir %{_localstatedir}/lib/%{name}
+%endif
 
+%if %{without python3}
 %files integration-tests
 %{python2_sitelib}/bkr/inttest/
 %{python2_sitelib}/beaker_integration_tests-*-nspkg.pth
 %{python2_sitelib}/beaker_integration_tests-*.egg-info/
 %{_datadir}/beaker-integration-tests
+%endif
 
 %files client
 %dir %{_sysconfdir}/%{name}
 %doc Client/client.conf.example
+%if %{with python3}
+%{python3_sitelib}/bkr/client/
+%{python3_sitelib}/beaker_client-*-nspkg.pth
+%{python3_sitelib}/beaker_client-*.egg-info/
+%else
 %{python2_sitelib}/bkr/client/
 %{python2_sitelib}/beaker_client-*-nspkg.pth
 %{python2_sitelib}/beaker_client-*.egg-info/
+%endif
 %{_bindir}/beaker-wizard
 %{_bindir}/bkr
 %{_mandir}/man1/beaker-wizard.1.gz
@@ -567,6 +647,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_sysconfdir}/bash_completion.d
 %endif
 
+%if %{without python3}
 %files lab-controller
 %dir %{_sysconfdir}/%{name}
 %config(noreplace) %{_sysconfdir}/%{name}/labcontroller.conf
@@ -610,9 +691,12 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %attr(0440,root,root) %config(noreplace) %{_sysconfdir}/sudoers.d/beaker_proxy_clear_netboot
 %config(noreplace) %{_sysconfdir}/rsyslog.d/beaker-lab-controller.conf
 %config(noreplace) %{_sysconfdir}/logrotate.d/beaker
+%endif
 
+%if %{without python3}
 %files lab-controller-addDistro
 %{_var}/lib/%{name}/addDistro.sh
 %{_var}/lib/%{name}/addDistro.d/*
+%endif
 
 %changelog

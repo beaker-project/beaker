@@ -19,8 +19,8 @@ Synopsis
 Description
 -----------
 
-Applies the given version (for example, ``RedHatEnterpriseLinuxServer5.6`` or 
-``Fedora14``) to all matching distros in Beaker.
+Applies the given version (for example, ``RedHatEnterpriseLinux8.0`` or
+``Fedora30``) to all matching distros in Beaker.
 
 Options
 -------
@@ -43,7 +43,7 @@ Examples
 
 Set the version for all RHEL5.6 Server nightly trees from a particular date::
 
-    bkr distros-edit-version --name "RHEL5.6-Server-20101110%" RedHatEnterpriseLinuxServer5.6
+    bkr distros-edit-version --name "RHEL-8.0.0-20190410%" RedHatEnterpriseLinux8.0
 
 Notes
 -----
@@ -56,12 +56,15 @@ See also
 :manpage:`bkr(1)`
 """
 
+from __future__ import print_function
 
 from bkr.client import BeakerCommand
 
 
 class Distros_Edit_Version(BeakerCommand):
-    """Edit distros version"""
+    """
+    Edit distros version
+    """
     enabled = True
 
 
@@ -74,7 +77,6 @@ class Distros_Edit_Version(BeakerCommand):
             help="tag by name, use % for wildcard",
         )
 
-
     def run(self, *args, **kwargs):
         if len(args) < 1:
             self.parser.error("Please specify a version")
@@ -84,7 +86,7 @@ class Distros_Edit_Version(BeakerCommand):
 
         self.set_hub(**kwargs)
         distros = self.hub.distros.edit_version(name, version)
-        print "Updated the following distros with Version: %s" % version
-        print "------------------------------------------------------"
+        print("Updated the following distros with Version: %s" % version)
+        print("------------------------------------------------------")
         for distro in distros:
-            print distro
+            print(distro)

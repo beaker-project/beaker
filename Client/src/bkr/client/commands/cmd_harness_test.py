@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -21,7 +20,7 @@ Description
 Generates a Beaker job to test that the harness can be installed correctly on 
 all available combinations of distro family, variant, and arch.
 
-This is intended to catch misconfigurations and missing/incomplete harness 
+This is intended to catch misconfiguration and missing/incomplete harness
 repos, not find bugs in the harness.
 
 Options
@@ -51,21 +50,18 @@ See also
 :manpage:`bkr(1)`
 """
 
-try:
-    any # builtin in Python 2.5+
-except NameError:
-    def any(iterable):
-        for element in iterable:
-            if element:
-                return True
-        return False
+from __future__ import print_function
 
 import sys
+
 from bkr.client import BeakerWorkflow, BeakerJob, BeakerRecipeSet, BeakerRecipe
 from bkr.client.task_watcher import watch_tasks
 
+
 class Harness_Test(BeakerWorkflow):
-    """Workflow for testing harness installation"""
+    """
+    Workflow for testing harness installation
+    """
     enabled = True
 
     def options(self):
@@ -99,11 +95,11 @@ class Harness_Test(BeakerWorkflow):
             kwargs['whiteboard'] = 'Test harness installation'
 
         if not families:
-            families = self.getOsMajors(**kwargs)
+            families = self.get_os_majors(**kwargs)
             # filter out any junky old distros with no family
             families = [f for f in families if f]
 
-        fva = set() # all family-variant-arch combinations
+        fva = set()  # all family-variant-arch combinations
         for family in families:
             dts = self.hub.distrotrees.filter({'family': family})
             for dt in dts:
@@ -111,28 +107,28 @@ class Harness_Test(BeakerWorkflow):
             # if this family has any variants, discard combinations which have blank variant
             if any(f == family and v for f, v, a in fva):
                 fva.difference_update([(f, v, a) for f, v, a in fva
-                        if f == family and not v])
+                                       if f == family and not v])
 
         job = BeakerJob(**kwargs)
         for family, variant, arch in sorted(fva):
-            requestedTasks = self.getTasks(family=family, **kwargs)
+            requestedTasks = self.get_tasks(family=family, **kwargs)
             recipe = BeakerRecipe()
-            recipe.addBaseRequires(family=family, variant=variant, arch=arch, **kwargs)
+            recipe.add_base_requires(family=family, variant=variant, arch=arch, **kwargs)
             arch_node = self.doc.createElement('distro_arch')
             arch_node.setAttribute('op', '=')
             arch_node.setAttribute('value', arch)
-            recipe = self.processTemplate(recipe, requestedTasks, taskParams=taskParams,
-                                          distroRequires=arch_node, arch=arch, family=family,
-                                          allow_empty_recipe=True, **kwargs)
+            recipe = self.process_template(recipe, requestedTasks, taskParams=taskParams,
+                                           distroRequires=arch_node, arch=arch, family=family,
+                                           allow_empty_recipe=True, **kwargs)
             recipe.whiteboard = ' '.join([family, variant, arch])
             recipeset = BeakerRecipeSet(**kwargs)
-            recipeset.addRecipe(recipe)
-            job.addRecipeSet(recipeset)
+            recipeset.add_recipe(recipe)
+            job.add_recipe_set(recipeset)
 
         jobxml = job.toxml(**kwargs)
 
         if debug:
-            print jobxml
+            print(jobxml)
 
         submitted_jobs = []
         failed = False
@@ -140,12 +136,12 @@ class Harness_Test(BeakerWorkflow):
         if not dryrun:
             try:
                 submitted_jobs.append(self.hub.jobs.upload(jobxml))
-            except Exception, ex:
+                print("Submitted: %s" % submitted_jobs)
+            except (KeyboardInterrupt, SystemError):
+                raise
+            except Exception as ex:
                 failed = True
-                print >>sys.stderr, ex
-        if not dryrun:
-            print "Submitted: %s" % submitted_jobs
+                sys.stderr.write('Exception: %s\n' % ex)
             if wait:
-                watch_tasks(self.hub, submitted_jobs)
-            if failed:
-                sys.exit(1)
+                failed |= watch_tasks(self.hub, submitted_jobs)
+        sys.exit(failed)

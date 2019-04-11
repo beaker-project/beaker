@@ -89,11 +89,15 @@ See also
 
 """
 
-import urllib
+from six.moves.urllib import parse
+
 from bkr.client import BeakerCommand
 
+
 class LabController_Modify(BeakerCommand):
-    """Modify attributes of an existing lab controller"""
+    """
+    Modify attributes of an existing lab controller
+    """
     enabled = True
 
     def options(self):
@@ -133,11 +137,11 @@ class LabController_Modify(BeakerCommand):
         if kwargs.pop('create', False):
             lc_data['fqdn'] = fqdn
             res = requests_session.post('labcontrollers/', json=lc_data)
-            # If the lab controller aleady exists, fall back to send a PATCH request.
+            # If the lab controller already exists, fall back to send a PATCH request.
             if res.status_code != 409:
                 update = False
                 res.raise_for_status()
         if update:
-            url = 'labcontrollers/%s' % urllib.quote(fqdn, '')
+            url = 'labcontrollers/%s' % parse.quote(fqdn, '')
             res = requests_session.patch(url, json=lc_data)
             res.raise_for_status()

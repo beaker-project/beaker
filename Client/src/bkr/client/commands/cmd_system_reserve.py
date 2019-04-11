@@ -57,8 +57,11 @@ See also
 
 from bkr.client import BeakerCommand
 
+
 class System_Reserve(BeakerCommand):
-    """Reserve a system for manual usage"""
+    """
+    Reserve a system for manual usage
+    """
     enabled = True
 
     def options(self):

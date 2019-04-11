@@ -39,8 +39,10 @@ See also
 :manpage:`bkr(1)`
 """
 
+from __future__ import print_function
 
 import json
+
 from bkr.client import BeakerCommand
 
 
@@ -48,10 +50,8 @@ class WhoAmI(BeakerCommand):
     """Who Am I"""
     enabled = True
 
-
     def options(self):
         self.parser.usage = "%%prog %s" % self.normalized_name
-
 
     def run(self, *args, **kwargs):
         self.set_hub(**kwargs)
@@ -66,4 +66,4 @@ class WhoAmI(BeakerCommand):
         }
         if attributes.get('proxied_by_user'):
             result['proxied_by_username'] = attributes['proxied_by_user']['user_name']
-        print json.dumps(result)
+        print(json.dumps(result))

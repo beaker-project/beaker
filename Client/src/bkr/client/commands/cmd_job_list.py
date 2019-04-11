@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -114,12 +113,17 @@ See also
 :manpage:`bkr(1)`
 """
 
-from bkr.client import BeakerCommand
+from __future__ import print_function
+
 import json
-from optparse import OptionValueError
+
+from bkr.client import BeakerCommand
+
 
 class Job_List(BeakerCommand):
-    """List Beaker jobs """
+    """
+    List Beaker jobs
+    """
     enabled = True
     requires_login = False
 
@@ -209,7 +213,7 @@ class Job_List(BeakerCommand):
             help='Results display format: list, json [default: %default]',
         )
 
-    def run(self,*args, **kwargs):
+    def run(self, *args, **kwargs):
         family = kwargs.pop('family', None)
         tags = kwargs.pop('tag', None)
         product = kwargs.pop('product', None)
@@ -226,18 +230,25 @@ class Job_List(BeakerCommand):
         minid = kwargs.pop('min_id', None)
         maxid = kwargs.pop('max_id', None)
         if minid or maxid:
-            if minid and minid<=0 or maxid and maxid <= 0:
+            if minid and minid <= 0 or maxid and maxid <= 0:
                 self.parser.error('Please specify a non zero positive Job ID')
             if minid and maxid:
-                if maxid <  minid:
+                if maxid < minid:
                     self.parser.error('Max Job ID should be greater than or equal to min Job ID')
 
         if complete_days is not None and complete_days < 1:
             self.parser.error('Please pass a positive integer to completeDays')
 
-        if complete_days is None and tags is None and family is None and product is None\
-                and owner is None and mine is None and whiteboard is None:
-            self.parser.error('Please pass either the completeDays time delta, a tag, product, family, or owner')
+        if (complete_days is None
+                and tags is None
+                and family is None
+                and product is None
+                and owner is None
+                and mine is None
+                and whiteboard is None
+        ):
+            self.parser.error('Please pass either the completeDays time delta, a tag'
+                              ', product, family, or owner')
 
         if args:
             self.parser.error('This command does not accept any arguments')
@@ -254,20 +265,20 @@ class Job_List(BeakerCommand):
         if mine:
             self.hub._login()
         jobs = self.hub.jobs.filter(dict(tags=tags,
-                                        daysComplete=complete_days,
-                                        family=family,
-                                        product=product,
-                                        owner=owner,
-                                        whiteboard=whiteboard,
-                                        mine=mine,
-                                        minid=minid,
-                                        maxid=maxid,
-                                        limit=limit,
-                                        is_finished=is_finished))
+                                         daysComplete=complete_days,
+                                         family=family,
+                                         product=product,
+                                         owner=owner,
+                                         whiteboard=whiteboard,
+                                         mine=mine,
+                                         minid=minid,
+                                         maxid=maxid,
+                                         limit=limit,
+                                         is_finished=is_finished))
 
         if format == 'list':
             for job_id in jobs:
-                print job_id
+                print(job_id)
 
         if format == 'json':
-            print json.dumps(jobs)
+            print(json.dumps(jobs))

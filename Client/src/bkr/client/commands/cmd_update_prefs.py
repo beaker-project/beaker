@@ -52,10 +52,12 @@ See also
 
 
 from bkr.client import BeakerCommand
-import sys
+
 
 class Update_Prefs(BeakerCommand):
-    """Update user preferences"""
+    """
+    Update user preferences
+    """
     enabled = True
 
     def options(self):

@@ -45,10 +45,15 @@ See also
 :manpage:`bkr(1)`
 """
 
+from __future__ import print_function
+
 from bkr.client import BeakerCommand
 
+
 class System_Delete(BeakerCommand):
-    """Delete a system"""
+    """
+    Delete a system
+    """
     enabled = True
 
     def options(self):
@@ -60,4 +65,4 @@ class System_Delete(BeakerCommand):
         fqdn = args[0]
 
         self.set_hub(**kwargs)
-        print self.hub.systems.delete(fqdn)
+        print(self.hub.systems.delete(fqdn))

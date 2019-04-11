@@ -5,10 +5,9 @@
 # the Free Software # Foundation, either version 2 of the License, or
 # (at your option) any later version.
 
-import os
 import syslog
-import codecs
 import logging
+
 
 def log_to_stream(stream, level=logging.WARNING):
     """
@@ -23,12 +22,14 @@ def log_to_stream(stream, level=logging.WARNING):
     stream_handler.setFormatter(logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s'))
     logging.getLogger().handlers = [stream_handler]
 
+
 def log_to_syslog(program_name, facility=syslog.LOG_DAEMON):
     syslog.openlog(program_name, syslog.LOG_PID, facility)
     syslog_handler = SysLogHandler()
     syslog_handler.setLevel(logging.DEBUG) # syslog can do the filtering instead
     syslog_handler.setFormatter(logging.Formatter('%(name)s %(levelname)s %(message)s'))
     logging.getLogger().handlers = [syslog_handler]
+
 
 # Like logging.handlers.SysLogHandler, but uses libc syslog(3) and splits
 # multi-line messages into separate log entries.

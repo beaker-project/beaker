@@ -65,11 +65,15 @@ See also
 
 """
 
-import urllib
+from six.moves.urllib import parse
+
 from bkr.client import BeakerCommand
 
+
 class Pool_Remove(BeakerCommand):
-    """Removes systems from a system pool"""
+    """
+    Removes systems from a system pool
+    """
     enabled = True
 
     def options(self):
@@ -95,5 +99,5 @@ class Pool_Remove(BeakerCommand):
         requests_session = self.requests_session()
         for s in systems:
             res = requests_session.delete('pools/%s/systems/?fqdn=%s' %
-                                          (urllib.quote(pool), urllib.quote(s)))
+                                          (parse.quote(pool), parse.quote(s)))
             res.raise_for_status()

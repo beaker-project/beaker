@@ -51,21 +51,24 @@ See also
 :manpage:`bkr(1)`
 """
 
+from __future__ import print_function
 
-from bkr.client.task_watcher import *
-from bkr.client import BeakerCommand
-from optparse import OptionValueError
-import sys
 import os.path
-import xmlrpclib
+import sys
+
+from six.moves import xmlrpc_client
+
+from bkr.client import BeakerCommand
+
 
 class Task_Add(BeakerCommand):
-    """Add/Update task to scheduler"""
+    """
+    Add/Update task to scheduler
+    """
     enabled = True
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <taskrpm>..." % self.normalized_name
-
 
     def run(self, *args, **kwargs):
         tasks = args
@@ -74,13 +77,13 @@ class Task_Add(BeakerCommand):
         failed = False
         for task in tasks:
             task_name = os.path.basename(task)
-            task_binary = xmlrpclib.Binary(open(task, "r").read())
-            print task_name
+            task_binary = xmlrpc_client.Binary(open(task, "rb").read())
+            print(task_name)
             try:
-                print self.hub.tasks.upload(task_name, task_binary)
+                print(self.hub.tasks.upload(task_name, task_binary))
             except (KeyboardInterrupt, SystemExit):
                 raise
-            except Exception, ex:
+            except Exception as ex:
                 failed = True
                 sys.stderr.write('Exception: %s\n' % ex)
 

@@ -1,8 +1,16 @@
 # Makefile for Sphinx documentation
 #
 
+# Python 2 default
+ifeq ($(BKR_PY3),)
+	BKR_PY3 :=0
+endif
+
+python_command :=  $(shell if [[ $(BKR_PY3) == 0 ]]; then echo "python2"; else echo "python3"; fi)
+python_path :=  $(shell if [[ $(BKR_PY3) == 0 ]]; then echo "../Common:../Server:../Client/src"; else echo "../Common:../Client/src"; fi)
+bkr_path_injected :=  $(shell if [[ $(BKR_PY3) == 0 ]]; then echo \"../Common/bkr\", \"../Server/bkr\", \"../Client/src/bkr\"; else echo \"../Common/bkr\", \"../Client/src/bkr\"; fi)
 SHELL = /bin/bash
-export PYTHONPATH=../Common:../Server:../Client/src
+export PYTHONPATH=$(python_path)
 SPHINXBUILD ?= $(firstword $(shell command -v sphinx-1.0-build sphinx-build))
 
 # This Makefile contains some frustrating hacks, centering around the fact that
@@ -27,16 +35,16 @@ SPHINXBUILD ?= $(firstword $(shell command -v sphinx-1.0-build sphinx-build))
 # Also see: https://bitbucket.org/pypa/setuptools/issue/6/
 
 SPHINXREQUIRES = "Sphinx >= 1.0",
-ifeq (0,$(shell python2 -c '__requires__ = ["CherryPy < 3.0"]; import pkg_resources' &>/dev/null ; echo $$?))
+ifeq (0,$(shell $(python_command) -c '__requires__ = ["CherryPy < 3.0"]; import pkg_resources' &>/dev/null ; echo $$?))
     SPHINXREQUIRES += "CherryPy < 3.0",
 endif
-BKR_PATH_INJECTED = "../Common/bkr", "../Server/bkr", "../Client/src/bkr"
+BKR_PATH_INJECTED = $(bkr_path_injected)
 
 # You can set these variables from the command line.
 SPHINXOPTS    =
-SPHINXBUILD  := python2 -c '__requires__ = [$(SPHINXREQUIRES)]; import pkg_resources; \
+SPHINXBUILD  := $(python_command) -c '__requires__ = [$(SPHINXREQUIRES)]; import pkg_resources; \
     import bkr; bkr.__path__ = [$(BKR_PATH_INJECTED)]; \
-    execfile("$(SPHINXBUILD)")'
+    exec(open("$(SPHINXBUILD)").read())'
 PAPER         =
 BUILDDIR      = _build
 
@@ -54,7 +62,9 @@ build: man text
 install: man
 	install -m0755 -d $(DESTDIR)/usr/share/man/man{1,8}
 	install -m0644 _build/man/*.1 $(DESTDIR)/usr/share/man/man1
-	install -m0644 _build/man/*.8 $(DESTDIR)/usr/share/man/man8
+	if [[ ${BKR_PY3} == 0 ]]; then \
+		install -m0644 _build/man/*.8 $(DESTDIR)/usr/share/man/man8; \
+	fi
 	ln -s bkr-distro-trees-verify.1.gz $(DESTDIR)/usr/share/man/man1/bkr-distros-verify.1.gz
 	ln -s bkr-system-list.1.gz $(DESTDIR)/usr/share/man/man1/bkr-list-systems.1.gz
 	ln -s bkr-labcontroller-list $(DESTDIR)/usr/share/man/man1/bkr-list-labcontrollers.1.gz

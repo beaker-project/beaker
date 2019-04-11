@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -88,32 +87,36 @@ See also
 :manpage:`bkr(1)`, :manpage:`bkr-policy-grant(1)`
 """
 
-import urllib
+from six.moves.urllib import parse
+
 from bkr.client import BeakerCommand
 
+
 class Policy_Revoke(BeakerCommand):
-    """Revoke permissions in an access policy"""
+    """
+    Revoke permissions in an access policy
+    """
     enabled = True
 
     def options(self):
         self.parser.usage = "%%prog %s <options>" % self.normalized_name
         self.parser.add_option('--system', metavar='FQDN',
-                help='Modify custom access policy for FQDN')
+                               help='Modify custom access policy for FQDN')
         self.parser.add_option('--pool', metavar='NAME',
-                help='Modify access policy for system pool NAME')
+                               help='Modify access policy for system pool NAME')
         self.parser.add_option('--permission', metavar='PERMISSION',
-                dest='permissions', action='append', default=[],
-                help='Revoke PERMISSION in policy: '
-                     'view, edit_policy, edit_system, loan_any, loan_self, '
-                     'control_system, reserve')
+                               dest='permissions', action='append', default=[],
+                               help='Revoke PERMISSION in policy: '
+                                    'view, edit_policy, edit_system, loan_any, loan_self, '
+                                    'control_system, reserve')
         self.parser.add_option('--user', metavar='USERNAME',
-                dest='users', action='append', default=[],
-                help='Revoke permission for USERNAME')
+                               dest='users', action='append', default=[],
+                               help='Revoke permission for USERNAME')
         self.parser.add_option('--group', metavar='GROUP',
-                dest='groups', action='append', default=[],
-                help='Revoke permission for GROUP')
+                               dest='groups', action='append', default=[],
+                               help='Revoke permission for GROUP')
         self.parser.add_option('--everybody', action='store_true', default=False,
-                help='Revoke permission granted to all Beaker users')
+                               help='Revoke permission granted to all Beaker users')
 
     def run(self, system=None, pool=None, permissions=None, users=None,
             groups=None, everybody=None, *args, **kwargs):
@@ -125,27 +128,27 @@ class Policy_Revoke(BeakerCommand):
             self.parser.error('Specify at least one permission to revoke using --permission')
         if not (users or groups or everybody):
             self.parser.error('Specify at least one user or group '
-                    'to revoke permissions for, or --everybody')
+                              'to revoke permissions for, or --everybody')
 
         self.set_hub(**kwargs)
         requests_session = self.requests_session()
         if system:
-            rules_url = 'systems/%s/access-policy/rules/' % urllib.quote(system, '')
+            rules_url = 'systems/%s/access-policy/rules/' % parse.quote(system, '')
         if pool:
-            rules_url = 'pools/%s/access-policy/rules/' % urllib.quote(pool, '')
+            rules_url = 'pools/%s/access-policy/rules/' % parse.quote(pool, '')
 
         if users:
             res = requests_session.delete(rules_url,
-                    params=[('permission', p) for p in permissions]
-                         + [('user', u) for u in users])
+                                          params=[('permission', p) for p in permissions]
+                                                 + [('user', u) for u in users])
             res.raise_for_status()
         if groups:
             res = requests_session.delete(rules_url,
-                    params=[('permission', p) for p in permissions]
-                         + [('group', g) for g in groups])
+                                          params=[('permission', p) for p in permissions]
+                                                 + [('group', g) for g in groups])
             res.raise_for_status()
         if everybody:
             res = requests_session.delete(rules_url,
-                    params=[('permission', p) for p in permissions]
-                         + [('everybody', '1')])
+                                          params=[('permission', p) for p in permissions]
+                                                 + [('everybody', '1')])
             res.raise_for_status()

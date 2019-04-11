@@ -77,10 +77,11 @@ See also
 
 
 from bkr.client import BeakerCommand
-import json
 
 class LabController_Create(BeakerCommand):
-    """Creates a new Lab controller"""
+    """
+    Creates a new Lab controller
+    """
     enabled = True
 
     def options(self):

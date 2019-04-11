@@ -1,10 +1,8 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import sys
 import re
 import xml.dom.minidom
 
@@ -13,21 +11,22 @@ __all__ = (
     "rhts2beaker",
 )
 
+
 def rhts2beaker(jobfile):
     convert = Convert(xml.dom.minidom.parseString(jobfile))
     return convert.toxml()
 
-class Convert(object):
 
+class Convert(object):
     doc = xml.dom.minidom.Document()
     rhts2beaker = staticmethod(rhts2beaker)
     invalidjobtags = ['submitter',
                       'workflow',
-                     ]
+                      ]
 
     invalidrecipetags = ['yumInstall',
                          'driverdisk',
-                        ]
+                         ]
 
     def __init__(self, jobxml):
         self.counter = 0
@@ -64,19 +63,23 @@ class Convert(object):
         return require
 
     def handle_addrepo(self, addrepo):
-        """ process repos """
+        """
+        Process repos
+        """
         self.counter += 1
         repo = self.doc.createElement('repo')
-        repo.setAttribute('name','myrepo_%s' % self.counter)
-        repo.setAttribute('url','%s' % addrepo)
+        repo.setAttribute('name', 'myrepo_%s' % self.counter)
+        repo.setAttribute('url', '%s' % addrepo)
         return repo
-    
+
     def handle_addpackage(self, addpackage):
-        """ process packages """
+        """
+        Process packages
+        """
         package = self.doc.createElement('package')
-        package.setAttribute('name','%s' % addpackage)
+        package.setAttribute('name', '%s' % addpackage)
         return package
-    
+
     def handle_hostRequires(self, requires):
         require = None
         requires_search = re.compile(r'([^\s]+)\s+([^\s]+)\s+([^\s]+)')
@@ -104,7 +107,7 @@ class Convert(object):
                 require.setAttribute('op', '%s' % op)
                 require.setAttribute('value', '%s' % value)
         return require
-    
+
     def handle_tasks(self, nodes):
         for child in nodes.childNodes:
             if child.nodeType == child.ELEMENT_NODE:
@@ -112,7 +115,7 @@ class Convert(object):
                     child.tagName = 'task'
                 else:
                     self.handle_tasks(child)
-    
+
     def handle_partition(self, node):
         partition = self.doc.createElement('partition')
         for child in node.childNodes:
@@ -139,60 +142,54 @@ class Convert(object):
                 kernel_options = '%s ' % recipe.getAttribute('kernel_options')
             if 'bootargs' in recipe._attrs:
                 kernel_options = '%s%s' % (kernel_options, recipe.getAttribute('bootargs'))
-                recipe.setAttribute('kernel_options',kernel_options)
+                recipe.setAttribute('kernel_options', kernel_options)
                 recipe.removeAttribute('bootargs')
             if 'testrepo' in recipe._attrs:
                 recipe.removeAttribute('testrepo')
             for child in recipe.childNodes:
-                if child.nodeType == child.ELEMENT_NODE and \
-                   child.tagName == 'bootargs':
-                       del_nodes.append(child)
-                       kernel_options = '%s%s' % (kernel_options, self.getText(child.childNodes))
-                       recipe.setAttribute('kernel_options' , kernel_options)
-                if child.nodeType == child.ELEMENT_NODE and \
-                   child.tagName == 'distroRequires':
-                       del_nodes.append(child)
-                       require = self.handle_distroRequires(self.getText(child.childNodes))
-                       if require:
-                           and_distro.appendChild(require)
-    
-                if child.nodeType == child.ELEMENT_NODE and \
-                   child.tagName == 'hostRequires':
-                       del_nodes.append(child)
-                       require = self.handle_hostRequires(self.getText(child.childNodes))
-                       if require:
-                           and_host.appendChild(require)
-    
-                if child.nodeType == child.ELEMENT_NODE and \
-                   child.tagName == 'partition':
-                       del_nodes.append(child)
-                       partitions.appendChild(self.handle_partition(child))
-                   
-                if child.nodeType == child.ELEMENT_NODE and \
-                   child.tagName == 'addrepo':
-                       del_nodes.append(child)
-                       repo = self.handle_addrepo(self.getText(child.childNodes))
-                       repos.appendChild(repo)
-    
-                if child.nodeType == child.ELEMENT_NODE and \
-                   child.tagName == 'installPackage':
-                       del_nodes.append(child)
-                       package = self.handle_addpackage(self.getText(child.childNodes))
-                       packages.appendChild(package)
-    
+                if child.nodeType == child.ELEMENT_NODE and child.tagName == 'bootargs':
+                    del_nodes.append(child)
+                    kernel_options = '%s%s' % (kernel_options, self.getText(child.childNodes))
+                    recipe.setAttribute('kernel_options', kernel_options)
+                if child.nodeType == child.ELEMENT_NODE and child.tagName == 'distroRequires':
+                    del_nodes.append(child)
+                    require = self.handle_distroRequires(self.getText(child.childNodes))
+                    if require:
+                        and_distro.appendChild(require)
+
+                if child.nodeType == child.ELEMENT_NODE and child.tagName == 'hostRequires':
+                    del_nodes.append(child)
+                    require = self.handle_hostRequires(self.getText(child.childNodes))
+                    if require:
+                        and_host.appendChild(require)
+
+                if child.nodeType == child.ELEMENT_NODE and child.tagName == 'partition':
+                    del_nodes.append(child)
+                    partitions.appendChild(self.handle_partition(child))
+
+                if child.nodeType == child.ELEMENT_NODE and child.tagName == 'addrepo':
+                    del_nodes.append(child)
+                    repo = self.handle_addrepo(self.getText(child.childNodes))
+                    repos.appendChild(repo)
+
+                if child.nodeType == child.ELEMENT_NODE and child.tagName == 'installPackage':
+                    del_nodes.append(child)
+                    package = self.handle_addpackage(self.getText(child.childNodes))
+                    packages.appendChild(package)
+
             distro = self.doc.createElement('distroRequires')
             distro.appendChild(and_distro)
             host = self.doc.createElement('hostRequires')
             host.appendChild(and_host)
-        
+
             for child in del_nodes:
-                recipe.removeChild(child) 
+                recipe.removeChild(child)
             recipe.appendChild(packages)
             recipe.appendChild(repos)
             recipe.appendChild(distro)
             recipe.appendChild(host)
             recipe.appendChild(partitions)
-    
+
     def handle_invalid(self, nodes, invalids):
         for invalid in invalids:
             for node in nodes:

@@ -86,16 +86,24 @@ See also
 :manpage:`bkr(1)`, :manpage:`bkr-machine-test(1)`,
 """
 
-import sys
+from __future__ import print_function
+
 import cgi
+import sys
 from xml.dom.minidom import parseString
+
 from requests.exceptions import HTTPError
+
 from bkr.client import BeakerCommand
 from bkr.client.task_watcher import watch_tasks
 
+
 class Update_Inventory(BeakerCommand):
-    """Submits a Inventory job"""
+    """
+    Submits a Inventory job
+    """
     enabled = True
+
     def options(self):
         self.parser.usage = "%%prog %s <fqdn>.." % self.normalized_name
         self.parser.add_option(
@@ -139,11 +147,11 @@ class Update_Inventory(BeakerCommand):
         failed = False
         for fqdn in args:
             res = requests_session.post('jobs/+inventory',
-                                        json={'fqdn':fqdn,
-                                              'dryrun':dryrun})
+                                        json={'fqdn': fqdn,
+                                              'dryrun': dryrun})
             try:
                 res.raise_for_status()
-            except HTTPError, e:
+            except HTTPError as e:
                 sys.stderr.write('HTTP error: %s, %s\n' % (fqdn, e))
                 content_type, _ = cgi.parse_header(e.response.headers.get(
                     'Content-Type', ''))
@@ -155,13 +163,13 @@ class Update_Inventory(BeakerCommand):
             else:
                 res_data = res.json()
                 if xml:
-                    print res_data['job_xml']
+                    print(res_data['job_xml'])
                 if prettyxml:
-                    print parseString(res_data['job_xml']).toprettyxml(encoding='utf8')
+                    print(parseString(res_data['job_xml']).toprettyxml(encoding='utf8'))
                 if not dryrun:
                     submitted_jobs.append(res_data['job_id'])
         if not dryrun:
-            print "Submitted: %s" % submitted_jobs
+            print("Submitted: %s" % submitted_jobs)
             if wait:
                 failed |= watch_tasks(self.hub, submitted_jobs)
             sys.exit(failed)

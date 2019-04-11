@@ -54,11 +54,17 @@ See also
 
 """
 
-from bkr.client import BeakerCommand
+from __future__ import print_function
+
 import sys
 
+from bkr.client import BeakerCommand
+
+
 class Group_List(BeakerCommand):
-    """List groups"""
+    """
+    List groups
+    """
     enabled = True
 
     def options(self):
@@ -81,8 +87,7 @@ class Group_List(BeakerCommand):
 
         requests_session = self.requests_session()
 
-        params = {}
-        params['page_size'] = limit
+        params = {'page_size': limit}
         if owner:
             params['q'] = 'owner.user_name:%s' % owner
 

@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -82,11 +81,15 @@ See also
 :manpage:`bkr(1)`
 """
 
+from __future__ import print_function
+
 from bkr.client import BeakerCommand
-from optparse import OptionValueError
+
 
 class Job_Delete(BeakerCommand):
-    """Delete Jobs in Beaker """
+    """
+    Delete Jobs in Beaker
+    """
     enabled = True
 
     def options(self):
@@ -96,7 +99,6 @@ class Job_Delete(BeakerCommand):
             "--family",
             help="Family for which the Job is run against"
         )
-
 
         self.parser.add_option(
             "-t",
@@ -148,13 +150,13 @@ class Job_Delete(BeakerCommand):
         )
         """
 
-    def run(self,*args, **kwargs):
-        tag = kwargs.pop('tag',None)
+    def run(self, *args, **kwargs):
+        tag = kwargs.pop('tag', None)
         product = kwargs.pop('product', None)
         complete_days = kwargs.pop('completeDays', None)
-        family = kwargs.pop('family',None)
-        dryrun = kwargs.pop('dryrun',None)
-        #FIXME This is only useful for admins, will enable when we have the admin delete fucntionality
+        family = kwargs.pop('family', None)
+        dryrun = kwargs.pop('dryrun', None)
+        # FIXME This is only useful for admins, will enable when we have the admin delete fucntionality
         """
         if user_deleted is True:
             if complete_days or tag or family or product or len(args) > 0:
@@ -164,11 +166,22 @@ class Job_Delete(BeakerCommand):
         if complete_days is not None and complete_days < 1:
             self.parser.error('Please pass a positive integer to completeDays')
 
-        if len(args) < 1 and tag is None and complete_days is None and family is None and product is None:
-            self.parser.error('Please specify either a job, recipeset, tag, family, product or complete days')
+        if (len(args) < 1
+                and tag is None
+                and complete_days is None
+                and family is None
+                and product is None
+        ):
+            self.parser.error('Please specify either a job, recipeset, tag, family, product or '
+                              'complete days')
         if len(args) > 0:
-            if tag is not None or complete_days is not None or family is not None or product is not None:
-                self.parser.error('Please either delete by job or tag/complete/family/product, not by both')
+            if (tag is not None
+                    or complete_days is not None
+                    or family is not None
+                    or product is not None
+            ):
+                self.parser.error('Please either delete by job or tag/complete/family/product, '
+                                  'not by both')
             self.check_taskspec_args(args, permitted_types=['J'])
 
         self.set_hub(**kwargs)
@@ -176,4 +189,4 @@ class Job_Delete(BeakerCommand):
         if args:
             for job in args:
                 jobs.append(job)
-        print self.hub.jobs.delete_jobs(jobs,tag,complete_days,family,dryrun, product)
+        print(self.hub.jobs.delete_jobs(jobs, tag, complete_days, family, dryrun, product))

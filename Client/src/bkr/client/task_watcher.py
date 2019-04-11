@@ -5,37 +5,46 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import sys
-import time
+from __future__ import print_function
 
+import sys
+
+import six
+import time
 
 __all__ = (
     "TaskWatcher",
     "watch_tasks"
 )
 
+
 def display_tasklist_status(task_list):
     state_dict = {}
     for task in task_list:
-        for state, value in task.get_state_dict().iteritems():
+        for state, value in six.iteritems(task.get_state_dict()):
             state_dict.setdefault(state, 0)
             state_dict[state] += value
-    print "--> " + " ".join(( "%s: %s" % (key, state_dict[key]) for key in sorted(state_dict) )) + " [total: %s]" % sum(state_dict.values())
+    print("--> " + " ".join(("%s: %s" % (key, state_dict[key])
+                             for key in sorted(state_dict)))
+          + " [total: %s]" % sum(state_dict.values()))
+
 
 def watch_tasks(hub, task_id_list, indentation_level=0, sleep_time=30, task_url=None):
-    """Watch the task statuses until they finish."""
+    """
+    Watch the task statuses until they finish.
+    """
     if not task_id_list:
         return
     watcher = TaskWatcher()
     is_failed = False
     try:
-        print "Watching tasks (this may be safely interrupted)..."
+        print("Watching tasks (this may be safely interrupted)...")
         for task_id in sorted(task_id_list):
             watcher.task_list.append(Task(hub, task_id, indentation_level))
             # print task url if task_url is set or TASK_URL exists in config file
             task_url = task_url or hub._conf.get("TASK_URL", None)
             if task_url is not None:
-                print "Task url: %s" % (task_url % task_id)
+                print("Task url: %s" % (task_url % task_id))
         while True:
             all_done = True
             changed = False
@@ -49,15 +58,15 @@ def watch_tasks(hub, task_id_list, indentation_level=0, sleep_time=30, task_url=
                 break
             time.sleep(sleep_time)
     except KeyboardInterrupt:
-        running_task_list = [ t.task_id for t in watcher.task_list if not watcher.is_finished(t) ]
+        running_task_list = [t.task_id for t in watcher.task_list if not watcher.is_finished(t)]
         if running_task_list:
-            print "Tasks still running: %s" % running_task_list
+            print("Tasks still running: %s" % running_task_list)
             # Don't report pass on jobs still running.
             is_failed = True
     return is_failed
 
-class TaskWatcher(object):
 
+class TaskWatcher(object):
     display_tasklist_status = staticmethod(display_tasklist_status)
 
     def __init__(self):
@@ -70,7 +79,7 @@ class TaskWatcher(object):
             return False
 
         result = task.task_info.get("is_finished", False)
-        for subtask in self.subtask_dict.itervalues():
+        for subtask in six.itervalues(self.subtask_dict):
             result &= subtask.is_finished()
         return result
 
@@ -80,7 +89,7 @@ class TaskWatcher(object):
             return False
 
         result = task.task_info.get("is_failed", False)
-        for subtask in self.subtask_dict.itervalues():
+        for subtask in six.itervalues(self.subtask_dict):
             result |= subtask.is_failed()
         return result
 
@@ -93,7 +102,7 @@ class TaskWatcher(object):
         task.task_info = task.hub.taskactions.task_info(task.task_id, False)
 
         if task.task_info is None:
-            print "No such task id: %s" % task.task_id
+            print("No such task id: %s" % task.task_id)
             sys.exit(1)
 
         changed = False
@@ -102,11 +111,12 @@ class TaskWatcher(object):
             # compare and note status changes
             laststate = last["state"]
             if laststate != state:
-                print "%s: %s -> %s" % (task, task.display_state(last), task.display_state(task.task_info))
+                print("%s: %s -> %s" % (task, task.display_state(last),
+                                        task.display_state(task.task_info)))
                 changed = True
         else:
             # first time we're seeing this task, so just show the current state
-            print "%s: %s" % (task, task.display_state(task.task_info))
+            print("%s: %s" % (task, task.display_state(task.task_info)))
             changed = True
 
         # update all subtasks
@@ -136,15 +146,11 @@ class Task(object):
             return False
         return self.task_info.get("is_failed", False)
 
-
     def display_state(self, task_info):
         worker = task_info.get("worker")
         if worker is not None:
             return "%s (%s)" % (task_info["state_label"], worker["name"])
         return "%s" % task_info["state_label"]
-
-
-
 
     def get_state_dict(self):
         state_dict = {}
@@ -153,11 +159,9 @@ class Task(object):
             state_dict.setdefault(state, 0)
             state_dict[state] += 1
 
-        for subtask in self.subtask_dict.itervalues():
-            for state, value in subtask.get_state_dict().iteritems():
+        for subtask in six.itervalues(self.subtask_dict):
+            for state, value in six.iteritems(subtask.get_state_dict()):
                 state_dict.setdefault(state, 0)
                 state_dict[state] += value
 
         return state_dict
-
-

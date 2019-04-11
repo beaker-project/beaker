@@ -40,7 +40,7 @@ Options
 
 .. option:: --retention-tag <retention_tag>
 
-   Sets the retention tag of a job. Must co-incide with correct product value.
+   Sets the retention tag of a job. Must coincide with correct product value.
    Please refer to the job page to see a list of available retention tags.
 
 .. option:: --product <product>
@@ -104,42 +104,50 @@ See also
 
 :manpage:`bkr(1)`
 """
-from bkr.client import BeakerCommand
-from xmlrpclib import Fault
-import requests
-import json
+
+from __future__ import print_function
+
 import sys
 
+import requests
+from six.moves.xmlrpc_client import Fault
+
+from bkr.client import BeakerCommand
+
+
 class Job_Modify(BeakerCommand):
-    """Modify certain job properties """
+    """
+    Modify certain job properties
+    """
 
     enabled = True
+
     def options(self):
         self.parser.usage = "%%prog %s [options] <taskspec> ..." % self.normalized_name
         self.parser.add_option(
             "-r",
             "--response",
-            help = "Set a job or recipesets response. Valid values are 'ack' or 'nak'",
-         )
+            help="Set a job or recipesets response. Valid values are 'ack' or 'nak'",
+        )
 
         self.parser.add_option(
             "-t",
             "--retention-tag",
-            help = "Set a job's retention tag",
-         )
+            help="Set a job's retention tag",
+        )
 
         self.parser.add_option(
             "-p",
             "--product",
-            help = "Set a job's product",
-         )
+            help="Set a job's product",
+        )
 
         self.parser.add_option(
             "--priority",
             type='choice',
             choices=['Low', 'Medium', 'Normal', 'High', 'Urgent'],
             help='Change job priority: Low, Medium, Normal, High, Urgent',
-         )
+        )
         self.parser.add_option(
             '--whiteboard',
             help='Set job or recipe whiteboard',
@@ -169,22 +177,22 @@ class Job_Modify(BeakerCommand):
                     modded.append(taskspec)
                 if retention_tag or product is not None:
                     self.hub.jobs.set_retention_product(taskspec, retention_tag,
-                        product,)
+                                                        product, )
                     modded.append(taskspec)
                 if priority:
                     res = requests_session.patch('recipesets/by-taskspec/%s'
-                            % taskspec, json={'priority': priority.title()})
+                                                 % taskspec, json={'priority': priority.title()})
                     res.raise_for_status()
                     modded.append(taskspec)
                 if whiteboard:
                     type, id = taskspec.split(':', 1)
                     if type == 'J':
                         res = requests_session.patch('jobs/%s' % id,
-                                json={'whiteboard': whiteboard})
+                                                     json={'whiteboard': whiteboard})
                         res.raise_for_status()
                     elif type == 'R':
                         res = requests_session.patch('recipes/%s' % id,
-                                json={'whiteboard': whiteboard})
+                                                     json={'whiteboard': whiteboard})
                         res.raise_for_status()
                     modded.append(taskspec)
             except (Fault, requests.HTTPError) as e:
@@ -192,9 +200,9 @@ class Job_Modify(BeakerCommand):
                 error = True
         if modded:
             modded = set(modded)
-            print 'Successfully modified jobs %s' % ' '.join(modded)
+            print('Successfully modified jobs %s' % ' '.join(modded))
         else:
-            print 'No jobs modified'
+            print('No jobs modified')
 
         if error:
             sys.exit(1)

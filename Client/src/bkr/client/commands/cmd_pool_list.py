@@ -58,12 +58,17 @@ See also
 
 """
 
-from bkr.client import BeakerCommand
+from __future__ import print_function
+
 import sys
+
+from bkr.client import BeakerCommand
 
 
 class Pool_List(BeakerCommand):
-    """List pools"""
+    """
+    List pools
+    """
     enabled = True
 
     def options(self):
@@ -84,21 +89,22 @@ class Pool_List(BeakerCommand):
         owning_group = kwargs.get('owning_group', None)
         limit = kwargs.get('limit')
 
-        if len(filter(None, [owner, owning_group])) > 1:
+        if len(list(filter(None, [owner, owning_group]))) > 1:
             self.parser.error('Only one of --owner or --owning-group may be specified')
 
         self.set_hub(**kwargs)
 
         requests_session = self.requests_session()
 
-        params = {}
-        params['page_size'] = limit
+        params = {'page_size': limit}
         if owner:
             params['q'] = 'owner.user_name:%s' % owner
         elif owning_group:
             params['q'] = 'owner.group_name:%s' % owning_group
 
-        response = requests_session.get('pools/', params=params, headers={'Accept': 'application/json'})
+        response = requests_session.get('pools/',
+                                        params=params,
+                                        headers={'Accept': 'application/json'})
         response.raise_for_status()
         attributes = response.json()
         pools = attributes['entries']

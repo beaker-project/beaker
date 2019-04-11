@@ -53,11 +53,15 @@ See also
 :manpage:`bkr(1)`
 """
 
-import urllib
+from six.moves.urllib import parse
+
 from bkr.client import BeakerCommand
 
+
 class Loan_Return(BeakerCommand):
-    """Return a previously granted loan"""
+    """
+    Return a previously granted loan
+    """
     enabled = True
 
     def options(self):
@@ -69,7 +73,7 @@ class Loan_Return(BeakerCommand):
         fqdn = args[0]
 
         self.set_hub(**kwargs)
-        update_url = 'systems/%s/loans/+current' % urllib.quote(fqdn, '')
+        update_url = 'systems/%s/loans/+current' % parse.quote(fqdn, '')
         requests_session = self.requests_session()
         res = requests_session.patch(update_url, json={'finish': 'now'})
         res.raise_for_status()

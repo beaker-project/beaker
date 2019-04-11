@@ -8,24 +8,17 @@ import errno
 import os
 import sys
 import logging
-import signal
 import time
-import datetime
 import base64
 import lxml.etree
-import glob
 import re
 import json
 import shutil
 import tempfile
 import xmlrpclib
-import socket
 import subprocess
 import pkg_resources
 import shlex
-from cStringIO import StringIO
-from socket import gethostname
-from threading import Thread, Event
 from xml.sax.saxutils import escape as xml_escape, quoteattr as xml_quoteattr
 from werkzeug.wrappers import Response
 from werkzeug.exceptions import BadRequest, NotAcceptable, NotFound, \
@@ -34,10 +27,8 @@ from werkzeug.utils import redirect
 from werkzeug.http import parse_content_range_header
 from werkzeug.wsgi import wrap_file
 from bkr.common.hub import HubProxy
-from bkr.common.xmlrpc import CookieTransport, SafeCookieTransport
 from bkr.labcontroller.config import get_conf
 from bkr.labcontroller.log_storage import LogStorage
-import utils
 try:
     #pylint: disable=E0611
     from subprocess import check_output

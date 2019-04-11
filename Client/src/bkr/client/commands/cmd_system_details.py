@@ -47,13 +47,17 @@ See also
 :manpage:`bkr-system-list(1)`, :manpage:`bkr(1)`
 """
 
-import sys
-import urllib
-import urllib2
+from __future__ import print_function
+
+from six.moves.urllib import parse
+
 from bkr.client import BeakerCommand
 
+
 class System_Details(BeakerCommand):
-    """Export RDF/XML description of a system"""
+    """
+    Export RDF/XML description of a system
+    """
     enabled = True
 
     def options(self):
@@ -64,7 +68,7 @@ class System_Details(BeakerCommand):
             self.parser.error('Exactly one system fqdn must be given')
         fqdn = args[0]
 
-        system_url = 'view/%s?tg_format=rdfxml' % urllib.quote(fqdn, '')
+        system_url = 'view/%s?tg_format=rdfxml' % parse.quote(fqdn, '')
 
         # This will log us in using XML-RPC
         self.set_hub(**kwargs)
@@ -72,4 +76,4 @@ class System_Details(BeakerCommand):
         session = self.requests_session()
         response = session.get(system_url)
         response.raise_for_status()
-        print response.text
+        print(response.text)

@@ -44,7 +44,7 @@ Options
 .. option:: --family <family>
 
    Limit to distros of the given family (major version), for example 
-   ``RedHatEnterpriseLinuxServer5``.
+   ``RedHatEnterpriseLinuxServer8``.
 
 .. option:: --arch <arch>
 
@@ -79,13 +79,17 @@ See also
 :manpage:`bkr-distro-trees-list(1)`, :manpage:`bkr(1)`
 """
 
+from __future__ import print_function
 
 import sys
+
 from bkr.client import BeakerCommand
 
 
 class Distro_Trees_Verify(BeakerCommand):
-    """Verify distro trees"""
+    """
+    Verify distro trees
+    """
     enabled = True
     requires_login = False
 
@@ -128,7 +132,6 @@ class Distro_Trees_Verify(BeakerCommand):
             help="filter by arch",
         )
 
-
     def run(self, *args, **kwargs):
         onlybroken = kwargs.pop("broken", False)
         filter = dict( limit    = kwargs.pop("limit", None),
@@ -147,11 +150,11 @@ class Distro_Trees_Verify(BeakerCommand):
                 available_lcs = set(lc for lc, url in tree['available'])
                 broken = lab_controllers.difference(available_lcs)
                 if not onlybroken or broken:
-                    print '%s %s %s %s Tags:%s' % (tree['distro_tree_id'],
-                            tree['distro_name'], tree['variant'] or '',
-                            tree['arch'], ','.join(tree['distro_tags']))
+                    print('%s %s %s %s Tags:%s' % (tree['distro_tree_id'],
+                                                   tree['distro_name'], tree['variant'] or '',
+                                                   tree['arch'], ','.join(tree['distro_tags'])))
                     if broken:
-                        print "missing from labs %s" % list(broken)
+                        print("missing from labs %s" % list(broken))
         else:
             sys.stderr.write("Nothing Matches\n")
             sys.exit(1)

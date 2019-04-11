@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -82,27 +81,32 @@ See also
 :manpage:`bkr(1)`
 """
 
-import urllib
+from six.moves.urllib import parse
+
 from bkr.client import BeakerCommand
 
+
 class System_Modify(BeakerCommand):
-    """Modify Beaker system attributes"""
+    """
+    Modify Beaker system attributes
+    """
     enabled = True
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <fqdn> .." % self.normalized_name
 
         self.parser.add_option('--owner', metavar='USERNAME',
-                help='Change owner to USERNAME')
+                               help='Change owner to USERNAME')
         self.parser.add_option('--condition', type='choice',
-                choices=['Automated', 'Manual', 'Broken', 'Removed'],
-                help='Change condition: Automated, Manual, Broken, Removed')
+                               choices=['Automated', 'Manual', 'Broken', 'Removed'],
+                               help='Change condition: Automated, Manual, Broken, Removed')
         self.parser.add_option('--host-hypervisor', metavar='TYPE',
-                help='Change host hypervisor to TYPE')
+                               help='Change host hypervisor to TYPE')
         self.parser.add_option('--pool-policy', metavar='POOL',
-                help='Change active access policy to the access policy of POOL')
+                               help='Change active access policy to the access policy of POOL')
         self.parser.add_option('--use-custom-policy', action='store_true', default=None,
-                help="Change active access policy to the system's custom access policy")
+                               help="Change active access policy to the "
+                                    "system's custom access policy")
 
     def run(self, *args, **kwargs):
         owner = kwargs.pop('owner')
@@ -117,7 +121,7 @@ class System_Modify(BeakerCommand):
             self.parser.error('Specify one or more system FQDNs to modify')
 
         if not any(option is not None for option in
-                [owner, condition, host_hypervisor, pool, custom_policy]):
+                   [owner, condition, host_hypervisor, pool, custom_policy]):
             self.parser.error('At least one option is required, specifying what to change')
         if pool and custom_policy:
             self.parser.error('Only one of --pool-policy or'
@@ -138,6 +142,6 @@ class System_Modify(BeakerCommand):
 
         requests_session = self.requests_session()
         for fqdn in args:
-            system_update_url = 'systems/%s/' % urllib.quote(fqdn, '')
+            system_update_url = 'systems/%s/' % parse.quote(fqdn, '')
             res = requests_session.patch(system_update_url, json=system_attr)
             res.raise_for_status()

@@ -67,9 +67,9 @@ the exit status will be 1.
 Examples
 --------
 
-List details of all RHEL6 distros with the RELEASED tag::
+List details of all RHEL7 distros with the RELEASED tag::
 
-    bkr distros-list --family RedHatEnterpriseLinux6 --tag RELEASED
+    bkr distros-list --family RedHatEnterpriseLinux7 --tag RELEASED
 
 History
 -------
@@ -84,13 +84,18 @@ See also
 :manpage:`bkr(1)`, :manpage:`bkr-distro-trees-list(1)`
 """
 
+from __future__ import print_function
 
-import sys
 import json
+import sys
+
 from bkr.client import BeakerCommand
 
+
 class Distros_List(BeakerCommand):
-    """list distros"""
+    """
+    List distros
+    """
     enabled = True
     requires_login = False
 
@@ -131,7 +136,6 @@ class Distros_List(BeakerCommand):
             help="filter by distro id",
         )
 
-
     def run(self, *args, **kwargs):
         filter = dict( limit    = kwargs.pop("limit", None),
                        name     = kwargs.pop("name", None),
@@ -144,16 +148,16 @@ class Distros_List(BeakerCommand):
         self.set_hub(**kwargs)
         distros = self.hub.distros.filter(filter)
         if format == 'json':
-            print json.dumps(distros, indent=4)
+            print(json.dumps(distros, indent=4))
         elif format == 'tabular':
             if distros:
-                print "-"*70
+                print("-" * 70)
                 for distro in distros:
-                    print "       ID: %s" % distro['distro_id']
-                    print "     Name: %s" % distro['distro_name']
-                    print "OSVersion: %s" % distro['distro_version']
-                    print "     Tags: %s" % ", ".join(distro['distro_tags'])
-                    print "-"*70
+                    print("       ID: %s" % distro['distro_id'])
+                    print("     Name: %s" % distro['distro_name'])
+                    print("OSVersion: %s" % distro['distro_version'])
+                    print("     Tags: %s" % ", ".join(distro['distro_tags']))
+                    print("-" * 70)
             else:
                 sys.stderr.write("Nothing Matches\n")
         if not distros:

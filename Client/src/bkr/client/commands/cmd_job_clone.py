@@ -83,14 +83,21 @@ See also
 :manpage:`bkr(1)`
 """
 
+from __future__ import print_function
+
 import sys
+
 import lxml.etree
+import six
+
 from bkr.client import BeakerCommand
-from optparse import OptionValueError
 from bkr.client.task_watcher import *
 
+
 class Job_Clone(BeakerCommand):
-    """Clone Jobs/RecipeSets"""
+    """
+    Clone Jobs/RecipeSets
+    """
     enabled = True
 
     def options(self):
@@ -122,9 +129,9 @@ class Job_Clone(BeakerCommand):
             help="print the jobxml that it would submit, in pretty format",
         )
         self.parser.add_option(
-             '--job-owner', metavar='USERNAME',
-             help='Clone job on behalf of USERNAME '
-                  '(cloning user must be a submission delegate for job owner)',
+            '--job-owner', metavar='USERNAME',
+            help='Clone job on behalf of USERNAME '
+                 '(cloning user must be a submission delegate for job owner)',
         )
 
     def run(self, *args, **kwargs):
@@ -156,19 +163,22 @@ class Job_Clone(BeakerCommand):
                     root.set('user', job_owner)
                     jobxml = lxml.etree.tostring(root, encoding='utf8')
                 if xml or pretty:
-                    print lxml.etree.tostring(lxml.etree.fromstring(jobxml),
-                                            pretty_print=pretty,
-                                            xml_declaration=True,
-                                            encoding='utf8')
+                    str_xml = lxml.etree.tostring(lxml.etree.fromstring(jobxml),
+                                                  pretty_print=pretty,
+                                                  xml_declaration=True,
+                                                  encoding='utf8')
+                    if six.PY3:
+                        str_xml = str_xml.decode('utf-8')
+                    print(str_xml)
                 if not dryrun:
-                    submitted_jobs.append(self.hub.jobs.upload(jobxml))
-            except Exception, ex:
-                failed = True
+                    submitted_jobs.append(self.hub.jobs.upload(
+                        jobxml.decode('utf-8') if six.PY3 else jobxml))
+                    print("Submitted: %s" % submitted_jobs)
+            except (KeyboardInterrupt, SystemError):
                 raise
-                print >>sys.stderr, ex
-        if not dryrun:
-            print "Submitted: %s" % submitted_jobs
-            if wait:
-                watch_tasks(self.hub, submitted_jobs)
-        if failed:
-            sys.exit(1)
+            except Exception as ex:
+                failed = True
+                sys.stderr.write('Exception: %s\n' % ex)
+        if not dryrun and wait:
+            failed |= watch_tasks(self.hub, submitted_jobs)
+        sys.exit(failed)

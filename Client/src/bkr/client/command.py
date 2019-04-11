@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 
 # This program is free software; you can redistribute it and/or modify
@@ -6,29 +5,34 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-# This is a copy and paste of various parts of kobo 0.4.2-1 needed to support the
-# creation of kobo commands
-
-import sys
-import os
 import optparse
+import os
+import sys
 from optparse import Option
-from xmlrpclib import Fault
-from bkr.common.pyconfig import PyConfigParser
+
+import six
+
 from bkr.common.hub import HubProxy
+from bkr.common.pyconfig import PyConfigParser
+
 
 def username_prompt(prompt=None, default_value=None):
-    """Ask for a username."""
+    """
+    Ask for a username.
+    """
+
     if default_value is not None:
         return default_value
 
     prompt = prompt or "Enter your username: "
-    print >>sys.stderr, prompt,
+    sys.stderr.write(prompt)
     return sys.stdin.readline()
 
 
 def password_prompt(prompt=None, default_value=None):
-    """Ask for a password."""
+    """
+    Ask for a password.
+    """
     import getpass
 
     if default_value is not None:
@@ -45,14 +49,16 @@ def password_prompt(prompt=None, default_value=None):
 
 
 def yes_no_prompt(prompt, default_value=None):
-    """Give a yes/no (y/n) question."""
+    """
+    Give a yes/no (y/n) question.
+    """
     if default_value is not None:
         if default_value not in ("Y", "N"):
             raise ValueError("Invalid default value: %s" % default_value)
         default_value = default_value.upper()
 
     prompt = "%s [%s/%s]: " % (prompt, ("y", "Y")[default_value == "Y"], ("n", "N")[default_value == "N"])
-    print >>sys.stderr, prompt,
+    sys.stderr.write(prompt)
 
     while True:
         user_input = sys.stdin.readline().strip().upper()
@@ -64,10 +70,13 @@ def yes_no_prompt(prompt, default_value=None):
         if user_input == "N":
             return False
 
+
 def are_you_sure_prompt(prompt=None):
-    """Give a yes/no (y/n) question."""
+    """
+    Give a yes/no (y/n) question.
+    """
     prompt = prompt or "Are you sure? Enter 'YES' to continue: "
-    print >>sys.stderr, prompt,
+    sys.stderr.write(prompt)
     user_input = sys.stdin.readline().strip()
 
     if user_input == "YES":
@@ -86,13 +95,16 @@ class Plugin(object):
     def __getattr__(self, name):
         """
         Get missing attribute from a container.
-        This is quite hackish but it allows to define settings and methods per container.
+        This is quite hackish but it allows to define settings
+        and methods per container.
         """
         return getattr(self.container, name)
 
 
 class Command(Plugin):
-    """An abstract class representing a command for CommandOptionParser."""
+    """
+    An abstract class representing a command for CommandOptionParser.
+    """
 
     enabled = False
     admin = False
@@ -107,25 +119,31 @@ class Command(Plugin):
         self.parser = parser
 
     def options(self):
-        """Add options to self.parser."""
+        """
+        Add options to self.parser.
+        """
         pass
 
     def run(self, *args, **kwargs):
-        """Run a command. Arguments contain parsed options."""
+        """
+        Run a command. Arguments contain parsed options.
+        """
         raise NotImplementedError()
 
 
 class PluginContainer(object):
-    """A plugin container.
+    """
+    A plugin container.
 
     Usage: Inherit PluginContainer and register plugins to the new class.
+
     """
 
     def __getitem__(self, name):
         return self._get_plugin(name)
 
     def __iter__(self):
-        return self.plugins.iterkeys()
+        return six.iterkeys(self.plugins)
 
     @classmethod
     def normalize_name(cls, name):
@@ -133,12 +151,16 @@ class PluginContainer(object):
 
     @classmethod
     def _get_plugins(cls):
-        """Return dictionary of registered plugins."""
+        """
+        Return dictionary of registered plugins.
+        """
 
         result = {}
-        parent_plugins = cls._get_parent_plugins(cls.normalize_name).items() #pylint: disable=no-member
-        class_plugins = getattr(cls, "_class_plugins", {}).items()
-        for name, plugin_class in parent_plugins + class_plugins:
+        parent_plugins = cls._get_parent_plugins(cls.normalize_name)  # pylint: disable=no-member
+        class_plugins = getattr(cls, "_class_plugins", {})
+        d = parent_plugins.copy()
+        d.update(class_plugins)
+        for name, plugin_class in d.items():
             result[name] = plugin_class
         return result
 
@@ -155,17 +177,20 @@ class PluginContainer(object):
                 continue
 
             # read inherited plugins first (conflicts are resolved recursively)
-            plugins = parent._get_parent_plugins(normalize_function) #pylint: disable=no-member
+            plugins = parent._get_parent_plugins(normalize_function)  # pylint: disable=no-member
 
             # read class plugins, override inherited on name conflicts
             if hasattr(parent, "_class_plugins"):
-                for plugin_class in parent._class_plugins.values(): #pylint: disable=no-member
+                for plugin_class in parent._class_plugins.values():  # pylint: disable=no-member
                     normalized_name = normalize_function(plugin_class.__name__)
                     plugins[normalized_name] = plugin_class
 
-            for name, value in plugins.iteritems():
+            for name, value in six.iteritems(plugins):
                 if result.get(name, value) != value:
-                   raise RuntimeError("Cannot register plugin '%s'. Another plugin with the same normalized name (%s) is already in the container." % (str(value), normalized_name))
+                    raise RuntimeError(
+                        "Cannot register plugin '%s'. "
+                        "Another plugin with the same normalized name (%s) "
+                        "is already in the container." % (str(value), normalized_name))
 
             result.update(plugins)
 
@@ -178,7 +203,9 @@ class PluginContainer(object):
         return self._plugins
 
     def _get_plugin(self, name):
-        """Return a plugin or raise KeyError."""
+        """
+        Return a plugin or raise KeyError.
+        """
         normalized_name = self.normalize_name(name)
 
         if normalized_name not in self.plugins:
@@ -191,7 +218,9 @@ class PluginContainer(object):
 
     @classmethod
     def register_plugin(cls, plugin, name=None):
-        """Register a new plugin. Return normalized plugin name."""
+        """
+        Register a new plugin. Return normalized plugin name.
+        """
 
         if cls is PluginContainer:
             raise TypeError("Can't register plugin to the PluginContainer base class.")
@@ -209,7 +238,9 @@ class PluginContainer(object):
 
     @classmethod
     def register_module(cls, module, prefix=None, skip_broken=False):
-        """Register all plugins in a module's sub-modules.
+        """
+
+        Register all plugins in a module's sub-modules.
 
         @param module: a python module that contains plugin sub-modules
         @type  module: module
@@ -238,7 +269,8 @@ class PluginContainer(object):
                     __import__(module.__name__, {}, {}, [mod])
                 except:
                     import sys
-                    print >> sys.stderr, "WARNING: Skipping broken plugin module: %s.%s" % (module.__name__, mod)
+                    sys.stderr.write("WARNING: Skipping broken plugin module: %s.%s"
+                                     % (module.__name__, mod))
                     module_list.remove(mod)
         else:
             __import__(module.__name__, {}, {}, module_list)
@@ -259,11 +291,15 @@ class BeakerClientConfigurationError(ValueError):
 
 
 class CommandContainer(PluginContainer):
-    """Container for Command classes."""
+    """
+    Container for Command classes.
+    """
 
     @classmethod
     def normalize_name(cls, name):
-        """Replace some characters in command names."""
+        """
+        Replace some characters in command names.
+        """
         return name.lower().replace('_', '-').replace(' ', '-')
 
 
@@ -286,26 +322,28 @@ class ClientCommandContainer(CommandContainer):
 
         cacert = self.conf.get('CA_CERT')
         if cacert and not os.path.exists(cacert):
-            raise BeakerClientConfigurationError('CA_CERT configuration points to non-existing file: %s' % cacert)
+            raise BeakerClientConfigurationError(
+                'CA_CERT configuration points to non-existing file: %s' % cacert)
 
         self.hub = HubProxy(conf=self.conf, auto_login=auto_login)
 
 
 class CommandOptionParser(optparse.OptionParser):
     """Enhanced OptionParser with plugin support."""
+
     def __init__(self,
-            usage=None,
-            option_list=None,
-            option_class=Option,
-            version=None,
-            conflict_handler="error",
-            description=None,
-            formatter=None,
-            add_help_option=True,
-            prog=None,
-            command_container=None,
-            default_command="help",
-            add_username_password_options=False):
+                 usage=None,
+                 option_list=None,
+                 option_class=Option,
+                 version=None,
+                 conflict_handler="error",
+                 description=None,
+                 formatter=None,
+                 add_help_option=True,
+                 prog=None,
+                 command_container=None,
+                 default_command="help",
+                 add_username_password_options=False):
 
         usage = usage or "%prog <command> [args] [--help]"
         self.container = command_container
@@ -313,7 +351,9 @@ class CommandOptionParser(optparse.OptionParser):
         self.command = None
         formatter = formatter or optparse.IndentedHelpFormatter(max_help_position=33)
 
-        optparse.OptionParser.__init__(self, usage, option_list, option_class, version, conflict_handler, description, formatter, add_help_option, prog)
+        optparse.OptionParser.__init__(self, usage, option_list, option_class, version,
+                                       conflict_handler, description, formatter, add_help_option,
+                                       prog)
 
         if add_username_password_options:
             option_list = [
@@ -334,7 +374,7 @@ class CommandOptionParser(optparse.OptionParser):
         commands = []
         admin_commands = []
 
-        for name, plugin in sorted(self.container.plugins.iteritems()):
+        for name, plugin in sorted(six.iteritems(self.container.plugins)):
             if getattr(plugin, 'hidden', False):
                 continue
             is_admin = getattr(plugin, "admin", False)
@@ -356,9 +396,10 @@ class CommandOptionParser(optparse.OptionParser):
         return "\n".join(commands + admin_commands)
 
     def parse_args(self, args=None, values=None):
-        """return (command_instance, opts, args)"""
+        """
+        Return (command_instance, opts, args)
+        """
         args = self._get_args(args)
-        command = None
 
         if len(args) > 0 and not args[0].startswith("-"):
             command = args[0]
@@ -376,16 +417,21 @@ class CommandOptionParser(optparse.OptionParser):
             self.command = cmd.normalized_name
             cmd.options()
         cmd_opts, cmd_args = optparse.OptionParser.parse_args(self, args, values)
-        return (cmd, cmd_opts, cmd_args)
+        return cmd, cmd_opts, cmd_args
 
     def run(self, args=None, values=None):
-        """parse arguments and run a command"""
+        """
+        Parse arguments and run a command
+        """
         cmd, cmd_opts, cmd_args = self.parse_args(args, values)
         cmd_kwargs = cmd_opts.__dict__
         cmd.run(*cmd_args, **cmd_kwargs)
 
+
 class Help(Command):
-    """show this help message and exit"""
+    """
+    Show this help message and exit
+    """
     enabled = True
 
     def options(self):
@@ -396,7 +442,9 @@ class Help(Command):
 
 
 class Help_Admin(Command):
-    """show help message about administrative commands and exit"""
+    """
+    Show help message about administrative commands and exit
+    """
     enabled = True
 
     def options(self):
@@ -407,6 +455,7 @@ class Help_Admin(Command):
 
     def run(self, *args, **kwargs):
         self.parser.print_help(admin=True)
+
 
 CommandContainer.register_plugin(Help)
 CommandContainer.register_plugin(Help_Admin)

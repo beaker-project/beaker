@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -135,15 +134,22 @@ See also
 :manpage:`bkr(1)`
 """
 
-import sys
+from __future__ import print_function
+
 import optparse
-import urllib
-import urllib2
+import sys
+
 import lxml.etree
+import six
+from six.moves.urllib import parse
+
 from bkr.client import BeakerCommand, host_filter_presets
 
+
 class System_List(BeakerCommand):
-    """List systems"""
+    """
+    List systems
+    """
     enabled = True
     search = dict()
 
@@ -159,54 +165,54 @@ class System_List(BeakerCommand):
     def options(self):
         self.parser.usage = "%%prog %s [options]" % self.normalized_name
         self.parser.add_option('--available', action='store_const',
-                const='available', dest='feed',
-                help='Only include systems available to be used by this user')
+                               const='available', dest='feed',
+                               help='Only include systems available to be used by this user')
         self.parser.add_option('--free', action='store_const',
-                const='free', dest='feed',
-                help='Only include systems available '
-                     'to this user and not currently being used')
+                               const='free', dest='feed',
+                               help='Only include systems available '
+                                    'to this user and not currently being used')
         self.parser.add_option('--removed', action='store_const',
-                const='removed', dest='feed',
-                help='Only include systems which have been removed')
+                               const='removed', dest='feed',
+                               help='Only include systems which have been removed')
         self.parser.add_option('--mine', action='store_const',
-                const='mine', dest='feed',
-                help='Only include systems owned by this user')
+                               const='mine', dest='feed',
+                               help='Only include systems owned by this user')
         self.parser_add_option('--type', metavar='TYPE', table='System/Type',
-                help='Only include systems of TYPE')
+                               help='Only include systems of TYPE')
         self.parser_add_option('--status', metavar='STATUS', table='System/Status',
-                help='Only include systems with STATUS')
+                               help='Only include systems with STATUS')
         self.parser_add_option('--pool', metavar='POOL', table='System/Pools',
-                help='Only include systems in POOL')
+                               help='Only include systems in POOL')
         self.parser_add_option('--group', metavar='GROUP', table='System/Pools',
-                help=optparse.SUPPRESS_HELP)
+                               help=optparse.SUPPRESS_HELP)
         self.parser_add_option('--arch', metavar='ARCH', table='System/Arch',
-                help='Only include systems with ARCH')
+                               help='Only include systems with ARCH')
         self.parser_add_option('--dev-vendor-id', metavar='VENDOR-ID',
-                table='Devices/Vendor_id',
-                help='only include systems with a device that has VENDOR-ID')
+                               table='Devices/Vendor_id',
+                               help='only include systems with a device that has VENDOR-ID')
         self.parser_add_option('--dev-device-id', metavar='DEVICE-ID',
-                table='Devices/Device_id',
-                help='only include systems with a device that has DEVICE-ID')
+                               table='Devices/Device_id',
+                               help='only include systems with a device that has DEVICE-ID')
         self.parser_add_option('--dev-sub-vendor-id', metavar='SUBVENDOR-ID',
-                table='Devices/Subsys_vendor_id',
-                help='only include systems with a device that has SUBVENDOR-ID')
+                               table='Devices/Subsys_vendor_id',
+                               help='only include systems with a device that has SUBVENDOR-ID')
         self.parser_add_option('--dev-sub-device-id', metavar='SUBDEVICE-ID',
-                table='Devices/Subsys_device_id',
-                help='only include systems with a device that has SUBDEVICE-ID')
+                               table='Devices/Subsys_device_id',
+                               help='only include systems with a device that has SUBDEVICE-ID')
         self.parser_add_option('--dev-driver', metavar='DRIVER',
-                table='Devices/Driver',
-                help='only include systems with a device that has DRIVER')
+                               table='Devices/Driver',
+                               help='only include systems with a device that has DRIVER')
         self.parser_add_option('--dev-description', metavar='DESCRIPTION',
-                table='Devices/Description',
-                help='only include systems with a device that has DESCRIPTION')
+                               table='Devices/Description',
+                               help='only include systems with a device that has DESCRIPTION')
         self.parser.add_option('--xml-filter', metavar='XML',
-                action='append', default=[],
-                help='only include systems matching the given XML filter, '
-                'as in <hostRequires/>')
+                               action='append', default=[],
+                               help='only include systems matching the given XML filter, '
+                                    'as in <hostRequires/>')
         self.parser.add_option('--host-filter', metavar='NAME',
-                action='append', default=[],
-                help='Only include systems matching pre-defined host filter, '
-                'as in bkr workflow-* --host-filter')
+                               action='append', default=[],
+                               help='Only include systems matching pre-defined host filter, '
+                                    'as in bkr workflow-* --host-filter')
         self.parser.set_defaults(feed='')
 
     def run(self, *args, **kwargs):
@@ -217,12 +223,12 @@ class System_List(BeakerCommand):
             ('tg_format', 'atom'),
             ('list_tgp_limit', 0),
         ]
-        for i, x in enumerate(self.search.iteritems()):
+        for i, x in enumerate(six.iteritems(self.search)):
             if kwargs[x[0]]:
                 qs_args.extend([
                     ('systemsearch-%d.table' % i, x[1]),
                     ('systemsearch-%d.operation' % i, 'is'),
-                    ('systemsearch-%d.value' % i,     kwargs[x[0]])
+                    ('systemsearch-%d.value' % i, kwargs[x[0]])
                 ])
         xmlsearch = ''.join(kwargs['xml_filter'])
         for filter_name in kwargs['host_filter']:
@@ -234,7 +240,7 @@ class System_List(BeakerCommand):
         if xmlsearch:
             qs_args.append(('xmlsearch', xmlsearch))
 
-        feed_url = '%s?%s' % (kwargs['feed'], urllib.urlencode(qs_args))
+        feed_url = '%s?%s' % (kwargs['feed'], parse.urlencode(qs_args))
 
         # This will log us in using XML-RPC
         self.set_hub(**kwargs)
@@ -249,8 +255,11 @@ class System_List(BeakerCommand):
             sys.stderr.write('Nothing Matches\n')
             sys.exit(1)
         for title in titles:
-            print title.text.strip()
+            print(title.text.strip())
+
 
 class List_Systems(System_List):
-    """To provide backwards compatibility"""
+    """
+    To provide backwards compatibility
+    """
     hidden = True

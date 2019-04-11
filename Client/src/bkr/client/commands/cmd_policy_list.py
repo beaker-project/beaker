@@ -82,14 +82,20 @@ See also
 :manpage:`bkr(1)`, :manpage:`bkr-policy-list(1)`
 """
 
-import urllib
-from bkr.client import BeakerCommand
+from __future__ import print_function
+
 import json
+
 from prettytable import PrettyTable
+from six.moves.urllib import parse
+
+from bkr.client import BeakerCommand
 
 
 class Policy_List(BeakerCommand):
-    """Retrieves policy list"""
+    """
+    Retrieves policy list
+    """
     enabled = True
 
     def options(self):
@@ -122,8 +128,8 @@ class Policy_List(BeakerCommand):
         rules_group = kwargs.get('group', None)
 
         # only one or none of the filtering criteria must be specified
-        if len(filter(lambda x: x,
-                      [rules_mine, rules_user, rules_group])) > 1:
+        if len(list(filter(lambda x: x,
+                      [rules_mine, rules_user, rules_group]))) > 1:
             self.parser.error('Only one filtering criteria allowed')
 
         # build the query string for filtering, if any
@@ -139,14 +145,14 @@ class Policy_List(BeakerCommand):
         requests_session = self.requests_session()
 
         if kwargs.get('custom', False):
-            rules_url = 'systems/%s/access-policy' % urllib.quote(fqdn, '')
+            rules_url = 'systems/%s/access-policy' % parse.quote(fqdn, '')
         else:
-            rules_url = 'systems/%s/active-access-policy/' % urllib.quote(fqdn, '')
+            rules_url = 'systems/%s/active-access-policy/' % parse.quote(fqdn, '')
         res = requests_session.get(rules_url, params=query_string)
         res.raise_for_status()
 
         if kwargs['format'] == 'json':
-            print res.text
+            print(res.text)
         else:
             policy_dict = json.loads(res.text)
             # setup table
@@ -156,4 +162,4 @@ class Policy_List(BeakerCommand):
                 table.add_row([col if col else 'X' for col in [rule['permission'],
                                                                rule['user'], rule['group'],
                                                                everybody_humanreadble]])
-            print table.get_string(sortby='Permission')
+            print(table.get_string(sortby='Permission'))

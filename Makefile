@@ -4,9 +4,14 @@
 # the Free Software # Foundation, either version 2 of the License, or
 # (at your option) any later version.
 
-DEPCMD  :=  $(shell if [ -f /usr/bin/dnf ]; then echo "dnf builddep"; else echo "yum-builddep"; fi)
+# Python 2 default
+ifeq ($(BKR_PY3),)
+	BKR_PY3 :=0
+endif
 
-SUBDIRS := Common Client documentation Server LabController IntegrationTests
+DEPCMD  :=  $(shell if [ -f /usr/bin/dnf ]; then echo "dnf builddep"; else echo "yum-builddep"; fi)
+SUBDIRS :=  $(shell if [[ $(BKR_PY3) == 0 ]]; then echo "Common Client documentation Server LabController IntegrationTests"; else echo "Common Client documentation"; fi)
+
 
 .PHONY: build
 build:

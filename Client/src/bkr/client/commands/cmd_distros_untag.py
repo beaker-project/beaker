@@ -41,9 +41,9 @@ Non-zero on error, otherwise zero.
 Examples
 --------
 
-Removes the "STABLE" tag from all RHEL5.6 Server nightly trees from a particular date::
+Removes the "STABLE" tag from all RHEL 8.0.0 nightly trees from a particular date::
 
-    bkr distros-untag --name RHEL5.6-Server-20101110% STABLE
+    bkr distros-untag --name RHEL-8.0.0-20190410% STABLE
 
 Notes
 -----
@@ -56,14 +56,16 @@ See also
 :manpage:`bkr-distros-tag(1)`, :manpage:`bkr(1)`
 """
 
+from __future__ import print_function
 
 from bkr.client import BeakerCommand
 
 
 class Distros_Untag(BeakerCommand):
-    """untag distros"""
+    """
+    Untag distros
+    """
     enabled = True
-
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <tag>" % self.normalized_name
@@ -79,7 +81,6 @@ class Distros_Untag(BeakerCommand):
             help="untag by arch",
         )
 
-
     def run(self, *args, **kwargs):
         if len(args) < 1:
             self.parser.error("Please specify a tag")
@@ -91,7 +92,7 @@ class Distros_Untag(BeakerCommand):
 
         self.set_hub(**kwargs)
         distros = self.hub.distros.untag(name, tag)
-        print "Removed Tag %s from the following distros:" % tag
-        print "------------------------------------------------------"
+        print("Removed Tag %s from the following distros:" % tag)
+        print("------------------------------------------------------")
         for distro in distros:
-            print distro
+            print(distro)

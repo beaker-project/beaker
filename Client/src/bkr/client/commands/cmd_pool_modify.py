@@ -73,8 +73,11 @@ See also
 
 from bkr.client import BeakerCommand
 
+
 class Pool_Modify(BeakerCommand):
-    """Modify attributes of an existing system pool"""
+    """
+    Modify attributes of an existing system pool
+    """
     enabled = True
 
     def options(self):

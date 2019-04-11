@@ -68,11 +68,15 @@ See also
 :manpage:`bkr(1)`
 """
 
-import urllib
+from six.moves.urllib import parse
+
 from bkr.client import BeakerCommand
 
+
 class Loan_Grant(BeakerCommand):
-    """Loan a system to a specific user"""
+    """
+    Loan a system to a specific user
+    """
     enabled = True
 
     def options(self):
@@ -97,7 +101,7 @@ class Loan_Grant(BeakerCommand):
         comment = kwargs.pop('comment', None)
 
         self.set_hub(**kwargs)
-        grant_url = 'systems/%s/loans/' % urllib.quote(fqdn, '')
+        grant_url = 'systems/%s/loans/' % parse.quote(fqdn, '')
         data = {'recipient': recipient, 'comment': comment}
         requests_session = self.requests_session()
         res = requests_session.post(grant_url, json=data)

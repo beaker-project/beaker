@@ -98,17 +98,18 @@ See also
 :manpage:`bkr(1)`
 """
 
+from __future__ import print_function
 
-from bkr.client.task_watcher import *
-from bkr.client import BeakerCommand
-from optparse import OptionValueError
 import sys
-import os.path
-import xmlrpclib
-from xml.dom.minidom import Document, parseString
+from xml.dom.minidom import Document
+
+from bkr.client import BeakerCommand
+
 
 class Task_List(BeakerCommand):
-    """List tasks in Beaker's task library"""
+    """
+    List tasks in Beaker's task library
+    """
     enabled = True
 
     def options(self):
@@ -153,13 +154,13 @@ class Task_List(BeakerCommand):
                   "destructive and unmarked tasks)"),
         )
 
-
     def run(self, *args, **kwargs):
         filter = dict()
         filter['types'] = kwargs.pop("type", None)
         filter['packages'] = kwargs.pop("package", None)
         filter['distro_name'] = kwargs.pop("distro", None)
         filter['valid'] = True
+
         # Make sure they didn't specify both destructive and non_destructive.
         if not kwargs.get("destructive") or not kwargs.get("non_destructive"):
             if kwargs.get("destructive", None):
@@ -174,9 +175,9 @@ class Task_List(BeakerCommand):
         xmlparams = doc.createElement('params')
         for param in params:
             try:
-                (key, value) = param.split('=',1)
+                (key, value) = param.split('=', 1)
             except ValueError:
-                print "Params must be KEY=VALUE %s is not" % param
+                print("Params must be KEY=VALUE %s is not" % param)
                 sys.exit(1)
             xmlparam = doc.createElement('param')
             xmlparam.setAttribute('name', '%s' % key)
@@ -187,6 +188,6 @@ class Task_List(BeakerCommand):
                 xmltask = doc.createElement('task')
                 xmltask.setAttribute('name', task_dict['name'])
                 xmltask.appendChild(xmlparams)
-                print xmltask.toprettyxml()
+                print(xmltask.toprettyxml())
             else:
-                print task_dict['name']
+                print(task_dict['name'])

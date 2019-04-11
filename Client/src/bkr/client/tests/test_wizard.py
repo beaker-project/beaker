@@ -1,26 +1,28 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import StringIO
-from datetime import date
 import unittest2 as unittest
+from datetime import date
 from mock import Mock, patch
+from six.moves import StringIO
+
 from bkr.client import wizard
 
 EXPECTED_GPL_HEADER = ("Copyright (c) %s %s.\n" %
-                           (date.today().year, wizard.LICENSE_ORGANISATION))
+                       (date.today().year, wizard.LICENSE_ORGANISATION))
 
 EXPECTED_OTHER_HEADER = ("Copyright (c) %s %s. All rights reserved.\n" %
-                           (date.today().year, wizard.LICENSE_ORGANISATION))
+                         (date.today().year, wizard.LICENSE_ORGANISATION))
+
 
 class ShellEscapingTest(unittest.TestCase):
 
     def test_it(self):
         self.assertEquals(wizard.shellEscaped(r'a " ` $ ! \ z'),
-                r'a \" \` \$ \! \\ z')
+                          r'a \" \` \$ \! \\ z')
+
 
 class LicenseTests(unittest.TestCase):
 
@@ -89,7 +91,7 @@ class ArchitecturesTest(unittest.TestCase):
     def test_contain_aarch64(self):
         self.assertIn('aarch64', self.archs.list)
 
-    #https://bugzilla.redhat.com/show_bug.cgi?id=1120487
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1120487
     def test_contain_ppc64le(self):
         self.assertIn('ppc64le', self.archs.list)
 
@@ -104,12 +106,12 @@ class BugsTest(unittest.TestCase):
             bug_id=887866,
         )
         options = wizard.Options(['beaker-wizard', 'CVE-2012-5660'],
-                load_user_prefs=False)
+                                 load_user_prefs=False)
         bugs = wizard.Bugs(options)
         bugs.bug = bzbug
         self.assertEquals(
-                'abrt: Race condition in abrt-action-install-debuginfo',
-                bugs.getSummary())
+            'abrt: Race condition in abrt-action-install-debuginfo',
+            bugs.getSummary())
 
 
 class DescTest(unittest.TestCase):
@@ -118,7 +120,7 @@ class DescTest(unittest.TestCase):
     def test_shell_metachars_escaped_in_makefile(self):
         options = wizard.Options(['beaker-wizard', '--yes'], load_user_prefs=False)
         desc = wizard.Desc(options, suggest="Test for BZ#1234567 "
-                "(I ran `rm -rf ~` and everything's gone suddenly)")
+                                            "(I ran `rm -rf ~` and everything's gone suddenly)")
         self.assertEquals(
             """\n            \t@echo "Description:     Test for BZ#1234567 (I ran \`rm -rf ~\` and everything's gone suddenly)" >> $(METADATA)""",
             desc.formatMakefileLine())
@@ -133,12 +135,12 @@ class ReleasesTest(unittest.TestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1131429
     def test_default_excludes_rhel4_rhel5(self):
         self.assertEqual(self.releases.data,
-                ['-RHEL4', '-RHELClient5', '-RHELServer5'])
+                         ['-RHEL4', '-RHELClient5', '-RHELServer5'])
 
 
 class TypeTest(unittest.TestCase):
 
-    @patch('sys.stdout', new_callable=StringIO.StringIO)
+    @patch('sys.stdout', new_callable=StringIO)
     def test_prints_full_heading(self, cpt_stdout):
         type = wizard.Type()
         type.heading()
