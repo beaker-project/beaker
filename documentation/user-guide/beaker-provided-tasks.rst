@@ -81,12 +81,12 @@ This task is useful for inserting ad hoc tests or behaviour into a recipe for
 experimentation purposes, without needing to modify an existing task or write 
 a new one.
 
-For example, to test the effect of rebooting in between two other tasks::
+For example, to log the CPU information of the system under test::
 
     ...
     <task name="/distribution/command">
         <params>
-            <param name="CMDS_TO_RUN" value="rhts-reboot" />
+            <param name="CMDS_TO_RUN" value="cat /proc/cpuinfo" />
         </params>
     </task>
     ...
@@ -248,13 +248,12 @@ compiler to see if it introduces any build failures:
         </params>
     </task>
 
-Other tasks
-===========
+Task source code
+================
 
-There are a number of other tasks that you will find in the
-:file:`Tasks/` sub-directory of the Beaker `source tree`_. Most of
-these tasks (besides the ones we discussed above), have a
-:file:`PURPOSE` file which contains a brief description of what
-the task does.
+The source code for the above tasks can be found in the 
+`Beaker core tasks git repo`_.  The tasks for testing Beaker itself are 
+in the `Beaker meta tasks git repo`_.
 
-.. _source tree: http://git.beaker-project.org/cgit/beaker/
+.. _Beaker core tasks git repo: https://git.beaker-project.org/cgit/beaker-core-tasks/
+.. _Beaker meta tasks git repo: https://git.beaker-project.org/cgit/beaker-meta-tasks/
