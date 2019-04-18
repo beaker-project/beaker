@@ -27,11 +27,16 @@ __description__ = 'Update CPE identifiers for products in Beaker'
 def get_parser():
     parser = OptionParser(description=__description__, version=__version__)
     parser.add_option('-c', '--config-file', metavar='FILE', dest='configfile',
-            help='Load Beaker server configuration from FILE')
+                      help='Load Beaker server configuration from FILE')
     parser.add_option('-f', '--product-file', metavar='FILE', dest='productfile',
-            help='Load product XML data from FILE')
+                      help='Load product XML data from FILE')
     parser.add_option('--product-url', metavar='URL', dest='producturl',
-            help='Load product XML or JSON data from URL')
+                      help='Load product XML or JSON data from URL')
+    parser.add_option('--product-url-header', metavar='APPLICATION_TYPE', dest='producturl_header',
+                      type='choice',
+                      choices=['json', 'xml'],
+                      default='json',
+                      help='Define accept header for the product url. Options: JSON, XML. Default: JSON')
     return parser
 
 def update_products_from_xml(xml_file):
@@ -67,7 +72,9 @@ def main():
         xml_file = open(opts.productfile, 'rb')
         update_products_from_xml(xml_file)
     elif opts.producturl:
-        response = requests.get(opts.producturl, stream=True)
+        response = requests.get(opts.producturl,
+                                stream=True,
+                                headers=dict(Accept='application/%s' % opts.producturl_header))
         response.raise_for_status()
         mimetype, options = cgi.parse_header(response.headers['Content-Type'])
         if mimetype in ['text/xml', 'application/xml']:
