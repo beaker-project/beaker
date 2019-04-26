@@ -4,22 +4,22 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import datetime
 import crypt
+import email
+import re
+
+import datetime
 import requests
 import xmlrpclib
 from turbogears.database import session
-from bkr.server.model import Group, User, Activity, UserGroup, \
-    SystemPermission, GroupMembershipType
+
+from bkr.inttest import data_setup, get_server_base, mail_capture_thread, DatabaseTestCase
+from bkr.inttest.server.requests_utils import post_json, patch_json, login as requests_login
 from bkr.inttest.server.selenium import WebDriverTestCase, XmlRpcTestCase
-from bkr.inttest import data_setup, get_server_base, with_transaction, \
-    mail_capture_thread, DatabaseTestCase
-from bkr.inttest.server.webdriver_utils import login, logout, \
-        wait_for_animation, check_group_search_results, BootstrapSelect
-from bkr.inttest.assertions import wait_for_condition
-from bkr.inttest.server.requests_utils import put_json, post_json, \
-        patch_json, login as requests_login
-import email
+from bkr.inttest.server.webdriver_utils import (login, logout, check_group_search_results,
+                                                BootstrapSelect)
+from bkr.server.model import Group, User, Activity, SystemPermission, GroupMembershipType
+
 
 class TestGroupsWD(WebDriverTestCase):
 
@@ -137,8 +137,10 @@ class TestGroupsWD(WebDriverTestCase):
         tab = b.find_element_by_id('rootpassword')
         tab.find_element_by_name('root_password').send_keys('s3cr3t')
         tab.find_element_by_tag_name('form').submit()
-        self.assertIn('The group root password is shorter than 7 characters',
-                      tab.find_element_by_class_name('alert-error').text)
+        # Number of req chars was changed in RPM, however RHEL is using older one
+        # RHEL requires 7, Fedora requires 8 at this moment
+        self.assertTrue(re.search('The group root password is shorter than . characters',
+                                 tab.find_element_by_class_name('alert-error').text))
 
     def test_dictionary_password_rejected(self):
         b = self.browser

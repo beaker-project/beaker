@@ -5,12 +5,14 @@
 # (at your option) any later version.
 
 import email
-import crypt
-from bkr.inttest import data_setup, with_transaction, mail_capture_thread
-from bkr.inttest.client import run_client, ClientError, create_client_config, \
-        ClientTestCase
-from bkr.server.model import Group, Activity, User, GroupMembershipType
+import re
+
 from turbogears.database import session
+
+from bkr.inttest import data_setup, mail_capture_thread
+from bkr.inttest.client import run_client, ClientError, create_client_config, ClientTestCase
+from bkr.server.model import Group, Activity, GroupMembershipType
+
 
 class GroupModifyTest(ClientTestCase):
 
@@ -195,7 +197,10 @@ class GroupModifyTest(ClientTestCase):
                 self.group.group_name], config=self.client_config)
             self.fail('Should fail with short password')
         except ClientError, e:
-            self.assertTrue('The group root password is shorter than 7 characters' in str(e))
+            # Number of req chars was changed in RPM, however RHEL is using older one
+            # RHEL requires 7, Fedora requires 8 at this moment
+            self.assertTrue(
+                re.search('The group root password is shorter than . characters', str(e)))
             session.expire(self.group)
             with session.begin():
                 group = self.group

@@ -4,13 +4,16 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from turbogears.database import session
+import re
+
 from turbogears import config
+from turbogears.database import session
 from unittest2 import SkipTest
-from bkr.server.model import Group, GroupMembershipType, User
+
 from bkr.inttest import data_setup
-from bkr.inttest.client import run_client, ClientError, create_client_config, \
-        ClientTestCase
+from bkr.inttest.client import run_client, ClientError, create_client_config, ClientTestCase
+from bkr.server.model import Group, GroupMembershipType, User
+
 
 class GroupCreateTest(ClientTestCase):
 
@@ -127,8 +130,10 @@ class GroupCreateTest(ClientTestCase):
                               group_name])
             self.fail('Expected to fail due to short password')
         except ClientError, e:
-            self.assertTrue('The group root password is shorter than 7 characters' in e.stderr_output,
-                e.stderr_output)
+            # Number of req chars was changed in RPM, however RHEL is using older one
+            # RHEL requires 7, Fedora requires 8 at this moment
+            self.assertTrue(
+                re.search('The group root password is shorter than . characters', str(e)))
 
         try:
             out = run_client(['bkr', 'group-create',
