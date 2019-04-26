@@ -4,39 +4,37 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import logging
-import re
-import os
-import time
-import datetime
-import uuid
-import itertools
-import netaddr
-import lxml.etree
 import inspect
+import itertools
+import logging
+import os
 import unittest
+
+import datetime
+import lxml.etree
 import mock
+import netaddr
+import turbogears.config
+import turbogears.database
+import uuid
 from sqlalchemy.orm.exc import NoResultFound
-import turbogears.config, turbogears.database
 from turbogears.database import session, metadata
-from bkr.server.bexceptions import DatabaseLookupError
-from bkr.server.model import LabController, User, Group, UserGroup, \
-        Distro, DistroTree, Arch, OSMajor, OSVersion, \
-        SystemActivity, Task, MachineRecipe, System, \
-        SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
-        Device, TaskResult, TaskStatus, Job, RecipeSet, TaskPriority, \
-        LabControllerDistroTree, Power, PowerType, \
-        Permission, RetentionTag, Product, Watchdog, Reservation, LogRecipe, \
-        LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor, DistroTag, \
-        DeviceClass, DistroTreeRepo, TaskPackage, KernelType, \
-        LogRecipeTaskResult, TaskType, SystemResource, GuestRecipe, \
-        GuestResource, VirtResource, SystemStatusDuration, SystemAccessPolicy, \
-        SystemPermission, DistroTreeImage, ImageType, KernelType, \
-        RecipeReservationRequest, OSMajorInstallOptions, SystemPool, \
-        GroupMembershipType, Installation, CommandStatus, OpenStackRegion, \
-        SystemSchedulerStatus
-from bkr.server.model.types import mac_unix_padded_dialect
+
 from bkr.server import dynamic_virt
+from bkr.server.model import (
+    LabController, User, Group, Distro, DistroTree, Arch, OSMajor, OSVersion,
+    SystemActivity, Task, MachineRecipe, System, SystemType, SystemStatus,
+    RecipeTask, RecipeTaskResult, Device, TaskResult, TaskStatus, Job,
+    RecipeSet, TaskPriority, LabControllerDistroTree, Power, PowerType,
+    Permission, RetentionTag, Product, Watchdog, Reservation, LogRecipe,
+    LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor, DistroTag,
+    DeviceClass, DistroTreeRepo, TaskPackage, LogRecipeTaskResult, TaskType,
+    SystemResource, GuestRecipe, GuestResource, VirtResource,
+    SystemStatusDuration, SystemAccessPolicy, SystemPermission, DistroTreeImage,
+    ImageType, KernelType, RecipeReservationRequest, OSMajorInstallOptions,
+    SystemPool, GroupMembershipType, Installation, CommandStatus,
+    OpenStackRegion, SystemSchedulerStatus)
+from bkr.server.model.types import mac_unix_padded_dialect
 
 log = logging.getLogger(__name__)
 
@@ -175,7 +173,10 @@ def create_distro(name=None, osmajor=u'DansAwesomeLinux6', osminor=u'9',
     osmajor = OSMajor.lazy_create(osmajor=osmajor)
     osversion = OSVersion.lazy_create(osmajor=osmajor, osminor=osminor)
     if arches:
-        osversion.arches = [Arch.by_name(arch) for arch in arches]
+        # list arches may contains unicode name or instance
+        # Comparing instance to attribute is prohibited in SQLAlchemy 1.1 and later
+        osversion.arches = [Arch.by_name(arch.arch if isinstance(arch, Arch) else arch)
+                            for arch in arches]
     if not name:
         name = unique_name(u'%s.%s-%%s' % (osmajor, osminor))
     distro = Distro.lazy_create(name=name, osversion=osversion)
