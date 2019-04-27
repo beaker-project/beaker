@@ -586,7 +586,7 @@ class TestBeakerd(DatabaseTestCase):
 
     def check_user_cannot_run_job_on_system(self, user, system):
         """
-        Asserts that the given user is not allowed to run a job against the 
+        Asserts that the given user is not allowed to run a job against the
         given system, i.e. that it aborts due to no matching systems.
         """
         with session.begin():
@@ -603,8 +603,8 @@ class TestBeakerd(DatabaseTestCase):
 
     def check_user_can_run_job_on_system(self, user, system):
         """
-        Asserts that the given user *is* allowed to run a job against the given 
-        system, i.e. that it does not abort due to no matching systems. Inverse 
+        Asserts that the given user *is* allowed to run a job against the given
+        system, i.e. that it does not abort due to no matching systems. Inverse
         of the method above.
         """
         with session.begin():
@@ -856,7 +856,7 @@ class TestBeakerd(DatabaseTestCase):
         finally:
             if not os.path.exists(harness_dir):
                 os.mkdir(harness_dir)
-    
+
     def test_success_harness_repo(self):
         with session.begin():
             user = data_setup.create_user()
@@ -919,14 +919,14 @@ class TestBeakerd(DatabaseTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1157348
     def test_harness_repo_not_required_contained_harness(self):
         with session.begin():
-            distro_tree = data_setup.create_distro_tree(osmajor=u'MyAwesomeNewLinux', 
+            distro_tree = data_setup.create_distro_tree(osmajor=u'MyAwesomeNewLinux',
                                                         harness_dir=False)
             recipe = data_setup.create_recipe(distro_tree=distro_tree)
             recipe.ks_meta = "contained_harness no_default_harness_repo"
             job = data_setup.create_job_for_recipes([recipe])
             data_setup.mark_recipe_waiting(recipe)
-        # The test is just checking that recipe.provision() can be called 
-        # without exploding and aborting the recipe due to missing harness repo 
+        # The test is just checking that recipe.provision() can be called
+        # without exploding and aborting the recipe due to missing harness repo
         # directory.
 
     def test_single_processor_priority(self):
@@ -1203,7 +1203,7 @@ class TestBeakerd(DatabaseTestCase):
         xmljob = lxml.etree.fromstring("""
 <job retention_tag="scratch">
 	<whiteboard>
-		
+
 	</whiteboard>
 	<recipeSet priority="Normal">
 		<recipe kernel_options="" kernel_options_post="" ks_meta="" role="RECIPE_MEMBERS" whiteboard="Normal">
@@ -1468,7 +1468,7 @@ class TestBeakerd(DatabaseTestCase):
             result = RecipeTaskResult.query.filter(
                 RecipeTaskResult.recipe_task_id == recipetask_id).one()
             self.assertEquals(result.log,
-                              'Recipe ID %s does not match any systems' % 
+                              'Recipe ID %s does not match any systems' %
                               job.recipesets[0].recipes[0].id)
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=851354
@@ -1549,7 +1549,7 @@ class TestBeakerd(DatabaseTestCase):
         with session.begin():
             recipe = data_setup.create_recipe(
                 task_list=[Task.by_name(u'/distribution/check-install')] * 2,
-                reservesys=True, 
+                reservesys=True,
                 reservesys_duration=3600,
             )
             job = data_setup.create_job_for_recipes([recipe])
@@ -1631,7 +1631,7 @@ class TestBeakerd(DatabaseTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1120052
     def test_bz1120052(self):
-        # Due to the complexities of the not enough systems logic, the 
+        # Due to the complexities of the not enough systems logic, the
         # triggering circumstances for this bug are quite intricate...
         # LC has 3 systems: A, B, C
         # RS has 4 recipes:
@@ -1639,7 +1639,7 @@ class TestBeakerd(DatabaseTestCase):
         #     R1 -> [B]
         #     R2 -> [A, B]
         #     R3 -> [A, B, C]
-        # The recipe set is aborted because R2 will have no candidates (they 
+        # The recipe set is aborted because R2 will have no candidates (they
         # will be removed in favour of R0 and R1).
         with session.begin():
             lc = data_setup.create_labcontroller()
@@ -1958,9 +1958,9 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
             self.virt_manager = dynamic_virt.VirtManager(self.user)
             self.recipe = data_setup.create_recipe()
             data_setup.create_job_for_recipes([self.recipe], owner=self.user)
-            # We want our test recipe to go to OpenStack, so make sure there 
-            # are no shared idle systems left behind by previous tests. If 
-            # there are, the scheduler will prefer to use those instead of 
+            # We want our test recipe to go to OpenStack, so make sure there
+            # are no shared idle systems left behind by previous tests. If
+            # there are, the scheduler will prefer to use those instead of
             # OpenStack.
             System.query.filter(System.status == SystemStatus.automated)\
                     .update(dict(status=SystemStatus.removed), synchronize_session=False)
@@ -1983,9 +1983,20 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
         self._run_beakerd_once()
         with session.begin():
             recipe = Recipe.query.get(self.recipe.id)
+            self.assertIsNotNone(recipe,
+                                 "Failed to get recipe ID %s" % self.recipe.id)
+            self.assertIsNotNone(recipe.resource,
+                                 "Recipe ID %s does not have a resource" % self.recipe.id)
             self.assertEquals(recipe.status, TaskStatus.installing)
-            self.assertIsNotNone(recipe.resource.instance_created)
-            instance = self.virt_manager.novaclient.servers.get(recipe.resource.instance_id)
+            self.assertIsNotNone(
+                recipe.resource.instance_created,
+                "Recipe ID %s resource does not have instance_created" % self.recipe.id)
+            instance = self.virt_manager.novaclient.servers.get(
+                recipe.resource.instance_id)
+            self.assertIsNotNone(
+                instance,
+                "Instance not found for recipe ID %s, resource instance ID %s"
+                % (self.recipe.id, recipe.resource.instance_id))
             self.assertTrue(instance.status, u'ACTIVE')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1361936
@@ -1997,9 +2008,9 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
             self.assertIsNotNone(recipe.installation.rebooted)
             self.assertIsNotNone(recipe.watchdog.kill_time)
             assert_datetime_within(
-                    recipe.watchdog.kill_time,
-                    tolerance=datetime.timedelta(seconds=10),
-                    reference=datetime.datetime.utcnow() + datetime.timedelta(seconds=3000))
+                recipe.watchdog.kill_time,
+                tolerance=datetime.timedelta(seconds=10),
+                reference=datetime.datetime.utcnow() + datetime.timedelta(seconds=3000))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1397649
     def test_cheapest_OpenStack_flavor_should_be_picked(self):
@@ -2011,9 +2022,14 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
         beakerd.update_dirty_jobs()
         with session.begin():
             recipe = Recipe.query.get(self.recipe.id)
-            instance = self.virt_manager.novaclient.servers.get(recipe.resource.instance_id)
+            self.assertIsNotNone(recipe,
+                                 "Failed to get recipe ID %s" % self.recipe.id)
+            self.assertIsNotNone(recipe.resource,
+                                 "Recipe ID %s does not have a resource" % self.recipe.id)
+            instance = self.virt_manager.novaclient.servers.get(
+                recipe.resource.instance_id)
             available_flavors = self.virt_manager.available_flavors()
-            #remove the flavor that has no disk.
+            # remove the flavor that has no disk.
             for flavor in available_flavors:
                 if flavor.disk == 0:
                     available_flavors.remove(flavor)
@@ -2024,10 +2040,17 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1396851
     def test_floating_ip_is_assigned(self):
+        if not self.virt_manager.is_create_floating_ip:
+            raise SkipTest('create_floating_ip is False')
         self._run_beakerd_once()
         with session.begin():
             recipe = Recipe.query.get(self.recipe.id)
-            port = self.virt_manager._get_instance_port(str(recipe.resource.instance_id))
+            self.assertIsNotNone(recipe,
+                                 "Failed to get recipe ID %s" % self.recipe.id)
+            self.assertIsNotNone(recipe.resource,
+                                 "Recipe ID %s does not have a resource" % self.recipe.id)
+            resource_instance_id = str(recipe.resource.instance_id)
+            port = self.virt_manager._get_instance_port(resource_instance_id)
             fips = self.virt_manager.neutronclient.list_floatingips(port_id=port['id'])
             # the port of the instance should be associated with a floating ip
             self.assertEquals(len(fips['floatingips']), 1)
@@ -2038,7 +2061,12 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
         self._run_beakerd_once()
         with session.begin():
             recipe = Recipe.query.get(self.recipe.id)
-            instance = self.virt_manager.novaclient.servers.get(recipe.resource.instance_id)
+            self.assertIsNotNone(recipe,
+                                 "Failed to get recipe ID %s" % self.recipe.id)
+            self.assertIsNotNone(recipe.resource,
+                                 "Recipe ID %s does not have a resource" % self.recipe.id)
+            instance = self.virt_manager.novaclient.servers.get(
+                recipe.resource.instance_id)
             self.assertTrue(instance.status, u'ACTIVE')
             recipe.recipeset.job.cancel()
             recipe.recipeset.job.update_status()
@@ -2049,36 +2077,37 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
         except Exception, e:
             self.assertIn('Instance %s could not be found' % recipe.resource.instance_id,
                     e.message)
-        # the network should be deleted
-        try:
-            self.virt_manager.neutronclient.show_network(recipe.resource.network_id)
-            self.fail('should raise')
-        except Exception, e:
-            # neutronclient on RHEL7+ raise NetworkNotFoundClient for missing nets
-            if hasattr(e, 'status_code'):
-                self.assertEquals(e.status_code, 404)
-            else:
-                self.assertEquals(e.response.status_code, 404)
-        # the subnet should be deleted
-        try:
-            self.virt_manager.neutronclient.show_subnet(recipe.resource.subnet_id)
-            self.fail('should raise')
-        except Exception, e:
-            if hasattr(e, 'status_code'):
-                self.assertEquals(e.status_code, 404)
-            else:
-                self.assertEquals(e.response.status_code, 404)
-        # the router should be deleted
-        try:
-            self.virt_manager.neutronclient.show_router(recipe.resource.router_id)
-            self.fail('should raise')
-        except Exception, e:
-            if hasattr(e, 'status_code'):
-                self.assertEquals(e.status_code, 404)
-            else:
-                self.assertEquals(e.response.status_code, 404)
-        # the floating ip should be deleted
-        self.assertFalse(self.virt_manager.neutronclient.list_floatingips(
+        if self.virt_manager.is_create_floating_ip:
+            # the network should be deleted
+            try:
+                self.virt_manager.neutronclient.show_network(recipe.resource.network_id)
+                self.fail('should raise')
+            except Exception, e:
+                # neutronclient on RHEL7+ raise NetworkNotFoundClient for missing nets
+                if hasattr(e, 'status_code'):
+                    self.assertEquals(e.status_code, 404)
+                else:
+                    self.assertEquals(e.response.status_code, 404)
+            # the subnet should be deleted
+            try:
+                self.virt_manager.neutronclient.show_subnet(recipe.resource.subnet_id)
+                self.fail('should raise')
+            except Exception, e:
+                if hasattr(e, 'status_code'):
+                    self.assertEquals(e.status_code, 404)
+                else:
+                    self.assertEquals(e.response.status_code, 404)
+            # the router should be deleted
+            try:
+                self.virt_manager.neutronclient.show_router(recipe.resource.router_id)
+                self.fail('should raise')
+            except Exception, e:
+                if hasattr(e, 'status_code'):
+                    self.assertEquals(e.status_code, 404)
+                else:
+                    self.assertEquals(e.response.status_code, 404)
+            # the floating IP address should be deleted
+            self.assertFalse(self.virt_manager.neutronclient.list_floatingips(
                 floating_ip_address=recipe.resource.floating_ip)['floatingips'])
 
 @patch('bkr.server.tools.beakerd.metrics')
@@ -2087,8 +2116,8 @@ class TestBeakerdMetrics(DatabaseTestCase):
     def setUp(self):
         session.begin()
         try:
-            # Other tests might have left behind systems and system commands 
-            # and running recipes, so we remove or cancel them all so they 
+            # Other tests might have left behind systems and system commands
+            # and running recipes, so we remove or cancel them all so they
             # don't pollute our metrics
             manually_reserved = System.query.filter(System.open_reservation != None)
             for system in manually_reserved:
