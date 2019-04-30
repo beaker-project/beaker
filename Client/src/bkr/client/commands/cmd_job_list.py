@@ -158,6 +158,19 @@ class Job_List(BeakerCommand):
         )
 
         self.parser.add_option(
+            "-g",
+            "--group",
+            help="Jobs with a particular group"
+        )
+
+        self.parser.add_option(
+            "--my-groups", "--mygroups",
+            action="store_true",
+            dest='my-groups',
+            help="Jobs with a particular group that querying user is part of"
+        )
+
+        self.parser.add_option(
             "-w",
             "--whiteboard",
             metavar='STRING',
@@ -166,7 +179,6 @@ class Job_List(BeakerCommand):
 
         self.parser.add_option(
             "--mine",
-            default=False,
             action="store_true",
             help="Jobs owned by the querying user"
         )
@@ -215,6 +227,8 @@ class Job_List(BeakerCommand):
         product = kwargs.pop('product', None)
         complete_days = kwargs.pop('completeDays', None)
         owner = kwargs.pop('owner', None)
+        group = kwargs.pop('group', None)
+        my_groups = kwargs.pop('my-groups', None)
         whiteboard = kwargs.pop('whiteboard', None)
         mine = kwargs.pop('mine', None)
         limit = kwargs.pop('limit', None)
@@ -235,10 +249,6 @@ class Job_List(BeakerCommand):
         if complete_days is not None and complete_days < 1:
             self.parser.error('Please pass a positive integer to completeDays')
 
-        if complete_days is None and tags is None and family is None and product is None\
-                and owner is None and mine is None and whiteboard is None:
-            self.parser.error('Please pass either the completeDays time delta, a tag, product, family, or owner')
-
         if args:
             self.parser.error('This command does not accept any arguments')
 
@@ -251,13 +261,15 @@ class Job_List(BeakerCommand):
             is_finished = False
 
         self.set_hub(**kwargs)
-        if mine:
+        if mine or my_groups:
             self.hub._login()
         jobs = self.hub.jobs.filter(dict(tags=tags,
                                         daysComplete=complete_days,
                                         family=family,
                                         product=product,
                                         owner=owner,
+                                        group=group,
+                                        my_groups=my_groups,
                                         whiteboard=whiteboard,
                                         mine=mine,
                                         minid=minid,
