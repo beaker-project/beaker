@@ -1,7 +1,8 @@
 import six
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinx.ext.todo',
-    'sphinx.ext.extlinks',
-    'sphinxcontrib.httpdomain', 'sphinxcontrib.autohttp.flask']
+    'sphinx.ext.extlinks']
+if six.PY2:
+    extensions += ['sphinxcontrib.httpdomain', 'sphinxcontrib.autohttp.flask']
 master_doc = 'index'
 project = u'Beaker'
 copyright = u'2013-2019 Red Hat, Inc.'

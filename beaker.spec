@@ -61,7 +61,6 @@ BuildRequires:  python3-setuptools
 BuildRequires:  python3-devel
 BuildRequires:  python3-docutils
 BuildRequires:  python3-sphinx
-BuildRequires:  python3-sphinxcontrib-httpdomain
 %else
 %if 0%{?fedora} == 29
 BuildRequires:  python2-setuptools
@@ -449,6 +448,11 @@ export BKR_PY3=%{with python3}
 make
 
 %install
+# RHEL 8 python3-nose removed unversioned executables
+%if 0%{?rhel} >= 8
+ln -sf %{_bindir}/nosetests-%{python3_version} %{buildroot}/nosetests-3
+%endif
+
 export BKR_PY3=%{with python3}
 DESTDIR=%{buildroot} make install
 
@@ -459,8 +463,14 @@ ln -s /dev/null %{buildroot}%{_datadir}/bkr/server/assets/site.less
 %endif
 
 %check
+%if 0%{?rhel} >= 8
+export PATH=%{buildroot}:$PATH
+%endif
 export BKR_PY3=%{with python3}
 make check
+%if 0%{?rhel} >= 8
+unlink %{buildroot}/nosetests-3
+%endif
 
 %if %{without python3}
 %post server
