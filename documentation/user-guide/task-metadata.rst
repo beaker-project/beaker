@@ -326,8 +326,9 @@ menu. For example:
 -  Fedora17
 
 Your Beaker administrator may have configured compatibility aliases for some OS
-versions, which you can also use in the ``Releases`` field. See
-:ref:`admin-os-versions` in the Administration Guide.
+versions, which you can also use in the ``Releases`` field. Refer to Distro->Family
+selection in the Web User Interface to review `alias to OSMajor name` mapping
+or :ref:`admin-os-versions` in the Administration Guide to modify alias names.
 
 
 Requires

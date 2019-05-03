@@ -339,13 +339,14 @@ import re
 import os
 
 # Version
-WizardVersion = "2.3.0"
+WizardVersion = "2.3.1"
 
 # Regular expressions
 RegExpPackage    = re.compile("^(?![._+-])[.a-zA-Z0-9_+-]+(?<![._-])$")
 RegExpRhtsRequires = re.compile("^(?![._+-])[.a-zA-Z0-9_+-/()]+(?<![._-])$")
 RegExpPath       = re.compile("^(?![/-])[a-zA-Z0-9/_-]+(?<![/-])$")
 RegExpTestName   = re.compile("^(?!-)[a-zA-Z0-9-_]+(?<!-)$")
+RegExpReleases   = re.compile("^(?!-)[a-zA-Z0-9-_]+(?<!-)$")
 RegExpBug        = re.compile("^\d+$")
 RegExpBugLong    = re.compile("^bz\d+$")
 RegExpBugPrefix  = re.compile("^bz")
@@ -1536,7 +1537,7 @@ class License(Inquisitor):
 
     def init(self):
         self.name = "License"
-        self.question = "What licence should be used?"
+        self.question = "What license should be used?"
         self.description = "Just supply a license GPLv2+, GPLv3+, ..."
         self.common = False
         self.default(self.options.license())
@@ -1650,11 +1651,12 @@ class Releases(MultipleChoice):
         self.question = "Releases (choose one or more or \"all\")"
         self.description = """One or more values separated with space or comma
             or "all" for no limitaion. You can also use minus sign for excluding
-            a specific release (-RHEL4)"""
+            a specific release (-RHEL4). Refer to Web UI Distro Family
+            selection for OSMajor alias name or if none provided use the
+            OSMajor Name"""
         self.list = "RHEL2.1 RHEL3 RHEL4 RHELServer5 RHELClient5".split()
         self.list += ["RHEL{0}".format(id) for id in range(6, 9)]
-        self.list += "FC4 FC5 FC6".split()
-        self.list += ["F{0}".format(release) for release in range(7, 28)]
+        self.list += ["F{0}".format(release) for release in range(7, 32)]
         self.sort = True
         self.common = False
         self.emptyListMeaning = "All"
@@ -1662,7 +1664,11 @@ class Releases(MultipleChoice):
 
     def validItem(self, item):
         item = re.sub("^-","", item)
-        return item in self.list
+        valid = item in self.list
+        if not valid:
+            return RegExpReleases.match(item)
+        else:
+            return valid
 
 
 class Architectures(MultipleChoice):
