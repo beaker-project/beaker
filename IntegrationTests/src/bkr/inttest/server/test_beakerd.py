@@ -2033,7 +2033,9 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
             for flavor in available_flavors:
                 if flavor.disk == 0:
                     available_flavors.remove(flavor)
-            cheapest_flavor = sorted(available_flavors, key=lambda flavor: flavor.ram)[0]
+            # cheapest flavor is smallest disk and smallest ram
+            smallest_disk_list = sorted(available_flavors, key=lambda flavor: flavor.disk)
+            cheapest_flavor = sorted(smallest_disk_list, key=lambda flavor: flavor.ram)[0]
             instance_flavor = self.virt_manager.novaclient.flavors.get(instance.flavor['id'])
             self.assertEquals(instance_flavor.ram, cheapest_flavor.ram)
             self.assertEquals(instance_flavor.id, cheapest_flavor.id)
