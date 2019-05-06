@@ -61,6 +61,9 @@ from bkr.client import BeakerCommand
 
 
 class System_Status(BeakerCommand):
+    """
+    Return the current status of a system
+    """
     enabled = True
 
     def options(self):

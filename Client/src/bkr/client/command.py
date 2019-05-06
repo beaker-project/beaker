@@ -378,7 +378,7 @@ class CommandOptionParser(optparse.OptionParser):
             if getattr(plugin, 'hidden', False):
                 continue
             is_admin = getattr(plugin, "admin", False)
-            text = "  %-30s %s" % (name, plugin.__doc__ or "")
+            text = "  %-30s %s" % (name, plugin.__doc__.strip() if plugin.__doc__ else "")
             if is_admin:
                 if admin:
                     admin_commands.append(text)
