@@ -66,7 +66,7 @@ class TestSystemsGrid(WebDriverTestCase):
         b = self.browser
         # check number of columns in the table
         ths = b.find_elements_by_xpath('//table[@id="widget"]//th')
-        self.assertEquals(len(ths), 32)
+        self.assertEquals(len(ths), 33)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1321740
     def test_grid_columns_order_is_preserved(self):

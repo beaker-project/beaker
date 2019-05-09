@@ -364,7 +364,7 @@ class ReserveSystem(WebDriverTestCase):
         b.find_element_by_link_text('Select All').click()
         b.find_element_by_xpath("//form[@id='searchform']").submit()
         columns = b.find_elements_by_xpath("//table[@id='widget']//th")
-        self.assertEquals(len(columns), 33)
+        self.assertEquals(len(columns), 34)
 
     def test_all_systems_included_when_no_distro_tree_selected(self):
         login(self.browser)
