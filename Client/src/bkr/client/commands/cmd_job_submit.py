@@ -126,7 +126,9 @@ combineTag = combine_tag
 
 def combine_attr(olddoc, newdoc, attr_name):
     # Take the attr from the first olddoc and set it to the newdoc.
-    if attr_name not in newdoc._attrs and attr_name in olddoc._attrs:
+    # py3 _attrs are None instead of {}
+    if (newdoc._attrs is None or attr_name not in newdoc._attrs
+            and (olddoc._attrs and attr_name in olddoc._attrs)):
         newdoc.setAttribute(attr_name, olddoc.getAttribute(attr_name))
 
 
