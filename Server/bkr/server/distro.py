@@ -78,14 +78,19 @@ class Distros(RPCRoot):
 
     @expose()
     def get_arch(self, filter):
-        """ pass in a dict() with either distro or osmajor to get possible arches
+        """
+        Pass in a dict() with either `distro` or `osmajor` to get possible arches.
+        Further supported filters are `variant` and `tags`.
         """
         distros = Distro.query
         if 'distro' in filter:
             distros = distros.filter(Distro.name == filter['distro'])
         if 'osmajor' in filter:
             distros = distros.join(Distro.osversion).join(OSVersion.osmajor)\
-                             .filter(OSMajor.osmajor == filter['osmajor'])
+                .filter(OSMajor.osmajor == filter['osmajor'])
+        if filter.get('variant'):
+            distros = distros.join(Distro.trees)\
+                .filter(DistroTree.variant == filter['variant'])
         for tag in filter.get('tags', []):
             distros = distros.filter(Distro._tags.any(DistroTag.tag == tag))
         # approximates the behaviour of <distroRequires/>

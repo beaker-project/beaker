@@ -489,19 +489,21 @@ class BeakerWorkflow(BeakerCommand):
         """
         Get all arches that apply to either this distro, or the distro which
         will be selected by the given family and tag.
+        Variant can be used as a further filter.
         """
 
-        distro = kwargs.get("distro", None)
-        family = kwargs.get("family", None)
-        tags = kwargs.get("tag", None)
+        distro = kwargs.get("distro")
+        family = kwargs.get("family")
+        tags = kwargs.get("tag")
+        variant = kwargs.get("variant")
 
         if not hasattr(self, 'hub'):
             self.set_hub(**kwargs)
 
         if distro:
-            return self.hub.distros.get_arch(dict(distro=distro))
+            return self.hub.distros.get_arch(dict(distro=distro, variant=variant))
         else:
-            return self.hub.distros.get_arch(dict(osmajor=family, tags=tags))
+            return self.hub.distros.get_arch(dict(osmajor=family, tags=tags, variant=variant))
 
     getArches = get_arches
 
