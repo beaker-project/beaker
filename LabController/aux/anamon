@@ -62,6 +62,7 @@ class WatchedCommand(UploadCommand):
             return
 
         while True:
+            time.sleep(4.5)
             self.output = proc.stdout.readline()
             # If the process dies, let's stop
             if not self.output and proc.poll() is not None:

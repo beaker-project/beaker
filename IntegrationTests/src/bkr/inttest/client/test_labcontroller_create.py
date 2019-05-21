@@ -8,6 +8,7 @@ from bkr.server.model import session, LabController, Group
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientTestCase, ClientError
 
+
 class LabcontrollerCreateTest(ClientTestCase):
 
     def test_lab_controller_create(self):
@@ -21,7 +22,7 @@ class LabcontrollerCreateTest(ClientTestCase):
             self.assertEqual(lc.user.user_name, 'host/%s' % fqdn)
             self.assertEqual(lc.user.email_address, 'lab1@%s.com' % fqdn)
             self.assertIn(Group.by_name(u'lab_controller'), lc.user.groups)
-        # cann't create duplicate lab controller 
+        # can't create duplicate lab controller
         try:
             run_client(['bkr', 'labcontroller-create',
                               '--fqdn', fqdn,

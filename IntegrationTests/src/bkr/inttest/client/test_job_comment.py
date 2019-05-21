@@ -20,7 +20,7 @@ class JobCommentTest(ClientTestCase):
         try:
             run_client(['bkr', 'job-comment', '12345'])
             self.fail('should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assertIn('Invalid taskspec', e.stderr_output)
 
     def test_post_comment_to_recipeset(self):
@@ -70,7 +70,7 @@ class JobCommentTest(ClientTestCase):
             run_client(['bkr', 'job-comment', self.job.recipesets[0].t_id,
                         '--message', comment_text], config=client_config)
             self.fail('should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assertEquals(e.status, 1)
             self.assertIn('Invalid username or password', e.stderr_output)
 
@@ -79,7 +79,7 @@ class JobCommentTest(ClientTestCase):
             run_client(['bkr', 'job-comment', self.job.recipesets[0].t_id,
                         '--message', ''])
             self.fail('should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assertIn('Comment text cannot be empty', e.stderr_output)
 
     def test_post_comment_on_multiple_taskspec(self):
@@ -102,5 +102,5 @@ class JobCommentTest(ClientTestCase):
             run_client(['bkr', 'job-comment', 'TR:thisisnotanint', '--message',
                         comment_text])
             self.fail('should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assertIn('Recipe task result not found', e.stderr_output)

@@ -4,11 +4,10 @@
 # (at your option) any later version.
 
 from turbogears.database import session
-from bkr.inttest import data_setup, with_transaction
+from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, create_client_config, ClientError, \
         ClientTestCase
-from bkr.server.model import TaskStatus, Job, User, SystemPermission, SystemStatus
-from bkr.server.tools import beakerd
+from bkr.server.model import TaskStatus, User, SystemPermission, SystemStatus
 
 class RemoveAccountTest(ClientTestCase):
 
@@ -16,7 +15,7 @@ class RemoveAccountTest(ClientTestCase):
         try:
             run_client(['bkr', 'remove-account', 'admin'])
             self.fail('Must fail or die')
-        except ClientError, e:
+        except ClientError as e:
             self.assertIn('You cannot remove yourself', e.stderr_output)
 
     def test_remove_multiple_users(self):
@@ -38,7 +37,7 @@ class RemoveAccountTest(ClientTestCase):
         try:
             run_client(['bkr', 'remove-account', user.user_name])
             self.fail('Must fail or die')
-        except ClientError, e:
+        except ClientError as e:
             self.assertIn('User already removed', e.stderr_output)
 
     def test_non_admin_cannot_delete(self):
@@ -51,7 +50,7 @@ class RemoveAccountTest(ClientTestCase):
             run_client(['bkr', 'remove-account', user3.user_name],
                        config=client_config1)
             self.fail('Must fail or die')
-        except ClientError, e:
+        except ClientError as e:
             self.assertIn('Not member of group: admin', e.stderr_output)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1257020
@@ -150,5 +149,5 @@ class RemoveAccountTest(ClientTestCase):
         try:
             run_client(['bkr', 'remove-account', '--new-owner=%s' % invalid_username, user.user_name])
             self.fail('Expected client to fail due to invalid new owner')
-        except ClientError, e:
+        except ClientError as e:
             self.assertIn('Invalid user name for owner', e.stderr_output)

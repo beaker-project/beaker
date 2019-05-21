@@ -7,21 +7,21 @@ Integration with OpenStack
 .. note::
 
    The OpenStack integration for dynamic system provisioning is classified as
-   experimental. It has a number of limitations and may impact the scheduler's 
-   performance, therefore it is currently not recommended for use in production 
+   experimental. It has a number of limitations and may impact the scheduler's
+   performance, therefore it is currently not recommended for use in production
    on large Beaker instances.
 
 Beaker can optionally be configured to use OpenStack to create
 virtual machines on demand for running recipes.
 
 When OpenStack integration is enabled, Beaker will attempt to create a new
-virtual machine for each recipe when it is scheduled. If creating the virtual 
+virtual machine for each recipe when it is scheduled. If creating the virtual
 machine fails, Beaker will fall back to using the regular hardware
 pool for that recipe. Recipes with hardware requirements in
 ``<hostRequires/>`` which cannot be satisfied by a virtual machine are
 excluded from this process.
 
-Package prerequisites 
+Package prerequisites
 ---------------------
 
 - python-keystoneclient >= 0.11.0
@@ -34,24 +34,43 @@ Juno EL6 repositories provided by CentOS in this case. See
 `JunoEL6QuickStart <https://wiki.centos.org/Cloud/OpenStack/JunoEL6QuickStart>`_
 for more details.
 
-Configuring OpenStack integration 
+Configuring OpenStack integration
 ---------------------------------
 
-To enable OpenStack integration, configure the Identity API (Keystone) endpoint, 
+To enable OpenStack integration, configure the Identity API (Keystone) endpoint,
 dashboard (Horizon) URL and an OpenStack account of Beaker in :file:`/etc/beaker/server.cfg`::
 
     # Use OpenStack for running recipes on dynamically created guests.
-    openstack.identity_api_url = 'https://openstack.example.com:5000/v2.0'
+    # Beaker uses the credentials given here to authenticate to OpenStack
+    # when creating OpenStack instances on behalf of users.
+    openstack.identity_api_url = 'https://openstack.example.com:13000/v3.0'
     openstack.dashboard_url = 'https://openstack.example.com/dashboard/'
-    # Credentials of the OpenStack account of Beaker for authorization-based on
-    # OpenStack identity trusts. Beaker uses the trust delegated by users to authenticate
-    # to OpenStack when creating OpenStack instances on behalf of users.
     openstack.username = ""
     openstack.password = ""
 
-Currently Beaker does not support multiple OpenStack regions. Beaker expects 
-a single row to exist in the ``openstack_region`` table, referencing the lab 
-controller which should be used for OpenStack recipes. You must insert the row 
+The user domain name when authenticating to OpenStack. Beaker does not
+provide a default domain name. This option is required if the OpenStack
+instance has been configured to require a domain name.
+
+    openstack.user_domain_name = ""
+
+The OpenStack external network name for the instance. If not provided, Beaker
+will search for an external network and use the first one it finds.
+
+    openstack.external_network_name = ""
+
+By default, Beaker will attempt to set up a floating IP address for a newly
+created instance to provide a public IP address. This assumes that the IP
+address assigned when the instance is created is on a private network. If the
+'create_floating_ip' flag is set to False, the Beaker code will use the IP
+address assigned when the instance is created as the public IP address of the
+instance.
+
+    openstack.create_floating_ip = True
+
+Currently Beaker does not support multiple OpenStack regions. Beaker expects
+a single row to exist in the ``openstack_region`` table, referencing the lab
+controller which should be used for OpenStack recipes. You must insert the row
 manually::
 
     INSERT INTO openstack_region (lab_controller_id)
@@ -60,14 +79,14 @@ manually::
 Uploading iPXE image to Glance
 ------------------------------
 
-In order to boot distro installers on OpenStack instances, Beaker relies on 
-a special image containing the iPXE network boot loader, which then loads its 
-boot configuration from the Beaker server. The 
-:program:`beaker-create-ipxe-image` tool creates and uploads a suitable image 
+In order to boot distro installers on OpenStack instances, Beaker relies on
+a special image containing the iPXE network boot loader, which then loads its
+boot configuration from the Beaker server. The
+:program:`beaker-create-ipxe-image` tool creates and uploads a suitable image
 to Glance. You must run this tool once after defining an OpenStack region.
 
-The name for each virtual machine is constructed from the ``guest_name_prefix`` 
-setting (see :ref:`admin-configuration`) combined with the recipe ID. If you 
-have configured multiple Beaker instances to use the same OpenStack instance, 
-make sure you set a distinct value for ``guest_name_prefix`` to avoid name 
+The name for each virtual machine is constructed from the ``guest_name_prefix``
+setting (see :ref:`admin-configuration`) combined with the recipe ID. If you
+have configured multiple Beaker instances to use the same OpenStack instance,
+make sure you set a distinct value for ``guest_name_prefix`` to avoid name
 collisions.

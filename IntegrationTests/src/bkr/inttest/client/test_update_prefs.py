@@ -26,7 +26,7 @@ class UpdatePrefsTest(ClientTestCase):
             run_client(['bkr', 'update-prefs', '--email=%s' % self.user1.email_address],
                        config=self.client_config1)
             self.fail('should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assertIn('is same as before', e.stderr_output)
 
         run_client(['bkr', 'update-prefs', '--email=%s' % self.user2.email_address],

@@ -557,8 +557,7 @@ class Group(DeclarativeMappedObject, ActivityMixin):
     @classmethod
     def by_name(cls, name, lockmode=False):
         if lockmode:
-            return cls.query.with_lockmode(lockmode).filter(cls.group_name ==
-                                                            name).one()
+            return cls.query.with_lockmode(lockmode).filter(cls.group_name == name).one()
         else:
             return cls.query.filter_by(group_name=name).one()
 

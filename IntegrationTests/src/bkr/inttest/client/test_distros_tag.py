@@ -23,7 +23,7 @@ class DistrosTagTest(ClientTestCase):
         try:
             run_client(['bkr', 'distros-tag'])
             self.fail('should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assertEqual(e.status, 2)
             self.assertIn('Please specify a tag', e.stderr_output)
 
@@ -31,7 +31,7 @@ class DistrosTagTest(ClientTestCase):
         try:
             run_client(['bkr', 'distros-tag', 'asdf'])
             self.fail('should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assertEqual(e.status, 2)
             self.assertIn('If you really want to tag every distro in Beaker, use --name=%', e.stderr_output)
 

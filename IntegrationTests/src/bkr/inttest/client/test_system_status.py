@@ -5,12 +5,17 @@
 # (at your option) any later version.
 
 import textwrap
-import re
 from turbogears.database import session
 from bkr.server.model import SystemStatus, Recipe
 from json import loads
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError, ClientTestCase
+
+try:
+    unicode('')
+except:
+    unicode = str
+
 
 class SystemStatusTest(ClientTestCase):
 
@@ -21,7 +26,6 @@ class SystemStatusTest(ClientTestCase):
             self.fail('Should raise 404 from the server')
         except ClientError as e:
             self.assertIn('System not found', e.stderr_output)
-
 
     def test_reserve_with_recipe(self):
         with session.begin():

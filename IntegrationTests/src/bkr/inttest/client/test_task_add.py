@@ -19,8 +19,8 @@ class TaskAddTest(ClientTestCase):
     def test_add_invalid_task(self):
         try:
             run_client(['bkr', 'task-add', '/dev/null'])
-            fail('should raise')
-        except ClientError, e:
+            self.fail('should raise')
+        except ClientError as e:
             self.assertEqual(e.status, 1)
             self.assert_('error reading package header' in e.stderr_output,
                     e.stderr_output)
@@ -55,7 +55,7 @@ class TaskAddTest(ClientTestCase):
             # run this task-add twice to make duplicate error will show.
             run_client(['bkr', 'task-add', import_rpm])
             self.fail('should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assertEqual(e.status, 1)
             self.assertIn('Cannot import duplicate task', e.stderr_output)
 
@@ -65,7 +65,7 @@ class TaskAddTest(ClientTestCase):
         try:
             run_client(['bkr', 'task-add', unde_rpm])
             self.fail('should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assertEqual(e.status, 1)
             self.assertIn('Name field not defined', e.stderr_output)
 
@@ -74,7 +74,7 @@ class TaskAddTest(ClientTestCase):
         try:
             run_client(['bkr', 'task-add', '/non/exist/task.rpm'])
             self.fail('should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assertEqual(e.status, 1)
             self.assertIn("No such file or directory:", e.stderr_output)
 
@@ -85,7 +85,7 @@ class TaskAddTest(ClientTestCase):
         try:
             run_client(['bkr', 'task-add', overlen_rpm])
             self.fail('should  raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assertEqual(e.status, 1)
             self.assertIn('Task name should be <= 255 characters', e.stderr_output)
 
@@ -96,7 +96,7 @@ class TaskAddTest(ClientTestCase):
         try:
             run_client(['bkr', 'task-add', redundant_rpm])
             self.fail('should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assertEqual(e.status, 1)
             self.assertIn('Task name must not contain redundant slashes', e.stderr_output)
 
@@ -107,7 +107,7 @@ class TaskAddTest(ClientTestCase):
         try:
             run_client(['bkr', 'task-add', slash_rpm])
             self.fail('should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assertEqual(e.status, 1)
             self.assertIn('Task name must not end with slash', e.stderr_output)
 
@@ -120,6 +120,6 @@ class TaskAddTest(ClientTestCase):
         try:
             run_client(['bkr', 'task-add', same_version_rpm])
             self.fail('should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assertEqual(e.status, 1)
             self.assertIn('Failed to import,  1.1.2-0 is the same version we already have', e.stderr_output)

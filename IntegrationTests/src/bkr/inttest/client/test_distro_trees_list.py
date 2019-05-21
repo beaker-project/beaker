@@ -4,7 +4,6 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
 import datetime
 import json
 from turbogears.database import session
@@ -43,7 +42,7 @@ class DistroTreesListTest(DatabaseTestCase):
         try:
             run_client(['bkr', 'distro-trees-list', '--name', 'NOTEXIST'])
             fail('should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assertEqual(e.status, 1)
             self.assertEqual(e.stderr_output, 'Nothing Matches\n')
 
@@ -98,9 +97,9 @@ class DistroTreesListTest(DatabaseTestCase):
 
     def test_output_is_ordered_by_date_created(self):
         with session.begin():
-            # Insert them in reverse order (oldest last), just because the most 
-            # likely regression here is that we aren't sorting at all and thus 
-            # the output is in database insertion order. So this proves that's 
+            # Insert them in reverse order (oldest last), just because the most
+            # likely regression here is that we aren't sorting at all and thus
+            # the output is in database insertion order. So this proves that's
             # not happening.
             data_setup.create_distro_tree(date_created=datetime.datetime(2021, 1, 1, 0, 0))
             data_setup.create_distro_tree(date_created=datetime.datetime(2004, 1, 1, 0, 0))

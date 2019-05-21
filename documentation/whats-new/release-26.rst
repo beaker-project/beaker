@@ -249,3 +249,52 @@ Beaker 26.4
 * | :issue:`1689926`: Updated :program:`restraint` BJJ to use static build 
     from fetched tarballs.
   | (Contributed by Martin Styk)
+
+.. internal workflow so it is not published in the release notes:
+   :issue:`1666204`, `1678595`
+
+
+Beaker 26.5
+~~~~~~~~~~~
+* | :issue:`1697479`: Fixed a regression in :program:`anamon` which caused
+    extensive writing to logs.
+  | (Contributed by Martin Styk)
+* | :issue:`1695029`: Previously, Beaker used program:`yum` in generated
+    kickstarts. Now, Beaker uses :program:`dnf` when it is available in OS
+    distribution.
+  | (Contributed by Martin Styk)
+* | :issue:`1043419`: Job Matrix no longer failing with code 500 Internal Error
+    when Job ID field contains non-integer chars.
+  | (Contributed by Tomas Klohna)
+* | :issue:`1175584`: Removed ability to store duplicate SSH key in Web UI.
+  | (Contributed by Tomas Klohna)
+* | :issue:`1672048`: Added MODULE key to Key/Value search in Web UI.
+  | (Contributed by Tomas Klohna)
+* | :issue:`1229802`: Added Notes column to search in Web UI.
+  | (Contributed by Tomas Klohna)
+* | :issue:`1414669`: Beaker client now allows to filter by group in job-list
+    command.
+  | (Contributed by Tomas Klohna)
+* | :issue:`1362048`: Task names are fully visible and no longer cropped in Web
+    UI.
+  | (Contributed by Tomas Klohna)
+* | :issue:`1597923`: Beaker client now supports JSON output for system-details
+    command.
+  | (Contributed by Carol Bouchard)
+* | :issue:`1688877`: Provisioning system through Reserve System no longer creates
+    Job with an empty whiteboard by default.
+  | (Contributed by Carol Bouchard)
+* | :issue:`1409676`: Added support for :program:`product-update` script to send
+    Accept header in HTTP requests.
+  | (Contributed by Tomas Klohna)
+* | :issue:`1384491`: Previously, Beaker Lab Controller (LC) daemons couldn't
+    start due to issue in python-gevent package on RHEL 7. Beaker now uses
+    python-gevent package which is not causing any issues in LC daemons.
+  | (Contributed by Martin Styk)
+* | :issue:`1686147`: Updated documentation for Job XML definition.
+  | (Contributed by Carol Bouchard)
+* | :issue:`1654848`: Extended OpenStack support.
+  | (Contributed by Chris Beer)
+
+.. internal workflow so it is not published in the release notes:
+   :issue:`1707057`, `1693758`

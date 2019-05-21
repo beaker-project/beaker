@@ -174,6 +174,10 @@ class Utility:
         return lambda x: getattr(x.numa, 'nodes', 0)
 
     @classmethod
+    def system_notes_getter(cls):
+        return lambda x: ' ---- '.join([note.text for note in x.notes])
+
+    @classmethod
     def system_added_getter(cls):
         return lambda x: x.date_added
 

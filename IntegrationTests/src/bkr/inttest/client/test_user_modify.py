@@ -5,7 +5,6 @@
 # (at your option) any later version.
 
 from turbogears.database import session
-from bkr.server.model import User
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError, create_client_config, \
         ClientTestCase
@@ -21,7 +20,7 @@ class UserModifyTest(ClientTestCase):
             out = run_client(['bkr', 'user-modify', '--add-submission-delegate',
                 '1thatdoesnotexist'], config=client_config)
             self.fail('Added an invalid submission delegate')
-        except ClientError, e:
+        except ClientError as e:
             self.assertTrue('1thatdoesnotexist is not a valid user' in \
                 e.stderr_output, e.stderr_output)
 
@@ -48,7 +47,7 @@ class UserModifyTest(ClientTestCase):
             run_client(['bkr', 'user-modify', '--remove-submission-delegate',
                 notadelegate.user_name], config=client_config)
             self.fail('Does not throw error when removing non delegate')
-        except ClientError, e:
+        except ClientError as e:
             self.assertTrue('%s is not a submission delegate of %s' % \
                 (notadelegate.user_name, user) in e.stderr_output,
                 e.stderr_output)

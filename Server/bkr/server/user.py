@@ -137,11 +137,11 @@ def get_users():
     ``email_address``
         The user's email address.
     ``disabled``
-        A boolean field which is true if the user has been temporarily disabled 
-        by the Beaker administrator (preventing them from logging in or running 
+        A boolean field which is true if the user has been temporarily disabled
+        by the Beaker administrator (preventing them from logging in or running
         jobs).
     ``removed``
-        Timestamp when the user account was deleted, or null for a user account 
+        Timestamp when the user account was deleted, or null for a user account
         which has not been deleted.
     """
     query = User.query.order_by(User.user_name)
@@ -181,8 +181,8 @@ def users_typeahead():
     return jsonify(data=data)
 
 def user_full_json(user):
-    # Users have a minimal JSON representation which is embedded in many other 
-    # objects (system owner, system user, etc) but we need more info here on 
+    # Users have a minimal JSON representation which is embedded in many other
+    # objects (system owner, system user, etc) but we need more info here on
     # the user page.
     attributes = user.to_json()
     attributes['job_count'] = Job.query.filter(not_(Job.is_finished()))\
@@ -196,7 +196,7 @@ def user_full_json(user):
             .filter(System.owner == user).count()
     attributes['owned_pool_count'] = SystemPool.query\
             .filter(SystemPool.owning_user == user).count()
-    # Intentionally not counting membership in inverted groups because everyone 
+    # Intentionally not counting membership in inverted groups because everyone
     # is always in those
     attributes['group_membership_count'] = len(user.group_user_assocs)
     return attributes
@@ -277,14 +277,14 @@ def update_user(username):
     Updates a Beaker user account.
 
     :param username: The user's username.
-    :jsonparam string user_name: New username. If the username is changed, the 
-      response will include a Location header referring to the new URL for newly 
+    :jsonparam string user_name: New username. If the username is changed, the
+      response will include a Location header referring to the new URL for newly
       renamed user resource.
     :jsonparam string display_name: New display name.
     :jsonparam string email_address: New email address.
-    :jsonparam string password: New password. Only valid when Beaker is not 
+    :jsonparam string password: New password. Only valid when Beaker is not
       using external authentication for this account.
-    :jsonparam string root_password: Root password to be set on systems 
+    :jsonparam string root_password: Root password to be set on systems
       provisioned by Beaker.
     :jsonparam boolean use_old_job_page: True if the user has opted to use the
       old, deprecated pre-Beaker-23 job page.
@@ -298,10 +298,10 @@ def update_user(username):
       notifications of modifications to the groups the user belongs to.
     :jsonparam boolean notify_reservesys: True if the user receives
       notifications upon reservesys being ready.
-    :jsonparam boolean disabled: Whether the user should be temporarily 
-      disabled. Disabled users cannot log in or submit jobs, and any running jobs 
+    :jsonparam boolean disabled: Whether the user should be temporarily
+      disabled. Disabled users cannot log in or submit jobs, and any running jobs
       are cancelled when their account is disabled.
-    :jsonparam string removed: Pass the string 'now' to remove a user account. 
+    :jsonparam string removed: Pass the string 'now' to remove a user account.
       Pass null to un-remove a removed user account.
     """
     user = _get_user(username)
@@ -387,7 +387,7 @@ def add_ssh_public_key(username):
     """
     Adds a new SSH public key for the given user account.
 
-    Accepts mimetype:`text/plain` request bodies containing the SSH public key 
+    Accepts mimetype:`text/plain` request bodies containing the SSH public key
     in the conventional OpenSSH format: <keytype> <key> <ident>.
 
     :param username: The user's username.
@@ -404,6 +404,9 @@ def add_ssh_public_key(username):
         elements = keytext.split(None, 2)
         if len(elements) != 3:
             raise ValueError('Invalid SSH public key')
+        # 0 - key type; 1 - key; 2 - identity
+        if elements[1] in [ssh_key.pubkey for ssh_key in user.sshpubkeys]:
+            raise ValueError('Duplicate SSH public key')
         key = SSHPubKey(*elements)
         user.sshpubkeys.append(key)
         session.flush() # to populate id
@@ -432,7 +435,7 @@ def delete_ssh_public_key(username, id):
 @auth_required
 def add_submission_delegate(username):
     """
-    Adds a submission delegate for a user account. Submission delegates are 
+    Adds a submission delegate for a user account. Submission delegates are
     other users who are allowed to submit jobs on behalf of this user.
 
     :param username: The user's username.
@@ -511,7 +514,8 @@ def _create_keystone_trust(user):
     if not config.get('openstack.identity_api_url'):
         raise BadRequest400("OpenStack Integration is not enabled")
     if not user.can_edit_keystone_trust(identity.current.user):
-        raise Forbidden403('Cannot edit Keystone trust of user %s' % user.username)
+        raise Forbidden403('Cannot edit Keystone trust of user %s' % user.user_name)
+
     data = read_json_request(request)
     if 'openstack_username' not in data:
         raise BadRequest400('No OpenStack username specified')
@@ -519,9 +523,14 @@ def _create_keystone_trust(user):
         raise BadRequest400('No OpenStack password specified')
     if 'openstack_project_name' not in data:
         raise BadRequest400('No OpenStack project name specified')
+
     try:
-        trust_id = dynamic_virt.create_keystone_trust(data['openstack_username'],
-                data['openstack_password'], data['openstack_project_name'])
+        trust_id = dynamic_virt.create_keystone_trust(
+                trustor_username=data['openstack_username'],
+                trustor_password=data['openstack_password'],
+                trustor_project_name=data['openstack_project_name'],
+                trustor_user_domain_name=data.get('openstack_user_domain_name'),
+                trustor_project_domain_name=data.get('openstack_project_domain_name'))
     except ValueError as err:
         raise BadRequest400(u'Could not authenticate with OpenStack using your credentials: %s' % unicode(err))
     user.openstack_trust_id = trust_id
@@ -543,7 +552,7 @@ def delete_keystone_trust(username):
     if not user.can_edit_keystone_trust(identity.current.user):
         raise Forbidden403('Cannot edit Keystone trust of user %s' % username)
     if not user.openstack_trust_id:
-        raise BadRequest400('No Keystone trust created by %s' % user)
+        raise BadRequest400('No Keystone trust created by user %s' % username)
     try:
         manager = dynamic_virt.VirtManager(user)
         manager.delete_keystone_trust()

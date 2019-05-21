@@ -54,14 +54,14 @@ class GroupCreateTest(ClientTestCase):
             out = run_client(['bkr', 'group-create',
                           group_name, group_name])
             self.fail('Must fail or die')
-        except ClientError,e:
+        except ClientError as e:
             self.assert_('Exactly one group name must be specified' in
                          e.stderr_output, e.stderr_output)
         try:
             out = run_client(['bkr', 'group-create',
                               'areallylonggroupname'*20])
             self.fail('Must fail or die')
-        except ClientError,e:
+        except ClientError as e:
             self.assertIn(
                     'Group name must be not more than 255 characters long',
                     e.stderr_output)
@@ -71,7 +71,7 @@ class GroupCreateTest(ClientTestCase):
                               'A really long group display name'*20,
                               'agroup'])
             self.fail('Must fail or die')
-        except ClientError,e:
+        except ClientError as e:
             self.assertIn(
                     'Group display name must be not more than 255 characters long',
                     e.stderr_output)
@@ -104,7 +104,7 @@ class GroupCreateTest(ClientTestCase):
                               group_name],
                              config = rand_client_config)
             self.fail('Must fail or die')
-        except ClientError, e:
+        except ClientError as e:
             self.assert_('Only admins can create LDAP groups' in
                          e.stderr_output)
 
@@ -118,7 +118,7 @@ class GroupCreateTest(ClientTestCase):
                         '--display-name', 'Test Display Name',
                         group_name])
             self.fail('Must fail or die')
-        except ClientError, e:
+        except ClientError as e:
             self.assertIn('LDAP is not enabled', e.stderr_output)
 
     def test_group_passwords(self):
@@ -129,7 +129,7 @@ class GroupCreateTest(ClientTestCase):
                               '--root-password', 'fa1l',
                               group_name])
             self.fail('Expected to fail due to short password')
-        except ClientError, e:
+        except ClientError as e:
             # Number of req chars was changed in RPM, however RHEL is using older one
             # RHEL requires 7, Fedora requires 8 at this moment
             self.assertTrue(
@@ -141,7 +141,7 @@ class GroupCreateTest(ClientTestCase):
                               group_name])
 
             self.fail('Expected to fail due to dictionary words')
-        except ClientError, e:
+        except ClientError as e:
             self.assertTrue('The group root password fails the dictionary check' in
                 e.stderr_output, e.stderr_output)
         out = run_client(['bkr', 'group-create',
@@ -162,7 +162,7 @@ class GroupCreateTest(ClientTestCase):
             out = run_client(['bkr', 'group-create',
                               group_name])
             self.fail('Must fail or die')
-        except ClientError,e:
+        except ClientError as e:
             self.assert_('Group already exists' in e.stderr_output,
                          e.stderr_output)
 

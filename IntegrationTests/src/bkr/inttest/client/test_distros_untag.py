@@ -6,7 +6,7 @@
 
 from turbogears.database import session
 from bkr.inttest import data_setup
-from bkr.inttest.client import run_client, ClientError, ClientTestCase
+from bkr.inttest.client import run_client, ClientTestCase
 
 class DistrosUntagTest(ClientTestCase):
 

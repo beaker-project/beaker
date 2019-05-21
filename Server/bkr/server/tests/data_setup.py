@@ -63,7 +63,7 @@ def setup_model(override=True):
 _counter = itertools.count()
 def unique_name(pattern):
     """
-    Pass a %-format pattern, such as 'user%s', to generate a name that is 
+    Pass a %-format pattern, such as 'user%s', to generate a name that is
     unique within this test run.
     """
     # time.time() * 1000 is no good, KVM guest wall clock is too dodgy
@@ -85,7 +85,7 @@ def create_labcontroller(fqdn=None, user=None):
     if fqdn is None:
         fqdn = unique_name(u'lab%s.testdata.invalid')
     try:
-        lc = LabController.by_name(fqdn)  
+        lc = LabController.by_name(fqdn)
     except NoResultFound:
         if user is None:
             user = User(user_name=u'host/%s' % fqdn,
@@ -95,8 +95,8 @@ def create_labcontroller(fqdn=None, user=None):
         session.add(lc)
         group = Group.by_name(u'lab_controller')
         group.add_member(user, service=u'testdata')
-        # Need to ensure it is inserted now, since we aren't using lazy_create 
-        # here so a subsequent call to create_labcontroller could try and 
+        # Need to ensure it is inserted now, since we aren't using lazy_create
+        # here so a subsequent call to create_labcontroller could try and
         # create the same LC again.
         session.flush()
         return lc
@@ -132,7 +132,7 @@ def create_admin(user_name=None, **kwargs):
     group.add_member(user, service=u'testdata')
     return user
 
-def add_system_lab_controller(system,lc): 
+def add_system_lab_controller(system,lc):
     system.lab_controller = lc
 
 def create_group(permissions=None, group_name=None, display_name=None,
@@ -304,11 +304,11 @@ def create_system(arch=u'i386', type=SystemType.machine, status=None,
                         lab_controller=lab_controller, **kw)
         session.add(system)
 
-    # Normally the system would be "idle" when first added, and then becomes 
-    # "pending" when a user flips it to Automated status. But for simplicity in 
-    # the tests, we will just force it back to "idle" here since we know we 
-    # just created it. This lets a subsequent call to the scheduler pick it up 
-    # immediately, without going through an iteration of 
+    # Normally the system would be "idle" when first added, and then becomes
+    # "pending" when a user flips it to Automated status. But for simplicity in
+    # the tests, we will just force it back to "idle" here since we know we
+    # just created it. This lets a subsequent call to the scheduler pick it up
+    # immediately, without going through an iteration of
     # schedule_pending_systems() first.
     system.scheduler_status = SystemSchedulerStatus.idle
 
@@ -398,7 +398,7 @@ def create_system_status_history(system, statuses):
 
 def create_task(name=None, exclude_arches=None, exclusive_arches=None,
         exclude_osmajors=None, exclusive_osmajors=None, version=u'1.0-1',
-        uploader=None, owner=None, priority=u'Manual', valid=None, path=None, 
+        uploader=None, owner=None, priority=u'Manual', valid=None, path=None,
         description=None, requires=None, runfor=None, type=None, avg_time=1200):
     if name is None:
         name = unique_name(u'/distribution/test_task_%s')
@@ -648,8 +648,8 @@ def mark_recipe_tasks_finished(recipe, result=TaskResult.pass_,
         mark_recipe_running(recipe, start_time=start_time,
                 task_start_time=start_time, **kwargs)
 
-    # Need to make sure recipe.watchdog has been persisted, since we delete it 
-    # below when the recipe completes and sqlalchemy will barf on deleting an 
+    # Need to make sure recipe.watchdog has been persisted, since we delete it
+    # below when the recipe completes and sqlalchemy will barf on deleting an
     # instance that hasn't been persisted.
     session.flush()
 
@@ -758,10 +758,10 @@ def mark_recipe_waiting(recipe, start_time=None, only=False, **kwargs):
     with mock.patch('bkr.server.dynamic_virt.VirtManager', autospec=True):
         recipe.provision()
     if recipe.installation.commands:
-        # Because we run a real beaker-provision in the dogfood tests, it will pick 
-        # up the freshly created configure_netboot commands and try pulling down 
-        # non-existent kernel+initrd images. When that fails, it will abort our 
-        # newly created recipe which we don't want. To work around this, we hack 
+        # Because we run a real beaker-provision in the dogfood tests, it will pick
+        # up the freshly created configure_netboot commands and try pulling down
+        # non-existent kernel+initrd images. When that fails, it will abort our
+        # newly created recipe which we don't want. To work around this, we hack
         # the commands to be already completed so that beaker-provision skips them.
         # I would like to have a better solution here...
         session.flush()
@@ -769,8 +769,8 @@ def mark_recipe_waiting(recipe, start_time=None, only=False, **kwargs):
             cmd.change_status(CommandStatus.running)
             cmd.change_status(CommandStatus.completed)
     else:
-        # System without power control, there are no power commands. In the 
-        # real world the recipe sits in Waiting with no watchdog kill time 
+        # System without power control, there are no power commands. In the
+        # real world the recipe sits in Waiting with no watchdog kill time
         # until someone powers on the system.
         pass
     recipe.waiting()
@@ -936,8 +936,11 @@ def create_openstack_region():
         region.lab_controller = LabController.query.first()
 
 def create_keystone_trust(user):
-    trust_id = dynamic_virt.create_keystone_trust(os.environ['OPENSTACK_DUMMY_USERNAME'],
-            os.environ['OPENSTACK_DUMMY_PASSWORD'],
-            os.environ['OPENSTACK_DUMMY_PROJECT_NAME'])
+    trust_id = dynamic_virt.create_keystone_trust(
+        trustor_username=os.environ['OPENSTACK_DUMMY_USERNAME'],
+        trustor_password=os.environ['OPENSTACK_DUMMY_PASSWORD'],
+        trustor_project_name=os.environ['OPENSTACK_DUMMY_PROJECT_NAME'],
+        trustor_user_domain_name=os.environ.get('OPENSTACK_DUMMY_USER_DOMAIN_NAME'),
+        trustor_project_domain_name=os.environ.get('OPENSTACK_DUMMY_PROJECT_DOMAIN_NAME'))
     user.openstack_trust_id = trust_id
     log.debug('Created OpenStack trust %s for %s', trust_id, user)

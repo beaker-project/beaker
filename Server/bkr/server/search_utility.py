@@ -794,7 +794,7 @@ class SystemSearch(Search):
     def get_column_descriptions(self):
         return self.system_columns_desc
 
-    def append_results(self,cls_ref,value,column,operation,**kw):  
+    def append_results(self,cls_ref,value,column,operation,**kw):
         """ 
         append_results() will take a value, column and operation from the search field,
         as well as the class of which the search pertains to, and will append the join
@@ -1094,6 +1094,9 @@ class System(SystemObject):
                           'Memory'    : MyColumn(column=model.System.memory,col_type='numeric'),
                           'Hypervisor': MyColumn(column=model.Hypervisor.hypervisor, col_type='string', relations='hypervisor'),
                           'NumaNodes' : MyColumn(column=model.Numa.nodes, col_type='numeric', relations='numa'),
+                          'Notes'     : AliasedColumn(column_name='text',
+                                            col_type='string', relations=[model.Note],
+                                            onclause=model.System.notes),
                           'User'      : AliasedColumn(column_name='user_name',
                                             relations=[model.User],
                                             col_type='string',
@@ -1185,6 +1188,17 @@ class System(SystemObject):
           
         ids = [r.id for r in query]  
         return not_(model.System.id.in_(ids))
+
+    @classmethod
+    def notes_contains_filter(cls, col, val, **kw):
+        """
+        notes_contains_filter is a function dynamically called from append_results.
+        It serves to provide a table column operation specific method of filtering results of System/Notes
+
+        In this case it specifically searches case-insensitively through System/Notes
+        """
+        query = model.System.query.filter(model.System.notes.any(model.Note.text.ilike(val)))
+        return model.System.id.in_([x.id for x in query])
 
 class Recipe(SystemObject):
     search = RecipeSearch

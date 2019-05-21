@@ -20,10 +20,10 @@
 # not representable in RPM. For example, a release candidate might be 0.15.0rc1
 # but that is not usable for the RPM Version because it sorts higher than
 # 0.15.0, so the RPM will have Version 0.15.0 and Release 0.rc1 in that case.
-%global upstream_version 26.4
+%global upstream_version 26.5
 
 Name:           beaker
-Version:        26.4
+Version:        26.5
 Release:        1%{?dist}
 Summary:        Full-stack software and hardware integration testing system
 Group:          Applications/Internet
@@ -349,12 +349,20 @@ Requires:       python2-flask
 %else # old style Python package names
 # These LC dependencies are needed in build due to tests
 BuildRequires:  python-lxml
+%if 0%{?rhel} == 7
+BuildRequires:  python-gevent102
+%else
 BuildRequires:  python-gevent >= 1.0
+%endif
 Requires:       python-cpio
 Requires:       python-setuptools
 Requires:       python-lxml
 Requires:       python-gssapi
+%if 0%{?rhel} == 7
+Requires:       python-gevent102
+%else
 Requires:       python-gevent >= 1.0
+%endif
 Requires:       python-daemon
 Requires:       python-werkzeug
 Requires:       python-flask

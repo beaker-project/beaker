@@ -43,8 +43,8 @@ class WhoAmITest(ClientTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1072127
     def test_password_not_set_on_server_side(self):
-        # A user account might have a NULL password if the Beaker site is using 
-        # Kerberos authentication, or if their account is new and the admin 
+        # A user account might have a NULL password if the Beaker site is using
+        # Kerberos authentication, or if their account is new and the admin
         # hasn't set a password yet.
         with session.begin():
             user = data_setup.create_user(password=None)
@@ -65,8 +65,8 @@ class WhoAmITest(ClientTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=844364
     def test_config_is_read_from_user_config_and_system_config(self):
-        # We tell the client to use a config which lacks HUB_URL. The correct 
-        # HUB_URL setting will be inherited from the system-wide config instead 
+        # We tell the client to use a config which lacks HUB_URL. The correct
+        # HUB_URL setting will be inherited from the system-wide config instead
         # and so the command still succeeds.
         if not os.path.exists('/etc/beaker/client.conf'):
             raise SkipTest('System-wide client config does not exist')

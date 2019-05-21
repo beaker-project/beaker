@@ -8,8 +8,6 @@ from turbogears.database import session
 from bkr.inttest import data_setup
 from bkr.inttest.client import start_client, run_client, ClientError, \
         ClientTestCase
-import time
-from unittest2 import SkipTest
 
 class JobWatchTest(ClientTestCase):
 
@@ -72,8 +70,8 @@ class JobWatchTest(ClientTestCase):
     def test_invalid_taskspec(self):
         try:
             run_client(['bkr', 'job-watch', '12345'])
-            fail('should raise')
-        except ClientError, e:
+            self.fail('should raise')
+        except ClientError as e:
             self.assert_('Invalid taskspec' in e.stderr_output)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1415104

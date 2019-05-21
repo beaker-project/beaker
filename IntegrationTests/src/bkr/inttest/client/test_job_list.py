@@ -15,10 +15,16 @@ class JobListTest(ClientTestCase):
 
     @with_transaction
     def setUp(self):
-        jobs_to_generate = 2;
-        self.products = [data_setup.create_product() for product in range(jobs_to_generate)]
-        self.users = [data_setup.create_user(password='mypass') for user in range(jobs_to_generate)]
-        self.jobs = [data_setup.create_completed_job(product=self.products[x], owner=self.users[x]) for x in range(jobs_to_generate)]
+        jobs_to_generate = 2
+        self.products = [data_setup.create_product() for _ in range(jobs_to_generate)]
+        self.users = [data_setup.create_user(password='mypass') for _ in range(jobs_to_generate)]
+        self.groups = [data_setup.create_group() for _ in range(jobs_to_generate)]
+        _ = [group.add_member(self.users[i]) for i, group in enumerate(self.groups)]
+
+        self.jobs = [data_setup.create_completed_job(product=self.products[x],
+                                                     owner=self.users[x],
+                                                     group=self.groups[x])
+                     for x in range(jobs_to_generate)]
         self.client_configs = [create_client_config(username=user.user_name, password='mypass') for user in self.users]
 
     def test_list_jobs_by_product(self):
@@ -29,12 +35,15 @@ class JobListTest(ClientTestCase):
     def test_list_jobs_by_owner(self):
         out = run_client(['bkr', 'job-list', '--owner', self.users[0].user_name])
         self.assert_(self.jobs[0].t_id in out, out)
+
         out = run_client(['bkr', 'job-list', '--owner', self.users[0].user_name, '--limit', '1'])
-        self.assert_(len(out[0]) == 1, out)
-        out = run_client(['bkr', 'job-list', '--owner', 'foobar'])
-        self.assert_(self.jobs[0].t_id not in out, out)
-        out = run_client(['bkr', 'job-list', '--owner', self.users[0].user_name, '--min-id', \
-                              '{0}'.format(self.jobs[0].id), '--max-id', '{0}'.format(self.jobs[0].id)])
+        self.assert_(len(json.loads(out)) == 1, out)
+
+        with self.assertRaisesRegexp(ClientError, 'Owner.*is invalid'):
+            run_client(['bkr', 'job-list', '--owner', 'foobar'])
+
+        out = run_client(['bkr', 'job-list', '--owner', self.users[0].user_name, '--min-id',
+                          '{0}'.format(self.jobs[0].id), '--max-id', '{0}'.format(self.jobs[0].id)])
         self.assert_(self.jobs[0].t_id in out and self.jobs[1].t_id not in out)
 
     def test_list_jobs_by_whiteboard(self):
@@ -52,8 +61,8 @@ class JobListTest(ClientTestCase):
         listed_job_ids = out.splitlines()
         self.assertIn(included_job.t_id, listed_job_ids)
         self.assertNotIn(excluded_job.t_id, listed_job_ids)
-        # This was accidental undocumented functionality supported by the 
-        # original implementation of jobs.filter. Some people are probably 
+        # This was accidental undocumented functionality supported by the
+        # original implementation of jobs.filter. Some people are probably
         # relying on it.
         out = run_client(['bkr', 'job-list', '--format=list', '--whiteboard=p%z_nce'])
         listed_job_ids = out.splitlines()
@@ -94,15 +103,54 @@ class JobListTest(ClientTestCase):
         out = json.loads(out)
         self.assertIn(self.jobs[0].t_id, out)
         self.assertNotIn(self.jobs[1].t_id, out)
-        self.assertRaises(ClientError, run_client, ['bkr', 'job-list', '--mine', \
-                                                        '--username', 'xyz',\
-                                                        '--password','xyz'])
+        self.assertRaises(ClientError, run_client, ['bkr', 'job-list', '--mine',
+                                                    '--username', 'xyz',
+                                                    '--password','xyz'])
+
+    def test_list_jobs_my_groups(self):
+        out = run_client(['bkr', 'job-list', '--my-groups'], config=self.client_configs[0])
+        self.assert_(self.jobs[0].t_id in out and self.jobs[1].t_id not in out, out)
+
+        out = run_client(['bkr', 'job-list', '--my-groups'], config=self.client_configs[1])
+        self.assert_(self.jobs[1].t_id in out and self.jobs[0].t_id not in out, out)
+
+        out = run_client(['bkr', 'job-list', '--my-groups', '--format','json'],
+                         config=self.client_configs[0])
+        out = json.loads(out)
+        self.assertIn(self.jobs[0].t_id, out)
+        self.assertNotIn(self.jobs[1].t_id, out)
+
+        self.assertRaises(ClientError, run_client, ['bkr', 'job-list', '--my-groups',
+                                                    '--username', 'xyz',
+                                                    '--password','xyz'])
+
+    def test_list_jobs_by_group(self):
+        out = run_client(['bkr', 'job-list', '--group', self.groups[0].group_name])
+        self.assert_(self.jobs[0].t_id in out and self.jobs[1].t_id not in out, out)
+
+        out = run_client(['bkr', 'job-list', '--group', self.groups[1].group_name])
+        self.assert_(self.jobs[1].t_id in out and self.jobs[0].t_id not in out, out)
+
+        out = run_client(['bkr', 'job-list', '--group', self.groups[1].group_name, '--limit', '1'])
+        self.assert_(len(json.loads(out)) == 1, out)
+
+        with self.assertRaisesRegexp(ClientError, 'No such group \'foobar\''):
+            run_client(['bkr', 'job-list', '--group', 'foobar'])
+
+        out = run_client(['bkr', 'job-list', '--group',
+                          self.groups[0].group_name,
+                          '--min-id', '{0}'.format(self.jobs[0].id), '--max-id', '{0}'.format(self.jobs[0].id)])
+        self.assert_(self.jobs[0].t_id in out and self.jobs[1].t_id not in out)
+
+    def test_list_jobs_both_by_mine_and_owner(self):
+        out = run_client(['bkr', 'job-list', '--mine', '--owner', self.users[1].user_name], config=self.client_configs[0])
+        self.assert_(self.jobs[0].t_id in out and self.jobs[1].t_id in out, out)
 
     def test_cannot_specify_finished_and_unfinished_at_the_same_time (self):
         try:
             run_client(['bkr', 'job-list', '--finished', '--unfinished'])
             self.fail('should raise')
-        except ClientError, e:
+        except ClientError as e:
             self.assertEqual(e.status, 2)
             self.assertIn("Only one of --finished or --unfinished may be specified", e.stderr_output)
 

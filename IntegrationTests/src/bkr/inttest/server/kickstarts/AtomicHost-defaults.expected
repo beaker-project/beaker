@@ -299,20 +299,26 @@ EOF
 # Create the Dockerfile for the container
 cat << EOF > /root/Dockerfile
 
+if command -v dnf >/dev/null ; then
+   export package_command="dnf"
+else
+   export package_command="yum"
+fi
+
 FROM registry.hub.docker.com/fedora:20
 MAINTAINER Beaker Developers <beaker-devel@lists.fedoraproject.org>
 ENV container docker
 ADD beaker-tasks.repo /etc/yum.repos.d/
 ADD customrepos/ /etc/yum.repos.d/
 ADD beaker-harness-env.sh /etc/profile.d/beaker-harness-env.sh
-RUN yum -y update; yum clean all
+RUN $package_command -y update; $package_command clean all
 
 # We assume that if the contained harness entrypoint is not
 # defined, we are relying on systemd to start the harness
 # for us
 # Reference: http://developerblog.redhat.com/2014/05/05/running-systemd-within-docker-container/
-RUN yum -y remove fakesystemd || true
-RUN yum -y install systemd; \
+RUN $package_command -y remove fakesystemd || true
+RUN $package_command -y install systemd; \
 (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ "\$i" == systemd-tmpfiles-setup.service ] || rm -f "\$i"; done); \
 rm -f /lib/systemd/system/multi-user.target.wants/*;\
 rm -f /etc/systemd/system/*.wants/*;\
@@ -324,10 +330,10 @@ rm -f /lib/systemd/system/anaconda.target.wants/*;
 VOLUME [ "/sys/fs/cgroup" ]
 
 # Install the harness
-RUN yum -y install restraint-rhts
-RUN yum -y install coreutils
-RUN yum -y install beakerlib || true
-RUN yum -y install beakerlib-redhat || true
+RUN $package_command -y install restraint-rhts
+RUN $package_command -y install coreutils
+RUN $package_command -y install beakerlib || true
+RUN $package_command -y install beakerlib-redhat || true
 CMD ["/usr/sbin/init"]
 EOF
 

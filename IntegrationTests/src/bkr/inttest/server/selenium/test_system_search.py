@@ -290,6 +290,36 @@ class Search(WebDriverTestCase):
                              ('System/Added', 'before', '2020-06-22')])
         check_system_search_results(b, present=[new_system], absent=[old_system])
 
+    def test_by_notes(self):
+        with session.begin():
+            owner = data_setup.create_user()
+            new_system = data_setup.create_system()
+            new_system.add_note("Note1", owner)
+            old_system = data_setup.create_system()
+            old_system.add_note("Note2", owner)
+
+        b = self.browser
+
+        # System/Notes search is supposed to be case-insensitive
+        perform_search(b, [('System/Notes', 'contains', 'nOTe1')])
+        check_system_search_results(b, present=[new_system], absent=[old_system])
+
+        # Specific search
+        perform_search(b, [('System/Notes', 'is', 'Note2')])
+        check_system_search_results(b, present=[old_system], absent=[new_system])
+
+        # All systems without any note
+        perform_search(b, [('System/Notes', 'is', '')])
+        check_system_search_results(b, absent=[old_system, new_system])
+
+        # All systems with any note
+        perform_search(b, [('System/Notes', 'is not', '')])
+        check_system_search_results(b, present=[old_system, new_system])
+
+        perform_search(b, [('System/Notes', 'is', 'foobar')])
+        # no results
+        b.find_element_by_xpath('//table[@id="widget" and not(.//td)]')
+
     def test_by_key_value_is(self):
         with session.begin():
             self.system.key_values_string.append(Key_Value_String(

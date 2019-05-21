@@ -212,6 +212,10 @@ class Jobs(RPCRoot):
                 Job owner username
             'mine'
                 Inclusion is equivalent to including own username in 'owner'
+            'group'
+                Job group name
+            'my-group'
+                Jobs for any of the given user's groups.
             'whiteboard'
                 Job whiteboard (substring match)
             'limit'
@@ -242,22 +246,33 @@ class Jobs(RPCRoot):
         family = filters.get('family', None)
         product = filters.get('product', None)
         owner = filters.get('owner', None)
+        group = filters.pop('group', None)
+        my_groups = filters.pop('my_groups', None)
         whiteboard = filters.get('whiteboard', None)
         mine = filters.get('mine', None)
         limit = filters.get('limit', None)
         is_finished = filters.get('is_finished', None)
 
-        if mine and not identity.not_anonymous():
-            raise BX(_('You should be authenticated to use the --mine filter.'))
+        # identity.not_anonymous() wrongly returns True for anonymous XML-RPC
+        if (mine or my_groups) and not identity.current.user:
+            raise BX(_('You need to be authenticated to use the --mine or --my_groups filter.'))
 
-        if mine and identity.not_anonymous():
+        if mine:
             if owner:
-                if type(owner) is list:
+                if isinstance(owner, list):
                     owner.append(identity.current.user.user_name)
                 else:
                     owner = [owner, identity.current.user.user_name]
             else:
                 owner = identity.current.user.user_name
+
+        if my_groups:
+            if group:
+                if isinstance(group, basestring):
+                    group = [group]
+                group.extend([g.group_name for g in identity.current.user.groups])
+            else:
+                group = [g.group_name for g in identity.current.user.groups]
 
         jobs = jobs.order_by(Job.id.desc())
         if tags:
@@ -270,6 +285,11 @@ class Jobs(RPCRoot):
             jobs = Job.by_product(product, jobs)
         if owner:
             jobs = Job.by_owner(owner, jobs)
+        if group:
+            try:
+                jobs = Job.by_groups(group, jobs)
+            except NoResultFound:
+                raise BX(_('No such group %r' % group))
         if whiteboard:
             jobs = jobs.filter(Job.whiteboard.like(u'%%%s%%' % whiteboard))
         # is_finished is a tri-state value, True limit finished job, False limit unfinished job, None don't limit

@@ -830,10 +830,9 @@ class Job(TaskBase, ActivityMixin):
     def by_tag(cls, tag, query=None):
         if query is None:
             query = cls.query
-        if type(tag) is list:
-            tag_query = cls.retention_tag_id.in_([RetentionTag.by_tag(unicode(t)).id for t in tag])
-        else:
-            tag_query = cls.retention_tag==RetentionTag.by_tag(unicode(tag))
+        if isinstance(tag, basestring):
+            tag = [tag]
+        tag_query = cls.retention_tag_id.in_([RetentionTag.by_tag(unicode(t)).id for t in tag])
 
         return query.filter(tag_query)
 
@@ -841,21 +840,34 @@ class Job(TaskBase, ActivityMixin):
     def by_product(cls, product, query=None):
         if query is None:
             query=cls.query
-        if type(product) is list:
-            product_query = cls.product.in_(*[Product.by_name(p) for p in product])
-        else:
-            product_query = cls.product == Product.by_name(product)
+        if isinstance(product, basestring):
+            product = [product]
+        product_query = cls.product_id.in_([Product.by_name(p).id for p in product])
+
         return query.join('product').filter(product_query)
 
     @classmethod
     def by_owner(cls, owner, query=None):
         if query is None:
             query=cls.query
-        if type(owner) is list:
-            owner_query = cls.owner.in_(*[User.by_user_name(p) for p in owner])
-        else:
-            owner_query = cls.owner == User.by_user_name(owner)
+        if isinstance(owner, basestring):
+            owner = [owner]
+        # by_user_name() returns None for non-existent users
+        for o in owner:
+            if User.by_user_name(o) is None:
+                raise NoResultFound('Owner %s is invalid' % o)
+        owner_query = cls.owner_id.in_([User.by_user_name(o).id for o in owner])
+
         return query.join('owner').filter(owner_query)
+
+    @classmethod
+    def by_groups(cls, groups, query=None):
+        if query is None:
+            query=cls.query
+        if isinstance(groups, basestring):
+            groups = [groups]
+        groups_query = cls.group_id.in_([Group.by_name(g).id for g in groups])
+        return query.join('group').filter(groups_query)
 
     @classmethod
     def by_whiteboard(cls, desc, like=False):

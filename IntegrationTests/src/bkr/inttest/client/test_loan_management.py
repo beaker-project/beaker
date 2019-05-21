@@ -6,7 +6,7 @@
 
 import contextlib
 from turbogears.database import session
-from bkr.server.model import System, SystemAccessPolicy, SystemPermission
+from bkr.server.model import SystemPermission
 from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client, create_client_config, ClientError, \
         ClientTestCase
@@ -52,8 +52,8 @@ class SystemLoanTest(ClientTestCase):
         expected_error = "Insufficient permissions: %s" % details
         try:
             yield
-            fail('Permissions error expected')
-        except ClientError, e:
+            self.fail('Permissions error expected')
+        except ClientError as e:
             self.assertEqual(e.status, 1)
             self.assertRegexpMatches(e.stderr_output, expected_error)
 

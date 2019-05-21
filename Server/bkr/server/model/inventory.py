@@ -2723,7 +2723,8 @@ class Key(DeclarativeMappedObject):
     # from searching on these keys in the web UI, to encourage them to migrate 
     # to the structured columns instead (and to avoid the costly queries that 
     # sometimes result).
-    obsoleted_keys = [u'MODULE', u'PCIID']
+    # * PCIID replaced by Device/Vendor_id
+    obsoleted_keys = [u'PCIID']
 
     @classmethod
     def get_all_keys(cls):

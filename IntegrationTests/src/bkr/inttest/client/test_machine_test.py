@@ -33,11 +33,11 @@ class MachineTestTest(ClientTestCase):
 
         #https://bugzilla.redhat.com/show_bug.cgi?id=893878
         try:
-            out = run_client(['bkr', 'machine-test','--machine', 
+            out = run_client(['bkr', 'machine-test','--machine',
                               self.system.fqdn, '--tag','aTAG'])
         except Exception as ex:
-            self.assertEqual(ex.stderr_output.rstrip('\n'), \
-                                 'Could not find an appropriate distro to provision system with.')
+            self.assertEqual(ex.stderr_output.rstrip('\n'),
+                             'Could not find an appropriate distro to provision system with.')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=876752
     def test_filters_out_excluded_families(self):

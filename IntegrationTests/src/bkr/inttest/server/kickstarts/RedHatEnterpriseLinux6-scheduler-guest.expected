@@ -351,14 +351,24 @@ skip_if_unavailable=1
 EOF
 
 
+if command -v dnf >/dev/null ; then
+   package_command="dnf"
+else
+   package_command="yum"
+fi
 # fill the yum cache and redirect output to /dev/null
 # This speeds up yum because of a bug where it will update stdout too often.
 # http://lists.baseurl.org/pipermail/yum-devel/2011-December/008857.html
-yum check-update > /dev/null 2>&1 || true
-yum -y install beah rhts-test-env
-yum -y install beakerlib
+$package_command check-update > /dev/null 2>&1 || true
+if command -v dnf >/dev/null ; then
+   package_command="dnf"
+else
+   package_command="yum"
+fi
+$package_command -y install beah rhts-test-env
+$package_command -y install beakerlib
 # This may fail if you are outside of Red Hat..
-yum -y install beakerlib-redhat
+$package_command -y install beakerlib-redhat
 
 cp /etc/beah_beaker.conf{,.default}
 cat << EOF > /etc/beah_beaker.conf

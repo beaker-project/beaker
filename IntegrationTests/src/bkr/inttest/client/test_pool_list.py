@@ -1,6 +1,6 @@
-from bkr.server.model import session, SystemPool
+from bkr.server.model import session
 from bkr.inttest import data_setup
-from bkr.inttest.client import run_client, ClientError, ClientTestCase, create_client_config
+from bkr.inttest.client import run_client, ClientError, ClientTestCase
 
 
 class PoolList(ClientTestCase):

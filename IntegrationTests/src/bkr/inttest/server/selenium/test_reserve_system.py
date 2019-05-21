@@ -15,6 +15,8 @@ from selenium.webdriver.support.ui import Select
 import unittest, time, re, os
 from turbogears.database import session
 
+WORKFLOW_DESCR = "Reserve Workflow provision of distro %s on %s for %s seconds"
+
 class ReserveWorkflow(WebDriverTestCase):
 
     @with_transaction
@@ -157,6 +159,10 @@ class ReserveWorkflow(WebDriverTestCase):
         b.find_element_by_xpath('//button[normalize-space(text())="Submit job"]').click()
         # should end up on the job page
         b.find_element_by_xpath('//h1[contains(string(.), "J:")]')
+        wb_descr = (WORKFLOW_DESCR %
+                    (self.distro.name, "any system", "86400"))
+        wboard = b.find_element_by_class_name('job-whiteboard')
+        self.assertIn(wb_descr, wboard.text, msg="Fail to match default whiteboard")
         # one recipe set for the chosen distro tree
         self.assertEquals(len(b.find_elements_by_class_name('recipeset')), 1)
         b.find_element_by_xpath('//td[normalize-space(string(.))="%s Server i386"]'
@@ -264,6 +270,10 @@ class ReserveWorkflow(WebDriverTestCase):
         b.find_element_by_xpath('//button[normalize-space(text())="Submit job"]').click()
         # should end up on the job page
         job_id = b.find_element_by_xpath('//h1//span[@class="job-id"]').text
+        wb_descr = (WORKFLOW_DESCR %
+                    (self.distro.name, "any lab system", "86400"))
+        wboard = b.find_element_by_class_name('job-whiteboard')
+        self.assertIn(wb_descr, wboard.text, msg="Fail to match default whiteboard")
         with session.begin():
             job = TaskBase.get_by_t_id(job_id)
             cloned_job_xml = lxml.etree.tostring(job.to_xml(clone=True), encoding=unicode)  # cloning re-parses hostRequires
@@ -296,6 +306,10 @@ class ReserveWorkflow(WebDriverTestCase):
         b.find_element_by_xpath('//button[normalize-space(text())="Submit job"]').click()
         # should end up on the job page
         job_id = b.find_element_by_xpath('//h1//span[@class="job-id"]').text
+        wb_descr = (WORKFLOW_DESCR %
+                    ("None", "a specific system", "86400"))
+        wboard = b.find_element_by_class_name('job-whiteboard')
+        self.assertIn(wb_descr, wboard.text, msg="Fail to match default whiteboard")
         with session.begin():
             job = TaskBase.get_by_t_id(job_id)
             cloned_job_xml = lxml.etree.tostring(job.to_xml(clone=True), encoding=unicode)  # cloning re-parses hostRequires
@@ -350,7 +364,7 @@ class ReserveSystem(WebDriverTestCase):
         b.find_element_by_link_text('Select All').click()
         b.find_element_by_xpath("//form[@id='searchform']").submit()
         columns = b.find_elements_by_xpath("//table[@id='widget']//th")
-        self.assertEquals(len(columns), 33)
+        self.assertEquals(len(columns), 34)
 
     def test_all_systems_included_when_no_distro_tree_selected(self):
         login(self.browser)

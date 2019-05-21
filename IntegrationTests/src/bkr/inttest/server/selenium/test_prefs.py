@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+from bkr.server.model import SSHPubKey
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, logout, is_text_present, \
         delete_and_confirm
@@ -176,6 +177,18 @@ class UserPrefs(WebDriverTestCase):
         pane.find_element_by_name('key').send_keys(key)
         pane.find_element_by_tag_name('form').submit()
         self.assertIn('SSH public keys may not contain newlines',
+                pane.find_element_by_class_name('alert-error').text)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1175584
+    def test_duplicate_ssh_key_not_accepted(self):
+        sshkey = (u'ssh-rsa', u'uniquekey', u'domain@example.com')
+        with session.begin():
+            self.user.sshpubkeys.append(SSHPubKey(*sshkey))
+        key = 'ssh-rsa %s different_domain@xample.com' % sshkey[1]
+        pane = self.go_to_prefs_tab('SSH Public Keys')
+        pane.find_element_by_name('key').send_keys(key)
+        pane.find_element_by_tag_name('form').submit()
+        self.assertIn('Duplicate SSH public key',
                 pane.find_element_by_class_name('alert-error').text)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=830475

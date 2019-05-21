@@ -9,7 +9,7 @@ import datetime
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client, ClientError, ClientTestCase
-from bkr.server.model import LabControllerDistroTree, Distro
+from bkr.server.model import Distro
 
 class DistrosListTest(ClientTestCase):
 
@@ -41,16 +41,16 @@ class DistrosListTest(ClientTestCase):
         try:
             run_client(['bkr', 'distros-list', '--name', self.distro.name,
                     '--tag', 'NOTEXIST'])
-            fail('should raise')
-        except ClientError, e:
+            self.fail('should raise')
+        except ClientError as e:
             self.assertEqual(e.status, 1)
             self.assertEqual(e.stderr_output, 'Nothing Matches\n')
 
     def test_output_is_ordered_by_date_created(self):
         with session.begin():
-            # Insert them in reverse order (oldest last), just because the most 
-            # likely regression here is that we aren't sorting at all and thus 
-            # the output is in database insertion order. So this proves that's 
+            # Insert them in reverse order (oldest last), just because the most
+            # likely regression here is that we aren't sorting at all and thus
+            # the output is in database insertion order. So this proves that's
             # not happening.
             new_distro = data_setup.create_distro(date_created=datetime.datetime(2021, 1, 1, 0, 0))
             data_setup.create_distro_tree(distro=new_distro)

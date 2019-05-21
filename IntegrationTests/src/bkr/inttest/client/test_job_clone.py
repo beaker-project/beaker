@@ -109,8 +109,8 @@ class JobCloneTest(ClientTestCase):
     def test_invalid_taskspec(self):
         try:
             run_client(['bkr', 'job-clone', '12345'])
-            fail('should raise')
-        except ClientError, e:
+            self.fail('should raise')
+        except ClientError as e:
             self.assert_('Invalid taskspec' in e.stderr_output)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1014623
@@ -161,6 +161,6 @@ class JobCloneTest(ClientTestCase):
     def test_must_provide_job_or_recipeset(self):
         try:
             run_client(['bkr', 'job-clone',])
-        except ClientError, e:
+        except ClientError as e:
             self.assertIn("Please specify a job or recipeset to clone",
                           e.stderr_output)
