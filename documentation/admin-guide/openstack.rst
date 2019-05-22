@@ -43,7 +43,7 @@ dashboard (Horizon) URL and an OpenStack account of Beaker in :file:`/etc/beaker
     # Use OpenStack for running recipes on dynamically created guests.
     # Beaker uses the credentials given here to authenticate to OpenStack
     # when creating OpenStack instances on behalf of users.
-    openstack.identity_api_url = 'https://openstack.example.com:13000/v3.0'
+    openstack.identity_api_url = 'https://openstack.example.com:13000/v3'
     openstack.dashboard_url = 'https://openstack.example.com/dashboard/'
     openstack.username = ""
     openstack.password = ""
