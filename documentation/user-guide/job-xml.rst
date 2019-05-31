@@ -170,8 +170,6 @@ things as as ``<distro_arch/>``, ``<distro_name/>`` and
 of the Distro, and it's install method (i.e nfs,ftp etc) respectively.
 The ``op`` determines if we do or do not want this value i.e ``=`` means
 we do want that value, ``!=`` means we do not want that value.
-``<distro_virt/>`` will determine whether we install on a virtual
-machine or not.
 
 ::
 
@@ -199,7 +197,6 @@ machine or not.
                 <distro_name op="=" value="RHEL5-Server-U4"/>
                 <distro_method op="=" value="nfs"/>
               </and>
-              <distro_virt op="=" value=""/>
             </distroRequires>
           </recipe>
         </recipeSet>
@@ -235,7 +232,6 @@ machine or not.
                 <distro_name op="=" value="RHEL5-Server-U4"/>
                 <distro_method op="=" value="nfs"/>
               </and>
-              <distro_virt op="=" value=""/>
             </distroRequires>
             <hostRequires>
               <and>
@@ -403,7 +399,6 @@ assigned to a new environment variable specified by ``name``.
                 <distro_name op="=" value="RHEL5-Server-U4"/>
                 <distro_method op="=" value="nfs"/>
               </and>
-              <distro_virt op="=" value=""/>
             </distroRequires>
 
             <task name="/distribution/check-install" role="STANDALONE">
