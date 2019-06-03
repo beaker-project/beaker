@@ -1,28 +1,30 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import string
-import re
-import urlparse
 import logging
+import pipes  # For pipes.quote, since it isn't available in shlex until 3.3
+import re
+import string
+import urlparse
+
+import jinja2.ext
+import jinja2.nodes
+import jinja2.sandbox
 import netaddr
-import pipes # For pipes.quote, since it isn't available in shlex until 3.3
+from flask import redirect, abort
 from sqlalchemy.orm.exc import NoResultFound
-from turbogears import config, redirect
-from turbogears.controllers import expose
-import cherrypy
-import jinja2.sandbox, jinja2.ext, jinja2.nodes
-from bkr.server.model import session, RenderedKickstart, OSMajor, OSVersion
-from bkr.server.util import absolute_url
+
+from bkr.server.app import app
+from bkr.server.model import session, RenderedKickstart
 from bkr.server.model.distrolibrary import split_osmajor_name_version
+from bkr.server.util import absolute_url
 
 log = logging.getLogger(__name__)
 
-class SnippetExtension(jinja2.ext.Extension):
 
+class SnippetExtension(jinja2.ext.Extension):
     """
     An extension which defines a block-level snippet statement::
 
@@ -42,19 +44,21 @@ class SnippetExtension(jinja2.ext.Extension):
         snippet_name = parser.parse_expression()
         node = jinja2.nodes.Output([
             jinja2.nodes.Call(jinja2.nodes.Name('snippet', 'load'),
-                    [snippet_name], [], None, None),
+                              [snippet_name], [], None, None),
         ])
         node.set_lineno(lineno)
         return node
 
+
 template_env = jinja2.sandbox.SandboxedEnvironment(
-        cache_size=0, # https://bugzilla.redhat.com/show_bug.cgi?id=862235
-        loader=jinja2.ChoiceLoader([
-            jinja2.FileSystemLoader('/etc/beaker'),
-            jinja2.PackageLoader('bkr.server', ''),
-        ]),
-        trim_blocks=True,
-        extensions=[SnippetExtension])
+    cache_size=0,  # https://bugzilla.redhat.com/show_bug.cgi?id=862235
+    loader=jinja2.ChoiceLoader([
+        jinja2.FileSystemLoader('/etc/beaker'),
+        jinja2.PackageLoader('bkr.server', ''),
+    ]),
+    trim_blocks=True,
+    extensions=[SnippetExtension])
+
 
 def add_to_template_searchpath(dir):
     """Adds a new searchpath to our template_env var
@@ -63,6 +67,7 @@ def add_to_template_searchpath(dir):
     searchpath
     """
     global template_env
+
     def _add_template(loaders, dir):
         for loader in loaders:
             # Let's squeeze a new FS path in
@@ -73,6 +78,7 @@ def add_to_template_searchpath(dir):
                 _add_template(loader.loaders, dir)
             else:
                 continue
+
     _add_template([template_env.loader], dir)
 
 
@@ -85,19 +91,22 @@ class TemplateRenderingEnvironment(object):
     or snippet from wreaking too much havoc. User-supplied templates are not
     allowed to access our model objects at all so they are not a concern.
     """
+
     def __enter__(self):
         # Can't do this without a CherryPy request :-(
-        #self.saved_identity = identity.current
-        #identity.set_current_identity(None)
+        # self.saved_identity = identity.current
+        # identity.set_current_identity(None)
         session.begin_nested()
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         session.rollback()
-        #identity.set_current_identity(self.saved_identity)
+        # identity.set_current_identity(self.saved_identity)
 
-# For user-supplied templates we only expose these "fake" objects which wrap 
-# real model objects, providing only safe documented attributes. Otherwise 
-# users could invoke arbitrary methods on the model objects which we don't 
-# want. Server templates (controlled by the admin) on the other hand have 
+
+# For user-supplied templates we only expose these "fake" objects which wrap
+# real model objects, providing only safe documented attributes. Otherwise
+# users could invoke arbitrary methods on the model objects which we don't
+# want. Server templates (controlled by the admin) on the other hand have
 # access to the real model objects because it is more powerful.
 class RestrictedOSMajor(object):
     def __init__(self, osmajor, name=None, number=None):
@@ -105,6 +114,8 @@ class RestrictedOSMajor(object):
         name, number = split_osmajor_name_version(osmajor)
         self.name = unicode(name)
         self.number = unicode(number)
+
+
 class RestrictedOSVersion(object):
     def __init__(self, osmajor, osminor):
         self.osmajor = RestrictedOSMajor(osmajor)
@@ -112,13 +123,19 @@ class RestrictedOSVersion(object):
             self.osminor = None
         else:
             self.osminor = unicode(osminor)
+
+
 class RestrictedDistro(object):
     def __init__(self, osmajor, osminor, name):
         self.osversion = RestrictedOSVersion(osmajor, osminor)
         self.name = unicode(name)
+
+
 class RestrictedArch(object):
     def __init__(self, arch):
         self.arch = unicode(arch)
+
+
 class RestrictedDistroTree(object):
     def __init__(self, osmajor, osminor, name, variant, arch, tree_url, distro_tree=None):
         self.distro = RestrictedDistro(osmajor, osminor, name)
@@ -138,14 +155,18 @@ class RestrictedDistroTree(object):
         else:
             return self.tree_url
 
+
 class RestrictedLabController(object):
     def __init__(self, lab_controller):
         self.fqdn = unicode(lab_controller.fqdn)
+
+
 class RestrictedRecipe(object):
     def __init__(self, recipe):
         self.id = recipe.id
         self.whiteboard = recipe.whiteboard
         self.role = recipe.role
+
 
 # Some custom Jinja template filters and tests,
 # for added convenience when writing kickstart/snippet templates
@@ -155,6 +176,7 @@ class RestrictedRecipe(object):
 def dictsplit(s, delim=',', pairsep=':'):
     return dict(pair.split(pairsep, 1) for pair in s.split(delim))
 
+
 template_env.filters.update({
     'split': string.split,
     'dictsplit': dictsplit,
@@ -163,15 +185,19 @@ template_env.filters.update({
     'shell_quoted': pipes.quote,
 })
 
+
 def is_arch(distro_tree, *arch_names):
     return distro_tree.arch.arch in arch_names
+
 
 def is_osmajor(distro, *osmajor_names):
     return distro.osversion.osmajor.osmajor in osmajor_names
 
+
 def is_osversion(distro, *osversion_names):
     return (u'%s.%s' % (distro.osversion.osmajor.osmajor, distro.osversion.osminor)
             in osversion_names)
+
 
 template_env.tests.update({
     'arch': is_arch,
@@ -179,9 +205,11 @@ template_env.tests.update({
     'osversion': is_osversion,
 })
 
+
 @jinja2.contextfunction
 def var(context, name):
     return context.resolve(name)
+
 
 template_env.globals.update({
     're': re,
@@ -191,6 +219,7 @@ template_env.globals.update({
     'var': var,
     'absolute_url': absolute_url,
 })
+
 
 def kickstart_template(osmajor):
     candidates = [
@@ -206,8 +235,9 @@ def kickstart_template(osmajor):
     raise ValueError('No kickstart template found for %s, tried: %s'
                      % (osmajor, ', '.join(candidates)))
 
+
 def generate_kickstart(install_options, distro_tree, system, user,
-        recipe=None, ks_appends=None, kickstart=None, installation=None):
+                       recipe=None, ks_appends=None, kickstart=None, installation=None):
     if recipe:
         lab_controller = recipe.recipeset.lab_controller
     elif system:
@@ -231,7 +261,8 @@ def generate_kickstart(install_options, distro_tree, system, user,
         'job_whiteboard': job_whiteboard,
         'distro_tree': RestrictedDistroTree(installation.osmajor, installation.osminor,
                                             installation.distro_name, installation.variant,
-                                            installation.arch.arch, installation.tree_url, distro_tree),
+                                            installation.arch.arch, installation.tree_url,
+                                            distro_tree),
         'distro': RestrictedDistro(installation.osmajor, installation.osminor,
                                    installation.distro_name),
         'lab_controller': RestrictedLabController(lab_controller),
@@ -248,7 +279,7 @@ def generate_kickstart(install_options, distro_tree, system, user,
         'lab_controller': lab_controller,
         'user': user,
         'recipe': recipe,
-        'config': config,
+        'config': app.config,
     })
     if distro_tree:
         context.update({
@@ -267,8 +298,7 @@ def generate_kickstart(install_options, distro_tree, system, user,
 
     snippet_locations = []
     if system:
-        snippet_locations.append(
-             'snippets/per_system/%%s/%s' % system.fqdn)
+        snippet_locations.append('snippets/per_system/%%s/%s' % system.fqdn)
     snippet_locations.extend([
         'snippets/per_lab/%%s/%s' % lab_controller.fqdn,
         'snippets/per_osversion/%%s/%s.%s' % (installation.osmajor, installation.osminor),
@@ -292,13 +322,14 @@ def generate_kickstart(install_options, distro_tree, system, user,
             return retval
         else:
             return u'# no snippet data for %s\n' % name
+
     restricted_context['snippet'] = snippet
     context['snippet'] = snippet
 
     with TemplateRenderingEnvironment():
         if kickstart:
             template = template_env.from_string(
-                    "{% snippet 'install_method' %}\n" + kickstart)
+                "{% snippet 'install_method' %}\n" + kickstart)
             result = template.render(restricted_context)
         else:
             template = kickstart_template(installation.osmajor)
@@ -306,21 +337,17 @@ def generate_kickstart(install_options, distro_tree, system, user,
 
     rendered_kickstart = RenderedKickstart(kickstart=result)
     session.add(rendered_kickstart)
-    session.flush() # so that it has an id
+    session.flush()  # so that it has an id
     return rendered_kickstart
 
-class KickstartController(object):
 
+@app.route('/kickstart/<id>', methods=['GET'])
+def get_kickstart(id):
     """
-    TurboGears controller for serving up generated kickstarts.
+    Flask endpoint for serving up generated kickstarts.
     """
-
-    @expose(content_type='text/plain; charset=UTF-8')
-    def default(self, id):
-        try:
-            kickstart = RenderedKickstart.by_id(id)
-        except NoResultFound:
-            raise cherrypy.NotFound(id)
-        if kickstart.url:
-            redirect(kickstart.url)
-        return kickstart.kickstart.encode('utf8')
+    try:
+        kickstart = RenderedKickstart.by_id(id)
+    except NoResultFound:
+        abort(404)
+    return redirect(kickstart.url) if kickstart.url else kickstart.kickstart.encode('utf8')
