@@ -109,6 +109,7 @@ BuildRequires:  python3-gssapi
 BuildRequires:  python3-lxml
 BuildRequires:  python3-prettytable
 BuildRequires:  python3-libxml2
+Requires:       python3-six
 Requires:       python3-setuptools
 Requires:       python3-gssapi
 Requires:       python3-lxml
@@ -123,6 +124,7 @@ BuildRequires:  python2-gssapi
 BuildRequires:  python2-lxml
 BuildRequires:  python2-prettytable
 BuildRequires:  python2-libxml2
+Requires:       python2-six
 Requires:       python2-setuptools
 Requires:       python2-gssapi
 Requires:       python2-lxml
@@ -136,6 +138,7 @@ BuildRequires:  python-gssapi
 BuildRequires:  python-lxml
 BuildRequires:  libxslt-python
 BuildRequires:  python-prettytable
+Requires:       python-six
 Requires:       python
 Requires:       python-setuptools
 Requires:       python-gssapi
