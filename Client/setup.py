@@ -35,6 +35,7 @@ setup(
         'requests',
         'PrettyTable',
         'Jinja2',
+        'gssapi'
     ],
 
     packages=find_packages('src'),
