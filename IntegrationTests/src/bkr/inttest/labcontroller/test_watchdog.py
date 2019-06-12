@@ -370,3 +370,11 @@ def test_unrelated_Oops_string_is_not_detected_as_panic():
     failure_found = detector.feed(line)
     if failure_found:
         raise AssertionError('False panic detection: %s' % failure_found)
+
+# https://bugzilla.redhat.com/show_bug.cgi?id=1719829
+def test_general_protection__user_space_is_not_detected_as_panic():
+    line = "kvm-01-guest19 login: [   30.165967] traps: bz1172806[2463] general protection fault ip:804b000 sp:5aadc0de error:0 in bz1172806[8048000+5000] \n"
+    detector = PanicDetector(get_conf().get('PANIC_REGEX'))
+    failure_found = detector.feed(line)
+    if failure_found:
+        raise AssertionError('False panic detection: %s' % failure_found)
