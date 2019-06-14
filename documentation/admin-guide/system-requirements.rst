@@ -7,7 +7,7 @@ database, Beaker requires a multiple terabyte disk storage system.
 
 Your Beaker server should have:
 
--  Red Hat Enterprise Linux 5 or latest Fedora operating system.
+-  Red Hat Enterprise Linux 7 or latest Fedora operating system.
 
 -  200 or more gigabytes hard disk space.
 
@@ -17,7 +17,7 @@ Your Beaker server should have:
 
 -  2 or more terabytes tree storage requirement.
 
-.. note:: If your site already has an existing repository of Red Hat install 
+.. note:: If your site already has an existing repository of Red Hat install
    trees, you do not have to meet the tree storage requirement above.
 
 Your target hosts are required to have:
@@ -47,4 +47,4 @@ most common compatible controllers that are available:
 You may mix and match any of these controllers on the target hosts, but
 you must include at least one compatible controller per system. Beaker supports
 the cman package's fence component. Beaker supports any device that you control
-from the Red Hat Enterprise Linux 5 command line.
+from the Red Hat Enterprise Linux 7 command line.
