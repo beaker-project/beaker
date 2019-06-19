@@ -1,0 +1,9 @@
+Ready-for-Checks+1: Tomas Klohna <tklohna@redhat.com>
+Verified+1: Tomas Klohna <tklohna@redhat.com>
+Code-Review+2: Tomas Klohna <tklohna@redhat.com>
+Code-Review+1: Carol Bouchard <cbouchar@redhat.com>
+Submitted-by: Tomas Klohna <tklohna@redhat.com>
+Submitted-at: Wed, 19 Jun 2019 12:17:51 +0000
+Reviewed-on: https://gerrit.beaker-project.org/6591
+Project: beaker
+Branch: refs/heads/release-26
