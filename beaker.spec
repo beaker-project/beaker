@@ -10,9 +10,9 @@
 %bcond_with systemd
 %endif
 
-# This will not necessarily match the RPM Version if the real version number is 
-# not representable in RPM. For example, a release candidate might be 0.15.0rc1 
-# but that is not usable for the RPM Version because it sorts higher than 
+# This will not necessarily match the RPM Version if the real version number is
+# not representable in RPM. For example, a release candidate might be 0.15.0rc1
+# but that is not usable for the RPM Version because it sorts higher than
 # 0.15.0, so the RPM will have Version 0.15.0 and Release 0.rc1 in that case.
 %global upstream_version 26.5
 
@@ -308,6 +308,7 @@ Requires:       yum-utils
 Requires:       fence-agents
 Requires:       ipmitool
 Requires:       wsmancli
+Requires:       /usr/bin/virsh
 Requires:       telnet
 Requires:       sudo
 %if 0%{?fedora} >= 29 || 0%{?rhel} >= 8
@@ -360,30 +361,30 @@ Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
 
 %description
-Beaker is a full stack software and hardware integration testing system, with 
+Beaker is a full stack software and hardware integration testing system, with
 the ability to manage a globally distributed network of test labs.
 
 %description common
 Python modules which are used by other Beaker packages.
 
 %description client
-The bkr client is a command-line tool for interacting with Beaker servers. You 
+The bkr client is a command-line tool for interacting with Beaker servers. You
 can use it to submit Beaker jobs, fetch results, and perform many other tasks.
 
 %description server
-This package provides the central server components for Beaker, which 
+This package provides the central server components for Beaker, which
 consist of:
-* a Python web application, providing services to remote lab controllers as 
-  well as a web interface for Beaker users; 
-* the beakerd scheduling daemon, which schedules recipes on systems; and 
+* a Python web application, providing services to remote lab controllers as
+  well as a web interface for Beaker users;
+* the beakerd scheduling daemon, which schedules recipes on systems; and
 * command-line tools for managing a Beaker installation.
 
 %description integration-tests
-This package contains integration tests for Beaker, which require a running 
+This package contains integration tests for Beaker, which require a running
 database and Beaker server.
 
 %description lab-controller
-The lab controller daemons connect to a central Beaker server in order to 
+The lab controller daemons connect to a central Beaker server in order to
 manage a local lab of test systems.
 
 The daemons and associated lab controller tools:
@@ -393,8 +394,8 @@ The daemons and associated lab controller tools:
 * track distros available from the lab's local mirror
 
 %description lab-controller-addDistro
-addDistro.sh can be called after distros have been imported into Beaker. You 
-can install this on your lab controller to automatically launch jobs against 
+addDistro.sh can be called after distros have been imported into Beaker. You
+can install this on your lab controller to automatically launch jobs against
 newly imported distros.
 
 %prep
@@ -421,7 +422,7 @@ make
 %install
 DESTDIR=%{buildroot} make install
 
-# Newer RPM fails if site.less doesn't exist, even though it's marked %%ghost 
+# Newer RPM fails if site.less doesn't exist, even though it's marked %%ghost
 # and therefore is not included in the RPM. Seems like an RPM bug...
 ln -s /dev/null %{buildroot}%{_datadir}/bkr/server/assets/site.less
 
