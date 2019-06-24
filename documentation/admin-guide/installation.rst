@@ -3,11 +3,11 @@
 Installation
 ============
 
-Pre-built Beaker packages are available from the `Download 
+Pre-built Beaker packages are available from the `Download
 <../../download.html>`__ section of Beaker's web site.
 There are two main repos. One containing packages needed for installing
 the Beaker server and required components, another for packages needed
-to run the Beaker client. Download the repo file that suits your requirements 
+to run the Beaker client. Download the repo file that suits your requirements
 and copy it to ``/etc/yum.repos.d``.
 
 
@@ -16,7 +16,7 @@ Installing the Beaker server
 
 Start by installing the ``beaker-server`` package::
 
-    $ yum install beaker-server 
+    $ yum install beaker-server
 
 Preparing the database
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -25,15 +25,15 @@ Beaker uses the `SQLAlchemy <http://www.sqlalchemy.org/>`_ database
 library, which supports a large number of databases (including MySQL,
 PostgreSQL, SQLite, Oracle, and Microsoft SQL Server) provided that a
 suitable client driver is installed. However Beaker is only tested
-against MySQL, so it is recommended to use that.
+against MariaDB, so it is recommended to use that.
 
-First, make sure MySQL server is installed, and configure the daemon to run at 
+First, make sure MariaDB server is installed, and configure the daemon to run at
 startup::
 
-    $ yum install -y mysql-server MySQL-python
-    $ chkconfig mysqld on
+    $ yum install -y mariadb-server MySQL-python
+    $ systemctl enable mariadb
 
-For Unicode support in Beaker, it is recommended to configure MySQL to
+For Unicode support in Beaker, it is recommended to configure MariaDB to
 store strings as UTF-8. This is controlled by the
 ``character-set-server`` option in ``/etc/my.cnf``::
 
@@ -43,7 +43,7 @@ store strings as UTF-8. This is controlled by the
 
 Now start the MySQL server::
 
-    $ service mysqld start
+    $ systemctl start mariadb
 
 Create a database, and grant access to a user. You can put the database
 on the local machine, or on a remote machine.
@@ -83,8 +83,8 @@ than HTTP.
 
 First make sure Apache is on and configured to run on startup::
 
-    $ chkconfig httpd on
-    $ service httpd start
+    $ systemctl enable httpd
+    $ systemctl start httpd
 
 We unfortunately need to switch SELinux off on the main Beaker server.
 
@@ -99,8 +99,8 @@ Start the Beaker scheduling daemon and configure it to run on startup.
 
 ::
 
-    $ chkconfig beakerd on
-    $ service beakerd start
+    $ systemctl enable beakerd
+    $ systemctl start beakerd
 
 To make sure Beaker is running, open the URL configured in Apache in a
 browser.
@@ -109,11 +109,11 @@ browser.
 Adding a lab controller
 -----------------------
 
-Beaker uses lab controllers to manage the systems in its inventory. The lab 
-controller serves files for network booting, monitors console logs, and 
+Beaker uses lab controllers to manage the systems in its inventory. The lab
+controller serves files for network booting, monitors console logs, and
 executes fence commands to reboot systems.
 
-In small Beaker installations, the lab controller can be the same system as the 
+In small Beaker installations, the lab controller can be the same system as the
 Beaker server.
 
 
@@ -137,8 +137,8 @@ operate correctly without one.
 Registering the lab controller
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To start with, we need to make Beaker aware of the new lab controller. Log in 
-to Beaker using your administrator account created above, and select Admin → Lab 
+To start with, we need to make Beaker aware of the new lab controller. Log in
+to Beaker using your administrator account created above, and select Admin → Lab
 Controllers from the menu. Click "Add ( + )" to add a new lab controller.
 
 The new lab controller form requires the following fields:
@@ -181,8 +181,8 @@ the following settings:
 
 Turn on Apache::
 
-    $ chkconfig httpd on
-    $ service httpd start
+    $ systemctl enable httpd
+    $ systemctl start httpd
 
 
 .. _archive-server:
@@ -195,9 +195,9 @@ server. The relevant settings to configure this are described in
 
 Turn on tftp::
 
-    $ chkconfig xinetd on
-    $ chkconfig tftp on
-    $ service xinetd start
+    $ systemctl enable xinetd
+    $ systemctl enable tftp
+    $ systemctl start xinetd
 
 You can also use dnsmasq or any other TFTP server implementation. If
 your TFTP server is configured to use a root directory other than the
@@ -209,30 +209,30 @@ and proxies them to the server.
 
 ::
 
-    $ chkconfig beaker-proxy on
-    $ service beaker-proxy start
+    $ systemctl enable beaker-proxy
+    $ systemctl start beaker-proxy
 
 The ``beaker-watchdog`` daemon monitors systems and aborts their recipes
 if they panic or exceed the time limit.
 
 ::
 
-    $ chkconfig beaker-watchdog on
-    $ service beaker-watchdog start
+    $ systemctl enable beaker-watchdog
+    $ systemctl start beaker-watchdog
 
 The ``beaker-provision`` daemon writes netboot configuration files in
 the TFTP root directory and runs fence commands to reboot systems.
 
 ::
 
-    $ chkconfig beaker-provision on
-    $ service beaker-provision start
+    $ systemctl enable beaker-provision
+    $ systemctl start beaker-provision
 
 Beaker installs a configuration file into ``/etc/sudoers.d`` so that
 beaker-proxy (running as apache) can clear the TFTP netboot files for
 specific servers (owned by root). To ensure that Beaker lab controllers
 read this directory, the following command must be enabled in
-``/etc/sudoers`` (it is enabled by default in RHEL 6)::
+``/etc/sudoers`` (it is enabled by default from RHEL 6 forward)::
 
     #includedir /etc/sudoers.d
 
