@@ -4,4 +4,8 @@ if [ "$power_mode" == interrupt ] ; then
     echo "interrupt not supported by wti" >&2
     exit 1
 fi
-fence_wti -v -a "$power_address" -n "$power_id" -p "$power_pass" -o "$power_mode"
+# Handle one or more plug numbers
+# power_id must be a whitespace delimited list
+for plug in $power_id ; do
+    fence_wti -a "$power_address" -n "$plug" -l "$power_user" -p "$power_pass" -o "$power_mode"
+done
