@@ -168,7 +168,7 @@ class TestWizard(BaseWizardTestCase):
     def test_accepts_non_ascii_names(self):
         out = run_wizard(['beaker-wizard',
                           '--current-directory',
-                          '-n', u'Gęśla Jaźń',
+                          '-n', u'Gęśla Jaźń'.encode('utf8'),
                           '-m', 'gj@example.com'], cwd=self.tempdir)
         self.assertNotIn('is not a valid author', out)
         self.assertIn(u'Author : Gęśla Jaźń', out.decode('utf8'))

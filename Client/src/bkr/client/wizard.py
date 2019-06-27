@@ -1,11 +1,21 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+# FYI, many issues encounter using Python 2 version can be fixed by setting
+# several environmental variables:
+#
+# LANG='en_US.UTF-8'
+# LC_ALL='en_US.UTF-8'
+# PYTHONIOENCODING='UTF8'
+#
+# Most modern Linux systems do this by default though
+# but some users still can have different LANG
+
 from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import math
 
@@ -343,8 +353,15 @@ import sys
 import re
 import os
 
+# Python 2 Unicode compatibility
+# wrap stdout in utf-8 writer so we don't have to encode
+# everything that goes to print or stdout
+if sys.version_info.major == 2:
+    import codecs
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
+
 # Version
-WizardVersion = "2.3.1"
+WizardVersion = "2.3.2"
 
 # Regular expressions
 RegExpPackage    = re.compile("^(?![._+-])[.a-zA-Z0-9_+-]+(?<![._-])$")
@@ -375,14 +392,14 @@ SuggestedTestTypes = """Regression Performance Stress Certification
 
 # Guesses
 pwd_uinfo = pwd.getpwuid(os.getuid())
+
+# pw_name and pw_gecos are in ASCII encoding
+GuessAuthorLogin = pwd_uinfo.pw_name
 try:
-    GuessAuthorLogin = pwd_uinfo.pw_name.decode(sys.getfilesystemencoding())
-except AttributeError:
-    GuessAuthorLogin = pwd_uinfo.pw_name
-try:
-    GuessAuthorName = pwd_uinfo.pw_gecos.decode(sys.getfilesystemencoding())
+    GuessAuthorName = u'{}'.format(pwd_uinfo.pw_gecos.decode("utf-8"))
 except AttributeError:
     GuessAuthorName = pwd_uinfo.pw_gecos
+
 GuessAuthorDomain = re.sub("^.*\.([^.]+\.[^.]+)$", "\\1", os.uname()[1])
 GuessAuthorEmail = "%s@%s" % (GuessAuthorLogin, GuessAuthorDomain)
 
@@ -445,7 +462,7 @@ PreferencesTemplate = """<?xml version="1.0" ?>
         </skeleton>
     </skeletons>
 </wizard>
-""" % (GuessAuthorName.encode('utf8'), GuessAuthorEmail.encode('utf8'))
+""" % (GuessAuthorName, GuessAuthorEmail)
 
 
 def wrapText(text):
@@ -604,7 +621,7 @@ class Preferences:
 
     def __init__(self, load_user_prefs=True):
         """ Set (in future get) user preferences / defaults """
-        self.template = parseString(PreferencesTemplate)
+        self.template = parseString(PreferencesTemplate.encode("utf-8"))
         self.firstRun = False
         if load_user_prefs:
             self.load()
@@ -699,7 +716,7 @@ class Preferences:
 
         # try to write the file
         try:
-            file = open(PreferencesFile, "w")
+            file = open(PreferencesFile, "wb")
         except:
             print("Cannot write to %s" % PreferencesFile)
         else:
@@ -776,7 +793,17 @@ class Makefile:
             # open and read the whole content into self.text
             print("Reading the Makefile...")
             with open(self.path) as fd:
-                self.text = ''.join(fd.readlines())
+                # readlines behavior in Python 2 returns list with strings not unicode,
+                # convert them manually
+                text = []
+                for line in fd.readlines():
+                    try:
+                        line = line.decode("utf-8")
+                    except AttributeError:
+                        pass
+                    text.append(line)
+
+                self.text = ''.join(text)
 
             # substitute the old style $TEST sub-variables if present
             for var in "TOPLEVEL_NAMESPACE PACKAGE_NAME RELATIVE_PATH".split():
@@ -794,8 +821,9 @@ class Makefile:
             options.arg = [m.group(1)]
             m = RegExpVersion.search(self.text)
             options.opt.version = m.group(1)
-        except:
+        except Exception as e:
             print("Failed to parse the original Makefile")
+            print(e)
             sys.exit(6)
 
         # disable test name prefixing and set confirm to nothing
@@ -870,7 +898,7 @@ class Makefile:
 
         # let's write it
         try:
-            file = open(self.path, "w")
+            file = open(self.path, "wb")
             file.write(self.text.encode("utf-8"))
             file.close()
         except:
@@ -1217,14 +1245,20 @@ class Inquisitor:
         Read an answer from user
         """
         try:
-            answer = u'{}'.format(sys.stdin.readline().strip())
+            # Even though unicode_literals are imported, stdin still produces ascii
+            answer = sys.stdin.readline().strip()
+            answer = answer.decode("utf-8")
+        # Python 3 doesn't have decode
+        except AttributeError:
+            pass
         except KeyboardInterrupt:
             print("\nOk, finishing for now. See you later ;-)")
             sys.exit(4)
         # if just enter pressed, we leave self.data as it is (confirmed)
         if answer != "":
-            # append the data if the answer starts with a "+"
-            m = re.search("^\+\s*(.*)", answer)
+            # append the data if the answer starts with a "+",
+            # but ignore if only "+" is present
+            m = re.search("^\+\S+(.*)", answer)
             if m and isinstance(self.data, list):
                 self.data.append(m.group(1))
             else:
@@ -1241,9 +1275,11 @@ class Inquisitor:
 
     def show(self, data = None):
         """ Return current value nicely formatted (redefined in children)"""
-        if not data: data = self.data
-        if data == "": return "None"
-        return data.encode('utf8')
+        if not data:
+            data = self.data
+        if data == "":
+            return "None"
+        return data
 
     def singleName(self):
         """ Return the name in lowercase singular (for error reporting) """
@@ -1308,6 +1344,10 @@ class Inquisitor:
         # keep asking until we get sane answer
         while self.confirm or not self.valid():
             sys.stdout.write("[%s] " % self.suggestion())
+            # Python 3 had a complete IO overhaul and doesn't flush automatically
+            # like Python 2 did. So to not wait until readline() flushes, we flush before
+            # prompting user for data
+            sys.stdout.flush()
             self.read()
             self.confirm = False
 
@@ -1333,7 +1373,7 @@ class SingleChoice(Inquisitor):
         """ Try to find nearest match in the list"""
         if self.data == "?": return
         for item in self.list:
-            if re.search(self.data, item, re.I):
+            if re.search(re.escape(self.data), item, re.I):
                 self.pref = item
                 return
 
@@ -1479,7 +1519,7 @@ class MultipleChoice(SingleChoice):
         result = []
         try:
             for item in self.list:
-                if re.search(self.data[0], item, re.I):
+                if re.search(re.escape(self.data[0]), item, re.I):
                     result.append(item)
         except:
             pass
@@ -1761,7 +1801,8 @@ class Type(Inquisitor):
         self.proposed = 0
         self.proposedname = ""
         self.list = SuggestedTestTypes
-        self.dirs = [os.path.join(o) for o in os.listdir('.') if os.path.isdir(os.path.join('.',o)) and not o.startswith('.')]
+        self.dirs = [os.path.join(o) for o in os.listdir('.')
+                     if os.path.isdir(os.path.join('.', o)) and not o.startswith('.')]
         if self.options: self.default(self.options.type())
 
     def heading(self):
@@ -1771,12 +1812,14 @@ class Type(Inquisitor):
 
     def propose(self):
         """ Try to find nearest match in the list"""
+        if self.data == "?":
+            return
         self.proposed = 1
         self.proposedname = self.data
         self.description = "Type '%s' does not exist. Confirm creating a new type." % self.proposedname
         self.describe()
         for item in self.list:
-            if re.search(self.data, item, re.I):
+            if re.search(re.escape(self.data), item, re.I):
                 self.pref = item
                 return
 
@@ -2013,6 +2056,14 @@ class Name(Inquisitor):
         """ When formatting let's display with bug/CVE numbers """
         Inquisitor.format(self, self.value())
 
+    def show(self, data=None):
+        """ Return current value """
+        if data == "":
+            return "None"
+        if not data:
+            data = self.data
+        return data
+
 class Reproducers(MultipleChoice):
     """ Possible reproducers from Bugzilla """
 
@@ -2090,11 +2141,18 @@ class Reproducers(MultipleChoice):
                         new_name = ""
                         while new_name == "":
                             print("Choose a new filename for the attachment: ",)
-                            new_name = u'{}'.format(sys.stdin.readline().strip())
+                            try:
+                                # Even though unicode_literals are imported, stdin still produces ascii
+                                new_name = sys.stdin.readline().strip()
+                                new_name = new_name.decode("utf-8")
+                            # Python 3 doesn't have decode
+                            except AttributeError:
+                                pass
                         filename = path + "/" + new_name
 
-                    local = open(filename, 'w')
-                    local.write(remote.read())
+                    local = open(filename, 'wb')
+                    # XXX needs more testing
+                    local.write(remote.read().encode("utf-8"))
                     remote.close()
                     local.close()
 
@@ -2639,7 +2697,7 @@ class Skeleton(SingleChoice):
                         value = eval("test." + name + ".show()")
                 except:
                     # leave unknown xml tags as they are
-                    skeleton += child.toxml('utf-8')
+                    skeleton += child.toxml()
                 else:
                     skeleton += value
         return skeleton
@@ -2999,14 +3057,21 @@ class Test(SingleChoice):
                 print("force on -> overwriting")
             else:
                 sys.stdout.write("overwrite? [y/n] ")
-                answer = u'{}'.format(sys.stdin.readline())
+                sys.stdout.flush()
+                try:
+                    # Even though unicode_literals are imported, stdin still produces ascii
+                    answer = sys.stdin.readline().strip()
+                    answer = answer.decode("utf-8")
+                # Python 3 doesn't have decode
+                except AttributeError:
+                    pass
                 if not re.match("y", answer, re.I):
                     print("Ok skipping. Next time use -f if you want to overwrite files.")
                     return
 
         # let's write it
         try:
-            file = open(fullpath, "w")
+            file = open(fullpath, "wb")
             file.write(content.encode("utf-8"))
             file.close()
 
@@ -3034,7 +3099,7 @@ class Test(SingleChoice):
         # set file vars
         test = self.testname.value()
         package = self.package.value()
-        author = self.formatAuthor().encode('utf-8')
+        author = self.formatAuthor()
         description = self.desc.value()
         path = self.relativePath()
         fullpath = self.fullPath()
