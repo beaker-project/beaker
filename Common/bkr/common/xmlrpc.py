@@ -527,7 +527,12 @@ class SafeCookieTransport(xmlrpclib.SafeTransport, CookieTransport):
             conn.set_timeout(self.timeout)
             return conn
         else:
+            CONNECTION_LOCK.acquire()
+            # Disables HTTP connection caching added in python 2.7
+            # which causes a race condition in threads
+            self._connection = (None, None)
             conn = xmlrpclib.SafeTransport.make_connection(self, host)
+            CONNECTION_LOCK.release()
             if self.timeout:
                 conn.timeout = self.timeout
             return conn
@@ -541,7 +546,7 @@ class SafeCookieTransport(xmlrpclib.SafeTransport, CookieTransport):
         request = CookieTransport._request
 
     def __init__(self, *args, **kwargs):
-        # SafeTransport.__init__ does this but we can't call that because we 
+        # SafeTransport.__init__ does this but we can't call that because we
         # have an inheritance diamond and these are old-style classes...
         self.context = kwargs.pop('context', None)
         CookieTransport.__init__(self, *args, **kwargs)
