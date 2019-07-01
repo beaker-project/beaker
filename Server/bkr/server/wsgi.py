@@ -7,8 +7,8 @@
 """
 WSGI application entry point.
 
-Normal Beaker code should not import this module, since it has side effects 
-(such as loading configuration). It should only be imported by the WSGI 
+Normal Beaker code should not import this module, since it has side effects
+(such as loading configuration). It should only be imported by the WSGI
 application container.
 """
 
@@ -66,6 +66,7 @@ if config.get('coverage', False):
 application = app
 
 # Register all routes.
+import bkr.server.authentication
 import bkr.server.activity
 import bkr.server.user
 import bkr.server.group
@@ -84,7 +85,7 @@ import bkr.server.controllers
 
 @app.before_first_request
 def init():
-    # Make TG's run_with_transaction a no-op, we manage the transaction here 
+    # Make TG's run_with_transaction a no-op, we manage the transaction here
     # through Flask instead.
     import turbogears.database
     def run_with_transaction_noop(func, *args, **kwargs):
@@ -94,9 +95,9 @@ def init():
     turbogears.database.EndTransactionsFilter = EndTransactionsFilterNoop
     turbogears.startup.EndTransactionsFilter = EndTransactionsFilterNoop
 
-    # Make TG's restart_transaction not call session.close(). We are 
-    # responsible for calling session.close() here at the very end of the 
-    # Flask request, and if TG does it during its validation error handling, it 
+    # Make TG's restart_transaction not call session.close(). We are
+    # responsible for calling session.close() here at the very end of the
+    # Flask request, and if TG does it during its validation error handling, it
     # will break identity.
     def restart_transaction_patched(args):
         session.rollback()
@@ -140,7 +141,7 @@ def begin_session():
 
 @app.after_request
 def commit_or_rollback_session(response):
-    # Matches behaviour of TG's sa_rwt: commit on success or redirect, 
+    # Matches behaviour of TG's sa_rwt: commit on success or redirect,
     # roll back on error.
     if session.is_active:
         if response.status_code >= 200 and response.status_code < 400:
@@ -162,15 +163,15 @@ def set_extra_headers(response):
 def close_session(exception=None):
     try:
         session.close()
-    except Exception, e:
-        # If session.close() fails the application is now totally useless: 
-        # the next request will fail to start a new transaction because we have 
-        # not closed the old one here. So we kill the entire process with 
-        # SIGABRT. The application container should spawn a fresh worker to 
+    except Exception:
+        # If session.close() fails the application is now totally useless:
+        # the next request will fail to start a new transaction because we have
+        # not closed the old one here. So we kill the entire process with
+        # SIGABRT. The application container should spawn a fresh worker to
         # replace this one.
-        # Note that the most likely failure here is MemoryError, so we must not 
-        # do any other work before we abort (not even logging a message) 
-        # because that could try to allocate, which will just fail again with 
+        # Note that the most likely failure here is MemoryError, so we must not
+        # do any other work before we abort (not even logging a message)
+        # because that could try to allocate, which will just fail again with
         # MemoryError.
         os.abort()
 
