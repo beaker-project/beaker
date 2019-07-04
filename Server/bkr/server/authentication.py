@@ -14,7 +14,7 @@ from flask import jsonify
 from bkr.common.bexceptions import BX
 from bkr.server import identity
 from bkr.server.app import app
-from bkr.server.flask_util import auth_required
+from bkr.server.flask_util import auth_required, read_json_request
 from bkr.server.flask_util import Unauthorised401
 from bkr.server.model import User
 
@@ -41,15 +41,21 @@ def login_password():
     Authenticates the current session using the given username and password.
 
     The caller may act as a proxy on behalf of another user by passing the
-    *proxy_user* argument. This requires that the caller has 'proxy_auth'
+    *proxy_user* key. This requires that the caller has 'proxy_auth'
     permission.
+    The request body must be a JSON object containing username and password.
+    Proxy_user is optional.
+
+    :jsonparam string username: Username
+    :jsonparam string password: Password
+    :jsonparam string proxy_user: Username on whose behalf the caller is proxying
 
     """
 
-    payload = json.loads(request.data)
+    payload = read_json_request(request)
     username = payload.get('username')
     password = payload.get('password')
-    proxy_user = payload.get('proxyuser')
+    proxy_user = payload.get('proxy_user')
 
     user = User.by_user_name(username)
     if user is None:
@@ -77,16 +83,22 @@ def login_krbv():
     Authenticates the current session using Kerberos.
 
     The caller may act as a proxy on behalf of another user by passing the
-    *proxy_user* argument. This requires that the caller has 'proxy_auth'
+    *proxy_user* key. This requires that the caller has 'proxy_auth'
     permission.
+    The request body must be a JSON object containing krb_request.
+    Proxy_user is optional.
+
+    :jsonparam base64-encoded string krb_request: KRB_AP_REQ message containing
+    client credentials, as produced by :c:func:`krb5_mk_req`
+    :jsonparam string proxy_user: Username on whose behalf the caller is proxying
 
     """
     import krbV
     import base64
 
-    payload = json.loads(request.data)
+    payload = read_json_request(request)
     krb_request = payload.get('krb_request')
-    proxy_user = payload.get('proxyuser')
+    proxy_user = payload.get('proxy_user')
 
     context = krbV.default_context()
     server_principal = krbV.Principal(name=KRB_AUTH_PRINCIPAL, context=context)
@@ -132,13 +144,19 @@ def login_oauth2():
     Authenticates the current session using OAuth2.
 
     The caller may act as a proxy on behalf of another user by passing the
-    *proxy_user* argument. This requires that the caller has 'proxy_auth'
+    *proxy_user* key. This requires that the caller has 'proxy_auth'
     permission.
+    The request body must be a JSON object containing access_token.
+    Proxy_user is optional.
+
+    :jsonparam string access_token: The OAuth2 access token
+    :jsonparam string proxy_user: Username on whose behalf the caller is proxying
+
     """
 
-    payload = json.loads(request.data)
+    payload = read_json_request(request)
     access_token = payload.get('access_token')
-    proxy_user = payload.get('proxyuser')
+    proxy_user = payload.get('proxy_user')
 
     token_info_resp = requests.post(
         OAUTH2_TOKEN_INFO_URL,
@@ -193,11 +211,6 @@ def who_am_i():
     currently logged in user.
     Provided for testing purposes.
 
-    .. versionadded:: 0.6.0
-    .. versionchanged:: 0.6.1
-       Formerly returned only the username.
-    .. versionchanged:: 1.0
-       Also return the email address of user.
     """
     retval = {'username': identity.current.user.user_name,
               'email_address': identity.current.user.email_address}
