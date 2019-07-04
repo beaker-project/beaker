@@ -99,6 +99,7 @@ clean:
 	-rm -rf $(BUILDDIR)/*
 
 html:
+	@echo "$$0"
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
