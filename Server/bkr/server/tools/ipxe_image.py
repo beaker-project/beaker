@@ -96,6 +96,11 @@ def main():
     parser.add_option('--os-project-name', help='OpenStack project name')
     parser.add_option('--os-project-domain-name', help='OpenStack project domain name')
     parser.add_option('--os-user-domain-name', help='OpenStack user domain name')
+    parser.add_option('--image-visibility', help='OpenStack Image visibility',
+                      type='choice',
+                      choices=['public', 'private', 'shared', 'community'],
+                      default='public',
+                      )
     parser.set_defaults(debug=False, upload=True)
     options, args = parser.parse_args()
     load_config_or_exit(options.config_file)
@@ -145,7 +150,7 @@ def main():
         glance = glanceclient.v2.client.Client(glance_url, token=keystone.auth_token)
         # Generate and upload the image.
         with session.begin():
-            upload_image(glance)
+            upload_image(glance, visibility=options.image_visibility)
     else:
         print generate_image(delete=False).name
 
