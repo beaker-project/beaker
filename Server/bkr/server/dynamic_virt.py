@@ -287,56 +287,22 @@ def create_keystone_trust(trustor_username,
     openstack_user_domain_name = config.get('openstack.user_domain_name',
                                             trustor_user_domain_name)
     openstack_user_name = config.get('openstack.username')
-    if openstack_user_domain_name:
-        trustee_auth = keystoneclient.auth.identity.v3.Password(
-            username=openstack_user_name,
-            password=config.get('openstack.password'),
-            user_domain_name=openstack_user_domain_name,
-            auth_url=auth_url)
-    else:
-        trustee_auth = keystoneclient.auth.identity.v3.Password(
-            username=openstack_user_name,
-            password=config.get('openstack.password'),
-            user_domain_id=u'default',
-            auth_url=auth_url)
+    trustee_auth = keystoneclient.auth.identity.v3.Password(
+        username=openstack_user_name,
+        password=config.get('openstack.password'),
+        user_domain_name=openstack_user_domain_name or "Default",
+        auth_url=auth_url)
 
     trustee_session = keystoneclient.session.Session(auth=trustee_auth)
-    trustee = keystoneclient.v3.client.Client(session=trustee_session,
-                                              interface='public')
     try:
         trustee_auth_ref = trustee_auth.get_access(trustee_session)
-        if trustor_user_domain_name and trustor_project_domain_name:
-            trustor_auth = keystoneclient.auth.identity.v3.Password(
-                    username=trustor_username,
-                    password=trustor_password,
-                    project_name=trustor_project_name,
-                    user_domain_name=trustor_user_domain_name,
-                    project_domain_name=trustor_project_domain_name,
-                    auth_url=auth_url)
-        elif trustor_user_domain_name and not trustor_project_domain_name:
-            trustor_auth = keystoneclient.auth.identity.v3.Password(
-                    username=trustor_username,
-                    password=trustor_password,
-                    project_name=trustor_project_name,
-                    user_domain_name=trustor_user_domain_name,
-                    project_domain_id=u'default',
-                    auth_url=auth_url)
-        elif not trustor_user_domain_name and trustor_project_domain_name:
-            trustor_auth = keystoneclient.auth.identity.v3.Password(
-                    username=trustor_username,
-                    password=trustor_password,
-                    project_name=trustor_project_name,
-                    user_domain_id=u'default',
-                    project_domain_name=trustor_project_domain_name,
-                    auth_url=auth_url)
-        else:
-            trustor_auth = keystoneclient.auth.identity.v3.Password(
-                    username=trustor_username,
-                    password=trustor_password,
-                    project_name=trustor_project_name,
-                    user_domain_id=u'default',
-                    project_domain_id=u'default',
-                    auth_url=auth_url)
+        trustor_auth = keystoneclient.auth.identity.v3.Password(
+                username=trustor_username,
+                password=trustor_password,
+                project_name=trustor_project_name,
+                user_domain_name=trustor_user_domain_name or "Default",
+                project_domain_name=trustor_project_domain_name or "Default",
+                auth_url=auth_url)
 
         trustor_session = keystoneclient.session.Session(auth=trustor_auth)
         trustor = keystoneclient.v3.client.Client(session=trustor_session,

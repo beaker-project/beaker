@@ -27,6 +27,18 @@
             <input type="text" id="openstack_project_name" name="openstack_project_name" required <% if (!can_edit_keystone_trust) { %>disabled<% } %>/>
         </div>
     </div>
+    <div class="control-group">
+        <label class="control-label" for="openstack_project_domain_name">Project domain name</label>
+        <div class="controls">
+            <input placeholder="Default" type="text" id="openstack_project_domain_name" name="openstack_project_domain_name" <% if (!can_edit_keystone_trust) { %>disabled<% } %>/>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label" for="openstack_user_domain_name">User domain name</label>
+        <div class="controls">
+            <input placeholder="Default" type="text" id="openstack_user_domain_name" name="openstack_user_domain_name" <% if (!can_edit_keystone_trust) { %>disabled<% } %>/>
+        </div>
+    </div>
     <div class="form-actions">
       <button type="submit" class="btn btn-primary" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Saving&hellip;">Save Changes</button>
       <button type="reset" class="btn" data-loading-text="Revert">Revert</button>

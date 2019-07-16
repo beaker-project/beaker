@@ -99,7 +99,7 @@ window.UserSubmissionDelegatesView = Backbone.View.extend({
     render: function () {
         this.$el.html(this.template(this.model.attributes));
         this.$('[name=user_name]').beaker_typeahead('user-name');
-        // Focus the username input, but only if it's visible. (We might be 
+        // Focus the username input, but only if it's visible. (We might be
         // showing another tab right now.)
         this.$('[name=user_name]:visible').focus();
     },
@@ -166,7 +166,7 @@ window.UserUIPreferencesView = Backbone.View.extend({
                 $el.append(alert_for_xhr(xhr));
             })
             .done(function (xhr) {
-                // Bootstrap's button reset happens in setTimeout for... 
+                // Bootstrap's button reset happens in setTimeout for...
                 // questionable reasons, so we have to do the same here.
                 setTimeout(function () {
                     $el.find('.form-actions button').prop('disabled', true);
@@ -289,6 +289,10 @@ window.UserKeystoneTrustView = Backbone.View.extend({
             openstack_username: this.$('[name=openstack_username]').val(),
             openstack_password: this.$('[name=openstack_password]').val(),
             openstack_project_name: this.$('[name=openstack_project_name]').val(),
+            openstack_project_domain_name: this.$('[name=openstack_project_domain_name]').val()
+                || this.$('[name=openstack_project_domain_name]').attr('placeholder'),
+            openstack_user_domain_name: this.$('[name=openstack_user_domain_name]').val()
+                || this.$('[name=openstack_user_domain_name]').attr('placeholder'),
         };
         this.model.create_keystone_trust(attributes)
             .always(function () {
@@ -298,7 +302,7 @@ window.UserKeystoneTrustView = Backbone.View.extend({
                 $el.append(alert_for_xhr(xhr));
             })
             .done(function (xhr) {
-                // Bootstrap's button reset happens in setTimeout for... 
+                // Bootstrap's button reset happens in setTimeout for...
                 // questionable reasons, so we have to do the same here.
                 setTimeout(function () {
                     $el.find('.form-actions button').prop('disabled', true);
