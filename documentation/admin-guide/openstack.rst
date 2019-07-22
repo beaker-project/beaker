@@ -24,14 +24,14 @@ excluded from this process.
 Package prerequisites
 ---------------------
 
-- python-keystoneclient >= 0.11.0
-- python-novaclient >= 2.20.0
-- python-glanceclient >= 0.15.0
-- python-neutronclient >= 2.3.9
+- python-keystoneclient >= 3.10.0
+- python-novaclient >= 7.1.2
+- python-glanceclient >= 2.6.0
+- python-neutronclient >= 6.1.1
 
-As RHEL 6 may not provide the required version of those packages, you can use
-Juno EL6 repositories provided by CentOS in this case. See
-`JunoEL6QuickStart <https://wiki.centos.org/Cloud/OpenStack/JunoEL6QuickStart>`_
+As RHEL 7 may not provide the required version of those packages, you can use
+Ocata EL7 repositories provided by CentOS in this case. See
+`CentOS OpenStack Wiki <https://wiki.centos.org/Cloud/OpenStack/>`_
 for more details.
 
 Configuring OpenStack integration
