@@ -343,7 +343,7 @@ class CookieTransport(xmlrpclib.Transport):
             errmsg = "KERBEROS: Could not clean-up GSSAPI: %s/%s" % (ex[0][0], ex[1][0])
             raise xmlrpclib.ProtocolError(host + handler, errcode, errmsg, headers)
 
-    def single_request(self, host, handler, request_body, verbose=0):
+    def _single_request(self, host, handler, request_body, verbose=0):
         # issue XML-RPC request
 
         request_url = "%s://%s/" % (self.scheme, host)
@@ -398,6 +398,10 @@ class CookieTransport(xmlrpclib.Transport):
             response.read()
         raise xmlrpclib.ProtocolError(host + handler, response.status, response.reason, response.msg)
 
+    # Override the appropriate request method
+    # we need to store/load cookies for request
+    if hasattr(xmlrpclib.Transport, "single_request"):
+        single_request = _single_request
 
 
 class SafeCookieTransport(xmlrpclib.SafeTransport, CookieTransport):
@@ -409,14 +413,24 @@ class SafeCookieTransport(xmlrpclib.SafeTransport, CookieTransport):
 
     scheme = "https"
 
+    # Override the appropriate request method
+    # we need to store/load cookies for request
+    if hasattr(xmlrpclib.Transport, "single_request"):
+        single_request = CookieTransport._single_request
+
     def __init__(self, *args, **kwargs):
         # SafeTransport.__init__ does this but we can't call that because we
         # have an inheritance diamond and these are old-style classes...
         self.context = kwargs.pop('context', None)
         CookieTransport.__init__(self, *args, **kwargs)
 
-    def make_connection(self, host):
+    def send_request(self, connection, handler, request_body):
+        return xmlrpclib.SafeTransport.send_request(self, connection, handler, request_body)
 
+    def send_host(self, connection, host):
+        return xmlrpclib.SafeTransport.send_host(self, connection, host)
+
+    def make_connection(self, host):
         host.lower()
 
         if ':' in host:
