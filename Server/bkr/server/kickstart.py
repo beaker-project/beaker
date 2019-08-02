@@ -13,7 +13,7 @@ import jinja2.ext
 import jinja2.nodes
 import jinja2.sandbox
 import netaddr
-from flask import redirect, abort
+from flask import redirect, abort, Response
 from sqlalchemy.orm.exc import NoResultFound
 
 from bkr.server.app import app
@@ -350,4 +350,6 @@ def get_kickstart(id):
         kickstart = RenderedKickstart.by_id(id)
     except NoResultFound:
         abort(404)
-    return redirect(kickstart.url) if kickstart.url else kickstart.kickstart.encode('utf8')
+    return redirect(kickstart.url) if kickstart.url else Response(
+        kickstart.kickstart.encode('utf8'),
+        mimetype='text/plain')
