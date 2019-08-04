@@ -1,17 +1,17 @@
 
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
 import operator
-from sqlalchemy import or_, and_, not_, exists, func
-from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.orm import aliased
-from sqlalchemy.sql import false
+
 import datetime
 from lxml import etree
+from sqlalchemy import or_, and_, not_, exists, func
+from sqlalchemy.orm import aliased
+from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.sql import false
 
 from bkr.server.model import (Arch, Distro, DistroTree, DistroTag,
                               OSMajor, OSVersion, SystemPool, System, User,
@@ -20,67 +20,71 @@ from bkr.server.model import (Arch, Distro, DistroTree, DistroTag,
                               Hypervisor, Cpu, CpuFlag, Numa, Device,
                               DeviceClass, Disk, Power, PowerType)
 
+
 # This follows the SI conventions used in disks and networks --
 # *not* applicable to computer memory!
 def bytes_multiplier(units):
     return {
         'bytes': 1,
-        'B':     1,
-        'kB':    1000,
-        'KB':    1000,
-        'KiB':   1024,
-        'MB':    1000*1000,
-        'MiB':   1024*1024,
-        'GB':    1000*1000*1000,
-        'GiB':   1024*1024*1024,
-        'TB':    1000*1000*1000*1000,
-        'TiB':   1024*1024*1024*1024,
+        'B': 1,
+        'kB': 1000,
+        'KB': 1000,
+        'KiB': 1024,
+        'MB': 1000 * 1000,
+        'MiB': 1024 * 1024,
+        'GB': 1000 * 1000 * 1000,
+        'GiB': 1024 * 1024 * 1024,
+        'TB': 1000 * 1000 * 1000 * 1000,
+        'TiB': 1024 * 1024 * 1024 * 1024,
     }.get(units)
+
 
 # convert a date to a datetime range
 def get_dtrange(dt):
     start_dt = datetime.datetime.combine(
-        dt, datetime.time(0,0,0))
+        dt, datetime.time(0, 0, 0))
     end_dt = datetime.datetime.combine(
-        dt, datetime.time(23,59,59))
+        dt, datetime.time(23, 59, 59))
 
     return start_dt, end_dt
+
 
 # Common special query processing specific to
 # System.date_added and System.date_lastcheckin
 def date_filter(col, op, value):
     try:
-        dt = datetime.datetime.strptime(value,'%Y-%m-%d').date()
+        dt = datetime.datetime.strptime(value, '%Y-%m-%d').date()
     except ValueError:
         raise ValueError('Invalid date format: %s. '
-                                 'Use YYYY-MM-DD.' % value)
+                         'Use YYYY-MM-DD.' % value)
     if op == '__eq__':
         start_dt, end_dt = get_dtrange(dt)
         clause = and_(getattr(col, '__ge__')(start_dt),
-                                 (getattr(col, '__le__')(end_dt)))
+                      (getattr(col, '__le__')(end_dt)))
     elif op == '__ne__':
         start_dt, end_dt = get_dtrange(dt)
         clause = not_(and_(getattr(col, '__ge__')(start_dt),
-                                      (getattr(col, '__le__')(end_dt))))
+                           (getattr(col, '__le__')(end_dt))))
     elif op == '__gt__':
         clause = getattr(col, '__gt__')(datetime.datetime.combine
-                                       (dt,datetime.time(23, 59, 59)))
+                                        (dt, datetime.time(23, 59, 59)))
     else:
         clause = getattr(col, op)(datetime.datetime.combine
-                                 (dt,datetime.time(0, 0, 0)))
+                                  (dt, datetime.time(0, 0, 0)))
 
     return clause
 
+
 class ElementWrapper(object):
     # Operator translation table
-    op_table = { '=' : '__eq__',
-                 '==' : '__eq__',
-                 'like': 'like',
-                 '!=' : '__ne__',
-                 '>'  : '__gt__',
-                 '>=' : '__ge__',
-                 '<'  : '__lt__',
-                 '<=' : '__le__'}
+    op_table = {'=': '__eq__',
+                '==': '__eq__',
+                'like': 'like',
+                '!=': '__ne__',
+                '>': '__gt__',
+                '>=': '__ge__',
+                '<': '__lt__',
+                '<=': '__le__'}
 
     subclassDict = []
 
@@ -142,9 +146,9 @@ class ElementWrapper(object):
 
     def virtualisable(self):
         """
-        In addition to the flavor filtering, we have this simple boolean check as 
-        an extra optimisation. This should return False if the host requirements 
-        could *never* be satisfied by a dynamic virt guest. That way we can bail 
+        In addition to the flavor filtering, we have this simple boolean check as
+        an extra optimisation. This should return False if the host requirements
+        could *never* be satisfied by a dynamic virt guest. That way we can bail
         out early and avoid going to OpenStack at all for this recipe.
         """
         return False
@@ -272,6 +276,7 @@ class XmlDistroArch(ElementWrapper):
     """
     Filter distro tree based on Aarch
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
@@ -281,10 +286,12 @@ class XmlDistroArch(ElementWrapper):
             query = getattr(Arch.arch, op)(value)
         return (joins, query)
 
+
 class XmlDistroFamily(ElementWrapper):
     """
     Filter distro tree based on Family
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
@@ -294,14 +301,15 @@ class XmlDistroFamily(ElementWrapper):
             query = getattr(OSMajor.osmajor, op)(value)
         return (joins, query)
 
+
 class XmlDistroTag(ElementWrapper):
     """
     Filter distro tree based on Tag
     """
 
-    op_table = { '=' : '__eq__',
-                 '==' : '__eq__',
-                 '!=' : '__ne__'}
+    op_table = {'=': '__eq__',
+                '==': '__eq__',
+                '!=': '__ne__'}
 
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
@@ -315,10 +323,12 @@ class XmlDistroTag(ElementWrapper):
                 query = Distro._tags.any(getattr(DistroTag.tag, op)(value))
         return (joins, query)
 
+
 class XmlDistroVariant(ElementWrapper):
     """
     Filter distro tree based on variant
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
@@ -327,10 +337,12 @@ class XmlDistroVariant(ElementWrapper):
             query = getattr(DistroTree.variant, op)(value)
         return (joins, query)
 
+
 class XmlDistroName(ElementWrapper):
     """
     Filter distro tree based on distro name
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
@@ -339,6 +351,7 @@ class XmlDistroName(ElementWrapper):
             joins = joins.join(DistroTree.distro)
             query = getattr(Distro.name, op)(value)
         return (joins, query)
+
 
 class XmlDistroVirt(ElementWrapper):
     """
@@ -352,9 +365,9 @@ class XmlPool(ElementWrapper):
     Filter based on pool
     """
 
-    op_table = { '=' : '__eq__',
-                 '==' : '__eq__',
-                 '!=' : '__ne__'}
+    op_table = {'=': '__eq__',
+                '==': '__eq__',
+                '!=': '__ne__'}
 
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
@@ -384,6 +397,7 @@ class XmlKeyValue(ElementWrapper):
     """
     Filter based on key_value
     """
+
     def filter(self, joins):
         key = self.get_xml_attr('key', unicode, None)
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
@@ -409,25 +423,27 @@ class XmlKeyValue(ElementWrapper):
             query = not_(collection.any(key_value_cls.key == _key))
         elif op == '__ne__':
             query = not_(collection.any(and_(
-                    key_value_cls.key == _key,
-                    key_value_cls.key_value == value)))
+                key_value_cls.key == _key,
+                key_value_cls.key_value == value)))
         elif op == '__eq__' and value is None:
             query = collection.any(key_value_cls.key == _key)
         elif op == '__eq__':
             query = collection.any(and_(
-                    key_value_cls.key == _key,
-                    key_value_cls.key_value == value))
+                key_value_cls.key == _key,
+                key_value_cls.key_value == value))
         else:
             query = collection.any(and_(
-                    key_value_cls.key == _key,
-                    getattr(key_value_cls.key_value, op)(value)))
+                key_value_cls.key == _key,
+                getattr(key_value_cls.key_value, op)(value)))
         return (joins, query)
+
 
 class XmlAutoProv(ElementWrapper):
     """
-    Verify that a system has the ability to power cycle and is connected to a 
+    Verify that a system has the ability to power cycle and is connected to a
     lab controller
     """
+
     def filter(self, joins):
         value = self.get_xml_attr('value', unicode, False)
         query = None
@@ -436,13 +452,14 @@ class XmlAutoProv(ElementWrapper):
             query = System.lab_controller != None
         return (joins, query)
 
+
 class XmlHostLabController(ElementWrapper):
     """
     Pick a system from this lab controller
     """
-    op_table = { '=' : '__eq__',
-                 '==' : '__eq__',
-                 '!=' : '__ne__'}
+    op_table = {'=': '__eq__',
+                '==': '__eq__',
+                '!=': '__ne__'}
 
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
@@ -467,13 +484,15 @@ class XmlHostLabController(ElementWrapper):
     def virtualisable(self):
         return True
 
+
 class XmlDistroLabController(ElementWrapper):
     """
     Pick a distro tree available on this lab controller
     """
-    op_table = { '=' : '__eq__',
-                 '==' : '__eq__',
-                 '!=' : '__ne__'}
+    op_table = {'=': '__eq__',
+                '==': '__eq__',
+                '!=': '__ne__'}
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
@@ -481,20 +500,24 @@ class XmlDistroLabController(ElementWrapper):
             return (joins, None)
         if op == '__eq__':
             query = exists([1],
-                    from_obj=[LabControllerDistroTree.__table__.join(LabController.__table__)])\
-                    .where(LabControllerDistroTree.distro_tree_id == DistroTree.id)\
-                    .where(LabController.fqdn == value)
+                           from_obj=
+                           [LabControllerDistroTree.__table__.join(LabController.__table__)]) \
+                .where(LabControllerDistroTree.distro_tree_id == DistroTree.id) \
+                .where(LabController.fqdn == value)
         else:
             query = not_(exists([1],
-                    from_obj=[LabControllerDistroTree.__table__.join(LabController.__table__)])\
-                    .where(LabControllerDistroTree.distro_tree_id == DistroTree.id)\
-                    .where(LabController.fqdn == value))
+                                from_obj=[LabControllerDistroTree.__table__.join
+                                          (LabController.__table__)]) \
+                         .where(LabControllerDistroTree.distro_tree_id == DistroTree.id) \
+                         .where(LabController.fqdn == value))
         return (joins, query)
 
+
 class XmlHypervisor(ElementWrapper):
-    """ 
+    """
     Pick a system based on the hypervisor.
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, '')
@@ -512,16 +535,18 @@ class XmlHypervisor(ElementWrapper):
         return self._matches_kvm()
 
     def _matches_kvm(self):
-        # XXX 'KVM' is hardcoded here assuming that is what OpenStack is using, 
+        # XXX 'KVM' is hardcoded here assuming that is what OpenStack is using,
         # but we should have a better solution
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, '')
         return getattr(operator, op)('KVM', value)
 
+
 class XmlSystemType(ElementWrapper):
     """
     Pick a system with the correct system type.
     """
+
     def filter(self, joins):
         value = self.get_xml_attr('value', unicode, None)
         query = None
@@ -542,10 +567,12 @@ class XmlSystemType(ElementWrapper):
         value = self.get_xml_attr('value', unicode, None)
         return value == 'Machine'
 
+
 class XmlSystemStatus(ElementWrapper):
     """
     Pick a system with the correct system status.
     """
+
     def filter(self, joins):
         value = self.get_xml_attr('value', unicode, None)
         query = None
@@ -553,10 +580,12 @@ class XmlSystemStatus(ElementWrapper):
             query = System.status == value
         return (joins, query)
 
+
 class XmlHostName(ElementWrapper):
     """
     Pick a system wth the correct hostname.
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
@@ -565,17 +594,18 @@ class XmlHostName(ElementWrapper):
             query = getattr(System.fqdn, op)(value)
         return (joins, query)
 
+
 class XmlLastInventoried(ElementWrapper):
     """
     Pick a system wth the correct last inventoried date/status
     """
-    op_table = { '=' : '__eq__',
-                 '==' : '__eq__',
-                 '!=' : '__ne__',
-                 '>'  : '__gt__',
-                 '>=' : '__ge__',
-                 '<'  : '__lt__',
-                 '<=' : '__le__'}
+    op_table = {'=': '__eq__',
+                '==': '__eq__',
+                '!=': '__ne__',
+                '>': '__gt__',
+                '>=': '__ge__',
+                '<': '__lt__',
+                '<=': '__le__'}
 
     def filter(self, joins):
         col = System.date_lastcheckin
@@ -589,10 +619,12 @@ class XmlLastInventoried(ElementWrapper):
 
         return (joins, clause)
 
+
 class XmlSystemCompatibleWithDistro(ElementWrapper):
     """
     Matches systems which are compatible with the given OS version.
     """
+
     def filter(self, joins):
         arch_name = self.get_xml_attr('arch', unicode, None)
         try:
@@ -606,10 +638,12 @@ class XmlSystemCompatibleWithDistro(ElementWrapper):
         clause = System.compatible_with_distro_tree(arch, osmajor, osminor)
         return (joins, clause)
 
+
 class XmlSystemLender(ElementWrapper):
     """
     Pick a system wth the correct lender.
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
@@ -618,10 +652,12 @@ class XmlSystemLender(ElementWrapper):
             query = getattr(System.lender, op)(value)
         return (joins, query)
 
+
 class XmlSystemVendor(ElementWrapper):
     """
     Pick a system wth the correct vendor.
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
@@ -630,10 +666,12 @@ class XmlSystemVendor(ElementWrapper):
             query = getattr(System.vendor, op)(value)
         return (joins, query)
 
+
 class XmlSystemLocation(ElementWrapper):
     """
     Pick a system wth the correct location.
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
@@ -642,10 +680,12 @@ class XmlSystemLocation(ElementWrapper):
             query = getattr(System.location, op)(value)
         return (joins, query)
 
+
 class XmlSystemSerial(ElementWrapper):
     """
     Pick a system wth the correct Serial Number.
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
@@ -654,10 +694,12 @@ class XmlSystemSerial(ElementWrapper):
             query = getattr(System.serial, op)(value)
         return (joins, query)
 
+
 class XmlSystemModel(ElementWrapper):
     """
     Pick a system wth the correct model.
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
@@ -666,10 +708,12 @@ class XmlSystemModel(ElementWrapper):
             query = getattr(System.model, op)(value)
         return (joins, query)
 
+
 class XmlMemory(ElementWrapper):
     """
     Pick a system wth the correct amount of memory.
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', int, None)
@@ -683,16 +727,18 @@ class XmlMemory(ElementWrapper):
         value = self.get_xml_attr('value', int, None)
         if value:
             flavors = [flavor for flavor in flavors
-                    if getattr(operator, op)(flavor.ram, value)]
+                       if getattr(operator, op)(flavor.ram, value)]
         return flavors
 
     def virtualisable(self):
         return True
 
+
 class XmlSystemOwner(ElementWrapper):
     """
     Pick a system with the correct owner.
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
@@ -703,10 +749,12 @@ class XmlSystemOwner(ElementWrapper):
             query = getattr(owner_alias.user_name, op)(value)
         return (joins, query)
 
+
 class XmlSystemUser(ElementWrapper):
     """
     Pick a system with the correct user.
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
@@ -717,10 +765,12 @@ class XmlSystemUser(ElementWrapper):
             query = getattr(user_alias.user_name, op)(value)
         return (joins, query)
 
+
 class XmlSystemLoaned(ElementWrapper):
     """
     Pick a system that has been loaned to this user.
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
@@ -731,17 +781,18 @@ class XmlSystemLoaned(ElementWrapper):
             query = getattr(loaned_alias.user_name, op)(value)
         return (joins, query)
 
+
 class XmlSystemAdded(ElementWrapper):
     """
     Pick a system based on when it was added
     """
-    op_table = { '=' : '__eq__',
-                 '==' : '__eq__',
-                 '!=' : '__ne__',
-                 '>'  : '__gt__',
-                 '>=' : '__ge__',
-                 '<'  : '__lt__',
-                 '<=' : '__le__'}
+    op_table = {'=': '__eq__',
+                '==': '__eq__',
+                '!=': '__ne__',
+                '>': '__gt__',
+                '>=': '__ge__',
+                '<': '__lt__',
+                '<=': '__le__'}
 
     def filter(self, joins):
         col = System.date_added
@@ -754,10 +805,12 @@ class XmlSystemAdded(ElementWrapper):
 
         return (joins, clause)
 
+
 class XmlSystemPowertype(ElementWrapper):
     """
     Pick a system that has been loaned to this user.
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
@@ -767,10 +820,12 @@ class XmlSystemPowertype(ElementWrapper):
             query = getattr(PowerType.name, op)(value)
         return (joins, query)
 
+
 class XmlCpuProcessors(ElementWrapper):
     """
     Pick a system with the correct amount of cpu processors.
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', int, None)
@@ -781,23 +836,25 @@ class XmlCpuProcessors(ElementWrapper):
         return (joins, query)
 
     def filter_openstack_flavors(self, flavors, lab_controller):
-        # We treat an OpenStack flavor with N vcpus as having N single-core 
-        # processors. Not sure how realistic that is but we have to pick 
+        # We treat an OpenStack flavor with N vcpus as having N single-core
+        # processors. Not sure how realistic that is but we have to pick
         # something...
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', int, None)
         if value:
             flavors = [flavor for flavor in flavors
-                    if getattr(operator, op)(flavor.vcpus, value)]
+                       if getattr(operator, op)(flavor.vcpus, value)]
         return flavors
 
     def virtualisable(self):
         return True
 
+
 class XmlCpuCores(ElementWrapper):
     """
     Pick a system with the correct amount of cpu cores.
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', int, None)
@@ -812,16 +869,18 @@ class XmlCpuCores(ElementWrapper):
         value = self.get_xml_attr('value', int, None)
         if value:
             flavors = [flavor for flavor in flavors
-                    if getattr(operator, op)(flavor.vcpus, value)]
+                       if getattr(operator, op)(flavor.vcpus, value)]
         return flavors
 
     def virtualisable(self):
         return True
 
+
 class XmlCpuFamily(ElementWrapper):
     """
     Pick a system with the correct cpu family.
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', int, None)
@@ -836,6 +895,7 @@ class XmlCpuModel(ElementWrapper):
     """
     Pick a system with the correct cpu model.
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', int, None)
@@ -850,6 +910,7 @@ class XmlCpuModelName(ElementWrapper):
     """
     Pick a system with the correct cpu model_name.
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
@@ -864,6 +925,7 @@ class XmlCpuSockets(ElementWrapper):
     """
     Pick a system with the correct number of cpu sockets.
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', int, None)
@@ -878,6 +940,7 @@ class XmlCpuSpeed(ElementWrapper):
     """
     Pick a system with the correct cpu speed.
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', float, None)
@@ -892,6 +955,7 @@ class XmlCpuStepping(ElementWrapper):
     """
     Pick a system with the correct cpu stepping.
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', int, None)
@@ -906,6 +970,7 @@ class XmlCpuVendor(ElementWrapper):
     """
     Pick a system with the correct cpu vendor.
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
@@ -920,6 +985,7 @@ class XmlCpuHyper(ElementWrapper):
     """
     Pick a system with cpu's that have hyperthreading enabled.
     """
+
     def filter(self, joins):
         op = '__eq__'
         uvalue = self.get_xml_attr('value', unicode, False).lower()
@@ -936,10 +1002,10 @@ class XmlCpuFlag(ElementWrapper):
     Filter systems based on System.cpu.flags
     """
 
-    op_table = { '=' : '__eq__',
-                 '==' : '__eq__',
-                 'like' : 'like',
-                 '!=' : '__ne__'}
+    op_table = {'=': '__eq__',
+                '==': '__eq__',
+                'like': 'like',
+                '!=': '__ne__'}
 
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
@@ -955,14 +1021,15 @@ class XmlCpuFlag(ElementWrapper):
                 query = Cpu.flags.any(query)
         return (joins, query)
 
+
 class XmlArch(ElementWrapper):
     """
     Pick a system with the correct arch
     """
 
-    op_table = { '=' : '__eq__',
-                 '==' : '__eq__',
-                 '!=' : '__ne__'}
+    op_table = {'=': '__eq__',
+                '==': '__eq__',
+                '!=': '__ne__'}
 
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
@@ -997,10 +1064,12 @@ class XmlArch(ElementWrapper):
         return (getattr(operator, op)('x86_64', value) or
                 getattr(operator, op)('i386', value))
 
+
 class XmlNumaNodeCount(ElementWrapper):
     """
     Pick a system with the correct number of NUMA nodes.
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', int, None)
@@ -1010,15 +1079,16 @@ class XmlNumaNodeCount(ElementWrapper):
             query = getattr(Numa.nodes, op)(value)
         return (joins, query)
 
+
 class XmlDevice(ElementWrapper):
     """
     Pick a system with a matching device.
     """
 
-    op_table = { '=' : '__eq__',
-                 '==' : '__eq__',
-                 'like' : 'like',
-                 '!=' : '__ne__'}
+    op_table = {'=': '__eq__',
+                '==': '__eq__',
+                'like': 'like',
+                '!=': '__ne__'}
 
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
@@ -1029,11 +1099,11 @@ class XmlDevice(ElementWrapper):
                      'subsys_vendor_id', 'subsys_device_id', 'description']:
             value = self.get_xml_attr(attr, unicode, None)
             if value:
-                filter_clauses.append(getattr(getattr(Device, attr),equal)(value))
+                filter_clauses.append(getattr(getattr(Device, attr), equal)(value))
         if self.get_xml_attr('type', unicode, None):
             filter_clauses.append(Device.device_class.has(
-                    DeviceClass.device_class ==
-                    self.get_xml_attr('type', unicode, None)))
+                DeviceClass.device_class ==
+                self.get_xml_attr('type', unicode, None)))
         if filter_clauses:
             if op == '__ne__':
                 query = not_(System.devices.any(and_(*filter_clauses)))
@@ -1045,16 +1115,18 @@ class XmlDevice(ElementWrapper):
 # N.B. these XmlDisk* filters do not work outside of a <disk/> element!
 
 class XmlDiskModel(ElementWrapper):
-    op_table = { '=' : '__eq__',
-                 '==' : '__eq__',
-                 'like' : 'like',
-                 '!=' : '__ne__'}
+    op_table = {'=': '__eq__',
+                '==': '__eq__',
+                'like': 'like',
+                '!=': '__ne__'}
+
     def filter_disk(self):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
         if value:
             return getattr(Disk.model, op)(value)
         return None
+
 
 class XmlDiskSize(ElementWrapper):
 
@@ -1076,11 +1148,12 @@ class XmlDiskSize(ElementWrapper):
         value = self._bytes_value()
         if value:
             flavors = [flavor for flavor in flavors
-                    if getattr(operator, op)(flavor.disk, value)]
+                       if getattr(operator, op)(flavor.disk, value)]
         return flavors
 
     def virtualisable(self):
         return True
+
 
 class XmlDiskSectorSize(ElementWrapper):
     def filter_disk(self):
@@ -1089,8 +1162,9 @@ class XmlDiskSectorSize(ElementWrapper):
         units = self.get_xml_attr('units', unicode, 'bytes')
         if value:
             return getattr(Disk.sector_size, op)(
-                    value * bytes_multiplier(units))
+                value * bytes_multiplier(units))
         return None
+
 
 class XmlDiskPhysSectorSize(ElementWrapper):
     def filter_disk(self):
@@ -1099,8 +1173,9 @@ class XmlDiskPhysSectorSize(ElementWrapper):
         units = self.get_xml_attr('units', unicode, 'bytes')
         if value:
             return getattr(Disk.phys_sector_size, op)(
-                    value * bytes_multiplier(units))
+                value * bytes_multiplier(units))
         return None
+
 
 class XmlDisk(XmlAnd):
     subclassDict = {
@@ -1124,10 +1199,12 @@ class XmlDisk(XmlAnd):
             return (joins, System.disks.any())
         return (joins, System.disks.any(and_(*clauses)))
 
+
 class XmlDiskSpace(ElementWrapper):
     """
     Filter systems by total disk space
     """
+
     def _bytes_value(self):
         value = self.get_xml_attr('value', int, None)
         units = self.get_xml_attr('units', unicode, 'bytes')
@@ -1142,10 +1219,12 @@ class XmlDiskSpace(ElementWrapper):
             query = getattr(System.diskspace, op)(value)
         return (joins, query)
 
+
 class XmlDiskCount(ElementWrapper):
     """
     Filter systems by total number of disks
     """
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', int, None)
@@ -1154,77 +1233,79 @@ class XmlDiskCount(ElementWrapper):
             query = getattr(System.diskcount, op)(value)
         return (joins, query)
 
+
 class XmlCpu(XmlAnd):
     subclassDict = {
-                    'and': XmlAnd,
-                    'or': XmlOr,
-                    'not': XmlNot,
-                    'processors': XmlCpuProcessors,
-                    'cores': XmlCpuCores,
-                    'family': XmlCpuFamily,
-                    'hyper': XmlCpuHyper,
-                    'model': XmlCpuModel,
-                    'model_name': XmlCpuModelName,
-                    'sockets': XmlCpuSockets,
-                    'speed': XmlCpuSpeed,
-                    'stepping': XmlCpuStepping,
-                    'vendor': XmlCpuVendor,
-                    'flag': XmlCpuFlag,
-                   }
+        'and': XmlAnd,
+        'or': XmlOr,
+        'not': XmlNot,
+        'processors': XmlCpuProcessors,
+        'cores': XmlCpuCores,
+        'family': XmlCpuFamily,
+        'hyper': XmlCpuHyper,
+        'model': XmlCpuModel,
+        'model_name': XmlCpuModelName,
+        'sockets': XmlCpuSockets,
+        'speed': XmlCpuSpeed,
+        'stepping': XmlCpuStepping,
+        'vendor': XmlCpuVendor,
+        'flag': XmlCpuFlag,
+    }
+
 
 class XmlSystem(XmlAnd):
     subclassDict = {
-                    'and': XmlAnd,
-                    'or': XmlOr,
-                    'not': XmlNot,
-                    'name': XmlHostName,
-                    'type': XmlSystemType,
-                    'status': XmlSystemStatus,
-                    'lender': XmlSystemLender,
-                    'vendor': XmlSystemVendor,
-                    'model': XmlSystemModel,
-                    'owner': XmlSystemOwner,
-                    'user': XmlSystemUser,
-                    'loaned': XmlSystemLoaned,
-                    'location': XmlSystemLocation,
-                    'powertype': XmlSystemPowertype, #Should this be here?
-                    'serial': XmlSystemSerial,
-                    'memory': XmlMemory,
-                    'arch': XmlArch,
-                    'numanodes': XmlNumaNodeCount,
-                    'hypervisor': XmlHypervisor,
-                    'added': XmlSystemAdded,
-                    'last_inventoried':XmlLastInventoried,
-                    'compatible_with_distro': XmlSystemCompatibleWithDistro,
-                   }
+        'and': XmlAnd,
+        'or': XmlOr,
+        'not': XmlNot,
+        'name': XmlHostName,
+        'type': XmlSystemType,
+        'status': XmlSystemStatus,
+        'lender': XmlSystemLender,
+        'vendor': XmlSystemVendor,
+        'model': XmlSystemModel,
+        'owner': XmlSystemOwner,
+        'user': XmlSystemUser,
+        'loaned': XmlSystemLoaned,
+        'location': XmlSystemLocation,
+        'powertype': XmlSystemPowertype,  # Should this be here?
+        'serial': XmlSystemSerial,
+        'memory': XmlMemory,
+        'arch': XmlArch,
+        'numanodes': XmlNumaNodeCount,
+        'hypervisor': XmlHypervisor,
+        'added': XmlSystemAdded,
+        'last_inventoried': XmlLastInventoried,
+        'compatible_with_distro': XmlSystemCompatibleWithDistro,
+    }
 
 
 class XmlHost(XmlAnd):
     subclassDict = {
-                    'and': XmlAnd,
-                    'or': XmlOr,
-                    'not': XmlNot,
-                    'labcontroller': XmlHostLabController,
-                    'system': XmlSystem,
-                    'cpu': XmlCpu,
-                    'device': XmlDevice,
-                    'disk': XmlDisk,
-                    'diskspace': XmlDiskSpace,
-                    'diskcount': XmlDiskCount,
-                    'pool': XmlPool,
-                    # for backward compatibility
-                    'group': XmlPool,
-                    'key_value': XmlKeyValue,
-                    'auto_prov': XmlAutoProv,
-                    'hostlabcontroller': XmlHostLabController, #deprecated
-                    'system_type': XmlSystemType, #deprecated
-                    'memory': XmlMemory, #deprecated
-                    'cpu_count': XmlCpuProcessors, #deprecated
-                    'hostname': XmlHostName, #deprecated
-                    'arch': XmlArch, #deprecated
-                    'numa_node_count': XmlNumaNodeCount, #deprecated
-                    'hypervisor': XmlHypervisor, #deprecated
-                   }
+        'and': XmlAnd,
+        'or': XmlOr,
+        'not': XmlNot,
+        'labcontroller': XmlHostLabController,
+        'system': XmlSystem,
+        'cpu': XmlCpu,
+        'device': XmlDevice,
+        'disk': XmlDisk,
+        'diskspace': XmlDiskSpace,
+        'diskcount': XmlDiskCount,
+        'pool': XmlPool,
+        # for backward compatibility
+        'group': XmlPool,
+        'key_value': XmlKeyValue,
+        'auto_prov': XmlAutoProv,
+        'hostlabcontroller': XmlHostLabController,  # deprecated
+        'system_type': XmlSystemType,  # deprecated
+        'memory': XmlMemory,  # deprecated
+        'cpu_count': XmlCpuProcessors,  # deprecated
+        'hostname': XmlHostName,  # deprecated
+        'arch': XmlArch,  # deprecated
+        'numa_node_count': XmlNumaNodeCount,  # deprecated
+        'hypervisor': XmlHypervisor,  # deprecated
+    }
 
     @classmethod
     def from_string(cls, xml_string):
@@ -1236,7 +1317,7 @@ class XmlHost(XmlAnd):
     @property
     def force(self):
         """
-        <hostRequires force="$FQDN"/> means to skip all normal host filtering 
+        <hostRequires force="$FQDN"/> means to skip all normal host filtering
         and always use the named system.
         """
         return self.get_xml_attr('force', unicode, None)
@@ -1248,32 +1329,34 @@ class XmlHost(XmlAnd):
 
     # Physical Beaker systems are expected to have at least one disk of a sane
     # size, so recipes will often not bother including a requirement on disk
-    # size. But OpenStack flavors can have no disk at all, so we filter those
-    # out here.
+    # size. But OpenStack flavors can have no disk at all or really small disk,
+    # so we filter those out here.
     def filter_openstack_flavors(self, flavors, lab_controller):
         result = super(XmlHost, self).filter_openstack_flavors(flavors, lab_controller)
-        return [flavor for flavor in result if flavor.disk > 0]
+        # 10G is sufficient for most of current distributions supported by Beaker
+        return [flavor for flavor in result if flavor.disk > 10]
+
 
 class XmlDistro(XmlAnd):
     subclassDict = {
-                    'and': XmlAnd,
-                    'or': XmlOr,
-                    'not': XmlNot,
-                    'arch': XmlDistroArch,
-                    'family': XmlDistroFamily,
-                    'variant': XmlDistroVariant,
-                    'name': XmlDistroName,
-                    'tag': XmlDistroTag,
-                    'virt': XmlDistroVirt,
-                    'labcontroller': XmlDistroLabController,
-                    'distro_arch': XmlDistroArch, #deprecated
-                    'distro_family': XmlDistroFamily, #deprecated
-                    'distro_variant': XmlDistroVariant, #deprecated
-                    'distro_name': XmlDistroName, #deprecated
-                    'distro_tag': XmlDistroTag, #deprecated
-                    'distro_virt': XmlDistroVirt, #deprecated
-                    'distrolabcontroller': XmlDistroLabController, #deprecated
-                   }
+        'and': XmlAnd,
+        'or': XmlOr,
+        'not': XmlNot,
+        'arch': XmlDistroArch,
+        'family': XmlDistroFamily,
+        'variant': XmlDistroVariant,
+        'name': XmlDistroName,
+        'tag': XmlDistroTag,
+        'virt': XmlDistroVirt,
+        'labcontroller': XmlDistroLabController,
+        'distro_arch': XmlDistroArch,  # deprecated
+        'distro_family': XmlDistroFamily,  # deprecated
+        'distro_variant': XmlDistroVariant,  # deprecated
+        'distro_name': XmlDistroName,  # deprecated
+        'distro_tag': XmlDistroTag,  # deprecated
+        'distro_virt': XmlDistroVirt,  # deprecated
+        'distrolabcontroller': XmlDistroLabController,  # deprecated
+    }
 
 
 def apply_distro_filter(filter, query):
