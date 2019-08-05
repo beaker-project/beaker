@@ -14,7 +14,7 @@ def check_http(url):
     try:
         urllib2.urlopen(url, timeout=120)
         return True
-    except urllib2.HTTPError, e:
+    except urllib2.HTTPError as e:
         if e.code in (404, 410):
             return False
         else:
@@ -25,7 +25,7 @@ def check_ftp(url):
     try:
         urllib2.urlopen(url, timeout=120)
         return True
-    except urllib2.URLError, e:
+    except urllib2.URLError as e:
         if '550' in e.reason:
             return False
         else:
@@ -75,38 +75,44 @@ def check_url(url):
         raise ValueError('Unrecognised URL scheme %s for tree %s' % (scheme, url))
 
 
-def check_all_trees(ignore_errors=False, dry_run=False, lab_controller='http://localhost:8000'):
+def check_all_trees(ignore_errors=False,
+                    dry_run=False,
+                    lab_controller='http://localhost:8000',
+                    remove_all=False):
     proxy = xmlrpclib.ServerProxy(lab_controller, allow_none=True)
     rdistro_trees = []
     distro_trees = proxy.get_distro_trees()
-    for distro_tree in distro_trees:
-        accessable = False
-        for lc, url in distro_tree['available']:
-            try:
-                if check_url(url):
-                    accessable = True
-                else:
-                    print('{0} is missing [Distro Tree ID {1}]'.format(
-                        url,
-                        distro_tree['distro_tree_id']))
-            except (urllib2.URLError, urllib2.HTTPError, NFSServerInaccessible) as e:
-                if ignore_errors:
-                    # suppress exception, assume the tree still exists
-                    accessable = True
-                else:
-                    sys.stderr.write('Error checking for existence of URL %s '
-                                     'for distro tree %s:\n%s\n'
-                                     % (url, distro_tree['distro_tree_id'], e))
-                    sys.exit(1)
-        if not accessable:
-            # All methods were unaccessable!
-            rdistro_trees.append(distro_tree)
+    if not remove_all:
+        for distro_tree in distro_trees:
+            accessible = False
+            for lc, url in distro_tree['available']:
+                try:
+                    if check_url(url):
+                        accessible = True
+                    else:
+                        print('{0} is missing [Distro Tree ID {1}]'.format(
+                            url,
+                            distro_tree['distro_tree_id']))
+                except (urllib2.URLError, urllib2.HTTPError, NFSServerInaccessible) as e:
+                    if ignore_errors:
+                        # suppress exception, assume the tree still exists
+                        accessible = True
+                    else:
+                        sys.stderr.write('Error checking for existence of URL %s '
+                                         'for distro tree %s:\n%s\n'
+                                         % (url, distro_tree['distro_tree_id'], e))
+                        sys.exit(1)
+            if not accessible:
+                # All methods were inaccessible!
+                rdistro_trees.append(distro_tree)
+    else:
+        rdistro_trees = distro_trees
 
     # if all distro_trees are expired then something is probably wrong.
     if len(distro_trees) != len(rdistro_trees):
         for distro_tree in rdistro_trees:
             if dry_run:
-                print('No longer accessible distro %s:%d' % (distro_tree['distro_name'],
+                print('Distro marked for remove %s:%d' % (distro_tree['distro_name'],
                                                              distro_tree['distro_tree_id']))
             else:
                 print('Removing distro %s:%d' % (distro_tree['distro_name'],
@@ -121,16 +127,21 @@ def main():
     from optparse import OptionParser
     parser = OptionParser()
     parser.add_option('--ignore-errors', default=False, action='store_true',
-                      help='Ignore all network errors when communicating with mirrors')
+                      help='Ignore all network errors when communicating with mirrors.')
     parser.add_option('--dry-run', default=False, action='store_true',
                       help='Prints no longer accessible distro without updating the database.')
     parser.add_option('--lab-controller',
                       default='http://localhost:8000',
                       help='Specify which lab controller to import to. '
                            'Defaults to http://localhost:8000.')
+    parser.add_option('--remove-all', default=False, action='store_true',
+                      help='Remove all distros from lab controller.')
     options, args = parser.parse_args()
     try:
-        check_all_trees(options.ignore_errors, options.dry_run, options.lab_controller)
+        check_all_trees(options.ignore_errors,
+                        options.dry_run,
+                        options.lab_controller,
+                        options.remove_all)
     except KeyboardInterrupt:
         pass
 
