@@ -3,7 +3,6 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import json
 import logging
 import socket
 
@@ -81,17 +80,14 @@ def login_password():
 def login_krbv():
     """
     Authenticates the current session using Kerberos.
-
     The caller may act as a proxy on behalf of another user by passing the
     *proxy_user* key. This requires that the caller has 'proxy_auth'
-    permission.
-    The request body must be a JSON object containing krb_request.
+    permission. The request body must be a JSON object containing krb_request.
     Proxy_user is optional.
 
-    :jsonparam base64-encoded string krb_request: KRB_AP_REQ message containing
-    client credentials, as produced by :c:func:`krb5_mk_req`
+    :jsonparam base64-encoded-string krb_request: KRB_AP_REQ message containing
+        client credentials, as produced by :c:func:`krb5_mk_req`
     :jsonparam string proxy_user: Username on whose behalf the caller is proxying
-
     """
     import krbV
     import base64
@@ -235,6 +231,7 @@ class Auth(RPCRoot):
         Returns an XML-RPC structure (dict) with information about the
         currently logged in user.
         Provided for testing purposes.
+
         .. versionadded:: 0.6.0
         .. versionchanged:: 0.6.1
            Formerly returned only the username.
@@ -340,7 +337,7 @@ class Auth(RPCRoot):
         *proxy_user* argument. This requires that the caller has 'proxy_auth'
         permission.
         :param krb_request: KRB_AP_REQ message containing client credentials,
-            as produced by :c:func:`krb5_mk_req`
+        as produced by :c:func:`krb5_mk_req`
         :type krb_request: base64-encoded string
         :param proxy_user: username on whose behalf the caller is proxying
         :type proxy_user: string or None

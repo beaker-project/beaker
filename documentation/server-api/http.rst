@@ -1,3 +1,5 @@
+.. _http_resources:
+
 HTTP resources
 ==============
 

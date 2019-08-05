@@ -512,9 +512,9 @@ def create_keystone_trust_for_self():
     :jsonparam string openstack_password: OpenStack password.
     :jsonparam string openstack_project_name: OpenStack project name.
     :jsonparam string openstack_project_domain_name: OpenStack project domain name.
-    Optional parameter. [Default: "Default"].
+        Optional parameter. [Default: "Default"].
     :jsonparam string openstack_user_domain_name: OpenStack user domain name.
-    Optional parameter. [Default: "Default"].
+        Optional parameter. [Default: "Default"].
     :status 200: Keystone trust created.
     :status 400: Invalid data was given/OpenStack is not enabled.
     :status 403: Cannot edit Keystone trust.
@@ -535,9 +535,9 @@ def create_keystone_trust(username):
     :jsonparam string openstack_password: OpenStack password.
     :jsonparam string openstack_project_name: OpenStack project name.
     :jsonparam string openstack_project_domain_name: OpenStack project domain name.
-    Optional parameter. [Default value: "Default"].
+        Optional parameter. [Default value: "Default"].
     :jsonparam string openstack_user_domain_name: OpenStack user domain name.
-    Optional parameter. [Default value: "Default"].
+        Optional parameter. [Default value: "Default"].
     :status 200: Keystone trust created.
     :status 400: Invalid data was given/OpenStack is not enabled.
     :status 403: Cannot edit Keystone trust.
