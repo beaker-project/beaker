@@ -2029,9 +2029,10 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
             instance = self.virt_manager.novaclient.servers.get(
                 recipe.resource.instance_id)
             available_flavors = self.virt_manager.available_flavors()
-            # remove the flavor that has no disk.
+            # remove the flavor that has no disk
+            # and flavor with really small disk
             for flavor in available_flavors:
-                if flavor.disk == 0:
+                if flavor.disk < 10:
                     available_flavors.remove(flavor)
             # cheapest flavor is smallest disk and smallest ram
             smallest_disk_list = sorted(available_flavors, key=lambda flavor: flavor.disk)

@@ -1334,7 +1334,7 @@ class XmlHost(XmlAnd):
     def filter_openstack_flavors(self, flavors, lab_controller):
         result = super(XmlHost, self).filter_openstack_flavors(flavors, lab_controller)
         # 10G is sufficient for most of current distributions supported by Beaker
-        return [flavor for flavor in result if flavor.disk > 10]
+        return [flavor for flavor in result if flavor.disk >= 10]
 
 
 class XmlDistro(XmlAnd):
