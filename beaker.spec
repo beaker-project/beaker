@@ -202,6 +202,7 @@ BuildRequires:  python2-passlib
 BuildRequires:  python2-alembic
 BuildRequires:  python2-daemon
 BuildRequires:  python2-futures
+BuildRequires:  python2-qpid-proton >= 0.13.0
 Requires:       TurboGears
 Requires:       python2-turbojson
 Requires:       python2-sqlalchemy
@@ -226,6 +227,7 @@ Requires:       python2-webassets
 Requires:       python2-passlib
 Requires:       python2-alembic
 Requires:       python2-futures
+Requires:       python2-qpid-proton >= 0.13.0
 %else # old style Python package names
 BuildRequires:  python-requests
 BuildRequires:  TurboGears >= 1.1.3
@@ -247,6 +249,7 @@ BuildRequires:  python-passlib
 BuildRequires:  python-alembic
 BuildRequires:  python-daemon
 BuildRequires:  python-futures
+BuildRequires:  python-qpid-proton >= 0.13.0
 Requires:       TurboGears >= 1.1.3
 Requires:       python-turbojson
 Requires:       python-sqlalchemy >= 0.9
@@ -271,6 +274,7 @@ Requires:       python-webassets
 Requires:       python-passlib
 Requires:       python-alembic
 Requires:       python-futures
+Requires:       python-qpid-proton >= 0.13.0
 %endif
 %if %{with systemd}
 BuildRequires:  systemd
