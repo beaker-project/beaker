@@ -1,0 +1,223 @@
+# This schema is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
+namespace a = "http://relaxng.org/ns/compatibility/annotations/1.0"
+
+start = task
+task =
+  element task {
+    attribute name {
+      xsd:string
+      >> a:documentation [
+           xml:lang = "en"
+           "\x{a}" ~
+           "            The name of the task, consists of namespaces seperated by '/'\x{a}" ~
+           "          "
+         ]
+    }
+    & attribute creation_date {
+        xsd:string
+        >> a:documentation [
+             xml:lang = "en"
+             "\x{a}" ~
+             "            This is the datetime when the task was initially created\x{a}" ~
+             "          "
+           ]
+      }
+    & attribute destructive {
+        xsd:boolean
+        >> a:documentation [
+             xml:lang = "en"
+             "\x{a}" ~
+             "              A destructive task is one that destroys data on the machine\x{a}" ~
+             "            "
+           ]
+      }?
+    & attribute nda {
+        xsd:boolean
+        >> a:documentation [
+             xml:lang = "en"
+             "\x{a}" ~
+             "              This is to inform whether or not the task is subject to\x{a}" ~
+             "              a non disclosure agreement\x{a}" ~
+             "            "
+           ]
+      }?
+    & [
+        a:documentation [
+          xml:lang = "en"
+          "\x{a}" ~
+          "            The current version of the task. The tracking of this\x{a}" ~
+          "            revision is upto the maintainer of the task. It will\x{a}" ~
+          "            be reflected in the rpm name\x{a}" ~
+          "          "
+        ]
+      ]
+      attribute version { text }
+    & description
+    & owner
+    & types?
+    & excludedDistroFamilies?
+    & excludedArches?
+    & runFor?
+    & requires?
+    & bugzillas?
+    & repo?
+    & rpms
+    & path
+  }
+description =
+  element description {
+    xsd:string
+    >> a:documentation [
+         xml:lang = "en"
+         "\x{a}" ~
+         "        This is element is descriptive text explaining\x{a}" ~
+         "        the purpose of the task\x{a}" ~
+         "      "
+       ]
+  }
+owner =
+  element owner {
+    xsd:string
+    >> a:documentation [
+         xml:lang = "en"
+         "\x{a}" ~
+         "        This is the owner of the task. This correlates\x{a}" ~
+         "        to the initial uploader. This value is non transferrable\x{a}" ~
+         "      "
+       ]
+  }
+types = element types { type+ }
+excludedDistroFamilies =
+  [
+    a:description [
+      xml:lang = "en"
+      "\x{a}" ~
+      "        This is all of the distro families, on which the\x{a}" ~
+      "        task will not run.\x{a}" ~
+      "      "
+    ]
+  ]
+  element excludedDistroFamilies { distroFamily+ }
+distroFamily =
+  element distroFamily {
+    xsd:string
+    >> a:documentation [
+         xml:lang = "en"
+         "\x{a}" ~
+         "        This is the name of the distro family (otherwise known as OSMajor)\x{a}" ~
+         "      "
+       ]
+  }
+excludedArches =
+  [
+    a:documentation [
+      xml:lang = "en"
+      "\x{a}" ~
+      "        These are arches on which the task will not be run\x{a}" ~
+      "      "
+    ]
+  ]
+  element excludedArches { arch+ }
+arch =
+  element arch {
+    xsd:string
+    >> a:documentation [
+         xml:lang = "en"
+         "\x{a}" ~
+         "        This is the hardware architecture\x{a}" ~
+         "      "
+       ]
+  }
+runFor =
+  [
+    a:documentation [
+      xml:lang = "en"
+      "\x{a}" ~
+      "        This describes the different packages\x{a}" ~
+      "        that utilise this task\x{a}" ~
+      "      "
+    ]
+  ]
+  element runFor { package+ }
+requires =
+  [
+    a:documentation [
+      xml:lang = "en"
+      "\x{a}" ~
+      "        Packages that are required to be installed for the task to run\x{a}" ~
+      "      "
+    ]
+  ]
+  element requires { package+ }
+package =
+  element package {
+    xsd:string
+    >> a:documentation [
+         xml:lang = "en"
+         "\x{a}" ~
+         "        This represents a package name which can be installed via\x{a}" ~
+         "        the yum command\x{a}" ~
+         "      "
+       ]
+  }
+bugzillas =
+  [
+    a:documentation [
+      xml:lang = "en"
+      "\x{a}" ~
+      "        Contains one or more references to tickets in the Bugzilla\x{a}" ~
+      "        bug tracking system\x{a}" ~
+      "      "
+    ]
+  ]
+  element bugzillas { bugzilla+ }
+bugzilla = element bugzilla { xsd:int }
+repo =
+  element repo {
+    xsd:anyURI
+    >> a:documentation [
+         xml:lang = "en"
+         "\x{a}" ~
+         "        A location of the repo where the task lives\x{a}" ~
+         "      "
+       ]
+  }
+rpms = element rpms { rpm }
+rpm =
+  element rpm {
+    attribute name { xsd:string }
+    & [
+        a:description [
+          xml:lang = "en"
+          "\x{a}" ~
+          "            This is the location of where the rpm is stored\x{a}" ~
+          "          "
+        ]
+      ]
+      attribute url { xsd:anyURI }
+  }
+type =
+  element type {
+    xsd:string
+    >> a:documentation [
+         xml:lang = "en"
+         "\x{a}" ~
+         "        This is a non specific category, used for high level grouping.\x{a}" ~
+         "        i.e 'KernelTier1' etc.\x{a}" ~
+         "      "
+       ]
+  }
+path =
+  element path {
+    xsd:string
+    >> a:documentation [
+         xml:lang = "en"
+         "\x{a}" ~
+         "        This is the path of the task when it's installed\x{a}" ~
+         "      "
+       ]
+  }

@@ -1,0 +1,1121 @@
+# vim: set sw=2:
+
+# This schema is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
+namespace a = "http://relaxng.org/ns/compatibility/annotations/1.0"
+namespace local = ""
+
+start = job
+job =
+  element job {
+    [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "              Extra XML provided by the user. Must have a namespace. Beaker will\x{a}" ~
+        "              preserve the XML when cloning the job.\x{a}" ~
+        "            "
+      ]
+    ]
+    element * - local:* { anyAttributes, anyContent }*
+    & [
+        a:documentation [
+          xml:lang = "en"
+          "\x{a}" ~
+          "          Specifies the user who will be the owner of this job.\x{a}" ~
+          "          This requires that the submitting user is a valid delegate of\x{a}" ~
+          "          the user.\x{a}" ~
+          "          "
+        ]
+      ]
+      attribute user { text }?
+    & [
+        a:documentation [
+          xml:lang = "en"
+          "\x{a}" ~
+          "          Specifies the group this job was submitted on behalf of.\x{a}" ~
+          "          This will allow other group members to view and modify this job.\x{a}" ~
+          "          "
+        ]
+      ]
+      attribute group { text }?
+    & [
+        a:documentation [
+          xml:lang = "en"
+          "\x{a}" ~
+          "            Specifies the data retention policy for the job. See http://your-beaker-server/retentiontag/\x{a}" ~
+          "            for the possible values. Some of these tags may require a\x{a}" ~
+          "            product to be specified (see below).\x{a}" ~
+          "            "
+        ]
+      ]
+      attribute retention_tag { text }?
+    & [
+        a:documentation [
+          xml:lang = "en"
+          "\x{a}" ~
+          "            Specifies the product with which this job is associated.\x{a}" ~
+          "            The product names are customized to suit a beaker\x{a}" ~
+          "            deployment and hence there there are no standard or default\x{a}" ~
+          "            product names shipped with Beaker. Note that this\x{a}" ~
+          "            specification is meaningful only for retention tagging purposes (see\x{a}" ~
+          "            above). \x{a}" ~
+          "          "
+        ]
+      ]
+      attribute product { text }?
+    & notify?
+    & [
+        a:documentation [
+          xml:lang = "en"
+          "\x{a}" ~
+          "              A textual description of this job, for human consumption only.\x{a}" ~
+          "            "
+        ]
+      ]
+      element whiteboard { text }?
+    & [
+        a:documentation [
+          xml:lang = "en"
+          "\x{a}" ~
+          "              A recipeset defines one or more recipes which are to be run in\x{a}" ~
+          "              parallel. Define multiple recipes within a recipeset for\x{a}" ~
+          "              multihost testing. Otherwise, define only one recipe within the\x{a}" ~
+          "              recipeset.\x{a}" ~
+          "            "
+        ]
+      ]
+      element recipeSet {
+        [
+          a:documentation [
+            xml:lang = "en"
+            "\x{a}" ~
+            "                Sets the scheduling priority of this job. Possible values are low,\x{a}" ~
+            "                medium, normal, high and urgent.\x{a}" ~
+            "              "
+          ]
+        ]
+        attribute priority {
+          "Low" | "Medium" | "Normal" | "High" | "Urgent"
+        }?,
+        recipe+
+      }+
+  }
+notify =
+  [
+    a:documentation [
+      xml:lang = "en"
+      "\x{a}" ~
+      "        This element is a container for configuring notifications that this\x{a}" ~
+      "        job has finished running.\x{a}" ~
+      "      "
+    ]
+  ]
+  element notify {
+    [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "            An e-mail address which will be cc'ed on the job completion e-mail.\x{a}" ~
+        "          "
+      ]
+    ]
+    element cc { text }*
+  }
+recipe =
+  [
+    a:documentation [
+      xml:lang = "en"
+      "\x{a}" ~
+      "        A recipe is a sequence of tasks which are run on a single system,\x{a}" ~
+      "        in parallel with any other recipes in the same recipeset.\x{a}" ~
+      "        The system is always provisioned with an operating system at the start\x{a}" ~
+      "        of each recipe. Options for provisioning are contained within this\x{a}" ~
+      "        element.\x{a}" ~
+      "      "
+    ]
+  ]
+  element recipe {
+    element guestrecipe {
+      attribute guestname { text }?
+      & attribute guestargs { text }
+      & recipe_contents
+    }*
+    & recipe_contents
+  }
+recipe_contents =
+  # stuff which is common to both <recipe/> and <guestrecipe/>
+  [
+    a:documentation [
+      xml:lang = "en"
+      "\x{a}" ~
+      "          Additional kernel options to be passed to Anaconda during installation.\x{a}" ~
+      "        "
+    ]
+  ]
+  attribute kernel_options { text }?
+  & [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Additional kernel options to be passed to Anaconda after installation.\x{a}" ~
+        "        "
+      ]
+    ]
+    attribute kernel_options_post { text }?
+  & [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Additional kickstart metadata variables.\x{a}" ~
+        "        "
+      ]
+    ]
+    attribute ks_meta { text }?
+  & [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          If a role is specified, an environment variable of the same\x{a}" ~
+        "          name will be created on each of the hosts the test runs. The value\x{a}" ~
+        "          of the environment variable will be set to a space-separated\x{a}" ~
+        "          list of all the host names in that role. If there are multiple\x{a}" ~
+        "          roles, there will an environment variable for each of them\x{a}" ~
+        "          present on all the hosts the test runs. Useful for multihost\x{a}" ~
+        "          tests (see the role attribute for the task element).\x{a}" ~
+        "        "
+      ]
+    ]
+    attribute role { text }?
+  & [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "            A textual description of this recipe, for human consumption only.\x{a}" ~
+        "          "
+      ]
+    ]
+    attribute whiteboard { text }?
+  & autopick?
+  & [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          You can specify a custom kickstart template here. This template should be a\x{a}" ~
+        "          valid Jinja2 template. Review the existing kickstart templates to get\x{a}" ~
+        "          an idea of what you can specify here. Beaker will add extra\x{a}" ~
+        '          "defaults" based on the system options specified in the recipe\x{a}' ~
+        "          such as the architecture and distro.\x{a}" ~
+        "        "
+      ]
+    ]
+    element kickstart { text }?
+  & watchdog?
+  & packages?
+  & ks_appends?
+  & repos?
+  & ([
+       a:documentation [
+         xml:lang = "en"
+         "\x{a}" ~
+         "            This element is a container for expressing constraints on the\x{a}" ~
+         "            operating system distribution which will be selected and\x{a}" ~
+         "            provisioned at the start of this recipe.\x{a}" ~
+         "          "
+       ]
+     ]
+     element distroRequires { distroreq* }
+     | [
+         a:documentation [
+           xml:lang = "en"
+           "\x{a}" ~
+           "            This element is a container for specifying the operating system\x{a}" ~
+           "            distribution which will be provisioned at the start of this recipe.\x{a}" ~
+           "          "
+         ]
+       ]
+       element distro { distrometadata })
+  & [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          This element is a container for expressing constraints on the\x{a}" ~
+        "          system which will be selected to run this recipe.\x{a}" ~
+        "        "
+      ]
+    ]
+    element hostRequires {
+      attribute force {
+        xsd:string
+        >> a:documentation [
+             xml:lang = "en"
+             "\x{a}" ~
+             "            Select a specific system by FQDN. This bypasses the\x{a}" ~
+             "            normal filtering mechanisms for selecting a system,\x{a}" ~
+             "            and always uses the named system regardless of its\x{a}" ~
+             "            current condition. No other filter criteria can be\x{a}" ~
+             "            specified when this attribute is used.\x{a}" ~
+             "            "
+           ]
+      }
+      | hostreq*
+    }
+  & partitions?
+  & task+
+  & [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "            If this element is specified, the system will be reserved\x{a}" ~
+        "            at the end of the recipe when all tasks have completed execution.\x{a}" ~
+        "          "
+      ]
+    ]
+    element reservesys {
+      [
+        a:documentation [
+          xml:lang = "en"
+          "\x{a}" ~
+          "                Reserve for the specified duration in seconds. If not\x{a}" ~
+          "                specified, this defaults to 86400 seconds or 24 hours.\x{a}" ~
+          "              "
+        ]
+      ]
+      attribute duration { text }?,
+      [
+        a:documentation [
+          xml:lang = "en"
+          "\x{a}" ~
+          "                Reserve the system only under certain conditions.\x{a}" ~
+          "\x{a}" ~
+          '                The default value "always" will reserve the system unconditionally.\x{a}' ~
+          '                The value "onwarn" will reserve the system if any task reported a Warn or Fail result, or if the recipe aborted.\x{a}' ~
+          '                The value "onfail" will reserve the system if any task reported a Fail result, or if the recipe aborted.\x{a}' ~
+          '                The value "onabort" will reserve the system if the recipe aborted.\x{a}' ~
+          "              "
+        ]
+      ]
+      attribute when { "always" | "onwarn" | "onfail" | "onabort" }?
+    }?
+autopick =
+  [
+    a:documentation [
+      xml:lang = "en"
+      "\x{a}" ~
+      "        Settings that influence the selection of the system used to run this\x{a}" ~
+      "        recipe without imposing strict constraints as 'hostRequires' does.\x{a}" ~
+      "      "
+    ]
+  ]
+  element autopick {
+    [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        '            When set to "true", randomizes the choice of system across all\x{a}' ~
+        "            eligible systems. This can help avoid a recipe being repeatedly\x{a}" ~
+        "            scheduled on the same system.\x{a}" ~
+        '            When omitted or set to "false", the system selection is done\x{a}' ~
+        "            according to a default ordering that favours the user's\x{a}" ~
+        "            systems, then systems associated with the user's groups and\x{a}" ~
+        "            finally systems generally available to all users of the Beaker\x{a}" ~
+        "            instance.\x{a}" ~
+        "          "
+      ]
+    ]
+    attribute random { xsd:boolean | "TRUE" | "FALSE" }?
+  }
+watchdog =
+  element watchdog {
+    [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          If the value is set to 'ignore', jobs which output panics to the console\x{a}" ~
+        "          are not aborted. If absent, such jobs will be aborted by the\x{a}" ~
+        "          watchdog. The default value is None.\x{a}" ~
+        "        "
+      ]
+    ]
+    attribute panic { "ignore" | "None" }?
+  }
+ks_appends =
+  element ks_appends {
+    [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          You can specify additional kickstart commands to add to the base kickstart file.\x{a}" ~
+        "        "
+      ]
+    ]
+    element ks_append { text }*
+  }
+packages =
+  [
+    a:documentation [
+      xml:lang = "en"
+      "\x{a}" ~
+      "          This element is a container for specifying additional packages\x{a}" ~
+      "          to be installed for this recipe. These packages are appended\x{a}" ~
+      "          to the existing default set of packages.\x{a}" ~
+      "        "
+    ]
+  ]
+  element packages {
+    element package {
+      attribute name { text }
+    }*
+  }
+repos =
+  [
+    a:documentation [
+      xml:lang = "en"
+      "\x{a}" ~
+      "        This element is a container for defining additional\x{a}" ~
+      "        repositories. These are also available during installation.\x{a}" ~
+      "      "
+    ]
+  ]
+  element repos {
+    element repo {
+      attribute name { text },
+      attribute url { text }
+    }*
+  }
+partitions =
+  element partitions {
+    element partition {
+      [
+        a:documentation [
+          xml:lang = "en"
+          "\x{a}" ~
+          "                Type of filesystem to be created on this partition. Defaults to\x{a}" ~
+          "                'ext3' if not specified.\x{a}" ~
+          "              "
+        ]
+      ]
+      attribute fs { text }?,
+      [
+        a:documentation [
+          xml:lang = "en"
+          "\x{a}" ~
+          "              Mount point without the initial slash. Eg: 'mnt/test'.\x{a}" ~
+          "            "
+        ]
+      ]
+      attribute name { text },
+      [
+        a:documentation [
+          xml:lang = "en"
+          "\x{a}" ~
+          "               part = Partition, lvm = LVM volume\x{a}" ~
+          "              "
+        ]
+      ]
+      attribute type { text }?,
+      attribute size {
+        xsd:integer
+        >> a:documentation [
+             xml:lang = "en"
+             "\x{a}" ~
+             "            Partition size in GB.\x{a}" ~
+             "            "
+           ]
+      }
+    }*
+  }
+task =
+  element task {
+    ([
+       a:documentation [
+         xml:lang = "en"
+         "\x{a}" ~
+         "            Name of the task. When no fetch element is specified, the named\x{a}" ~
+         "            task must exist in Beaker's task library.\x{a}" ~
+         "          "
+       ]
+     ]
+     attribute name { text }
+     | (element fetch {
+          [
+            a:documentation [
+              xml:lang = "en"
+              "\x{a}" ~
+              "                URL from which the harness should fetch the task. Refer to the\x{a}" ~
+              "                harness documentation for supported URL schemes and task\x{a}" ~
+              "                formats.\x{a}" ~
+              "              "
+            ]
+          ]
+          attribute url { xsd:anyURI },
+          [
+            a:documentation [
+              xml:lang = "en"
+              "\x{a}" ~
+              "                  If the fetch URL points at an archive or repository\x{a}" ~
+              "                  containing multiple tasks, this attribute identifies which\x{a}" ~
+              "                  subtree the harness should use to find the task.\x{a}" ~
+              '                  The default value is the empty string ("") which means that\x{a}' ~
+              "                  the task is at the root of the archive.\x{a}" ~
+              "                "
+            ]
+          ]
+          attribute subdir { text }?
+        },
+        [
+          a:documentation [
+            xml:lang = "en"
+            "\x{a}" ~
+            "                Name of the task. When the fetch element is specified, the task\x{a}" ~
+            "                name is only used to report results (the task need not exist in\x{a}" ~
+            "                Beaker's task library).\x{a}" ~
+            "\x{a}" ~
+            "                If the task name is not given, it defaults to the fetch URL\x{a}" ~
+            "                combined with the subdirectory (if any). The task name can also\x{a}" ~
+            "                be updated by the harness when the recipe executes.\x{a}" ~
+            "              "
+          ]
+        ]
+        attribute name { text }?)),
+    [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "              If the task is standalone, specify STANDALONE. If this is\x{a}" ~
+        "              a multihost task, then either specify CLIENTS or\x{a}" ~
+        "              SERVERS. If it is not relevant, simply omit. This\x{a}" ~
+        "              sets up an environment variable of the same name as\x{a}" ~
+        "              specified in the role (Also, see the role attribute in\x{a}" ~
+        "              the recipe element).\x{a}" ~
+        "            "
+      ]
+    ]
+    attribute role { text }?,
+    element params {
+      [
+        a:documentation [
+          xml:lang = "en"
+          "\x{a}" ~
+          "                You can specify additional parameters in name=value formats\x{a}" ~
+          "                for the task. These parameters are set in the\x{a}" ~
+          "                environment when the task is executed.\x{a}" ~
+          "              "
+        ]
+      ]
+      element param {
+        attribute name { text },
+        attribute value { text }
+      }*
+    }?
+  }
+distroreq =
+  element and { distroreq* }
+  | element or { distroreq* }
+  | element not { distroreq* }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Deprecated.  Use <family> instead.\x{a}" ~
+        "        "
+      ]
+    ]
+    element distro_family { req }
+  | element family { req }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Deprecated.  Use <name> instead.\x{a}" ~
+        "        "
+      ]
+    ]
+    element distro_name { req }
+  | element name { req }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Deprecated.  Use <tag> instead.\x{a}" ~
+        "        "
+      ]
+    ]
+    element distro_tag { req }
+  | element tag { req }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Deprecated.  Use <variant> instead.\x{a}" ~
+        "        "
+      ]
+    ]
+    element distro_variant { req }
+  | element variant { req }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Deprecated.  Use <arch> instead.\x{a}" ~
+        "        "
+      ]
+    ]
+    element distro_arch { req }
+  | element arch { req }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Deprecated.\x{a}" ~
+        "        "
+      ]
+    ]
+    element distro_virt { req }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Deprecated.  Use <method> instead.\x{a}" ~
+        "        "
+      ]
+    ]
+    element distro_method { req }
+  | element method { req }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Deprecated.  Use <labcontroller> instead.\x{a}" ~
+        "        "
+      ]
+    ]
+    element distrolabcontroller { req }
+  | element labcontroller { req }
+distrometadata =
+  [
+    a:documentation [
+      xml:lang = "en"
+      "\x{a}" ~
+      "        The URL where the installation tree is located.\x{a}" ~
+      "      "
+    ]
+  ]
+  element tree {
+    attribute url { text }
+  },
+  [
+    a:documentation [
+      xml:lang = "en"
+      "\x{a}" ~
+      "        Location of the installer kernel image. May be specified as\x{a}" ~
+      "        an absolute URL or as a path relative to the installation tree URL.\x{a}" ~
+      "      "
+    ]
+  ]
+  element kernel {
+    attribute url { text }
+  },
+  [
+    a:documentation [
+      xml:lang = "en"
+      "\x{a}" ~
+      "        Location of the installer initramfs image. May be specified as\x{a}" ~
+      "        an absolute URL or as a path relative to the installation tree URL.\x{a}" ~
+      "      "
+    ]
+  ]
+  element initrd {
+    attribute url { text }
+  },
+  [
+    a:documentation [
+      xml:lang = "en"
+      "\x{a}" ~
+      "        CPU architecture that the distro is built for.\x{a}" ~
+      "      "
+    ]
+  ]
+  element arch {
+    attribute value { text }
+  },
+  [
+    a:documentation [
+      xml:lang = "en"
+      "\x{a}" ~
+      "        OS version expressed as the major and minor versions of this distro.\x{a}" ~
+      '        For example, <osversion major="RedHatEnterpriseLinux7" minor="4"/>.\x{a}' ~
+      "      "
+    ]
+  ]
+  element osversion {
+    attribute major { text },
+    attribute minor { text }?
+  },
+  [
+    a:documentation [
+      xml:lang = "en"
+      "\x{a}" ~
+      "          The (optional) distro name, used for display purposes.\x{a}" ~
+      "        "
+    ]
+  ]
+  element name {
+    attribute value { text }
+  }?,
+  [
+    a:documentation [
+      xml:lang = "en"
+      "\x{a}" ~
+      "          The (optional) distro variant, used for display purposes.\x{a}" ~
+      "        "
+    ]
+  ]
+  element variant {
+    attribute value { text }
+  }?
+hostreq =
+  element and { hostreq* }
+  | element or { hostreq* }
+  | element not { hostreq* }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Deprecated.  Use <system><name> instead.\x{a}" ~
+        "        "
+      ]
+    ]
+    element host { req }
+  | element labcontroller { req }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Deprecated.  Use <labcontroller> instead.\x{a}" ~
+        "        "
+      ]
+    ]
+    element hostlabcontroller { req }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Deprecated.  Use <system><type> instead.\x{a}" ~
+        "        "
+      ]
+    ]
+    element system_type { req }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Deprecated.  Use <system><memory> instead.\x{a}" ~
+        "        "
+      ]
+    ]
+    element memory { req }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Deprecated.  Use <cpu><processors> instead.\x{a}" ~
+        "        "
+      ]
+    ]
+    element cpu_count { req }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Deprecated.  Use <system><numanodes> instead.\x{a}" ~
+        "        "
+      ]
+    ]
+    element numa_node_count { req }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Deprecated.  Use <system><name> instead.\x{a}" ~
+        "        "
+      ]
+    ]
+    element hostname { req }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Deprecated.  Use <system><arch> instead.\x{a}" ~
+        "        "
+      ]
+    ]
+    element arch { req }
+  | element auto_prov { req }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Deprecated.  Use <system><hypervisor> instead.\x{a}" ~
+        "        "
+      ]
+    ]
+    element hypervisor { req }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Selects systems by device. If operator is ==, selects systems which\x{a}" ~
+        "          have at least one matching device. If operator is !=, selects systems\x{a}" ~
+        "          which have no matching devices.\x{a}" ~
+        "        "
+      ]
+    ]
+    element device {
+      equality_op,
+      (attribute type { text }
+       | attribute bus { text }
+       | attribute driver { text }
+       | attribute vendor_id { text }
+       | attribute device_id { text }
+       | attribute subsys_vendor_id { text }
+       | attribute subsys_device_id { text }
+       | attribute description { text })+
+    }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Selects systems by disk. A system will match this filter if any of \x{a}" ~
+        "          its disks matches the criteria in this element.\x{a}" ~
+        "        "
+      ]
+    ]
+    element disk { diskreq+ }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Selects systems by total disk space.\x{a}" ~
+        "        "
+      ]
+    ]
+    element diskspace {
+      op,
+      bytes_units,
+      attribute value { text }
+    }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Selects systems by total number of disks.\x{a}" ~
+        "        "
+      ]
+    ]
+    element diskcount {
+      op,
+      attribute value { text }
+    }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Deprecated.  Use <pool> instead.\x{a}" ~
+        "        "
+      ]
+    ]
+    element group {
+      equality_op,
+      attribute value { text }
+    }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Select system from a specific pool. If operator is = or ==, select a system which\x{a}" ~
+        "          belongs to the specified pool. If the operator is, !=, select a system which does\x{a}" ~
+        '          not belong to the pool, != "" will select a system which belongs to any pool.\x{a}' ~
+        "        "
+      ]
+    ]
+    element pool {
+      equality_op,
+      attribute value { text }
+    }
+  | element key_value {
+      attribute key { text },
+      op,
+      attribute value { text }
+    }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Specify the type of CPU required for this job.\x{a}" ~
+        "        "
+      ]
+    ]
+    element cpu { cpureq* }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Specify the system required for this task. If you have any\x{a}" ~
+        "          specific requirements for the system, you must specify it here.\x{a}" ~
+        "        "
+      ]
+    ]
+    element system { systemreq* }
+cpureq =
+  element and { cpureq* }
+  | element or { cpureq* }
+  | element not { cpureq* }
+  | element cores {
+      op,
+      attribute value { text }
+    }
+  | element family {
+      op,
+      attribute value { text }
+    }
+  | element hyper { boolean_value }
+  | element model {
+      op,
+      attribute value { text }
+    }
+  | element model_name {
+      equality_op,
+      attribute value { text }
+    }
+  | element processors {
+      op,
+      attribute value { text }
+    }
+  | element sockets {
+      op,
+      attribute value { text }
+    }
+  | element speed {
+      op,
+      attribute value { text }
+    }
+  | element stepping {
+      op,
+      attribute value { text }
+    }
+  | element vendor {
+      equality_op,
+      attribute value { text }
+    }
+  | element flag {
+      equality_op,
+      attribute value { text }
+    }
+diskreq =
+  element and { diskreq* }
+  | element or { diskreq* }
+  | element not { diskreq* }
+  | element model {
+      equality_op,
+      attribute value { text }
+    }
+  | [ a:documentation [ xml:lang = "en" "Size of the disk in bytes." ] ]
+    element size {
+      op,
+      attribute value { text },
+      bytes_units
+    }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "          Logical sector size of the disk in bytes. Modern hard disks with \x{a}" ~
+        "          large sector sizes may emulate a 512-byte sector size in firmware for \x{a}" ~
+        "          compatibility reasons.\x{a}" ~
+        "        "
+      ]
+    ]
+    element sector_size {
+      op,
+      attribute value { text },
+      bytes_units
+    }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "Physical sector size of the disk in bytes."
+      ]
+    ]
+    element phys_sector_size {
+      op,
+      attribute value { text },
+      bytes_units
+    }
+systemreq =
+  element and { systemreq* }
+  | element or { systemreq* }
+  | element not { systemreq* }
+  | element name {
+      equality_op,
+      attribute value { text }
+    }
+  | element lender {
+      equality_op,
+      attribute value { text }
+    }
+  | element model {
+      equality_op,
+      attribute value { text }
+    }
+  | element vendor {
+      equality_op,
+      attribute value { text }
+    }
+  | element added {
+      op,
+      attribute value { xsd:date }
+    }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "        Date on which the system was last inventoried.\x{a}" ~
+        "      "
+      ]
+    ]
+    element last_inventoried {
+      op,
+      [
+        a:documentation [
+          xml:lang = "en"
+          "\x{a}" ~
+          '          The date should be specified as "YYYY-MM-DD". It can be\x{a}' ~
+          """          specified as "" to be used in conjunction with the '=' or\x{a}""" ~
+          "          '!=' operators - the former matching only uninventoried\x{a}" ~
+          "          machines and the latter only inventoried machines.\x{a}" ~
+          "         "
+        ]
+      ]
+      attribute value { xsd:date | "" }
+    }
+  | element arch {
+      equality_op,
+      attribute value { text }
+    }
+  | element memory {
+      op,
+      attribute value { text }
+    }
+  | element numanodes {
+      op,
+      attribute value { text }
+    }
+  | element owner {
+      equality_op,
+      attribute value { text }
+    }
+  | element user {
+      equality_op,
+      attribute value { text }
+    }
+  | element loaned {
+      equality_op,
+      attribute value { text }
+    }
+  | element location {
+      equality_op,
+      attribute value { text }
+    }
+  | element powertype {
+      equality_op,
+      attribute value { text }
+    }
+  | element serial {
+      equality_op,
+      attribute value { text }
+    }
+  | element hypervisor {
+      equality_op,
+      attribute value { text }
+    }
+  | element status {
+      equality_op,
+      attribute value { text }
+    }
+  | element type {
+      equality_op,
+      attribute value { text }
+    }
+  | [
+      a:documentation [
+        xml:lang = "en"
+        "\x{a}" ~
+        "        Selects systems which are compatible with a particular distro.\x{a}" ~
+        "        For example, you can use this element to select systems which are compatible\x{a}" ~
+        "        with Red Hat Enterprise Linux 7.4 x86_64.\x{a}" ~
+        "      "
+      ]
+    ]
+    element compatible_with_distro {
+      [
+        a:documentation [
+          xml:lang = "en"
+          "\x{a}" ~
+          "          CPU architecture that the system must be compatible with.\x{a}" ~
+          "\x{a}" ~
+          "          This attribute is mandatory because system exclusions are specified\x{a}" ~
+          "          in Beaker on a per-architecture basis.\x{a}" ~
+          "        "
+        ]
+      ]
+      attribute arch { text },
+      [
+        a:documentation [
+          xml:lang = "en"
+          "\x{a}" ~
+          '          The OS major version, for example "RedHatEnterpriseLinux7".\x{a}' ~
+          "         "
+        ]
+      ]
+      attribute osmajor { text },
+      [
+        a:documentation [
+          xml:lang = "en"
+          "\x{a}" ~
+          '            The OS minor version, for example "4" for RHEL7.4.\x{a}' ~
+          "\x{a}" ~
+          "            If this attribute is ommitted, the filter selects only systems\x{a}" ~
+          "            which are compatible with *all* minor versions of the OS.\x{a}" ~
+          "           "
+        ]
+      ]
+      attribute osminor { text }?
+    }
+req =
+  op,
+  attribute value { text }
+op =
+  attribute op { "!=" | "like" | "==" | "=" | "<=" | "<" | ">=" | ">" }?
+equality_op = attribute op { "!=" | "like" | "==" | "=" }?
+boolean_value = attribute value { xsd:boolean | "TRUE" | "FALSE" }
+bytes_units =
+  attribute units {
+    "bytes"
+    | "B"
+    | "kB"
+    | "KB"
+    | "KiB"
+    | "MB"
+    | "MiB"
+    | "GB"
+    | "GiB"
+    | "TB"
+    | "TiB"
+  }?
+anyContent = (anyElement | text)*
+anyElement = element * { anyAttributes, anyContent }
+anyAttributes = attribute * { text }*

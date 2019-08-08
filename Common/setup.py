@@ -20,7 +20,10 @@ setup(
 
     packages=find_packages('.'),
     package_dir={'': '.'},
-    package_data={'bkr.common': ['schema/*.rng', 'schema/*.ttl', 'default.conf']},
+    package_data={'bkr.common': ['schema/*.rnc',
+                                 'schema/*.rng',
+                                 'schema/*.ttl',
+                                 'default.conf']},
 
     classifiers=[
         'Development Status :: 5 - Production/Stable',
