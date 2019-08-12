@@ -1258,6 +1258,9 @@ class Job(TaskBase, ActivityMixin):
             result="%s" % self.result,
             is_finished=self.is_finished(),
             is_failed=self.is_failed(),
+            owner="{}".format(self.owner),
+            submitter="{}".format(self.submitter),
+            group="{}".format(self.group)
         )
 
     def all_recipes(self):
@@ -1894,6 +1897,9 @@ class RecipeSet(TaskBase, ActivityMixin):
             result="%s" % self.result,
             is_finished=self.is_finished(),
             is_failed=self.is_failed(),
+            owner="{}".format(self.owner),
+            submitter="{}".format(self.job.submitter),
+            group="{}".format(self.job.group),
         )
 
     def allowed_priorities(self, user):
@@ -2767,6 +2773,9 @@ class Recipe(TaskBase, ActivityMixin):
             result="%s" % self.result,
             is_finished=self.is_finished(),
             is_failed=self.is_failed(),
+            owner="{}".format(self.recipeset.job.owner),
+            submitter="{}".format(self.recipeset.job.submitter),
+            group="{}".format(self.recipeset.job.group),
         )
 
     def extend(self, kill_time):
@@ -3795,6 +3804,9 @@ class RecipeTask(TaskBase):
             result="%s" % self.result,
             is_finished=self.is_finished(),
             is_failed=self.is_failed(),
+            owner="{}".format(self.recipe.recipeset.job.owner),
+            submitter="{}".format(self.recipe.recipeset.job.submitter),
+            group="{}".format(self.recipe.recipeset.job.group),
         )
 
     def no_value(self):
