@@ -301,6 +301,7 @@ def beaker_version_to_schema_version(version):
     #   git log -n 1 --stat -- .
     # And use the prefix of the file that changed 
     beaker_versions = {
+        '27': '348daa35773c',
         '26': '348daa35773c',
         '25': '1ce53a2af0ed',
         '24': 'f18df089261',
