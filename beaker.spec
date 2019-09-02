@@ -57,7 +57,6 @@ BuildRequires:  python3-setuptools
 BuildRequires:  python3-nose
 BuildRequires:  python3-unittest2
 BuildRequires:  python3-mock
-BuildRequires:  python3-setuptools
 BuildRequires:  python3-devel
 BuildRequires:  python3-docutils
 BuildRequires:  python3-sphinx
@@ -67,7 +66,6 @@ BuildRequires:  python2-setuptools
 BuildRequires:  python2-nose
 BuildRequires:  python2-unittest2
 BuildRequires:  python2-mock
-BuildRequires:  python2-setuptools
 BuildRequires:  python2-devel
 BuildRequires:  python2-docutils
 BuildRequires:  python2-sphinx
@@ -77,7 +75,6 @@ BuildRequires:  python-setuptools
 BuildRequires:  python-nose >= 0.10
 BuildRequires:  python-unittest2
 BuildRequires:  python-mock
-BuildRequires:  python-setuptools
 BuildRequires:  python2-devel
 BuildRequires:  python-docutils >= 0.6
 %if 0%{?rhel} == 6
