@@ -738,55 +738,110 @@ class LabInfoForm(HorizontalForm):
 
 class ExcludedFamilies(FormField):
     template = """
-    <ul xmlns:py="http://purl.org/kid/ns#"
-        class="${field_class}"
-        id="${field_id}"
-        py:attrs="list_attrs"
-    >
-     <li py:for="arch, a_options in options">
-      ${arch}
-      <ul xmlns:py="http://purl.org/kid/ns#"
-          class="${field_class}"
-          id="${field_id}_${arch}"
-          py:attrs="list_attrs"
-      >
-       <li py:for="value, desc, subsection, attrs in a_options">
-        <label class="checkbox">
-        <input class="majorCheckbox"
-	       type="checkbox"
-               name="${name}.${arch}"
-               id="${field_id}_${value}_${arch}"
-               value="${value}"
-               py:attrs="attrs"
-        />
-        ${desc}
-        </label>
-        <ul xmlns:py="http://purl.org/kid/ns#"
-            class="${field_class}"
-            id="${field_id}_${value}_sub"
-            py:attrs="list_attrs"
-        >
-         <li py:for="subvalue, subdesc, attrs  in subsection">
-          <label class="checkbox">
-          <input type="checkbox"
-                 name="${name}_subsection.${arch}"
-                 id="${field_id}_${value}_sub_${subvalue}_${arch}"
-                 value="${subvalue}"
-                 py:attrs="attrs"
-          />
-          ${subdesc}
-          </label>
-         </li>
+    <div xmlns:py="http://purl.org/kid/ns#"
+         class="${field_class}"
+         id="${field_id}"
+     >
+        <div class="filter">
+            <strong>Filter by OS family:</strong>
+            <input
+                placeholder="Type here to apply filter"
+                onkeyup="filterFamilies(event.target.value)"
+                onkeydown="preventSubmit(event)"
+            />
+        </div>
+        <p><strong>Available architectures:</strong></p>
+        <ul class="nav nav-tabs available-archs" role="tablist">
+            <li py:for="arch, _ in options">
+                <a href="#arch-${arch}"
+                    class="nav-link"
+                    id="${arch}-tab"
+                    data-toggle="tab"
+                >
+                    ${arch}
+                </a>
+            </li>
         </ul>
-       </li>
-      </ul>
-     </li>
-    </ul>
+        <div class="tab-content archs-list">
+            <div id="arch-${arch}" class="tab-pane fade" py:for="arch, a_options in options">
+                <div class="arch-title excluded-families-title">
+                    <span>Architecture: ${arch}</span>
+                    <button type="button"
+                        class="btn"
+                        onclick="toggleExclude('${arch}')"
+                    >
+                        Toggle ${arch}
+                    </button>
+                </div>
+                <div class="category-list" py:for="category, cat_options in a_options">
+                    <div class="category-title excluded-families-title">
+                        <span>${category}</span>
+                        <button type="button"
+                            class="btn"
+                            onclick="toggleExclude('${arch}','${category}')"
+                        >
+                            Toggle
+                        </button>
+                    </div>
+                    <div py:for="value, desc, subsection, attrs in cat_options">
+                        <label class="with-arrow">
+                            <input class="majorCheckbox"
+                                type="checkbox"
+                                name="${name}.${arch}"
+                                id="${field_id}_${value}_${arch}_${category}"
+                                value="${value}"
+                                py:attrs="attrs"
+                                onchange="checkMajor(this)"
+                            />
+                            <span>${desc}</span>
+                        </label>
+                        <i class="fa fa-angle-down" data-toggle="collapse" data-target="#collapse-${arch}-${desc}"></i>
+                        <ul class="collapse os-version-list"
+                            id="collapse-${arch}-${desc}"
+                        >
+                            <li py:for="subvalue, subdesc, attrs  in subsection">
+                                <label>
+                                    <input type="checkbox"
+                                        name="${name}_subsection.${arch}"
+                                        id="${field_id}_${value}_sub_${subvalue}_${arch}"
+                                        value="${subvalue}"
+                                        py:attrs="attrs"
+                                        onchange="checkVersion(this)"
+                                    />
+                                    <span>${subdesc}</span>
+                                </label>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="back-to-top">
+            <button type="button"
+                onclick="backToTop()"
+            >
+                Back to Top
+                <i class="fa fa-arrow-up"></i>
+            </button>
+        </div>
+        <script>
+            initializeExcludedFamilies();
+        </script>
+     </div>
     """
 
 
     _multiple_selection = True
     _selected_verb = 'checked'
+    _major_categories = [
+        {
+            'name': 'RHEL',
+            'match': 'RedHatEnterprise'
+        },{
+            'name': 'Fedora',
+            'match':  'Fedora'
+        }
+    ]
     params = ["attrs", "options", "list_attrs"]
     params_doc = {'list_attrs' : 'Extra (X)HTML attributes for the ul tag'}
     list_attrs = {}
@@ -801,35 +856,34 @@ class ExcludedFamilies(FormField):
         super(ExcludedFamilies, self).update_params(d)
         a_options = []
         for arch,arch_options in d["options"]:
-            options = []
-            for optgroup in arch_options:
-                optlist = [optgroup]
+            options = { name: [] for name in [category['name'] for category in self._major_categories]}
+            options['Other'] = []
+            for option in arch_options:
                 soptions = []
-                for i, option in enumerate(optlist):
-                    if len(option) is 3:
-                        option_attrs = {}
-                    elif len(option) is 4:
-                        option_attrs = dict(option[3])
+                option_attrs = dict(option[3]) if len(option) == 4 else {}
+                if d['attrs'].has_key('readonly'):
+                    option_attrs['readonly'] = 'readonly'
+                if self._is_selected(option[0], d['value'][0][arch]):
+                    option_attrs[self._selected_verb] = self._selected_verb
+                for soption in option[2]:
+                    soption_attrs = dict(soption[2]) if len(soption) == 3 else {}
                     if d['attrs'].has_key('readonly'):
-                        option_attrs['readonly'] = 'True'
-                    if self._is_selected(option[0], d['value'][0][arch]):
-                        option_attrs[self._selected_verb] = self._selected_verb
-                    for soptgroup in option[2]:
-                        soptlist = [soptgroup]
-                        for j, soption in enumerate(soptlist):
-                            if len(soption) is 2:
-                                soption_attrs = {}
-                            elif len(soption) is 3:
-                                soption_attrs = dict(soption[2])
-                            if d['attrs'].has_key('readonly'):
-                                soption_attrs['readonly'] = 'True'
-                            if self._is_selected(soption[0], d['value'][1][arch]):
-                                soption_attrs[self._selected_verb] = self._selected_verb
-                            soptlist[j]=(soption[0], soption[1], soption_attrs)
-                        soptions.extend(soptlist)
-                    optlist[i] = (option[0], option[1], soptions, option_attrs)
-                options.extend(optlist)
-            a_options.append((arch,options))
+                        soption_attrs['readonly'] = 'readonly'
+                    if self._is_selected(soption[0], d['value'][1][arch]):
+                        soption_attrs[self._selected_verb] = self._selected_verb
+                    soptions.append((soption[0], soption[1], soption_attrs))
+                option_category = 'Other'
+                for category in self._major_categories:
+                    if option[1].find(category['match']) == 0:
+                        option_category = category['name']
+                options[option_category].append((option[0], option[1], soptions, option_attrs))
+            for category in options:
+                options[category].sort(key=lambda o: o[1])
+            ordered_categories = []
+            for category in self._major_categories:
+                ordered_categories.append((category['name'], options[category['name']]))
+            ordered_categories.append(('Other', options['Other']))
+            a_options.append((arch, ordered_categories))
         d["options"] = a_options
 
     def _is_selected(self, option_value, value):
@@ -932,10 +986,10 @@ class SystemExclude(Form):
           name="${name}"
           action="${action}"
           method="post" width="100%">
-     ${display_field_for("id")}
-     ${display_field_for("excluded_families")}
-     <button id="excludeButton" type="button" py:if="not readonly" class="btn" onclick='excludeAll();'>Exclude All</button>
-     <a py:if="not readonly" class="btn btn-primary" href="javascript:document.${name}.submit();">Save Exclude Changes</a>
+        <button id="excludeButton" type="button" py:if="not readonly" class="btn" onclick='toggleExcludeAll();'><strong>Toggle All Architectures/Families</strong></button>
+        <a py:if="not readonly" class="btn btn-primary" href="javascript:document.${name}.submit();">Save Exclude Changes</a>
+        ${display_field_for("id")}
+        ${display_field_for("excluded_families")}
     </form>
     """
     member_widgets = ["id", "excluded_families"]

@@ -1,0 +1,80 @@
+
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+
+.excludedfamilies{
+    width: 80%;
+    max-width: 750px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px;
+    position: relative;
+
+    div.filter{
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 300px;
+        display: flex;
+        flex-direction: column;
+
+        input{
+            width: 100%;
+        }
+    }
+
+    ul.available-archs{
+        width: 100%;
+    }
+
+    .archs-list{
+        width: 100%;
+        overflow: visible;
+
+        .excluded-families-title{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding: 5px 10px;
+        }
+
+        .arch-title{
+            background-color: #f1f1f1;
+            border-top: 2px solid #cccccc;
+        }
+
+        .category-list{
+            padding: 0 0 30px 15px;
+
+            .category-title{
+                background-color: #f6f6f6;
+                border-top: 1px solid #cccccc;
+            }
+
+            ul.os-version-list.in{
+                padding-top: 5px;
+            }
+        }
+
+        label.with-arrow{
+            display: inline;
+        }
+
+        i{
+            cursor: pointer;
+        }
+
+    }
+
+    .back-to-top{
+        display: none;
+        align-self: flex-end;
+        position: sticky;
+        bottom: 30px;
+        z-index: 10;
+    }
+}

@@ -25,6 +25,7 @@ from bkr.inttest.server.webdriver_utils import login, check_system_search_result
         delete_and_confirm, logout, click_menu_item, BootstrapSelect, wait_for_ajax_loading
 from bkr.inttest.server.requests_utils import login as requests_login, patch_json
 from selenium.webdriver.support.ui import Select
+from selenium.common.exceptions import ElementNotVisibleException
 from bkr.inttest.assertions import wait_for_condition, assert_sorted
 
 class SystemViewTestWD(WebDriverTestCase):
@@ -935,7 +936,7 @@ class SystemViewTestWD(WebDriverTestCase):
             self.assertEqual(self.system.mac_address, bad_mac_address)
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=833275
-    def test_excluded_families(self):
+    def test_exclude_by_architecture(self):
         # Uses the default distro tree which goes by the name
         # of DansAwesomeLinux created in setUp()
 
@@ -951,8 +952,10 @@ class SystemViewTestWD(WebDriverTestCase):
         b = self.browser
 
         # simulate the label click for i386
-        b.find_element_by_xpath('//li[normalize-space(text())="i386"]'
-                  '//label[normalize-space(string(.))="DansAwesomeLinux6.9"]').click()
+        # click the major version to open the submenu, and then click the osversion
+        b.find_element_by_xpath('//div[@id="arch-i386"]//i[@data-target="#collapse-i386-DansAwesomeLinux6"]').click()
+        b.find_element_by_xpath('//div[@id="arch-i386"]//span[text()="DansAwesomeLinux6.9"]').click()
+
         # Now check if the appropriate checkbox was selected
         self.assertTrue(b.find_element_by_xpath(
                 '//input[@name="excluded_families_subsection.i386" and @value="%s"]'
@@ -966,9 +969,11 @@ class SystemViewTestWD(WebDriverTestCase):
                 '//input[@name="excluded_families_subsection.i386" and @value="%s"]'
                 % self.distro_tree.distro.osversion_id).click()
 
-        # simulate the label click for x86_64
-        b.find_element_by_xpath('//li[normalize-space(text())="x86_64"]'
-                  '//label[normalize-space(string(.))="DansAwesomeLinux6.9"]').click()
+        # Change the tab and simulate the label click for x86_64
+        b.find_element_by_id('x86_64-tab').click()
+        b.find_element_by_xpath('//div[@id="arch-x86_64"]//i[@data-target="#collapse-x86_64-DansAwesomeLinux6"]').click()
+        b.find_element_by_xpath('//div[@id="arch-x86_64"]//span[text()="DansAwesomeLinux6.9"]').click()
+
         # Now check if the appropriate checkbox was selected
         self.assertTrue(b.find_element_by_xpath(
                 '//input[@name="excluded_families_subsection.x86_64" and @value="%s"]'
@@ -990,6 +995,27 @@ class SystemViewTestWD(WebDriverTestCase):
         checkboxes = b.find_elements_by_class_name('majorCheckbox')
         #assert all clicks are correct
         assert all([i.is_selected() for i in checkboxes])
+
+    def test_exclude_filter(self):
+        # Creates more distro trees to apply the filter on
+        with session.begin():
+            distro_names = [u'RenansAwesomeLinux3', u'AnyOtherLinux0']
+            for distro_name in distro_names:
+                data_setup.create_distro_tree(osmajor=distro_name, osminor=u'2', lab_controllers=[self.lab_controller])
+        self.go_to_system_view(tab='Excluded Families')
+        b = self.browser
+
+        # type a string in the filter input field
+        input_filter = b.find_element_by_css_selector('div.filter input').send_keys('awe')
+        # check if the matching majors are being shown
+        b.find_element_by_xpath('//div[@id="arch-i386"]//i[@data-target="#collapse-i386-DansAwesomeLinux6"]').click()
+        b.find_element_by_xpath('//div[@id="arch-i386"]//i[@data-target="#collapse-i386-RenansAwesomeLinux3"]').click()
+        # check if the non-matching majors are not being shown
+        try:
+            b.find_element_by_xpath('//div[@id="arch-i386"]//i[@data-target="#collapse-i386-AnyOtherLinux0"]').click()
+        except ElementNotVisibleException:
+            return
+        self.fail('Element is displayed but it should not.')
 
     def test_can_sort_activity_grid(self):
         with session.begin():
