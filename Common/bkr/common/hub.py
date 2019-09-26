@@ -5,14 +5,18 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import os
 import base64
-import ssl
-import six
-from six.moves import xmlrpc_client
-from six.moves import urllib_parse as urlparse
+import os
+import tempfile
+
 import gssapi
+import six
+import ssl
+from six.moves import urllib_parse as urlparse
+from six.moves import xmlrpc_client
+
 from bkr.common.pyconfig import PyConfigParser, ImproperlyConfigured
+
 if six.PY2:
     from bkr.common.xmlrpc2 import CookieTransport, SafeCookieTransport, retry_request_decorator
 if six.PY3:
@@ -138,10 +142,14 @@ class HubProxy(object):
         self._hub.auth.login_oauth2(access_token)
 
     def _login_krbv(self):
-        """Login using kerberos credentials (uses python-gssapi)."""
+        """
+        Login using kerberos credentials (uses python-gssapi).
+        """
 
         def get_server_principal(service=None, realm=None):
-            """Convert hub url to kerberos principal."""
+            """
+            Convert hub url to kerberos principal.
+            """
             hostname = urlparse.urlparse(self._hub_url)[1]
             # remove port from hostname
             hostname = hostname.split(":")[0]
@@ -152,7 +160,6 @@ class HubProxy(object):
             if service is None:
                 service = "HTTP"
             return '%s/%s@%s' % (service, hostname, realm)
-
 
         # read default values from settings
         principal = self._conf.get("KRB_PRINCIPAL")
@@ -167,9 +174,13 @@ class HubProxy(object):
         if principal:
             name = gssapi.Name(principal, gssapi.NameType.kerberos_principal)
 
-        store = None # Default ccache
+        store = None  # Default ccache
         if keytab:
-            store = {'client_keytab': keytab}
+            # Make sure we are using always APP ccache or user specified ccache
+            # instead of MIT krb5 default one with keytabs. Default ccache can be occupied by
+            # system application
+            store = {'client_keytab': keytab,
+                     'ccache': ccache or tempfile.NamedTemporaryFile(prefix='krb5cc_bkr_').name}
         elif ccache:
             store = {'ccache': ccache}
 
