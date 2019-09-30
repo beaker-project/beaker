@@ -29,3 +29,4 @@ selenium.log
 /IntegrationTests/test-repos/
 /IntegrationTests/test-rpms/
 /IntegrationTests/test-server-joblogs/
+venv/
