@@ -16,6 +16,7 @@ window.DistroPicker = Backbone.View.extend({
         'change select': 'update_state',
         'change select.distro_filter_criterion': 'get_distros',
         'change select.distro_tree_filter_criterion': 'get_distro_trees',
+        'change select.unsupported_lab_controllers_filter_criterion': 'get_unsupported_lab_controllers',
     },
     initialize: function (options) {
         _.defaults(options, {multiple: true, selection: {}});
@@ -110,6 +111,38 @@ window.DistroPicker = Backbone.View.extend({
             select.append($('<option/>').attr('value', option[0]).text(option[1]));
         });
         select.change();
+    },
+    get_unsupported_lab_controllers: function () {
+        if (this.get_unsupported_lab_controllers_xhr)
+            this.get_unsupported_lab_controllers_xhr.abort();
+        if (this.$('select[name=distro_tree_id]').val()) {
+            var loading = $('<span><i class="fa fa-spinner fa-spin"></i> Loading&hellip;</span>');
+            this.$('div.lab-controller-warning').after(loading);
+            var xhr = this.get_unsupported_lab_controllers_xhr = $.ajax({
+                url: beaker_url_prefix +
+                        'reserveworkflow/unsupported-lab-controllers?' +
+                        this.$('.unsupported_lab_controllers_filter_criterion').serialize(),
+                dataType: 'json',
+            });
+            xhr.done(_.bind(this.replace_unsupported_lab_controllers, this));
+            xhr.always(function () { loading.remove() ; });
+        } else {
+            // shortcut
+            this.replace_unsupported_lab_controllers({options: []});
+        }
+    },
+    replace_unsupported_lab_controllers: function (result) {
+        var warningDiv = this.$('div.lab-controller-warning');
+        warningDiv.empty();
+        for(var option in result.options){
+            var options = result.options[option]
+            if(options.length){
+                warningDiv.append($('<strong>').text("The distro tree you have selected (" + option + ") is not available in the following lab controllers:"));
+                for(var labControllerFQDN in options){
+                    warningDiv.append($('<p>').text(options[labControllerFQDN]));
+                }
+            }
+        }
     },
 });
 

@@ -43,7 +43,7 @@
 <div class="control-group">
   <label class="control-label" for="distro_tree_id">Distro Tree</label>
   <div class="controls">
-    <select id="distro_tree_id" name="distro_tree_id" class="input-xxlarge"
+    <select id="distro_tree_id" name="distro_tree_id" class="unsupported_lab_controllers_filter_criterion input-xxlarge"
         <% if (this.multiple) { %>multiple size="7"<% } %>
         >
       <% _.each(distro_trees, function (distro_tree) { %>
@@ -52,5 +52,12 @@
             ><%- distro_tree[1] %></option>
       <% }) %>
     </select>
+  </div>
+</div>
+<div class="control-group">
+  <label class="control-label" for="lab-controller-warning"></label>
+  <div class="controls">
+    <div class="lab-controller-warning">
+    </div>
   </div>
 </div>

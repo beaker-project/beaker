@@ -5,14 +5,16 @@
 # (at your option) any later version.
 
 from turbogears import expose
-from flask import request
+from flask import request, jsonify
+from sqlalchemy import and_, not_
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server import identity
 from bkr.server.app import app
 from bkr.server.flask_util import BadRequest400, \
         convert_internal_errors, auth_required
 from bkr.server.model import (Distro, Job, System, Arch, OSMajor, DistroTag,
-        SystemType, OSVersion, DistroTree, LabController, MachineRecipe)
+        SystemType, OSVersion, DistroTree, LabControllerDistroTree,
+        LabController, MachineRecipe)
 from bkr.server.bexceptions import DatabaseLookupError
 from bkr.server.util import absolute_url
 from bkr.server.bexceptions import DatabaseLookupError
@@ -66,6 +68,24 @@ def doit():
     with convert_internal_errors():
         job = Job.provision_system_job(distro_trees, **job_details)
     return 'Created %s' % job.t_id, 201, [('Location', absolute_url('/jobs/%s' % job.id))]
+
+@app.route('/reserveworkflow/unsupported-lab-controllers', methods=['GET'])
+def get_unsupported_lab_controllers():
+    """
+    Returns a dict with a list of not supported lab controller for every distro tree provided.
+    """
+    distro_tree_ids = request.args.getlist('distro_tree_id')
+    unsupported_lab_controllers = {}
+    for distro_tree_id in distro_tree_ids:
+        try:
+            name = str(DistroTree.query.filter(DistroTree.id == distro_tree_id).one())
+            unsupported_lab_controllers[name] = [lab_controller.fqdn for lab_controller in
+                LabController.query.filter(and_(LabController.disabled == 0,
+                not_(LabController._distro_trees.any(LabControllerDistroTree.distro_tree_id == distro_tree_id)))).all()]
+        except DatabaseLookupError:
+            pass
+
+    return  jsonify({'options': unsupported_lab_controllers})
 
 class ReserveWorkflow:
 
