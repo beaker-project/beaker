@@ -17,7 +17,7 @@ function failure(err_msg) {
 }
 
 function do_and_confirm_form(msg, action_type, yes_action) {
-    _do_and_confirm(false, null, null, null, msg, action_type, yes_action);
+    _do_and_confirm(false, null, {}, null, msg, action_type, yes_action);
 }
 
 function do_and_confirm_ajax(url, data, callback, msg, action_type) {
@@ -29,7 +29,7 @@ function _do_and_confirm(ajax, url, data, callback, msg, action_type, yes_action
         msg = 'Are you sure you want to '+ action_type +' this?'
     }
     var newpara = $('<p></p>').text(msg)
-    var dialog_div = $('<div></div>').attr('title',action_type[0].toUpperCase() + action_type.slice(1,action_type.length)).append(newpara)
+    var dialog_div = $('<div></div>').attr('title',action_type[0].toUpperCase() + action_type.slice(1,action_type.length)+' '+ (data.t_id || "")).append(newpara)
 
     if (! yes_action) {
         if (ajax == true) {
