@@ -520,10 +520,9 @@ def provision_virt_recipe(recipe_id):
                     recipe.id)
             recipe.virt_status = RecipeVirtStatus.precluded
             return
-        # cheapest flavor is smallest disk and smallest ram
-        smallest_disk_list = sorted(possible_flavors, key=lambda flavor: flavor.disk)
-        possible_flavors = sorted(smallest_disk_list, key=lambda flavor: flavor.ram)
-        flavor = possible_flavors[0]
+        # cheapest flavor has the smallest disk and ram
+        # id guarantees consistency of our results
+        flavor = min(possible_flavors, key=lambda flavor: (flavor.ram, flavor.disk, flavor.id))
         vm_name = '%srecipe-%s' % (
                 ConfigItem.by_name(u'guest_name_prefix').current_value(u'beaker-'),
                 recipe.id)

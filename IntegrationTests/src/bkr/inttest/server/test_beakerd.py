@@ -2014,29 +2014,23 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1397649
     def test_cheapest_OpenStack_flavor_should_be_picked(self):
-        beakerd.process_new_recipes()
-        beakerd.update_dirty_jobs()
-        beakerd.queue_processed_recipesets()
-        beakerd.update_dirty_jobs()
-        beakerd.provision_virt_recipes()
-        beakerd.update_dirty_jobs()
+        self._run_beakerd_once()
         with session.begin():
             recipe = Recipe.query.get(self.recipe.id)
             self.assertIsNotNone(recipe,
                                  "Failed to get recipe ID %s" % self.recipe.id)
             self.assertIsNotNone(recipe.resource,
                                  "Recipe ID %s does not have a resource" % self.recipe.id)
-            instance = self.virt_manager.novaclient.servers.get(
-                recipe.resource.instance_id)
+            instance = self.virt_manager.novaclient.servers.get(recipe.resource.instance_id)
             available_flavors = self.virt_manager.available_flavors()
             # remove the flavor that has no disk
             # and flavor with really small disk
             for flavor in available_flavors:
                 if flavor.disk < 10:
                     available_flavors.remove(flavor)
-            # cheapest flavor is smallest disk and smallest ram
-            smallest_disk_list = sorted(available_flavors, key=lambda flavor: flavor.disk)
-            cheapest_flavor = sorted(smallest_disk_list, key=lambda flavor: flavor.ram)[0]
+            # cheapest flavor has the smallest disk and ram
+            # id guarantees consistency of our results
+            cheapest_flavor = min(available_flavors, key=lambda flavor: (flavor.ram, flavor.disk, flavor.id))
             instance_flavor = self.virt_manager.novaclient.flavors.get(instance.flavor['id'])
             self.assertEquals(instance_flavor.ram, cheapest_flavor.ram)
             self.assertEquals(instance_flavor.id, cheapest_flavor.id)
