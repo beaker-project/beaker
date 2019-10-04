@@ -345,6 +345,9 @@ setenv NFSSERVERS "RHEL3,rhel3-nfs.test-kickstart.invalid:/export/home RHEL4,rhe
 setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
+sed -i '/^#PermitRootLogin /s/^#//' /etc/ssh/sshd_config
+sed -i 's|PermitRootLogin .*|PermitRootLogin yes|' /etc/ssh/sshd_config
+systemctl restart sshd
 # Disable rhts-compat for Fedora15/RHEL7 and newer.
 cat >> /etc/profile.d/task-overrides-rhts.sh <<END
 export RHTS_OPTION_COMPATIBLE=

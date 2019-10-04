@@ -16,3 +16,8 @@ __EOF__
 restorecon -R /root/.ssh
 chmod go-w /root /root/.ssh /root/.ssh/authorized_keys
 {% endif %}
+{% if disabled_root_access is defined %}
+sed -i '/^#PermitRootLogin /s/^#//' /etc/ssh/sshd_config
+sed -i 's|PermitRootLogin .*|PermitRootLogin yes|' /etc/ssh/sshd_config
+systemctl restart sshd
+{% endif %}
