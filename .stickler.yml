@@ -1,6 +1,8 @@
 linters:
   flake8:
-    fixer: true
+    python: 2
+    max-line-length: 100
+    max-complexity: 20
   csslint: {  }
   shellcheck:
     shell: bash
@@ -8,5 +10,3 @@ files:
   ignore:
     - 'bower_components/*'
     - 'node_modules/*'
-fixers:
-  enable: true
