@@ -14,10 +14,10 @@
 # not representable in RPM. For example, a release candidate might be 0.15.0rc1
 # but that is not usable for the RPM Version because it sorts higher than
 # 0.15.0, so the RPM will have Version 0.15.0 and Release 0.rc1 in that case.
-%global upstream_version 26.5
+%global upstream_version 26.6
 
 Name:           beaker
-Version:        26.5
+Version:        26.6
 Release:        1%{?dist}
 Summary:        Full-stack software and hardware integration testing system
 Group:          Applications/Internet
