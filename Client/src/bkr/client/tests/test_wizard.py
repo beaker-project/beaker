@@ -128,14 +128,28 @@ class DescTest(unittest.TestCase):
 
 class ReleasesTest(unittest.TestCase):
 
-    def setUp(self):
-        self.options = options = wizard.Options([], load_user_prefs=False)
-        self.releases = wizard.Releases(options)
-
     # https://bugzilla.redhat.com/show_bug.cgi?id=1131429
     def test_default_excludes_rhel4_rhel5(self):
+        self.options = options = wizard.Options([], load_user_prefs=False)
+        self.releases = wizard.Releases(options)
         self.assertEqual(self.releases.data,
                          ['-RHEL4', '-RHELClient5', '-RHELServer5'])
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1704804
+    def test_long_spelled_out_RHEL_Name(self):
+        self.options = options = wizard.Options(['beaker-wizard', '-r', 'RedHatEnterpriseLinux8'],
+                                                load_user_prefs=False)
+        self.releases = wizard.Releases(options)
+        self.assertEqual(self.releases.data,
+                ['RedHatEnterpriseLinux8'])
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1704804
+    def test_dashes_and_underscore(self):
+        self.options = options = wizard.Options(['beaker-wizard', '-r', 'Fedora-Cloud21-Alpha'],
+                                                load_user_prefs=False)
+        self.releases = wizard.Releases(options)
+        self.assertEqual(self.releases.data,
+                ['Fedora-Cloud21-Alpha'])
 
 
 class TypeTest(unittest.TestCase):

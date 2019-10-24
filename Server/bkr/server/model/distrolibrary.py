@@ -35,7 +35,7 @@ def split_osmajor_name_version(osmajor):
 
 def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
     """
-    Returns the default install options supplied by Beaker (rather than the 
+    Returns the default install options supplied by Beaker (rather than the
     admin) based on some hardcoded OS major names.
     This is where installer feature test variables are populated.
     """
@@ -54,9 +54,9 @@ def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
     if name == 'Fedora':
         fedora = version
 
-    # We default to assuming all features are present, with features 
-    # conditionally turned off if needed. That way, unrecognised custom 
-    # distros will be assumed to support all features. The admin can 
+    # We default to assuming all features are present, with features
+    # conditionally turned off if needed. That way, unrecognised custom
+    # distros will be assumed to support all features. The admin can
     # override these in OS major or distro install options if necessary.
     ks_meta = {}
 
@@ -154,7 +154,8 @@ def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
         ]
     else:
         ks_meta['conflicts_groups'] = []
-    #clearpart --cdl
+
+    # clearpart --cdl
     if arch.arch == 's390x' and (rhel == '7' and int(osminor) >= 6
                                  or rhel == '8' and int(osminor) >= 0):
         ks_meta['has_clearpart_cdl'] = True
@@ -162,6 +163,11 @@ def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
     ks_meta['has_ignoredisk_interactive'] = False  # --interactive is deprecated
     if (rhel and int(rhel) < 8) or (fedora and fedora != 'rawhide' and int(fedora) < 29):
         ks_meta['has_ignoredisk_interactive'] = True
+
+    # Remove Fedora disabled root/password ssh combination
+    # introduced in Fedora 31
+    if fedora and (fedora == 'rawhide' or int(fedora) > 30):
+        ks_meta['disabled_root_access'] = True
 
     kernel_options = {}
     # set arch specific default netboot loader paths
@@ -767,13 +773,13 @@ class DistroTree(DeclarativeMappedObject, ActivityMixin):
         """
         Returns an absolute URL for this distro tree in the given lab.
 
-        If *scheme* is a string, the URL returned will use that scheme. Callers 
-        can also pass a list of allowed schemes in order of preference; the URL 
-        returned will use one of them. If *scheme* is None or absent, any 
+        If *scheme* is a string, the URL returned will use that scheme. Callers
+        can also pass a list of allowed schemes in order of preference; the URL
+        returned will use one of them. If *scheme* is None or absent, any
         scheme will be used.
 
-        If the *required* argument is false or absent, then None will be 
-        returned if this distro tree is not in the given lab. If *required* is 
+        If the *required* argument is false or absent, then None will be
+        returned if this distro tree is not in the given lab. If *required* is
         true, then an exception will be raised.
         """
         if isinstance(scheme, basestring):

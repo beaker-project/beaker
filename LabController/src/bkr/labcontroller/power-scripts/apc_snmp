@@ -4,4 +4,8 @@ if [ "$power_mode" == interrupt ] ; then
     echo "interrupt not supported by apc_snmp" >&2
     exit 1
 fi
-fence_apc_snmp -v -a "$power_address" -n "$power_id" -o "$power_mode"
+# Handle one or more plug numbers
+# power_id must be a whitespace delimited list
+for plug in $power_id; do
+    fence_apc_snmp -a "$power_address" -n $plug -o "$power_mode"
+done

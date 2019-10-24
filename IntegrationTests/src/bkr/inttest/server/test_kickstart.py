@@ -466,6 +466,28 @@ class KickstartTest(unittest.TestCase):
                 DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
             ]
 
+            cls.f30 = data_setup.create_distro(
+                name=u'Fedora-30', osmajor=u'Fedora30', osminor=u'0')
+            cls.f30_x86_64 = data_setup.create_distro_tree(
+                distro=cls.f30, variant=u'Everything', arch=u'x86_64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/F-30/GOLD/Everything/x86_64/os/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/F-30/GOLD/Everything/x86_64/os/'])
+            cls.f30_x86_64.repos[:] = [
+                DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
+            ]
+
+            cls.f31 = data_setup.create_distro(
+                name=u'Fedora-31', osmajor=u'Fedora31', osminor=u'0')
+            cls.f31_x86_64 = data_setup.create_distro_tree(
+                distro=cls.f31, variant=u'Everything', arch=u'x86_64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/F-31/GOLD/Everything/x86_64/os/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/F-31/GOLD/Everything/x86_64/os/'])
+            cls.f31_x86_64.repos[:] = [
+                DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
+            ]
+
             cls.frawhide = data_setup.create_distro(name=u'Fedora-rawhide',
                 osmajor=u'Fedorarawhide', osminor=u'0')
             cls.frawhide_x86_64 = data_setup.create_distro_tree(
@@ -709,7 +731,7 @@ class KickstartTest(unittest.TestCase):
         for line in recipe.installation.rendered_kickstart.kickstart.splitlines():
             if line.startswith('repo'):
                 self.assert_(r'''--cost'''
-                             not in line, 
+                             not in line,
                              line)
 
     def test_rhel6_defaults(self):
@@ -1319,6 +1341,76 @@ class KickstartTest(unittest.TestCase):
             ''', self.system)
 
         self.assert_(r'''repo --name=custom --cost=100 --baseurl=http://repos.fedorapeople.org/repos/beaker/server/Fedora18/'''
+                     in recipe.installation.rendered_kickstart.kickstart.splitlines(),
+                     recipe.installation.rendered_kickstart.kickstart)
+
+    def test_rhel8_root_ssh_snippet(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-8.0-20181114.n.0" />
+                            <distro_variant op="=" value="BaseOS" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assert_(r'''sed -i '/^#PermitRootLogin /s/^#//' /etc/ssh/sshd_config'''
+                     not in recipe.installation.rendered_kickstart.kickstart.splitlines(),
+                     recipe.installation.rendered_kickstart.kickstart)
+
+    def test_fedora30_root_ssh_snippet(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-30" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assert_(r'''sed -i '/^#PermitRootLogin /s/^#//' /etc/ssh/sshd_config'''
+                     not in recipe.installation.rendered_kickstart.kickstart.splitlines(),
+                     recipe.installation.rendered_kickstart.kickstart)
+
+    def test_fedora31_root_ssh_snippet(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-31" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assert_(r'''sed -i '/^#PermitRootLogin /s/^#//' /etc/ssh/sshd_config'''
+                     in recipe.installation.rendered_kickstart.kickstart.splitlines(),
+                     recipe.installation.rendered_kickstart.kickstart)
+        self.assert_(r'''sed -i 's|PermitRootLogin .*|PermitRootLogin yes|' /etc/ssh/sshd_config'''
+                     in recipe.installation.rendered_kickstart.kickstart.splitlines(),
+                     recipe.installation.rendered_kickstart.kickstart)
+        self.assert_(r'''systemctl restart sshd'''
                      in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                      recipe.installation.rendered_kickstart.kickstart)
 
@@ -3009,12 +3101,12 @@ network --bootproto=dhcp --device=66:77:88:99:aa:bb
         self.assert_(kickstart_lines.count('requires1') == 1)
 
     def test_packages_ksmeta_replaces_recipe_packages(self):
-        # Users can pass a colon-separated list of packages in ksmeta and it 
-        # will replace all the recipe packages (from <packages/> and task 
+        # Users can pass a colon-separated list of packages in ksmeta and it
+        # will replace all the recipe packages (from <packages/> and task
         # requirements).
-        # This was never really intended behaviour (since it's not very 
-        # useful), it was just a side-effect of how Beaker passed recipe 
-        # packages to Cobbler through ksmeta. However to avoid breaking 
+        # This was never really intended behaviour (since it's not very
+        # useful), it was just a side-effect of how Beaker passed recipe
+        # packages to Cobbler through ksmeta. However to avoid breaking
         # compatibility we need to continue supporting it.
         recipe = self.provision_recipe('''
             <job>
@@ -3043,11 +3135,11 @@ httpd
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=952635
     def test_task_requirements_with_colons_are_preserved(self):
-        # Note that no package ever contains colons in its name, and a task 
-        # cannot use arbitrary RPM virtual requirements (like 
-        # perl(Archive::Tar) or similar), it has to depend on actual package 
-        # names because Anaconda only accepts real package names in %packages. 
-        # But, for completelness, we ensure colons are preserved as is in the 
+        # Note that no package ever contains colons in its name, and a task
+        # cannot use arbitrary RPM virtual requirements (like
+        # perl(Archive::Tar) or similar), it has to depend on actual package
+        # names because Anaconda only accepts real package names in %packages.
+        # But, for completelness, we ensure colons are preserved as is in the
         # kickstart.
         task = data_setup.create_task(requires=[u'some::weird::package'])
         recipe = self.provision_recipe('''
@@ -3148,8 +3240,8 @@ done
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=978640
     def test_oats_api(self):
-        # This is not a documented API at all, but OATS relies on 
-        # LAB_CONTROLLER being defined in /etc/profile.d/rh-env.sh and we don't 
+        # This is not a documented API at all, but OATS relies on
+        # LAB_CONTROLLER being defined in /etc/profile.d/rh-env.sh and we don't
         # want to break that.
         recipe = self.provision_recipe('''
             <job>
@@ -3512,7 +3604,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1262098
     def test_boot_partition_size(self):
-        # On RHEL7 and later we just use --recommended, for earlier RHELs that 
+        # On RHEL7 and later we just use --recommended, for earlier RHELs that
         # doesn't work so we have to supply a size.
         # We use fstype= here to trigger custom partitioning.
         recipe = self.provision_recipe('''

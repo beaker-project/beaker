@@ -298,3 +298,24 @@ Beaker 26.5
 
 .. internal workflow so it is not published in the release notes:
    :issue:`1707057`, `1693758`
+
+Beaker 26.6
+~~~~~~~~~~~
+* | :issue:`1704804`: Extended beaker-wizard to accept full OSMajor distro names.
+  | (Contributed by Carol Bouchard)
+* | :issue:`1719829`: Watchdog no longer report user domain general protection fault
+  | as panic.
+  | (Contributed by Tomas Klohna)
+* | :issue:`1751105`: Added support to remove all distributions from Lab Controller.
+  | (Contributed by Martin Styk)
+* | :issue:`1758124`: Fedora 31+ disabled root password login in SSH. This patch
+  | enables it again to provide consistent experience on all systems under test.
+  | (Contributed by Martin Styk)
+* | :issue:`1724650`: Fixed race conditions between Python 2.6 and Python 2.7.
+  | (Contributed by Martin Styk)
+* | :issue:`1723303`: Power scripts :program:`apc_snmp` and :program:`wti` now
+  | supports multiple plugs.
+  | (Contributed by Martin Styk)
+* | :issue:`1720067`: Added support to run :program:`beaker-expire-distros` on
+  | non-local labcontroller.
+  | (Contributed by Martin Styk)
