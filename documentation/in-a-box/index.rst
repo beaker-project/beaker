@@ -50,7 +50,7 @@ Start the setup using Ansible by running::
 Customizing the provisioning
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-By default the server and lab controller VM is provisioned from a CentOS 6 HTTP
+By default the server and lab controller VM is provisioned from a CentOS 7 HTTP
 URL. If you prefer to provision it from a different HTTP URL, run the playbook
 by passing `variables on the command line
 <http://docs.ansible.com/ansible/playbooks_variables.html#passing-variables-on-the-command-line>`_
@@ -59,9 +59,9 @@ which will overwrite the default.
 For example, create a new YAML file ``extravars.yml``::
 
   ---
-  netinstall_url: http://mirror.centos.org/centos/6/os/x86_64/
+  netinstall_url: http://mirror.centos.org/centos/7/os/x86_64/
   kickstart_repos:
-    updates: http://mirror.centos.org/centos/6/updates/x86_64/
+    updates: http://mirror.centos.org/centos/7/updates/x86_64/
 
 It provides the netinstall URL and additional repositories the VM is provisioned
 with. Then run the playbook and include the file to the ``ansible-playbook``
