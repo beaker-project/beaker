@@ -1098,7 +1098,7 @@ class Root(RPCRoot):
 
     @expose(template="bkr.server.templates.login")
     def login(self, forward_url=None, **kwargs):
-        if not forward_url:
+        if not forward_url or not re.match("^/[a-zA-Z0-9]", forward_url):
             forward_url = url('/')
         # If the container is doing authentication for us, we might have
         # already been authenticated through REMOTE_USER.
