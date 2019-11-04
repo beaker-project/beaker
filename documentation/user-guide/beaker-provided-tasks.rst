@@ -4,7 +4,7 @@ Tasks provided with Beaker
 Besides the custom tasks which Beaker users would write for a specific
 testing scenario, there are a number of tasks which are distributed
 and maintained along with Beaker. Among these,
-the ``/distribution/check-install``, ``/distribution/install``, and 
+the ``/distribution/check-install``, ``/distribution/install``, and
 ``/distribution/reservesys`` tasks are
 essential for Beaker's operation. The ``/distribution/inventory`` task is not
 essential for Beaker's operation, but it is required for accurate
@@ -22,7 +22,7 @@ The purpose of this task is to report back on the system install
 (provisioning). It is usually added before any scenario specific tasks
 so that it is run immediately after the system has been provisioned.
 
-This task collects and reports various information about the installed system 
+This task collects and reports various information about the installed system
 which may be useful in debugging any problems with the installer or the distro.
 
 /distribution/install
@@ -30,13 +30,13 @@ which may be useful in debugging any problems with the installer or the distro.
 
 This task is deprecated. Use ``/distribution/check-install`` instead.
 
-This is the original implementation of the installation checking task, but its 
-name has proved confusing, and it carried a very large (and unnecessary) set of 
+This is the original implementation of the installation checking task, but its
+name has proved confusing, and it carried a very large (and unnecessary) set of
 package requirements for historical reasons.
 
-This task is still maintained for backwards compatibility. Note that the 
-:program:`bkr` workflow commands will schedule this older task (instead of its 
-replacement ``/distribution/check-install``) for recipes running Fedora 28 and 
+This task is still maintained for backwards compatibility. Note that the
+:program:`bkr` workflow commands will schedule this older task (instead of its
+replacement ``/distribution/check-install``) for recipes running Fedora 28 and
 older, or RHEL7 and older.
 
 .. _reservesys-task:
@@ -74,11 +74,11 @@ details are correctly updated in Beaker's database.
 /distribution/command
 =====================
 
-The ``/distribution/command`` task runs an arbitrary shell command, given in 
+The ``/distribution/command`` task runs an arbitrary shell command, given in
 the ``CMDS_TO_RUN`` parameter.
 
-This task is useful for inserting ad hoc tests or behaviour into a recipe for 
-experimentation purposes, without needing to modify an existing task or write 
+This task is useful for inserting ad hoc tests or behaviour into a recipe for
+experimentation purposes, without needing to modify an existing task or write
 a new one.
 
 For example, to log the CPU information of the system under test::
@@ -142,28 +142,28 @@ should never be defined in the guest recipe itself.
 /distribution/virt/image-install
 ================================
 
-This task is an experimental alternative to the regular 
-``/distribution/virt/install`` task for installing guest recipes. Rather than 
-booting the installer inside the guest and running through a complete 
+This task is an experimental alternative to the regular
+``/distribution/virt/install`` task for installing guest recipes. Rather than
+booting the installer inside the guest and running through a complete
 installation, this task fetches a cloud image and boots that.
 
-The ``CLOUD_IMAGE`` task parameter should be the URL for a suitable cloud 
-image. The image must have the ``cloud-init`` package pre-installed and 
-enabled. This task approximates the effect of the guest kickstart by generating 
+The ``CLOUD_IMAGE`` task parameter should be the URL for a suitable cloud
+image. The image must have the ``cloud-init`` package pre-installed and
+enabled. This task approximates the effect of the guest kickstart by generating
 a suitable user-data file for cloud-init.
 
 Note that there are a number of limitations when using this task:
 
 * The distro tree selected by Beaker for the guest recipe is effectively
-  ignored. The distro used in the guest is determined solely by what image is 
+  ignored. The distro used in the guest is determined solely by what image is
   given.
 
 * Similarly, it is the job submitter's responsibility to use a suitable local
-  mirror for the cloud image. (Fetching the image over an expensive WAN link is 
+  mirror for the cloud image. (Fetching the image over an expensive WAN link is
   not desirable but Beaker will not prevent it.)
 
 * Not all parts of the guest kickstart are accurately applied, since the
-  installer is skipped. The task extracts ``%packages`` and ``%post`` sections, 
+  installer is skipped. The task extracts ``%packages`` and ``%post`` sections,
   and it also handles the ``repo``, ``rootpw``, and ``selinux`` commands.
 
 .. _virt-start-task:
@@ -180,12 +180,12 @@ use it with ``/distribution/virt/install``.
 /distribution/rebuild
 =====================
 
-This task is for experimental mass rebuilds of an entire distribution from 
-source, for example using a newer or modified build toolchain. It fetches 
+This task is for experimental mass rebuilds of an entire distribution from
+source, for example using a newer or modified build toolchain. It fetches
 source RPMs from a given yum repo and rebuilds them all in mock.
 
-Packages are rebuilt in alphabetical order. This task does not attempt to build 
-packages in dependency order, nor does it inject the build results back into 
+Packages are rebuilt in alphabetical order. This task does not attempt to build
+packages in dependency order, nor does it inject the build results back into
 the build root.
 
 The following task parameters are accepted:
@@ -193,46 +193,46 @@ The following task parameters are accepted:
 ``SOURCE_REPO``
     URL of the yum repo to fetch source RPMs from.
 ``MOCK_REPOS``
-    Space-separated list of URLs of the yum repos to include in the build root. 
-    Typically this should include the entire distribution or the build tag for 
+    Space-separated list of URLs of the yum repos to include in the build root.
+    Typically this should include the entire distribution or the build tag for
     it. You can also add extra repos containing patched packages.
 ``MOCK_CHROOT_SETUP_CMD``
-    Command to be run when mock sets up the chroot. The default value is 
-    suitable for Fedora: ``install @buildsys-build``. The group name may need 
+    Command to be run when mock sets up the chroot. The default value is
+    suitable for Fedora: ``install @buildsys-build``. The group name may need
     adjusting for other distros.
 ``MOCK_TARGET_ARCH``
-    Target architecture for builds. By default this will match the arch of the 
+    Target architecture for builds. By default this will match the arch of the
     recipe where this task is running.
 ``MOCK_CONFIG_NAME``
-    Name of the mock configuration to use or generate (excluding ``.cfg`` file 
+    Name of the mock configuration to use or generate (excluding ``.cfg`` file
     extension).
-    If this parameter is set and the configuration exists, it will be used as 
-    is. Otherwise the configuration will be generated based on the parameters 
+    If this parameter is set and the configuration exists, it will be used as
+    is. Otherwise the configuration will be generated based on the parameters
     above.
 ``SKIP_NOARCH``
-    If set to a non-empty value, skip building any SRPMs which produce only 
+    If set to a non-empty value, skip building any SRPMs which produce only
     noarch packages.
 ``KEEP_RESULTS``
-    If set to a non-empty value, keep the results (RPMs and log files) produced 
-    by each build in 
+    If set to a non-empty value, keep the results (RPMs and log files) produced
+    by each build in
     :file:`/mnt/tests/distribution/rebuild/results/{packagename}/`.
-    You can use a subsequent task in the recipe to examine the results or copy 
+    You can use a subsequent task in the recipe to examine the results or copy
     the RPMs elsewhere.
 ``SRPM_BLACKLIST``
     SRPMs to skip.
-    This parameter must be a whitespace-separated list of `bash glob patterns 
-    <http://www.gnu.org/software/bash/manual/bashref.html#Pattern-Matching>`_. 
-    Each pattern is matched against the SRPM filename (including .src.rpm 
-    extension). If any pattern matches, the SRPM is skipped. For example 
+    This parameter must be a whitespace-separated list of `bash glob patterns
+    <http://www.gnu.org/software/bash/manual/bashref.html#Pattern-Matching>`_.
+    Each pattern is matched against the SRPM filename (including .src.rpm
+    extension). If any pattern matches, the SRPM is skipped. For example
     ``kernel*`` will skip any SRPMs beginning with kernel.
 ``SRPM_WHITELIST``
-    SRPMs to build. If this parameter is set, any SRPM which does not match 
+    SRPMs to build. If this parameter is set, any SRPM which does not match
     a pattern in the whitelist is skipped.
-    Similar to ``SRPM_BLACKLIST``, this must be a whitespace-separated list of 
+    Similar to ``SRPM_BLACKLIST``, this must be a whitespace-separated list of
     bash glob patterns.
 
-As an example, imagine you have built the latest GCC version 99.0, and you want 
-to try rebuilding all architecture-specific packages in Fedora 21 using the new 
+As an example, imagine you have built the latest GCC version 99.0, and you want
+to try rebuilding all architecture-specific packages in Fedora 21 using the new
 compiler to see if it introduces any build failures:
 
 .. code-block:: xml
@@ -251,9 +251,9 @@ compiler to see if it introduces any build failures:
 Task source code
 ================
 
-The source code for the above tasks can be found in the 
-`Beaker core tasks git repo`_.  The tasks for testing Beaker itself are 
+The source code for the above tasks can be found in the
+`Beaker core tasks git repo`_.  The tasks for testing Beaker itself are
 in the `Beaker meta tasks git repo`_.
 
-.. _Beaker core tasks git repo: https://git.beaker-project.org/cgit/beaker-core-tasks/
-.. _Beaker meta tasks git repo: https://git.beaker-project.org/cgit/beaker-meta-tasks/
+.. _Beaker core tasks git repo: https://github.com/beaker-project/beaker-core-tasks/
+.. _Beaker meta tasks git repo: https://github.com/beaker-project/beaker-meta-tasks/

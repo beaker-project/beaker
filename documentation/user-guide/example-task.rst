@@ -125,13 +125,13 @@ recipe:
 Running the task
 ----------------
 
-You can then submit the job (see :ref:`job-submission`). After the job has 
+You can then submit the job (see :ref:`job-submission`). After the job has
 completed, you can access the logs as described in :ref:`job-results`. You will
 see that on success, the ``taskout.log`` file will provide verbose information
 about the progress of the test and it's result.
 
 The overall workflow of creating a task for a test, submitting a job to
-run the test and accessing the test results is illustrated in 
+run the test and accessing the test results is illustrated in
 :ref:`chronological-overview`.
 
 .. _writing-example-task-references:
@@ -140,11 +140,11 @@ Next steps
 ----------
 
 The Beaker `meta tasks git repository
-<https://git.beaker-project.org/cgit/beaker-meta-tasks/tree/>`_ provides tasks
+<https://github.com/beaker-project/beaker-meta-tasks/tree/master/>`_ provides tasks
 which are in use daily by the Beaker team. They can give you further information
 on how you can write tasks. The task described in this tutorial can be inspected
 in the same repository under `examples
-<https://git.beaker-project.org/cgit/beaker-meta-tasks/tree/examples>`_. If you
+<https://github.com/beaker-project/beaker-meta-tasks/tree/master/examples/>`_. If you
 run into problems when scheduling your task in Beaker, the
 :ref:`troubleshooting` section might be of interest to you. Further information
 on the test harness used in this tutorial can be found in the `Restraint

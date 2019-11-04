@@ -256,7 +256,7 @@ these to your Beaker installation before attempting to run jobs.
 
 You can build and upload most of the tasks from source by cloning the
 `beaker-core-tasks git repository
-<https://git.beaker-project.org/cgit/beaker-core-tasks/>`__, or fetch a
+<https://github.com/beaker-project/beaker-core-tasks/>`__, or fetch a
 pre-built version of the tasks as RPMs from `beaker-project.org
 <https://beaker-project.org/tasks/>`__.
 
