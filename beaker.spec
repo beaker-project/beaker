@@ -170,6 +170,7 @@ Requires:       intltool
 Requires:       crontabs
 Requires:       mod_wsgi
 Requires:       httpd
+Requires:       dnf
 Requires:       yum
 Requires:       yum-utils
 Requires:       nodejs-less >= 1.7

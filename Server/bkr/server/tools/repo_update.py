@@ -19,8 +19,7 @@ from turbogears.config import get
 import os
 import sys
 import urlparse
-import shutil
-import yum, yum.misc, yum.packages
+import dnf
 import urllib
 import requests
 import logging
@@ -61,33 +60,33 @@ requests_session = requests.Session()
 # download from.
 class HarnessRepoNotFoundError(ValueError): pass
 
-# Can't use /usr/bin/reposync for this, because it tries to replicate the 
-# ../../ in rpm paths and generally makes a mess of things.
+class RPMPayloadLocation(dnf.repo.RPMPayload):
+    def __init__(self, pkg, progress, pkg_location):
+        super(RPMPayloadLocation, self).__init__(pkg, progress)
+        self.package_dir = os.path.dirname(pkg_location)
+
+    def _target_params(self):
+        tp = super(RPMPayloadLocation, self)._target_params()
+        dnf.util.ensure_dir(self.package_dir)
+        tp['dest'] = self.package_dir
+        return tp
+
 # This is a cutdown version of reposync.
-class RepoSyncer(yum.YumBase):
+class RepoSyncer(dnf.Base):
 
     def __init__(self, repo_url, output_dir):
         super(RepoSyncer, self).__init__()
-        self.doConfigSetup(init_plugins=False)
-        # This mess with repo_setopts is equivalent to just loading and then 
-        # disabling all repos, but it has the extra effect that it silences any 
-        # whingeing on stderr about being unable to access 
-        # # subscription-manager certs for RHEL repos (which we do not want or 
-        # need here).
-        self.repo_setopts['*'] = yum.misc.GenericHolder()
-        self.repo_setopts['*'].enabled = False
-        self.repo_setopts['*'].items = ['enabled']
-        cachedir = yum.misc.getCacheDir()
-        assert cachedir is not None # ugh
-        self.repos.setCacheDir(cachedir)
-        self.conf.cachedir = cachedir
         repo_id = repo_url.replace('/', '-')
-        self.add_enable_repo(repo_id, baseurls=[repo_url])
+        self.repos.add_new_repo(repo_id, self.conf, baseurl=[repo_url])
         self.repo_url = repo_url
         self.output_dir = output_dir
 
-        # yum foolishness: http://lists.baseurl.org/pipermail/yum-devel/2010-June/007168.html
-        yum.packages.base = None
+    # Verify the remote package's checksum against the local copy
+    def verify_checksum(self, package, dest_path):
+        (chksum_type, chksum) = package.returnIdSum()
+        real_sum = dnf.yum.misc.checksum(chksum_type, dest_path,
+                                         datasize=package._size)
+        return real_sum == chksum
 
     def sync(self):
         # First check if the harness repo exists.
@@ -95,40 +94,35 @@ class RepoSyncer(yum.YumBase):
         if response.status_code != 200:
             raise HarnessRepoNotFoundError()
 
-        has_new_packages = False
         log.info('Syncing packages from %s to %s', self.repo_url, self.output_dir)
-        self.doRepoSetup()
-        # have to list every possible arch here, ughhhh
-        self.doSackSetup(archlist='noarch armv7hl aarch64 i386 i686 x86_64 ia64 ppc ppc64 ppc64le s390 s390x'.split())
-        repo, = self.repos.listEnabled()
-        repo.copy_local = True
-        package_sack = yum.packageSack.ListPackageSack(
-                self.pkgSack.returnPackages(repoid=repo.id))
+        self.fill_sack(load_system_repo=False)
+        pkglist = self.sack.query().latest().filterm(arch__neq='src')
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
-        for package in package_sack.returnNewestByNameArch():
+
+        remote_pkgs, _ = self._select_remote_pkgs(pkglist)
+        new_packages = []
+        for package in remote_pkgs:
             dest = os.path.join(self.output_dir, os.path.basename(package.relativepath))
-            package.localpath = dest
             if os.path.exists(dest):
-                if package.verifyLocalPkg():
+                if self.verify_checksum(package, dest):
                     log.info('Skipping %s', dest)
                     continue
                 else:
                     log.info('Unlinking bad package %s', dest)
                     os.unlink(dest)
-            log.info('Fetching %s', dest)
-            cached_package = repo.getPackage(package)
-            if not package.verifyLocalPkg():
-                raise ValueError('Package %s checksum did not match '
-                        'expected checksum from repodata %s'
-                        % (dest, package.checksum))
-            has_new_packages = True
-            # Based on some confusing cache configuration, yum may or may not 
-            # have fetched the package to the right place for us already
-            if os.path.exists(dest) and os.path.samefile(cached_package, dest):
-                continue
-            shutil.copy2(cached_package, dest)
-        return has_new_packages
+            new_packages.append(package)
+            log.info('Fetching %s', os.path.join(self.output_dir, package.relativepath))
+
+        if new_packages:
+            progress = dnf.callback.NullDownloadProgress()
+            drpm = dnf.drpm.DeltaInfo(self.sack.query().latest(), progress, 0)
+            payloads = [RPMPayloadLocation(package, progress, os.path.join(self.output_dir, os.path.basename(package.relativepath)))
+                        for package in new_packages]
+            self._download_remote_payloads(payloads, drpm, progress, None)  # pylint: disable=no-member
+            flag_path = os.path.join(self.output_dir, '.new_files')
+            with open(flag_path, 'wb'):
+                os.utime(flag_path, None)
 
 def update_repos(baseurl, basepath):
     # We only sync repos for the OS majors that have existing trees in the lab controllers.
@@ -140,20 +134,22 @@ def update_repos(baseurl, basepath):
             continue # skip symlinks
         syncer = RepoSyncer(urlparse.urljoin(baseurl, '%s/' % urllib.quote(osmajor)), dest)
         try:
-            has_new_packages = syncer.sync()
+            syncer.sync()
         except KeyboardInterrupt:
             raise
         except HarnessRepoNotFoundError:
             log.warning('Harness packages not found for OS major %s, ignoring', osmajor)
             continue
-        if has_new_packages:
+        flag_path = os.path.join(dest, '.new_files')
+        if os.path.exists(flag_path):
             createrepo_results = run_createrepo(cwd=dest)
             returncode = createrepo_results.returncode
             if returncode != 0:
                 err = createrepo_results.err
                 command = createrepo_results.command
                 raise RuntimeError('Createrepo failed.\nreturncode:%s cmd:%s err:%s'
-                     % (returncode, command, err))
+                        % (returncode, command, err))
+            os.unlink(flag_path)
 
 
 def main():
