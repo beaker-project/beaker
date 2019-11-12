@@ -43,7 +43,8 @@ from bkr.inttest import data_setup, DatabaseTestCase, get_server_base
 from bkr.inttest.assertions import assert_datetime_within
 import turbogears
 import os
-import yum
+import dnf
+import tempfile
 
 def serialize_kid_element(elem):
     return kid.XHTMLSerializer().serialize(kid.ElementStream(elem), fragment=True)
@@ -2514,17 +2515,14 @@ class TaskLibraryTest(DatabaseTestCase):
     def query_task_repo(self, task_name):
 
         task_dir = turbogears.config.get('basepath.rpms')
-        yb = yum.YumBase()
-        yb.preconf.init_plugins = False
-        if not yb.setCacheDir(force=True, reuse=False):
-            self.fail('Failed to set yum cache dir')
-        cachedir = os.path.dirname(os.path.dirname(yb.conf.cachedir))
-        self.assert_(cachedir.startswith('/var/tmp/yum-'), cachedir)
+        base = dnf.Base()
+        cachedir = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, cachedir)
-        yb.repos.disableRepo('*')
-        yb.add_enable_repo('myrepo', ['file://' + os.path.abspath(task_dir)])
-        return [''.join([pkg.version, '-', pkg.rel]) for pkg, _ in
-                yb.searchGenerator(['name'], [task_name])]
+        base.conf.cachedir = cachedir
+        base.repos.add_new_repo('myrepo', base.conf, baseurl=['file://' + os.path.abspath(task_dir)])
+        base.fill_sack(load_system_repo=False)
+        packages = base.sack.query().filter(name=task_name).run()
+        return [''.join([pkg.version, '-', pkg.release]) for pkg in packages]
 
     def write_data_file(self, rpm):
         rpm_data = open(rpm)

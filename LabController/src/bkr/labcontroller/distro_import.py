@@ -21,7 +21,7 @@ from bkr.common.bexceptions import BX
 import pprint
 import time
 import json
-import yum
+import dnf
 import uuid
 
 def url_exists(url):
@@ -1545,13 +1545,13 @@ class TreeInfoRHVH4(TreeInfoMixin, Importer):
         self.tree["ks_meta"] = ks_meta + " autopart_type=thinp liveimg=%s" % img_rpm
 
     def _find_image_update_rpm(self):
-        yb = yum.YumBase()
-        yb.repos.disableRepo("*")
-        yb.add_enable_repo(uuid.uuid4().hex, [self.parser.url])
-        pkgs = yb.pkgSack.searchNames(["redhat-virtualization-host-image-update"])
+        base = dnf.Base()
+        base.repos.add_new_repo(uuid.uuid4().hex, base.conf, baseurl=[self.parser.url])
+        base.fill_sack(load_system_repo=False)
+        pkgs = base.sack.query().filter(name="redhat-virtualization-host-image-update").run()
         if not pkgs:
             raise IncompleteTree("Could not find a valid RHVH rpm")
-        return pkgs[0].remote_path
+        return pkgs[0].relativepath
 
     def find_repos(self):
         return []

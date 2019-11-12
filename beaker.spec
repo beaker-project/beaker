@@ -156,12 +156,10 @@ BuildRequires:  python-kid
 # These runtime dependencies are needed at build time as well, because
 # the unit tests and Sphinx autodoc import the server code as part of the
 # build process.
-BuildRequires:  createrepo
 BuildRequires:  createrepo_c
 BuildRequires:  ipxe-bootimgs
 BuildRequires:  syslinux
 BuildRequires:  mtools
-BuildRequires:  yum
 Requires:       createrepo_c
 Requires:       ipxe-bootimgs
 Requires:       syslinux
@@ -171,8 +169,6 @@ Requires:       crontabs
 Requires:       mod_wsgi
 Requires:       httpd
 Requires:       dnf
-Requires:       yum
-Requires:       yum-utils
 Requires:       nodejs-less >= 1.7
 Requires:       /usr/bin/cssmin
 Requires:       /usr/bin/uglifyjs
@@ -328,7 +324,6 @@ Requires:       python
 Requires:       crontabs
 Requires:       httpd
 Requires:       syslinux
-Requires:       yum-utils
 Requires:       fence-agents
 Requires:       ipmitool
 Requires:       wsmancli

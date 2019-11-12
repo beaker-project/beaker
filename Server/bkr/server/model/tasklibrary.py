@@ -11,7 +11,6 @@ import shutil
 import logging
 import rpm
 import lxml.etree
-import rpmUtils.miscutils
 from sqlalchemy import (Table, Column, ForeignKey, Integer, Unicode, Boolean,
                         DateTime)
 from sqlalchemy.sql.expression import and_, or_, not_, true
@@ -110,8 +109,7 @@ class TaskLibrary(object):
     def _update_locked_repo(self):
         # Internal call that assumes the flock is already held
         # If the createrepo command crashes for some reason it may leave behind
-        # its work directories. createrepo refuses to run if .olddata exists,
-        # createrepo_c refuses to run if .repodata exists.
+        # its work directories. createrepo_c refuses to run if .repodata exists.
         workdirs = [os.path.join(self.rpmspath, dirname) for dirname in
                 ['.repodata', '.olddata']]
         for workdir in workdirs:
@@ -407,11 +405,11 @@ class Task(DeclarativeMappedObject):
     def check_downgrade(old_version, new_version):
         old_version, old_release = old_version.rsplit('-', 1)
         new_version, new_release = new_version.rsplit('-', 1)
-        # compareEVR returns 1 if tup1 > tup2
+        # labelCompare returns 1 if tup1 > tup2
         # It is ok to default epoch to 0, since rhts-devel doesn't generate
         # task packages with epoch > 0
-        return rpmUtils.miscutils.compareEVR((0, old_version, old_release),
-                                             (0, new_version, new_release)) == 1
+        return rpm.labelCompare(('0', old_version, old_release),
+                                ('0', new_version, new_release)) == 1
 
     @classmethod
     def create_from_taskinfo(cls, raw_taskinfo):

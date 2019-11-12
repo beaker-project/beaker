@@ -179,13 +179,6 @@ class TaskLibraryTest(unittest.TestCase):
         os.mkdir(os.path.join(self.tasklibrary.rpmspath, '.repodata'))
         self.tasklibrary.update_repo()
 
-    # https://bugzilla.redhat.com/show_bug.cgi?id=1101402
-    def test_update_repo_cleans_stale_dot_olddata(self):
-        # createrepo refuses to run if .olddata exists
-        update({'beaker.createrepo_command': 'createrepo'})
-        os.mkdir(os.path.join(self.tasklibrary.rpmspath, '.olddata'))
-        self.tasklibrary.update_repo()
-
     def test_unlink_rpm(self):
         rpm_file = pkg_resources.resource_filename(
             'bkr.server.tests',
