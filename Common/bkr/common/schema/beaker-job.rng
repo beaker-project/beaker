@@ -568,6 +568,7 @@ the Free Software Foundation; either version 2 of the License, or
     </choice>
   </define>
   <define name="distrometadata">
+    <interleave>
     <element name="tree">
       <a:documentation xml:lang="en">
         The URL where the installation tree is located.
@@ -620,6 +621,7 @@ the Free Software Foundation; either version 2 of the License, or
         <attribute name="value"/>
       </element>
     </optional>
+    </interleave>
   </define>
   <define name="hostreq">
     <choice>
