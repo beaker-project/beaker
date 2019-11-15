@@ -952,8 +952,9 @@ class SystemViewTestWD(WebDriverTestCase):
         b = self.browser
 
         # simulate the label click for i386
-        # click the major version to open the submenu, and then click the osversion
+        # click the major version to open the submenu, wait for it to open, and then click the osversion
         b.find_element_by_xpath('//div[@id="arch-i386"]//i[@data-target="#collapse-i386-DansAwesomeLinux6"]').click()
+        time.sleep(0.42)
         b.find_element_by_xpath('//div[@id="arch-i386"]//span[text()="DansAwesomeLinux6.9"]').click()
 
         # Now check if the appropriate checkbox was selected
@@ -972,6 +973,7 @@ class SystemViewTestWD(WebDriverTestCase):
         # Change the tab and simulate the label click for x86_64
         b.find_element_by_id('x86_64-tab').click()
         b.find_element_by_xpath('//div[@id="arch-x86_64"]//i[@data-target="#collapse-x86_64-DansAwesomeLinux6"]').click()
+        time.sleep(0.42)
         b.find_element_by_xpath('//div[@id="arch-x86_64"]//span[text()="DansAwesomeLinux6.9"]').click()
 
         # Now check if the appropriate checkbox was selected
