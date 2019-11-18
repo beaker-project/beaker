@@ -3,7 +3,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest2 as unittest
+import unittest
 from datetime import date
 from mock import Mock, patch
 from six.moves import StringIO
@@ -20,8 +20,7 @@ EXPECTED_OTHER_HEADER = ("Copyright (c) %s %s. All rights reserved.\n" %
 class ShellEscapingTest(unittest.TestCase):
 
     def test_it(self):
-        self.assertEquals(wizard.shellEscaped(r'a " ` $ ! \ z'),
-                          r'a \" \` \$ \! \\ z')
+        self.assertEqual(wizard.shellEscaped(r'a " ` $ ! \ z'), r'a \" \` \$ \! \\ z')
 
 
 class LicenseTests(unittest.TestCase):
@@ -109,7 +108,7 @@ class BugsTest(unittest.TestCase):
                                  load_user_prefs=False)
         bugs = wizard.Bugs(options)
         bugs.bug = bzbug
-        self.assertEquals(
+        self.assertEqual(
             'abrt: Race condition in abrt-action-install-debuginfo',
             bugs.getSummary())
 
@@ -121,7 +120,7 @@ class DescTest(unittest.TestCase):
         options = wizard.Options(['beaker-wizard', '--yes'], load_user_prefs=False)
         desc = wizard.Desc(options, suggest="Test for BZ#1234567 "
                                             "(I ran `rm -rf ~` and everything's gone suddenly)")
-        self.assertEquals(
+        self.assertEqual(
             """\n            \t@echo "Description:     Test for BZ#1234567 (I ran \`rm -rf ~\` and everything's gone suddenly)" >> $(METADATA)""",
             desc.formatMakefileLine())
 

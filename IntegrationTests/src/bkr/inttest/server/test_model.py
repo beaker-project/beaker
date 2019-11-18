@@ -8,7 +8,7 @@ import sys
 import re
 import time
 import datetime
-import unittest2 as unittest
+import unittest
 import pkg_resources
 import shutil
 import urlparse
@@ -55,8 +55,8 @@ class SchemaSanityTest(DatabaseTestCase):
         if engine.url.drivername != 'mysql':
             raise unittest.SkipTest('not using MySQL')
         for table in engine.table_names():
-            # We don't control the creation of alembic_version, so if the 
-            # server default is MyISAM alembic_version will end up using that. 
+            # We don't control the creation of alembic_version, so if the
+            # server default is MyISAM alembic_version will end up using that.
             # It doesn't really matter though.
             if table == 'alembic_version':
                 continue
@@ -69,9 +69,9 @@ class SchemaSanityTest(DatabaseTestCase):
 
 class ModelInitializationTest(DatabaseTestCase):
 
-    # We are testing the database creation done by bkr.server.tools.init. 
-    # However do not actually invoke that here, because it would be too 
-    # complicated to set up properly. Instead we just test the initialization 
+    # We are testing the database creation done by bkr.server.tools.init.
+    # However do not actually invoke that here, because it would be too
+    # complicated to set up properly. Instead we just test the initialization
     # that was done by bkr.inttest.setup_package for this test run.
 
     def test_admin_user_owns_admin_group(self):
@@ -123,8 +123,8 @@ class TestSystem(DatabaseTestCase):
         self.assertEqual(new_system.serial, '4534534')
         self.assertEqual(new_system.vendor, 'Dell')
         self.assertEqual(new_system.owner, owner)
-    
-    def test_add_user_to_system(self): 
+
+    def test_add_user_to_system(self):
         user = data_setup.create_user()
         system = data_setup.create_system()
         system.user = user
@@ -764,7 +764,7 @@ class SystemPermissionsTest(DatabaseTestCase):
         self.system.user = user
         self.assertTrue(self.system.can_configure_netboot(user))
         # 'control_system' permission DOES NOT grant access to configure_netboot.
-        # This is mainly for historical reasons: in the past all Beaker users 
+        # This is mainly for historical reasons: in the past all Beaker users
         # had access to power any system, but not to "provision" it.
         self.assertFalse(self.system.can_configure_netboot(self.unprivileged))
         self.policy.add_rule(SystemPermission.control_system, user=self.unprivileged)
@@ -1301,7 +1301,7 @@ class WatchdogTest(DatabaseTestCase):
         job = data_setup.create_job_for_recipes([r1, r2])
         data_setup.mark_recipe_scheduled(r1)
         data_setup.mark_recipe_running(r2)
-        # r2 has a kill time hence it's "active", whereas r1 has a watchdog 
+        # r2 has a kill time hence it's "active", whereas r1 has a watchdog
         # with no kill time so it's not.
         self.assertIsNone(r1.watchdog.kill_time)
         self.assertIsNotNone(r2.watchdog.kill_time)
@@ -1514,8 +1514,8 @@ class UserTest(DatabaseTestCase):
         self.assertRaises(ValueError, lambda: User(user_name=u'extra\t tab'))
 
     def test_user_relationships(self):
-        # UserActivity is a tricky one because it has two foreign keys to 
-        # tg_user. This is just testing that the ORM relationships are defined 
+        # UserActivity is a tricky one because it has two foreign keys to
+        # tg_user. This is just testing that the ORM relationships are defined
         # correctly.
         user = data_setup.create_user()
         admin = data_setup.create_admin()
@@ -2272,7 +2272,7 @@ class MACAddressAllocationTest(DatabaseTestCase):
         self.assertEquals(job.recipesets[0].recipes[0].guests[0].resource.mac_address,
                     netaddr.EUI('52:54:00:00:00:00'))
         data_setup.mark_recipe_complete(job.recipesets[0].recipes[0].guests[0], only=True)
-        # host recipe may still be running reservesys or some other task, 
+        # host recipe may still be running reservesys or some other task,
         # even after the guest recipe is finished...
         self.assertEquals(job.recipesets[0].recipes[0].status, TaskStatus.running)
         self.assertEquals(job.recipesets[0].status, TaskStatus.running)
@@ -2284,7 +2284,7 @@ class MACAddressAllocationTest(DatabaseTestCase):
     def test_in_use_below_base_address(self):
         job = data_setup.create_job(num_guestrecipes=1)
         data_setup.mark_job_running(job)
-        # This can happen if the base address was previously set to a lower 
+        # This can happen if the base address was previously set to a lower
         # value, and a guest recipe from then is still running.
         job.recipesets[0].recipes[0].guests[0].resource.mac_address = \
             netaddr.EUI('52:53:FF:00:00:00')

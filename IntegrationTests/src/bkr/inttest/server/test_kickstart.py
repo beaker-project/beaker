@@ -6,7 +6,7 @@
 
 import lxml.etree
 import re
-import unittest2 as unittest
+import unittest
 import pipes
 import crypt
 import sys

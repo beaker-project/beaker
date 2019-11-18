@@ -1,4 +1,3 @@
-
 # vim: set fileencoding=utf-8 :
 
 # This program is free software; you can redistribute it and/or modify
@@ -6,26 +5,15 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import datetime
-import unittest2 as unittest
-import requests
-import lxml.etree
-import logging
 import time
 import re
-import tempfile
-import pkg_resources
 from turbogears.database import session
 from selenium.webdriver.support.ui import Select
 from bkr.inttest.server.selenium import WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login, is_text_present, logout, \
-        click_menu_item
-from bkr.inttest import data_setup, with_transaction, get_server_base, \
-        DatabaseTestCase
-from bkr.server.model import RetentionTag, Product, Distro, Job, GuestRecipe, \
-        User, TaskStatus, TaskPriority, RecipeSetComment
-from bkr.inttest.server.requests_utils import post_json, patch_json, \
-        login as requests_login
+from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest import data_setup, get_server_base
+from bkr.server.model import GuestRecipe
+
 
 # OLD, DEPRECATED JOB PAGE ONLY
 
@@ -45,14 +33,14 @@ class TestViewJob(WebDriverTestCase):
         b.get(get_server_base() + 'jobs/%s' % job.id)
         b.find_element_by_link_text("%s" % job.group).click()
         b.find_element_by_xpath('.//h1[normalize-space(text())="%s"]' % \
-                                       group.group_name)
+                                group.group_name)
 
     def test_cc_list(self):
         with session.begin():
             user = data_setup.create_user(password=u'password')
             user.use_old_job_page = True
             job = data_setup.create_job(owner=user,
-                    cc=[u'laika@mir.su', u'tereshkova@kosmonavt.su'])
+                                        cc=[u'laika@mir.su', u'tereshkova@kosmonavt.su'])
         b = self.browser
         login(b, user=user.user_name, password='password')
         b.get(get_server_base())
@@ -62,7 +50,7 @@ class TestViewJob(WebDriverTestCase):
         self.assertEqual(
             # value of cell beside "CC" cell
             b.find_element_by_xpath('//table//td'
-                '[preceding-sibling::th[1]/text() = "CC"]').text,
+                                    '[preceding-sibling::th[1]/text() = "CC"]').text,
             'laika@mir.su; tereshkova@kosmonavt.su')
 
     def test_edit_job_whiteboard(self):
@@ -75,17 +63,17 @@ class TestViewJob(WebDriverTestCase):
         b.get(get_server_base() + 'jobs/%s' % job.id)
         new_whiteboard = 'new whiteboard value %s' % int(time.time())
         b.find_element_by_xpath(
-                '//td[preceding-sibling::th[1]/text()="Whiteboard"]'
-                '//a[text()="(Edit)"]').click()
+            '//td[preceding-sibling::th[1]/text()="Whiteboard"]'
+            '//a[text()="(Edit)"]').click()
         b.find_element_by_name('whiteboard').clear()
         b.find_element_by_name('whiteboard').send_keys(new_whiteboard)
         b.find_element_by_xpath('//form[@id="job_whiteboard_form"]'
-                '//button[@type="submit"]').click()
+                                '//button[@type="submit"]').click()
         b.find_element_by_xpath(
-                '//form[@id="job_whiteboard_form"]//div[@class="msg success"]')
+            '//form[@id="job_whiteboard_form"]//div[@class="msg success"]')
         b.get(get_server_base() + 'jobs/%s' % job.id)
         b.find_element_by_xpath('//input[@name="whiteboard" and @value="%s"]'
-                % new_whiteboard)
+                                % new_whiteboard)
 
     def test_datetimes_are_localised(self):
         with session.begin():
@@ -96,14 +84,14 @@ class TestViewJob(WebDriverTestCase):
         login(b, user=user.user_name, password='asdf')
         b.get(get_server_base() + 'jobs/%s' % job.id)
         self.check_datetime_localised(b.find_element_by_xpath(
-                '//table//td'
-                '[preceding-sibling::th[1]/text() = "Queued"]').text)
+            '//table//td'
+            '[preceding-sibling::th[1]/text() = "Queued"]').text)
         self.check_datetime_localised(b.find_element_by_xpath(
-                '//table//td'
-                '[preceding-sibling::th[1]/text() = "Started"]').text)
+            '//table//td'
+            '[preceding-sibling::th[1]/text() = "Started"]').text)
         self.check_datetime_localised(b.find_element_by_xpath(
-                '//table//td'
-                '[preceding-sibling::th[1]/text() = "Finished"]').text)
+            '//table//td'
+            '[preceding-sibling::th[1]/text() = "Finished"]').text)
 
     def test_invalid_datetimes_arent_localised(self):
         with session.begin():
@@ -114,9 +102,9 @@ class TestViewJob(WebDriverTestCase):
         login(b, user=user.user_name, password='asdf')
         b.get(get_server_base() + 'jobs/%s' % job.id)
         self.assertEquals(
-                b.find_element_by_xpath('//table//td'
-                '[preceding-sibling::th[1]/text() = "Finished"]').text,
-                '')
+            b.find_element_by_xpath('//table//td'
+                                    '[preceding-sibling::th[1]/text() = "Finished"]').text,
+            '')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=706435
     def test_task_result_datetimes_are_localised(self):
@@ -128,22 +116,23 @@ class TestViewJob(WebDriverTestCase):
         login(b, user=user.user_name, password='asdf')
         b.get(get_server_base() + 'jobs/%s' % job.id)
         recipe_id = job.recipesets[0].recipes[0].id
-        b.find_element_by_xpath('//div[@id="recipe%s"]//a[text()="Show Results"]' % recipe_id).click()
         b.find_element_by_xpath(
-                '//div[@id="recipe-%d-results"]//table' % recipe_id)
+            '//div[@id="recipe%s"]//a[text()="Show Results"]' % recipe_id).click()
+        b.find_element_by_xpath(
+            '//div[@id="recipe-%d-results"]//table' % recipe_id)
         recipe_task_start, recipe_task_finish, recipe_task_duration = \
-                b.find_elements_by_xpath(
-                    '//div[@id="recipe-%d-results"]//table'
-                    '/tbody/tr[1]/td[3]/div' % recipe_id)
+            b.find_elements_by_xpath(
+                '//div[@id="recipe-%d-results"]//table'
+                '/tbody/tr[1]/td[3]/div' % recipe_id)
         self.check_datetime_localised(recipe_task_start.text.strip())
         self.check_datetime_localised(recipe_task_finish.text.strip())
         self.check_datetime_localised(b.find_element_by_xpath(
-                '//div[@id="recipe-%d-results"]//table'
-                '/tbody/tr[2]/td[3]' % recipe_id).text)
+            '//div[@id="recipe-%d-results"]//table'
+            '/tbody/tr[2]/td[3]' % recipe_id).text)
 
     def check_datetime_localised(self, dt):
         self.assert_(re.match(r'\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d [-+]\d\d:\d\d$', dt),
-                '%r does not look like a localised datetime' % dt)
+                     '%r does not look like a localised datetime' % dt)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=881387
     def test_guestrecipes_appear_after_host(self):
@@ -163,7 +152,7 @@ class TestViewJob(WebDriverTestCase):
         login(b, user=user.user_name, password='asdf')
         b.get(get_server_base() + 'jobs/%s' % job.id)
         recipe_order = [elem.text for elem in b.find_elements_by_xpath(
-                '//a[@class="recipe-id"]')]
+            '//a[@class="recipe-id"]')]
         self.assertEquals(recipe_order, [host.t_id, guest.t_id])
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=995012
@@ -193,7 +182,7 @@ class JobAttributeChangeTest(WebDriverTestCase):
     def check_can_change_product(self, job, new_product):
         b = self.browser
         b.get(get_server_base() + 'jobs/%s' % job.id)
-        Select(b.find_element_by_id('job_product'))\
+        Select(b.find_element_by_id('job_product')) \
             .select_by_visible_text(new_product.name)
         b.find_element_by_xpath('//div[text()="Product has been updated"]')
 
@@ -205,7 +194,7 @@ class JobAttributeChangeTest(WebDriverTestCase):
     def check_can_change_retention_tag(self, job, new_tag):
         b = self.browser
         b.get(get_server_base() + 'jobs/%s' % job.id)
-        Select(b.find_element_by_id('job_retentiontag'))\
+        Select(b.find_element_by_id('job_retentiontag')) \
             .select_by_visible_text(new_tag)
         b.find_element_by_xpath('//div[text()="Tag has been updated"]')
 
@@ -219,8 +208,8 @@ class JobAttributeChangeTest(WebDriverTestCase):
             job_owner = data_setup.create_user(password=u'owner')
             job_owner.use_old_job_page = True
             job = data_setup.create_job(owner=job_owner,
-                    retention_tag=u'active',
-                    product=data_setup.create_product())
+                                        retention_tag=u'active',
+                                        product=data_setup.create_product())
             new_product = data_setup.create_product()
         login(self.browser, user=job_owner.user_name, password=u'owner')
         self.check_can_change_product(job, new_product)
@@ -234,9 +223,9 @@ class JobAttributeChangeTest(WebDriverTestCase):
             group.add_member(job_owner)
             group.add_member(group_member)
             job = data_setup.create_job(owner=job_owner,
-                    retention_tag=u'active',
-                    product=data_setup.create_product(),
-                    group=group)
+                                        retention_tag=u'active',
+                                        product=data_setup.create_product(),
+                                        group=group)
             new_product = data_setup.create_product()
         login(self.browser, user=group_member.user_name, password=u'group_member')
         self.check_can_change_product(job, new_product)
@@ -246,7 +235,7 @@ class JobAttributeChangeTest(WebDriverTestCase):
             other_user = data_setup.create_user(password=u'other_user')
             other_user.use_old_job_page = True
             job = data_setup.create_job(retention_tag=u'active',
-                    product=data_setup.create_product())
+                                        product=data_setup.create_product())
         login(self.browser, user=other_user.user_name, password=u'other_user')
         self.check_cannot_change_product(job)
 
@@ -255,7 +244,7 @@ class JobAttributeChangeTest(WebDriverTestCase):
             job_owner = data_setup.create_user(password=u'owner')
             job_owner.use_old_job_page = True
             job = data_setup.create_job(owner=job_owner,
-                    retention_tag=u'scratch')
+                                        retention_tag=u'scratch')
         login(self.browser, user=job_owner.user_name, password=u'owner')
         self.check_can_change_retention_tag(job, '60days')
 
@@ -268,8 +257,8 @@ class JobAttributeChangeTest(WebDriverTestCase):
             group.add_member(job_owner)
             group.add_member(group_member)
             job = data_setup.create_job(owner=job_owner,
-                    retention_tag=u'scratch',
-                    group=group)
+                                        retention_tag=u'scratch',
+                                        group=group)
         login(self.browser, user=group_member.user_name, password=u'group_member')
         self.check_can_change_retention_tag(job, '60days')
 
@@ -287,12 +276,12 @@ class JobAttributeChangeTest(WebDriverTestCase):
             job_owner = data_setup.create_user(password=u'owner')
             job_owner.use_old_job_page = True
             job = data_setup.create_job(owner=job_owner,
-                    retention_tag=u'active',
-                    product=data_setup.create_product())
+                                        retention_tag=u'active',
+                                        product=data_setup.create_product())
         login(self.browser, user=job_owner.user_name, password=u'owner')
         b = self.browser
         b.get(get_server_base() + 'jobs/%s' % job.id)
-        Select(b.find_element_by_id('job_retentiontag'))\
+        Select(b.find_element_by_id('job_retentiontag')) \
             .select_by_visible_text('scratch')
         b.find_element_by_xpath('//button[text()="Clear product"]').click()
         b.find_element_by_xpath('//div[text()="Tag has been updated"]')
@@ -322,12 +311,13 @@ class JobAttributeChangeTest(WebDriverTestCase):
         login(self.browser, user=job_owner.user_name, password=u'owner')
         b = self.browser
         b.get(get_server_base() + 'jobs/%s' % job.id)
-        Select(b.find_element_by_id('priority_recipeset_%s' % job.recipesets[0].id))\
+        Select(b.find_element_by_id('priority_recipeset_%s' % job.recipesets[0].id)) \
             .select_by_visible_text('Low')
         b.find_element_by_xpath('//msg[text()="Priority has been updated"]')
         with session.begin():
             self.assertEquals(job.recipesets[0].activity[0].service, u'WEBUI')
             self.assertEquals(job.recipesets[0].activity[0].field_name, 'Priority')
-            self.assertEquals(job.recipesets[0].activity[0].object_name(), 'RecipeSet: %s' % job.recipesets[0].id)
+            self.assertEquals(job.recipesets[0].activity[0].object_name(),
+                              'RecipeSet: %s' % job.recipesets[0].id)
             self.assertEquals(job.recipesets[0].activity[0].old_value, u'Normal')
             self.assertEquals(job.recipesets[0].activity[0].new_value, u'Low')

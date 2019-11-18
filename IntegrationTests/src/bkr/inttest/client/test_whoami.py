@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -6,11 +5,11 @@
 
 import os
 import tempfile
-from unittest2 import SkipTest
+from unittest import SkipTest
 from bkr.server.model import session, Permission
 from bkr.inttest import data_setup, get_server_base
-from bkr.inttest.client import run_client, create_client_config, ClientError, \
-        ClientTestCase
+from bkr.inttest.client import run_client, create_client_config, ClientError, ClientTestCase
+
 
 class WhoAmITest(ClientTestCase):
 
@@ -28,8 +27,7 @@ class WhoAmITest(ClientTestCase):
             group.add_member(proxying_user)
         out = run_client(['bkr', 'whoami',
                           '--proxy-user', proxied_user.user_name],
-                         config=\
-                         create_client_config(
+                         config=create_client_config(
                              username=proxying_user.user_name,
                              password='password'))
         self.assertIn('"username": "%s"' % proxied_user.user_name, out)
@@ -38,7 +36,7 @@ class WhoAmITest(ClientTestCase):
     def test_wrong_password(self):
         with self.assertRaises(ClientError) as assertion:
             run_client(['bkr', 'whoami'],
-                    config=create_client_config(password='gotofail'))
+                       config=create_client_config(password='gotofail'))
         self.assertIn('Invalid username or password', assertion.exception.stderr_output)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1072127
@@ -50,7 +48,7 @@ class WhoAmITest(ClientTestCase):
             user = data_setup.create_user(password=None)
         with self.assertRaises(ClientError) as assertion:
             run_client(['bkr', 'whoami'], config=create_client_config(
-                    username=user.user_name, password='irrelevant'))
+                username=user.user_name, password='irrelevant'))
         self.assertIn('Invalid username or password', assertion.exception.stderr_output)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1350959

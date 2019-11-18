@@ -3,11 +3,11 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import re
-import os
-import unittest2 as unittest
-from bkr.labcontroller.proxy import PanicDetector
+import unittest
+
 from bkr.labcontroller.config import _conf
+from bkr.labcontroller.proxy import PanicDetector
+
 
 class TestPanicDetector(unittest.TestCase):
 

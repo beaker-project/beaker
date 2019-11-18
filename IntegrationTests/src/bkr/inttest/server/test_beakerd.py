@@ -34,7 +34,7 @@ from bkr.server import dynamic_virt
 from bkr.server.model import OSMajor
 from bkr.server.model.installation import RenderedKickstart
 from bkr.inttest.assertions import assert_datetime_within
-from unittest2 import SkipTest
+from unittest import SkipTest
 
 log = logging.getLogger(__name__)
 

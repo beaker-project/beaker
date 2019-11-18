@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -6,19 +5,21 @@
 
 import os
 import errno
-import unittest2 as unittest
+import unittest
 import subprocess
 import signal
 from time import sleep
 import gevent
+
 try:
-    #pylint: disable=E0611
+    # pylint: disable=E0611
     from gevent import wait as gevent_wait
 except ImportError:
     # gevent.wait was gevent.run in 1.0 beta
-    #pylint: disable=E0611
+    # pylint: disable=E0611
     from gevent import run as gevent_wait
 from bkr.labcontroller.async import MonitoredSubprocess
+
 
 class SubprocessTest(unittest.TestCase):
 
@@ -29,7 +30,7 @@ class SubprocessTest(unittest.TestCase):
         try:
             # There's seems to sometimes be a delay from when the process is killed
             # and when os.killpg believes it is killed
-            for _ in range(1,6):
+            for _ in range(1, 6):
                 os.killpg(pgid, signal.SIGKILL)
                 sleep(0.5)
             self.fail("The process group should've already been removed")
@@ -40,12 +41,13 @@ class SubprocessTest(unittest.TestCase):
     def test_runaway_output_is_discarded(self):
         def _test():
             p = MonitoredSubprocess(['seq', '--format=%0.0f cans of spam on the wall',
-                    str(1024 * 1024)], stdout=subprocess.PIPE,
-                    timeout=5)
+                                     str(1024 * 1024)], stdout=subprocess.PIPE,
+                                    timeout=5)
             p.dead.wait()
             out = p.stdout_reader.get()
             self.assert_(len(out) <= 4096013, len(out))
             self.assert_(out.endswith('+++ DISCARDED'), out[:-10240])
+
         greenlet = gevent.spawn(_test)
         gevent_wait()
         greenlet.get(block=False)
@@ -55,6 +57,7 @@ class SubprocessTest(unittest.TestCase):
             p = MonitoredSubprocess(['sleep', '10'], timeout=1)
             p.dead.wait()
             self.assertEquals(p.returncode, -signal.SIGTERM)
+
         greenlet = gevent.spawn(_test)
         gevent_wait()
         greenlet.get(block=False)
@@ -64,6 +67,7 @@ class SubprocessTest(unittest.TestCase):
             p = MonitoredSubprocess(['sleep', '1'], timeout=2)
             self._assert_child_is_process_group_leader(p)
             p.dead.wait()
+
         greenlet = gevent.spawn(_test)
         gevent_wait()
         greenlet.get(block=False)
@@ -92,6 +96,7 @@ class SubprocessTest(unittest.TestCase):
             p.dead.wait()
             self.assertIn(p.returncode, [-signal.SIGTERM, -signal.SIGKILL])
             self._assert_process_group_is_removed(p.pid)
+
         greenlet = gevent.spawn(_test)
         gevent_wait()
         greenlet.get(block=False)
@@ -120,6 +125,7 @@ class SubprocessTest(unittest.TestCase):
             p.dead.wait()
             self.assertEquals(p.returncode, 0)
             self._assert_process_group_is_removed(p.pid)
+
         greenlet = gevent.spawn(_test)
         gevent_wait()
         greenlet.get(block=False)
@@ -128,9 +134,10 @@ class SubprocessTest(unittest.TestCase):
     def test_reaper_race(self):
         def _test():
             procs = [MonitoredSubprocess(['true'], timeout=10)
-                    for _ in xrange(600)]
+                     for _ in xrange(600)]
             for p in procs:
                 p.dead.wait()
+
         greenlet = gevent.spawn(_test)
         gevent_wait()
         greenlet.get(block=False)

@@ -5,12 +5,14 @@
 # (at your option) any later version.
 
 import os
-from turbogears.database import session
+from unittest import SkipTest
+
 from turbogears import config
+from turbogears.database import session
+
 from bkr.inttest import data_setup
-from bkr.inttest.client import run_client, create_client_config
 from bkr.inttest.client import ClientError, ClientTestCase
-from unittest2 import SkipTest
+from bkr.inttest.client import run_client, create_client_config
 
 
 class UpdateOpenStackTrustTest(ClientTestCase):

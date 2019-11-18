@@ -1,17 +1,15 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import sys
-import os
 import turbogears.config
 from turbogears.database import session
 import xmlrpclib
 import urllib
 from hashlib import sha1
-from unittest2 import SkipTest
+from unittest import SkipTest
+
 try:
     import krbV
 except ImportError:
@@ -21,8 +19,8 @@ from bkr.inttest import data_setup, with_transaction, get_server_base
 from bkr.inttest.server.selenium import WebDriverTestCase, XmlRpcTestCase
 from bkr.inttest.server.webdriver_utils import login
 
-class LoginTest(WebDriverTestCase):
 
+class LoginTest(WebDriverTestCase):
     password = u'password'
 
     @with_transaction
@@ -66,12 +64,12 @@ class LoginTest(WebDriverTestCase):
         b = self.browser
         # Open jobs/mine (which requires login) with some funky params
         b.get(get_server_base() + 'jobs/mine?'
-                'jobsearch-0.table=Status&'
-                'jobsearch-0.operation=is+not&'
-                'jobsearch-0.value=Completed&'
-                'jobsearch-1.table=Status&'
-                'jobsearch-1.operation=is+not&'
-                'jobsearch-1.value=Cancelled')
+                                  'jobsearch-0.table=Status&'
+                                  'jobsearch-0.operation=is+not&'
+                                  'jobsearch-0.value=Completed&'
+                                  'jobsearch-1.table=Status&'
+                                  'jobsearch-1.operation=is+not&'
+                                  'jobsearch-1.value=Cancelled')
         # Fill in the login form
         b.find_element_by_name('user_name').send_keys(self.user.user_name)
         b.find_element_by_name('password').send_keys(self.password)
@@ -104,21 +102,21 @@ class LoginTest(WebDriverTestCase):
         b.get(get_server_base() + 'jobs/mine')
         # XXX should check for 403 response code
         self.assertEquals(b.find_element_by_css_selector('#message').text,
-                'Please log in.')
+                          'Please log in.')
 
     def test_message_when_explicitly_logging_in(self):
         b = self.browser
         b.get(get_server_base())
         b.find_element_by_link_text('Log in').click()
         self.assertEquals(b.find_element_by_css_selector('#message').text,
-                'Please log in.')
+                          'Please log in.')
 
     def test_message_when_password_mistyped(self):
         b = self.browser
         login(b, self.user.user_name, 'not the right password')
         self.assertEquals(b.find_element_by_css_selector('#message').text,
-                'The credentials you supplied were not correct or '
-                'did not grant access to this resource.')
+                          'The credentials you supplied were not correct or '
+                          'did not grant access to this resource.')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=994751
     def test_old_password_hashes_are_migrated(self):
@@ -131,26 +129,26 @@ class LoginTest(WebDriverTestCase):
         with session.begin():
             session.refresh(self.user)
             self.assert_(self.user._password.startswith('$pbkdf2-sha512$'),
-                    self.user._password)
+                         self.user._password)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1095010
     def test_ldap_login_with_existing_email_address(self):
-        # Logging in with an LDAP account would fail when there was another 
-        # existing account with the same e-mail address, since Beaker's 
+        # Logging in with an LDAP account would fail when there was another
+        # existing account with the same e-mail address, since Beaker's
         # database schema was enforcing uniqueness.
-        # 'bz1095010_user' is defined in bkr/inttest/ldap-data.ldif 
+        # 'bz1095010_user' is defined in bkr/inttest/ldap-data.ldif
         # with this e-mail address:
         email = u'bz1095010@example.invalid'
         with session.begin():
             data_setup.create_user(user_name=u'bz1095010_other',
-                    email_address=email)
+                                   email_address=email)
         b = self.browser
         login(b, u'bz1095010_user', u'password')
         b.find_element_by_xpath('//title[text()="Systems"]')
         with session.begin():
             newly_created_user = User.by_user_name(u'bz1095010_user')
             self.assert_(newly_created_user is not None,
-                    'bz1095010_user should have been created from LDAP')
+                         'bz1095010_user should have been created from LDAP')
 
     def test_disabled_accounts_cannot_log_in(self):
         with session.begin():
@@ -158,8 +156,9 @@ class LoginTest(WebDriverTestCase):
         b = self.browser
         login(b, self.user.user_name, self.password)
         self.assertEquals(b.find_element_by_css_selector('#message').text,
-                'The credentials you supplied were not correct or '
-                'did not grant access to this resource.')
+                          'The credentials you supplied were not correct or '
+                          'did not grant access to this resource.')
+
 
 class XmlRpcLoginTest(XmlRpcTestCase):
 
@@ -167,8 +166,8 @@ class XmlRpcLoginTest(XmlRpcTestCase):
         if not krbV:
             raise SkipTest('krbV module not found')
         server_princ_name = turbogears.config.get(
-                'identity.krb_auth_principal', None)
-        if not server_princ_name: # XXX FIXME dead test
+            'identity.krb_auth_principal', None)
+        if not server_princ_name:  # XXX FIXME dead test
             raise SkipTest('server not configured for krbV')
 
         # build krb request
@@ -183,7 +182,7 @@ class XmlRpcLoginTest(XmlRpcTestCase):
         ac.flags = krbV.KRB5_AUTH_CONTEXT_DO_SEQUENCE | krbV.KRB5_AUTH_CONTEXT_DO_TIME
         ac.rcache = ctx.default_rcache()
         ac, req = ctx.mk_req(server=sprinc, client=cprinc, auth_context=ac,
-                ccache=ccache, options=krbV.AP_OPTS_MUTUAL_REQUIRED)
+                             ccache=ccache, options=krbV.AP_OPTS_MUTUAL_REQUIRED)
         encoded_req = base64.encodestring(req)
 
         # attempt to log in

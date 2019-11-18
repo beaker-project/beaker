@@ -1,4 +1,3 @@
-
 # vim: set fileencoding=utf-8 :
 
 # This program is free software; you can redistribute it and/or modify
@@ -7,11 +6,12 @@
 # (at your option) any later version.
 
 import datetime
-import unittest2 as unittest
+import unittest
 from bkr.server.junitxml import job_to_junit_xml
-from bkr.server.model import session, TaskResult, TaskStatus, Task, RecipeTaskResult
+from bkr.server.model import session, TaskResult, TaskStatus
 from bkr.server.tests import data_setup
 from bkr.inttest import get_server_base
+
 
 class JUnitXMLUnitTest(unittest.TestCase):
     maxDiff = None
@@ -22,8 +22,9 @@ class JUnitXMLUnitTest(unittest.TestCase):
 
     def test_passing_result(self):
         job = data_setup.create_completed_job(recipe_whiteboard=u'happy',
-                fqdn=u'happysystem.testdata', server_log=True,
-                result=TaskResult.pass_, task_status=TaskStatus.completed)
+                                              fqdn=u'happysystem.testdata', server_log=True,
+                                              result=TaskResult.pass_,
+                                              task_status=TaskStatus.completed)
         recipe = job.recipesets[0].recipes[0]
         recipe.tasks[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 0)
         recipe.tasks[0].results[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 10)
@@ -46,8 +47,9 @@ class JUnitXMLUnitTest(unittest.TestCase):
 
     def test_failing_result(self):
         job = data_setup.create_completed_job(recipe_whiteboard=u'failing result',
-                fqdn=u'happysystem.testdata', server_log=True,
-                result=TaskResult.fail, task_status=TaskStatus.completed)
+                                              fqdn=u'happysystem.testdata', server_log=True,
+                                              result=TaskResult.fail,
+                                              task_status=TaskStatus.completed)
         recipe = job.recipesets[0].recipes[0]
         recipe.tasks[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 0)
         recipe.tasks[0].results[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 10)
@@ -72,7 +74,7 @@ class JUnitXMLUnitTest(unittest.TestCase):
 
     def test_aborted(self):
         job = data_setup.create_running_job(recipe_whiteboard=u'ewd',
-                fqdn=u'sadsystem.testdata')
+                                            fqdn=u'sadsystem.testdata')
         job.abort(msg=u'External Watchdog Expired')
         job.update_status()
         recipe = job.recipesets[0].recipes[0]
@@ -98,7 +100,7 @@ class JUnitXMLUnitTest(unittest.TestCase):
 
     def test_cancelled(self):
         job = data_setup.create_running_job(recipe_whiteboard=u'cancelled',
-                fqdn=u'sadsystem.testdata')
+                                            fqdn=u'sadsystem.testdata')
         job.cancel(msg=u'I cancelled it')
         job.update_status()
         recipe = job.recipesets[0].recipes[0]
@@ -123,7 +125,7 @@ class JUnitXMLUnitTest(unittest.TestCase):
         self.assertMultiLineEqual(expected, out)
 
     def test_new_job(self):
-        # We can't give anything much sensible if the job is not finished yet, 
+        # We can't give anything much sensible if the job is not finished yet,
         # but we *don't* want to just totally explode and return a 500 error.
         job = data_setup.create_job(recipe_whiteboard=u'new job')
         self.assertEqual(job.status, TaskStatus.new)
@@ -137,16 +139,17 @@ class JUnitXMLUnitTest(unittest.TestCase):
         self.assertMultiLineEqual(expected, out)
 
     def test_incomplete_job(self):
-        # First task is completed so it shows up in the JUnit XML, second task 
+        # First task is completed so it shows up in the JUnit XML, second task
         # is still running and has no results so it doesn't appear.
         job = data_setup.create_running_job(recipe_whiteboard=u'running job',
-                fqdn=u'busysystem.testdata',
-                task_list=[data_setup.create_task(u'/test_junitxml/completed'),
-                           data_setup.create_task(u'/test_junitxml/running')])
+                                            fqdn=u'busysystem.testdata',
+                                            task_list=[
+                                                data_setup.create_task(u'/test_junitxml/completed'),
+                                                data_setup.create_task(u'/test_junitxml/running')])
         recipe = job.recipesets[0].recipes[0]
         data_setup.mark_recipe_tasks_finished(recipe,
-                only=True, num_tasks=1, result=TaskResult.pass_,
-                server_log=True)
+                                              only=True, num_tasks=1, result=TaskResult.pass_,
+                                              server_log=True)
         recipe.tasks[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 0)
         recipe.tasks[0].results[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 10)
         self.assertEqual(job.status, TaskStatus.running)
@@ -170,7 +173,7 @@ class JUnitXMLUnitTest(unittest.TestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1291107
     def test_duration(self):
         job = data_setup.create_running_job(recipe_whiteboard=u'duration',
-                fqdn=u'happysystem.testdata')
+                                            fqdn=u'happysystem.testdata')
         recipe = job.recipesets[0].recipes[0]
         recipe.tasks[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 0)
         recipe.tasks[0].pass_(path=u'first', score=0, summary=u'(Pass)')
@@ -200,7 +203,8 @@ class JUnitXMLUnitTest(unittest.TestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1291112
     def test_result_names(self):
         job = data_setup.create_running_job(recipe_whiteboard=u'duration',
-                fqdn=u'happysystem.testdata', task_name=u'/junitxml/names')
+                                            fqdn=u'happysystem.testdata',
+                                            task_name=u'/junitxml/names')
         recipe = job.recipesets[0].recipes[0]
         recipe.tasks[0].start_time = datetime.datetime(2015, 12, 14, 0, 0, 0)
         recipe.tasks[0].pass_(path=u'/start', score=0, summary=u'(Pass)')
@@ -241,7 +245,7 @@ class JUnitXMLUnitTest(unittest.TestCase):
     # htps://bugzilla.redhat.com/show_bug.cgi?id=1316045
     def test_cancelled_recipe_has_tasks_never_started(self):
         job = data_setup.create_job(recipe_whiteboard=u'cancelled',
-                task_name=u'/test_junixml/cancelled')
+                                    task_name=u'/test_junixml/cancelled')
         job.cancel(msg=u'I cancelled it')
         recipe = job.recipesets[0].recipes[0]
         job.update_status()

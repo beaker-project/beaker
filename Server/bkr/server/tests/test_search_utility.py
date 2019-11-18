@@ -4,21 +4,24 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest2 as unittest
-import datetime
+import unittest
 from decimal import Decimal
+
+import datetime
 from sqlalchemy.sql import and_, or_
 from sqlalchemy.sql.expression import true, false
+
 from bkr.server.model import User, System, LabInfo, Device
 from bkr.server.search_utility import lucene_to_sqlalchemy
+
 
 class LuceneQueryTest(unittest.TestCase):
 
     def assert_clause_equals(self, actual, expected):
-        # We should be able to use expected.compare(actual) but it seems most 
-        # complex SQLAlchemy ClauseElement types (e.g. FromGrouping) do not 
+        # We should be able to use expected.compare(actual) but it seems most
+        # complex SQLAlchemy ClauseElement types (e.g. FromGrouping) do not
         # actually implement comparison properly.
-        # The poor man's version is to just compile it to SQL and do string 
+        # The poor man's version is to just compile it to SQL and do string
         # comparison.
         actual_compiled = actual.compile()
         expected_compiled = expected.compile()

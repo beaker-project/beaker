@@ -1,17 +1,15 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from unittest2 import SkipTest
 from turbogears.database import session
 from bkr.server.model import TaskResult
-from bkr.inttest import get_server_base, stop_process, start_process, \
-    edit_file, CONFIG_FILE
-from bkr.inttest.server.webdriver_utils import login, logout
+from bkr.inttest import get_server_base
+from bkr.inttest.server.webdriver_utils import login
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest import data_setup
+
 
 # OLD, DEPRECATED JOB PAGE ONLY
 
@@ -22,14 +20,14 @@ class JobAckTest(WebDriverTestCase):
 
     def check_cannot_review(self):
         self.browser.find_element_by_xpath('.//*[@class="recipeset" and '
-                'not(.//div[contains(@class, "ackpanel")])]')
+                                           'not(.//div[contains(@class, "ackpanel")])]')
 
     def review(self, recipeset, response='Nak'):
         b = self.browser
         rs = b.find_element_by_xpath('//*[@id="RS_%s"]' % recipeset.id)
         # click response radio button
         rs.find_element_by_xpath('.//label[normalize-space(string(.))="%s"]/input'
-                % response).click()
+                                 % response).click()
         rs.find_element_by_xpath('.//span[text()="Success"]')
 
         with session.begin():
@@ -119,6 +117,7 @@ class JobAckTest(WebDriverTestCase):
         with session.begin():
             self.assertEquals(job.recipesets[0].activity[0].service, u'WEBUI')
             self.assertEquals(job.recipesets[0].activity[0].field_name, 'Ack/Nak')
-            self.assertEquals(job.recipesets[0].activity[0].object_name(), 'RecipeSet: %s' % job.recipesets[0].id)
+            self.assertEquals(job.recipesets[0].activity[0].object_name(),
+                              'RecipeSet: %s' % job.recipesets[0].id)
             self.assertEquals(job.recipesets[0].activity[0].old_value, u'ack')
             self.assertEquals(job.recipesets[0].activity[0].new_value, u'nak')

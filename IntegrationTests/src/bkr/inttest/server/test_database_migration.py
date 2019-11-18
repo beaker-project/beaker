@@ -5,7 +5,7 @@
 
 import collections
 import datetime
-import unittest2 as unittest
+import unittest
 import pkg_resources
 import sqlalchemy
 from turbogears import config
@@ -22,7 +22,7 @@ from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, User
         SystemSchedulerStatus, Permission, Installation, Arch
 
 def has_initial_sublist(larger, prefix):
-    """ Return true iff list *prefix* is an initial sublist of list 
+    """ Return true iff list *prefix* is an initial sublist of list
     *larger*. Like .startswith() for lists. """
     if len(prefix) > len(larger):
         return False
@@ -36,9 +36,9 @@ class MigrationTest(unittest.TestCase):
     maxDiff = None
 
     def setUp(self):
-        # For the database migration tests we use a side database (usually 
-        # 'beaker_migration_test') separate from the main one used in tests 
-        # (usually 'beaker_test'). This is to avoid interfering with the schema 
+        # For the database migration tests we use a side database (usually
+        # 'beaker_migration_test') separate from the main one used in tests
+        # (usually 'beaker_test'). This is to avoid interfering with the schema
         # that is already created and populated at the start of the test run.
         if not config.get('beaker.migration_test_dburi'):
             raise unittest.SkipTest('beaker.migration_test_dburi is not set')
@@ -53,9 +53,9 @@ class MigrationTest(unittest.TestCase):
             connection.invalidate() # can't reuse this one
 
     def tearDown(self):
-        # If this assertion fails, it means the previous test (or some code 
-        # called during the test) leaked a database connection. This can cause 
-        # deadlocks with other tests in case the leaked connection was holding 
+        # If this assertion fails, it means the previous test (or some code
+        # called during the test) leaked a database connection. This can cause
+        # deadlocks with other tests in case the leaked connection was holding
         # an open transaction, which is why we force it to be 0.
         # https://bugzilla.redhat.com/show_bug.cgi?id=1356852
         self.assertEquals(self.migration_engine.pool.checkedout(), 0)
@@ -88,9 +88,9 @@ class MigrationTest(unittest.TestCase):
             self.fail("doit() raised NoSuchTableError, tried to update a non-existent database schema")
 
     def test_can_pass_beaker_version_to_downgrade(self):
-        # We should be able to give it arbitrary Beaker versions and have it 
+        # We should be able to give it arbitrary Beaker versions and have it
         # figure out the matching schema version we want.
-        # The downgrade process itself will do nothing in this case because we 
+        # The downgrade process itself will do nothing in this case because we
         # are already on the right version.
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
@@ -151,7 +151,7 @@ class MigrationTest(unittest.TestCase):
         self.check_migrated_schema()
 
     def test_full_downgrade_then_upgrade(self):
-        # The point is to test that the complete *downgrade* sequence is valid, 
+        # The point is to test that the complete *downgrade* sequence is valid,
         # by then upgrading again and making sure we still have a correct schema.
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
@@ -261,9 +261,9 @@ class MigrationTest(unittest.TestCase):
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
-    # These schema dumps are derived from actual dumps from the Red Hat 
-    # production Beaker instance at various points in time, which makes 
-    # them a more realistic test case than the synthetically generated 
+    # These schema dumps are derived from actual dumps from the Red Hat
+    # production Beaker instance at various points in time, which makes
+    # them a more realistic test case than the synthetically generated
     # schemas used in the cases above.
 
     def test_redhat_production_20160120(self):
@@ -302,14 +302,14 @@ class MigrationTest(unittest.TestCase):
 
     def check_migrated_schema(self):
         """
-        Compares the schema in the migrated db (self.migration_metadata) 
-        against the fresh one which was populated for this test run (global TG 
+        Compares the schema in the migrated db (self.migration_metadata)
+        against the fresh one which was populated for this test run (global TG
         metadata).
         """
         self.migration_metadata.reflect()
-        # The upgraded schema will not be *completely identical* to the fresh 
-        # one. There are some exceptions because the migrations intentionally 
-        # leave behind some structures to avoid destroying data in case the 
+        # The upgraded schema will not be *completely identical* to the fresh
+        # one. There are some exceptions because the migrations intentionally
+        # leave behind some structures to avoid destroying data in case the
         # admin wants to downgrade later. So we have to account for those here.
         ignored_tables = [
             # may be left over from 23
@@ -382,14 +382,14 @@ class MigrationTest(unittest.TestCase):
             if table_name == 'log_recipe_task_result':
                 if 'recipe_task_result_id_id' in actual_indexes:
                     del actual_indexes['recipe_task_result_id_id']
-            # This was accidentally created in 0.7.1 upgrade (commit 75a9bea9) 
+            # This was accidentally created in 0.7.1 upgrade (commit 75a9bea9)
             # but it serves no purpose so we aren't adding it
             if table_name == 'task':
                 if 'priority' in actual_indexes:
                     del actual_indexes['priority']
-            # For now, we are ignoring differences in index names. That's 
-            # because we have a lot of cases where the SA generated name is 
-            # ix_<table>_<col> and that will appear in a fresh schema, but an 
+            # For now, we are ignoring differences in index names. That's
+            # because we have a lot of cases where the SA generated name is
+            # ix_<table>_<col> and that will appear in a fresh schema, but an
             # older upgraded schema will have the MySQL generated name <col>.
             self.assertItemsEqual(expected_indexes.values(),
                     actual_indexes.values(),
@@ -401,7 +401,7 @@ class MigrationTest(unittest.TestCase):
                     # PKs and FKs are checked below on individual columns
                     continue
                 elif isinstance(constraint, sqlalchemy.CheckConstraint):
-                    # SA generates CheckConstraints for ENUM columns but they 
+                    # SA generates CheckConstraints for ENUM columns but they
                     # are not actually used in MySQL, so we ignore them
                     continue
                 elif isinstance(constraint, sqlalchemy.UniqueConstraint):
@@ -424,10 +424,10 @@ class MigrationTest(unittest.TestCase):
         expected_indexes = {}
         for index in table.indexes:
             expected_indexes[index.name] = [col.name for col in index.columns]
-        # If we have defined a column with a unique constraint but it is not 
-        # explicitly indexed (and is also not the first column in a primary 
-        # key), then InnoDB will implicitly create an index on that column. 
-        # So there will be some extra indexes which we never explicitly 
+        # If we have defined a column with a unique constraint but it is not
+        # explicitly indexed (and is also not the first column in a primary
+        # key), then InnoDB will implicitly create an index on that column.
+        # So there will be some extra indexes which we never explicitly
         # defined in Python land.
         for constraint in table.constraints:
             if isinstance(constraint, sqlalchemy.UniqueConstraint):
@@ -440,7 +440,7 @@ class MigrationTest(unittest.TestCase):
                     continue
                 name = constraint.name or constraint.columns.values()[0].name
                 expected_indexes[name] = cols
-        # Similarly, if we have defined a foreign key without an 
+        # Similarly, if we have defined a foreign key without an
         # explicit index, InnoDB creates one implicitly.
         for fk in table.foreign_keys:
             if any(index_cols[0] == fk.parent.name
@@ -453,7 +453,7 @@ class MigrationTest(unittest.TestCase):
 
     def assert_columns_equivalent(self, expected, actual):
         self.assertEquals(actual.name, expected.name)
-        # actual.type is the dialect-specific type so it will not be identical 
+        # actual.type is the dialect-specific type so it will not be identical
         # to expected.type
         if isinstance(actual.type, sqlalchemy.dialects.mysql.TINYINT):
             self.assertTrue(isinstance(expected.type, sqlalchemy.Boolean),
@@ -483,7 +483,7 @@ class MigrationTest(unittest.TestCase):
                     '%r has incorrect database default' % actual)
         else:
             if not actual.nullable and actual.server_default:
-                # MySQL forces non-NULLable columns to have a default even if 
+                # MySQL forces non-NULLable columns to have a default even if
                 # we don't want to specify one, so we just ignore those.
                 default_text = str(actual.server_default.arg)
                 if default_text not in ["''", "'0'", "0"]:
@@ -1194,8 +1194,8 @@ class MigrationTest(unittest.TestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1337789
     def test_purged_jobs_are_also_deleted(self):
-        # The new invariant is that a job is always deleted *before* it is 
-        # purged (not one or the other) so any existing purged jobs must also 
+        # The new invariant is that a job is always deleted *before* it is
+        # purged (not one or the other) so any existing purged jobs must also
         # be marked as deleted.
         with self.migration_metadata.bind.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
@@ -1211,10 +1211,10 @@ class MigrationTest(unittest.TestCase):
     def test_deleted_jobs_with_logs_are_not_purged(self):
         with self.migration_metadata.bind.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
-            # We have a job which beaker-log-delete claims to have purged the 
-            # logs for (deleted timestamp is set) but there are actually still 
+            # We have a job which beaker-log-delete claims to have purged the
+            # logs for (deleted timestamp is set) but there are actually still
             # logs left in it.
-            # Note that we are setting the 'deleted' column here which becomes 
+            # Note that we are setting the 'deleted' column here which becomes
             # 'purged' after the migration.
             connection.execute(
                     "INSERT INTO job (owner_id, retention_tag_id, dirty_version, clean_version, deleted) "
@@ -1321,8 +1321,8 @@ class MigrationTest(unittest.TestCase):
         systems = self.migration_session.query(System).order_by(System.id).all()
         # Removed system should be 'idle', we don't want the scheduler to bother looking at it.
         self.assertEquals(systems[0].scheduler_status, SystemSchedulerStatus.idle)
-        # Idle systems should be 'pending', so that the scheduler will check if 
-        # there is a queued recipe for them to start. Note that this includes 
+        # Idle systems should be 'pending', so that the scheduler will check if
+        # there is a queued recipe for them to start. Note that this includes
         # Manual and Broken systems since they can be scheduled too!
         self.assertEquals(systems[1].scheduler_status, SystemSchedulerStatus.pending)
         self.assertEquals(systems[2].scheduler_status, SystemSchedulerStatus.pending)

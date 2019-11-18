@@ -12,7 +12,7 @@ import re
 import shutil
 import tempfile
 import textwrap
-import unittest2 as unittest
+import unittest
 
 from bkr.inttest.client import run_wizard
 

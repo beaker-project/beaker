@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -7,98 +6,99 @@
 # These are unit tests which don't need a MySQL database. Tests which need to
 # talk to external services belong in the IntegrationTests subdir.
 
-import unittest2 as unittest
+import errno
 import gzip
 import os
-import re
-import pkg_resources
-import errno
-from lxml import etree
+import unittest
 from tempfile import mkdtemp
+
+import pkg_resources
+from lxml import etree
 from shutil import copy, rmtree
-from sqlalchemy.schema import MetaData, Table, Column
 from sqlalchemy.dialects.mysql.base import MySQLDialect
 from sqlalchemy.dialects.sqlite.base import SQLiteDialect
+from sqlalchemy.schema import MetaData, Table, Column
 from sqlalchemy.types import Integer, Unicode
-from turbogears.config import get, update
+from turbogears.config import update
+
 from bkr.server.model.sql import ConditionalInsert
 from bkr.server.model.tasklibrary import TaskLibrary
 
 
 class ConditionalInsertTest(unittest.TestCase):
 
-    # We want ConditionalInsert to work with both MySQL (for real code) and 
-    # SQLite (for unit tests) so each test case needs to check both versions of 
+    # We want ConditionalInsert to work with both MySQL (for real code) and
+    # SQLite (for unit tests) so each test case needs to check both versions of
     # the compiled statement.
 
     def test_unique_params_only(self):
         metadata = MetaData()
         table = Table('table', metadata,
-            Column('id', Integer, primary_key=True),
-            Column('name', Unicode(16), nullable=False, unique=True),
-        )
+                      Column('id', Integer, primary_key=True),
+                      Column('name', Unicode(16), nullable=False, unique=True),
+                      )
         clause = ConditionalInsert(table, {table.c.name: 'asdf'})
 
         # there is a bug in upstream in pylint so we have to disable it for
-        # SQLAlchemy 0.9. 
+        # SQLAlchemy 0.9.
         # https://bitbucket.org/logilab/astroid/issue/39/support-for-sqlalchemy
-        #pylint: disable=E1120
+        # pylint: disable=E1120
         compiled = clause.compile(dialect=MySQLDialect())
         self.assertEquals(str(compiled),
-                'INSERT INTO `table` (name)\n'
-                'SELECT %s\n'
-                'FROM DUAL\n'
-                'WHERE NOT (EXISTS (SELECT 1 \n'
-                'FROM `table` \n'
-                'WHERE `table`.name = %s FOR UPDATE))')
+                          'INSERT INTO `table` (name)\n'
+                          'SELECT %s\n'
+                          'FROM DUAL\n'
+                          'WHERE NOT (EXISTS (SELECT 1 \n'
+                          'FROM `table` \n'
+                          'WHERE `table`.name = %s FOR UPDATE))')
         self.assertEquals(compiled.positiontup, ['name', 'name_1'])
         self.assertEquals(compiled.params, {'name': 'asdf', 'name_1': 'asdf'})
 
-        #pylint: disable=E1120
+        # pylint: disable=E1120
         compiled = clause.compile(dialect=SQLiteDialect())
         self.assertEquals(str(compiled),
-                'INSERT INTO "table" (name)\n'
-                'SELECT ?\n'
-                'WHERE NOT (EXISTS (SELECT 1 \n'
-                'FROM "table" \n'
-                'WHERE "table".name = ?))')
+                          'INSERT INTO "table" (name)\n'
+                          'SELECT ?\n'
+                          'WHERE NOT (EXISTS (SELECT 1 \n'
+                          'FROM "table" \n'
+                          'WHERE "table".name = ?))')
         self.assertEquals(compiled.positiontup, ['name', 'name_1'])
         self.assertEquals(compiled.params, {'name': 'asdf', 'name_1': 'asdf'})
 
     def test_with_extra_params(self):
         metadata = MetaData()
         table = Table('table', metadata,
-            Column('id', Integer, primary_key=True),
-            Column('name', Unicode(16), nullable=False, unique=True),
-            Column('extra', Unicode(16), nullable=False),
-        )
+                      Column('id', Integer, primary_key=True),
+                      Column('name', Unicode(16), nullable=False, unique=True),
+                      Column('extra', Unicode(16), nullable=False),
+                      )
         clause = ConditionalInsert(table, {table.c.name: 'asdf'},
-                {table.c.extra: 'something'})
+                                   {table.c.extra: 'something'})
 
-        #pylint: disable=E1120
+        # pylint: disable=E1120
         compiled = clause.compile(dialect=MySQLDialect())
         self.assertEquals(str(compiled),
-                'INSERT INTO `table` (name, extra)\n'
-                'SELECT %s, %s\n'
-                'FROM DUAL\n'
-                'WHERE NOT (EXISTS (SELECT 1 \n'
-                'FROM `table` \n'
-                'WHERE `table`.name = %s FOR UPDATE))')
+                          'INSERT INTO `table` (name, extra)\n'
+                          'SELECT %s, %s\n'
+                          'FROM DUAL\n'
+                          'WHERE NOT (EXISTS (SELECT 1 \n'
+                          'FROM `table` \n'
+                          'WHERE `table`.name = %s FOR UPDATE))')
         self.assertEquals(compiled.positiontup, ['name', 'extra', 'name_1'])
         self.assertEquals(compiled.params, {'name': 'asdf',
-                'extra': 'something', 'name_1': 'asdf'})
+                                            'extra': 'something', 'name_1': 'asdf'})
 
-        #pylint: disable=E1120
+        # pylint: disable=E1120
         compiled = clause.compile(dialect=SQLiteDialect())
         self.assertEquals(str(compiled),
-                'INSERT INTO "table" (name, extra)\n'
-                'SELECT ?, ?\n'
-                'WHERE NOT (EXISTS (SELECT 1 \n'
-                'FROM "table" \n'
-                'WHERE "table".name = ?))')
+                          'INSERT INTO "table" (name, extra)\n'
+                          'SELECT ?, ?\n'
+                          'WHERE NOT (EXISTS (SELECT 1 \n'
+                          'FROM "table" \n'
+                          'WHERE "table".name = ?))')
         self.assertEquals(compiled.positiontup, ['name', 'extra', 'name_1'])
         self.assertEquals(compiled.params, {'name': 'asdf',
-                'extra': 'something', 'name_1': 'asdf'})
+                                            'extra': 'something', 'name_1': 'asdf'})
 
 
 class TaskLibraryTest(unittest.TestCase):
@@ -106,9 +106,11 @@ class TaskLibraryTest(unittest.TestCase):
     def setUp(self):
         test_rpmspath = mkdtemp(prefix='beaker-task-library-test-rpms')
         self.addCleanup(rmtree, test_rpmspath)
+
         # hack to override descriptor for rpmspath
         class TestTaskLibrary(TaskLibrary):
             rpmspath = test_rpmspath
+
         self.tasklibrary = TestTaskLibrary()
         self.assertEquals(self.tasklibrary.rpmspath, test_rpmspath)
 
@@ -144,25 +146,28 @@ class TaskLibraryTest(unittest.TestCase):
 
     def test_createrepo_c_command(self):
         update({'beaker.createrepo_command': 'createrepo_c'})
-        rpm_file = pkg_resources.resource_filename('bkr.server.tests', \
+        rpm_file = pkg_resources.resource_filename(
+            'bkr.server.tests',
             'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
         copy(rpm_file, self.tasklibrary.rpmspath)
         try:
             self.tasklibrary.update_repo()
-        except OSError, e:
+        except OSError as e:
             if e.errno is errno.ENOENT:
                 raise unittest.SkipTest('Could not find createrepo_c')
 
     def test_invalid_createrepo_command_fail(self):
         update({'beaker.createrepo_command': 'iamnotarealcommand'})
-        rpm_file = pkg_resources.resource_filename('bkr.server.tests', \
+        rpm_file = pkg_resources.resource_filename(
+            'bkr.server.tests',
             'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
         copy(rpm_file, self.tasklibrary.rpmspath)
         with self.assertRaises(OSError):
             self.tasklibrary.update_repo()
 
     def test_update_repo(self):
-        rpm_file = pkg_resources.resource_filename('bkr.server.tests', \
+        rpm_file = pkg_resources.resource_filename(
+            'bkr.server.tests',
             'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
         copy(rpm_file, self.tasklibrary.rpmspath)
         self.tasklibrary.update_repo()
@@ -182,14 +187,15 @@ class TaskLibraryTest(unittest.TestCase):
         self.tasklibrary.update_repo()
 
     def test_unlink_rpm(self):
-        rpm_file = pkg_resources.resource_filename('bkr.server.tests',
+        rpm_file = pkg_resources.resource_filename(
+            'bkr.server.tests',
             'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
         copy(rpm_file, self.tasklibrary.rpmspath)
         self.tasklibrary. \
             unlink_rpm('tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
         self.assertTrue(not os.path.exists(
             os.path.join(self.tasklibrary.rpmspath,
-                'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')))
+                         'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')))
         # This tests that it does not throw an exception
         # if the file has been removed
         self.tasklibrary.unlink_rpm('tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
@@ -197,7 +203,8 @@ class TaskLibraryTest(unittest.TestCase):
     def test_make_snapshot_repo(self):
         recipe_repo_parent = mkdtemp(prefix='beaker-test_make_snapshot_repo')
         self.addCleanup(rmtree, recipe_repo_parent)
-        rpm_file = pkg_resources.resource_filename('bkr.server.tests', \
+        rpm_file = pkg_resources.resource_filename(
+            'bkr.server.tests',
             'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
         copy(rpm_file, self.tasklibrary.rpmspath)
         repo_dir = os.path.join(self.tasklibrary.rpmspath, 'repodata')
@@ -218,8 +225,7 @@ class TaskLibraryTest(unittest.TestCase):
             elif filename.endswith(".xml"):
                 open_file = open
             else:
-                raise AssertionError('Expected gzip or xml, not %r' %
-                                                                 filename)
+                raise AssertionError('Expected gzip or xml, not %r' % filename)
             repo_filename = os.path.join(repo_dir, filename)
             recipe_repo_filename = os.path.join(recipe_repo_dir, filename)
             repo_file = open_file(repo_filename)

@@ -55,7 +55,6 @@ BuildRequires:  make
 %if %{with python3}
 BuildRequires:  python3-setuptools
 BuildRequires:  python3-nose
-BuildRequires:  python3-unittest2
 BuildRequires:  python3-mock
 BuildRequires:  python3-devel
 BuildRequires:  python3-docutils
@@ -64,7 +63,6 @@ BuildRequires:  python3-sphinx
 %if 0%{?fedora} == 29
 BuildRequires:  python2-setuptools
 BuildRequires:  python2-nose
-BuildRequires:  python2-unittest2
 BuildRequires:  python2-mock
 BuildRequires:  python2-devel
 BuildRequires:  python2-docutils
@@ -73,7 +71,6 @@ BuildRequires:  python2-sphinxcontrib-httpdomain
 %else
 BuildRequires:  python-setuptools
 BuildRequires:  python-nose >= 0.10
-BuildRequires:  python-unittest2
 BuildRequires:  python-mock
 BuildRequires:  python2-devel
 BuildRequires:  python-docutils >= 0.6
@@ -301,7 +298,6 @@ Requires:       python2-nose
 Requires:       python2-selenium
 Requires:       python2-requests
 Requires:       python2-requests-kerberos
-Requires:       python2-unittest2
 Requires:       python2-gunicorn
 Requires:       python2-mock
 %else # old style Python package names
@@ -313,7 +309,6 @@ Requires:       python-selenium >= 2.12
 %endif
 Requires:       python-requests >= 1.0
 Requires:       python-requests-kerberos
-Requires:       python-unittest2
 Requires:       python-gunicorn
 Requires:       python-mock
 %if 0%{?rhel} == 7

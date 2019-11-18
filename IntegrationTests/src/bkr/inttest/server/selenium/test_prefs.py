@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -6,14 +5,13 @@
 
 from bkr.server.model import SSHPubKey
 from bkr.inttest.server.selenium import WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login, logout, is_text_present, \
-        delete_and_confirm
+from bkr.inttest.server.webdriver_utils import login
 from bkr.inttest import data_setup, get_server_base
-import unittest, time, re, os
-from unittest2 import SkipTest
+from unittest import SkipTest
 from turbogears.database import session
 from turbogears import config
 import crypt
+
 
 class UserPrefs(WebDriverTestCase):
 
@@ -30,7 +28,7 @@ class UserPrefs(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'prefs/')
         tab_link = b.find_element_by_xpath(
-                '//ul[contains(@class, "nav-tabs")]//a[text()="%s"]' % tab)
+            '//ul[contains(@class, "nav-tabs")]//a[text()="%s"]' % tab)
         tab_link.click()
         # XXX is there a timing issue here? unsure
         return b.find_element_by_css_selector('.tab-pane.active')
@@ -43,7 +41,7 @@ class UserPrefs(WebDriverTestCase):
         delegate_field.send_keys('randuseriosgfsy89238')
         pane.find_element_by_tag_name('form').submit()
         self.assertIn('Submission delegate randuseriosgfsy89238 does not exist',
-                pane.find_element_by_class_name('alert-error').text)
+                      pane.find_element_by_class_name('alert-error').text)
 
     def test_adding_duplicate_delegate(self):
         with session.begin():
@@ -70,8 +68,8 @@ class UserPrefs(WebDriverTestCase):
         b = self.browser
         pane = self.go_to_prefs_tab(tab='Submission Delegates')
         pane.find_element_by_xpath('//li[a/text()="%s"]'
-                '/button[contains(text(), "Remove")]'
-                % submission_delegate.user_name).click()
+                                   '/button[contains(text(), "Remove")]'
+                                   % submission_delegate.user_name).click()
         b.find_element_by_xpath('//div[@id="submission-delegates" and not(.//ul/li)]')
         # Check they have been removed in DB
         session.expire(self.user)
@@ -93,7 +91,7 @@ class UserPrefs(WebDriverTestCase):
         delegate_field.send_keys(submission_delegate.user_name)
         pane.find_element_by_tag_name('form').submit()
         pane.find_element_by_xpath('//ul/li[a/text()="%s"]'
-                % submission_delegate.user_name)
+                                   % submission_delegate.user_name)
         # Check user has indeed been added, and activity updated
         with session.begin():
             session.expire_all()
@@ -101,7 +99,7 @@ class UserPrefs(WebDriverTestCase):
             activity = self.user.user_activity[-1]
             self.assertEqual(activity.action, u'Added')
             self.assertEqual(activity.field_name,
-                u'Submission delegate')
+                             u'Submission delegate')
             self.assertEqual(activity.user_id, self.user.user_id)
             self.assertEqual(activity.new_value, submission_delegate.user_name)
             self.assertEqual(activity.old_value, None)
@@ -113,7 +111,7 @@ class UserPrefs(WebDriverTestCase):
         e.send_keys(self.clear_password)
         pane.find_element_by_tag_name('form').submit()
         pane.find_element_by_xpath('p[contains(text(), "Your root password was set")'
-                ' and normalize-space(string(time))="a few seconds ago"]')
+                                   ' and normalize-space(string(time))="a few seconds ago"]')
         new_hash = pane.find_element_by_xpath('p[1]/code').text
         self.failUnless(new_hash)
         self.failUnless(crypt.crypt(self.clear_password, new_hash) == new_hash)
@@ -125,7 +123,7 @@ class UserPrefs(WebDriverTestCase):
         e.send_keys(self.hashed_password)
         pane.find_element_by_tag_name('form').submit()
         pane.find_element_by_xpath('p[contains(text(), "Your root password was set")'
-                ' and normalize-space(string(time))="a few seconds ago"]')
+                                   ' and normalize-space(string(time))="a few seconds ago"]')
         new_hash = pane.find_element_by_xpath('p[1]/code').text
         self.failUnless(crypt.crypt(self.clear_password, new_hash) == self.hashed_password)
 
@@ -136,7 +134,7 @@ class UserPrefs(WebDriverTestCase):
         e.send_keys('s3cr3t')
         pane.find_element_by_tag_name('form').submit()
         self.assertIn('The root password is shorter than 7 characters',
-                pane.find_element_by_class_name('alert-error').text)
+                      pane.find_element_by_class_name('alert-error').text)
 
     def test_dictionary_password_rejected(self):
         b = self.browser
@@ -145,8 +143,8 @@ class UserPrefs(WebDriverTestCase):
         e.send_keys('s3cr3tive')
         pane.find_element_by_tag_name('form').submit()
         self.assertIn('The root password fails the dictionary check - '
-                'it is based on a dictionary word',
-                pane.find_element_by_class_name('alert-error').text)
+                      'it is based on a dictionary word',
+                      pane.find_element_by_class_name('alert-error').text)
 
     def test_ssh_key_allows_whitespace_in_description(self):
         b = self.browser
@@ -155,7 +153,7 @@ class UserPrefs(WebDriverTestCase):
         pane.find_element_by_name('key').send_keys(key)
         pane.find_element_by_tag_name('form').submit()
         pane.find_element_by_xpath(
-                '//li/span[@class="ident" and text()="this is my favourite key"]')
+            '//li/span[@class="ident" and text()="this is my favourite key"]')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=830475
     def test_ssh_key_trailing_whitespace_is_stripped(self):
@@ -165,7 +163,7 @@ class UserPrefs(WebDriverTestCase):
         pane.find_element_by_name('key').send_keys(key)
         pane.find_element_by_tag_name('form').submit()
         pane.find_element_by_xpath(
-                '//li/span[@class="ident" and text()="me@example.com"]')
+            '//li/span[@class="ident" and text()="me@example.com"]')
         with session.begin():
             self.assertEquals(self.user.sshpubkeys[-1].ident, 'me@example.com')
 
@@ -177,7 +175,7 @@ class UserPrefs(WebDriverTestCase):
         pane.find_element_by_name('key').send_keys(key)
         pane.find_element_by_tag_name('form').submit()
         self.assertIn('SSH public keys may not contain newlines',
-                pane.find_element_by_class_name('alert-error').text)
+                      pane.find_element_by_class_name('alert-error').text)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1175584
     def test_duplicate_ssh_key_not_accepted(self):
@@ -189,7 +187,7 @@ class UserPrefs(WebDriverTestCase):
         pane.find_element_by_name('key').send_keys(key)
         pane.find_element_by_tag_name('form').submit()
         self.assertIn('Duplicate SSH public key',
-                pane.find_element_by_class_name('alert-error').text)
+                      pane.find_element_by_class_name('alert-error').text)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=830475
     def test_invalid_ssh_key_not_accepted(self):
@@ -198,7 +196,7 @@ class UserPrefs(WebDriverTestCase):
         pane.find_element_by_name('key').send_keys('gibberish')
         pane.find_element_by_tag_name('form').submit()
         self.assertIn('Invalid SSH public key',
-                pane.find_element_by_class_name('alert-error').text)
+                      pane.find_element_by_class_name('alert-error').text)
 
     def test_set_use_old_job_page(self):
         with session.begin():
@@ -332,5 +330,6 @@ class UserPrefs(WebDriverTestCase):
         pane.find_element_by_name('openstack_password').send_keys('invalid')
         pane.find_element_by_name('openstack_project_name').send_keys('invalid')
         pane.find_element_by_tag_name('form').submit()
-        self.assertIn('Could not authenticate with OpenStack using your credentials: The request you have made requires authentication.',
-                pane.find_element_by_class_name('alert-error').text)
+        self.assertIn(
+            'Could not authenticate with OpenStack using your credentials: The request you have made requires authentication.',
+            pane.find_element_by_class_name('alert-error').text)

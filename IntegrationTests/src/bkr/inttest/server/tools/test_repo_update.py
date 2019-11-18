@@ -4,21 +4,22 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import sys
-import os, os.path
-import subprocess
+import os
+import os.path
 import tempfile
-import shutil
-import time
+
 import pkg_resources
-import unittest2 as unittest
+import shutil
+import sys
+import time
+
 from bkr.common import __version__
-from bkr.server.util import run_createrepo
-from bkr.server.tests import data_setup
-from bkr.server.model import session, OSMajor
-from bkr.server.tools.repo_update import update_repos
 from bkr.inttest import DatabaseTestCase, Process
 from bkr.inttest.server.tools import run_command
+from bkr.server.model import session, OSMajor
+from bkr.server.tests import data_setup
+from bkr.server.util import run_createrepo
+
 
 class RepoUpdate(DatabaseTestCase):
     """Tests the repo_update.py script"""

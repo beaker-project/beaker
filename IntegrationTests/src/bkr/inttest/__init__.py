@@ -20,7 +20,7 @@ import tempfile
 import re
 import logging, logging.config
 import signal
-import unittest2 as unittest
+import unittest
 import turbogears
 
 try:
