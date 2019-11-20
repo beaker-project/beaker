@@ -1,0 +1,8 @@
+Ready-for-Checks+1: Martin Styk <mastyk@redhat.com>
+Code-Review+2: Renan Rodrigo Barbosa <rebarbos@redhat.com>
+Verified+1: Martin Styk <mastyk@redhat.com>
+Submitted-by: Martin Styk <mastyk@redhat.com>
+Submitted-at: Wed, 20 Nov 2019 07:25:59 +0000
+Reviewed-on: https://gerrit.beaker-project.org/6688
+Project: beaker
+Branch: refs/heads/develop
