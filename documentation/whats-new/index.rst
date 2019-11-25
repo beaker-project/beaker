@@ -31,6 +31,17 @@ version, see :doc:`../admin-guide/upgrading`.
 
        next/*
 
+Beaker 27
+---------
+
+Beaker 27 has Python 3 support for beaker-common and beaker-client, AMQ messaging,
+several changes for outdated packages and some other features.
+
+.. toctree::
+   :maxdepth: 2
+
+   release-27
+
 Beaker 26
 ---------
 
