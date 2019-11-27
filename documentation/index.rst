@@ -17,6 +17,7 @@ Resources
       Release notes <whats-new/index>
       glossary
       architecture-guide/index
+      Restraint Test Harness <https://restraint.readthedocs.io/en/latest/>
 
    * :download:`RELAX NG schema for Beaker jobs <../Common/bkr/common/schema/beaker-job.rng>`
 
