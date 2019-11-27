@@ -1383,11 +1383,23 @@ class DistroTreeTest(DatabaseTestCase):
         self.assertRaises(ValueError, lambda: distro_tree.url_in_lab(
                 self.lc, scheme=['http', 'nfs'], required=True))
 
-    def provision_distro_tree(self, distro_tree):
-        recipe = data_setup.create_recipe(distro_tree=distro_tree)
+    def provision_distro_tree(self, distro_tree, ks_meta=None):
+        recipe = data_setup.create_recipe(distro_tree=distro_tree, ks_meta=ks_meta)
         data_setup.create_job_for_recipes([recipe])
         data_setup.mark_recipe_waiting(recipe, lab_controller=self.lc)
         return recipe
+
+    def test_ksmeta_ks_keyword(self):
+        # Test that the 'ks_keyword' variable when put in the ks_meta attribute
+        # changes the name of the value used to specify the kickstart.
+        distro_rhel6 = data_setup.create_distro(osmajor=u'RedHatEnterpriseLinux6',
+                                                osminor=u'5')
+        rhel6_ppc64 = data_setup.create_distro_tree(distro=distro_rhel6,
+                                                    arch=u'ppc64')
+        r1 = self.provision_distro_tree(rhel6_ppc64, ks_meta="ks_keyword=preseed/url")
+        self.assertIn('preseed/url=http://', r1.installation.kernel_options)
+        self.assertNotIn('ks=', r1.installation.kernel_options)
+
 
     def test_custom_netbootloader(self):
 
