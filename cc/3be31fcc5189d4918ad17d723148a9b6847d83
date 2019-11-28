@@ -1,0 +1,8 @@
+Ready-for-Checks+1: John Villalovos <jvillalovos.ampere@gmail.com>
+Verified+1: Martin Styk <mastyk@redhat.com>
+Code-Review+2: Martin Styk <mastyk@redhat.com>
+Submitted-by: Martin Styk <mastyk@redhat.com>
+Submitted-at: Thu, 28 Nov 2019 10:11:57 +0000
+Reviewed-on: https://gerrit.beaker-project.org/6691
+Project: beaker
+Branch: refs/heads/develop
