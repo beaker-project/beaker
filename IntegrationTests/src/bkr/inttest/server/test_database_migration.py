@@ -11,15 +11,16 @@ import sqlalchemy
 from turbogears import config
 from turbogears.database import metadata
 from bkr.common import __version__
-from bkr.server.tools.init import upgrade_db, downgrade_db, check_db, doit, \
-        init_db
+from bkr.server.tools.init import upgrade_db, downgrade_db, check_db, doit, init_db
 from sqlalchemy.orm import create_session
 from sqlalchemy.sql import func
-from bkr.server.model import SystemPool, System, SystemAccessPolicy, Group, User, \
-        OSMajor, OSMajorInstallOptions, GroupMembershipType, SystemActivity, \
-        Activity, RecipeSetComment, Recipe, RecipeSet, RecipeTaskResult, \
-        Command, CommandStatus, LogRecipeTaskResult, DataMigration, Job, \
-        SystemSchedulerStatus, Permission, Installation, Arch
+from bkr.server.model import (
+    SystemPool, System, SystemAccessPolicy, Group, User, OSMajor, OSMajorInstallOptions,
+    GroupMembershipType, SystemActivity, Activity, RecipeSetComment, Recipe, RecipeSet,
+    RecipeTaskResult, Command, CommandStatus, LogRecipeTaskResult, DataMigration, Job,
+    SystemSchedulerStatus, Permission, Installation, Arch
+)
+
 
 def has_initial_sublist(larger, prefix):
     """ Return true iff list *prefix* is an initial sublist of list
@@ -31,8 +32,8 @@ def has_initial_sublist(larger, prefix):
             return False
     return True
 
-class MigrationTest(unittest.TestCase):
 
+class MigrationTest(unittest.TestCase):
     maxDiff = None
 
     def setUp(self):
@@ -43,14 +44,14 @@ class MigrationTest(unittest.TestCase):
         if not config.get('beaker.migration_test_dburi'):
             raise unittest.SkipTest('beaker.migration_test_dburi is not set')
         self.migration_engine = sqlalchemy.create_engine(
-                config.get('beaker.migration_test_dburi'))
+            config.get('beaker.migration_test_dburi'))
         self.migration_metadata = sqlalchemy.MetaData(bind=self.migration_engine)
         self.migration_session = create_session(bind=self.migration_engine)
         with self.migration_engine.connect() as connection:
             db_name = self.migration_engine.url.database
             connection.execute('DROP DATABASE IF EXISTS %s' % db_name)
             connection.execute('CREATE DATABASE %s' % db_name)
-            connection.invalidate() # can't reuse this one
+            connection.invalidate()  # can't reuse this one
 
     def tearDown(self):
         # If this assertion fails, it means the previous test (or some code
@@ -63,7 +64,7 @@ class MigrationTest(unittest.TestCase):
     def test_check_db(self):
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/21.sql'))
+                                                             'database-dumps/21.sql'))
         self.assertTrue(check_db(self.migration_metadata, '171c07fb4970'))
         self.assertFalse(check_db(self.migration_metadata, 'head'))
         upgrade_db(self.migration_metadata)
@@ -73,11 +74,11 @@ class MigrationTest(unittest.TestCase):
     def test_empty_check_and_create(self):
         EmptyOpt = collections.namedtuple('EmtpyOpt',
                                           ['user_name',
-                                          'password',
-                                          'display_name',
-                                          'email_address',
-                                          'check',
-                                          'downgrade'])
+                                           'password',
+                                           'display_name',
+                                           'email_address',
+                                           'check',
+                                           'downgrade'])
 
         opts = EmptyOpt._make(['empty', 'empty', 'Empty DB Test', 'empty@example.com', True, False])
         doit(opts, self.migration_metadata)
@@ -85,7 +86,8 @@ class MigrationTest(unittest.TestCase):
             doit(opts._replace(check=False), self.migration_metadata)
         except sqlalchemy.exc.NoSuchTableError:
             # Without the fix in doit() for bug 1350302, an exception will be thrown
-            self.fail("doit() raised NoSuchTableError, tried to update a non-existent database schema")
+            self.fail(
+                "doit() raised NoSuchTableError, tried to update a non-existent database schema")
 
     def test_can_pass_beaker_version_to_downgrade(self):
         # We should be able to give it arbitrary Beaker versions and have it
@@ -94,7 +96,7 @@ class MigrationTest(unittest.TestCase):
         # are already on the right version.
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/21.sql'))
+                                                             'database-dumps/21.sql'))
         downgrade_db(self.migration_metadata, '21')
         self.assertTrue(check_db(self.migration_metadata, '171c07fb4970'))
         # Should also accept minor versions
@@ -135,18 +137,18 @@ class MigrationTest(unittest.TestCase):
         dump_filename = 'database-dumps/%s.sql' % major_version_to_test
         if not pkg_resources.resource_exists('bkr.inttest.server', dump_filename):
             raise AssertionError('Schema dump for version %s not found '
-                    'in IntegrationTests/src/bkr/inttest/server/database-dumps'
-                    % major_version_to_test)
+                                 'in IntegrationTests/src/bkr/inttest/server/database-dumps'
+                                 % major_version_to_test)
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string(
-                    'bkr.inttest.server', dump_filename))
+                'bkr.inttest.server', dump_filename))
         downgrade_db(self.migration_metadata, major_version_to_test)
         self.check_migrated_schema()
 
     def test_full_upgrade(self):
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/0.11.sql'))
+                                                             'database-dumps/0.11.sql'))
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
@@ -155,7 +157,7 @@ class MigrationTest(unittest.TestCase):
         # by then upgrading again and making sure we still have a correct schema.
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/0.11.sql'))
+                                                             'database-dumps/0.11.sql'))
         upgrade_db(self.migration_metadata)
         downgrade_db(self.migration_metadata, 'base')
         upgrade_db(self.migration_metadata)
@@ -164,98 +166,105 @@ class MigrationTest(unittest.TestCase):
     def test_from_012(self):
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/0.12.sql'))
+                                                             'database-dumps/0.12.sql'))
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
     def test_from_013(self):
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/0.13.sql'))
+                                                             'database-dumps/0.13.sql'))
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
     def test_from_014(self):
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/0.14.sql'))
+                                                             'database-dumps/0.14.sql'))
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
     def test_from_015(self):
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/0.15.sql'))
+                                                             'database-dumps/0.15.sql'))
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
     def test_from_016(self):
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/0.16.sql'))
+                                                             'database-dumps/0.16.sql'))
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
     def test_from_017(self):
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/0.17.sql'))
+                                                             'database-dumps/0.17.sql'))
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
     def test_from_19(self):
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/19.sql'))
+                                                             'database-dumps/19.sql'))
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
     def test_from_20(self):
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/20.sql'))
+                                                             'database-dumps/20.sql'))
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
     def test_from_21(self):
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/21.sql'))
+                                                             'database-dumps/21.sql'))
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
     def test_from_22(self):
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/22.sql'))
+                                                             'database-dumps/22.sql'))
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
     def test_from_23(self):
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/23.sql'))
+                                                             'database-dumps/23.sql'))
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
     def test_from_24(self):
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/24.sql'))
+                                                             'database-dumps/24.sql'))
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
     def test_from_25(self):
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/25.sql'))
+                                                             'database-dumps/25.sql'))
+        upgrade_db(self.migration_metadata)
+        self.check_migrated_schema()
+
+    def test_from_26(self):
+        with self.migration_engine.connect() as connection:
+            connection.execute(pkg_resources.resource_string('bkr.inttest.server',
+                                                             'database-dumps/26.sql'))
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
     def test_already_upgraded(self):
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/0.17.sql'))
+                                                             'database-dumps/0.17.sql'))
         upgrade_db(self.migration_metadata)
         # Upgrading an already-upgraded database should be a no-op.
         upgrade_db(self.migration_metadata)
@@ -269,7 +278,7 @@ class MigrationTest(unittest.TestCase):
     def test_redhat_production_20160120(self):
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/redhat-production-20160120.sql'))
+                                                             'database-dumps/redhat-production-20160120.sql'))
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
         downgrade_db(self.migration_metadata, 'base')
@@ -277,7 +286,7 @@ class MigrationTest(unittest.TestCase):
     def test_redhat_production_20140820(self):
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/redhat-production-20140820.sql'))
+                                                             'database-dumps/redhat-production-20140820.sql'))
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
         downgrade_db(self.migration_metadata, 'base')
@@ -285,7 +294,7 @@ class MigrationTest(unittest.TestCase):
     def test_redhat_production_20130304(self):
         with self.migration_engine.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/redhat-production-20130304.sql'))
+                                                             'database-dumps/redhat-production-20130304.sql'))
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
         downgrade_db(self.migration_metadata, 'base')
@@ -293,9 +302,9 @@ class MigrationTest(unittest.TestCase):
     def test_redhat_production_20120216(self):
         with self.migration_metadata.bind.connect() as connection:
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/redhat-production-20120216.sql'))
+                                                             'database-dumps/redhat-production-20120216.sql'))
         raise unittest.SkipTest('Database migrations are not implemented '
-                'far enough into the past yet')
+                                'far enough into the past yet')
         upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
         downgrade_db(self.migration_metadata, 'base')
@@ -323,7 +332,7 @@ class MigrationTest(unittest.TestCase):
             'lab_controller_data_center',
         ]
         expected_tables = metadata.tables.keys()
-        expected_tables.append('alembic_version') # it exists, just not in metadata
+        expected_tables.append('alembic_version')  # it exists, just not in metadata
         actual_tables = self.migration_metadata.tables.keys()
         for ignored_table in ignored_tables:
             if ignored_table in actual_tables:
@@ -357,17 +366,17 @@ class MigrationTest(unittest.TestCase):
             self.assertItemsEqual(expected_columns, actual_columns)
             for column_name in metadata.tables[table_name].columns.keys():
                 self.assert_columns_equivalent(
-                        metadata.tables[table_name].columns[column_name],
-                        self.migration_metadata.tables[table_name].columns[column_name])
+                    metadata.tables[table_name].columns[column_name],
+                    self.migration_metadata.tables[table_name].columns[column_name])
             expected_indexes = self.find_expected_indexes_for_table(
-                    metadata.tables[table_name])
+                metadata.tables[table_name])
             actual_indexes = dict((index.name, [col.name for col in index.columns])
-                    for index in self.migration_metadata.tables[table_name].indexes)
+                                  for index in self.migration_metadata.tables[table_name].indexes)
             if table_name == 'command_queue':
                 # may be left over from 22
                 actual_indexes = dict((name, cols) for name, cols
-                        in actual_indexes.iteritems()
-                        if cols != ['distro_tree_id'])
+                                      in actual_indexes.iteritems()
+                                      if cols != ['distro_tree_id'])
             if table_name == 'virt_resource':
                 if 'ix_virt_resource_mac_address' in actual_indexes:
                     # may be left over from 0.16
@@ -392,12 +401,12 @@ class MigrationTest(unittest.TestCase):
             # ix_<table>_<col> and that will appear in a fresh schema, but an
             # older upgraded schema will have the MySQL generated name <col>.
             self.assertItemsEqual(expected_indexes.values(),
-                    actual_indexes.values(),
-                    'Incorrect indexes on %s' % table_name)
+                                  actual_indexes.values(),
+                                  'Incorrect indexes on %s' % table_name)
             expected_uniques = []
             for constraint in metadata.tables[table_name].constraints:
                 if isinstance(constraint, (sqlalchemy.PrimaryKeyConstraint,
-                        sqlalchemy.ForeignKeyConstraint)):
+                                           sqlalchemy.ForeignKeyConstraint)):
                     # PKs and FKs are checked below on individual columns
                     continue
                 elif isinstance(constraint, sqlalchemy.CheckConstraint):
@@ -417,7 +426,7 @@ class MigrationTest(unittest.TestCase):
                 if index.unique:
                     actual_uniques.append([col.name for col in index.columns])
             self.assertItemsEqual(expected_uniques, actual_uniques,
-                    'Incorrect unique constraints on %s' % table_name)
+                                  'Incorrect unique constraints on %s' % table_name)
 
     def find_expected_indexes_for_table(self, table):
         # This is not as easy as you might think (thanks MySQL...)
@@ -433,10 +442,10 @@ class MigrationTest(unittest.TestCase):
             if isinstance(constraint, sqlalchemy.UniqueConstraint):
                 cols = [col.name for col in constraint.columns]
                 if any(has_initial_sublist(index_cols, cols)
-                        for index_cols in expected_indexes.values()):
+                       for index_cols in expected_indexes.values()):
                     continue
                 if has_initial_sublist(table.primary_key.columns.values(),
-                        constraint.columns.values()):
+                                       constraint.columns.values()):
                     continue
                 name = constraint.name or constraint.columns.values()[0].name
                 expected_indexes[name] = cols
@@ -444,7 +453,7 @@ class MigrationTest(unittest.TestCase):
         # explicit index, InnoDB creates one implicitly.
         for fk in table.foreign_keys:
             if any(index_cols[0] == fk.parent.name
-                    for index_cols in expected_indexes.values()):
+                   for index_cols in expected_indexes.values()):
                 continue
             if table.primary_key.columns.values()[0] == fk.parent:
                 continue
@@ -457,30 +466,30 @@ class MigrationTest(unittest.TestCase):
         # to expected.type
         if isinstance(actual.type, sqlalchemy.dialects.mysql.TINYINT):
             self.assertTrue(isinstance(expected.type, sqlalchemy.Boolean),
-                    'Actual type was TINYINT which is equivalent to Boolean, '
-                    'but expected type was %r' % expected.type)
+                            'Actual type was TINYINT which is equivalent to Boolean, '
+                            'but expected type was %r' % expected.type)
         else:
             self.assertTrue(actual.type._compare_type_affinity(expected.type),
-                    'Actual type %r should be equivalent to expected type %r'
-                    % (actual.type, expected.type))
+                            'Actual type %r should be equivalent to expected type %r'
+                            % (actual.type, expected.type))
         if hasattr(expected.type, 'length'):
             self.assertEquals(actual.type.length, expected.type.length,
-                    '%r has wrong length' % actual)
+                              '%r has wrong length' % actual)
         if hasattr(expected.type, 'precision'):
             self.assertEquals(actual.type.precision, expected.type.precision,
-                    '%r has wrong numeric precision' % actual)
+                              '%r has wrong numeric precision' % actual)
         if hasattr(expected.type, 'scale'):
             self.assertEquals(actual.type.scale, expected.type.scale,
-                    '%r has wrong numeric scale' % actual)
+                              '%r has wrong numeric scale' % actual)
         if hasattr(expected.type, 'enums'):
             self.assertItemsEqual(actual.type.enums, expected.type.enums)
         self.assertEquals(actual.nullable, expected.nullable,
-                '%r should%s be nullable' % (actual,
-                '' if expected.nullable else ' not'))
+                          '%r should%s be nullable' % (actual,
+                                                       '' if expected.nullable else ' not'))
         self.assertEquals(actual.primary_key, expected.primary_key)
         if expected.server_default:
             self.assertEquals(actual.server_default, expected.server_default,
-                    '%r has incorrect database default' % actual)
+                              '%r has incorrect database default' % actual)
         else:
             if not actual.nullable and actual.server_default:
                 # MySQL forces non-NULLable columns to have a default even if
@@ -488,19 +497,19 @@ class MigrationTest(unittest.TestCase):
                 default_text = str(actual.server_default.arg)
                 if default_text not in ["''", "'0'", "0"]:
                     raise AssertionError('%r should not have database default %s'
-                            % (actual, default_text))
+                                         % (actual, default_text))
             else:
                 self.assertIsNone(actual.server_default,
-                        '%r should not have a database default' % actual)
+                                  '%r should not have a database default' % actual)
         actual_fk_targets = set(fk.target_fullname for fk in actual.foreign_keys)
         expected_fk_targets = set(fk.target_fullname for fk in expected.foreign_keys)
         self.assertItemsEqual(actual_fk_targets, expected_fk_targets,
-                '%r has incorrect FK targets' % actual)
+                              '%r has incorrect FK targets' % actual)
 
     def assert_indexes_equivalent(self, expected, actual):
         self.assertEquals(expected.name, actual.name)
         self.assertEquals([col.name for col in expected.columns],
-                [col.name for col in actual.columns])
+                          [col.name for col in actual.columns])
         self.assertEquals(expected.unique, actual.unique)
 
     def test_migrate_system_groups_to_pools(self):
@@ -509,11 +518,16 @@ class MigrationTest(unittest.TestCase):
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
                                                              'database-dumps/19.sql'))
             # populate synthetic data into relevant tables
-            connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (1, "test.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
-            connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (2, "test1.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
-            connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (3, "test2.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
-            connection.execute('INSERT INTO tg_group(group_id, group_name, ldap) VALUES (3, "group1", FALSE)')
-            connection.execute('INSERT INTO tg_group(group_id, group_name, ldap) VALUES (4, "group2", FALSE)')
+            connection.execute(
+                'INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (1, "test.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
+            connection.execute(
+                'INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (2, "test1.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
+            connection.execute(
+                'INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (3, "test2.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
+            connection.execute(
+                'INSERT INTO tg_group(group_id, group_name, ldap) VALUES (3, "group1", FALSE)')
+            connection.execute(
+                'INSERT INTO tg_group(group_id, group_name, ldap) VALUES (4, "group2", FALSE)')
             connection.execute('INSERT INTO system_group(system_id, group_id) VALUES (1, 3)')
             connection.execute('INSERT INTO system_group(system_id, group_id) VALUES (2, 3)')
             connection.execute('INSERT INTO system_group(system_id, group_id) VALUES (1, 4)')
@@ -525,7 +539,7 @@ class MigrationTest(unittest.TestCase):
         # check data for system_pool
         created_pools = self.migration_session.query(SystemPool).all()
         self.assertItemsEqual(['group1', 'group2'],
-                          [pool.name for pool in created_pools])
+                              [pool.name for pool in created_pools])
         self.assertItemsEqual(['Pool migrated from group group1',
                                'Pool migrated from group group2'],
                               [pool.description for pool in created_pools])
@@ -536,7 +550,8 @@ class MigrationTest(unittest.TestCase):
         for pool in expected_system_pool_owners.keys():
             p = self.migration_session.query(SystemPool).filter(SystemPool.name == pool).one()
             self.assertEquals(p.owning_group,
-                              self.migration_session.query(Group).filter(Group.group_name == pool).one())
+                              self.migration_session.query(Group).filter(
+                                  Group.group_name == pool).one())
 
         expected_system_pools_map = {
             u'test.fqdn.name': [u'group1', u'group2'],
@@ -562,9 +577,12 @@ class MigrationTest(unittest.TestCase):
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
                                                              'database-dumps/19.sql'))
             # populate synthetic data into relevant tables
-            connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (1, "test.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
-            connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (2, "test1.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
-            connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (3, "test2.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
+            connection.execute(
+                'INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (1, "test.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
+            connection.execute(
+                'INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (2, "test1.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
+            connection.execute(
+                'INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (3, "test2.fqdn.name", "2015-01-01", 1, 1, 1, 1)')
             connection.execute('INSERT INTO system_access_policy(id, system_id) VALUES (1, 2)')
             connection.execute('INSERT INTO system_access_policy(id, system_id) VALUES (2, 1)')
             connection.execute('INSERT INTO system_access_policy(id, system_id) VALUES (3, 3)')
@@ -575,9 +593,9 @@ class MigrationTest(unittest.TestCase):
         # check the data has been migrated successfully
         systems = self.migration_session.query(System).all()
         expected_system_policy_map = {
-            'test.fqdn.name':2,
-            'test1.fqdn.name':1,
-            'test2.fqdn.name':3
+            'test.fqdn.name': 2,
+            'test1.fqdn.name': 1,
+            'test2.fqdn.name': 3
         }
         for s in systems:
             self.assertEquals(s.custom_access_policy_id,
@@ -594,71 +612,71 @@ class MigrationTest(unittest.TestCase):
         self.assertIn('system_id',
                       migration_metadata.tables['system_access_policy'].columns.keys())
         self.assertNotIn('system_access_policy_id',
-                      migration_metadata.tables['system_pool'].columns.keys())
+                         migration_metadata.tables['system_pool'].columns.keys())
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1198914
     def test_delete_orphaned_system_access_policies(self):
         with self.migration_metadata.bind.connect() as connection:
             # populate empty database
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/20.sql'))
+                                                             'database-dumps/20.sql'))
             # access policy 1 is referenced, access policy 2 is an orphan
             connection.execute("INSERT INTO system_access_policy (id) VALUES (1)")
             connection.execute("INSERT INTO system_access_policy_rule "
-                    "(policy_id, user_id, group_id, permission) "
-                    "VALUES (1, NULL, NULL, 'view')")
+                               "(policy_id, user_id, group_id, permission) "
+                               "VALUES (1, NULL, NULL, 'view')")
             connection.execute("INSERT INTO system "
-                    "(fqdn, date_added, owner_id, type, status, kernel_type_id, "
-                    " custom_access_policy_id, active_access_policy_id) "
-                    "VALUES ('test.example.invalid', '2015-01-01', 1, 1, 1, 1, 1, 1)")
+                               "(fqdn, date_added, owner_id, type, status, kernel_type_id, "
+                               " custom_access_policy_id, active_access_policy_id) "
+                               "VALUES ('test.example.invalid', '2015-01-01', 1, 1, 1, 1, 1, 1)")
             connection.execute("INSERT INTO system_access_policy (id) VALUES (2)")
             connection.execute("INSERT INTO system_access_policy_rule "
-                    "(policy_id, user_id, group_id, permission) "
-                    "VALUES (2, NULL, NULL, 'view')")
+                               "(policy_id, user_id, group_id, permission) "
+                               "VALUES (2, NULL, NULL, 'view')")
         # run migration
         upgrade_db(self.migration_metadata)
         # check that access policy 2 has been deleted
         self.assertEquals(
-                self.migration_session.query(SystemAccessPolicy).filter_by(id=2).count(),
-                0)
+            self.migration_session.query(SystemAccessPolicy).filter_by(id=2).count(),
+            0)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1244996
     def test_delete_duplicate_osmajor_install_options(self):
         with self.migration_metadata.bind.connect() as connection:
             # populate empty database
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/20.sql'))
+                                                             'database-dumps/20.sql'))
             # RedHatEnterpriseLinux6 has duplicate rows in osmajor_install_options,
             # RedHatEnterpriseLinux7 just has one row
             connection.execute(
-                    "INSERT INTO osmajor (id, osmajor) "
-                    "VALUES (1, 'RedHatEnterpriseLinux6')")
+                "INSERT INTO osmajor (id, osmajor) "
+                "VALUES (1, 'RedHatEnterpriseLinux6')")
             connection.execute(
-                    "INSERT INTO osmajor_install_options (osmajor_id, arch_id, ks_meta) "
-                    "VALUES (1, NULL, 'testone'), (1, NULL, 'testtwo')")
+                "INSERT INTO osmajor_install_options (osmajor_id, arch_id, ks_meta) "
+                "VALUES (1, NULL, 'testone'), (1, NULL, 'testtwo')")
             connection.execute(
-                    "INSERT INTO osmajor (id, osmajor) "
-                    "VALUES (2, 'RedHatEnterpriseLinux7')")
+                "INSERT INTO osmajor (id, osmajor) "
+                "VALUES (2, 'RedHatEnterpriseLinux7')")
             connection.execute(
-                    "INSERT INTO osmajor_install_options (osmajor_id, arch_id, ks_meta) "
-                    "VALUES (2, NULL, 'testthree')")
+                "INSERT INTO osmajor_install_options (osmajor_id, arch_id, ks_meta) "
+                "VALUES (2, NULL, 'testthree')")
         # run migration
         upgrade_db(self.migration_metadata)
         # check that there is only one row per osmajor-arch combination
         row_counts = self.migration_session.query(OSMajorInstallOptions.osmajor_id,
-                    OSMajorInstallOptions.arch_id, func.count())\
-                .group_by(OSMajorInstallOptions.osmajor_id,
-                    OSMajorInstallOptions.arch_id)
+                                                  OSMajorInstallOptions.arch_id, func.count()) \
+            .group_by(OSMajorInstallOptions.osmajor_id,
+                      OSMajorInstallOptions.arch_id)
         for osmajor_id, arch_id, count in row_counts:
             self.assertEquals(count, 1,
-                    'Expected to find only one row in osmajor_install_options '
-                    'for osmajor_id %s, arch_id %s' % (osmajor_id, arch_id))
+                              'Expected to find only one row in osmajor_install_options '
+                              'for osmajor_id %s, arch_id %s' % (osmajor_id, arch_id))
         # check that the most recent install options are kept, older ones are deleted
-        installopts = self.migration_session.query(OSMajorInstallOptions)\
-                .join(OSMajorInstallOptions.osmajor)\
-                .filter(OSMajor.osmajor == u'RedHatEnterpriseLinux6',
-                        OSMajorInstallOptions.arch == None)\
-                .one()
+        installopts = self.migration_session.query(OSMajorInstallOptions) \
+            .join(OSMajorInstallOptions.osmajor) \
+            .filter(OSMajor.osmajor == u'RedHatEnterpriseLinux6',
+                    OSMajorInstallOptions.arch == None) \
+            .one()
         self.assertEquals(installopts.ks_meta, u'testtwo')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1257020
@@ -666,17 +684,17 @@ class MigrationTest(unittest.TestCase):
         with self.migration_metadata.bind.connect() as connection:
             # populate empty database
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/21.sql'))
+                                                             'database-dumps/21.sql'))
             # bob is in the colonel group
             connection.execute(
-                    "INSERT INTO tg_user (user_id, user_name, display_name, email_address, disabled, removed) "
-                    "VALUES (2, 'bob', 'Bob', 'bob@example.com', 1, '2015-12-01 15:43:28')")
+                "INSERT INTO tg_user (user_id, user_name, display_name, email_address, disabled, removed) "
+                "VALUES (2, 'bob', 'Bob', 'bob@example.com', 1, '2015-12-01 15:43:28')")
             connection.execute(
-                    "INSERT INTO tg_group (group_id, group_name, display_name, ldap) "
-                    "VALUES (3, 'colonel', 'Colonel', 0)")
+                "INSERT INTO tg_group (group_id, group_name, display_name, ldap) "
+                "VALUES (3, 'colonel', 'Colonel', 0)")
             connection.execute(
-                    "INSERT INTO user_group (user_id, group_id, is_owner) "
-                    "VALUES (2, 3, 1)")
+                "INSERT INTO user_group (user_id, group_id, is_owner) "
+                "VALUES (2, 3, 1)")
         # run migration
         upgrade_db(self.migration_metadata)
         colonel = self.migration_session.query(Group).get(3)
@@ -695,26 +713,26 @@ class MigrationTest(unittest.TestCase):
         with self.migration_metadata.bind.connect() as connection:
             # populate empty database
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/21.sql'))
+                                                             'database-dumps/21.sql'))
             # fred is in a custom access policy (1) and a pool access policy (2)
             connection.execute(
-                    "INSERT INTO tg_user (user_id, user_name, display_name, email_address, disabled, removed) "
-                    "VALUES (2, 'fred', 'Fred', 'fred@example.com', 1, '2015-12-01 17:18:56')")
+                "INSERT INTO tg_user (user_id, user_name, display_name, email_address, disabled, removed) "
+                "VALUES (2, 'fred', 'Fred', 'fred@example.com', 1, '2015-12-01 17:18:56')")
             connection.execute("INSERT INTO system_access_policy (id) VALUES (1)")
             connection.execute(
-                    "INSERT INTO system_access_policy_rule (policy_id, user_id, group_id, permission) "
-                    "VALUES (1, 2, NULL, 'reserve')")
+                "INSERT INTO system_access_policy_rule (policy_id, user_id, group_id, permission) "
+                "VALUES (1, 2, NULL, 'reserve')")
             connection.execute("INSERT INTO system "
-                    "(id, fqdn, date_added, owner_id, type, status, kernel_type_id, "
-                    " custom_access_policy_id, active_access_policy_id) "
-                    "VALUES (1, 'test.example.invalid', '2015-01-01', 1, 'Machine', 'Automated', 1, 1, 1)")
+                               "(id, fqdn, date_added, owner_id, type, status, kernel_type_id, "
+                               " custom_access_policy_id, active_access_policy_id) "
+                               "VALUES (1, 'test.example.invalid', '2015-01-01', 1, 'Machine', 'Automated', 1, 1, 1)")
             connection.execute("INSERT INTO system_access_policy (id) VALUES (2)")
             connection.execute(
-                    "INSERT INTO system_access_policy_rule (policy_id, user_id, group_id, permission) "
-                    "VALUES (2, 2, NULL, 'loan_self')")
+                "INSERT INTO system_access_policy_rule (policy_id, user_id, group_id, permission) "
+                "VALUES (2, 2, NULL, 'loan_self')")
             connection.execute(
-                    "INSERT INTO system_pool (id, name, owning_user_id, access_policy_id) "
-                    "VALUES (1, 'colonel-hard-wear', 1, 2)")
+                "INSERT INTO system_pool (id, name, owning_user_id, access_policy_id) "
+                "VALUES (1, 'colonel-hard-wear', 1, 2)")
         # run migration
         upgrade_db(self.migration_metadata)
         # check that fred is removed from the system access policy
@@ -740,15 +758,15 @@ class MigrationTest(unittest.TestCase):
         with self.migration_metadata.bind.connect() as connection:
             # populate empty database
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/21.sql'))
+                                                             'database-dumps/21.sql'))
             connection.execute(
-                    "INSERT INTO tg_group (group_name, ldap) "
-                    "VALUES ('%s', 1)" % group_name)
+                "INSERT INTO tg_group (group_name, ldap) "
+                "VALUES ('%s', 1)" % group_name)
         # run migration
         upgrade_db(self.migration_metadata)
         # check that the group row was created
-        group = self.migration_session.query(Group)\
-                .filter(Group.group_name == group_name).one()
+        group = self.migration_session.query(Group) \
+            .filter(Group.group_name == group_name).one()
         self.assertEqual(group.group_name, group_name)
         self.assertEqual(group.membership_type, GroupMembershipType.ldap)
 
@@ -757,36 +775,37 @@ class MigrationTest(unittest.TestCase):
         with self.migration_metadata.bind.connect() as connection:
             # populate empty database
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/20.sql'))
-            connection.execute('INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (1, "test.fqdn.name", "2015-12-15", 1, 1, 1, 1)')
+                                                             'database-dumps/20.sql'))
+            connection.execute(
+                'INSERT INTO system(id, fqdn, date_added, owner_id, type, status, kernel_type_id) VALUES (1, "test.fqdn.name", "2015-12-15", 1, 1, 1, 1)')
             connection.execute("INSERT INTO activity "
-                    "(id, user_id, created, type, field_name, service, action, old_value, new_value) "
-                    "VALUES (1, NULL, '2015-12-15 01:11:56', 'system_activity', 'System Acess Policy', "
-                    "'HTTP', 'changed', 'Custom Access Policy', 'Custom access policy')")
+                               "(id, user_id, created, type, field_name, service, action, old_value, new_value) "
+                               "VALUES (1, NULL, '2015-12-15 01:11:56', 'system_activity', 'System Acess Policy', "
+                               "'HTTP', 'changed', 'Custom Access Policy', 'Custom access policy')")
             connection.execute("INSERT INTO system_activity (id, system_id) "
-                    "VALUES (1, 1)")
+                               "VALUES (1, 1)")
         # run migration
         upgrade_db(self.migration_metadata)
         # check that systtem activity and activity have been deleted
         self.assertEquals(
-                self.migration_session.query(SystemActivity).filter_by(id=1).count(),
-                0)
+            self.migration_session.query(SystemActivity).filter_by(id=1).count(),
+            0)
 
     def test_migrate_recipe_set_comments_and_waived_from_nacked(self):
         with self.migration_metadata.bind.connect() as connection:
             # populate empty database
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/21.sql'))
+                                                             'database-dumps/21.sql'))
             # job owned by admin, with a recipe set which has been nacked and commented
             connection.execute(
-                    "INSERT INTO job (owner_id, retention_tag_id, dirty_version, clean_version) "
-                    "VALUES (1, 1, '', '')")
+                "INSERT INTO job (owner_id, retention_tag_id, dirty_version, clean_version) "
+                "VALUES (1, 1, '', '')")
             connection.execute(
-                    "INSERT INTO recipe_set (job_id, queue_time) "
-                    "VALUES (1, '2015-11-05 16:31:01')")
+                "INSERT INTO recipe_set (job_id, queue_time) "
+                "VALUES (1, '2015-11-05 16:31:01')")
             connection.execute(
-                    "INSERT INTO recipe_set_nacked (recipe_set_id, response_id, comment, created) "
-                    "VALUES (1, 2, 'it broke', '2015-11-05 16:32:40')")
+                "INSERT INTO recipe_set_nacked (recipe_set_id, response_id, comment, created) "
+                "VALUES (1, 2, 'it broke', '2015-11-05 16:32:40')")
         # run migration
         upgrade_db(self.migration_metadata)
         # check that the comment row was created
@@ -804,20 +823,20 @@ class MigrationTest(unittest.TestCase):
         with self.migration_metadata.bind.connect() as connection:
             # populate empty database
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/21.sql'))
+                                                             'database-dumps/21.sql'))
             # job owned by admin, with a recipe set which has been acked
             connection.execute(
-                    "INSERT INTO job (owner_id, retention_tag_id, dirty_version, clean_version) "
-                    "VALUES (1, 1, '', '')")
+                "INSERT INTO job (owner_id, retention_tag_id, dirty_version, clean_version) "
+                "VALUES (1, 1, '', '')")
             connection.execute(
-                    "INSERT INTO recipe_set (job_id, queue_time) "
-                    "VALUES (1, '2015-11-09 17:03:04')")
+                "INSERT INTO recipe_set (job_id, queue_time) "
+                "VALUES (1, '2015-11-09 17:03:04')")
             connection.execute(
-                    "INSERT INTO recipe (type, recipe_set_id, autopick_random) "
-                    "VALUES ('machine_recipe', 1, FALSE)")
+                "INSERT INTO recipe (type, recipe_set_id, autopick_random) "
+                "VALUES ('machine_recipe', 1, FALSE)")
             connection.execute(
-                    "INSERT INTO recipe_set_nacked (recipe_set_id, response_id, comment, created) "
-                    "VALUES (1, 1, NULL, '2015-11-09 17:32:03')")
+                "INSERT INTO recipe_set_nacked (recipe_set_id, response_id, comment, created) "
+                "VALUES (1, 1, NULL, '2015-11-09 17:32:03')")
         # run migration
         upgrade_db(self.migration_metadata)
         # check that the recipe is marked as reviewed by admin
@@ -829,28 +848,28 @@ class MigrationTest(unittest.TestCase):
         with self.migration_metadata.bind.connect() as connection:
             # Populate empty database
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/22.sql'))
+                                                             'database-dumps/22.sql'))
             # Populate test data for migration
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'bz991245-migration-setup.sql'))
+                                                             'bz991245-migration-setup.sql'))
         # Run migration
         upgrade_db(self.migration_metadata)
         # Check that installation has been populated for recipe 1 (system_resource)
         recipe = self.migration_session.query(Recipe).get(1)
         self.assertEqual(recipe.installation.distro_tree.distro.name, u'distro')
-        self.assertEqual(recipe.installation.kernel_options, u'') # populated below
+        self.assertEqual(recipe.installation.kernel_options, u'')  # populated below
         self.assertEqual(recipe.installation.rendered_kickstart.kickstart, u'lol')
         self.assertEqual(recipe.installation.system.fqdn, u'test.fqdn.name')
         self.assertEqual(recipe.installation.rebooted,
-                datetime.datetime(2016, 2, 16, 1, 0, 5))
+                         datetime.datetime(2016, 2, 16, 1, 0, 5))
         self.assertEqual(recipe.installation.install_started,
-                datetime.datetime(2016, 2, 16, 1, 1, 0))
+                         datetime.datetime(2016, 2, 16, 1, 1, 0))
         self.assertEqual(recipe.installation.install_finished,
-                datetime.datetime(2016, 2, 16, 1, 20, 0))
+                         datetime.datetime(2016, 2, 16, 1, 20, 0))
         self.assertEqual(recipe.installation.postinstall_finished,
-                datetime.datetime(2016, 2, 16, 1, 21, 0))
+                         datetime.datetime(2016, 2, 16, 1, 21, 0))
         self.assertEqual(recipe.installation.created,
-                datetime.datetime(2016, 2, 16, 1, 0, 0))
+                         datetime.datetime(2016, 2, 16, 1, 0, 0))
         self.migration_session.close()
         # Run online data migration (two batches)
         migration = DataMigration(name=u'commands-for-recipe-installations')
@@ -875,21 +894,21 @@ class MigrationTest(unittest.TestCase):
         self.assertIsNone(recipe.installation.system)
         self.assertIsNone(recipe.installation.rebooted)
         self.assertEqual(recipe.installation.install_started,
-                datetime.datetime(2016, 2, 16, 1, 31, 0))
+                         datetime.datetime(2016, 2, 16, 1, 31, 0))
         self.assertEqual(recipe.installation.install_finished,
-                datetime.datetime(2016, 2, 16, 1, 40, 0))
+                         datetime.datetime(2016, 2, 16, 1, 40, 0))
         self.assertEqual(recipe.installation.postinstall_finished,
-                datetime.datetime(2016, 2, 16, 1, 41, 0))
+                         datetime.datetime(2016, 2, 16, 1, 41, 0))
         self.assertEqual(recipe.installation.created,
-                datetime.datetime(2016, 2, 16, 1, 0, 0))
+                         datetime.datetime(2016, 2, 16, 1, 0, 0))
         # Check that installation has been populated for recipes 3 and 4
         # (host and guest that never started)
         recipe = self.migration_session.query(Recipe).get(3)
         self.assertEqual(recipe.installation.created,
-                datetime.datetime(2016, 2, 17, 0, 0, 0))
+                         datetime.datetime(2016, 2, 17, 0, 0, 0))
         recipe = self.migration_session.query(Recipe).get(4)
         self.assertEqual(recipe.installation.created,
-                datetime.datetime(2016, 2, 17, 0, 0, 0))
+                         datetime.datetime(2016, 2, 17, 0, 0, 0))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1322700
     # https://bugzilla.redhat.com/show_bug.cgi?id=1337790
@@ -897,86 +916,88 @@ class MigrationTest(unittest.TestCase):
         with self.migration_metadata.bind.connect() as connection:
             # populate empty database
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/22.sql'))
+                                                             'database-dumps/22.sql'))
             # populate test jobs
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'bz1322700-and-bz1337790-migration-setup.sql'))
+                                                             'bz1322700-and-bz1337790-migration-setup.sql'))
         # run migration
         upgrade_db(self.migration_metadata)
         # Job one's recipe task results should not be deleted
         self.assertEquals(
-                self.migration_session.query(RecipeTaskResult).filter_by(recipe_task_id=1).count(),
-                1)
+            self.migration_session.query(RecipeTaskResult).filter_by(recipe_task_id=1).count(),
+            1)
         # Job one's log recipe task results should not be deleted
         self.assertEquals(
-                self.migration_session.query(LogRecipeTaskResult).filter_by(recipe_task_result_id=1).count(),
-                1)
+            self.migration_session.query(LogRecipeTaskResult).filter_by(
+                recipe_task_result_id=1).count(),
+            1)
         # Job two's recipe task results should be deleted
         self.assertEquals(
-                self.migration_session.query(RecipeTaskResult).filter_by(recipe_task_id=2).count(),
-                0)
+            self.migration_session.query(RecipeTaskResult).filter_by(recipe_task_id=2).count(),
+            0)
         # Job two's log recipe task results should be deleted
         self.assertEquals(
-                self.migration_session.query(LogRecipeTaskResult).filter_by(recipe_task_result_id=2).count(),
-                0)
+            self.migration_session.query(LogRecipeTaskResult).filter_by(
+                recipe_task_result_id=2).count(),
+            0)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1346586
     def test_Installing_status_is_mapped_on_downgrade(self):
         with self.migration_metadata.bind.connect() as connection:
             # populate empty database
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/22.sql'))
+                                                             'database-dumps/22.sql'))
             upgrade_db(self.migration_metadata)
             # create a job in Installing state
             connection.execute(
-                    "INSERT INTO job (owner_id, retention_tag_id, is_dirty, status) "
-                    "VALUES (1, 1, FALSE, 'Installing')")
+                "INSERT INTO job (owner_id, retention_tag_id, is_dirty, status) "
+                "VALUES (1, 1, FALSE, 'Installing')")
             connection.execute(
-                    "INSERT INTO recipe_set (job_id, queue_time, waived, status) "
-                    "VALUES (1, '2015-11-09 17:03:04', FALSE, 'Installing')")
+                "INSERT INTO recipe_set (job_id, queue_time, waived, status) "
+                "VALUES (1, '2015-11-09 17:03:04', FALSE, 'Installing')")
             connection.execute(
-                    "INSERT INTO recipe (type, recipe_set_id, autopick_random, status) "
-                    "VALUES ('machine_recipe', 1, FALSE, 'Installing')")
+                "INSERT INTO recipe (type, recipe_set_id, autopick_random, status) "
+                "VALUES ('machine_recipe', 1, FALSE, 'Installing')")
         # run the downgrade
         downgrade_db(self.migration_metadata, '22')
         # status should be Running so that it works with 22.x
         with self.migration_metadata.bind.connect() as connection:
             self.assertEquals(
-                    connection.scalar('SELECT status FROM job WHERE id = 1'),
-                    u'Running')
+                connection.scalar('SELECT status FROM job WHERE id = 1'),
+                u'Running')
             self.assertEquals(
-                    connection.scalar('SELECT status FROM recipe_set WHERE id = 1'),
-                    u'Running')
+                connection.scalar('SELECT status FROM recipe_set WHERE id = 1'),
+                u'Running')
             self.assertEquals(
-                    connection.scalar('SELECT status FROM recipe WHERE id = 1'),
-                    u'Running')
+                connection.scalar('SELECT status FROM recipe WHERE id = 1'),
+                u'Running')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1318524
     def test_command_queue_separated_from_activity(self):
         with self.migration_metadata.bind.connect() as connection:
             # populate empty database
             connection.execute(pkg_resources.resource_string('bkr.inttest.server',
-                    'database-dumps/23.sql'))
+                                                             'database-dumps/23.sql'))
             # set up a test command
             connection.execute(
-                    "INSERT INTO system (id, fqdn, date_added, owner_id, type, status, kernel_type_id) "
-                    "VALUES (1, 'example.invalid', '2016-01-01 00:00:00', 1, 'Machine', 'Manual', 1)")
+                "INSERT INTO system (id, fqdn, date_added, owner_id, type, status, kernel_type_id) "
+                "VALUES (1, 'example.invalid', '2016-01-01 00:00:00', 1, 'Machine', 'Manual', 1)")
             connection.execute(
-                    "INSERT INTO activity (id, user_id, created, type, field_name, "
-                    "   service, action, old_value, new_value) "
-                    "VALUES (1, 1, '2016-08-11 16:47:56', 'command_activity', 'Command', "
-                    "   'Scheduler', 'on', '', 'ValueError: Power script /usr/lib/python2.6/site-packages/bk')")
+                "INSERT INTO activity (id, user_id, created, type, field_name, "
+                "   service, action, old_value, new_value) "
+                "VALUES (1, 1, '2016-08-11 16:47:56', 'command_activity', 'Command', "
+                "   'Scheduler', 'on', '', 'ValueError: Power script /usr/lib/python2.6/site-packages/bk')")
             connection.execute(
-                    "INSERT INTO command_queue (id, system_id, status, updated, quiescent_period) "
-                    "VALUES (1, 1, 'Failed', '2016-08-11 16:47:56', 5)")
+                "INSERT INTO command_queue (id, system_id, status, updated, quiescent_period) "
+                "VALUES (1, 1, 'Failed', '2016-08-11 16:47:56', 5)")
             # add an unrelated system activity (id 2 will conflict with the new command below)
             connection.execute(
-                    "INSERT INTO activity (id, user_id, created, type, field_name, "
-                    "   service, action, old_value, new_value) "
-                    "VALUES (2, 1, '2016-08-31 00:00:00', 'system_activity', 'Loaned', "
-                    "   'HTTP', 'Changed', 'bob', 'fred')")
+                "INSERT INTO activity (id, user_id, created, type, field_name, "
+                "   service, action, old_value, new_value) "
+                "VALUES (2, 1, '2016-08-31 00:00:00', 'system_activity', 'Loaned', "
+                "   'HTTP', 'Changed', 'bob', 'fred')")
             connection.execute(
-                    "INSERT INTO system_activity (id, system_id) VALUES (2, 1)")
+                "INSERT INTO system_activity (id, system_id) VALUES (2, 1)")
         # run migration
         upgrade_db(self.migration_metadata)
         # command should be correctly populated
@@ -990,7 +1011,7 @@ class MigrationTest(unittest.TestCase):
         self.assertEquals(cmd.delay_until, None)
         self.assertEquals(cmd.status, CommandStatus.failed)
         self.assertEquals(cmd.error_message,
-                u'ValueError: Power script /usr/lib/python2.6/site-packages/bk')
+                          u'ValueError: Power script /usr/lib/python2.6/site-packages/bk')
         # old activity row should be gone
         self.assertIsNone(self.migration_session.query(Activity).filter_by(id=1).first())
         # insert a new command after upgrade, as if Beaker has been running for a while
@@ -998,10 +1019,10 @@ class MigrationTest(unittest.TestCase):
         # https://bugzilla.redhat.com/show_bug.cgi?id=1376650)
         with self.migration_session.begin():
             new_command = Command(user_id=1, service=u'testdata', system_id=1,
-                    action=u'off', status=CommandStatus.running,
-                    quiescent_period=3,
-                    queue_time=datetime.datetime(2016, 9, 19, 11, 54, 7),
-                    start_time=datetime.datetime(2016, 9, 19, 11, 54, 27))
+                                  action=u'off', status=CommandStatus.running,
+                                  quiescent_period=3,
+                                  queue_time=datetime.datetime(2016, 9, 19, 11, 54, 7),
+                                  start_time=datetime.datetime(2016, 9, 19, 11, 54, 27))
             self.migration_session.add(new_command)
             self.migration_session.flush()
             self.assertEquals(new_command.id, 2)
@@ -1014,18 +1035,18 @@ class MigrationTest(unittest.TestCase):
             self.assertEquals(activity_rows[0].id, 1)
             self.assertEquals(activity_rows[0].user_id, 1)
             self.assertEquals(activity_rows[0].created,
-                    datetime.datetime(2016, 8, 11, 16, 47, 56))
+                              datetime.datetime(2016, 8, 11, 16, 47, 56))
             self.assertEquals(activity_rows[0].type, u'command_activity')
             self.assertEquals(activity_rows[0].field_name, u'Command')
             self.assertEquals(activity_rows[0].service, u'Scheduler')
             self.assertEquals(activity_rows[0].action, u'on')
             self.assertEquals(activity_rows[0].old_value, u'')
             self.assertEquals(activity_rows[0].new_value,
-                    u'ValueError: Power script /usr/lib/python2.6/site-packages/bk')
+                              u'ValueError: Power script /usr/lib/python2.6/site-packages/bk')
             self.assertEquals(activity_rows[2].id, 3)
             self.assertEquals(activity_rows[2].user_id, 1)
             self.assertEquals(activity_rows[2].created,
-                    datetime.datetime(2016, 9, 19, 11, 54, 7))
+                              datetime.datetime(2016, 9, 19, 11, 54, 7))
             self.assertEquals(activity_rows[2].type, u'command_activity')
             self.assertEquals(activity_rows[2].field_name, u'Command')
             self.assertEquals(activity_rows[2].service, u'testdata')
@@ -1040,22 +1061,23 @@ class MigrationTest(unittest.TestCase):
             self.assertEquals(command_rows[0].delay_until, None)
             self.assertEquals(command_rows[0].quiescent_period, 5)
             self.assertEquals(command_rows[0].updated,
-                    datetime.datetime(2016, 8, 11, 16, 47, 56))
+                              datetime.datetime(2016, 8, 11, 16, 47, 56))
             self.assertEquals(command_rows[0].installation_id, None)
-            self.assertEquals(command_rows[1].id, 3) # not 2, due to renumbering
+            self.assertEquals(command_rows[1].id, 3)  # not 2, due to renumbering
             self.assertEquals(command_rows[1].system_id, 1)
             self.assertEquals(command_rows[1].status, u'Running')
             self.assertEquals(command_rows[1].delay_until, None)
             self.assertEquals(command_rows[1].quiescent_period, 3)
             self.assertEquals(command_rows[1].updated,
-                    datetime.datetime(2016, 9, 19, 11, 54, 7))
+                              datetime.datetime(2016, 9, 19, 11, 54, 7))
             self.assertEquals(command_rows[1].installation_id, None)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1136748
     def test_email_prefs_set_for_current_users(self):
         with self.migration_metadata.bind.connect() as connection:
             # create the DB schema for beaker 23
-            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/23.sql'))
+            connection.execute(
+                pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/23.sql'))
 
             # insert synthetic data into tg_user
             connection.execute(
@@ -1078,47 +1100,47 @@ class MigrationTest(unittest.TestCase):
     def test_reserve_condition_is_set_to_always_for_existing_rows(self):
         with self.migration_metadata.bind.connect() as connection:
             # create the DB schema for beaker 23
-            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/23.sql'))
+            connection.execute(
+                pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/23.sql'))
             # existing job with a reservation request
             connection.execute(
-                    "INSERT INTO job (id, owner_id, retention_tag_id, dirty_version, clean_version) "
-                    "VALUES (1, 1, 1, '', '')")
+                "INSERT INTO job (id, owner_id, retention_tag_id, dirty_version, clean_version) "
+                "VALUES (1, 1, 1, '', '')")
             connection.execute(
-                    "INSERT INTO recipe_set (id, job_id, queue_time, waived) "
-                    "VALUES (1, 1, '2016-10-19 01:09:36', FALSE)")
+                "INSERT INTO recipe_set (id, job_id, queue_time, waived) "
+                "VALUES (1, 1, '2016-10-19 01:09:36', FALSE)")
             connection.execute(
-                    "INSERT INTO recipe (id, type, recipe_set_id, autopick_random) "
-                    "VALUES (1, 'machine_recipe', 1, FALSE)")
+                "INSERT INTO recipe (id, type, recipe_set_id, autopick_random) "
+                "VALUES (1, 'machine_recipe', 1, FALSE)")
             connection.execute(
-                    "INSERT INTO recipe_reservation (id, recipe_id, duration) "
-                    "VALUES (1, 1, 300)")
+                "INSERT INTO recipe_reservation (id, recipe_id, duration) "
+                "VALUES (1, 1, 300)")
         # run migration
         upgrade_db(self.migration_metadata)
         # condition should be set to 'always' by default
         with self.migration_metadata.bind.connect() as connection:
             self.assertEquals(
-                    connection.scalar('SELECT `when` FROM recipe_reservation WHERE id = 1'),
-                    u'always')
-
+                connection.scalar('SELECT `when` FROM recipe_reservation WHERE id = 1'),
+                u'always')
 
     def test_remove_task_arch_and_osmajor_exclude_orphans_duplicates(self):
         with self.migration_metadata.bind.connect() as connection:
-            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/23.sql'))
+            connection.execute(
+                pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/23.sql'))
             # The idea to test all the combinations of orphans
             # that either side of arch, task, osmajor is NULL hence orphaned.
             # as well as duplicates.
             # uses the arch for ppc64
             connection.execute(
-                    "INSERT INTO task (id, name, rpm, path, valid, description, avg_time, "
-                    "creation_date, update_date, owner, version, license) "
-                    "VALUES (1, 'task1', 'rpm1', '/task1', 1, 'task1', 1, "
-                    "'2017-12-13 00:00:00', '2017-12-13 00:00:00', 'owner1', '1.1-1', 'GPLv99+')")
+                "INSERT INTO task (id, name, rpm, path, valid, description, avg_time, "
+                "creation_date, update_date, owner, version, license) "
+                "VALUES (1, 'task1', 'rpm1', '/task1', 1, 'task1', 1, "
+                "'2017-12-13 00:00:00', '2017-12-13 00:00:00', 'owner1', '1.1-1', 'GPLv99+')")
             connection.execute("INSERT INTO osmajor(id, osmajor) VALUES (1, 'redhat loonix');")
             connection.execute("INSERT INTO task_exclude_arch(task_id, arch_id)"
-            "VALUES (1, 5), (NULL, 5), (1, NULL), (1, 5);")
+                               "VALUES (1, 5), (NULL, 5), (1, NULL), (1, 5);")
             connection.execute("INSERT INTO task_exclude_osmajor(task_id, osmajor_id)"
-            "VALUES (1, 1), (NULL, 1), (1, NULL), (1, 1);")
-
+                               "VALUES (1, 1), (NULL, 1), (1, NULL), (1, 1);")
 
         upgrade_db(self.migration_metadata)
 
@@ -1147,12 +1169,14 @@ class MigrationTest(unittest.TestCase):
 
         # Failed Command left in place
         self.assertEquals(
-            self.migration_session.query(Command).filter_by(status = CommandStatus.aborted, system_id=2).count(),
+            self.migration_session.query(Command).filter_by(status=CommandStatus.aborted,
+                                                            system_id=2).count(),
             4)
 
         # Failed Command left in place
         self.assertEquals(
-            self.migration_session.query(Command).filter_by(status = CommandStatus.failed, system_id=2).count(),
+            self.migration_session.query(Command).filter_by(status=CommandStatus.failed,
+                                                            system_id=2).count(),
             1)
 
         cmd = self.migration_session.query(Command).get(9)
@@ -1163,18 +1187,20 @@ class MigrationTest(unittest.TestCase):
         init_db(self.migration_metadata)
         with self.migration_session.begin():
             for name in DataMigration.all_names():
-                migration = self.migration_session.query(DataMigration)\
-                        .filter(DataMigration.name == name).one()
+                migration = self.migration_session.query(DataMigration) \
+                    .filter(DataMigration.name == name).one()
                 self.assertEquals(migration.is_finished, True)
 
     def test_values_are_preserved_after_migration(self):
         with self.migration_metadata.bind.connect() as connection:
-            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
+            connection.execute(
+                pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
             # inserting data into openstack_region requires a lab controller
             connection.execute("INSERT INTO lab_controller(id, fqdn, disabled, user_id) "
                                "VALUES(1, 'lab.controller', 0, 1);")
-            connection.execute("INSERT INTO openstack_region (lab_controller_id, ipxe_image_id) VALUES "
-                               "(1, 'deadbeef-dead-beef-dead-beefdeadbeef');")
+            connection.execute(
+                "INSERT INTO openstack_region (lab_controller_id, ipxe_image_id) VALUES "
+                "(1, 'deadbeef-dead-beef-dead-beefdeadbeef');")
 
         upgrade_db(self.migration_metadata)
 
@@ -1198,10 +1224,11 @@ class MigrationTest(unittest.TestCase):
         # purged (not one or the other) so any existing purged jobs must also
         # be marked as deleted.
         with self.migration_metadata.bind.connect() as connection:
-            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
             connection.execute(
-                    "INSERT INTO job (owner_id, retention_tag_id, dirty_version, clean_version, deleted) "
-                    "VALUES (1, 1, '', '', '2017-07-27 14:28:20')")
+                pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
+            connection.execute(
+                "INSERT INTO job (owner_id, retention_tag_id, dirty_version, clean_version, deleted) "
+                "VALUES (1, 1, '', '', '2017-07-27 14:28:20')")
         upgrade_db(self.migration_metadata)
         job = self.migration_session.query(Job).get(1)
         self.assertEquals(job.purged, datetime.datetime(2017, 7, 27, 14, 28, 20))
@@ -1210,24 +1237,25 @@ class MigrationTest(unittest.TestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1337789
     def test_deleted_jobs_with_logs_are_not_purged(self):
         with self.migration_metadata.bind.connect() as connection:
-            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
+            connection.execute(
+                pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
             # We have a job which beaker-log-delete claims to have purged the
             # logs for (deleted timestamp is set) but there are actually still
             # logs left in it.
             # Note that we are setting the 'deleted' column here which becomes
             # 'purged' after the migration.
             connection.execute(
-                    "INSERT INTO job (owner_id, retention_tag_id, dirty_version, clean_version, deleted) "
-                    "VALUES (1, 1, '', '', '2017-07-27 14:28:20')")
+                "INSERT INTO job (owner_id, retention_tag_id, dirty_version, clean_version, deleted) "
+                "VALUES (1, 1, '', '', '2017-07-27 14:28:20')")
             connection.execute(
-                    "INSERT INTO recipe_set (job_id, queue_time, waived) "
-                    "VALUES (1, '2015-11-09 17:03:04', 0)")
+                "INSERT INTO recipe_set (job_id, queue_time, waived) "
+                "VALUES (1, '2015-11-09 17:03:04', 0)")
             connection.execute(
-                    "INSERT INTO recipe (type, recipe_set_id, autopick_random) "
-                    "VALUES ('machine_recipe', 1, FALSE)")
+                "INSERT INTO recipe (type, recipe_set_id, autopick_random) "
+                "VALUES ('machine_recipe', 1, FALSE)")
             connection.execute(
-                    "INSERT INTO log_recipe (recipe_id, filename) "
-                    "VALUES (1, 'console.log')")
+                "INSERT INTO log_recipe (recipe_id, filename) "
+                "VALUES (1, 'console.log')")
         # Do the schema upgrades
         upgrade_db(self.migration_metadata)
         # Do the data migration
@@ -1242,79 +1270,84 @@ class MigrationTest(unittest.TestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=800455
     def test_downgrading_task_exclusive_osmajors_converts_to_excluded_osmajors(self):
         with self.migration_metadata.bind.connect() as connection:
-            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
+            connection.execute(
+                pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
             connection.execute("INSERT INTO osmajor (osmajor) "
-                    "VALUES ('Fedora26'), ('Fedora27'), ('CentOS7')")
+                               "VALUES ('Fedora26'), ('Fedora27'), ('CentOS7')")
         # Upgrade to 25
         upgrade_db(self.migration_metadata)
         # We have a task which is exclusive to Fedora26
         with self.migration_metadata.bind.connect() as connection:
             connection.execute(
-                    "INSERT INTO task (id, name, rpm, path, valid, description, avg_time, "
-                    "creation_date, update_date, owner, version, license) "
-                    "VALUES (1, '/a', 'a.rpm', '/a', 1, 'task1', 1, "
-                    "'2017-12-13 00:00:00', '2017-12-13 00:00:00', 'owner1', '1.1-1', 'GPLv99+')")
-            connection.execute("INSERT INTO task_exclusive_osmajor (task_id, osmajor_id) VALUES (1, 1)")
+                "INSERT INTO task (id, name, rpm, path, valid, description, avg_time, "
+                "creation_date, update_date, owner, version, license) "
+                "VALUES (1, '/a', 'a.rpm', '/a', 1, 'task1', 1, "
+                "'2017-12-13 00:00:00', '2017-12-13 00:00:00', 'owner1', '1.1-1', 'GPLv99+')")
+            connection.execute(
+                "INSERT INTO task_exclusive_osmajor (task_id, osmajor_id) VALUES (1, 1)")
         # Downgrade back to 24
         downgrade_db(self.migration_metadata, '24')
         # Now the task should have excluded all other releases
         with self.migration_metadata.bind.connect() as connection:
-            osmajor_ids = connection.execute('SELECT osmajor_id FROM task_exclude_osmajor WHERE task_id = 1').fetchall()
+            osmajor_ids = connection.execute(
+                'SELECT osmajor_id FROM task_exclude_osmajor WHERE task_id = 1').fetchall()
             self.assertItemsEqual(osmajor_ids, [(2,), (3,)])
 
     def test_downgrading_task_exclusive_arches_converts_to_excluded_arches(self):
         with self.migration_metadata.bind.connect() as connection:
-            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
+            connection.execute(
+                pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
         # Upgrade to 25
         upgrade_db(self.migration_metadata)
         # We have a task which is exclusive to s390(x)
         with self.migration_metadata.bind.connect() as connection:
             connection.execute(
-                    "INSERT INTO task (id, name, rpm, path, valid, description, avg_time, "
-                    "creation_date, update_date, owner, version, license) "
-                    "VALUES (1, '/a', 'a.rpm', '/a', 1, 'task1', 1, "
-                    "'2017-12-13 00:00:00', '2017-12-13 00:00:00', 'owner1', '1.1-1', 'GPLv99+')")
+                "INSERT INTO task (id, name, rpm, path, valid, description, avg_time, "
+                "creation_date, update_date, owner, version, license) "
+                "VALUES (1, '/a', 'a.rpm', '/a', 1, 'task1', 1, "
+                "'2017-12-13 00:00:00', '2017-12-13 00:00:00', 'owner1', '1.1-1', 'GPLv99+')")
             connection.execute("INSERT INTO task_exclusive_arch (task_id, arch_id) "
-                    "SELECT 1, arch.id FROM arch WHERE arch.arch IN ('s390', 's390x')")
+                               "SELECT 1, arch.id FROM arch WHERE arch.arch IN ('s390', 's390x')")
         # Downgrade back to 24
         downgrade_db(self.migration_metadata, '24')
         # Now the task should have excluded all other arches
         with self.migration_metadata.bind.connect() as connection:
             arches = connection.execute(
-                    'SELECT arch.arch FROM task_exclude_arch '
-                    'INNER JOIN arch ON task_exclude_arch.arch_id = arch.id '
-                    'WHERE task_id = 1').fetchall()
+                'SELECT arch.arch FROM task_exclude_arch '
+                'INNER JOIN arch ON task_exclude_arch.arch_id = arch.id '
+                'WHERE task_id = 1').fetchall()
             self.assertItemsEqual(arches,
-                    [('aarch64',), ('arm',), ('armhfp',), ('i386',), ('ia64',),
-                     ('ppc',), ('ppc64',), ('ppc64le',), ('x86_64',)])
+                                  [('aarch64',), ('arm',), ('armhfp',), ('i386',), ('ia64',),
+                                   ('ppc',), ('ppc64',), ('ppc64le',), ('x86_64',)])
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1519589
     def test_system_scheduler_status(self):
         with self.migration_metadata.bind.connect() as connection:
-            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
+            connection.execute(
+                pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
             # System 1 is removed
             connection.execute(
-                    "INSERT INTO system (id, fqdn, date_added, owner_id, type, status, kernel_type_id) "
-                    "VALUES (1, 'removed.example.com', '2017-12-06', 1, 'Machine', 'Removed', 1)")
+                "INSERT INTO system (id, fqdn, date_added, owner_id, type, status, kernel_type_id) "
+                "VALUES (1, 'removed.example.com', '2017-12-06', 1, 'Machine', 'Removed', 1)")
             # System 2 is idle with Automated status
             connection.execute(
-                    "INSERT INTO system (id, fqdn, date_added, owner_id, type, status, kernel_type_id) "
-                    "VALUES (2, 'automated.example.com', '2017-12-06', 1, 'Machine', 'Automated', 1)")
+                "INSERT INTO system (id, fqdn, date_added, owner_id, type, status, kernel_type_id) "
+                "VALUES (2, 'automated.example.com', '2017-12-06', 1, 'Machine', 'Automated', 1)")
             # System 3 is idle with Manual status
             connection.execute(
-                    "INSERT INTO system (id, fqdn, date_added, owner_id, type, status, kernel_type_id) "
-                    "VALUES (3, 'manual.example.com', '2017-12-06', 1, 'Machine', 'Manual', 1)")
+                "INSERT INTO system (id, fqdn, date_added, owner_id, type, status, kernel_type_id) "
+                "VALUES (3, 'manual.example.com', '2017-12-06', 1, 'Machine', 'Manual', 1)")
             # System 4 is idle with Broken status
             connection.execute(
-                    "INSERT INTO system (id, fqdn, date_added, owner_id, type, status, kernel_type_id) "
-                    "VALUES (4, 'broken.example.com', '2017-12-06', 1, 'Machine', 'Broken', 1)")
+                "INSERT INTO system (id, fqdn, date_added, owner_id, type, status, kernel_type_id) "
+                "VALUES (4, 'broken.example.com', '2017-12-06', 1, 'Machine', 'Broken', 1)")
             # System 5 is reserved by the scheduler
             connection.execute(
-                    "INSERT INTO system (id, fqdn, date_added, owner_id, type, status, kernel_type_id, user_id) "
-                    "VALUES (5, 'reserved.example.com', '2017-12-06', 1, 'Machine', 'Automated', 1, 1)")
+                "INSERT INTO system (id, fqdn, date_added, owner_id, type, status, kernel_type_id, user_id) "
+                "VALUES (5, 'reserved.example.com', '2017-12-06', 1, 'Machine', 'Automated', 1, 1)")
             connection.execute(
-                    "INSERT INTO reservation (id, system_id, user_id, start_time, type) "
-                    "VALUES (1, 5, 1, '2017-12-06 00:00:00', 'recipe')")
+                "INSERT INTO reservation (id, system_id, user_id, start_time, type) "
+                "VALUES (1, 5, 1, '2017-12-06 00:00:00', 'recipe')")
         # Do the schema upgrades
         upgrade_db(self.migration_metadata)
         # Job should be deleted, but not purged, so that beaker-log-delete will purge it again
@@ -1333,38 +1366,39 @@ class MigrationTest(unittest.TestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=911515
     def test_queued_recipe_has_installation_column_after_upgrade(self):
         with self.migration_metadata.bind.connect() as connection:
-            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
+            connection.execute(
+                pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
             # add a queued job
             connection.execute(
-                    "INSERT INTO osmajor (osmajor) "
-                    "VALUES ('Tiara9')")
+                "INSERT INTO osmajor (osmajor) "
+                "VALUES ('Tiara9')")
             connection.execute(
-                    "INSERT INTO osversion (osmajor_id, osminor) "
-                    "VALUES (1, 9)")
+                "INSERT INTO osversion (osmajor_id, osminor) "
+                "VALUES (1, 9)")
             connection.execute(
-                    "INSERT INTO distro (name, osversion_id, date_created) "
-                    "VALUES ('Tiara9.9', 1, '2017-07-27 14:28:20')")
+                "INSERT INTO distro (name, osversion_id, date_created) "
+                "VALUES ('Tiara9.9', 1, '2017-07-27 14:28:20')")
             connection.execute(
-                    "INSERT INTO distro_tree (distro_id, arch_id, variant, date_created) "
-                    "VALUES (1, 1, 'Server', '2017-07-27 14:28:20')")
+                "INSERT INTO distro_tree (distro_id, arch_id, variant, date_created) "
+                "VALUES (1, 1, 'Server', '2017-07-27 14:28:20')")
             connection.execute(
-                    "INSERT INTO job (owner_id, retention_tag_id, status, dirty_version, clean_version) "
-                    "VALUES (1, 1, 'Queued', '', '')")
+                "INSERT INTO job (owner_id, retention_tag_id, status, dirty_version, clean_version) "
+                "VALUES (1, 1, 'Queued', '', '')")
             connection.execute(
-                    "INSERT INTO recipe_set (job_id, status, queue_time, waived) "
-                    "VALUES (1, 'Queued', '2015-11-05 16:31:01', 0)")
+                "INSERT INTO recipe_set (job_id, status, queue_time, waived) "
+                "VALUES (1, 'Queued', '2015-11-05 16:31:01', 0)")
             connection.execute(
-                    "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status, autopick_random) "
-                    "VALUES ('machine_recipe', 1, 1, 'New', FALSE)")
+                "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status, autopick_random) "
+                "VALUES ('machine_recipe', 1, 1, 'New', FALSE)")
             connection.execute(
-                    "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status, autopick_random) "
-                    "VALUES ('machine_recipe', 1, 1, 'Processed', FALSE)")
+                "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status, autopick_random) "
+                "VALUES ('machine_recipe', 1, 1, 'Processed', FALSE)")
             connection.execute(
-                    "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status, autopick_random) "
-                    "VALUES ('machine_recipe', 1, 1, 'Queued', FALSE)")
+                "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status, autopick_random) "
+                "VALUES ('machine_recipe', 1, 1, 'Queued', FALSE)")
             connection.execute(
-                    "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status, autopick_random) "
-                    "VALUES ('machine_recipe', 1, 1, 'Scheduled', FALSE)")
+                "INSERT INTO recipe (type, recipe_set_id, distro_tree_id, status, autopick_random) "
+                "VALUES ('machine_recipe', 1, 1, 'Scheduled', FALSE)")
         # Do the schema upgrades
         upgrade_db(self.migration_metadata)
         self.assertEqual(4, self.migration_session.query(Recipe).count())
@@ -1378,18 +1412,19 @@ class MigrationTest(unittest.TestCase):
             self.assertEqual(recipe.installation.osminor, u'9')
         with self.migration_metadata.bind.connect() as connection:
             self.assertEqual(4,
-                connection.scalar('SELECT count(*) FROM installation;'))
+                             connection.scalar('SELECT count(*) FROM installation;'))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1159105
     def test_queue_admin_group_is_granted_permission(self):
         with self.migration_metadata.bind.connect() as connection:
-            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
             connection.execute(
-                    "INSERT INTO tg_group (group_id, group_name, display_name, membership_type, created) "
-                    "VALUES (41, 'queue_admin', 'queue_admin', 'normal', '2010-05-17 17:23:47')")
+                pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
+            connection.execute(
+                "INSERT INTO tg_group (group_id, group_name, display_name, membership_type, created) "
+                "VALUES (41, 'queue_admin', 'queue_admin', 'normal', '2010-05-17 17:23:47')")
         upgrade_db(self.migration_metadata)
         group = self.migration_session.query(Group).get(41)
-        change_prio = self.migration_session.query(Permission)\
+        change_prio = self.migration_session.query(Permission) \
             .filter_by(permission_name=u'change_prio').one()
         self.assertEquals(group.permissions, [change_prio])
 
@@ -1446,7 +1481,8 @@ class MigrationTest(unittest.TestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1550361
     def test_upgrade_will_not_insert_duplicate_installation_rows(self):
         with self.migration_metadata.bind.connect() as connection:
-            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
+            connection.execute(
+                pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/24.sql'))
             # add a queued job
             connection.execute(
                 "INSERT INTO osmajor (osmajor) "
@@ -1483,12 +1519,13 @@ class MigrationTest(unittest.TestCase):
         upgrade_db(self.migration_metadata)
         with self.migration_metadata.bind.connect() as connection:
             self.assertEqual(3,
-                connection.scalar('SELECT count(*) FROM installation;'))
+                             connection.scalar('SELECT count(*) FROM installation;'))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1568224
     def test_scheduled_recipe_has_installation_column_after_upgrade(self):
         with self.migration_metadata.bind.connect() as connection:
-            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/25.sql'))
+            connection.execute(
+                pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/25.sql'))
             # add a queued job
             connection.execute(
                 "INSERT INTO osmajor (id, osmajor) "
@@ -1536,12 +1573,13 @@ class MigrationTest(unittest.TestCase):
         self.assertEqual(recipe.installation.osminor, u'9')
         with self.migration_metadata.bind.connect() as connection:
             self.assertEqual(1,
-                connection.scalar('SELECT count(*) FROM installation;'))
+                             connection.scalar('SELECT count(*) FROM installation;'))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1568224
     def test_scheduled_recipe_has_installation_column_after_upgrade_when_cancelled(self):
         with self.migration_metadata.bind.connect() as connection:
-            connection.execute(pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/25.sql'))
+            connection.execute(
+                pkg_resources.resource_string('bkr.inttest.server', 'database-dumps/25.sql'))
             # add a queued job
             connection.execute(
                 "INSERT INTO osmajor (id, osmajor) "
@@ -1593,7 +1631,9 @@ class MigrationTest(unittest.TestCase):
         self.assertTrue(finished)
 
         for recipe in self.migration_session.query(Recipe).all():
-            self.assertIsNotNone(recipe.installation, 'Installation row for recipeid %s (%s) should exist' % (recipe.id, recipe.status))
+            self.assertIsNotNone(recipe.installation,
+                                 'Installation row for recipeid %s (%s) should exist' % (
+                                 recipe.id, recipe.status))
             self.assertEqual(recipe.installation.distro_tree_id, 1)
             self.assertEqual(recipe.installation.arch.arch, u'i386')
             self.assertEqual(recipe.installation.variant, u'Server')
@@ -1602,4 +1642,4 @@ class MigrationTest(unittest.TestCase):
             self.assertEqual(recipe.installation.osminor, u'9')
         with self.migration_metadata.bind.connect() as connection:
             self.assertEqual(6,
-                connection.scalar('SELECT count(*) FROM installation;'))
+                             connection.scalar('SELECT count(*) FROM installation;'))
