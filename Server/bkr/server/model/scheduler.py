@@ -650,7 +650,7 @@ class Job(TaskBase, ActivityMixin):
     group_id = Column(Integer,
                       ForeignKey('tg_group.group_id', name='job_group_id_fk'))
     group = relationship(Group, back_populates='jobs')
-    whiteboard = Column(Unicode(2000))
+    whiteboard = Column(Unicode(4096))
     extra_xml = Column(UnicodeText, nullable=True)
     retention_tag_id = Column(Integer, ForeignKey('retention_tag.id'),
                               nullable=False)
@@ -2003,7 +2003,7 @@ class Recipe(TaskBase, ActivityMixin):
     ftasks = Column(Integer, default=0)
     # Total Panic tasks
     ktasks = Column(Integer, default=0)
-    whiteboard = Column(Unicode(2000))
+    whiteboard = Column(Unicode(4096))
     ks_meta = Column(String(1024))
     kernel_options = Column(String(1024))
     kernel_options_post = Column(String(1024))
