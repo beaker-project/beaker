@@ -48,9 +48,9 @@ class LabControllerCreateTest(WebDriverTestCase):
 
     def test_lab_controller_add(self):
         b = self.browser
-        lc_name = data_setup.unique_name('lc%s.com')
-        lc_email = data_setup.unique_name('me@my%s.com')
-        lc_username = data_setup.unique_name('operator%s')
+        lc_name = data_setup.unique_name(u'lc%s.com')
+        lc_email = data_setup.unique_name(u'me@my%s.com')
+        lc_username = data_setup.unique_name(u'operator%s')
         self._add_lc(lc_name, lc_email, lc_username)
         b.find_element_by_xpath('//li[contains(., "%s")]' % lc_name)
 
@@ -307,17 +307,17 @@ class AddDistroTreeXmlRpcTest(XmlRpcTestCase):
             arches=['i386', 'x86_64'], arch='x86_64',
             osmajor='RedHatEnterpriseLinux6', osminor='1',
             variant='Workstation', tree_build_time=1305067998.6483951,
-            urls=['nfs://example.invalid:/RHEL-6-Workstation/U1/x86_64/os/',
-                  'http://example.invalid/RHEL-6-Workstation/U1/x86_64/os/'],
+            urls=[u'nfs://example.invalid:/RHEL-6-Workstation/U1/x86_64/os/',
+                  u'http://example.invalid/RHEL-6-Workstation/U1/x86_64/os/'],
             repos=[
-                dict(repoid='Workstation', type='os', path=''),
-                dict(repoid='ScalableFileSystem', type='addon', path='ScalableFileSystem/'),
-                dict(repoid='optional', type='addon', path='../../optional/x86_64/os/'),
-                dict(repoid='debuginfo', type='debug', path='../debug/'),
+                dict(repoid=u'Workstation', type='os', path=u''),
+                dict(repoid=u'ScalableFileSystem', type='addon', path=u'ScalableFileSystem/'),
+                dict(repoid=u'optional', type='addon', path=u'../../optional/x86_64/os/'),
+                dict(repoid=u'debuginfo', type='debug', path=u'../debug/'),
             ],
             images=[
-                dict(type='kernel', path='images/pxeboot/vmlinuz'),
-                dict(type='initrd', path='images/pxeboot/initrd.img'),
+                dict(type='kernel', path=u'images/pxeboot/vmlinuz'),
+                dict(type='initrd', path=u'images/pxeboot/initrd.img'),
             ],
             tags=['RELEASED'])
 
@@ -345,7 +345,7 @@ class AddDistroTreeXmlRpcTest(XmlRpcTestCase):
             self.assertEquals(distro_tree.date_created,
                     datetime.datetime(2011, 5, 10, 22, 53, 18))
             self.assertEquals(distro_tree.url_in_lab(self.lc, scheme='nfs'),
-                    'nfs://example.invalid:/RHEL-6-Workstation/U1/x86_64/os/')
+                              u'nfs://example.invalid:/RHEL-6-Workstation/U1/x86_64/os/')
             self.assertEquals(distro_tree.repo_by_id('Workstation').path,
                     '')
             self.assertEquals(distro_tree.repo_by_id('ScalableFileSystem').path,
@@ -374,7 +374,7 @@ class AddDistroTreeXmlRpcTest(XmlRpcTestCase):
             distro_tree = DistroTree.query.filter_by(distro=distro,
                     variant=u'Workstation', arch=Arch.by_name('x86_64')).one()
             self.assertEquals(distro_tree.url_in_lab(self.lc2, scheme='nfs'),
-                    'nfs://example.invalid:/RHEL-6-Workstation/U1/x86_64/os/')
+                              u'nfs://example.invalid:/RHEL-6-Workstation/U1/x86_64/os/')
             self.assertEquals(distro_tree.activity[0].field_name, u'lab_controller_assocs')
             self.assertEquals(distro_tree.activity[0].action, u'Added')
             self.assert_(self.lc2.fqdn in distro_tree.activity[0].new_value,
@@ -389,8 +389,8 @@ class AddDistroTreeXmlRpcTest(XmlRpcTestCase):
         new_distro_data = dict(self.distro_data)
         new_distro_data['urls'] = [
             # nfs:// is not included here, so it shouldn't change
-            'nfs+iso://example.invalid:/RHEL-6-Workstation/U1/x86_64/iso/',
-            'http://moved/',
+            u'nfs+iso://example.invalid:/RHEL-6-Workstation/U1/x86_64/iso/',
+            u'http://moved/',
         ]
         self.server.labcontrollers.add_distro_tree(new_distro_data)
         with session.begin():
@@ -398,11 +398,11 @@ class AddDistroTreeXmlRpcTest(XmlRpcTestCase):
             distro_tree = DistroTree.query.filter_by(distro=distro,
                     variant=u'Workstation', arch=Arch.by_name('x86_64')).one()
             self.assertEquals(distro_tree.url_in_lab(self.lc, scheme='nfs'),
-                    'nfs://example.invalid:/RHEL-6-Workstation/U1/x86_64/os/')
+                    u'nfs://example.invalid:/RHEL-6-Workstation/U1/x86_64/os/')
             self.assertEquals(distro_tree.url_in_lab(self.lc, scheme='nfs+iso'),
-                    'nfs+iso://example.invalid:/RHEL-6-Workstation/U1/x86_64/iso/')
+                    u'nfs+iso://example.invalid:/RHEL-6-Workstation/U1/x86_64/iso/')
             self.assertEquals(distro_tree.url_in_lab(self.lc, scheme='http'),
-                    'http://moved/')
+                    u'http://moved/')
             del distro, distro_tree
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=825913

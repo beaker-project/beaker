@@ -143,29 +143,29 @@ class TaskResultTest(LabControllerTestCase):
 
     def test_xmlrpc_pass(self):
         s = xmlrpclib.ServerProxy(self.get_proxy_url())
-        result_id = s.task_result(self.recipe.tasks[0].id, 'pass_',
-                '/random/junk', 123, 'The thing worked')
+        result_id = s.task_result(self.recipe.tasks[0].id, u'pass_',
+                u'/random/junk', 123, u'The thing worked')
         self.check_result(result_id, TaskResult.pass_, u'/random/junk', 123,
                 u'The thing worked')
 
     def test_xmlrpc_fail(self):
         s = xmlrpclib.ServerProxy(self.get_proxy_url())
-        result_id = s.task_result(self.recipe.tasks[0].id, 'fail',
-                '/random/junk', 456, 'The thing failed')
+        result_id = s.task_result(self.recipe.tasks[0].id, u'fail',
+                u'/random/junk', 456, u'The thing failed')
         self.check_result(result_id, TaskResult.fail, u'/random/junk', 456,
                 u'The thing failed')
 
     def test_xmlrpc_warn(self):
         s = xmlrpclib.ServerProxy(self.get_proxy_url())
-        result_id = s.task_result(self.recipe.tasks[0].id, 'warn',
-                '/random/junk', -1, 'The thing broke')
+        result_id = s.task_result(self.recipe.tasks[0].id, u'warn',
+                u'/random/junk', -1, u'The thing broke')
         self.check_result(result_id, TaskResult.warn, u'/random/junk', -1,
                 u'The thing broke')
 
     def test_xmlrpc_panic(self):
         s = xmlrpclib.ServerProxy(self.get_proxy_url())
-        result_id = s.task_result(self.recipe.tasks[0].id, 'panic',
-                '/random/junk', 0, 'The thing really broke')
+        result_id = s.task_result(self.recipe.tasks[0].id, u'panic',
+                u'/random/junk', 0, u'The thing really broke')
         self.check_result(result_id, TaskResult.panic, u'/random/junk', 0,
                 u'The thing really broke')
 
@@ -258,7 +258,7 @@ class TaskResultTest(LabControllerTestCase):
         with session.begin():
             RecipeTaskResult.__table__.insert().values([
                 {'recipe_task_id': self.recipe.tasks[0].id,
-                 'result': TaskResult.pass_, 'path': 'test-bz1293007',
+                 'result': TaskResult.pass_, 'path': u'test-bz1293007',
                  'score': i, 'start_time': datetime.datetime.utcnow()}
                 for i in range(7500)]).execute()
             session.expire(self.recipe.tasks[0])
@@ -313,7 +313,7 @@ class TaskStatusTest(LabControllerTestCase):
         # task. We want the task to stay Aborted, not Completed, so the stop 
         # request should fail.
         with session.begin():
-            self.recipe.abort('someone ran rhts-abort -t recipe')
+            self.recipe.abort(u'someone ran rhts-abort -t recipe')
         s = xmlrpclib.ServerProxy(self.get_proxy_url())
         try:
             s.task_stop(self.recipe.tasks[0].id, 'stop')
@@ -1090,14 +1090,14 @@ class LogUploadTest(LabControllerTestCase):
             # 4000 task logs, 3500 result logs
             session.execute(LogRecipeTask.__table__.insert().values([
                 {'recipe_task_id': task.id,
-                 'path': '/', 'filename': 'bz1293007.log',
+                 'path': u'/', 'filename': u'bz1293007.log',
                  'start_time': datetime.datetime.utcnow()}
                 for i in range(4000)]))
             session.expire(task)
             self.assertEqual(len(task.logs), 4000)
             session.execute(LogRecipeTaskResult.__table__.insert().values([
                 {'recipe_task_result_id': result.id,
-                 'path': '/', 'filename': 'bz1293007.log',
+                 'path': u'/', 'filename': u'bz1293007.log',
                  'start_time': datetime.datetime.utcnow()}
                 for i in range(3500)]))
             session.expire(result)
@@ -1213,9 +1213,9 @@ class GetInstallationForSystemTest(LabControllerTestCase):
         with session.begin():
             lab_controller = data_setup.create_labcontroller()
             self.tree_urls = [
-                'http://example.invalid/installationforsystem/',
-                'ftp://example.invalid/installationforsystem/',
-                'nfs://example.invalid:/installationforsystem/',
+                u'http://example.invalid/installationforsystem/',
+                u'ftp://example.invalid/installationforsystem/',
+                u'nfs://example.invalid:/installationforsystem/',
             ]
             self.distro_tree = data_setup.create_distro_tree(
                     lab_controllers=[lab_controller], urls=self.tree_urls)
@@ -1229,8 +1229,8 @@ class GetInstallationForSystemTest(LabControllerTestCase):
         installinfo = s.get_installation_for_system(self.recipe.resource.fqdn)
         self.assertItemsEqual(installinfo['distro_tree_urls'], self.tree_urls)
         self.assertEqual(installinfo['kernel_url'],
-                'http://example.invalid/installationforsystem/pxeboot/vmlinuz')
+                u'http://example.invalid/installationforsystem/pxeboot/vmlinuz')
         self.assertEqual(installinfo['initrd_url'],
-                'http://example.invalid/installationforsystem/pxeboot/initrd')
+                u'http://example.invalid/installationforsystem/pxeboot/initrd')
         self.assertEqual(installinfo['kernel_options'],
                 'ks=%s netbootloader=pxelinux.0 noverifyssl' % self.recipe.installation.rendered_kickstart.link)

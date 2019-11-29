@@ -159,7 +159,7 @@ def create_group(permissions=None, group_name=None, display_name=None,
 
 def create_permission(name=None):
     if not name:
-        name = unique_name('permission%s')
+        name = unique_name(u'permission%s')
     permission = Permission(name)
     session.add(permission)
     return permission
@@ -805,7 +805,7 @@ def mark_recipe_installation_finished(recipe, fqdn=None, install_finished=None,
     if not recipe.resource.fqdn:
         # system reports its FQDN to Beaker in kickstart %post
         if fqdn is None:
-            fqdn = '%s-for-recipe-%s' % (recipe.resource.__class__.__name__, recipe.id)
+            fqdn = u'%s-for-recipe-%s' % (recipe.resource.__class__.__name__, recipe.id)
         recipe.resource.fqdn = fqdn
     recipe.installation.install_finished = install_finished or datetime.datetime.utcnow()
     recipe.installation.postinstall_finished = postinstall_finished or datetime.datetime.utcnow()

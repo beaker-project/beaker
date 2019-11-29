@@ -22,8 +22,8 @@ class WorkflowSimpleTest(ClientTestCase):
         self.distro = data_setup.create_distro(tags=[u'STABLE'])
         self.distro_tree = data_setup.create_distro_tree(distro=self.distro)
         # multihost task required as bkr assumes there is always one available
-        self.multihost_task = data_setup.create_task(type=['Multihost'])
-        self.task = data_setup.create_task(runfor=['apache'])
+        self.multihost_task = data_setup.create_task(type=[u'Multihost'])
+        self.task = data_setup.create_task(runfor=[u'apache'])
 
     def test_no_specified_tasks_throws_relevant_error_with_hint(self):
         with self.assertRaises(ClientError) as assertion:

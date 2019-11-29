@@ -44,7 +44,7 @@ class PxemenuTest(LabControllerTestCase):
                     osmajor=u'SuperBadWindows10', osminor=u'1',
                     distro_tags=[tag],
                     arch=u'x86_64', lab_controllers=[lc],
-                    urls=['barf://localhost:19998/error/404'])
+                    urls=[u'barf://localhost:19998/error/404'])
         with self.assertRaises(ValueError) as exc:
             write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
         self.assertIn('Unrecognised URL scheme found in distro tree URL(s)', exc.exception.message)
@@ -57,7 +57,7 @@ class PxemenuTest(LabControllerTestCase):
                     osmajor=u'SuperBadWindows10', osminor=u'1',
                     distro_tags=[tag],
                     arch=u'x86_64', lab_controllers=[lc],
-                    urls=['http://localhost:19998/error/404'])
+                    urls=[u'http://localhost:19998/error/404'])
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
         menu = open(os.path.join(self.tftp_dir, 'pxelinux.cfg', 'beaker_menu')).read()
         self.assertNotIn('menu title SuperBadWindows10', menu)
@@ -70,7 +70,7 @@ class PxemenuTest(LabControllerTestCase):
                     osmajor=u'PinkUshankaLinux8', osminor=u'1',
                     distro_name=u'PinkUshankaLinux8.1-20140620.0', distro_tags=[tag],
                     arch=u'x86_64', lab_controllers=[lc],
-                    urls=['http://localhost:19998/'])
+                    urls=[u'http://localhost:19998/'])
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
         menu = open(os.path.join(self.tftp_dir, 'pxelinux.cfg', 'beaker_menu')).read()
         self.assertEquals(menu, '''\
@@ -108,7 +108,7 @@ menu end
                     osmajor=u'PinkUshankaLinux8', osminor=u'1',
                     distro_name=u'PinkUshankaLinux8.1-20140620.1', distro_tags=[tag],
                     arch=u'x86_64', lab_controllers=[lc],
-                    urls=['http://localhost:19998/'])
+                    urls=[u'http://localhost:19998/'])
             # https://bugzilla.redhat.com/show_bug.cgi?id=1420471
             # i386 and RHEL3-5 should be filtered out
             ignored_combos = [
@@ -139,7 +139,7 @@ title PinkUshankaLinux8.1-20140620.1 Server x86_64
                     osmajor=u'PinkUshankaLinux8', osminor=u'1',
                     distro_name=u'PinkUshankaLinux8.1-20140620.2', distro_tags=[tag],
                     arch=u'aarch64', lab_controllers=[lc],
-                    urls=['http://localhost:19998/'])
+                    urls=[u'http://localhost:19998/'])
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
         menu = open(os.path.join(self.tftp_dir, 'aarch64', 'beaker_menu.cfg')).read()
         self.assertEquals(menu, '''\
@@ -172,7 +172,7 @@ menuentry "PinkUshankaLinux8.1-20140620.2 Server aarch64" {
                     osmajor=u'PinkUshankaLinux8', osminor=u'1',
                     distro_name=u'PinkUshankaLinux8.1-20140620.3', distro_tags=[tag],
                     arch=u'x86_64', lab_controllers=[lc],
-                    urls=['http://localhost:19998/'])
+                    urls=[u'http://localhost:19998/'])
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
         menu = open(os.path.join(self.tftp_dir, 'boot', 'grub2',
             'beaker_menu_x86.cfg')).read()

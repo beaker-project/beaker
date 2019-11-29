@@ -44,7 +44,7 @@ class DistroImportTest(LabControllerTestCase):
                     '--base',  _compose_test_dir],
                 listen_port=19998)
         cls.distro_server.start()
-        cls.distro_url = 'http://localhost:19998/'
+        cls.distro_url = u'http://localhost:19998/'
 
     @classmethod
     def tearDownClass(cls):
@@ -1486,9 +1486,9 @@ class DistroImportTest(LabControllerTestCase):
         self.assertEquals(len(trees), 2) # Expecting two trees
 
         # set an alias
-        myalias = 'RHEL6'
+        myalias = u'RHEL6'
         with session.begin():
-            distro1 = OSMajor.by_name('RedHatEnterpriseLinux6')
+            distro1 = OSMajor.by_name(u'RedHatEnterpriseLinux6')
             distro1.alias = myalias
             self.assert_(distro1.alias is myalias)
 
@@ -1496,7 +1496,7 @@ class DistroImportTest(LabControllerTestCase):
         # beaker-import constructs the osmajor from family name and version
         # so, we just supply RHEL (and the osmajor will be RHEL6)
         try:
-            trees = self.import_trees(['--family','RHEL',
+            trees = self.import_trees(['--family', u'RHEL',
                                         '%sRHEL6-Server/' % self.distro_url])
             self.fail('Must fail or die')
         except TreeImportError as e:
