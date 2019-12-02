@@ -213,6 +213,43 @@ class ArchBasedConfigTest(ImagesBaseTestCase):
 
 class PxelinuxTest(NetBootTestCase):
 
+    def test_configure_symlink_then_clear(self):
+        """
+        Verify that kernel and initrd path points to images directory located in tftp root dir
+        This is necessary in case of PXELINUX. PXELINUX is using relative paths from location
+        of NBP instead of absolute paths as we can see in GRUB2.
+        """
+        bootloader_confs = os.path.join(self.tftp_root, 'bootloader', TEST_FQDN)
+        netboot.configure_pxelinux(TEST_FQDN,
+                                   'console=ttyS0,115200 ks=http://lol/',
+                                   bootloader_confs,
+                                   symlink=True)
+        pxelinux_bootloader_path = os.path.join(
+            self.tftp_root, 'bootloader', TEST_FQDN, 'pxelinux.cfg')
+        pxelinux_config_path = os.path.join(pxelinux_bootloader_path, '7F0000FF')
+        pxelinux_default_path = os.path.join(pxelinux_bootloader_path, 'default')
+        open(pxelinux_config_path).readlines()
+        self.assertEquals(open(pxelinux_config_path).read(),
+                          '''default linux
+prompt 0
+timeout 100
+label linux
+    kernel ../../images/fqdn.example.invalid/kernel
+    ipappend 2
+    append initrd=../../images/fqdn.example.invalid/initrd console=ttyS0,115200 ks=http://lol/ netboot_method=pxe
+''')
+        self.assertEquals(open(pxelinux_default_path).read(),
+                          '''default local
+prompt 0
+timeout 0
+label local
+    localboot 0
+''')
+
+        self.check_netbootloader_leak(pxelinux_config_path)
+        netboot.clear_pxelinux(TEST_FQDN, bootloader_confs)
+        self.assert_(not os.path.exists(pxelinux_config_path))
+
     def test_configure_then_clear(self):
         netboot.configure_pxelinux(TEST_FQDN,
                                    'console=ttyS0,115200 ks=http://lol/', self.tftp_root)
