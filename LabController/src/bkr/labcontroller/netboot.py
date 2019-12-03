@@ -526,6 +526,52 @@ def clear_yaboot(fqdn, basedir, yaboot_symlink=True):
         unlink_ignore(os.path.join(basedir, 'ppc', basename))
 
 
+# Bootloader config for X86_64
+def configure_x86_64(fqdn, kernel_options, basedir):
+    """
+    Calls configure_grub2() to create the machine config files to GRUB2
+    boot loader.
+
+    <get_tftp_root()>/x86_64/grub.cfg-<pxe_basename(fqdn)>
+    <get_tftp_root()>/x86_64/grub.cfg
+    <get_tftp_root()>/boot/grub2/grub.cfg-<pxe_basename(fqdn)>
+    <get_tftp_root()>/boot/grub2/grub.cfg
+    """
+    x86_64_dir = os.path.join(basedir, 'x86_64')
+    makedirs_ignore(x86_64_dir, mode=0o755)
+    grub2_conf = "grub.cfg-%s" % pxe_basename(fqdn)
+
+    grub_cfg_file = os.path.join(x86_64_dir, grub2_conf)
+    logger.debug('Writing grub2/x86_64 config for %s as %s', fqdn, grub_cfg_file)
+    configure_grub2(fqdn, x86_64_dir, grub_cfg_file, kernel_options)
+
+    # Location can be used as fallback
+    # Mostly old GRUB2 relying on this location
+    grub2_conf_dir = os.path.join(basedir, 'boot', 'grub2')
+    makedirs_ignore(grub2_conf_dir, mode=0o755)
+    grub_cfg_file = os.path.join(grub2_conf_dir, grub2_conf)
+    logger.debug('Writing grub2/x86_64 config for %s as %s', fqdn, grub_cfg_file)
+    configure_grub2(fqdn, grub2_conf_dir, grub_cfg_file, kernel_options)
+
+
+def clear_x86_64(fqdn, basedir):
+    """
+    Calls clear_grub2() to remove the machine config file and symlink to
+    the grub2 boot loader
+    """
+    x86_64_dir = os.path.join(basedir, 'x86_64')
+    grub2_config = "grub.cfg-%s" % pxe_basename(fqdn)
+
+    logger.debug('Removing grub2/x86_64 config for %s as %s', fqdn, grub2_config)
+    clear_grub2(os.path.join(x86_64_dir, grub2_config))
+
+    grub2_conf_dir = os.path.join(basedir, 'boot', 'grub2')
+
+    logger.debug('Removing grub2/x86_64 config for %s as %s', fqdn, grub2_config)
+    clear_grub2(os.path.join(grub2_conf_dir, grub2_config))
+
+
+
 # Bootloader config for PPC64
 def configure_ppc64(fqdn, kernel_options, basedir):
     """
@@ -537,8 +583,8 @@ def configure_ppc64(fqdn, kernel_options, basedir):
     <get_tftp_root()>/ppc/<pxe_basename(fqdn).lower()-grub2> -> ../boot/grub2/powerpc-ieee1275/core.elf
 
     # Hacks, see the note below
-    <get_tftp_root()>grub.cfg-<pxe_basename(fqdn)>
-    <get_tftp_root()>boot/grub2/grub.cfg-<pxe_basename(fqdn)>
+    <get_tftp_root()>/grub.cfg-<pxe_basename(fqdn)>
+    <get_tftp_root()>/boot/grub2/grub.cfg-<pxe_basename(fqdn)>
 
 
     """
@@ -663,6 +709,8 @@ add_bootloader("efigrub", configure_efigrub, clear_efigrub)
 add_bootloader("yaboot", configure_yaboot, clear_yaboot)
 add_bootloader("grub2", configure_ppc64, clear_ppc64,
                set(["ppc64", "ppc64le"]))
+add_bootloader("grub2_x86_64", configure_x86_64, clear_x86_64,
+               set(["x86_64"]))
 add_bootloader("elilo", configure_elilo, clear_elilo)
 add_bootloader("armlinux", configure_armlinux, clear_armlinux)
 add_bootloader("aarch64", configure_aarch64, clear_aarch64, set(["aarch64"]))
