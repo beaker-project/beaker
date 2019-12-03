@@ -3200,7 +3200,7 @@ class MachineRecipe(Recipe):
             # No way to determine now
             url_compatible = True
         elif self.distro_tree:
-            url_compatible = bool(self.distro_tree.url_in_lab(self.lab_controller,
+            url_compatible = bool(self.distro_tree.url_in_lab(self.recipeset.lab_controller,
                                                               scheme=['http', 'ftp'],
                                                               required=False))
         return url_compatible
