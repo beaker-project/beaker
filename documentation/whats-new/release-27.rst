@@ -42,8 +42,8 @@ configured in `server.cfg <https://beaker-project.org/docs/admin-guide/config-fi
 (Contributed by Martin Styk in :issue:`1370383`)
 
 
-GRUB2 menu for PPC64(LE) architecture
--------------------------------------
+GRUB2 functionality is extended
+-------------------------------
 
 We are expanding our functionality with menus. In Beaker 27 we added a new menu for
 PPC64(LE) architecture. The menu can be used as the default option for GRUB2 PPC64(LE)
@@ -52,9 +52,12 @@ configuration.
 You can find the new menu in :code:`<tftp_folder>/boot/grub2/beaker_menu_ppc64.cfg` or
 :code:`beaker_menu_ppc64le.cfg.`
 
+Besides that, the configuration for the bootloader folder was improved to be more reliable. Support
+for x86_64 architecture and fixes to PXELINUX boot were added.
+
 For more information refer to the `TFTP Configuration <https://beaker-project.org/docs/admin-guide/tftp.html>`_ guide.
 
-(Contributed by Martin Styk)
+(Contributed by Martin Styk in :issue:`1779202` and :issue:`1778839`)
 
 
 Moving repositories to Github
