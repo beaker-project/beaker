@@ -329,6 +329,7 @@ Requires:       ipmitool
 Requires:       wsmancli
 Requires:       /usr/bin/virsh
 Requires:       telnet
+Requires:       dnf
 Requires:       sudo
 %if 0%{?fedora} == 29
 # These LC dependencies are needed in build due to tests
