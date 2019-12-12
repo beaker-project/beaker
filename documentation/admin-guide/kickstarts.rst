@@ -23,7 +23,7 @@ templates, in order:
 
    Custom templates may be placed here.
 
--  ``/usr/lib/python2.6/site-packages/bkr/server/kickstarts``
+-  ``/usr/lib/python2.7/site-packages/bkr/server/kickstarts``
 
    These templates are packaged with Beaker and should not be modified.
 
