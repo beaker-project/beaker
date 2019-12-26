@@ -9,7 +9,7 @@ Beaker in a box provides a way of using Ansible to install and configure a
 complete working Beaker environment, including three virtual guests(VMs) to act
 as test systems. This guide assumes that you already have Ansible installed and
 working, also have a spare system capable of KVM virtualization with at least
-4GB of RAM running on Fedora 29.
+4GB of RAM running on Fedora 30.
 
 Package Prerequisites
 ---------------------
@@ -22,7 +22,7 @@ Cloning the beaker-in-a-box repo
 Start by cloning `Beaker-in-a-box's git
 repository <https://github.com/beaker-project/beaker-in-a-box/>`_::
 
-    git clone git@github.com:beaker-project/beaker-in-a-box.git
+    git clone https://github.com/beaker-project/beaker-in-a-box.git
 
 Setting up Beaker
 -----------------
