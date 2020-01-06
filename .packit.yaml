@@ -1,0 +1,20 @@
+# See the documentation for more information:
+# https://packit.dev/docs/configuration/
+
+specfile_path: beaker.spec
+
+# add or remove files that should be synced
+synced_files:
+    - beaker.spec
+    - .packit.yaml
+
+jobs:
+- job: copr_build
+  trigger: pull_request
+  metadata:
+    targets:
+      - epel-8-x86_64
+      - fedora-30-x86_64
+      - fedora-31-x86_64
+      - fedora-rawhide-x86_64
+      - centos-stream-x86_64
