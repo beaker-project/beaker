@@ -126,7 +126,8 @@ Requires:       python2-requests
 Requires:       python2-libxml2
 Requires:       python2-prettytable
 Requires:       python2-jinja2
-%else # old style Python package names
+%else
+# old style Python package names
 # These client dependencies are needed in build because of sphinx
 BuildRequires:  python-gssapi
 BuildRequires:  python-lxml
@@ -219,7 +220,8 @@ Requires:       python2-passlib
 Requires:       python2-alembic
 Requires:       python2-futures
 Requires:       python2-qpid-proton >= 0.13.0
-%else # old style Python package names
+%else
+# old style Python package names
 BuildRequires:  python-requests
 BuildRequires:  TurboGears >= 1.1.3
 BuildRequires:  python-turbojson
@@ -297,7 +299,8 @@ Requires:       python2-requests
 Requires:       python2-requests-kerberos
 Requires:       python2-gunicorn
 Requires:       python2-mock
-%else # old style Python package names
+%else
+# old style Python package names
 Requires:       python-nose >= 0.10
 %if 0%{?rhel}
 Requires:       selenium-python >= 2.12
@@ -342,7 +345,8 @@ Requires:       python2-gevent
 Requires:       python2-daemon
 Requires:       python2-werkzeug
 Requires:       python2-flask
-%else # old style Python package names
+%else
+# old style Python package names
 # These LC dependencies are needed in build due to tests
 BuildRequires:  python-lxml
 %if 0%{?rhel} == 7
