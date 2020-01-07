@@ -31,8 +31,8 @@ from checkbugs import get_bugs
 # not return the name of the bug assignee, just their email.
 _email_to_name = {
     'mastyk@redhat.com': 'Martin Styk',
-    'tklohna@redhat.com': 'Tomas Klohna',
     'cbouchar@redhat.com': 'Carol Bouchard',
+    'rebarbos@redhat.com': 'Renan Rodrigo Barbosa',
 }
 
 
