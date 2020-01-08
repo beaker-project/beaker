@@ -175,7 +175,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
 
         b = self.browser
         b.get(get_server_base() + 'matrix')
-        # No need to filter the whiteboard, we just created the jobs so they 
+        # No need to filter the whiteboard, we just created the jobs so they
         # will be at the top of the list of whiteboards.
         b.find_element_by_xpath("//select/option[@value='%s']" % unique_whiteboard).click()
         b.find_element_by_xpath('//button[@type="submit" and text()="Generate"]').click()
@@ -255,58 +255,3 @@ class TestJobMatrix(WebDriverTestCase):
         b.find_element_by_xpath('//button[text()="Generate"]').click()
         b.find_element_by_xpath('//table[@id="matrix_datagrid"]'
                 '//td[normalize-space(string(.))="Pass: 3"]')
-
-    def test_it(self):
-        b = self.browser
-        b.get(get_server_base())
-        click_menu_item(b, 'Reports', 'Matrix')
-        b.find_element_by_name('whiteboard_filter').send_keys(self.job_whiteboard)
-        b.find_element_by_xpath('//button[text()="Filter"]').click()
-        Select(b.find_element_by_name('whiteboard'))\
-            .select_by_visible_text(self.job_whiteboard)
-        b.find_element_by_xpath('//button[text()="Generate"]').click()
-
-        thead = b.find_element_by_xpath(
-                '//div[@class="dataTables_scrollHeadInner"]/table[1]/thead')
-        self.assertEquals(thead.find_element_by_xpath('tr[1]/th[1]').text, 'Task')
-        self.assertEquals(thead.find_element_by_xpath('tr[1]/th[2]').text, 'i386')
-        self.assertEquals(thead.find_element_by_xpath('tr[1]/th[3]').text, 'ia64')
-        self.assertEquals(thead.find_element_by_xpath('tr[1]/th[4]').text, 'x86_64')
-
-        tbody = b.find_element_by_xpath('//table[@id="matrix_datagrid"]/tbody')
-        tbody.find_element_by_xpath('.//td[normalize-space(string(.))="Pass: 1"]')
-        tbody.find_element_by_xpath('.//td[normalize-space(string(.))="Warn: 1"]')
-        tbody.find_element_by_xpath('.//td[normalize-space(string(.))="Fail: 1"]')
-
-        self.assertEquals(thead.find_element_by_xpath('tr[2]/th[2]').text,
-                self.recipe_whiteboard)
-        self.assertEquals(thead.find_element_by_xpath('tr[2]/th[3]').text,
-                self.recipe_whiteboard)
-        self.assertEquals(thead.find_element_by_xpath('tr[2]/th[4]').text,
-                self.recipe_whiteboard)
-
-        b.find_element_by_link_text('Pass: 1').click()
-        b.find_element_by_xpath('//title[text()="Executed Tasks"]')
-        self.assertEquals(b.find_element_by_name('whiteboard').get_attribute('value'),
-                self.recipe_whiteboard)
-        self.assertEquals(
-                b.find_element_by_xpath('//table/tbody/tr[1]/td[1]').text,
-                self.passed_job.recipesets[0].recipes[0].tasks[0].t_id)
-        b.back()
-
-        b.find_element_by_link_text('Warn: 1').click()
-        b.find_element_by_xpath('//title[text()="Executed Tasks"]')
-        self.assertEquals(b.find_element_by_name('whiteboard').get_attribute('value'),
-                self.recipe_whiteboard)
-        self.assertEquals(
-                b.find_element_by_xpath('//table/tbody/tr[1]/td[1]').text,
-                self.warned_job.recipesets[0].recipes[0].tasks[0].t_id)
-        b.back()
-
-        b.find_element_by_link_text('Fail: 1').click()
-        b.find_element_by_xpath('//title[text()="Executed Tasks"]')
-        self.assertEquals(b.find_element_by_name('whiteboard').get_attribute('value'),
-                self.recipe_whiteboard)
-        self.assertEquals(
-                b.find_element_by_xpath('//table/tbody/tr[1]/td[1]').text,
-                self.failed_job.recipesets[0].recipes[0].tasks[0].t_id)
