@@ -344,7 +344,55 @@ def clear_pxelinux(fqdn, basedir):
     unlink_ignore(configname)
 
 
-# Bootloader config: EFI GRUB
+### Bootloader config: iPXE
+def configure_ipxe(fqdn, kernel_options, basedir):
+    """
+    Creates iPXE bootloader files
+
+    <get_tftp_root()>/ipxe/<pxe_basename(fqdn).lower()>
+
+    Also ensures default (localboot) config exists:
+
+    <get_tftp_root()>/ipxe/default
+    """
+    ipxe_dir = os.path.join(basedir, 'ipxe')
+    makedirs_ignore(ipxe_dir, mode=0755)
+
+    basename = pxe_basename(fqdn).lower()
+    # Unfortunately the initrd kernel arg needs some special handling. It can be
+    # supplied from the Beaker side (e.g. a system-specific driver disk) but we
+    # also supply the main initrd here which we have fetched from the distro.
+    initrd, kernel_options = extract_arg('initrd=', kernel_options)
+    if initrd:
+        initrd = '/images/%s/initrd\ninitrd %s' % (fqdn, initrd)
+    else:
+        initrd = '/images/%s/initrd' % fqdn
+    config = '''#!ipxe
+kernel /images/%s/kernel
+initrd %s
+imgargs kernel initrd=initrd %s netboot_method=ipxe BOOTIF=01-${netX/mac:hexhyp}
+boot || exit 1
+''' % (fqdn, initrd, kernel_options)
+    logger.debug('Writing ipxe config for %s as %s', fqdn, basename)
+    with atomically_replaced_file(os.path.join(ipxe_dir, basename)) as f:
+        f.write(config)
+    # We also ensure a default config exists that falls back to local boot
+    write_ignore(os.path.join(ipxe_dir, 'default'), '''#!ipxe
+iseq ${builtin/platform} pcbios && sanboot --no-describe --drive 0x80 ||
+exit 1
+''')
+
+def clear_ipxe(fqdn, basedir):
+    """
+    Removes iPXE bootloader file created by configure_ipxe
+    """
+    ipxe_dir = os.path.join(basedir, 'ipxe')
+    basename = pxe_basename(fqdn).lower()
+    configname = os.path.join(ipxe_dir, basename)
+    logger.debug('Removing iPXE config for %s as %s', fqdn, basename)
+    unlink_ignore(configname)
+
+### Bootloader config: EFI GRUB
 def configure_efigrub(fqdn, kernel_options, basedir):
     """
     Creates bootloader file for EFI GRUB
@@ -705,6 +753,7 @@ def add_bootloader(name, configure, clear, arches=None):
 
 
 add_bootloader("pxelinux", configure_pxelinux, clear_pxelinux)
+add_bootloader("ipxe", configure_ipxe, clear_ipxe)
 add_bootloader("efigrub", configure_efigrub, clear_efigrub)
 add_bootloader("yaboot", configure_yaboot, clear_yaboot)
 add_bootloader("grub2", configure_ppc64, clear_ppc64,
@@ -728,6 +777,7 @@ def configure_netbootloader_directory(fqdn, kernel_options, netbootloader):
         grub2_cfg_file = os.path.join(fqdn_dir, 'grub.cfg-%s'%pxe_basename(fqdn))
         configure_grub2(fqdn, fqdn_dir, grub2_cfg_file, kernel_options)
         configure_pxelinux(fqdn, kernel_options, fqdn_dir, symlink=True)
+        configure_ipxe(fqdn, kernel_options, fqdn_dir)
         configure_yaboot(fqdn, kernel_options, fqdn_dir, yaboot_symlink=False)
 
         # create the symlink to the specified bootloader w.r.t the tftp_root
@@ -743,6 +793,7 @@ def clear_netbootloader_directory(fqdn):
     grub2_cfg_file = os.path.join(fqdn_dir, 'grub.cfg-%s'%pxe_basename(fqdn))
     clear_grub2(grub2_cfg_file)
     clear_pxelinux(fqdn, fqdn_dir)
+    clear_ipxe(fqdn, fqdn_dir)
     clear_yaboot(fqdn, fqdn_dir, yaboot_symlink=False)
 
 

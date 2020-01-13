@@ -125,6 +125,12 @@ def write_menus(tftp_root, tags, xml_filter):
     pxe_menu = atomically_replaced_file(os.path.join(tftp_root, 'pxelinux.cfg', 'beaker_menu'))
     write_menu(pxe_menu, u'pxelinux-menu', x86_distrotrees)
 
+    ipxe_distrotrees = [distro for distro in distro_trees if distro['arch'] in ['x86_64', 'i386', 'aarch64']]
+    print('Generating iPXE menus for %s distro trees' % len(ipxe_distrotrees))
+    makedirs_ignore(os.path.join(tftp_root, 'ipxe'), mode=0o755)
+    pxe_menu = atomically_replaced_file(os.path.join(tftp_root, 'ipxe', 'beaker_menu'))
+    write_menu(pxe_menu, u'ipxe-menu', ipxe_distrotrees)
+
     x86_efi_distrotrees = [distro for distro in distro_trees if distro['arch'] == 'x86_64']
     # Regardless of any filtering options selected by the admin, we always
     # filter out certain distros which are known not to have EFI support. This

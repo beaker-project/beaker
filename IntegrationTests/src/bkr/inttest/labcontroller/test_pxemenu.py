@@ -16,8 +16,8 @@ class PxemenuTest(LabControllerTestCase):
 
     @classmethod
     def setUpClass(cls):
-        # Need to populate a directory with fake images, and serve it over 
-        # HTTP, so that beaker-pxemenu can download the images when it builds 
+        # Need to populate a directory with fake images, and serve it over
+        # HTTP, so that beaker-pxemenu can download the images when it builds
         # the menus.
         cls.distro_dir = tempfile.mkdtemp()
         os.mkdir(os.path.join(cls.distro_dir, 'pxeboot'))
@@ -61,6 +61,8 @@ class PxemenuTest(LabControllerTestCase):
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
         menu = open(os.path.join(self.tftp_dir, 'pxelinux.cfg', 'beaker_menu')).read()
         self.assertNotIn('menu title SuperBadWindows10', menu)
+        menu = open(os.path.join(self.tftp_dir, 'ipxe', 'beaker_menu')).read()
+        self.assertNotIn('menu SuperBadWindows10', menu)
 
     def test_pxelinux_menu(self):
         with session.begin():
@@ -99,6 +101,59 @@ menu end
 
 menu end
 '''.format(distro_tree.id))
+
+    def test_ipxe_menu(self):
+        with session.begin():
+            lc = self.get_lc()
+            tag = u'test_ipxe_menu'
+            distro_tree = data_setup.create_distro_tree(
+                    osmajor=u'PinkUshankaLinux8', osminor=u'1',
+                    distro_name=u'PinkUshankaLinux8.1-20140620.42', distro_tags=[tag],
+                    arch=u'x86_64', lab_controllers=[lc],
+                    urls=['http://localhost:19998/'])
+        write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
+        menu = open(os.path.join(self.tftp_dir, 'ipxe', 'beaker_menu')).read()
+        self.assertEquals(menu, '''\
+#!ipxe
+
+chain /ipxe/${ip:hexraw} ||
+
+:main_menu
+menu Beaker
+item local (local)
+item PinkUshankaLinux8 PinkUshankaLinux8 ->
+choose --default local --timeout 600000 target && goto ${target} || goto local
+
+:local
+echo Booting local disk...
+iseq ${builtin/platform} pcbios && sanboot --no-describe --drive 0x80 ||
+# exit 1 generates an error message but req'd for some systems to fall through
+exit 1 || goto main_menu
+
+:PinkUshankaLinux8
+menu PinkUshankaLinux8
+item PinkUshankaLinux8.1 PinkUshankaLinux8.1 ->
+item main_menu back <-
+choose target && goto ${target} || goto main_menu
+
+:PinkUshankaLinux8.1
+menu PinkUshankaLinux8.1
+item PinkUshankaLinux8.1-20140620.42-Server-x86_64 PinkUshankaLinux8.1-20140620.42 Server x86_64
+item PinkUshankaLinux8 back <-
+choose target && goto ${target} || goto PinkUshankaLinux8
+
+:PinkUshankaLinux8.1-20140620.42-Server-x86_64
+set options kernel initrd=initrd method=http://localhost:19998/ repo=http://localhost:19998/ 
+echo Kernel command line: ${options}
+prompt --timeout 5000 Press any key for additional options... && set opts 1 || clear opts
+isset ${opts} && echo -n Additional options: ${} ||
+isset ${opts} && read useropts ||
+kernel /distrotrees/%s/kernel || goto PinkUshankaLinux8.1
+initrd /distrotrees/%s/initrd || goto PinkUshankaLinux8.1
+imgargs ${options} ${useropts}
+boot || goto PinkUshankaLinux8.1
+
+''' % (distro_tree.id, distro_tree.id))
 
     def test_efigrub_menu(self):
         with session.begin():

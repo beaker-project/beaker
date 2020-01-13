@@ -172,6 +172,19 @@ load the menus. For example::
         configfile boot/grub2/beaker_menu_x86.cfg
     }
 
+Likewise, you should edit the default configuration for iPXE :file:'ipxe/default'
+to exit after a timeout with an option to load the menu.  Also, iPXE will not
+load the host specific script by default like PXELINUX, so we direct it to do
+that in the default script if available, for example:
+
+    #!ipxe
+
+    chain /ipxe/${ip:hexraw} ||
+    prompt --key m --timeout 60000 Press 'm' to view install menu, any other key to boot from local disk && set beaker 1 || clear beaker
+    isset ${beaker} && chain /ipxe/beaker_menu ||
+    iseq ${builtin/platform} pcbios && sanboot --no-describe --drive 0x80 ||
+    exit 1
+
 If your site imports distros into Beaker infrequently, you may prefer to
 run ``beaker-pxemenu`` after importing new distros. Otherwise, you can
 create a cron job to periodically update the PXE menu::

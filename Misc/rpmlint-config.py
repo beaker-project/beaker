@@ -18,12 +18,18 @@ addFilter(r'non-readable /etc/sudoers\.d/beaker_proxy_clear_netboot')
 # These are intentionally non-executable, they are executed on test systems instead
 addFilter(r'non-executable-script /usr/share/bkr/lab-controller/(anamon|anamon\.init|anamon\.service)')
 
-# On RHEL6 bash completions are indeed stored in /etc even though they are not 
-# config. Newer bash-completion moved this to /usr/lib and the problem goes 
+# This is intentionally not-executable, they are executed on test systems instead
+addFilter(r'non-executable-script /usr/lib/python.*/site-packages/bkr/labcontroller/pxemenu-templates/ipxe-menu')
+
+# This is just an rpmlint bug really - This should be executed by iPXE
+addFilter(r'wrong-script-interpreter /usr/lib/python.*/site-packages/bkr/labcontroller/pxemenu-templates/ipxe-menu')
+
+# On RHEL6 bash completions are indeed stored in /etc even though they are not
+# config. Newer bash-completion moved this to /usr/lib and the problem goes
 # away. So delete this when we're not targetting RHEL6 anymore.
 addFilter(r'non-conffile-in-etc /etc/bash_completion\.d/bkr')
 
-# RHEL6-only pid file stuff. Under systemd we should be neither owning, nor 
+# RHEL6-only pid file stuff. Under systemd we should be neither owning, nor
 # creating, nor using any of this stuff in /var/run.
 addFilter(r'dir-or-file-in-var-run /var/run/(beaker|beaker-lab-controller)')
 

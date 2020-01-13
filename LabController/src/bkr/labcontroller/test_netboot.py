@@ -29,6 +29,9 @@ CONFIGURED_PATHS = {
     "pxelinux": (
         ("pxelinux.cfg", netboot.pxe_basename(TEST_ADDRESS)),
     ),
+    "ipxe": (
+        ("ipxe", netboot.pxe_basename(TEST_ADDRESS).lower()),
+    ),
     "efigrub": (
         ("grub", netboot.pxe_basename(TEST_ADDRESS)),
     ),
@@ -52,6 +55,9 @@ PERSISTENT_PATHS = {
     ),
     "pxelinux": (
         ("pxelinux.cfg", "default"),
+    ),
+    "ipxe": (
+        ("ipxe", "default"),
     ),
     "efigrub": (
         ("grub", "images"),
@@ -174,7 +180,7 @@ class ImagesTest(ImagesBaseTestCase):
 
 class ArchBasedConfigTest(ImagesBaseTestCase):
     common_categories = ("images", "armlinux", "efigrub",
-                         "elilo", "yaboot", "pxelinux")
+                         "elilo", "yaboot", "pxelinux", "ipxe")
 
     def configure(self, arch):
         netboot.configure_all(TEST_FQDN, arch, 1234,
@@ -318,6 +324,66 @@ label jabberwocky
         netboot.configure_pxelinux(TEST_FQDN,
                                    'console=ttyS0,115200 ks=http://lol/', self.tftp_root)
         self.assertEquals(open(pxelinux_default_path).read(), custom)
+
+class IpxeTest(NetBootTestCase):
+
+    def test_configure_then_clear(self):
+        netboot.configure_ipxe(TEST_FQDN,
+                'console=ttyS0,115200 ks=http://lol/', self.tftp_root)
+        ipxe_config_path = os.path.join(self.tftp_root, 'ipxe', '7f0000ff')
+        ipxe_default_path = os.path.join(self.tftp_root, 'ipxe', 'default')
+        self.assertEquals(open(ipxe_config_path).read(),
+                '''#!ipxe
+kernel /images/fqdn.example.invalid/kernel
+initrd /images/fqdn.example.invalid/initrd
+imgargs kernel initrd=initrd console=ttyS0,115200 ks=http://lol/ netboot_method=ipxe BOOTIF=01-${netX/mac:hexhyp}
+boot || exit 1
+''')
+        self.assertEquals(open(ipxe_default_path).read(),
+                '''#!ipxe
+iseq ${builtin/platform} pcbios && sanboot --no-describe --drive 0x80 ||
+exit 1
+''')
+        self.check_netbootloader_leak(ipxe_config_path)
+        netboot.clear_ipxe(TEST_FQDN, self.tftp_root)
+        self.assert_(not os.path.exists(ipxe_config_path))
+
+    def test_multiple_initrds(self):
+        netboot.configure_ipxe(TEST_FQDN,
+               'initrd=/mydriverdisk.img ks=http://lol/', self.tftp_root)
+        ipxe_config_path = os.path.join(self.tftp_root, 'ipxe', '7f0000ff')
+        self.assertEquals(open(ipxe_config_path).read(),
+                '''#!ipxe
+kernel /images/fqdn.example.invalid/kernel
+initrd /images/fqdn.example.invalid/initrd
+initrd /mydriverdisk.img
+imgargs kernel initrd=initrd ks=http://lol/ netboot_method=ipxe BOOTIF=01-${netX/mac:hexhyp}
+boot || exit 1
+''')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1067924
+    def test_kernel_options_are_not_quoted(self):
+        netboot.configure_ipxe(TEST_FQDN,
+                'initrd=/mydriverdisk.img ks=http://example.com/~user/kickstart', self.tftp_root)
+        ipxe_config_path = os.path.join(self.tftp_root, 'ipxe', '7f0000ff')
+        config = open(ipxe_config_path).read()
+        self.assertIn('imgargs kernel initrd=initrd '
+                'ks=http://example.com/~user/kickstart netboot_method=ipxe',
+                config)
+
+    def test_doesnt_overwrite_existing_default_config(self):
+        ipxe_dir = os.path.join(self.tftp_root, 'ipxe')
+        makedirs_ignore(ipxe_dir, mode=0755)
+        ipxe_default_path = os.path.join(ipxe_dir, 'default')
+        # in reality it will probably be a menu
+        custom = '''#!ipxe
+chain /ipxe/beaker_menu
+exit 1
+'''
+        open(ipxe_default_path, 'wx').write(custom)
+        netboot.configure_ipxe(TEST_FQDN,
+               'console=ttyS0,115200 ks=http://lol/', self.tftp_root)
+        self.assertEquals(open(ipxe_default_path).read(), custom)
 
 
 class EfigrubTest(NetBootTestCase):
