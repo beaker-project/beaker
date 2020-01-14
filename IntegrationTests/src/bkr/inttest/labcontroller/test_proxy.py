@@ -88,7 +88,7 @@ class GetRecipeTest(LabControllerTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1279871
     def test_xmlrpc_with_charset_param_is_not_rejected(self):
-        # Need to send the XMLRPC request manually with requests, so that we 
+        # Need to send the XMLRPC request manually with requests, so that we
         # can customise the Content-Type request header.
         xmlrpc_url = self.get_proxy_url() + 'RPC2'
         xmlrpc_request_body = """
@@ -308,9 +308,9 @@ class TaskStatusTest(LabControllerTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1322219
     def test_cannot_complete_aborted_task(self):
-        # The scenario is that the task itself invokes rhts-abort -t recipe, 
-        # which aborts all tasks, and then the harness tries to complete the 
-        # task. We want the task to stay Aborted, not Completed, so the stop 
+        # The scenario is that the task itself invokes rhts-abort -t recipe,
+        # which aborts all tasks, and then the harness tries to complete the
+        # task. We want the task to stay Aborted, not Completed, so the stop
         # request should fail.
         with session.begin():
             self.recipe.abort(u'someone ran rhts-abort -t recipe')
@@ -346,6 +346,28 @@ class TaskStatusTest(LabControllerTestCase):
             self.assertEquals(task.status, TaskStatus.running)
         response = requests.post(status_url, data=dict(status='Completed'))
         self.assertEquals(response.status_code, 204)
+        with session.begin():
+            session.expire_all()
+            task = self.recipe.tasks[0]
+            self.assertEquals(task.status, TaskStatus.completed)
+
+    def test_retry_POST_task_status(self):
+        # It may happen that harness will try to update status to already completed tasks.
+        # We have to make sure we will respond to this correctly - status code 409
+
+        status_url = '%srecipes/%s/tasks/%s/status' % (self.get_proxy_url(),
+                                                       self.recipe.id, self.recipe.tasks[0].id)
+        response = requests.post(status_url, data=dict(status='Running'))
+        self.assertEquals(response.status_code, 204)
+        response = requests.post(status_url, data=dict(status='Completed'))
+        self.assertEquals(response.status_code, 204)
+        with session.begin():
+            session.expire_all()
+            task = self.recipe.tasks[0]
+            self.assertEquals(task.status, TaskStatus.completed)
+        response = requests.post(status_url, data=dict(status='Completed'))
+        self.assertEquals(response.status_code, 409)
+        self.assertIn('Cannot change status for finished task', response.text)
         with session.begin():
             session.expire_all()
             task = self.recipe.tasks[0]
@@ -390,8 +412,8 @@ class UpdateTaskTest(LabControllerTestCase):
             data_setup.mark_recipe_running(self.recipe)
 
     def test_start_and_complete_task(self):
-        # This simulates the traditional beah style where the task comes from 
-        # the task library, and its name and version are already known. We just 
+        # This simulates the traditional beah style where the task comes from
+        # the task library, and its name and version are already known. We just
         # set it to Running and then to Completed.
         task_url = '%srecipes/%s/tasks/%s/' % (self.get_proxy_url(),
                 self.recipe.id, self.recipe.tasks[1].id)
@@ -411,7 +433,7 @@ class UpdateTaskTest(LabControllerTestCase):
             self.assertEquals(task.status, TaskStatus.completed)
 
     def test_start_and_complete_external_task(self):
-        # Alternative harnesses which support external tasks can report back 
+        # Alternative harnesses which support external tasks can report back
         # the name and version of the task after they fetch it.
         task_url = '%srecipes/%s/tasks/%s/' % (self.get_proxy_url(),
                 self.recipe.id, self.recipe.tasks[2].id)
@@ -461,7 +483,7 @@ class UpdateTaskTest(LabControllerTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1072133
     def test_initial_watchdog_set_correctly(self):
-        # When a task is started the watchdog is implicitly extended to the 
+        # When a task is started the watchdog is implicitly extended to the
         # task's expected time plus 30 minutes.
         task_url = '%srecipes/%s/tasks/%s/' % (self.get_proxy_url(),
                 self.recipe.id, self.recipe.tasks[1].id)
@@ -633,9 +655,9 @@ class InstallDoneTest(LabControllerTestCase):
             job = data_setup.create_job(num_guestrecipes=1)
             data_setup.mark_recipe_running(job.recipesets[0].recipes[0])
             data_setup.mark_recipe_installing(job.recipesets[0].recipes[0].guests[0])
-            # On a normal (machine) recipe, the fqdn reported in the 
-            # install_done call is just discarded since we already know the 
-            # machine's real FQDN. For this test we use a guest recipe, so that 
+            # On a normal (machine) recipe, the fqdn reported in the
+            # install_done call is just discarded since we already know the
+            # machine's real FQDN. For this test we use a guest recipe, so that
             # the reported FQDN will be filled in by the install_done call.
             self.recipe = job.recipesets[0].recipes[0].guests[0]
             self.assertIsNone(self.recipe.resource.fqdn)
