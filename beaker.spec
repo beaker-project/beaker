@@ -10,11 +10,6 @@
 %endif
 
 %global _lc_services beaker-proxy beaker-provision beaker-watchdog beaker-transfer
-%if 0%{?fedora} >= 18 || 0%{?rhel} >= 7
-%bcond_without systemd
-%else
-%bcond_with systemd
-%endif
 
 # This will not necessarily match the RPM Version if the real version number is
 # not representable in RPM. For example, a release candidate might be 0.15.0rc1
@@ -60,27 +55,13 @@ BuildRequires:  python3-devel
 BuildRequires:  python3-docutils
 BuildRequires:  python3-sphinx
 %else
-%if 0%{?fedora} == 29
-BuildRequires:  python2-setuptools
-BuildRequires:  python2-nose
-BuildRequires:  python2-mock
-BuildRequires:  python2-devel
-BuildRequires:  python2-docutils
-BuildRequires:  python2-sphinx
-BuildRequires:  python2-sphinxcontrib-httpdomain
-%else
 BuildRequires:  python-setuptools
 BuildRequires:  python-nose >= 0.10
 BuildRequires:  python-mock
 BuildRequires:  python2-devel
 BuildRequires:  python-docutils >= 0.6
-%if 0%{?rhel} == 6
-BuildRequires:  python-sphinx10
-%else
 BuildRequires:  python-sphinx >= 1.0
-%endif
 BuildRequires:  python-sphinxcontrib-httpdomain
-%endif
 %endif
 
 %package common
@@ -94,9 +75,7 @@ Summary:        Command-line client for interacting with Beaker
 Group:          Applications/Internet
 Requires:       %{name}-common = %{version}-%{release}
 # setup.py uses pkg-config to find the right installation paths
-%if 0%{?fedora} || 0%{?rhel} >= 7
 BuildRequires:  pkgconfig(bash-completion)
-%endif
 %if %{with python3}
 # These client dependencies are needed in build because of sphinx
 BuildRequires:  python3-gssapi
@@ -111,21 +90,6 @@ Requires:       python3-requests
 Requires:       python3-libxml2
 Requires:       python3-prettytable
 Requires:       python3-jinja2
-%else
-%if 0%{?fedora} == 29
-# These client dependencies are needed in build because of sphinx
-BuildRequires:  python2-gssapi
-BuildRequires:  python2-lxml
-BuildRequires:  python2-prettytable
-BuildRequires:  python2-libxml2
-Requires:       python2-six
-Requires:       python2-setuptools
-Requires:       python2-gssapi
-Requires:       python2-lxml
-Requires:       python2-requests
-Requires:       python2-libxml2
-Requires:       python2-prettytable
-Requires:       python2-jinja2
 %else
 # old style Python package names
 # These client dependencies are needed in build because of sphinx
@@ -143,7 +107,6 @@ Requires:       libxslt-python
 Requires:       libxml2-python
 Requires:       python-prettytable
 Requires:       python-jinja2
-%endif
 %endif
 # beaker-wizard was moved from rhts-devel to here in 4.52
 Conflicts:      rhts-devel < 4.52
@@ -173,55 +136,6 @@ Requires:       dnf
 Requires:       nodejs-less >= 1.7
 Requires:       /usr/bin/cssmin
 Requires:       /usr/bin/uglifyjs
-%if 0%{?fedora} == 29
-BuildRequires:  python2-requests
-BuildRequires:  TurboGears
-BuildRequires:  python2-turbojson
-BuildRequires:  python2-sqlalchemy
-BuildRequires:  python2-lxml
-BuildRequires:  python2-ldap
-BuildRequires:  python2-rdflib
-BuildRequires:  python2-turbomail
-BuildRequires:  python2-pwquality
-BuildRequires:  python2-rpm
-BuildRequires:  python2-netaddr
-BuildRequires:  python2-itsdangerous
-BuildRequires:  python2-decorator
-BuildRequires:  python2-webassets
-BuildRequires:  python2-flask
-BuildRequires:  python2-markdown
-BuildRequires:  python2-passlib
-BuildRequires:  python2-alembic
-BuildRequires:  python2-daemon
-BuildRequires:  python2-futures
-BuildRequires:  python2-qpid-proton >= 0.13.0
-Requires:       TurboGears
-Requires:       python2-turbojson
-Requires:       python2-sqlalchemy
-Requires:       python2-decorator
-Requires:       python2-lxml
-Requires:       python2-ldap
-Requires:       python2-rdflib
-Requires:       python2-daemon
-Requires:       python2-lockfile
-Requires:       python2-gssapi
-Requires:       python2-TurboMail
-Requires:       python2-pwquality
-Requires:       python2-jinja2
-Requires:       python2-netaddr
-Requires:       python2-requests
-Requires:       python2-requests-kerberos
-Requires:       python2-itsdangerous
-Requires:       python2-decorator
-Requires:       python2-flask
-Requires:       python2-markdown
-Requires:       python2-webassets
-Requires:       python2-passlib
-Requires:       python2-alembic
-Requires:       python2-futures
-Requires:       python2-qpid-proton >= 0.13.0
-%else
-# old style Python package names
 BuildRequires:  python-requests
 BuildRequires:  TurboGears >= 1.1.3
 BuildRequires:  python-turbojson
@@ -268,15 +182,12 @@ Requires:       python-passlib
 Requires:       python-alembic
 Requires:       python-futures
 Requires:       python-qpid-proton >= 0.13.0
-%endif
-%if %{with systemd}
 BuildRequires:  systemd
 BuildRequires:  pkgconfig(systemd)
 Requires:       systemd-units
 Requires(post): systemd
 Requires(pre):  systemd
 Requires(postun):  systemd
-%endif
 %endif
 
 %if %{without python3}
@@ -292,14 +203,6 @@ Requires:       firefox
 Requires:       lsof
 Requires:       openldap-servers
 Requires:       nss_wrapper
-%if 0%{?fedora} == 29
-Requires:       python2-nose
-Requires:       python2-selenium
-Requires:       python2-requests
-Requires:       python2-requests-kerberos
-Requires:       python2-gunicorn
-Requires:       python2-mock
-%else
 # old style Python package names
 Requires:       python-nose >= 0.10
 %if 0%{?rhel}
@@ -311,11 +214,8 @@ Requires:       python-requests >= 1.0
 Requires:       python-requests-kerberos
 Requires:       python-gunicorn
 Requires:       python-mock
-%if 0%{?rhel} == 7
 # Workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1358533
 Requires:       python-cssselect
-%endif
-%endif
 %endif
 
 %if %{without python3}
@@ -333,19 +233,6 @@ Requires:       wsmancli
 Requires:       /usr/bin/virsh
 Requires:       telnet
 Requires:       sudo
-%if 0%{?fedora} == 29
-# These LC dependencies are needed in build due to tests
-BuildRequires:  python2-lxml
-BuildRequires:  python2-gevent
-Requires:       python2-cpio
-Requires:       python2-setuptools
-Requires:       python2-lxml
-Requires:       python2-gssapi
-Requires:       python2-gevent
-Requires:       python2-daemon
-Requires:       python2-werkzeug
-Requires:       python2-flask
-%else
 # old style Python package names
 # These LC dependencies are needed in build due to tests
 BuildRequires:  python-lxml
@@ -366,15 +253,12 @@ Requires:       python-gevent >= 1.0
 Requires:       python-daemon
 Requires:       python-werkzeug
 Requires:       python-flask
-%endif
-%if %{with systemd}
 BuildRequires:  systemd
 BuildRequires:  pkgconfig(systemd)
 Requires:       systemd-units
 Requires(post): systemd
 Requires(pre):  systemd
 Requires(postun):  systemd
-%endif
 %endif
 
 %if %{without python3}
@@ -482,11 +366,8 @@ unlink %{buildroot}/nosetests-3
 
 %if %{without python3}
 %post server
-%if %{with systemd}
 %systemd_post beakerd.service
-%else
-/sbin/chkconfig --add beakerd
-%endif
+
 # Migrate ConcurrentLogHandler -> syslog
 rm -f %{_localstatedir}/log/%{name}/*.lock >/dev/null 2>&1 || :
 chown root:root %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
@@ -501,13 +382,8 @@ fi
 
 %if %{without python3}
 %post lab-controller
-%if %{with systemd}
 %systemd_post %{_lc_services}
-%else
-for service in %{_lc_services}; do
-    /sbin/chkconfig --add $service
-done
-%endif
+
 # Migrate ConcurrentLogHandler -> syslog
 rm -f %{_localstatedir}/log/%{name}/*.lock >/dev/null 2>&1 || :
 chown root:root %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
@@ -518,53 +394,22 @@ chmod go-w %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 
 %if %{without python3}
 %postun server
-%if %{with systemd}
 %systemd_postun_with_restart beakerd.service
-%else
-if [ "$1" -ge "1" ]; then
-    /sbin/service beakerd condrestart >/dev/null 2>&1 || :
-fi
-%endif
 %endif
 
 %if %{without python3}
 %postun lab-controller
-%if %{with systemd}
 %systemd_postun_with_restart %{_lc_services}
-%else
-if [ "$1" -ge "1" ]; then
-   for service in %{_lc_services}; do
-       /sbin/service $service condrestart >/dev/null 2>&1 || :
-   done
-fi
-%endif
 %endif
 
 %if %{without python3}
 %preun server
-%if %{with systemd}
 %systemd_preun beakerd.service
-%else
-if [ "$1" -eq "0" ]; then
-        /sbin/service beakerd stop >/dev/null 2>&1 || :
-        /sbin/chkconfig --del beakerd || :
-fi
-%endif
 %endif
 
 %if %{without python3}
 %preun lab-controller
-%if %{with systemd}
 %systemd_preun %{_lc_services}
-%else
-if [ "$1" -eq "0" ]; then
-      for service in %{_lc_services}; do
-          /sbin/service $service stop >/dev/null 2>&1 || :
-          /sbin/chkconfig --del $service || :
-      done
-fi
-rm -rf %{_var}/lib/beaker/osversion_data
-%endif
 %endif
 
 %files common
@@ -606,14 +451,9 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_mandir}/man8/beaker-repo-update.8.gz
 %{_mandir}/man8/beaker-usage-reminder.8.gz
 
-%if %{with systemd}
 %{_unitdir}/beakerd.service
 %attr(0644,apache,apache) %{_tmpfilesdir}/beaker-server.conf
 %attr(-,apache,root) %dir /run/%{name}
-%else
-%{_sysconfdir}/init.d/beakerd
-%attr(-,apache,root) %dir %{_localstatedir}/run/%{name}
-%endif
 
 %config(noreplace) %{_sysconfdir}/cron.d/%{name}
 %config(noreplace) %{_sysconfdir}/rsyslog.d/beaker-server.conf
@@ -691,20 +531,12 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %attr(-,apache,root) %dir %{_var}/www/%{name}/logs
 %dir %{_localstatedir}/log/%{name}
 
-%if %{with systemd}
 %{_unitdir}/beaker-proxy.service
 %{_unitdir}/beaker-provision.service
 %{_unitdir}/beaker-watchdog.service
 %{_unitdir}/beaker-transfer.service
 %{_tmpfilesdir}/beaker-lab-controller.conf
 %attr(-,apache,root) %dir /run/%{name}-lab-controller
-%else
-%{_sysconfdir}/init.d/beaker-proxy
-%{_sysconfdir}/init.d/beaker-watchdog
-%{_sysconfdir}/init.d/beaker-transfer
-%{_sysconfdir}/init.d/beaker-provision
-%attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
-%endif
 
 %attr(0440,root,root) %config(noreplace) %{_sysconfdir}/sudoers.d/beaker_proxy_clear_netboot
 %config(noreplace) %{_sysconfdir}/rsyslog.d/beaker-lab-controller.conf
