@@ -201,8 +201,8 @@ def main():
     if pid_file is None:
         pid_file = conf.get("PROXY_PID_FILE", "/var/run/beaker-lab-controller/beaker-proxy.pid")
 
-    # HubProxy will try to log some stuff, even though we 
-    # haven't configured our logging handlers yet. So we send logs to stderr 
+    # HubProxy will try to log some stuff, even though we
+    # haven't configured our logging handlers yet. So we send logs to stderr
     # temporarily here, and configure it again below.
     log_to_stream(sys.stderr, level=logging.WARNING)
     try:
@@ -218,7 +218,7 @@ def main():
         # See BZ#977269
         proxy.close()
         with daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(
-                pid_file, acquire_timeout=0), detach_process=True):
+                pid_file, acquire_timeout=0), detach_process=True, stderr=sys.stderr):
             log_to_syslog('beaker-proxy')
             main_loop(proxy=proxy, conf=conf)
 
