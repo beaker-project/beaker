@@ -2952,6 +2952,28 @@ part swap --recommended
                 in recipe.installation.rendered_kickstart.kickstart,
                 recipe.installation.rendered_kickstart.kickstart)
 
+    def test_no_networks(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="no_networks">
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-31" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.installation.rendered_kickstart.kickstart
+        self.assertNotIn('''
+        network --bootproto=dhcp --hostname=test01.test-kickstart.invalid
+        ''', k)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=578812
     def test_static_networks(self):
         recipe = self.provision_recipe('''
