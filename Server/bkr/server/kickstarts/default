@@ -43,7 +43,7 @@ firewall
 {% endif %}
 
 # Run the Setup Agent on first boot
-firstboot --disable
+firstboot {{ firstboot|default('--disable') }}
 # System keyboard
 keyboard {{ keyboard|default('us') }}
 # System language

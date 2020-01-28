@@ -3830,6 +3830,29 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
         ks = recipe.installation.rendered_kickstart.kickstart
         self.assertEquals(ks.count('IPV6_DISABLED=True\n'), 2)
 
+    def test_firstboot_opt(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="firstboot=--enabled">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <partitions>
+                            <partition fs="ext4" name="mnt" size="10" />
+                        </partitions>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+        ''')
+        ks = recipe.installation.rendered_kickstart.kickstart
+        self.assertIn('firstboot --enabled', ks)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1099231
     def test_remote_post(self):
         recipe = self.provision_recipe('''
