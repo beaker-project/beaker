@@ -114,72 +114,96 @@ Bug fixes
 
 A number of bug fixes are also included in this release:
 
-* :issue:`1777817`: Job and Recipe whiteboards now have a bigger character limit.
-  (Contributed by Martin Styk)
-* :issue:`1662898`:  Beaker is now properly ignoring SSL certificate verification
-  when the :program:`--insecure` switch is provided in the command line.
-  (Contributed by Martin Styk)
-* :issue:`1723692`:  Beaker-client is now providing the way how to check the machine
-  history of activity. You can use :program:`bkr system-history-list <FQDN>`.
-  (Contributed by Martin Styk)
-* :issue:`1703371`: Tests were updated to convert a list of Arch instances to the
-  respective Arch names in unicode format, as SQLAlchemy versions greater than 1.1
-  will need this for comparison.
-  (Contributed by Martin Styk)
-* :issue:`1703367`: Group passwords now need 8 characters on Fedora systems to be
-  compliant with the PWQuality version.
-  (Contributed by Martin Styk)
-* :issue:`1671054`: Change integration tests to use sessions to connect to Openstack.
-  (Contributed by Martin Styk)
-* :issue:`1776324`: The bash-completion script for the beaker client has been rewritten.
-  Changes include speed improvements using a cache directory, ability to specify file names for
-  commands which take files and option parsing.
-  (Contributed by John L. Villalovos)
-* :issue:`1776325`: Update Frontend for OpenStack integration
-  (Contributed by Martin Styk)
-* :issue:`1776327`: Set the correct MIME type for the kickstart endpoint.
-  (Contributed by Martin Styk)
-* :issue:`1404909`: Added visibility support for iPXE image creation, enabling users to
-  create and upload private images, for instance.
-  (Contributed by Martin Styk)
-* :issue:`1776332`: OpenStack flavors are now correctly filtered according
-  to disk size: should now be greater or equal to 10G.
-  (Contributed by Martin Styk)
-* :issue:`1384903`: RNC schemas for task and job XML files were added to
-  beaker-common.
-  (Contributed by Martin Styk)
-* :issue:`1776337`: Beaker will now pick the appropriate Kerberos credentials
-  cache when authenticating.
-  (Contributed by Martin Styk)
-* :issue:`1758124`: When provisioning a Fedora 31 machine, the root user can
-  use SSH to log in to the machine, using a password or key.
-  (Contributed by Martin Styk)
-* :issue:`1698383`: The Import Distro Tree web page and the distro-import
-  CLI now behave the same, using the same code: duplicates are being handled
-  correctly and URL checking works for both versions.
-  (Contributed by Matej Dujava and Tomas Klohna)
-* :issue:`1761195`: The way :program:`beakerd` chooses an OpenStack flavor applies
-  smallest disk size and RAM memory as criteria. As there may be more than
-  one flavor with the same disk size and RAM, the smallest flavor ID is now
-  also used.
-  (Contributed by Georgii Karataev)
-* :issue:`1748307`: When deleting a job by clicking the "delete" button on the jobs
-  list, the ID of the job will be shown on the title of the message box.
-  (Contributed by Renan Rodrigo Barbosa)
-* :issue:`719536`: All of the "excluded families" page was redesigned. Previously, any
-  excluded major distributions and the respective minors had to be clicked individually,
-  on a potentially huge list of checkboxes.
-  This list has been reorganized and categorized, toggle buttons were added to ease
-  the selection, and the major distro families can be filtered through user input.
-  (Contributed by Renan Rodrigo Barbosa)
-* :issue:`662517`: The Reserve Workflow page now shows a warning about available
-  lab controllers which don't support any of the selected distro trees.
-  (Contributed by Renan Rodrigo Barbosa)
-* :issue:`657559`: When user specific variant but no arch on command line,
-  he would incorrectly get all arches across all variants. This has now been fixed
-  and variant will correctly output only possible arches that are present.
-  (Contributed by Tomas Klohna)
-* :issue:`1694004`: The Beaker inventory_osmajors defaults were updated:
-  systems as Fedora 21, Fedora 22, CentOS5 and RHEL5 are out of the list and
-  Fedora 29, Fedora 30, Fedora 31 and RHEL8 were added.
-  (Contributed by Georgii Karataev)
+* | :issue:`1777817`: Job and Recipe whiteboards now have a bigger character limit.
+  | (Contributed by Martin Styk)
+* | :issue:`1662898`:  Beaker is now properly ignoring SSL certificate verification
+    when the :program:`--insecure` switch is provided in the command line.
+  | (Contributed by Martin Styk)
+* | :issue:`1723692`:  Beaker-client is now providing the way how to check the machine
+    history of activity. You can use :program:`bkr system-history-list <FQDN>`.
+  | (Contributed by Martin Styk)
+* | :issue:`1703371`: Tests were updated to convert a list of Arch instances to the
+    respective Arch names in unicode format, as SQLAlchemy versions greater than 1.1
+  | will need this for comparison.
+  | (Contributed by Martin Styk)
+* | :issue:`1703367`: Group passwords now need 8 characters on Fedora systems to be
+    compliant with the PWQuality version.
+  | (Contributed by Martin Styk)
+* | :issue:`1671054`: Change integration tests to use sessions to connect to Openstack.
+  | (Contributed by Martin Styk)
+* | :issue:`1776324`: The bash-completion script for the beaker client has been rewritten.
+    Changes include speed improvements using a cache directory, ability to specify file names for
+    commands which take files and option parsing.
+  | (Contributed by John L. Villalovos)
+* | :issue:`1776325`: Update Frontend for OpenStack integration
+  | (Contributed by Martin Styk)
+* | :issue:`1776327`: Set the correct MIME type for the kickstart endpoint.
+  | (Contributed by Martin Styk)
+* | :issue:`1404909`: Added visibility support for iPXE image creation, enabling users to
+    create and upload private images, for instance.
+  | (Contributed by Martin Styk)
+* | :issue:`1776332`: OpenStack flavors are now correctly filtered according
+    to disk size: should now be greater or equal to 10G.
+  | (Contributed by Martin Styk)
+* | :issue:`1384903`: RNC schemas for task and job XML files were added to
+    beaker-common.
+  | (Contributed by Martin Styk)
+* | :issue:`1776337`: Beaker will now pick the appropriate Kerberos credentials
+    cache when authenticating.
+  | (Contributed by Martin Styk)
+* | :issue:`1758124`: When provisioning a Fedora 31 machine, the root user can
+    use SSH to log in to the machine, using a password or key.
+  | (Contributed by Martin Styk)
+* | :issue:`1698383`: The Import Distro Tree web page and the distro-import
+    CLI now behave the same, using the same code: duplicates are being handled
+    correctly and URL checking works for both versions.
+  | (Contributed by Matej Dujava and Tomas Klohna)
+* | :issue:`1761195`: The way :program:`beakerd` chooses an OpenStack flavor applies
+    smallest disk size and RAM memory as criteria. As there may be more than
+    one flavor with the same disk size and RAM, the smallest flavor ID is now
+    also used.
+  | (Contributed by Georgii Karataev)
+* | :issue:`1748307`: When deleting a job by clicking the "delete" button on the jobs
+    list, the ID of the job will be shown on the title of the message box.
+  | (Contributed by Renan Rodrigo Barbosa)
+* | :issue:`719536`: All of the "excluded families" page was redesigned. Previously, any
+    excluded major distributions and the respective minors had to be clicked individually,
+    on a potentially huge list of checkboxes.
+    This list has been reorganized and categorized, toggle buttons were added to ease
+    the selection, and the major distro families can be filtered through user input.
+  | (Contributed by Renan Rodrigo Barbosa)
+* | :issue:`662517`: The Reserve Workflow page now shows a warning about available
+    lab controllers which don't support any of the selected distro trees.
+  | (Contributed by Renan Rodrigo Barbosa)
+* | :issue:`657559`: When user specific variant but no arch on command line,
+    he would incorrectly get all arches across all variants. This has now been fixed
+    and variant will correctly output only possible arches that are present.
+  | (Contributed by Tomas Klohna)
+* | :issue:`1694004`: The Beaker inventory_osmajors defaults were updated:
+    systems as Fedora 21, Fedora 22, CentOS5 and RHEL5 are out of the list and
+    Fedora 29, Fedora 30, Fedora 31 and RHEL8 were added.
+  | (Contributed by Georgii Karataev)
+
+
+Beaker 27.1
+~~~~~~~~~~~
+* | :issue:`1761589`: Added new option 'no_networks' to ks_meta.
+    This option can be useful when user already defines IP stack on
+    kernel options.
+  | (Contributed by Martin Styk)
+* | :issue:`1793655`: Updated default Apache configuration for deployment.
+  | (Contributed by Martin Styk)
+* | :issue:`1791205`: Fixed status code for task status update endpoint.
+    Instead of returning 500 endpoint will return 409 in case status
+    is already updated.
+  | (Contributed by Martin Styk)
+* | :issue:`1795234`: Added support for enabling/disabling firstboot in kickstart.
+  | (Contributed by Martin Styk)
+* | :issue:`1780909`: Fixed upstream spec file. DNF is now installed as part
+    of Lab Controllers.
+  | (Contributed by Martin Styk)
+* | :issue:`1795912`: Improved proxy logging in Lab Controllers.
+    All traffic is captured in logs instead of XMLRPC only.
+  | (Contributed by Martin Styk)
+* | :issue:`1778643`: Improved kernel panic detection.
+  | (Contributed by Renan Rodrigo Barbosa)

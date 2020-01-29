@@ -2952,6 +2952,28 @@ part swap --recommended
                 in recipe.installation.rendered_kickstart.kickstart,
                 recipe.installation.rendered_kickstart.kickstart)
 
+    def test_no_networks(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="no_networks">
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-31" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.installation.rendered_kickstart.kickstart
+        self.assertNotIn('''
+        network --bootproto=dhcp --hostname=test01.test-kickstart.invalid
+        ''', k)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=578812
     def test_static_networks(self):
         recipe = self.provision_recipe('''
@@ -3807,6 +3829,29 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
             </job>''')
         ks = recipe.installation.rendered_kickstart.kickstart
         self.assertEquals(ks.count('IPV6_DISABLED=True\n'), 2)
+
+    def test_firstboot_opt(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="firstboot=--enabled">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <partitions>
+                            <partition fs="ext4" name="mnt" size="10" />
+                        </partitions>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+        ''')
+        ks = recipe.installation.rendered_kickstart.kickstart
+        self.assertIn('firstboot --enabled', ks)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1099231
     def test_remote_post(self):

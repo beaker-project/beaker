@@ -19,13 +19,19 @@ class TestPanicDetector(unittest.TestCase):
             'Internal error: Oops - BUG: 0 [#2] PREEMPT ARM', # oops.kernel.org examples
             'Oops: 0000 [#1] SMP\\',
             'Oops[#1]',
-            'Oops - bad mode' # jbastian example bz:1538906
+            'Oops - bad mode', # jbastian example bz:1538906
+            'kernel BUG at fs/ext4/super.c:1022!' # xifeng example bz:1778643
         ]
 
         # From bz:1538906
-        self.test_case_name_oops = 'regression-bz123456789-Oops-when-some-thing-happens-'
-        self.fake_panic = 'I can\'t believe it\'s not a panic'
-        self.acceptable_panic_matches = ['Oops:', 'Oops ', 'Oops[']
+        self.should_not_panic = [
+            'regression-bz123456789-Oops-when-some-thing-happens-',
+            'I can\'t believe it\'s not a panic',
+            'looking for a kernel BUG at my setup!'
+        ]
+
+        self.acceptable_panic_matches = ['Oops:', 'Oops ', 'Oops[',
+            'kernel BUG at fs/ext4/super.c:1022!']
 
     def test_panic_detector_detects_correctly(self):
         for line in self.should_panic:
@@ -36,16 +42,10 @@ class TestPanicDetector(unittest.TestCase):
             self.assertTrue(match in self.acceptable_panic_matches,
                         "%r is not an acceptable match. Line: %r" % (match, line))
 
-    def test_panic_not_detected_for_random_string(self):
-        match = self.panic_detector.feed(self.fake_panic)
-        self.assertFalse(self.panic_detector.fired,
-                         "Panic detector erroneously detected: %r" % (self.fake_panic))
-        self.assertIsNone(match,
-                          "feed result ( %r ) wasn't NoneType" % (match))
-
-    def test_panic_not_detected_for_test_case_name_containing_oops(self):
-        match = self.panic_detector.feed(self.test_case_name_oops)
-        self.assertFalse(self.panic_detector.fired,
-                         "Panic detector erroneously detected: %r" % (self.test_case_name_oops))
-        self.assertIsNone(match,
-                          "feed result ( %r ) wasn't NoneType" % (match))
+    def test_panic_detector_ignores_false_panic(self):
+        for line in self.should_not_panic:
+            match = self.panic_detector.feed(line)
+            self.assertFalse(self.panic_detector.fired,
+                            "Panic detector erroneously detected: %r" % (line))
+            self.assertIsNone(match,
+                            "feed result ( %r ) wasn't NoneType" % (match))

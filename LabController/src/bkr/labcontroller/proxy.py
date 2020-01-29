@@ -72,13 +72,13 @@ class ProxyHelper(object):
         if sys.version_info >= (2, 7):
             self.hub._hub('close')()
 
-    def recipe_upload_file(self, 
-                         recipe_id, 
-                         path, 
-                         name, 
-                         size, 
-                         md5sum, 
-                         offset, 
+    def recipe_upload_file(self,
+                         recipe_id,
+                         path,
+                         name,
+                         size,
+                         md5sum,
+                         offset,
                          data):
         """ Upload a file in chunks
              path: the relative path to upload to
@@ -87,7 +87,7 @@ class ProxyHelper(object):
              md5: md5sum (hex digest) of contents
              data: base64 encoded file contents
              offset: the offset of the chunk
-            Files can be uploaded in chunks, if so the md5 and the size 
+            Files can be uploaded in chunks, if so the md5 and the size
             describe the chunk rather than the whole file.  The offset
             indicates where the chunk belongs
         """
@@ -98,10 +98,10 @@ class ProxyHelper(object):
             log_file.update_chunk(base64.decodestring(data), int(offset or 0))
         return True
 
-    def task_result(self, 
-                    task_id, 
-                    result_type, 
-                    result_path=None, 
+    def task_result(self,
+                    task_id,
+                    result_type,
+                    result_path=None,
                     result_score=None,
                     result_summary=None):
         """ report a result to the scheduler """
@@ -146,14 +146,14 @@ class ProxyHelper(object):
                     msg=None):
         """ tell the scheduler that we are stopping this job
             stop_type = ['abort', 'cancel']
-            msg to record 
+            msg to record
         """
         logger.debug("job_stop %s", job_id)
         return self.hub.jobs.stop(job_id, stop_type, msg)
 
     def get_my_recipe(self, request):
         """
-        Accepts a dict with key 'recipe_id'. Returns an XML document for the 
+        Accepts a dict with key 'recipe_id'. Returns an XML document for the
         recipe with that id.
         """
         if 'recipe_id' in request:
@@ -171,7 +171,7 @@ class ProxyHelper(object):
         return self.hub.recipes.tasks.extend(task_id, kill_time)
 
     def task_to_dict(self, task_name):
-        """ returns metadata about task_name from the TaskLibrary 
+        """ returns metadata about task_name from the TaskLibrary
         """
         return self.hub.tasks.to_dict(task_name)
 
@@ -210,8 +210,8 @@ class ConsoleLogHelper(object):
         if self.strip_cntrl:
             block = self.strip_cntrl.sub(' ', block)
         # Check for panics
-        # Only feed the panic detector complete lines. If we have read a part 
-        # of a line, store it in self.incomplete_line and it will be prepended 
+        # Only feed the panic detector complete lines. If we have read a part
+        # of a line, store it in self.incomplete_line and it will be prepended
         # to the subsequent block.
         lines = (self.incomplete_line + block).split('\n')
         self.incomplete_line = lines.pop()
@@ -288,11 +288,11 @@ class ConsoleWatchVirt(ConsoleLogHelper):
     """
     def update(self):
         output = self.proxy.get_console_log(self.watchdog['recipe_id'])
-        # OpenStack returns the console output as unicode, although it just 
+        # OpenStack returns the console output as unicode, although it just
         # replaces all non-ASCII bytes with U+FFFD REPLACEMENT CHARACTER.
         # But Beaker normally deals in raw bytes for the consoles.
-        # We can't get back the original bytes that OpenStack discarded so 
-        # let's just convert to UTF-8 so that the U+FFFD characters are written 
+        # We can't get back the original bytes that OpenStack discarded so
+        # let's just convert to UTF-8 so that the U+FFFD characters are written
         # properly at least.
         output = output.encode('utf8')
         if len(output) >= 102400:
@@ -335,8 +335,8 @@ class InstallFailureDetector(object):
         self.patterns = []
         for raw_pattern in self._load_patterns():
             pattern = re.compile(raw_pattern)
-            # If the pattern is empty, it is either a mistake or the admin is 
-            # trying to override a package pattern to disable it. Either way, 
+            # If the pattern is empty, it is either a mistake or the admin is
+            # trying to override a package pattern to disable it. Either way,
             # exclude it from the list.
             if pattern.search(''):
                 continue
@@ -414,7 +414,7 @@ class LogArchiver(ProxyHelper):
             logger.debug('Building temporary log tree for transfer under %s', tmpdir)
             for mylog in mylogs:
                 mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
-                mydst = '%s/%s/%s/%s' % (tmpdir, mylog['filepath'], 
+                mydst = '%s/%s/%s/%s' % (tmpdir, mylog['filepath'],
                                           mylog['path'], mylog['filename'])
                 if os.path.exists(mysrc):
                     if not os.path.exists(os.path.dirname(mydst)):
@@ -527,7 +527,7 @@ class Monitor(ProxyHelper):
                 if task.get('status') == 'Running':
                     break
             self.task_result(task.get('id'), 'panic', '/', 0, panic_message)
-            # set the watchdog timeout to 10 minutes, gives some time for all data to 
+            # set the watchdog timeout to 10 minutes, gives some time for all data to
             # print out on the serial console
             # this may abort the recipe depending on what the recipeSets
             # watchdog behaviour is set to.
@@ -542,28 +542,28 @@ class Monitor(ProxyHelper):
         recipe = job.find('recipeSet/guestrecipe')
         if recipe is None:
             recipe = job.find('recipeSet/recipe')
-        # For now we are re-using the same panic="" attribute which is used to 
+        # For now we are re-using the same panic="" attribute which is used to
         # control panic detection, bug 1055320 is an RFE to change this
         if recipe.find('watchdog').get('panic') == 'ignore':
             logger.info('Not reporting install failure due to panic=ignore')
         elif recipe.find('installation') is not None and recipe.find('installation').get('install_finished'):
             logger.info('Not reporting install failure for finished installation')
         else:
-            # Ideally we would record it against the Installation entity for 
-            # the recipe, but that's not a thing yet, so we just add a result 
+            # Ideally we would record it against the Installation entity for
+            # the recipe, but that's not a thing yet, so we just add a result
             # to the first task (which is typically /distribution/install)
             first_task = recipe.findall('task')[0]
             self.task_result(first_task.get('id'), 'fail', '/', 0, failure_message)
             self.recipe_stop(recipe.get('id'), 'abort', 'Installation failed')
 
 class Proxy(ProxyHelper):
-    def task_upload_file(self, 
-                         task_id, 
-                         path, 
-                         name, 
-                         size, 
-                         md5sum, 
-                         offset, 
+    def task_upload_file(self,
+                         task_id,
+                         path,
+                         name,
+                         size,
+                         md5sum,
+                         offset,
                          data):
         """ Upload a file in chunks
              path: the relative path to upload to
@@ -572,7 +572,7 @@ class Proxy(ProxyHelper):
              md5: md5sum (hex digest) of contents
              data: base64 encoded file contents
              offset: the offset of the chunk
-            Files can be uploaded in chunks, if so the md5 and the size 
+            Files can be uploaded in chunks, if so the md5 and the size
             describe the chunk rather than the whole file.  The offset
             indicates where the chunk belongs
         """
@@ -649,13 +649,13 @@ class Proxy(ProxyHelper):
         logger.debug("task_stop %s", task_id)
         return self.hub.recipes.tasks.stop(task_id, stop_type, msg)
 
-    def result_upload_file(self, 
-                         result_id, 
-                         path, 
-                         name, 
-                         size, 
-                         md5sum, 
-                         offset, 
+    def result_upload_file(self,
+                         result_id,
+                         path,
+                         name,
+                         size,
+                         md5sum,
+                         offset,
                          data):
         """ Upload a file in chunks
              path: the relative path to upload to
@@ -664,7 +664,7 @@ class Proxy(ProxyHelper):
              md5: md5sum (hex digest) of contents
              data: base64 encoded file contents
              offset: the offset of the chunk
-            Files can be uploaded in chunks, if so the md5 and the size 
+            Files can be uploaded in chunks, if so the md5 and the size
             describe the chunk rather than the whole file.  The offset
             indicates where the chunk belongs
         """
@@ -792,9 +792,12 @@ class ProxyHTTP(object):
                 self.hub.recipes.tasks.stop(task_id, 'stop')
             elif status == 'aborted':
                 self.hub.recipes.tasks.stop(task_id, 'abort', message)
-        except xmlrpclib.Fault, fault:
-            # XXX need to find a less fragile way to do this
-            if 'Cannot restart finished task' in fault.faultString:
+        except xmlrpclib.Fault as fault:
+            # XXX This has to be completely replaced with JSON response in next major release
+            # We don't want to blindly return 500 because of opposite side
+            # will try to retry request - which is almost in all situation wrong
+            if ('Cannot restart finished task' in fault.faultString
+                    or 'Cannot change status for finished task' in fault.faultString):
                 raise Conflict(fault.faultString)
             else:
                 raise
@@ -809,7 +812,7 @@ class ProxyHTTP(object):
         if 'status' in data:
             status = data.pop('status')
             self._update_status(task_id, status, data.pop('message', None))
-            # If the caller only wanted to update the status and nothing else, 
+            # If the caller only wanted to update the status and nothing else,
             # we will avoid making a second XML-RPC call.
             updated = {'status': status}
         if data:
