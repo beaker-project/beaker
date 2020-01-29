@@ -216,6 +216,10 @@ correspond to the similarly-named kickstart option.
     Firewall ports to allow, for example ``firewall=imap:tcp,1234:ucp,47``. If 
     this variable is not set, the firewall is disabled.
 
+``firstboot=<option>``
+    Option to be passed directly to the ``firstboot`` kickstart command.
+    The complete option string must be given, including ``--`` and ``=``.
+
 ``fstype``
     Filesystem type for all filesystems. Default is to allow the installer to 
     choose.
@@ -304,6 +308,13 @@ correspond to the similarly-named kickstart option.
     the installer to automatically select a suitable partition layout. Set this
     variable if you want to supply explicit partitioning commands in some other
     way, for example in a ``<ks_append/>`` section.
+
+``no_networks``
+    Omits the ``network`` command. By default when no specific network is
+    requested for a recipe, the kickstart will include
+    ``network --bootproto=dhcp`` which causes the installer to obtain it's
+    networking configuration from DHCP server. Set this variable if you want
+    to supply explicit network setting in kernel options.
 
 ``no_repo_<id>``
     Omits repo of the given id. You can find repo id for a particular distro
