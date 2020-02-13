@@ -25,6 +25,7 @@ from bkr.common.helpers import SensitiveUnicode, total_seconds
 from bkr.labcontroller.config import load_conf, get_conf
 from bkr.labcontroller.proxy import ProxyHelper
 from bkr.labcontroller import netboot
+import utils
 
 logger = logging.getLogger(__name__)
 
@@ -205,7 +206,12 @@ def build_power_env(command):
     return env
 
 def handle_clear_logs(conf, command):
-    console_log = os.path.join(conf['CONSOLE_LOGS'], command['fqdn'])
+    for filename, _ in utils.get_console_files(
+            console_logs_directory=conf['CONSOLE_LOGS'], system_name=command['fqdn']):
+        truncate_logfile(filename)
+
+
+def truncate_logfile(console_log):
     logger.debug('Truncating console log %s', console_log)
     try:
         f = open(console_log, 'r+')
@@ -214,6 +220,7 @@ def handle_clear_logs(conf, command):
             raise
     else:
         f.truncate()
+
 
 def handle_configure_netboot(command):
     netboot.configure_all(command['fqdn'],

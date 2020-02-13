@@ -40,6 +40,14 @@ class TestHelper(LabControllerTestCase):
     def check_cached_log_contents(self, expected):
         return open(self.cached_console_log, 'r').read() == expected
 
+    def check_console_log2_registered(self):
+        with session.begin():
+            return LogRecipe.query.filter_by(parent=self.recipe,
+                    filename=u'console-bmc.log').count() == 1
+
+    def check_cached_log2_contents(self, expected):
+        return open(self.cached_console_log_2, 'r').read() == expected
+
 
 class WatchdogConsoleLogTest(TestHelper):
 
@@ -57,6 +65,11 @@ class WatchdogConsoleLogTest(TestHelper):
         self.console_log = os.path.join(get_conf().get('CONSOLE_LOGS'), self.system.fqdn)
         self.cached_console_log = os.path.join(get_conf().get('CACHEPATH'), 'recipes',
                 str(self.recipe.id // 1000) + '+', str(self.recipe.id), 'console.log')
+        self.console_log_2 = os.path.join(get_conf().get('CONSOLE_LOGS'),
+                                          "{}-bmc".format(self.system.fqdn))
+        self.cached_console_log_2 = os.path.join(
+            get_conf().get('CACHEPATH'), 'recipes', str(self.recipe.id // 1000)
+            + '+', str(self.recipe.id), 'console-bmc.log')
 
     def test_stores_console_log(self):
         first_line = 'Here is the first line of the log file.\n'
@@ -67,6 +80,16 @@ class WatchdogConsoleLogTest(TestHelper):
         second_line = 'Here is the second line of the log file. FNORD FNORD FNORD\n'
         open(self.console_log, 'a').write(second_line)
         wait_for_condition(lambda: self.check_cached_log_contents(
+                first_line + second_line))
+
+    def test_stores_second_console_log(self):
+        first_line = 'Here is the first line of the second log file.\n'
+        open(self.console_log_2, 'w').write(first_line)
+        wait_for_condition(self.check_console_log2_registered)
+        wait_for_condition(lambda: self.check_cached_log2_contents(first_line))
+        second_line = 'Here is the second line of the BMC log file. FNORD FNORD FNORD\n'
+        open(self.console_log_2, 'a').write(second_line)
+        wait_for_condition(lambda: self.check_cached_log2_contents(
                 first_line + second_line))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1643139
