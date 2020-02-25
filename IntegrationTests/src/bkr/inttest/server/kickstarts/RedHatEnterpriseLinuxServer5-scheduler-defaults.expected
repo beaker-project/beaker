@@ -35,25 +35,10 @@ autopart
 # no snippet data for system
 
 %packages --resolvedeps --ignoremissing
-@desktop-platform-devel
-@development
-@development-libs
-@development-tools
-@server-platform-devel
 emacs
-expect
-gcc
-libxml2-python
-make
-nfs-utils
-ntp
-procmail
-pyOpenSSL
-redhat-lsb
 sendmail
 unifdef
 vim-enhanced
-wget
 # no snippet data for packages
 
 

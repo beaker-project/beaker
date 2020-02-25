@@ -635,29 +635,9 @@ class BeakerWorkflow(BeakerCommand):
         """
         Returns the name of the task which is injected at the start of the recipe.
         Its job is to check for any problems in the installation.
-        We have two implementations:
+        We have one implementation:
             /distribution/check-install is used by default
-            /distribution/install is used on RHEL <= 7 and Fedora <= 28
         """
-        older_families = [
-            'RedHatEnterpriseLinux3',
-            'RedHatEnterpriseLinux4',
-            'RedHatEnterpriseLinuxServer5',
-            'RedHatEnterpriseLinuxServerGrid5',
-            'RedHatEnterpriseLinuxClient5',
-            'RedHatEnterpriseLinux6',
-            'RedHatEnterpriseLinux7',
-            'CentOS4',
-            'CentOS5',
-            'CentOS6',
-            'CentOS7',
-            'RedHatStorage2',
-            'RedHatStorageSoftwareAppliance3',
-            'RedHatGlusterStorage3',
-            'RHVH4'] + ['Fedora%d' % n for n in range(1, 29)]
-        family = self.getFamily(*args, **kwargs)
-        if family in older_families:
-            return '/distribution/install'
         return '/distribution/check-install'
 
     getInstallTaskName = get_install_task_name
