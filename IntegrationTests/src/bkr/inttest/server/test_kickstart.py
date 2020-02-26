@@ -4,31 +4,32 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import lxml.etree
-import re
-import unittest
-import pipes
 import crypt
-import sys
 import os
 import os.path
-import tempfile
-import pkg_resources
-import subprocess
+import re
 import shutil
-from bkr.server import dynamic_virt
-from bkr.server.model import session, DistroTreeRepo, LabControllerDistroTree, \
-        Provision, SSHPubKey, ProvisionFamily, OSMajor, Arch, \
-        Key, Key_Value_String, OSMajorInstallOptions, Installation
+import subprocess
+import sys
+import tempfile
+import unittest
+
+import lxml.etree
+import pkg_resources
+
+from bkr.inttest import data_setup, get_server_base, Process
+from bkr.inttest.kickstart_helpers import (
+    create_rhel62, create_rhel62_server_x86_64, create_x86_64_automated, create_lab_controller,
+    compare_expected, jinja_choice_loader, create_user
+)
+from bkr.server.jobs import Jobs
+from bkr.server.kickstart import template_env, generate_kickstart
+from bkr.server.model import (
+    session, DistroTreeRepo, LabControllerDistroTree, Provision, SSHPubKey, ProvisionFamily,
+    OSMajor, Arch, Key, Key_Value_String, OSMajorInstallOptions
+)
 from bkr.server.model.distrolibrary import DistroTreeImage, KernelType
 from bkr.server.model.types import ImageType
-from bkr.server.kickstart import template_env, generate_kickstart
-from bkr.server.jobs import Jobs
-from bkr.inttest import data_setup, get_server_base, with_transaction, Process
-from bkr.inttest.kickstart_helpers import create_rhel62, create_rhel62_server_x86_64, \
-    create_x86_64_automated, create_lab_controller, compare_expected, \
-    jinja_choice_loader, create_user
-
 
 _snippets_dir = pkg_resources.resource_filename('bkr.server', 'snippets')
 _http_server = pkg_resources.resource_filename('bkr.inttest', 'http_server.py')
@@ -103,34 +104,6 @@ class KickstartTest(unittest.TestCase):
             cls.system_armhfp = data_setup.create_system(arch=u'armhfp',
                 fqdn=u'test03.test-kickstart.invalid', status=u'Automated',
                 lab_controller=cls.lab_controller)
-
-            cls.rhel39 = data_setup.create_distro(name=u'RHEL3-U9',
-                osmajor=u'RedHatEnterpriseLinux3', osminor=u'9')
-            cls.rhel39_as_x86_64 = data_setup.create_distro_tree(
-                distro=cls.rhel39, variant=u'AS', arch=u'x86_64',
-                lab_controllers=[cls.lab_controller],
-                urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-3/U9/AS/x86_64/tree/',
-                      u'nfs://lab.test-kickstart.invalid:/distros/RHEL-3/U9/AS/x86_64/tree/'])
-            cls.rhel39_as_x86_64.repos[:] = [
-                DistroTreeRepo(repo_id=u'repo-AS-x86_64', repo_type=u'os',
-                    path=u'../repo-AS-x86_64'),
-                DistroTreeRepo(repo_id=u'repo-debug-AS-x86_64', repo_type=u'debug',
-                    path=u'../repo-debug-AS-x86_64'),
-                DistroTreeRepo(repo_id=u'repo-srpm-AS-x86_64', repo_type=u'source',
-                    path=u'../repo-srpm-AS-x86_64'),
-            ]
-
-            cls.rhel49 = data_setup.create_distro(name=u'RHEL4-U9',
-                osmajor=u'RedHatEnterpriseLinux4', osminor=u'9')
-            cls.rhel49_as_x86_64 = data_setup.create_distro_tree(
-                distro=cls.rhel49, variant=u'AS', arch=u'x86_64',
-                lab_controllers=[cls.lab_controller],
-                urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-4/U9/AS/x86_64/tree/',
-                      u'nfs://lab.test-kickstart.invalid:/distros/RHEL-4/U9/AS/x86_64/tree/'])
-            cls.rhel49_as_x86_64.repos[:] = [
-                DistroTreeRepo(repo_id=u'AS', repo_type=u'os',
-                    path=u'../repo-AS-x86_64'),
-            ]
 
             cls.rhel58server = data_setup.create_distro(name=u'RHEL5-Server-U8',
                 osmajor=u'RedHatEnterpriseLinuxServer5', osminor=u'8')
@@ -576,90 +549,6 @@ class KickstartTest(unittest.TestCase):
         data_setup.mark_job_complete(job, system=system,
                 virt=virt, lab_controller=self.lab_controller)
         return recipe
-
-    def test_rhel3_defaults(self):
-        recipe = self.provision_recipe('''
-            <job>
-                <whiteboard/>
-                <recipeSet>
-                    <recipe>
-                        <distroRequires>
-                            <distro_name op="=" value="RHEL3-U9" />
-                            <distro_variant op="=" value="AS" />
-                            <distro_arch op="=" value="x86_64" />
-                        </distroRequires>
-                        <hostRequires/>
-                        <task name="/distribution/check-install" />
-                        <task name="/distribution/reservesys" />
-                    </recipe>
-                </recipeSet>
-            </job>
-            ''', self.system)
-        compare_expected('RedHatEnterpriseLinux3-scheduler-defaults', recipe.id,
-                recipe.installation.rendered_kickstart.kickstart)
-
-    def test_rhel3_auth(self):
-        recipe = self.provision_recipe('''
-            <job>
-                <whiteboard/>
-                <recipeSet>
-                    <recipe ks_meta="auth='--enableshadow --enablemd5'">
-                        <distroRequires>
-                            <distro_name op="=" value="RHEL3-U9" />
-                            <distro_variant op="=" value="AS" />
-                            <distro_arch op="=" value="x86_64" />
-                        </distroRequires>
-                        <hostRequires/>
-                        <task name="/distribution/check-install" />
-                        <task name="/distribution/reservesys" />
-                    </recipe>
-                </recipeSet>
-            </job>
-            ''', self.system)
-        self.assertIn('\nauthconfig --enableshadow --enablemd5\n',
-                      recipe.installation.rendered_kickstart.kickstart)
-
-    def test_rhel4_defaults(self):
-        recipe = self.provision_recipe('''
-            <job>
-                <whiteboard/>
-                <recipeSet>
-                    <recipe>
-                        <distroRequires>
-                            <distro_name op="=" value="RHEL4-U9" />
-                            <distro_variant op="=" value="AS" />
-                            <distro_arch op="=" value="x86_64" />
-                        </distroRequires>
-                        <hostRequires/>
-                        <task name="/distribution/check-install" />
-                        <task name="/distribution/reservesys" />
-                    </recipe>
-                </recipeSet>
-            </job>
-            ''', self.system)
-        compare_expected('RedHatEnterpriseLinux4-scheduler-defaults', recipe.id,
-                recipe.installation.rendered_kickstart.kickstart)
-
-    def test_rhel4_auth(self):
-        recipe = self.provision_recipe('''
-            <job>
-                <whiteboard/>
-                <recipeSet>
-                    <recipe ks_meta="auth='--enableshadow --enablemd5'">
-                        <distroRequires>
-                            <distro_name op="=" value="RHEL4-U9" />
-                            <distro_variant op="=" value="AS" />
-                            <distro_arch op="=" value="x86_64" />
-                        </distroRequires>
-                        <hostRequires/>
-                        <task name="/distribution/check-install" />
-                        <task name="/distribution/reservesys" />
-                    </recipe>
-                </recipeSet>
-            </job>
-            ''', self.system)
-        self.assertIn('\nauthconfig --enableshadow --enablemd5\n',
-                     recipe.installation.rendered_kickstart.kickstart)
 
     def test_rhel5server_defaults(self):
         recipe = self.provision_recipe('''
@@ -3698,24 +3587,6 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
             </job>
             ''')
         self.assertIn('\npart /boot --size 250 --recommended --asprimary --fstype ext3\n',
-                recipe.installation.rendered_kickstart.kickstart)
-        recipe = self.provision_recipe('''
-            <job>
-                <whiteboard/>
-                <recipeSet>
-                    <recipe ks_meta="fstype=ext3">
-                        <distroRequires>
-                            <distro_name op="=" value="RHEL4-U9" />
-                            <distro_variant op="=" value="AS" />
-                            <distro_arch op="=" value="x86_64" />
-                        </distroRequires>
-                        <hostRequires/>
-                        <task name="/distribution/check-install" />
-                    </recipe>
-                </recipeSet>
-            </job>
-            ''')
-        self.assertIn('\npart /boot --size 200 --recommended --asprimary --fstype ext3\n',
                 recipe.installation.rendered_kickstart.kickstart)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=854229

@@ -70,65 +70,56 @@ def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
 
     # %end
     ks_meta['end'] = '%end'
-    if rhel in ('3', '4', '5'):
+    if rhel == '5':
         ks_meta['end'] = ''
     # key option for RHEL 5
     if rhel and int(rhel) == 5:
         ks_meta['has_key'] = True
     # autopart --type
     ks_meta['has_autopart_type'] = True
-    if rhel in ('3', '4', '5', '6') or \
+    if rhel in ('5', '6') or \
             (fedora and fedora != 'rawhide' and int(fedora) < 18):
         del ks_meta['has_autopart_type']
     # chrony
     ks_meta['has_chrony'] = True
-    if rhel in ('3', '4', '5', '6'):
+    if rhel in ('5', '6'):
         del ks_meta['has_chrony']
     # DHCP option 26
     ks_meta['has_dhcp_mtu_support'] = True
-    if rhel in ('3', '4'):
-        del ks_meta['has_dhcp_mtu_support']
     # GPT on BIOS
     ks_meta['has_gpt_bios_support'] = True
-    if rhel in ('3', '4', '5', '6'):
+    if rhel in ('5', '6'):
         del ks_meta['has_gpt_bios_support']
     # bootloader --leavebootorder
     ks_meta['has_leavebootorder'] = True
-    if rhel in ('3', '4', '5', '6') or \
+    if rhel in ('5', '6') or \
             (fedora and fedora != 'rawhide' and int(fedora) < 18):
         del ks_meta['has_leavebootorder']
     # repo --cost
     ks_meta['has_repo_cost'] = True
-    if rhel in ('3', '4', '5'):
+    if rhel == '5':
         del ks_meta['has_repo_cost']
     # reqpart
     ks_meta['has_reqpart'] = True
     if rhel == '7' and osminor in ('0', '1'): # added in RHEL7.2
         del ks_meta['has_reqpart']
-    if rhel in ('3', '4', '5', '6') or \
+    if rhel in ('5', '6') or \
             (fedora and fedora != 'rawhide' and int(fedora) < 23):
         del ks_meta['has_reqpart']
     # systemd vs. SysV init
     ks_meta['has_systemd'] = True
-    if rhel in ('3', '4', '5', '6') or \
+    if rhel in ('5', '6') or \
             (fedora and fedora != 'rawhide' and int(fedora) < 15):
         del ks_meta['has_systemd']
     # unsupported_hardware
     ks_meta['has_unsupported_hardware'] = True
-    if rhel in ('3', '4', '5'):
+    if rhel == '5':
         del ks_meta['has_unsupported_hardware']
-    # yum
-    if rhel == '3':
-        ks_meta['yum'] = 'yum-2.2.2-1.rhts.EL3.noarch.rpm'
-    elif rhel == '4':
-        ks_meta['yum'] = 'yum-2.2.2-1.rhts.EL4.noarch.rpm'
-    # extra options for 'yum install' invocations
-    if rhel in ('3', '4'):
-        ks_meta['yum_install_extra_opts'] = '-d 1'
+
     # mode
     if rhel == '6':
         ks_meta['mode'] = 'cmdline'
-    if rhel in ('4', '5'):
+    if rhel == '5':
         ks_meta['mode'] = ''
     # docker package name
     ks_meta['docker_package'] = 'docker'
@@ -137,8 +128,6 @@ def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
     # recommended boot partition size
     if rhel in ('5', '6'):
         ks_meta['boot_partition_size'] = 250
-    elif rhel in ('3', '4'):
-        ks_meta['boot_partition_size'] = 200
     # names of package groups containing conflicts
     if name in ('RedHatEnterpriseLinux', 'RedHatEnterpriseLinuxServer',
         'RedHatEnterpriseLinuxClient'):

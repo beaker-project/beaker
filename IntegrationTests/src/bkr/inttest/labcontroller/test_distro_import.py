@@ -51,29 +51,6 @@ class DistroImportTest(LabControllerTestCase):
         cls.distro_server.stop()
 
     def setUp(self):
-        self.i386_rhel4 = {u'arch': u'i386',
-                          u'arches': [],
-                          u'images': [{u'path': u'images/pxeboot/vmlinuz', u'type': u'kernel'},
-                                      {u'path': u'images/pxeboot/initrd.img', u'type': u'initrd'}],
-                          u'kernel_options': None,
-                          u'kernel_options_post': None,
-                          u'ks_meta': None,
-                          u'name': u'RHEL4-U9',
-                          u'osmajor': u'RedHatEnterpriseLinux4',
-                          u'osminor': u'9',
-                          u'repos': [{u'path': u'../repo-debug-AS-i386',
-                                      u'repoid': u'AS-debuginfo',
-                                      u'type': u'debug'},
-                                     {u'path': u'../repo-AS-i386',
-                                      u'repoid': u'AS',
-                                      u'type': u'variant'}],
-                          u'tree_build_time': 0.0,
-                          u'tags': [u'RELEASED'],
-                          u'urls': [u'nfs://fake.example.com:/nfs/RHEL-4/U9/AS/i386/tree/',
-                                    u'http://localhost:19998/RHEL-4/U9/AS/i386/tree/',
-                                    u'nfs+iso://fake.example.com:/nfs/RHEL-4/U9/AS/i386/ftp-isos/'],
-                          u'variant': u'AS'}
-
         self.x86_64_rhel5 = {u'osmajor': u'RedHatEnterpriseLinuxServer5',
                             u'tree_build_time': u'1352937955.19',
                             u'name': u'RHEL5.9-Server-20121114.2',
@@ -487,7 +464,7 @@ class DistroImportTest(LabControllerTestCase):
             u'name': u'RHEL-7.0-20130930.n.0',
             u'osmajor': u'RedHatEnterpriseLinux7',
             u'osminor': u'0',
-            u'repos': [{u'path': u'addons/HighAvailability', 
+            u'repos': [{u'path': u'addons/HighAvailability',
                         u'repoid': u'HighAvailability',
                         u'type': u'addon'},
                        {u'path': u'addons/LoadBalancer',
@@ -1245,12 +1222,6 @@ class DistroImportTest(LabControllerTestCase):
         tree['tree_build_time'] = 1366007531.817827
         self.assertEquals(tree, self.x86_64_rhel6_naked)
 
-    def test_rhel4_tree_import_compose_with_iso(self):
-        trees = self.dry_run_import_trees(
-            ['nfs://fake.example.com:/nfs/RHEL-4/U9/AS',
-            '%sRHEL-4/U9/AS/' % self.distro_url])
-        self.assertItemsEqual(trees, [self.i386_rhel4])
-
     def test_rhel5_tree_import_compose(self):
         trees = self.dry_run_import_trees(['%sRHEL5-Server/' % self.distro_url])
         self.assertItemsEqual(trees, [self.i386_rhel5, self.x86_64_rhel5])
@@ -1465,8 +1436,8 @@ class DistroImportTest(LabControllerTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1140995
     def test_incomplete_compose(self):
-        # We are importing a compose that is only selectively synced. Only 
-        # x86_64 Server should be imported, and missing add-on repos (SAP and 
+        # We are importing a compose that is only selectively synced. Only
+        # x86_64 Server should be imported, and missing add-on repos (SAP and
         # SAPHANA) should be skipped.
         trees = self.dry_run_import_trees(['%sRHEL-6.6-incomplete' % self.distro_url,
                 '--ignore-missing-tree-compose'])
@@ -1474,7 +1445,7 @@ class DistroImportTest(LabControllerTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1140999
     def test_tags_from_composeinfo(self):
-        # At least some RHEL6.6 composes have a label in .composeinfo but not 
+        # At least some RHEL6.6 composes have a label in .composeinfo but not
         # .treeinfo (whether intentionally or not).
         trees = self.dry_run_import_trees(['%sRHEL-6.6-incomplete' % self.distro_url,
                 '--ignore-missing-tree-compose'])
