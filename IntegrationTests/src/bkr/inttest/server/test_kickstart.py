@@ -589,7 +589,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -610,7 +610,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -631,7 +631,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -652,7 +652,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -672,7 +672,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -692,7 +692,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -717,7 +717,7 @@ class KickstartTest(unittest.TestCase):
                             <repo name="custom"
                             url="http://repos.fedorapeople.org/repos/beaker/server/RedHatEnterpriseLinuxServer5/"/>
                         </repos>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -746,7 +746,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -767,7 +767,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -788,7 +788,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -811,7 +811,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -842,7 +842,7 @@ class KickstartTest(unittest.TestCase):
                         <partitions>
                             <partition fs="ext4" name="home" size="5" />
                         </partitions>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -874,7 +874,7 @@ class KickstartTest(unittest.TestCase):
                             <repo name="custom"
                             url="http://repos.fedorapeople.org/repos/beaker/server/RedHatEnterpriseLinux6/"/>
                         </repos>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -898,7 +898,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="s390x" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -934,7 +934,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -956,7 +956,7 @@ class KickstartTest(unittest.TestCase):
                                 <distro_arch op="=" value="x86_64" />
                             </distroRequires>
                             <hostRequires/>
-                            <task name="/distribution/install" />
+                            <task name="/distribution/check-install" />
                             <task name="/distribution/reservesys" />
                         </guestrecipe>
                         <distroRequires>
@@ -964,7 +964,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -986,7 +986,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1009,7 +1009,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1030,7 +1030,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1052,7 +1052,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1079,7 +1079,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1105,7 +1105,7 @@ class KickstartTest(unittest.TestCase):
                             <repo name="custom"
                             url="http://repos.fedorapeople.org/repos/beaker/server/RedHatEnterpriseLinux7/"/>
                         </repos>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1128,7 +1128,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="s390x" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1161,7 +1161,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="s390x" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1183,7 +1183,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1204,7 +1204,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1231,7 +1231,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1262,7 +1262,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1289,7 +1289,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1309,7 +1309,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1333,7 +1333,7 @@ class KickstartTest(unittest.TestCase):
                             <repo name="custom"
                             url="http://repos.fedorapeople.org/repos/beaker/server/Fedora18/"/>
                         </repos>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1356,7 +1356,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1377,7 +1377,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1398,7 +1398,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1448,13 +1448,13 @@ class KickstartTest(unittest.TestCase):
                         <packages>
                           <package name="python-glanceclient" />
                         </packages>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
             </job>
             ''', self.system)
-        self.assertIn('%packages --ignoremissing\npython-glanceclient\n@desktop-platform-devel',
+        self.assertIn('%packages --ignoremissing\npython-glanceclient\nemacs\n',
                       recipe.installation.rendered_kickstart.kickstart)
         self.assertIn('python-glanceclient',
                       recipe.installation.rendered_kickstart.kickstart)
@@ -1473,7 +1473,7 @@ class KickstartTest(unittest.TestCase):
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1498,7 +1498,7 @@ class KickstartTest(unittest.TestCase):
                           <package name="python-glanceclient" />
                           <package name="-mariadb-galera-server" />
                         </packages>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1552,7 +1552,7 @@ python-glanceclient
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1588,7 +1588,7 @@ python-glanceclient
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1616,7 +1616,7 @@ python-glanceclient
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1643,7 +1643,7 @@ python-glanceclient
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1671,7 +1671,7 @@ python-glanceclient
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1697,7 +1697,7 @@ python-glanceclient
                             <distro_arch op="=" value="ppc64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1743,7 +1743,7 @@ python-glanceclient
                             <distro_arch op="=" value="ppc64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -1766,7 +1766,7 @@ python-glanceclient
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1789,7 +1789,7 @@ python-glanceclient
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1814,7 +1814,7 @@ python-glanceclient
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1839,7 +1839,7 @@ python-glanceclient
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1864,7 +1864,7 @@ python-glanceclient
                         <partitions>
                             <partition type="lvm" fs="btrfs" name="butter" size="25" />
                         </partitions>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1901,7 +1901,7 @@ logvol /butter --name=butter --vgname=TestVolume001 --size=25600 --fstype btrfs
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1936,7 +1936,7 @@ chmod go-w /root /root/.ssh /root/.ssh/authorized_keys
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1969,7 +1969,7 @@ chmod go-w /root /root/.ssh /root/.ssh/authorized_keys
                             <distro_arch op="=" value="s390x" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -1998,7 +1998,7 @@ chmod go-w /root /root/.ssh /root/.ssh/authorized_keys
 echo Hello World
 %end</ks_append>
                         </ks_appends>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -2036,7 +2036,7 @@ bootloader --location=mbr
 mysillypackage
 %end
                         ]]></kickstart>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -2097,7 +2097,7 @@ bootloader --location=mbr
 mysillypackage
 %end
                         ]]></kickstart>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -2217,7 +2217,7 @@ bootloader --location=mbr
 mysillypackage
 %end
                         ]]></kickstart>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -2276,7 +2276,7 @@ install
 mysillypackage
 %end
                         ]]></kickstart>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -2318,7 +2318,7 @@ install
 # tree url is {{ distro_tree.url_in_lab(lab_controller, required=True) }}
 # recipe id is {{ recipe.id }}
                         ]]></kickstart>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -2485,7 +2485,7 @@ install
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -2510,7 +2510,7 @@ install
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -2535,7 +2535,7 @@ install
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -2560,7 +2560,7 @@ install
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -2587,7 +2587,7 @@ install
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -2620,7 +2620,7 @@ install
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -2647,7 +2647,7 @@ install
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -2674,7 +2674,7 @@ install
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -2694,7 +2694,7 @@ install
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -2727,7 +2727,7 @@ sed -i -e '/\[updates\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora-up
                         <repos>
                             <repo name="custom" url="http://example.com/$releasever/"/>
                         </repos>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -2748,7 +2748,7 @@ sed -i -e '/\[updates\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora-up
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -2773,7 +2773,7 @@ sed -i -e '/\[updates\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora-up
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -2809,7 +2809,7 @@ sed -i -e '/\[updates\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora-up
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -2861,7 +2861,7 @@ sed -i -e '/\[updates\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora-up
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -2884,7 +2884,7 @@ sed -i -e '/\[updates\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora-up
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -2911,7 +2911,7 @@ sed -i -e '/\[updates\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora-up
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -2938,7 +2938,7 @@ part swap --recommended
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -2963,7 +2963,7 @@ part swap --recommended
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -2987,7 +2987,7 @@ part swap --recommended
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3012,7 +3012,7 @@ network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netma
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3038,7 +3038,7 @@ network --bootproto=dhcp --device=66:77:88:99:aa:bb
                             <distro_arch op="=" value="armhfp" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3061,7 +3061,7 @@ network --bootproto=dhcp --device=66:77:88:99:aa:bb
                             <distro_arch op="=" value="armhfp" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3087,7 +3087,7 @@ network --bootproto=dhcp --device=66:77:88:99:aa:bb
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3141,7 +3141,7 @@ network --bootproto=dhcp --device=66:77:88:99:aa:bb
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3196,7 +3196,7 @@ httpd
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3223,7 +3223,7 @@ done
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3249,7 +3249,7 @@ done
                             <distro_arch op="=" value="ia64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>''')
@@ -3276,7 +3276,7 @@ done
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3300,7 +3300,7 @@ done
                             <partition fs="btrfs" name="mnt/testarea1" size="10" type="part"/>
                             <partition fs="btrfs" name="mnt/testarea2" size="10" type="part"/>
                         </partitions>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -3343,7 +3343,7 @@ btrfs /mnt/testarea2 --label=mnt_testarea2 btrfs.mnt_testarea2
                             <partition fs="btrfs" name="mnt/testarea1" size="10" type="part"/>
                             <partition fs="btrfs" name="mnt/testarea2" size="10" type="part"/>
                         </partitions>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -3387,7 +3387,7 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
                         <partitions>
                             <partition fs="ext4" name="mnt" size="10" />
                         </partitions>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3410,7 +3410,7 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
                         <partitions>
                             <partition fs="ext4" name="mnt" size="10" />
                         </partitions>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3440,7 +3440,7 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
                         <partitions>
                             <partition fs="ext4" name="mnt" size="10" />
                         </partitions>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3465,7 +3465,7 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
                         <partitions>
                             <partition fs="ext4" name="mnt" size="10" />
                         </partitions>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3487,7 +3487,7 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
                         <partitions>
                             <partition fs="ext4" name="mnt" size="10" />
                         </partitions>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3513,7 +3513,7 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
                             <partitions>
                                 <partition fs="ext4" name="mnt" size="10" />
                             </partitions>
-                            <task name="/distribution/install" />
+                            <task name="/distribution/check-install" />
                         </recipe>
                     </recipeSet>
                 </job>
@@ -3536,7 +3536,7 @@ part /boot --recommended --asprimary
                             </distroRequires>
                             <hostRequires/>
                             <partitions/>
-                            <task name="/distribution/install" />
+                            <task name="/distribution/check-install" />
                         </recipe>
                     </recipeSet>
                 </job>
@@ -3564,7 +3564,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                         <partitions>
                             <partition fs="ext4" name="mnt" size="10" />
                         </partitions>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3586,7 +3586,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                         <partitions>
                             <partition fs="ext4" name="mnt" size="10" />
                         </partitions>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3610,7 +3610,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                             <distro_arch op="=" value="ppc64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3639,7 +3639,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3657,7 +3657,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3675,7 +3675,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3692,7 +3692,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3710,7 +3710,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3731,7 +3731,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3752,7 +3752,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -3776,14 +3776,14 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                                 <distro_arch op="=" value="ia64" />
                             </distroRequires>
                             <hostRequires/>
-                            <task name="/distribution/install" />
+                            <task name="/distribution/check-install" />
                         </guestrecipe>
                         <distroRequires>
                             <distro_name op="=" value="RHEL5-Server-U8" />
                             <distro_arch op="=" value="ia64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>''')
@@ -3804,7 +3804,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>''')
@@ -3823,7 +3823,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                             <distro_arch op="=" value="ia64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>''')
@@ -3845,7 +3845,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                         <partitions>
                             <partition fs="ext4" name="mnt" size="10" />
                         </partitions>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3865,7 +3865,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -3928,13 +3928,13 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                                 <distro_arch op="=" value="x86_64" />
                             </distroRequires>
                             <hostRequires/>
-                            <task name="/distribution/install" />
+                            <task name="/distribution/check-install" />
                         </guestrecipe>
                         <distroRequires>
                             <distro_name op="=" value="RHEL-6.2" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>''')
@@ -3953,7 +3953,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                             <distro_name op="=" value="Fedora-18" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>''', virt=True)
@@ -3976,13 +3976,13 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                                 <distro_arch op="=" value="x86_64" />
                             </distroRequires>
                             <hostRequires/>
-                            <task name="/distribution/install" />
+                            <task name="/distribution/check-install" />
                         </guestrecipe>
                         <distroRequires>
                             <distro_name op="=" value="RHEL-6.2" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>''')
@@ -4004,7 +4004,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                             <distro_name op="=" value="Fedora-18" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>''', virt=True)
@@ -4025,7 +4025,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -4045,7 +4045,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>
@@ -4088,7 +4088,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>''')
@@ -4107,7 +4107,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>''')
@@ -4126,7 +4126,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>''')
@@ -4146,7 +4146,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                        <distro_arch op="=" value="x86_64" />
                    </distroRequires>
                    <hostRequires/>
-                  <task name="/distribution/install" />
+                  <task name="/distribution/check-install" />
                 </recipe>
             </recipeSet>
         </job>
@@ -4195,7 +4195,7 @@ part raid.03 --size=20480 --ondisk=sdc
 volgroup bootvg --pesize=32768 pv.01
                             </ks_append>
                         </ks_appends>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                         <task name="/distribution/reservesys" />
                     </recipe>
                 </recipeSet>
@@ -4224,7 +4224,7 @@ volgroup bootvg --pesize=32768 pv.01
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
-                        <task name="/distribution/install" />
+                        <task name="/distribution/check-install" />
                     </recipe>
                 </recipeSet>
             </job>

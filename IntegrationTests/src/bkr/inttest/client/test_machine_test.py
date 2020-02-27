@@ -104,10 +104,8 @@ class MachineTestTest(ClientTestCase):
             for recipeset in new_job.recipesets:
                 tasks = recipeset.recipes[0].tasks
                 self.assertEqual(len(tasks), 3)
-                # First task will be /distribution/install or
-                # /distribution/check-install depending on the family
-                self.assertIn(tasks[0].name,
-                              ['/distribution/install', '/distribution/check-install'])
+                # First task will be /distribution/check-install
+                self.assertIn(tasks[0].name, '/distribution/check-install')
                 self.assertEqual(tasks[1].name, str(task.name))
                 self.assertEqual(tasks[2].name, u'/distribution/inventory')
 
@@ -116,9 +114,7 @@ class MachineTestTest(ClientTestCase):
         # options) each recipe should contain only the install checking task
         # and nothing more.
         with session.begin():
-            # This one will use /distribution/check-install
             data_setup.create_distro_tree(osmajor=u'Fedorarawhide')
-            # This one will use /distribution/install
             data_setup.create_distro_tree(osmajor=u'RedHatEnterpriseLinux7')
         out = run_client(['bkr', 'machine-test',
                           '--machine', self.system.fqdn,
@@ -135,4 +131,4 @@ class MachineTestTest(ClientTestCase):
             rhel7_recipe = new_job.recipesets[1].recipes[0]
             self.assertEqual(rhel7_recipe.installation.osmajor, u'RedHatEnterpriseLinux7')
             self.assertEqual(len(rhel7_recipe.tasks), 1)
-            self.assertEqual(rhel7_recipe.tasks[0].name, '/distribution/install')
+            self.assertEqual(rhel7_recipe.tasks[0].name, '/distribution/check-install')

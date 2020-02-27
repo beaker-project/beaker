@@ -45,9 +45,7 @@ class HarnessTest(ClientTestCase):
         # each recipe should contain only the install checking task
         # and nothing more.
         with session.begin():
-            # This one will use /distribution/check-install
             data_setup.create_distro_tree(osmajor=u'Fedorarawhide')
-            # This one will use /distribution/install
             data_setup.create_distro_tree(osmajor=u'RedHatEnterpriseLinux7')
         out = run_client(['bkr', 'harness-test'])
         self.assertIn("Submitted:", out)
@@ -56,12 +54,11 @@ class HarnessTest(ClientTestCase):
             # There will be one recipe per OS major that exists in the database,
             # which is potentially a large number left from earlier tests.
             # What we care about is that every recipe must have one task,
-            # either /distribution/check-install (default)
-            # or /distribution/install (on known, older distros).
+            # /distribution/check-install
             self.assertGreater(len(new_job.recipesets), 1)
             for recipe in new_job.all_recipes:
                 self.assertEqual(len(recipe.tasks), 1)
                 if recipe.installation.osmajor == 'Fedorarawhide':
                     self.assertEqual(recipe.tasks[0].name, '/distribution/check-install')
                 if recipe.installation.osmajor == 'RedHatEnterpriseLinux7':
-                    self.assertEqual(recipe.tasks[0].name, '/distribution/install')
+                    self.assertEqual(recipe.tasks[0].name, '/distribution/check-install')

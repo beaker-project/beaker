@@ -36,7 +36,7 @@ class CreateKickstartTest(DatabaseTestCase):
 
     def _create_recipe(self, system=None):
         with session.begin():
-            install_task = Task.by_name(u'/distribution/install')
+            install_task = Task.by_name(u'/distribution/check-install')
             reserve_task = Task.by_name(u'/distribution/reservesys')
             lc = create_lab_controller()
             rhel62_server_x86_64 = create_rhel62_server_x86_64(lab_controller=lc)
