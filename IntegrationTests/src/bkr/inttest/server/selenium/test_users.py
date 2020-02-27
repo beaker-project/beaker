@@ -652,12 +652,13 @@ class UserHTTPTest(DatabaseTestCase):
         # authentication problem. The user can always update their credentials,
         # so expect in case Beaker can not create a keystone session that the
         # trust has been deleted or invalidated somehow by other means.
+        user_password = 'givemeoneopenstack'
         with session.begin():
-            user = data_setup.create_user(password='asdf')
-            user.openstack_trust_id = 'frobfrab'
-        s = requests.Session()
-        requests_login(s)
-        response = s.delete(
+            user = data_setup.create_user(password=user_password)
+            user.openstack_trust_id = 'openstackisgreatwhenyoudonthavetouseit'
+        sess = requests.Session()
+        requests_login(sess, user, user_password)
+        response = sess.delete(
             get_server_base() + 'users/%s/keystone-trust' % user.user_name)
         self.assertEqual('', response.text)
         self.assertEqual(response.status_code, 204)
