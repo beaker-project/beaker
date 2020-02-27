@@ -586,9 +586,8 @@ def delete_keystone_trust(username):
     :param username: The user's username.
     """
     user = _get_user(username)
-    if not config.get('openstack.identity_api_url'):
-        raise BadRequest400("OpenStack Integration is not enabled")
-    if not user.can_edit_keystone_trust(identity.current.user):
+
+    if not user.can_edit(identity.current.user):
         raise Forbidden403('Cannot edit Keystone trust of user %s' % username)
     if not user.openstack_trust_id:
         raise BadRequest400('No Keystone trust created by user %s' % username)
@@ -598,6 +597,9 @@ def delete_keystone_trust(username):
     except ValueError as e:
         # If we can't create a VirtManager we presume that the trust has been
         # invalidated by different means.
+        log.debug(e.message)
+    except RuntimeError as e:
+        # Sanity check failed. Because OpenStack is not configured.
         log.debug(e.message)
     old_trust_id = user.openstack_trust_id
     user.openstack_trust_id = None
