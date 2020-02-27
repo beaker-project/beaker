@@ -207,3 +207,13 @@ Beaker 27.1
   | (Contributed by Martin Styk)
 * | :issue:`1778643`: Improved kernel panic detection.
   | (Contributed by Renan Rodrigo Barbosa)
+
+
+Beaker 27.2
+~~~~~~~~~~~
+* | :issue:`1807755`: Added support to remove OpenStack Keystone Trust even
+    when OpenStack integration is disabled.
+  | (Contributed by Martin Styk)
+* | :issue:`1793655`: Beaker-client is now using `distribution/check-install` task
+    for all OS distributions. This is a replacement for `distribution/install`.
+  | (Contributed by Martin Styk)
