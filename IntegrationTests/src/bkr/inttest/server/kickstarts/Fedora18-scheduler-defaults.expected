@@ -301,7 +301,7 @@ fi
 # fill the yum cache and redirect output to /dev/null
 # This speeds up yum because of a bug where it will update stdout too often.
 # http://lists.baseurl.org/pipermail/yum-devel/2011-December/008857.html
-$package_command check-update > /dev/null 2>&1 || true
+$package_command check-update -y > /dev/null 2>&1 || true
 if command -v dnf >/dev/null ; then
    package_command="dnf"
 else
