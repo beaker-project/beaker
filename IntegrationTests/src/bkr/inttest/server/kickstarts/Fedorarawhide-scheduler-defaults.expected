@@ -297,7 +297,7 @@ fi
 # fill the yum cache and redirect output to /dev/null
 # This speeds up yum because of a bug where it will update stdout too often.
 # http://lists.baseurl.org/pipermail/yum-devel/2011-December/008857.html
-$package_command check-update > /dev/null 2>&1 || true
+$package_command check-update -y > /dev/null 2>&1 || true
 cat <<"EOF" >/etc/profile.d/beaker-harness-env.sh
 export BEAKER_LAB_CONTROLLER_URL="http://lab.test-kickstart.invalid:8000/"
 export BEAKER_LAB_CONTROLLER=lab.test-kickstart.invalid
