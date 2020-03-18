@@ -217,3 +217,14 @@ Beaker 27.2
 * | :issue:`1793655`: Beaker-client is now using `distribution/check-install` task
     for all OS distributions. This is a replacement for `distribution/install`.
   | (Contributed by Martin Styk)
+
+
+Beaker 27.3
+~~~~~~~~~~~
+* | :issue:`1814761`: Updated default values for kickstart. This change is
+    necessary to enable provision on Fedora 32+.
+  | (Contributed by Martin Styk)
+* | :issue:`1814784`: Improved stability in beaker-proxy. Now, WSGI layer
+    of beaker-proxy is capable of closing all sockets imminently after
+    request is finished.
+  | (Contributed by Martin Styk)
