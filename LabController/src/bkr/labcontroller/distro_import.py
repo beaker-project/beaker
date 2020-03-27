@@ -1542,7 +1542,11 @@ class TreeInfoRHVH4(TreeInfoMixin, Importer):
         self.tree["kernel_options"] = kopts + " inst.stage2=%s" % self.parser.url
         img_rpm = self._find_image_update_rpm()
         ks_meta = self.tree.get("ks_meta") or ""
-        self.tree["ks_meta"] = ks_meta + " autopart_type=thinp liveimg=%s" % img_rpm
+
+        # RHVH assumes that installation is happening based on 'inst.ks' on kernel cmdline
+        ks_keyword = 'ks_keyword=inst.ks'
+        autopart_type = 'autopart_type=thinp liveimg={}'.format(img_rpm)
+        self.tree["ks_meta"] = "{} {} {}".format(ks_meta, autopart_type, ks_keyword)
 
     def _find_image_update_rpm(self):
         base = dnf.Base()
