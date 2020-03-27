@@ -1,0 +1,45 @@
+name: Review-checks
+
+on: [pull_request]
+
+jobs:
+  check-pylint:
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/beaker/beaker-lint
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Run Pylint
+      run: |
+        set -o pipefail
+        Misc/run-pylint.sh --reports=n --disable=W \
+        --extension-pkg-whitelist=lxml \
+        bkr.server bkr.labcontroller bkr.client bkr.common \
+        | tee pylint.out
+
+  check-docs:
+    runs-on: ubuntu-latest
+    container:
+      image: centos:7
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install utils
+      run: |
+        yum install -y git wget
+    - name: Fetch Beaker repository
+      run: |
+        wget https://beaker-project.org/yum/beaker-server-RedHatEnterpriseLinux.repo -P /etc/yum.repos.d/
+    - name: Install Beaker dependency from specfile
+      run: |
+        yum-builddep *.spec -y
+    - name: Build documentation
+      run: |
+        make -C documentation html SPHINXOPTS="-W"
+        mv documentation/_build/html /__w
+    - uses: actions/upload-artifact@v1
+      with:
+        name: beaker-docs
+        path: /home/runner/work/html
+
