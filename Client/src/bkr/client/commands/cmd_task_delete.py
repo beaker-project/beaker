@@ -9,7 +9,7 @@
 .. _bkr-task-delete:
 
 bkr task-delete: Delete tasks to Beaker's task library
-===================================================
+======================================================
 
 .. program:: bkr task-delete
 
