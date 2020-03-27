@@ -1,0 +1,45 @@
+[compose]
+date = 20200323
+id = RHVH-4.3-20200323.0
+label = RC-20200323.0
+respin = 0
+type = production
+
+[product]
+family = RHVH
+name = RHVH-4.3-20200323.0
+short = RHVH
+type = ga
+variants = RHVH
+version = 4.3
+
+[variant-RHVH]
+arches = x86_64
+id = RHVH
+name = RHVH
+type = variant
+uid = RHVH
+
+[variant-RHVH.x86_64]
+debug_dir = RHVH/x86_64/debug/tree
+debug_packages = RHVH/x86_64/debug/tree/Packages
+debug_repository = RHVH/x86_64/debug/tree
+debug_tree = RHVH/x86_64/debug/tree
+debuginfo = RHVH/x86_64/debug/tree
+iso_dir = RHVH/x86_64/iso
+isos = RHVH/x86_64/iso
+jigdo_dir = RHVH/x86_64/jigdo
+jigdos = RHVH/x86_64/jigdo
+os_dir = RHVH/x86_64/os
+os_tree = RHVH/x86_64/os
+packages = RHVH/x86_64/os/Packages
+repository = RHVH/x86_64/os
+source_dir = RHVH/source/tree
+source_iso_dir = RHVH/source/iso
+source_isos = RHVH/source/iso
+source_jigdo_dir = RHVH/source/jigdo
+source_jigdos = RHVH/source/jigdo
+source_packages = RHVH/source/tree/Packages
+source_repository = RHVH/source/tree
+source_tree = RHVH/source/tree
+

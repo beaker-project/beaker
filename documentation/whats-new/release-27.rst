@@ -228,3 +228,21 @@ Beaker 27.3
     of beaker-proxy is capable of closing all sockets imminently after
     request is finished.
   | (Contributed by Martin Styk)
+
+Beaker 27.4
+~~~~~~~~~~~
+* | :issue:`1816102`: New command for beaker-client introduced.
+    Beaker-client is providing the way how to remove a task from task
+    library based on the name. This feature is limited to administrators.
+    You can execute as following `bkr task-remove <name>`.
+  | (Contributed by Martin Styk)
+* | :issue:`1795917`:  Added support to use different variable for kickstart
+    on kernel cmdline. Now user can define new `ks_meta` with name
+    `ks_keyword`.
+  | (Contributed by John Villalovos)
+* | :issue:`1818070`: Now, distribution RHVH is imported by default with
+    additional `ks_meta` variable `ks_keyword='inst.ks'`. This mitigates
+    problems with an older version of RHVH where `ks` do not trigger
+    the installation process in RHVH, instead of that, it is considered
+    an upgrade.
+  | (Contributed by Martin Styk)

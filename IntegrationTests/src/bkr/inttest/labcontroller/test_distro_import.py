@@ -9,6 +9,7 @@ import os
 import subprocess
 import json
 import pkg_resources
+import urlparse
 from copy import copy, deepcopy
 from bkr.inttest import Process
 from bkr.inttest.labcontroller import LabControllerTestCase
@@ -1161,6 +1162,48 @@ class DistroImportTest(LabControllerTestCase):
             u'variant': u'BaseOS',
         }
 
+        self.x86_64_rhvh43 = {
+            u"arch": u"x86_64",
+            u"arches": [],
+            u"images": [
+                {
+                    u"path": u"images/pxeboot/vmlinuz",
+                    u"type": u"kernel"
+                },
+                {
+                    u"path": u"images/pxeboot/initrd.img",
+                    u"type": u"initrd"
+                }
+            ],
+            u"kernel_options": u" inst.stage2={}".format(urlparse.urljoin(
+                self.distro_url, u'RHVH4/RHVH-4.3-20200323.0/compose/RHVH/x86_64/os')),
+            u"kernel_options_post": None,
+            u"ks_meta": u" autopart_type=thinp liveimg=Packages/redhat-virtualization-host-image-update-1.0.0-1.noarch.rpm ks_keyword=inst.ks",
+            u"name": u"RHVH-4.3-20200323.0",
+            u"osmajor": u"RHVH4",
+            u"osminor": u"3",
+            u"repos": [
+                {
+                    u"path": u"../../../RHVH/x86_64/os",
+                    u"repoid": u"RHVH",
+                    u"type": u"variant"
+                },
+                {
+                    u"path": u"../../../RHVH/x86_64/debug/tree",
+                    u"repoid": u"RHVH-debuginfo",
+                    u"type": u"debug"
+                }
+            ],
+            u"tags": [
+                u"RC-20200323.0"
+            ],
+            u"tree_build_time": u"1584961599",
+            u"urls": [
+                u"{}".format(urlparse.urljoin(self.distro_url, u'RHVH4/RHVH-4.3-20200323.0/compose/RHVH/x86_64/os/'))
+            ],
+            u"variant": u"RHVH"
+        }
+
     def _run_import(self, import_args):
         p = subprocess.Popen(import_args,
                              stdout=subprocess.PIPE,
@@ -1486,3 +1529,8 @@ class DistroImportTest(LabControllerTestCase):
     def test_rhel8_partner_import(self):
         trees = self.dry_run_import_trees(['%sRHEL8Alpha/Partners/RHEL-8.0-20180531.2/compose' % self.distro_url])
         self.assertItemsEqual(trees, [self.x86_64_rhel8_partner])
+
+    def test_rhvh43_import(self):
+        trees = self.dry_run_import_trees(['{}'.format(urlparse.urljoin(self.distro_url,
+                                                                        'RHVH4/RHVH-4.3-20200323.0/compose'))])
+        self.assertItemsEqual(trees, [self.x86_64_rhvh43])

@@ -2645,7 +2645,8 @@ class Recipe(TaskBase, ActivityMixin):
             if 'no_default_harness_repo' not in install_options.ks_meta \
                     and not self.harness_repo():
                 raise ValueError('Failed to find repo for harness')
-        if 'ks' in install_options.kernel_options:
+        ks_keyword = install_options.ks_meta.get('ks_keyword', 'ks')
+        if ks_keyword in install_options.kernel_options:
             # Use it as is
             rendered_kickstart = None
         elif self.kickstart:
@@ -2705,7 +2706,7 @@ class Recipe(TaskBase, ActivityMixin):
                                                     system=getattr(self.resource, 'system', None),
                                                     user=self.recipeset.job.owner,
                                                     recipe=self, kickstart=kickstart)
-            install_options.kernel_options['ks'] = rendered_kickstart.link
+            install_options.kernel_options[ks_keyword] = rendered_kickstart.link
         else:
             ks_appends = [ks_append.ks_append for ks_append in self.ks_appends]
             rendered_kickstart = generate_kickstart(install_options=install_options,
@@ -2713,7 +2714,7 @@ class Recipe(TaskBase, ActivityMixin):
                                                     system=getattr(self.resource, 'system', None),
                                                     user=self.recipeset.job.owner,
                                                     recipe=self, ks_appends=ks_appends)
-            install_options.kernel_options['ks'] = rendered_kickstart.link
+            install_options.kernel_options[ks_keyword] = rendered_kickstart.link
 
         self.installation.kernel_options = install_options.kernel_options_str
         self.installation.rendered_kickstart = rendered_kickstart

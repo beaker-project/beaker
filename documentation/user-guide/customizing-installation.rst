@@ -103,11 +103,18 @@ The following kernel options are treated specially by Beaker:
 
 .. _kickstart-metadata:
 
-Kickstart metadata
-~~~~~~~~~~~~~~~~~~
+Kickstart metadata (ks_meta)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The following variables are supported. In many cases, these variables 
-correspond to the similarly-named kickstart option.
+The following variables are supported and can be selected by placing them in
+the ``ks_meta`` attribute in the ``recipe`` element. In many cases, these
+variables correspond to the similarly-named kickstart option.
+
+For example in the job XML::
+
+    ...
+    <recipe kernel_options="" kernel_options_post="" ks_meta="harness=restraint hwclock_is_utc" role="None" whiteboard="Lab Controller">
+    ...
 
 ``auth=<authentication configuration options>``
     Authentication configuration to use. For example,
@@ -276,6 +283,16 @@ correspond to the similarly-named kickstart option.
 
 ``keyboard=<layout>``
     Keyboard layout to use. Default is ``us``.
+
+``ks_keyword``
+    Change the normal kickstart kernel command line keyword from 'ks' to user
+    specified value. This can be useful for instance if wanting to install an
+    operating system like Debian. Could do ``ks_keyword=preseed`` and then the
+    kickstart file will be generated but on kernel command it would be present
+    as ``preseed=http://example.com/kickstart/18`` as an example. A custom
+    preseed template will need to be created and put in
+    ``/etc/beaker/kickstarts/``.  For example if doing a Debian install the
+    file ``/etc/beaker/kickstarts/Debian`` should be created.
 
 ``lang=<localeid>``
     Locale to use. Default is ``en_US.UTF-8``.
