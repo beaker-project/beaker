@@ -1,0 +1,58 @@
+[checksums]
+LiveOS/squashfs.img = sha256:c3ded74c6e0c2a1e073b4cf0944f309994793d94a2b6caffbb875c81081ee6ae
+images/boot.iso = sha256:2bb03f86c4e3a8ae1024f99e190bf8a3a0e842da4181889fa2c9f0944a3221ef
+images/product.img = sha256:0d37d61234659569203efeadc971b9af6b6c6c06405bd8f2e944473a40ffa5cc
+images/pxeboot/initrd.img = sha256:7b74dac8699c04e7d247b28d1bdfda4df279d81d03dfd1ad9bf56ef5b023c7f8
+images/pxeboot/vmlinuz = sha256:ca7fddf874856b3c99afd671e0aea30acc1f3fe095ca75b1dc432273381210a0
+
+[general]
+; WARNING.0 = This section provides compatibility with pre-productmd treeinfos.
+; WARNING.1 = Read productmd documentation for details about new format.
+arch = x86_64
+family = RHVH
+name = RHVH 4.3
+packagedir = Packages
+platforms = x86_64,xen
+repository = .
+timestamp = 1584961599
+variant = RHVH
+variants = RHVH
+version = 4.3
+
+[header]
+type = productmd.treeinfo
+version = 1.2
+
+[images-x86_64]
+boot.iso = images/boot.iso
+initrd = images/pxeboot/initrd.img
+kernel = images/pxeboot/vmlinuz
+product.img = images/product.img
+
+[images-xen]
+initrd = images/pxeboot/initrd.img
+kernel = images/pxeboot/vmlinuz
+product.img = images/product.img
+
+[release]
+name = RHVH
+short = RHVH
+version = 4.3
+
+[stage2]
+mainimage = LiveOS/squashfs.img
+
+[tree]
+arch = x86_64
+build_timestamp = 1584961599
+platforms = x86_64,xen
+variants = RHVH
+
+[variant-RHVH]
+id = RHVH
+name = RHVH
+packages = Packages
+repository = .
+type = variant
+uid = RHVH
+
