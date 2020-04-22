@@ -1,0 +1,75 @@
+12:13:57 Not asking for VNC because of an automated install
+12:13:57 Not asking for VNC because text mode was explicitly asked for in kickstart
+Starting automated install....
+Generating updated storage configuration
+
+An unknown error has occured, look at the /tmp/anaconda-tb* file(s) for more details
+
+===============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  File "/usr/lib64/python3.6/site-packages/pyanaconda/storage/autopart.py", line 519, in do_autopart
+    grow_lvm(storage)
+  File "/usr/lib64/python3.6/site-packages/pyanaconda/kickstart.py", line 435, in execute
+    autopart.do_autopart(storage, ksdata, min_luks_entropy=MIN_CREATE_ENTROPY)
+  File "/usr/lib64/python3.6/site-packages/pyanaconda/kickstart.py", line 2855, in doKickstartStorage
+    ksdata.autopart.execute(storage, ksdata, instClass)
+  File "/usr/lib64/python3.6/site-packages/pyanaconda/ui/tui/spokes/storage.py", line 451, in execute
+    doKickstartStorage(self.storage, self.data, self.instclass)
+  File "/usr/lib64/python3.6/site-packages/pyanaconda/ui/tui/hubs/summary.py", line 74, in setup
+    spoke.execute()
+  File "/usr/lib64/python3.6/site-packages/pyanaconda/ui/tui/__init__.py", line 208, in setup
+    should_schedule = obj.setup(self.ENVIRONMENT)
+  File "/sbin/anaconda", line 815, in <module>
+    anaconda._intf.setup(ksdata)
+ValueError: not enough free space in volume group
+
+
+
+
+
+
+
+What do you want to do now?
+1) Report Bug
+2) Debug
+
+
+
+
+
+3) Run shell
+
+
+
+
+
+
+4) Quit
+
+Please make your choice from above: [-- MARK -- Tue Apr 21 13:05:00 2020]
+[-- MARK -- Tue Apr 21 13:10:00 2020]
