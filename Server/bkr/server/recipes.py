@@ -240,6 +240,21 @@ class Recipes(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
+    def install_fail(self, recipe_id=None):
+        """
+        Records the fail of a recipe's installation.
+        """
+        try:
+            recipe = Recipe.by_id(recipe_id)
+        except InvalidRequestError:
+            raise BX(_("Invalid Recipe ID {}".format(recipe_id)))  # noqa: F821
+        if not recipe.installation:
+            raise BX(_("Recipe {} not provisioned yet".format(recipe_id)))  # noqa: F821
+
+        return recipe.abort('Installation failed')
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
     def postinstall_done(self, recipe_id=None):
         """
         Report completion of postinstallation

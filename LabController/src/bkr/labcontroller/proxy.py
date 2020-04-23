@@ -629,6 +629,11 @@ class Proxy(ProxyHelper):
         logger.debug("install_done recipe_id=%s fqdn=%s", recipe_id, fqdn)
         return self.hub.recipes.install_done(recipe_id, fqdn)
 
+    def install_fail(self, recipe_id=None):
+        _debug_id = "(unspecified recipe)" if recipe_id is None else recipe_id
+        logger.debug("install_fail for R:%s", _debug_id)
+        return self.hub.recipes.install_fail(recipe_id)
+
     def postinstall_done(self, recipe_id=None):
         logger.debug("postinstall_done recipe_id=%s", recipe_id)
         return self.hub.recipes.postinstall_done(recipe_id)

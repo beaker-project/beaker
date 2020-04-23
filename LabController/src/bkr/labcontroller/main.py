@@ -69,6 +69,7 @@ class WSGIApplication(object):
             Rule('/postinstall_done/<recipe_id>',
                     endpoint=(self.proxy, 'postinstall_done')),
             Rule('/postreboot/<recipe_id>', endpoint=(self.proxy, 'postreboot')),
+            Rule('/install_fail/<recipe_id>/', endpoint=(self.proxy, 'install_fail')),
             # harness API:
             Rule('/recipes/<recipe_id>/', methods=['GET'],
                     endpoint=(self.proxy_http, 'get_recipe')),
