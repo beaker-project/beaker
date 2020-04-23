@@ -1,0 +1,8 @@
+{% if has_onerror is defined and recipe %}
+%onerror
+set -x
+{% snippet 'fetch_wrapper' %}
+fetch - http://{{ lab_controller.fqdn }}:8000/install_fail/{{ recipe.id }}
+sleep 10
+{{ end }}
+{% endif %}
