@@ -13,7 +13,7 @@ import copy
 from base64 import b64encode
 import xmlrpclib
 import lxml.etree, lxml.html
-import urlparse
+from urlparse import urljoin
 import requests
 import time
 from nose.plugins.skip import SkipTest
@@ -688,6 +688,38 @@ class InstallDoneTest(LabControllerTestCase):
             session.expire_all()
             self.assertIsNotNone(self.recipe.installation.install_finished)
             self.assertEquals(self.recipe.resource.fqdn, None)
+
+
+class InstallFailTest(LabControllerTestCase):
+    def setUp(self):
+        with session.begin():
+            self.recipe = data_setup.create_recipe(num_tasks=2)
+            data_setup.create_job_for_recipes([self.recipe])
+            data_setup.mark_recipe_installing(self.recipe)
+
+    def test_install_fail(self):
+        s = xmlrpclib.Server(self.get_proxy_url())
+        s.install_fail(self.recipe.id)
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.recipe.tasks[0].status, TaskStatus.aborted)
+            self.assertEquals(self.recipe.tasks[1].status, TaskStatus.aborted)
+
+    def test_install_fail_get(self):
+        response = requests.get(
+            reduce(urljoin,
+                   [self.get_proxy_url(),
+                    'install_fail/',
+                    '{}'.format(self.recipe.id)]
+                   )
+        )
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.recipe.tasks[0].status, TaskStatus.aborted)
+            self.assertEquals(self.recipe.tasks[0].results[-1].log, u'Installation failed')
+            self.assertEquals(self.recipe.tasks[1].status, TaskStatus.aborted)
+            self.assertEquals(self.recipe.tasks[1].results[-1].log, u'Installation failed')
 
 class PostrebootTest(LabControllerTestCase):
 
