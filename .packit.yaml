@@ -8,6 +8,10 @@ synced_files:
     - beaker.spec
     - .packit.yaml
 
+notifications:
+  pull_request:
+    successful_build: false
+
 jobs:
 - job: copr_build
   trigger: pull_request
