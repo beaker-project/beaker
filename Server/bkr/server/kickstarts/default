@@ -109,6 +109,7 @@ chrony
 {% snippet 'system_post' %}
 %end
 
+{% snippet 'onerror' %}
 {{ ks_appends|join('\n') }}
 {% snippet 'postinstall_done' %}
 {% snippet 'post_s390_reboot' %}
