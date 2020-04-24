@@ -216,6 +216,11 @@ For example in the job XML::
     tree under the :guilabel:`Repos` tab on the distro tree page.
     For example disable_debug_repos.
 
+``disable_onerror``
+    Don't add the ``%onerror`` section to the kickstart. By default the section
+    is added for RHEL 7 and newer. It handles the installation failure reporting
+    it to Beaker and aborting the recipe. This option disables this functionality.
+
 ``ethdevices=<module>[,<module>...]``
     Comma-separated list of network modules to be loaded during installation.
 
