@@ -1,4 +1,4 @@
-{% if has_onerror is defined and recipe %}
+{% if disable_onerror is undefined and has_onerror is defined and recipe %}
 %onerror
 set -x
 {% snippet 'fetch_wrapper' %}
