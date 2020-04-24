@@ -4146,3 +4146,23 @@ volgroup bootvg --pesize=32768 pv.01
         ks = recipe.installation.rendered_kickstart.kickstart
         self.assertIn("The default Beaker harness repository is not included, because you set 'no_default_harness_repo' via ks_meta", ks)
         self.assertNotIn('[beaker-harness]', ks)
+
+    def test_rhel7_disable_onerror(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="disable_onerror">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/check-install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        ks = recipe.installation.rendered_kickstart.kickstart
+        self.assertNotIn('%onerror', ks)
