@@ -154,10 +154,13 @@ def clear_authentication():
         del flask.g._beaker_proxied_by_user
 
 def update_response(response):
+    # visit.timeout (from TG) is in minutes, max_age is in seconds
+    max_age = int(config.get('visit.timeout')) * 60
     if hasattr(flask.g, '_beaker_validated_user'):
-        response.set_cookie(_token_cookie_name, _generate_token())
+        response.set_cookie(_token_cookie_name, _generate_token(),
+                            max_age=max_age)
     else:
-        response.set_cookie(_token_cookie_name, 'deleted')
+        response.set_cookie(_token_cookie_name, 'deleted', max_age=max_age)
     return response
 
 # Mimics the identity.current interface (SqlAlchemyIdentity) from TurboGears:
