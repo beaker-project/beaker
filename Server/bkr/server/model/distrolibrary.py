@@ -50,7 +50,9 @@ def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
                         'RedHatGlusterStorage3'):
         rhel = '6'
     if osmajor_name in ('RHVH4',):
-        rhel = '7'
+        # Due to great semver RHVH4 changed underlying operating system
+        # in minor version - RHVH4.4+ => EL8
+        rhel = '7' if int(osminor) <= 3 else '8'
     if name == 'Fedora':
         fedora = version
 
