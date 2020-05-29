@@ -85,6 +85,12 @@ Options
 
    Add variables to use in kickstart templates
 
+.. option:: --preserve-install-options
+
+   Do not overwrite the *'Install Options' (Kickstart Metadata, Kernel Options,
+   & Kernel Options Post)* already stored for the distro. This option can not be
+   used with any of --kopts, --kopts-post, or --ks-meta
+
 .. option:: --buildtime <buildtime>
 
    Specify build time
