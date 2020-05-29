@@ -1522,6 +1522,34 @@ class DistroImportTest(LabControllerTestCase):
         trees = self.dry_run_import_trees(['%sRHEL8Alpha/RHT/8.0-Alpha/' % self.distro_url])
         self.assertItemsEqual(trees, [self.x86_64_rhel8])
 
+    def test_preserve_install_options(self):
+        trees = self.dry_run_import_trees([
+            '--preserve-install-options',
+            '%sRHEL8Alpha/RHT/8.0-Alpha/' % self.distro_url])
+        for key in (u'kernel_options', u'kernel_options_post', u'ks_meta'):
+            del self.x86_64_rhel8[key]
+        # Verify that we do not have any of our Install Option values in the dictionary
+        self.assertItemsEqual(trees, [self.x86_64_rhel8])
+
+    def test_preserve_install_options_with_install_opt_fail(self):
+        # import the tree with --preserve-install-options and one of --kopt,
+        # --kopts-post, or --ks-meta. This should fail.
+        for opt_name, key_name in (
+             ('--kopts', u'kernel_options'),
+             ('--kopts-post', u'kernel_options_post'),
+             ('--ks-meta', u'ks_meta')
+        ):
+            try:
+                self.dry_run_import_trees([
+                    '--preserve-install-options',
+                    opt_name, 'a_kernel_option'
+                    '%sRHEL8Alpha/RHT/8.0-Alpha/' % self.distro_url])
+                self.fail('Must fail or die')
+            except TreeImportError as e:
+                self.assertIn('--preserve-install-options can not be used with any of: '
+                              '--kopt, --kopts-post, or --ks-meta',
+                              e.stderr_output, msg=e.stderr_output)
+
     def test_rhel8_unified_partner_import(self):
         trees = self.dry_run_import_trees(['%sRHEL8Alpha/Unified/RHEL-8.0-20180531.2/compose' % self.distro_url])
         self.assertItemsEqual(trees, [self.x86_64_rhel8_unified_partner_compose])

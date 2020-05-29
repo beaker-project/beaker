@@ -916,9 +916,10 @@ class TreeInfoMixin(object):
         # Add install images
         self.tree['images'] = self.get_images()
 
-        self.tree['kernel_options'] = self.options.kopts
-        self.tree['kernel_options_post'] = self.options.kopts_post
-        self.tree['ks_meta'] = self.options.ks_meta
+        if not self.options.preserve_install_options:
+            self.tree['kernel_options'] = self.options.kopts
+            self.tree['kernel_options_post'] = self.options.kopts_post
+            self.tree['ks_meta'] = self.options.ks_meta
         nfs_url = _get_url_by_scheme(urls, 'nfs')
         if nfs_url:
             try:
@@ -1898,9 +1899,10 @@ class NakedTree(Importer):
 
         urls = [os.path.join(url,'') for url in urls]
         self.tree['urls'] = urls
-        self.tree['kernel_options'] = options.kopts
-        self.tree['kernel_options_post'] = options.kopts_post
-        self.tree['ks_meta'] = options.ks_meta
+        if not options.preserve_install_options:
+            self.tree['kernel_options'] = options.kopts
+            self.tree['kernel_options_post'] = options.kopts_post
+            self.tree['ks_meta'] = options.ks_meta
         family  = options.family
         version = options.version
         self.tree['name'] = options.name
@@ -2033,6 +2035,14 @@ def main():
     parser.add_option("--ks-meta",
                       default=None,
                       help="add variables to use in kickstart templates")
+    parser.add_option("--preserve-install-options",
+                      action='store_true',
+                      default=False,
+                      help=("Do not overwrite the 'Install Options' (Kickstart "
+                            "Metadata, Kernel Options, & Kernel Options Post) already "
+                            "stored for the distro. This option can not be used with "
+                            "any of --kopts, --kopts-post, or --ks-meta")
+                      )
     parser.add_option("--buildtime",
                       default=None,
                       type=float,
@@ -2058,7 +2068,7 @@ def main():
                       default="http://localhost:8000",
                       help="Specify which lab controller to import to. Defaults to http://localhost:8000")
     parser.add_option_group(group)
-                      
+
     (opts, urls) = parser.parse_args()
 
     logging.getLogger().setLevel(logging.DEBUG)
@@ -2069,6 +2079,12 @@ def main():
     else:
         log_level = logging.INFO
     log_to_stream(sys.stderr, level=log_level)
+
+    if opts.preserve_install_options:
+        if any([opts.kopts, opts.kopts_post, opts.ks_meta]):
+            logging.critical("--preserve-install-options can not be used with any of: "
+                             "--kopt, --kopts-post, or --ks-meta")
+            sys.exit(4)
 
     if not urls:
         logging.critical('No location(s) specified!')
