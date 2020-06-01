@@ -42,9 +42,8 @@ def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
     # Some convenience variables to make the name-based checks simpler:
     name, version = split_osmajor_name_version(osmajor_name)
     rhel, fedora = False, False
-    if name in ('RedHatEnterpriseLinux', 'RedHatEnterpriseLinuxServer',
-            'RedHatEnterpriseLinuxClient', 'RedHatEnterpriseLinuxServerGrid',
-            'RedHatEnterpriseLinuxAlternateArchitectures', 'CentOS'):
+    rhel_like = ['RedHatEnterpriseLinux', 'CentOS', 'OracleLinux']
+    if any(distro in name for distro in rhel_like):
         rhel = version
     if osmajor_name in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3',
                         'RedHatGlusterStorage3'):
