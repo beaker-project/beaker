@@ -108,8 +108,9 @@ def check_all_trees(ignore_errors=False,
     else:
         rdistro_trees = distro_trees
 
-    # if all distro_trees are expired then something is probably wrong.
-    if len(distro_trees) != len(rdistro_trees):
+    # If all distro_trees are expired then something is wrong
+    # Unless there is intention to remove all distro_trees
+    if len(distro_trees) != len(rdistro_trees) or remove_all:
         for distro_tree in rdistro_trees:
             if dry_run:
                 print('Distro marked for remove %s:%d' % (distro_tree['distro_name'],
