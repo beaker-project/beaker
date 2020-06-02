@@ -269,17 +269,17 @@ setenv BEAKER_RECIPE_WHITEBOARD ''
 EOF
 cat << EOF > /etc/profile.d/rh-env.sh
 export LAB_CONTROLLER=lab.test-kickstart.invalid
-export DUMPSERVER=
+#export DUMPSERVER=
 #export NFSSERVERS="RHEL3,fqdn:path RHEL4,fqdn:path RHEL5,fqdn:path RHEL6,fqdn:path NETAPP,fqdn:path SOLARIS,fqdn:path"
-export LOOKASIDE=
-export BUILDURL=
+#export LOOKASIDE=
+#export BUILDURL=
 EOF
 cat << EOF > /etc/profile.d/rh-env.csh
 setenv LAB_CONTROLLER lab.test-kickstart.invalid
-setenv DUMPSERVER 
+#setenv DUMPSERVER
 #setenv NFSSERVERS "RHEL3,fqdn:path RHEL4,fqdn:path RHEL5,fqdn:path RHEL6,fqdn:path NETAPP,fqdn:path SOLARIS,fqdn:path"
-setenv LOOKASIDE 
-setenv BUILDURL 
+#setenv LOOKASIDE
+#setenv BUILDURL
 EOF
 # no snippet data for RedHatEnterpriseLinux6_post
 # no snippet data for RedHatEnterpriseLinux_post
