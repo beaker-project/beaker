@@ -597,8 +597,8 @@ def provision_scheduled_recipeset(recipeset_id):
             recipe.waiting()
             recipe.provision()
         except Exception as e:
-            log.exception("Failed to provision recipeid %s", recipe.id)
             session.rollback()
+            log.exception("Failed to provision recipeid %s", recipe.id)
             session.begin()
             recipe.recipeset.abort(u"Failed to provision recipeid %s, %s" % (recipe.id, e))
             return
