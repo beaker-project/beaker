@@ -4168,7 +4168,8 @@ volgroup bootvg --pesize=32768 pv.01
         self.assertNotIn('%onerror', ks)
 
     def test_kickstart_overflow(self):
-        self.provision_recipe('''
+        with self.assertRaises(ValueError):
+            self.provision_recipe('''
             <job>
                 <whiteboard/>
                 <recipeSet>

@@ -14,6 +14,7 @@ import jinja2.nodes
 import jinja2.sandbox
 import netaddr
 from flask import redirect, abort, Response
+from sqlalchemy.exc import DataError
 from sqlalchemy.orm.exc import NoResultFound
 
 from bkr.server.app import app
@@ -337,7 +338,10 @@ def generate_kickstart(install_options, distro_tree, system, user,
 
     rendered_kickstart = RenderedKickstart(kickstart=result)
     session.add(rendered_kickstart)
-    session.flush()  # so that it has an id
+    try:
+        session.flush()  # so that it has an id
+    except DataError:
+        raise ValueError('Kickstart generation failed. Please report this issue.')
     return rendered_kickstart
 
 
