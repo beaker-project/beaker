@@ -4166,3 +4166,24 @@ volgroup bootvg --pesize=32768 pv.01
             ''', self.system)
         ks = recipe.installation.rendered_kickstart.kickstart
         self.assertNotIn('%onerror', ks)
+
+    def test_kickstart_overflow(self):
+        self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="">
+                        <ks_appends>
+                            {0}
+                        </ks_appends>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/check-install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            '''.format('<ks_append>{0}</ks_append>'.format('A' * 64000) * 300))
