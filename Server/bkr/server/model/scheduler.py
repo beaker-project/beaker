@@ -2649,41 +2649,24 @@ class Recipe(TaskBase, ActivityMixin):
         if ks_keyword in install_options.kernel_options:
             # Use it as is
             rendered_kickstart = None
-        elif self.kickstart:
-            # add in cobbler packages snippet...
-            packages_slot = 0
-            nopackages = True
-            for line in self.kickstart.split('\n'):
-                # Add the length of line + newline
-                packages_slot += len(line) + 1
-                if line.find('%packages') == 0:
-                    nopackages = False
-                    break
-            beforepackages = self.kickstart[:packages_slot - 1]
-            afterpackages = self.kickstart[packages_slot:]
-            # if no %packages section then add it
-            if nopackages:
-                beforepackages = "%s\n%%packages --ignoremissing" % beforepackages
-                afterpackages = "{{ end }}\n%s" % afterpackages
-            # Fill in basic requirements for RHTS
-            if self.installation.osmajor == u'RedHatEnterpriseLinux3':
-                kicktemplate = """
-%(beforepackages)s
-{%% snippet 'rhts_packages' %%}
-%(afterpackages)s
-
-%%pre
-(
-{%% snippet 'rhts_pre' %%}
-) 2>&1 | /usr/bin/tee /dev/console
-
-%%post
-(
-{%% snippet 'rhts_post' %%}
-) 2>&1 | /usr/bin/tee /dev/console
-{%% snippet 'postinstall_done' %%}
-                """
-            else:
+        else:
+            if self.kickstart:
+                # add in cobbler packages snippet...
+                packages_slot = 0
+                nopackages = True
+                for line in self.kickstart.split('\n'):
+                    # Add the length of line + newline
+                    packages_slot += len(line) + 1
+                    if line.find('%packages') == 0:
+                        nopackages = False
+                        break
+                beforepackages = self.kickstart[:packages_slot - 1]
+                afterpackages = self.kickstart[packages_slot:]
+                # if no %packages section then add it
+                if nopackages:
+                    beforepackages = "%s\n%%packages --ignoremissing" % beforepackages
+                    afterpackages = "{{ end }}\n%s" % afterpackages
+                # Fill in basic requirements for RHTS
                 kicktemplate = """
 %(beforepackages)s
 {%% snippet 'rhts_packages' %%}
@@ -2698,26 +2681,26 @@ class Recipe(TaskBase, ActivityMixin):
 {{ end }}
 {%% snippet 'postinstall_done' %%}
                 """
-            kickstart = kicktemplate % dict(
-                beforepackages=beforepackages,
-                afterpackages=afterpackages)
+                kickstart = kicktemplate % dict(
+                    beforepackages=beforepackages,
+                    afterpackages=afterpackages)
+                ks_appends = None
+
+            else:
+                kickstart = None
+                ks_appends = [ks_append.ks_append for ks_append in self.ks_appends]
             rendered_kickstart = generate_kickstart(install_options=install_options,
                                                     distro_tree=self.distro_tree,
                                                     system=getattr(self.resource, 'system', None),
                                                     user=self.recipeset.job.owner,
-                                                    recipe=self, kickstart=kickstart)
-            install_options.kernel_options[ks_keyword] = rendered_kickstart.link
-        else:
-            ks_appends = [ks_append.ks_append for ks_append in self.ks_appends]
-            rendered_kickstart = generate_kickstart(install_options=install_options,
-                                                    distro_tree=self.distro_tree,
-                                                    system=getattr(self.resource, 'system', None),
-                                                    user=self.recipeset.job.owner,
-                                                    recipe=self, ks_appends=ks_appends)
+                                                    recipe=self,
+                                                    ks_appends=ks_appends,
+                                                    kickstart=kickstart)
             install_options.kernel_options[ks_keyword] = rendered_kickstart.link
 
         self.installation.kernel_options = install_options.kernel_options_str
         self.installation.rendered_kickstart = rendered_kickstart
+
         if isinstance(self.resource, SystemResource):
             self.installation.system = self.resource.system
             self.resource.system.configure_netboot(installation=self.installation,
