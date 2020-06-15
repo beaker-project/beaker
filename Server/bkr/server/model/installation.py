@@ -121,7 +121,7 @@ class RenderedKickstart(DeclarativeMappedObject):
     id = Column(Integer, primary_key=True)
     # Either kickstart or url should be populated -- if url is present,
     # it means fetch the kickstart from there instead
-    kickstart = Column(UnicodeText)
+    kickstart = Column(UnicodeText(length=2**18-1))
     url = Column(UnicodeText)
 
     def __repr__(self):
