@@ -12,6 +12,7 @@ from turbogears import config
 from turbogears.database import metadata
 from bkr.common import __version__
 from bkr.server.tools.init import upgrade_db, downgrade_db, check_db, doit, init_db
+from sqlalchemy import UnicodeText
 from sqlalchemy.orm import create_session
 from sqlalchemy.sql import func
 from bkr.server.model import (
@@ -472,7 +473,8 @@ class MigrationTest(unittest.TestCase):
             self.assertTrue(actual.type._compare_type_affinity(expected.type),
                             'Actual type %r should be equivalent to expected type %r'
                             % (actual.type, expected.type))
-        if hasattr(expected.type, 'length'):
+
+        if hasattr(expected.type, 'length') and not isinstance(expected.type, UnicodeText):
             self.assertEquals(actual.type.length, expected.type.length,
                               '%r has wrong length' % actual)
         if hasattr(expected.type, 'precision'):
