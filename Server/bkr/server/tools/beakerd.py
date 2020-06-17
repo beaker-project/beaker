@@ -597,6 +597,8 @@ def provision_scheduled_recipeset(recipeset_id):
             recipe.waiting()
             recipe.provision()
         except Exception as e:
+            # Make sure that rollback is first instruction here before touching ORM again
+            # Otherwise, ORM will raise another exception
             session.rollback()
             log.exception("Failed to provision recipeid %s", recipe.id)
             session.begin()
