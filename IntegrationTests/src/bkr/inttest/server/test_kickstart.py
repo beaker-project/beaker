@@ -4188,3 +4188,24 @@ volgroup bootvg --pesize=32768 pv.01
                 </recipeSet>
             </job>
             '''.format('<ks_append>{0}</ks_append>'.format('A' * 64000) * 300))
+
+    def test_multiple_harness_ks_meta(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard>Define harness ks_meta twice</whiteboard>
+                <recipeSet>
+                    <recipe ks_meta="harness='great-restraint' harness='dead-beah'">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/check-install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        ks = recipe.installation.rendered_kickstart.kickstart
+        ks_lines = ks.splitlines()
+        self.assert_('$package_command -y install great-restraint dead-beah' in ks_lines, ks)
