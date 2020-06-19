@@ -29,6 +29,7 @@ from werkzeug.wsgi import wrap_file
 from bkr.common.hub import HubProxy
 from bkr.labcontroller.config import get_conf
 from bkr.labcontroller.log_storage import LogStorage
+import utils
 try:
     #pylint: disable=E0611
     from subprocess import check_output
@@ -187,9 +188,10 @@ class ConsoleLogHelper(object):
     """
     blocksize = 65536
 
-    def __init__(self, watchdog, proxy, panic):
+    def __init__(self, watchdog, proxy, panic, logfile_name=None):
         self.watchdog = watchdog
         self.proxy = proxy
+        self.logfile_name = logfile_name if logfile_name is not None else "console.log"
         self.strip_ansi = re.compile("(\033\[[0-9;\?]*[ABCDHfsnuJKmhr])")
         ascii_control_chars = map(chr, range(0, 32) + [127])
         keep_chars = '\t\n'
@@ -232,7 +234,7 @@ class ConsoleLogHelper(object):
         try:
             log_file = self.proxy.log_storage.recipe(
                     str(self.watchdog['recipe_id']),
-                    'console.log', create=self.where == 0)
+                    self.logfile_name, create=(self.where == 0))
             with log_file:
                 log_file.update_chunk(block, self.where)
         except (OSError, IOError), e:
@@ -242,11 +244,48 @@ class ConsoleLogHelper(object):
                 raise
 
 
+class ConsoleWatchLogFiles(object):
+    """ Monitor a directory for log files and upload them """
+    def __init__(self, logdir, system_name, watchdog, proxy, panic):
+        self.logdir = os.path.abspath(logdir)
+        self.system_name = system_name
+        self.watchdog = watchdog
+        self.proxy = proxy
+        self.panic = panic
+
+        self.logfiles = {}
+        for filename, logfile_name in utils.get_console_files(
+                console_logs_directory=self.logdir, system_name=self.system_name):
+            logger.info('Watching console log file %s for recipe %s',
+                        filename, self.watchdog['recipe_id'])
+            self.logfiles[filename] = ConsoleWatchFile(
+                log=filename, watchdog=self.watchdog, proxy=self.proxy,
+                panic=self.panic, logfile_name=logfile_name)
+
+    def update(self):
+        # Check for any new log files
+        for filename, logfile_name in utils.get_console_files(
+                console_logs_directory=self.logdir, system_name=self.system_name):
+            if filename not in self.logfiles:
+                logger.info('Watching console log file %s for recipe %s',
+                            filename, self.watchdog['recipe_id'])
+                self.logfiles[filename] = ConsoleWatchFile(
+                    log=filename, watchdog=self.watchdog, proxy=self.proxy,
+                    panic=self.panic, logfile_name=logfile_name)
+
+        # Update all of our log files. If any had updated data return True
+        updated = False
+        for console_log in self.logfiles.values():
+            updated |= console_log.update()
+        return updated
+
+
 class ConsoleWatchFile(ConsoleLogHelper):
 
-    def __init__(self, log, watchdog, proxy, panic):
+    def __init__(self, log, watchdog, proxy, panic, logfile_name=None):
         self.log = log
-        super(ConsoleWatchFile, self).__init__(watchdog, proxy, panic)
+        super(ConsoleWatchFile, self).__init__(
+            watchdog, proxy, panic, logfile_name=logfile_name)
 
     def update(self):
         """
@@ -496,10 +535,10 @@ class Monitor(ProxyHelper):
             self.console_watch = ConsoleWatchVirt(
                     self.watchdog, self, self.conf["PANIC_REGEX"])
         else:
-            console_path = '%s/%s' % (self.conf['CONSOLE_LOGS'], self.watchdog['system'])
-            logger.info('Watching console log file %s for recipe %s', console_path, watchdog['recipe_id'])
-            self.console_watch = ConsoleWatchFile(console_path,
-                    self.watchdog, self, self.conf["PANIC_REGEX"])
+            self.console_watch = ConsoleWatchLogFiles(
+                logdir=self.conf['CONSOLE_LOGS'],
+                system_name=self.watchdog['system'], watchdog=self.watchdog,
+                proxy=self, panic=self.conf["PANIC_REGEX"])
 
     def run(self):
         """ check the logs for new data to upload/or cp

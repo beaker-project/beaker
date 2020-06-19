@@ -352,6 +352,8 @@ gpgcheck=0
                  'variant': dt.variant,
                  'images' : [(unicode(image.image_type), image.path) for image in dt.images],
                  'kernel_options': dt.kernel_options or u'',
+                 'kernel_options_post': dt.kernel_options_post or u'',
+                 'ks_meta': dt.ks_meta or u'',
                  'available': [(lca.lab_controller.fqdn, lca.url) for lca in dt.lab_controller_assocs],
                 } for dt in query]
 

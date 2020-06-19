@@ -20,5 +20,6 @@ jobs:
       - epel-8-x86_64
       - fedora-30-x86_64
       - fedora-31-x86_64
+      - fedora-32-x86_64
       - fedora-rawhide-x86_64
       - centos-stream-x86_64
