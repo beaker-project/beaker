@@ -1013,3 +1013,27 @@ class ProxyHTTP(object):
             else:
                 raise
         return self._log_index(req, logs)
+
+    def put_power(self, req, fqdn):
+        """
+        Controls power for the system with the given fully-qualified domain
+        name.
+
+        :param req: request
+        :param fqdn: fully-qualified domain name of the system to be power controlled
+        """
+        if req.json:
+            payload = dict(req.json)
+        elif req.form:
+            payload = req.form.to_dict()
+        else:
+            raise UnsupportedMediaType
+
+        if 'action' not in payload:
+            raise BadRequest('Missing "action" parameter')
+        action = payload['action']
+        if action not in ['on', 'off', 'reboot']:
+            raise BadRequest('Unknown action {}'.format(action))
+
+        self.hub.systems.power(action, fqdn, False, True)
+        return Response(status=204)
