@@ -15,7 +15,7 @@ For this, Beaker has built-in capabilities for detecting hardware lock ups (see
 :ref:`watchdog-timer-capability`) or installation failures (see
 :ref:`job-monitoring`). Jenkins - formerly called Hudson - was originally
 intended for testing (Java based) applications. Its capabilities to provision
-hardware for testing are limited, since the main assumption is that all slave
+hardware for testing are limited, since the main assumption is that all attached
 nodes are already provisioned, with a working operating system.
 
 OpenStack
