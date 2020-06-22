@@ -100,6 +100,7 @@ class WSGIApplication(object):
             Rule('/recipes/<recipe_id>/tasks/<task_id>/results/<result_id>/logs/<path:path>',
                     methods=['GET', 'PUT'],
                     endpoint=(self.proxy_http, 'do_result_log')),
+            Rule('/power/<fqdn>/', methods=['PUT'], endpoint=(self.proxy_http, 'put_power'))
         ])
 
     @LimitedRequest.application
