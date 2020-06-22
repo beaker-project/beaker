@@ -769,6 +769,47 @@ class PowerTest(LabControllerTestCase):
             session.expire_all()
             self.assertEqual(self.target_system.command_queue[0].action, 'off')
 
+    def test_put_power(self):
+        power_url = '%spower/%s/' % (self.get_proxy_url(), self.target_system.fqdn)
+        response = requests.put(power_url, data=dict(action='reboot'))
+        self.assertEquals(response.status_code, 204)
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(self.target_system.command_queue[0].action, 'on')
+            self.assertEqual(self.target_system.command_queue[1].action, 'off')
+
+        response = requests.put(power_url, data=dict(action='on'))
+        self.assertEquals(response.status_code, 204)
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(self.target_system.command_queue[0].action, 'on')
+            self.assertEqual(self.target_system.command_queue[1].action, 'on')
+            self.assertEqual(self.target_system.command_queue[2].action, 'off')
+
+    def test_put_power_error(self):
+        power_url = '%spower/%s/' % (self.get_proxy_url(), self.target_system.fqdn)
+        response = requests.put(power_url, data=dict(action='nonexistentcase'))
+        self.assertEquals(response.status_code, 400)
+
+    def test_put_power_json(self):
+        power_url = '%spower/%s/' % (self.get_proxy_url(), self.target_system.fqdn)
+        response = requests.put(power_url, json=dict(action='off'))
+        self.assertEquals(response.status_code, 204, response.text)
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(self.target_system.command_queue[0].action, 'off')
+
+    def test_put_power_missing_action(self):
+        power_url = '%spower/%s/' % (self.get_proxy_url(), self.target_system.fqdn)
+        response = requests.put(power_url, data=dict(status='off'))
+        self.assertEquals(response.status_code, 400, response.text)
+
+    def test_put_power_unsupported(self):
+        power_url = '%spower/%s/' % (self.get_proxy_url(), self.target_system.fqdn)
+        response = requests.put(power_url)
+        self.assertEquals(response.status_code, 415, response.text)
+
+
 class LogUploadTestRestartProxy(LabControllerTestCase):
 
     @classmethod
