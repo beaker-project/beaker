@@ -208,3 +208,16 @@ the request body must be given as HTML form data
    an Atom feed (:mimetype:`application/atom+xml`). Use the 
    :mailheader:`Accept` header to request a particular representation. The 
    default is HTML.
+
+.. http:put:: /power/(fqdn)/
+
+   Commands Beaker to perform given power action on system defined by FQDN.
+   The request must be :mimetype:`application/x-www-form-urlencoded` or
+   :mimetype:`application/json`.
+
+   :form action:
+        Must be *on*, *off*, or *reboot*.
+   :status 204:
+        The command was successfully executed.
+   :status 400:
+        Bad parameters were given.
