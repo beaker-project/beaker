@@ -4,7 +4,8 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from bkr.server.model import session, SystemStatus, SystemPermission, Hypervisor
+from bkr.server.model import (session, SystemStatus, SystemPermission,
+                              Hypervisor, PowerType, ReleaseAction)
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError, ClientTestCase
 
@@ -198,3 +199,110 @@ class ModifySystemTest(ClientTestCase):
             self.fail('Must raise')
         except ClientError as e:
             self.assertIn('Specify one or more system FQDNs to modify', e.stderr_output)
+
+    def test_change_power_type(self):
+        with session.begin():
+            system = data_setup.create_system(hypervisor=None)
+        # set to 'apc_snmp_then_etherwake'
+        run_client(['bkr', 'system-modify',
+                    '--power-type=apc_snmp_then_etherwake', system.fqdn])
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals(system.power.power_type,
+                              PowerType.by_name(u'apc_snmp_then_etherwake'))
+        # set back to ilo
+        run_client(['bkr', 'system-modify', '--power-type=ilo', system.fqdn])
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals(system.power.power_type, PowerType.by_name(u'ilo'))
+
+    def test_change_power_address(self):
+        with session.begin():
+            system = data_setup.create_system(hypervisor=None)
+        # set to 'dummyaddress'
+        run_client(['bkr', 'system-modify', '--power-address=dummyaddress',
+                    system.fqdn])
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals(system.power.power_address, u'dummyaddress')
+        # set back to default value
+        address = u'%s_power_address' % system.fqdn
+        run_client(['bkr', 'system-modify', '--power-address=%s' % address,
+                    system.fqdn])
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals(system.power.power_address, address)
+
+    def test_change_power_user(self):
+        with session.begin():
+            system = data_setup.create_system(hypervisor=None)
+        # set to 'dummyuser'
+        run_client(['bkr', 'system-modify', '--power-user=dummyuser', system.fqdn])
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals(system.power.power_user, u'dummyuser')
+        # set back to default value
+        user = u'%s_power_user' % system.fqdn
+        run_client(['bkr', 'system-modify', '--power-user=%s' % user, system.fqdn])
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals(system.power.power_user, user)
+
+    def test_change_power_password(self):
+        with session.begin():
+            system = data_setup.create_system(hypervisor=None)
+        # set to 'dummypassword'
+        run_client(['bkr', 'system-modify', '--power-password=dummypassword',
+                    system.fqdn])
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals(system.power.power_passwd, u'dummypassword')
+        # set back to default value
+        password = u'%s_power_password' % system.fqdn
+        run_client(['bkr', 'system-modify', '--power-password=%s' % password,
+                    system.fqdn])
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals(system.power.power_passwd, password)
+
+    def test_change_power_id(self):
+        with session.begin():
+            system = data_setup.create_system(hypervisor=None)
+        # set to 'dummyvm'
+        run_client(['bkr', 'system-modify', '--power-id=dummyvm', system.fqdn])
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals(system.power.power_id, u'dummyvm')
+        # set to 'vm-dummy'
+        run_client(['bkr', 'system-modify', '--power-id=vm-dummy', system.fqdn])
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals(system.power.power_id, u'vm-dummy')
+
+    def test_change_power_quiescent(self):
+        with session.begin():
+            system = data_setup.create_system(hypervisor=None)
+        # set to 10
+        run_client(['bkr', 'system-modify', '--power-quiescent-period=10', system.fqdn])
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals(system.power.power_quiescent_period, 10)
+        # set to 5
+        run_client(['bkr', 'system-modify', '--power-quiescent-period=5', system.fqdn])
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals(system.power.power_quiescent_period, 5)
+
+    def test_change_release_action(self):
+        with session.begin():
+            system = data_setup.create_system(hypervisor=None)
+        # set to 'LeaveOn'
+        run_client(['bkr', 'system-modify', '--release-action=LeaveOn', system.fqdn])
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals(system.release_action, ReleaseAction.leave_on)
+        # set to 'PowerOff'
+        run_client(['bkr', 'system-modify', '--release-action=PowerOff', system.fqdn])
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals(system.release_action, ReleaseAction.power_off)
