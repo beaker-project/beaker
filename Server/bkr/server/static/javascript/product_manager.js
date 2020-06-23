@@ -1,14 +1,14 @@
 ProductManager = function () {
     this.field_type = {}
     this.controllers = {
-                        'slave' : function(t) { return function(x,y,z) { t.RecipeSetChanged(x,y,z) } }, 
-                        'master' : function (t) { return function(x,y,z) { t.ChangeAll(x,y,z) } } 
+                        'secondary' : function(t) { return function(x,y,z) { t.RecipeSetChanged(x,y,z) } },
+                        'primary' : function (t) { return function(x,y,z) { t.ChangeAll(x,y,z) } }
                        }
     this.my_regex = /^.+?(\d{1,})$/
 
 }
 
-ProductManager.prototype = new MasterSlave() 
+ProductManager.prototype = new PrimarySecondary()
 
 ProductManager.prototype.RecipeSetChanged = function(new_product_id,recipeset_id,callback) { 
     var params = {"tg_format" : "json",
