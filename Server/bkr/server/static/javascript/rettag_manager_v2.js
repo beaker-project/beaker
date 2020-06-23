@@ -1,14 +1,14 @@
 RetentionTagManager = function () {
     this.field_type = {}
     this.controllers = {
-                        'slave' : function(t) { return function(x,y,z) { t.RecipeSetChanged(x,y,z) } }, 
-                        'master' : function (t) { return function(x,y,z) { t.ChangeAll(x,y,z) } } 
+                        'secondary' : function(t) { return function(x,y,z) { t.RecipeSetChanged(x,y,z) } },
+                        'primary' : function (t) { return function(x,y,z) { t.ChangeAll(x,y,z) } }
                        }
     this.my_regex = /^.+?(\d{1,})$/
 
 }
 
-RetentionTagManager.prototype = new MasterSlave() 
+RetentionTagManager.prototype = new PrimarySecondary()
 
 RetentionTagManager.prototype.RecipeSetChanged = function(new_retentiontag_id,recipeset_id,callback) { 
     var params = {"tg_format" : "json",

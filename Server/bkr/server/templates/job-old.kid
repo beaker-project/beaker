@@ -4,7 +4,7 @@
 
 <head>
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
-    <script type="text/javascript" src="${tg.url('/static/javascript/master_slave_v2.js')}"></script>
+    <script type="text/javascript" src="${tg.url('/static/javascript/primary_secondary.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/priority_manager_v4.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/rettag_manager_v2.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/jquery.timers-1.2.js')}"></script>
