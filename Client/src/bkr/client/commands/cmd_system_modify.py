@@ -56,6 +56,43 @@ Options
    access policy. This must be specified only once, and is mutually
    exclusive with :option:`--pool-policy`.
 
+.. option:: --location <location>
+
+   Physical location of the system.
+
+.. option:: --power-type <power-type>
+
+   Remote power control type. This value must be a valid power type configured
+   by the Beaker administrator (or one of the Beaker defaults).
+
+.. option:: --power-address <power-address>
+
+   Address passed to the power control script.
+
+.. option:: --power-user <power-user>
+
+   Username passed to the power control script.
+
+.. option:: --power-password <power-password>
+
+   Password passed to the power control script.
+
+.. option:: --power-id <power-id>
+
+   Unique identifier passed to the power control script. The meaning of the
+   power ID depends on which power type is selected. Typically this field
+   identifies a particular plug, socket, port, or virtual guest name.
+
+.. option:: --power-quiescent-period <seconds>
+
+   Quiescent period for power control. Beaker will delay at least this
+   long between consecutive power commands.
+
+.. option:: --release-action <release-action>
+
+   Action to take whenever a reservation for this system is returned:
+   ``PowerOff``, ``LeaveOn``, ``ReProvision``.
+
 Common :program:`bkr` options are described in the :ref:`Options
 <common-options>` section of :manpage:`bkr(1)`.
 
@@ -107,6 +144,24 @@ class System_Modify(BeakerCommand):
         self.parser.add_option('--use-custom-policy', action='store_true', default=None,
                                help="Change active access policy to the "
                                     "system's custom access policy")
+        self.parser.add_option('--location',
+                               help='Physical location of the system')
+        self.parser.add_option('--power-type', metavar='TYPE',
+                               help='Remote power control type')
+        self.parser.add_option('--power-address', metavar='ADDRESS',
+                               help='Address passed to the power control script')
+        self.parser.add_option('--power-user', metavar='USERNAME',
+                               help='Username passed to the power control script')
+        self.parser.add_option('--power-password', metavar='PASSWORD',
+                               help='Password passed to the power control script')
+        self.parser.add_option('--power-id',
+                               help='Unique identifier passed to the power control script')
+        self.parser.add_option('--power-quiescent-period', metavar='SECONDS',
+                               help='Quiescent period for power control')
+        self.parser.add_option('--release-action', type='choice',
+                               choices=['PowerOff', 'LeaveOn', 'ReProvision'],
+                               help='Action to take whenever a reservation for this system is '
+                                    'returned')
 
     def run(self, *args, **kwargs):
         owner = kwargs.pop('owner')
@@ -115,14 +170,9 @@ class System_Modify(BeakerCommand):
         pool = kwargs.get('pool_policy')
         custom_policy = kwargs.get('use_custom_policy')
 
-        self.set_hub(**kwargs)
-
         if not args:
             self.parser.error('Specify one or more system FQDNs to modify')
 
-        if not any(option is not None for option in
-                   [owner, condition, host_hypervisor, pool, custom_policy]):
-            self.parser.error('At least one option is required, specifying what to change')
         if pool and custom_policy:
             self.parser.error('Only one of --pool-policy or'
                               ' --use-custom-policy must be specified')
@@ -139,6 +189,19 @@ class System_Modify(BeakerCommand):
             system_attr['active_access_policy'] = {'pool_name': pool}
         if custom_policy:
             system_attr['active_access_policy'] = {'custom': True}
+
+        attrs = ['location', 'power_type', 'power_address', 'power_user',
+                 'power_password', 'power_id', 'power_quiescent_period',
+                 'release_action']
+        for attr in attrs:
+            value = kwargs.pop(attr, None)
+            if value is not None:
+                system_attr[attr] = value
+
+        if not system_attr:
+            self.parser.error('At least one option is required, specifying what to change')
+
+        self.set_hub(**kwargs)
 
         requests_session = self.requests_session()
         for fqdn in args:
