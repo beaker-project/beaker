@@ -2313,8 +2313,10 @@ class Recipe(TaskBase, ActivityMixin):
         except ValueError:
             hrs = etree.Element('hostRequires')
 
-        # If no system_type is specified then add defaults
-        if not hrs.findall('.//system_type') and not hrs.get('force'):
+        # If no system_type or system/type is not specified then add default value
+        if (not hrs.findall('.//system_type')
+                and not hrs.findall('.//system/type')
+                and not hrs.get('force')):
             system_type = etree.Element('system_type')
             system_type.set('value', unicode(self.systemtype))
             hrs.append(system_type)
