@@ -1900,6 +1900,22 @@ class RecipeTest(DatabaseTestCase):
                     u'</and>'
                 u'</hostRequires>')
 
+        # Make sure system_type is not added when
+        # system/type is already defined in hostRequires
+        recipe_system_type = data_setup.create_recipe()
+        recipe_st_host_requires = (
+            u'<hostRequires>'
+            u'<and>'
+            u'<system>'
+            u'<type op="=" value="Resource"/>'
+            u'</system>'
+            u'</and>'
+            u'</hostRequires>'
+        )
+        recipe_system_type.host_requires = recipe_st_host_requires
+
+        self.assertEquals(recipe_system_type.host_requires, recipe_st_host_requires)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1240809
     def test_get_all_logs(self):
         job = data_setup.create_completed_job(server_log=True)
