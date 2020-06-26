@@ -7,7 +7,7 @@ database, Beaker requires a multiple terabyte disk storage system.
 
 Your Beaker server should have:
 
--  Red Hat Enterprise Linux 7.7+ or latest Fedora operating system.
+-  Red Hat Enterprise Linux 7.8 or higher.
 
 -  200 or more gigabytes hard disk space.
 
