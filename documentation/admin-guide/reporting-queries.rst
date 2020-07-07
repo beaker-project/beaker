@@ -40,7 +40,6 @@ must then examine the detailed schema upgrade notes for that release and
 ensure the reporting tool's queries are updated as necessary. 
 
 Suggestions for additional supported queries are welcome, and may be filed
-as enhancement requests for the `Beaker community project`_ in Red Hat's
-Bugzilla instance. 
+as enhancement requests for the `Beaker community project`_ in GitHub.
 
-.. _Beaker community project: https://bugzilla.redhat.com/enter_bug.cgi?product=Beaker
+.. _Beaker community project: https://github.com/beaker-project/beaker/issues/

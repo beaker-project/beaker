@@ -160,7 +160,7 @@ from bkr.server.reports import Reports
               </a>
               <ul class="dropdown-menu" id="help-menu">
                 <li><a href="${tg.config('beaker.documentation_link')}">Documentation</a></li>
-                <li><a href="${tg.config('beaker.bz_create_link')}">Report a Bug</a></li>
+                <li><a href="${tg.config('beaker.issue_create_link')}">Report a Bug</a></li>
               </ul>
             </li>
         </ul>

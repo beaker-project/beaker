@@ -68,9 +68,8 @@ You can also ask your question by posting it to our `beaker-devel
 <https://lists.fedorahosted.org/archives/list/beaker-devel@lists.fedorahosted.org/>`_
 mailing list.
 
-If you've found a bug in Beaker, please report it in `Red Hat Bugzilla 
-<https://bugzilla.redhat.com/enter_bug.cgi?product=Beaker>`__ against the 
-Beaker product.
+If you've found a bug in Beaker, please report it in `GitHub project
+<https://github.com/beaker-project/beaker/issues>`__.
 
 Presentations about Beaker
 ==========================
