@@ -21,4 +21,4 @@ class TestHelp(WebDriverTestCase):
         b.find_element_by_xpath("//ul[@id='help-menu']//a[text()='Documentation' \
                                 and @href='http://beaker-project.org/docs/']")
         b.find_element_by_xpath("//ul[@id='help-menu']//a[text()='Report a Bug' \
-                                and @href='https://bugzilla.redhat.com/enter_bug.cgi?product=Beaker']")
+                                and @href='https://github.com/beaker-project/beaker/issues/']")
