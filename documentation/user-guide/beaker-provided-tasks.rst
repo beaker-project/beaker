@@ -4,8 +4,7 @@ Tasks provided with Beaker
 Besides the custom tasks which Beaker users would write for a specific
 testing scenario, there are a number of tasks which are distributed
 and maintained along with Beaker. Among these,
-the ``/distribution/check-install``, ``/distribution/install``, and
-``/distribution/reservesys`` tasks are
+the ``/distribution/check-install`` and ``/distribution/reservesys`` tasks are
 essential for Beaker's operation. The ``/distribution/inventory`` task is not
 essential for Beaker's operation, but it is required for accurate
 functioning of Beaker's ability to schedule jobs on test systems
@@ -24,20 +23,6 @@ so that it is run immediately after the system has been provisioned.
 
 This task collects and reports various information about the installed system
 which may be useful in debugging any problems with the installer or the distro.
-
-/distribution/install
-=====================
-
-This task is deprecated. Use ``/distribution/check-install`` instead.
-
-This is the original implementation of the installation checking task, but its
-name has proved confusing, and it carried a very large (and unnecessary) set of
-package requirements for historical reasons.
-
-This task is still maintained for backwards compatibility. Note that the
-:program:`bkr` workflow commands will schedule this older task (instead of its
-replacement ``/distribution/check-install``) for recipes running Fedora 28 and
-older, or RHEL7 and older.
 
 .. _reservesys-task:
 

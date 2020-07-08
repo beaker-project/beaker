@@ -267,8 +267,7 @@ Options for selecting tasks:
    Omit the installation checking task.
 
    By default, the first task in the recipe will be 
-   ``/distribution/check-install`` (or the previous implementation 
-   ``/distribution/install`` on RHEL7 and older). The purpose of this task is 
+   ``/distribution/check-install``. The purpose of this task is
    to check that the operating system was installed successfully and report 
    back on any potential problems, and to collect information about the 
    installed system for debugging.
