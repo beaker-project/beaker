@@ -35,10 +35,7 @@ autopart
 # no snippet data for system
 
 %packages --resolvedeps --ignoremissing
-emacs
-sendmail
-unifdef
-vim-enhanced
+# Task requirements will be installed by the harness
 # no snippet data for packages
 
 
@@ -322,60 +319,25 @@ fi
 # This speeds up yum because of a bug where it will update stdout too often.
 # http://lists.baseurl.org/pipermail/yum-devel/2011-December/008857.html
 $package_command check-update -y > /dev/null 2>&1 || true
+cat <<"EOF" >/etc/profile.d/beaker-harness-env.sh
+export BEAKER_LAB_CONTROLLER_URL="http://lab.test-kickstart.invalid:8000/"
+export BEAKER_LAB_CONTROLLER=lab.test-kickstart.invalid
+export BEAKER_RECIPE_ID=@RECIPEID@
+export BEAKER_HUB_URL="@BEAKER@"
+EOF
+cat <<"EOF" >/etc/profile.d/beaker-harness-env.csh
+setenv BEAKER_LAB_CONTROLLER_URL "http://lab.test-kickstart.invalid:8000/"
+setenv BEAKER_LAB_CONTROLLER lab.test-kickstart.invalid
+setenv BEAKER_RECIPE_ID @RECIPEID@
+setenv BEAKER_HUB_URL "@BEAKER@"
+EOF
+
 if command -v dnf >/dev/null ; then
    package_command="dnf"
 else
    package_command="yum"
 fi
-$package_command -y install beah rhts-test-env
-$package_command -y install beakerlib
-# This may fail if you are outside of Red Hat..
-$package_command -y install beakerlib-redhat
-
-cp /etc/beah_beaker.conf{,.default}
-cat << EOF > /etc/beah_beaker.conf
-# see /etc/beah_beaker.conf.default for commented configuration
-
-[DEFAULT]
-# LAB_CONTROLLER: URI of Beaker's XML-RPC handler
-LAB_CONTROLLER=http://lab.test-kickstart.invalid:8000
-#
-# HOSTNAME: Pretend to be machine with given name.
-# NOTE: This is mostly pointless as usually correct name is assigned by DHCP.
-HOSTNAME=test01.test-kickstart.invalid
-RECIPEID=@RECIPEID@
-
-# Turn on hard limits on upload sizes:
-FILE_SIZE_LIMIT=200000000
-TASK_SIZE_LIMIT=800000000
-
-EOF
-
-cp /etc/beah.conf{,.default}
-cat << EOF > /etc/beah.conf
-# see /etc/beah.conf.default for commented configuration
-
-[DEFAULT]
-# Turn on more verbose logging. This is useful for debugging harness' problems.
-LOG=Info
-# Also send logs to /dev/console.
-CONSOLE_LOG=Console
-# To turn on debug logging uncomment the following line. Warning: this is
-# rather verbose! This also requires LOG to be Debug.
-#DEVEL=True
-
-[TASK]
-INTERFACE=
-
-EOF
-
-chkconfig --level 345 beah-srv on
-chkconfig --level 345 beah-beaker-backend on
-chkconfig --level 345 beah-fwd-backend on
-
-# turn on rhts-compat by default (it will save us one reboot):
-chkconfig --add rhts-compat
-chkconfig --level 345 rhts-compat on
+$package_command -y install restraint-rhts
 
 #Add test user account
 useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
