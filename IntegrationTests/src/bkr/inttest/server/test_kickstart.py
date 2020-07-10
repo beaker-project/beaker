@@ -1959,7 +1959,7 @@ END
         self.assert_('# Check in with Beaker Server' in klines, k)
         self.assert_('%post --log=/dev/console' in klines, k)
         self.assert_('# Add Harness Repo' in klines, k)
-        self.assert_('$package_command -y install beah rhts-test-env' in klines, k)
+        self.assert_('$package_command -y install restraint-rhts' in klines, k)
 
     def test_custom_kickstart_rhel7(self):
         recipe = self.provision_recipe('''
@@ -2020,7 +2020,7 @@ END
         self.assert_('# Check in with Beaker Server' in klines, k)
         self.assert_('%post --log=/dev/console' in klines, k)
         self.assert_('# Add Harness Repo' in klines, k)
-        self.assert_('$package_command -y install beah rhts-test-env' in klines, k)
+        self.assert_('$package_command -y install restraint-rhts' in klines, k)
 
     def test_custom_kickstart_fedora_rawhide(self):
         recipe = self.provision_recipe('''
@@ -2140,7 +2140,7 @@ END
         self.assert_('# Check in with Beaker Server' in klines, k)
         self.assert_('%post --log=/dev/console' in klines, k)
         self.assert_('# Add Harness Repo' in klines, k)
-        self.assert_('$package_command -y install beah rhts-test-env' in klines, k)
+        self.assert_('$package_command -y install restraint-rhts' in klines, k)
 
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=801676
@@ -2253,6 +2253,7 @@ install
         self.assertIn('''\
 install
 %packages
+# Task requirements will be installed by the harness
 *
 -@conflicts
 %end
@@ -2288,6 +2289,7 @@ install
         self.assertIn('''\
 install
 %packages
+# Task requirements will be installed by the harness
 *
 -@conflicts-workstation
 %end
@@ -2322,12 +2324,13 @@ install
         self.assertIn('''\
 install
 %packages
+# Task requirements will be installed by the harness
 *
 -@conflicts-client
 -@conflicts-server
 -@conflicts-workstation
 %end
-''', ks)
+''', ks, ks)
 
     def test_custom_kickstart_fedora_without_conflicts_groups(self):
         recipe = self.provision_recipe('''
@@ -2358,6 +2361,7 @@ install
         self.assertIn('''\
 install
 %packages
+# Task requirements will be installed by the harness
 *
 %end
 ''', ks)
@@ -2994,7 +2998,7 @@ network --bootproto=dhcp --device=66:77:88:99:aa:bb
             <job>
                 <whiteboard/>
                 <recipeSet>
-                    <recipe>
+                    <recipe ks_meta="install_task_requires">
                         <distroRequires>
                             <distro_name op="=" value="RHEL-6.2" />
                             <distro_variant op="=" value="Server" />
@@ -3057,7 +3061,7 @@ httpd
             <job>
                 <whiteboard/>
                 <recipeSet>
-                    <recipe>
+                    <recipe ks_meta="install_task_requires">
                         <distroRequires>
                             <distro_name op="=" value="RHEL-6.2" />
                             <distro_variant op="=" value="Server" />
@@ -3668,7 +3672,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
             <job>
                 <whiteboard/>
                 <recipeSet>
-                    <recipe ks_meta="beah_rpm=beah-0.6.48">
+                    <recipe ks_meta="harness=beah beah_rpm=beah-0.6.48">
                         <distroRequires>
                             <distro_name op="=" value="RHEL-7.0-20120314.0" />
                             <distro_variant op="=" value="Workstation" />
@@ -3688,7 +3692,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
             <job>
                 <whiteboard/>
                 <recipeSet>
-                    <recipe ks_meta="beah_no_ipv6">
+                    <recipe ks_meta="beah_no_ipv6 harness=beah">
                         <distroRequires>
                             <distro_name op="=" value="RHEL5-Server-U8" />
                             <distro_arch op="=" value="ia64" />
@@ -4089,7 +4093,7 @@ volgroup bootvg --pesize=32768 pv.01
             <job>
                 <whiteboard/>
                 <recipeSet>
-                    <recipe>
+                    <recipe ks_meta="harness=beah">
                         <distroRequires>
                             <distro_name op="=" value="Fedora-18" />
                             <distro_arch op="=" value="x86_64" />
