@@ -88,7 +88,9 @@ systems) which have more than one network interface, you must set the
 interface to use during installation. If only one network interface has a cable 
 connected, you can set ``ksdevice=link``. If more than one interface has 
 a cable connected, you must nominate a specific interface to be used for 
-installation: ``ksdevice=00:11:22:33:44:55``.
+installation: ``ksdevice=00:11:22:33:44:55``.  If you want to remove the
+Beaker default of ksdevice kernel option, you can precede the option with `!`
+within your recipe's setting, i.e, `kernel_options="!ksdevice"`.
 
 Next steps
 ----------

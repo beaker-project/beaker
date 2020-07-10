@@ -25,7 +25,12 @@ All three options can be set:
 * by job submitters in each individual recipe (see :ref:`job-workflow-details`)
 
 Beaker combines all the install options in the order listed above to determine 
-the effective install options for each recipe.
+the effective install options for each recipe. To unset an option of a
+previous setting, place `!` before the option.  For example, the
+following will remove the beaker default kernel option setting of
+`ksdevice=bootif` from a user's job::
+
+  <recipe ... kernel_options="!ksdevice" ...>
 
 .. todo::
 
