@@ -61,13 +61,9 @@ def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
     # override these in OS major or distro install options if necessary.
     ks_meta = {}
 
-    # Default harness is set to restraint. We opt out of restraint for any
-    # distro prior to RHEL8 and Fedora 29.
+    # Default harness for all distributions
+    # User can always opt-out by defining harness in ks_meta
     ks_meta['harness'] = 'restraint-rhts'
-    if (rhel and int(rhel) < 8 or \
-        fedora and fedora != 'rawhide' and int(fedora) < 29):
-        ks_meta['harness'] = 'beah'
-        ks_meta['install_task_requires'] = True
 
     # %end
     ks_meta['end'] = '%end'
