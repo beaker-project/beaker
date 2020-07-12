@@ -125,7 +125,7 @@ marked as shared and is not in any system groups" to "the system
 access policy grants the 'reserve' permission to all users of the instance".
 
 This `update to an affected supported query
-<http://git.beaker-project.org/cgit/beaker/commit/Server/bkr/server/reporting-queries/machine-hours-by-user-arch.sql?id=d490c01c77ae0b1e269a6f44f411f92f4f87c787>`__
+<https://github.com/beaker-project/beaker/blob/master/Server/bkr/server/reporting-queries/machine-hours-by-user-arch.sql>`__
 shows how to change the filtering criteria to check the new
 ``system_access_policy`` and ``system_access_policy_rule`` tables to
 determine if a system is shared with all users.
@@ -600,7 +600,7 @@ Beaker 0.15.3
 
   * The standard Beaker tasks have been moved to a dedicated
     `beaker-core-tasks
-    <http://git.beaker-project.org/cgit/beaker-core-tasks/>`__ git repo.
+    <https://github.com/beaker-project/beaker-core-tasks>`__ git repo.
 
   * Maintenance of the ``/distribution/virt/install`` and
     ``/distribution/virt/start`` tasks has been moved to the upstream

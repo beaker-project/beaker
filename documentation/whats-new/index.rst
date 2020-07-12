@@ -292,6 +292,6 @@ Release notes for versions prior to 0.9 are not available.
 
 For administrators upgrading from older versions, refer to the now-obsolete 
 `SchemaUpgrades directory 
-<http://git.beaker-project.org/cgit/beaker/tree/SchemaUpgrades/>`_ in Beaker's 
+<https://github.com/beaker-project/beaker/tree/master/SchemaUpgrades/>`_ in Beaker's
 source tree. (Those files were previously included in the beaker-server package 
 under ``/usr/share/doc/beaker-server-*``.)

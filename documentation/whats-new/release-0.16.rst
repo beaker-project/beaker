@@ -38,8 +38,7 @@ task before running it.
 ::
 
     <task name="/distribution/reservesys">
-      <fetch url="git://git.beaker-project.org/beaker-core-tasks#master"
-             subdir="reservesys" />
+      <fetch url="https://github.com/beaker-project/beaker-core-tasks/archive/master.tgz#reservesys"/>
       ...
     </task>
 

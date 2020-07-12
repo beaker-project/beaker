@@ -20,7 +20,7 @@
     </hostRequires>
     <partitions/>
     <task name="/restraint/true" role="None">
-      <fetch url="git://git.beaker-project.org/~asaha/restraint_tasks?master#true"/>
+      <fetch url="git://git.example.org/~asaha/restraint_tasks?master#true"/>
     </task>
   </recipe>
 </recipeSet>

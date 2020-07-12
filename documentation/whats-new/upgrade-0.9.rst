@@ -5,7 +5,7 @@ These notes describe the steps needed to upgrade your Beaker installation from
 version 0.8.2 to version 0.9.3.
 
 For older upgrade instructions, refer to the obsolete `SchemaUpgrades directory 
-<http://git.beaker-project.org/cgit/beaker/tree/SchemaUpgrades/>`_ in Beaker's 
+<https://github.com/beaker-project/beaker/tree/master/SchemaUpgrades/>`_ in Beaker's
 source tree.
 
 Database changes

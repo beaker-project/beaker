@@ -13,7 +13,7 @@ may be useful for your Beaker site. They are installed with the
 ``beaker-server`` package under
 ``/usr/lib/python*/site-packages/bkr/server/reporting-queries``, or you
 can `browse the queries online in Beaker's
-git <http://git.beaker-project.org/cgit/beaker/tree/Server/bkr/server/reporting-queries>`_
+git <https://github.com/beaker-project/beaker/tree/master/Server/bkr/server/reporting-queries>`_
 (be sure to select the correct branch for your version of Beaker). These
 queries are "supported" in the sense that they are tested by Beaker's
 test suite, and if the queries require changes in future releases this will
