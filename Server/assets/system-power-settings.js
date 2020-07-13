@@ -10,6 +10,7 @@ window.SystemPowerSettingsView = Backbone.View.extend({
     template: JST['system-power-settings'],
     events: {
         'click #reprovision_distro_tree button': 'pick_reprovision_distro_tree',
+        'click #show_password button': 'showPassword',
         'submit form': 'submit',
         'reset form': 'reset',
     },
@@ -58,6 +59,14 @@ window.SystemPowerSettingsView = Backbone.View.extend({
             view.$('[name=reprovision_distro_tree_id]').val(selection.get('distro_tree_id'));
             view.$('#reprovision_distro_tree span').text(selection.get('distro_tree_label'));
         });
+    },
+    showPassword: function (evt) {
+        evt.preventDefault()
+        this.$("#show_password i").toggleClass('fa-eye').toggleClass('fa-eye-slash')
+
+        this.$("#show_password input").attr("type") === "password"
+            ? this.$("#show_password input").attr('type', 'text')
+            : this.$("#show_password input").attr('type', 'password')
     },
     sync_success: function (response, status, xhr) {
         this.$('.form-actions button').button('reset');
