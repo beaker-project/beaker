@@ -1329,3 +1329,21 @@ class GetInstallationForSystemTest(LabControllerTestCase):
                 u'http://example.invalid/installationforsystem/pxeboot/initrd')
         self.assertEqual(installinfo['kernel_options'],
                 'ks=%s netbootloader=pxelinux.0 noverifyssl' % self.recipe.installation.rendered_kickstart.link)
+
+
+class HealthTest(LabControllerTestCase):
+
+    def setUp(self):
+        self.healthz_url = '%shealthz/' % (self.get_proxy_url())
+
+    def test_get_healthz(self):
+        response = requests.get(self.healthz_url)
+
+        self.assertEquals(response.status_code, 200)
+        self.assertEquals(response.text, 'We are healthy!')
+
+    def test_head_healthz(self):
+        response = requests.head(self.healthz_url)
+
+        self.assertEquals(response.status_code, 200)
+        self.assertEquals(response.text, '')
