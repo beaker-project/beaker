@@ -117,7 +117,10 @@ class WSGIApplication(object):
                  endpoint=(self.proxy_http, 'do_result_log')),
             Rule('/power/<fqdn>/',
                  methods=['PUT'],
-                 endpoint=(self.proxy_http, 'put_power'))
+                 endpoint=(self.proxy_http, 'put_power')),
+            Rule('/healthz/',
+                 methods=['HEAD', 'GET'],
+                 endpoint=(self.proxy_http, 'healthz'))
         ])
 
     @LimitedRequest.application
