@@ -1037,3 +1037,14 @@ class ProxyHTTP(object):
 
         self.hub.systems.power(action, fqdn, False, True)
         return Response(status=204)
+
+    def healthz(self, req):
+        """
+        Health check
+
+        :param req: request
+        """
+        # HEAD is identical to GET except that it MUST NOT return a body in the response
+        response = "We are healthy!" if req.method == 'GET' else None
+
+        return Response(status=200, response=response)
