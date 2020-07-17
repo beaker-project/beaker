@@ -221,3 +221,17 @@ the request body must be given as HTML form data
         The command was successfully executed.
    :status 400:
         Bad parameters were given.
+
+.. http:head:: /healthz/
+
+   Check health status of Harness API.
+
+   :status 200: API is healthy.
+
+.. http:get:: /healthz/
+
+   Check health status of Harness API.
+
+   The response is a message signaling a healthy state.
+
+   :status 200: API is healthy.
