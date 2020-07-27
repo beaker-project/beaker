@@ -22,8 +22,6 @@ Description
 
 Deletes a Beaker system pool.
 
-(Note: this command requires Python 2.6 or later)
-
 .. versionadded:: 20
 
 Common :program:`bkr` options are described in the :ref:`Options
