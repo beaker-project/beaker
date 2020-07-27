@@ -13,7 +13,7 @@ directories are searched on the lab controller, in order:
 
    Custom power scripts may be placed here.
 
--  ``/usr/lib/python2.6/site-packages/bkr/labcontroller/power-scripts``
+-  ``/usr/lib/python2.7/site-packages/bkr/labcontroller/power-scripts``
 
    These templates are packaged with Beaker and should not be modified.
 

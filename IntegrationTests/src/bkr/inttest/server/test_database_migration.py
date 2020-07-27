@@ -988,7 +988,8 @@ class MigrationTest(unittest.TestCase):
                 "INSERT INTO activity (id, user_id, created, type, field_name, "
                 "   service, action, old_value, new_value) "
                 "VALUES (1, 1, '2016-08-11 16:47:56', 'command_activity', 'Command', "
-                "   'Scheduler', 'on', '', 'ValueError: Power script /usr/lib/python2.6/site-packages/bk')")
+                "   'Scheduler', 'on', '', "
+                "   'ValueError: Power script /usr/lib/python2.7/site-packages/bk')")
             connection.execute(
                 "INSERT INTO command_queue (id, system_id, status, updated, quiescent_period) "
                 "VALUES (1, 1, 'Failed', '2016-08-11 16:47:56', 5)")
@@ -1013,7 +1014,7 @@ class MigrationTest(unittest.TestCase):
         self.assertEquals(cmd.delay_until, None)
         self.assertEquals(cmd.status, CommandStatus.failed)
         self.assertEquals(cmd.error_message,
-                          u'ValueError: Power script /usr/lib/python2.6/site-packages/bk')
+                          u'ValueError: Power script /usr/lib/python2.7/site-packages/bk')
         # old activity row should be gone
         self.assertIsNone(self.migration_session.query(Activity).filter_by(id=1).first())
         # insert a new command after upgrade, as if Beaker has been running for a while
@@ -1044,7 +1045,7 @@ class MigrationTest(unittest.TestCase):
             self.assertEquals(activity_rows[0].action, u'on')
             self.assertEquals(activity_rows[0].old_value, u'')
             self.assertEquals(activity_rows[0].new_value,
-                              u'ValueError: Power script /usr/lib/python2.6/site-packages/bk')
+                              u'ValueError: Power script /usr/lib/python2.7/site-packages/bk')
             self.assertEquals(activity_rows[2].id, 3)
             self.assertEquals(activity_rows[2].user_id, 1)
             self.assertEquals(activity_rows[2].created,
