@@ -268,7 +268,7 @@ class Search(WebDriverTestCase):
     def test_by_date_added(self):
         with session.begin():
             new_system = data_setup.create_system()
-            new_system.date_added = datetime.datetime(2020, 6, 21, 11, 30, 0)
+            new_system.date_added = datetime.datetime(2025, 6, 21, 11, 30, 0)
             old_system = data_setup.create_system()
             old_system.date_added = datetime.datetime(2001, 1, 15, 14, 12, 0)
 
@@ -279,15 +279,15 @@ class Search(WebDriverTestCase):
         perform_search(b, [('System/Added', 'before', '2001-01-16')])
         check_system_search_results(b, present=[old_system], absent=[new_system])
 
-        perform_search(b, [('System/Added', 'after', '2020-12-31')])
+        perform_search(b, [('System/Added', 'after', '2025-12-31')])
         # no results
         b.find_element_by_xpath('//table[@id="widget" and not(.//td)]')
 
-        perform_search(b, [('System/Added', 'after', '2020-06-20')])
+        perform_search(b, [('System/Added', 'after', '2025-06-20')])
         check_system_search_results(b, present=[new_system], absent=[old_system])
 
-        perform_search(b, [('System/Added', 'after', '2020-06-20'),
-                             ('System/Added', 'before', '2020-06-22')])
+        perform_search(b, [('System/Added', 'after', '2025-06-20'),
+                           ('System/Added', 'before', '2025-06-22')])
         check_system_search_results(b, present=[new_system], absent=[old_system])
 
     def test_by_notes(self):
