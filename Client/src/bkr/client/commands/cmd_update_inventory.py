@@ -35,7 +35,6 @@ customizing your job.
 Common :program:`bkr` options are described in the :ref:`Options
 <common-options>` section of :manpage:`bkr(1)`.
 
-(Note: this command requires Python 2.6 or later)
 
 .. versionadded:: 21
 

@@ -26,8 +26,6 @@ By default, the currently *active* access policy rules are retrieved,
 which could be a a pool access policy. To retrieve the custom access
 policy rules, specify ``--custom``.
 
-(Note: this command requires Python 2.6 or later)
-
 Options
 -------
 

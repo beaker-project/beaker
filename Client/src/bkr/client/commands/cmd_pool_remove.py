@@ -24,8 +24,6 @@ Description
 
 Removes systems from a system pool.
 
-(Note: this command requires Python 2.6 or later)
-
 .. versionadded:: 20
 
 Options

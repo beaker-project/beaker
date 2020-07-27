@@ -26,8 +26,6 @@ Creates a Beaker system pool. By default the new pool is owned by the
 user who created it. To set a different owner, use the
 :option:`--owning-group` or :option:`--owner` options.
 
-(Note: this command requires Python 2.6 or later)
-
 .. versionadded:: 20
 
 Options

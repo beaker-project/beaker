@@ -23,8 +23,6 @@ Description
 
 Modify the name, description or owner of an existing system pool.
 
-(Note: this command requires Python 2.6 or later)
-
 .. versionadded:: 20
 
 Options
