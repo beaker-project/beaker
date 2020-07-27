@@ -193,7 +193,7 @@ order:
 
 - :file:`/etc/beaker/snippets/{snippet_name}`
 
-- :file:`/usr/lib/python2.6/site-packages/bkr/server/snippets/{snippet_name}`
+- :file:`/usr/lib/python2.7/site-packages/bkr/server/snippets/{snippet_name}`
 
 This allows administrators to customize Beaker kickstarts at whatever
 level is necessary.
