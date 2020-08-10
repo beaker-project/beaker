@@ -423,6 +423,10 @@ For example in the job XML::
     Do not configure X on the installed system. This is needed for headless 
     systems which lack graphics support.
 
+``skip_taskrepo``
+    Configure ``skip_if_unavailable`` yum repo attribute for task repository.
+    Default value is 0.
+
 ``static_networks=<device>,<ipv4_address>[;...]``
     Configure one or more network devices to start on boot with static IPv4 
     addresses. The device should be given as a kernel device name (for example, 
