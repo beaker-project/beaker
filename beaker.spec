@@ -420,7 +420,7 @@ chmod go-w %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 %{python3_sitelib}/bkr/common/
 %{python3_sitelib}/bkr/log.py*
 %{python3_sitelib}/bkr/__pycache__/*
-%{python3_sitelib}/%{name}_common-%{version}-py%{python3_version}.egg-info/
+%{python3_sitelib}/%{name}_common-*.egg-info/
 %else
 %dir %{python2_sitelib}/bkr/
 %{python2_sitelib}/bkr/__init__.py*
@@ -488,8 +488,8 @@ chmod go-w %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 %doc Client/client.conf.example
 %if %{with python3}
 %{python3_sitelib}/bkr/client/
-%{python3_sitelib}/%{name}_client-%{version}-py%{python3_version}-nspkg.pth
-%{python3_sitelib}/%{name}_client-%{version}-py%{python3_version}.egg-info/
+%{python3_sitelib}/%{name}_client-*-nspkg.pth
+%{python3_sitelib}/%{name}_client-*.egg-info/
 %else
 %{python2_sitelib}/bkr/client/
 %{python2_sitelib}/beaker_client-*-nspkg.pth
