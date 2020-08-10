@@ -5,4 +5,5 @@ name={{ reponame }}
 baseurl={{ repourl }}
 enabled=1
 gpgcheck=0
+skip_if_unavailable={{ skip_taskrepo|default(0) }}
 EOF
