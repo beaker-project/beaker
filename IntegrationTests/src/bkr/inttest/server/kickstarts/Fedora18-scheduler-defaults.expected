@@ -267,6 +267,7 @@ name=beaker-tasks
 baseurl=@REPOS@@RECIPEID@
 enabled=1
 gpgcheck=0
+skip_if_unavailable=0
 EOF
 
 
