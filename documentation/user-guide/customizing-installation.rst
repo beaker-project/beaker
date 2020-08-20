@@ -336,6 +336,11 @@ For example in the job XML::
     variable if you want to supply explicit partitioning commands in some other
     way, for example in a ``<ks_append/>`` section.
 
+``no_ks_template``
+    The whole kickstart has to be defined by user in ``<kickstart />`` tag.
+    Default Beaker's templating is not used; however, user does have
+    access to snippets and restricted context.
+
 ``no_networks``
     Omits the ``network`` command. By default when no specific network is
     requested for a recipe, the kickstart will include
