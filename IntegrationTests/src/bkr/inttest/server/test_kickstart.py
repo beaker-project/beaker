@@ -13,6 +13,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from itertools import izip_longest
 
 import lxml.etree
 import pkg_resources
@@ -4213,3 +4214,27 @@ volgroup bootvg --pesize=32768 pv.01
         ks = recipe.installation.rendered_kickstart.kickstart
         ks_lines = ks.splitlines()
         self.assert_('$package_command -y install great-restraint dead-beah' in ks_lines, ks)
+
+    def test_user_defined_kickstart(self):
+        payload = ['install', 'This-is-going-to-be-really-invalid']
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard>User Defined Kickstart</whiteboard>
+                <recipeSet>
+                    <recipe ks_meta='no_ks_template'>
+                        <kickstart>%s</kickstart>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/check-install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''' % '\n'.join(payload), self.system)
+        ks = recipe.installation.rendered_kickstart.kickstart
+        ks_lines = ks.splitlines()
+        for actual, expected in izip_longest(payload, ks_lines):
+            self.assert_(actual == expected, ks)
