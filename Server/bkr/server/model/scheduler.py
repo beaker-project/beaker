@@ -2648,11 +2648,15 @@ class Recipe(TaskBase, ActivityMixin):
                     and not self.harness_repo():
                 raise ValueError('Failed to find repo for harness')
         ks_keyword = install_options.ks_meta.get('ks_keyword', 'ks')
+        # Use only user input for kickstart
+        no_ks_template = 'no_ks_template' in install_options.ks_meta
+        ks_appends = None
+
         if ks_keyword in install_options.kernel_options:
             # Use it as is
             rendered_kickstart = None
         else:
-            if self.kickstart:
+            if self.kickstart and not no_ks_template:
                 # add in cobbler packages snippet...
                 packages_slot = 0
                 nopackages = True
@@ -2686,8 +2690,8 @@ class Recipe(TaskBase, ActivityMixin):
                 kickstart = kicktemplate % dict(
                     beforepackages=beforepackages,
                     afterpackages=afterpackages)
-                ks_appends = None
-
+            elif self.kickstart:
+                kickstart = self.kickstart
             else:
                 kickstart = None
                 ks_appends = [ks_append.ks_append for ks_append in self.ks_appends]
@@ -2697,7 +2701,8 @@ class Recipe(TaskBase, ActivityMixin):
                                                     user=self.recipeset.job.owner,
                                                     recipe=self,
                                                     ks_appends=ks_appends,
-                                                    kickstart=kickstart)
+                                                    kickstart=kickstart,
+                                                    no_template=no_ks_template)
             install_options.kernel_options[ks_keyword] = rendered_kickstart.link
 
         self.installation.kernel_options = install_options.kernel_options_str

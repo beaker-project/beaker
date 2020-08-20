@@ -237,8 +237,14 @@ def kickstart_template(osmajor):
                      % (osmajor, ', '.join(candidates)))
 
 
-def generate_kickstart(install_options, distro_tree, system, user,
-                       recipe=None, ks_appends=None, kickstart=None, installation=None):
+def generate_kickstart(install_options,
+                       distro_tree,
+                       system, user,
+                       recipe=None,
+                       ks_appends=None,
+                       kickstart=None,
+                       installation=None,
+                       no_template=None):
     if recipe:
         lab_controller = recipe.recipeset.lab_controller
     elif system:
@@ -329,8 +335,9 @@ def generate_kickstart(install_options, distro_tree, system, user,
 
     with TemplateRenderingEnvironment():
         if kickstart:
-            template = template_env.from_string(
-                "{% snippet 'install_method' %}\n" + kickstart)
+            template_string = ("{% snippet 'install_method' %}\n" + kickstart
+                               if not no_template else kickstart)
+            template = template_env.from_string(template_string)
             result = template.render(restricted_context)
         else:
             template = kickstart_template(installation.osmajor)
