@@ -585,9 +585,13 @@ class CSV_Exclude(CSV):
     @classmethod
     def query(cls):
         for system in System.all(identity.current.user):
-            for exclude in system.excluded_osmajor:
+            for exclude in (ExcludeOSMajor.query.join('system')
+                                                .yield_per(10000)
+                                                .filter(System.id == system.id)):
                 yield CSV_Exclude(exclude)
-            for exclude in system.excluded_osversion:
+            for exclude in (ExcludeOSVersion.query.join('system')
+                                                  .yield_per(10000)
+                                                  .filter(System.id == system.id)):
                 yield CSV_Exclude(exclude)
 
     @classmethod
@@ -817,9 +821,13 @@ class CSV_KeyValue(CSV):
     @classmethod
     def query(cls):
         for system in System.all(identity.current.user):
-            for key_int in system.key_values_int:
+            for key_int in (Key_Value_Int.query.join('system')
+                                               .yield_per(10000)
+                                               .filter(System.id == system.id)):
                 yield CSV_KeyValue(key_int)
-            for key_string in system.key_values_string:
+            for key_string in (Key_Value_String.query.join('system')
+                                               .yield_per(10000)
+                                               .filter(System.id == system.id)):
                 yield CSV_KeyValue(key_string)
 
     @classmethod
