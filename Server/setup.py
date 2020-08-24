@@ -186,7 +186,7 @@ else:
 setup(
     name='beaker-server',
     namespace_packages = ['bkr'],
-    version='27.4',
+    version='28.0',
     description='Beaker scheduler and web interface',
     long_description=
         'Beaker is a system for full stack software integration testing '
