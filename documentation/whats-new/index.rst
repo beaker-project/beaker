@@ -31,6 +31,18 @@ version, see :doc:`../admin-guide/upgrading`.
 
        next/*
 
+Beaker 28
+---------
+
+Beaker 28 uses Restraint as the default test harness for all OS releases,
+iPXE support, enhanced installation failure detection and some other
+features.
+
+.. toctree::
+   :maxdepth: 2
+
+   release-28
+
 Beaker 27
 ---------
 
