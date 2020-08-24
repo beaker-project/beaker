@@ -88,6 +88,7 @@ upgrade procedures described above, with the following differences:
 ==============  ================
 Beaker release  Database version
 ==============  ================
+28              ``4b3a6065eba2``
 27              ``4cddc14ab090``
 26              ``348daa35773c``
 25              ``1ce53a2af0ed``
