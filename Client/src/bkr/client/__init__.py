@@ -81,6 +81,8 @@ class BeakerCommand(Command):
         if kwargs.get('insecure'):
             self.conf['SSL_VERIFY'] = False
         proxy_user = kwargs.get('proxy_user')
+        if username is None and 'USERNAME' in self.conf:
+            username = self.conf['USERNAME']
         self.container.set_hub(username, password, auto_login=self.requires_login,
                                proxy_user=proxy_user)
 
