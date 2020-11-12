@@ -203,7 +203,10 @@ class HubProxy(object):
                 ex.message += ". Make sure you correctly set KRB_REALM (current value: %s)." % realm
                 ex.args = (ex.message, )
             raise ex
-        req_enc = base64.encodestring(res.token)
+        if six.PY2:
+            req_enc = base64.encodestring(res.token)
+        else:
+            req_enc = base64.encodebytes(res.token)
         try:
             req_enc = str(req_enc, 'utf-8')  # bytes to string
         except TypeError:
