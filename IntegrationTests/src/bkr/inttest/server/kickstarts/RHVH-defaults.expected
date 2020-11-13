@@ -22,8 +22,6 @@ selinux --enforcing
 
 # System timezone
 timezone America/New_York
-# Install OS instead of upgrade
-install
 
 zerombr
 clearpart --all --initlabel

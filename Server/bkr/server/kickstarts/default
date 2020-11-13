@@ -60,8 +60,6 @@ skipx
 {% endif %}
 
 {% snippet 'timezone' %}
-# Install OS instead of upgrade
-install
 
 {% snippet 'rhts_devices' %}
 {% snippet 'rhts_partitions' %}
