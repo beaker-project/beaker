@@ -206,7 +206,7 @@ class HubProxy(object):
         if six.PY2:
             req_enc = base64.encodestring(res.token)
         else:
-            req_enc = base64.encodebytes(res.token)
+            req_enc = base64.encodebytes(res.token)  # pylint: disable=maybe-no-member
         try:
             req_enc = str(req_enc, 'utf-8')  # bytes to string
         except TypeError:
