@@ -173,3 +173,21 @@ A number of bug fixes are also included in this release:
     Alternative Harness API was extended. Now, Beaker supports
     power commands via API.
   | (Contributed by `Martin Styk <https://github.com/StykMartin>`_)
+
+Beaker 28.1
+~~~~~~~~~~~
+* | `GH#74 <https://github.com/beaker-project/beaker/issues/74>`_:
+    Beaker client now works with Python 3.9. Deprecated python
+    functions were removed.
+  | (Contributed by `Xavi Hernandez <https://github.com/xhernandez>`_)
+* | `GH#76 <https://github.com/beaker-project/beaker/issues/76>`_:
+    Beaker server no longer generates kickstart with ``install``
+    kickstart command for RHEL6+.
+  | (Contributed by `Martin Styk <https://github.com/StykMartin>`_)
+* | `GH#79 <https://github.com/beaker-project/beaker/issues/79>`_:
+    When provisioning a RHEL 9 machine, the root user can
+    use SSH to log in to the machine, using a password or key.
+  | (Contributed by `Martin Styk <https://github.com/StykMartin>`_)
+* | `GH#80 <https://github.com/beaker-project/beaker/issues/80>`_:
+    Beaker server no longer requires qpid package by default.
+  | (Contributed by `Martin Styk <https://github.com/StykMartin>`_)
