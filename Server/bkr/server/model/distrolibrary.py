@@ -156,7 +156,7 @@ def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
 
     # Remove Fedora disabled root/password ssh combination
     # introduced in Fedora 31
-    if fedora and (fedora == 'rawhide' or int(fedora) > 30):
+    if (fedora and (fedora == 'rawhide' or int(fedora) > 30)) or (rhel and int(rhel) >= 9):
         ks_meta['disabled_root_access'] = True
 
     kernel_options = {}
