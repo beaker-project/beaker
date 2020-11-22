@@ -331,6 +331,48 @@ class KickstartTest(unittest.TestCase):
                 ),
             ]
 
+            cls.rhel9_1122 = data_setup.create_distro(
+                name=u'RHEL-9.0.0-20201122.0',
+                osmajor=u'RedHatEnterpriseLinux9', osminor=u'0')
+
+            cls.rhel9_1122_baseos = data_setup.create_distro_tree(
+                distro=cls.rhel9_1122, variant=u'BaseOS', arch=u'x86_64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/'
+                      u'RHEL-9.0.0-20201122.0/compose/BaseOS/x86_64/os/'])
+
+            cls.rhel9_1122_baseos.repos[:] = [
+                DistroTreeRepo(
+                    repo_id=u'BaseOS-debuginfo',
+                    repo_type=u'debug',
+                    path=u'../../../BaseOS/x86_64/debug/tree'
+                ),
+                DistroTreeRepo(
+                    repo_id=u'AppStream-debuginfo',
+                    repo_type=u'debug',
+                    path=u'../../../AppStream/x86_64/debug/tree'
+                ),
+                DistroTreeRepo(
+                    repo_id=u'CRB-debuginfo',
+                    repo_type=u'debug',
+                    path=u'../../../CRB/x86_64/debug/tree'
+                ),
+                DistroTreeRepo(
+                    repo_id=u'CRB',
+                    repo_type=u'variant',
+                    path=u'../../../CRB/x86_64/os'
+                ),
+                DistroTreeRepo(
+                    repo_id=u'BaseOS',
+                    repo_type=u'variant',
+                    path=u'../../../BaseOS/x86_64/os'
+                ),
+                DistroTreeRepo(
+                    repo_id=u'AppStream',
+                    repo_type=u'variant',
+                    path=u'../../../AppStream/x86_64/os'
+                ),
+            ]
 
             cls.centos7 = data_setup.create_distro(name=u'CentOS-7',
                 osmajor=u'CentOS7', osminor=u'0')
@@ -1254,6 +1296,33 @@ class KickstartTest(unittest.TestCase):
             ''', self.system)
         self.assert_(r'''sed -i '/^#PermitRootLogin /s/^#//' /etc/ssh/sshd_config'''
                      not in recipe.installation.rendered_kickstart.kickstart.splitlines(),
+                     recipe.installation.rendered_kickstart.kickstart)
+
+    def test_rhel9_root_ssh_snippet(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-9.0.0-20201122.0" />
+                            <distro_variant op="=" value="BaseOS" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/check-install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assert_(r'''sed -i '/^#PermitRootLogin /s/^#//' /etc/ssh/sshd_config'''
+                     in recipe.installation.rendered_kickstart.kickstart.splitlines(),
+                     recipe.installation.rendered_kickstart.kickstart)
+        self.assert_(r'''sed -i 's|PermitRootLogin .*|PermitRootLogin yes|' /etc/ssh/sshd_config'''
+                     in recipe.installation.rendered_kickstart.kickstart.splitlines(),
+                     recipe.installation.rendered_kickstart.kickstart)
+        self.assert_(r'''systemctl restart sshd'''
+                     in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                      recipe.installation.rendered_kickstart.kickstart)
 
     def test_fedora30_root_ssh_snippet(self):
