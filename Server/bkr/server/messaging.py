@@ -11,13 +11,20 @@ import json
 import logging
 import random
 
-from proton import Message, SSLDomain
-from proton.handlers import MessagingHandler
-from proton.reactor import Container
+try:
+    from proton import Message, SSLDomain
+    from proton.handlers import MessagingHandler
+    from proton.reactor import Container
+    has_proton = True
+except ImportError:
+    has_proton = False
+    MessagingHandler = object
+
 # XXX replace turbogears with beaker prefixed flask when migration is done
 from turbogears.config import get
 
 log = logging.getLogger(__name__)
+
 
 # Taken from rhmsg
 class TimeoutHandler(MessagingHandler):
@@ -305,10 +312,11 @@ class BeakerMessenger(object):
 def _messenger_enabled():
     if _messenger_enabled.res is False:
         _messenger_enabled.res = bool(
-                get('amq.url')
-                and get('amq.cert')
-                and get('amq.key')
-                and get('amq.cacerts')
+            has_proton
+            and get('amq.url')
+            and get('amq.cert')
+            and get('amq.key')
+            and get('amq.cacerts')
         )
     return _messenger_enabled.res
 
