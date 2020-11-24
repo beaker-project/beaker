@@ -156,7 +156,6 @@ BuildRequires:  python-passlib
 BuildRequires:  python-alembic
 BuildRequires:  python-daemon
 BuildRequires:  python-futures
-BuildRequires:  python-qpid-proton >= 0.13.0
 Requires:       TurboGears >= 1.1.3
 Requires:       python-turbojson
 Requires:       python-sqlalchemy >= 0.9
@@ -181,7 +180,6 @@ Requires:       python-webassets
 Requires:       python-passlib
 Requires:       python-alembic
 Requires:       python-futures
-Requires:       python-qpid-proton >= 0.13.0
 BuildRequires:  systemd
 BuildRequires:  pkgconfig(systemd)
 Requires:       systemd-units
