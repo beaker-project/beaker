@@ -74,6 +74,10 @@ def get_console_files(console_logs_directory, system_name):
                     console_logs_directory)
         return []
 
+    if not system_name:
+        logger.info("No System Name for console log file...Ignoring")
+        return []
+
     output = []
     for filename in sorted(os.listdir(console_logs_directory)):
         if filename.startswith(system_name):
