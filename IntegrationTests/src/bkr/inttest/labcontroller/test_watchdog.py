@@ -53,7 +53,7 @@ class WatchdogConsoleLogTest(TestHelper):
 
     @classmethod
     def setUpClass(cls):
-        makedirs_ignore(get_conf().get('CONSOLE_LOGS'), 0755)
+        makedirs_ignore(get_conf().get('CONSOLE_LOGS'), 0o755)
 
     def setUp(self):
         with session.begin():
@@ -315,6 +315,55 @@ class WatchdogVirtConsoleLogTest(TestHelper):
         self.monitor.run()
         self.assert_(self.check_console_log_registered())
         self.assertEquals(open(self.cached_console_log).read().decode('utf8'), log_contents)
+
+
+# Class WatchdogGuestConsoleLogTest tests console log handling for Guest Recipes
+class WatchdogGuestConsoleLogTest(TestHelper):
+    @classmethod
+    def setUpClass(cls):
+        makedirs_ignore(get_conf().get('CONSOLE_LOGS'), 0o755)
+
+    def setUp(self):
+        with session.begin():
+            self.system = data_setup.create_system(lab_controller=self.get_lc())
+            self.recipe = data_setup.create_recipe()
+            self.guest_recipe = data_setup.create_guestrecipe(self.recipe)
+            job = data_setup.create_job_for_recipes([self.recipe, self.guest_recipe])
+            self.addCleanup(self.cleanup_job, job)
+
+            data_setup.mark_recipe_running(self.recipe, system=self.system)
+            data_setup.mark_recipe_installing(self.guest_recipe, system=self.system)
+
+            self.console_log = os.path.join(get_conf().get('CONSOLE_LOGS'), self.system.fqdn)
+            self.cached_console_log = os.path.join(get_conf().get('CACHEPATH'),
+                                                   'recipes',
+                                                   str(self.recipe.id // 1000) + '+',
+                                                   str(self.recipe.id), 'console.log')
+        self.first_line = 'Here is the first line of the log file.\n'
+        open(self.console_log, 'w').write(self.first_line)
+
+        self.watchdog = Watchdog()
+
+        self.monitor = Monitor({'recipe_id': self.recipe.id, 'is_virt_recipe': False,
+                               'system': self.system.fqdn}, self.watchdog)
+        self.monitor_guest = Monitor({'recipe_id': self.guest_recipe.id, 'is_virt_recipe': False,
+                                     'system': None}, self.watchdog)
+
+
+    def tearDown(self):
+        # Clear file created beneath test-consoles subdirectory.
+        if self.console_log and os.path.isfile(self.console_log):
+            os.remove(self.console_log)
+
+    def test_stores_guest_console_logs(self):
+
+        # Verify Guest recipe handled well and host logfile present.
+
+        self.assert_(self.monitor.console_watch.logfiles)
+        self.assert_(not self.monitor_guest.console_watch.logfiles)
+
+        wait_for_condition(self.check_console_log_registered)
+        wait_for_condition(lambda: self.check_cached_log_contents(self.first_line))
 
 
 class ExternalWatchdogScriptTest(LabControllerTestCase):
