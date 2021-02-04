@@ -104,6 +104,20 @@ gidNumber: 15554
 homeDirectory: /home/lol
 mail: another_my_ldap_user@example.invalid
 
+dn: uid=retired_ldap_user,ou=users,dc=example,dc=invalid
+objectClass: top
+objectClass: person
+objectClass: organizationalperson
+objectClass: inetorgperson
+objectClass: posixAccount
+cn: Retired My LDAP User
+givenName: Retired
+sn: Retired My LDAP User
+uid: retired_ldap_user
+uidNumber: 15555
+gidNumber: 15555
+homeDirectory: /home/BKR-5058
+
 dn: cn=my_ldap_group,ou=groups,dc=example,dc=invalid
 objectClass: top
 objectClass: posixGroup

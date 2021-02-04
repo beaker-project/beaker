@@ -295,6 +295,8 @@ class User(DeclarativeMappedObject, ActivityMixin):
             # who doesn't actually match the username we were given.
             if attrs['uid'][0].decode('utf8') != user_name:
                 return None
+            if 'mail' not in attrs:
+                return None
             user = User()
             user.user_name = attrs['uid'][0].decode('utf8')
             user.display_name = attrs['cn'][0].decode('utf8')

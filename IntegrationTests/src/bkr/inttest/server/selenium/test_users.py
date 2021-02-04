@@ -226,6 +226,16 @@ class UserHTTPTest(DatabaseTestCase):
         self.assertEqual(response.json()['proxied_by_user']['user_name'],
                          proxying_user.user_name)
 
+    def test_get_ldap_user(self):
+        user = User.by_user_name(u'my_ldap_user')
+        self.assertEqual(user.user_name, 'my_ldap_user')
+        self.assertEqual(user.display_name, 'My LDAP User')
+        self.assertEqual(user.email_address, 'my_ldap_user@example.invalid')
+
+    def test_get_retired_ldap_user(self):
+        user = User.by_user_name(u'retired_ldap_user')
+        self.assertIsNone(user)
+
     def test_create_user(self):
         s = requests.Session()
         requests_login(s)
