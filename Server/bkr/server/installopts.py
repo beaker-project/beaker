@@ -119,5 +119,5 @@ class InstallOptions(object):
 def global_install_options():
     return InstallOptions.from_strings(
             config.get('beaker.ks_meta', u''),
-            config.get('beaker.kernel_options', u'ksdevice=bootif'),
+            config.get('beaker.kernel_options', u''),
             config.get('beaker.kernel_options_post', u''))

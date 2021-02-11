@@ -446,10 +446,10 @@ class IpxeScriptHTTPTest(DatabaseTestCase):
                 'systems/by-uuid/%s/ipxe-script' % recipe.resource.instance_id)
         response.raise_for_status()
         self.assertMultiLineEqual(response.text, """#!ipxe
-kernel http://mydistro.dummylab.test/os/pxeboot/vmlinuz console=tty0 console=ttyS0,115200n8 ks=%s noverifyssl netboot_method=ipxe
+kernel http://mydistro.dummylab.test/os/pxeboot/vmlinuz console=tty0 console=ttyS0,115200n8 inst.ks=%s noverifyssl netboot_method=ipxe
 initrd http://mydistro.dummylab.test/os/pxeboot/initrd
 boot
-""" % recipe.installation.rendered_kickstart.link)
+""" % recipe.installation.rendered_kickstart.link)  # noqa: E501
 
     def test_recipe_provision_with_custom_distro_and_incompatible_url(self):
         with session.begin():
@@ -481,10 +481,10 @@ boot
                 'systems/by-uuid/%s/ipxe-script' % recipe.resource.instance_id)
         response.raise_for_status()
         self.assertEquals(response.text, """#!ipxe
-kernel http://example.com/ipxe-test/F20/x86_64/os/pxeboot/vmlinuz console=tty0 console=ttyS0,115200n8 ks=%s noverifyssl netboot_method=ipxe
+kernel http://example.com/ipxe-test/F20/x86_64/os/pxeboot/vmlinuz console=tty0 console=ttyS0,115200n8 ks=%s ksdevice=bootif noverifyssl netboot_method=ipxe
 initrd http://example.com/ipxe-test/F20/x86_64/os/pxeboot/initrd
 boot
-""" % recipe.installation.rendered_kickstart.link)
+""" % recipe.installation.rendered_kickstart.link)  # noqa: E501
 
 class SystemHTTPTest(DatabaseTestCase):
     """

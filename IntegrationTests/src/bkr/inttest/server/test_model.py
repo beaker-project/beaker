@@ -1400,6 +1400,27 @@ class DistroTreeTest(DatabaseTestCase):
         self.assertIn('preseed/url=http://', r1.installation.kernel_options)
         self.assertNotIn('ks=', r1.installation.kernel_options)
 
+    def test_ks_option_for_older_systems(self):
+        distro_tree = data_setup.create_distro_tree(osmajor=u'CentOS7')
+        recipe = self.provision_distro_tree(distro_tree)
+        self.assertIn('ks=', recipe.installation.kernel_options)
+        self.assertNotIn('inst.ks=', recipe.installation.kernel_options)
+
+    def test_inst_ks_option_for_newer_systems(self):
+        distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora34')
+        recipe = self.provision_distro_tree(distro_tree)
+        self.assertIn('inst.ks=', recipe.installation.kernel_options)
+        self.assertFalse(re.search(r"(?<!inst\.)ks=", recipe.installation.kernel_options))
+
+    def test_ksdevice_option_for_older_systems(self):
+        distro_tree = data_setup.create_distro_tree(osmajor=u'CentOS7')
+        recipe = self.provision_distro_tree(distro_tree)
+        self.assertIn('ksdevice=bootif', recipe.installation.kernel_options)
+
+    def test_no_ksdevice_option_for_newer_systems(self):
+        distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora34')
+        recipe = self.provision_distro_tree(distro_tree)
+        self.assertNotIn('ksdevice', recipe.installation.kernel_options)
 
     def test_custom_netbootloader(self):
 
@@ -1464,6 +1485,11 @@ class DistroTreeTest(DatabaseTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1172472
     def test_leavebootorder_kernel_option_is_set_by_default_for_ppc(self):
         distro_tree = data_setup.create_distro_tree(arch=u'ppc64')
+        recipe = self.provision_distro_tree(distro_tree)
+        self.assertIn(u'inst.leavebootorder', recipe.installation.kernel_options.split())
+
+    def test_leavebootorder_kernel_option_has_no_prefix_for_older_distro(self):
+        distro_tree = data_setup.create_distro_tree(osmajor=u'CentOS7', arch=u'ppc64')
         recipe = self.provision_distro_tree(distro_tree)
         self.assertIn(u'leavebootorder', recipe.installation.kernel_options.split())
 

@@ -178,7 +178,17 @@ def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
     # for s390, s390x and armhfp, we default to ''
     kernel_options['netbootloader'] = netbootloader.get(arch.arch, '')
     if arch.arch in ['ppc', 'ppc64', 'ppc64le']:
-        kernel_options['leavebootorder'] = None
+        if rhel and int(rhel) < 9 or \
+                (fedora and fedora != 'rawhide' and int(fedora) < 34):
+            kernel_options['leavebootorder'] = None
+        else:
+            kernel_options['inst.leavebootorder'] = None
+
+    # Keep old kernel options for older distros
+    if rhel and int(rhel) < 9 or \
+            (fedora and fedora != 'rawhide' and int(fedora) < 34):
+        kernel_options['ksdevice'] = 'bootif'
+        ks_meta['ks_keyword'] = 'ks'
 
     return InstallOptions(ks_meta, kernel_options, {})
 
