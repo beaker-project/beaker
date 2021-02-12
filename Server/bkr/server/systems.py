@@ -225,13 +225,15 @@ class SystemsController(controllers.Controller):
             kernel_options_post or ''))
         installation = distro_tree.create_installation_from_tree()
         installation.tree_url = distro_tree.url_in_lab(lab_controller=system.lab_controller)
-        if 'ks' not in options.kernel_options:
+
+        ks_keyword = options.ks_meta.get('ks_keyword', 'inst.ks')
+        if ks_keyword not in options.kernel_options:
             rendered_kickstart = generate_kickstart(
                 install_options=options,
                 installation=installation,
                 distro_tree=distro_tree,
                 system=system, user=identity.current.user, kickstart=kickstart)
-            options.kernel_options['ks'] = rendered_kickstart.link
+            options.kernel_options[ks_keyword] = rendered_kickstart.link
         else:
             rendered_kickstart = None
         by_kernel = ImageType.uimage if system.kernel_type and system.kernel_type.uboot \
@@ -1215,11 +1217,12 @@ def provision_system(fqdn):
         installation.tree_url = distro_tree.url_in_lab(lab_controller=system.lab_controller)
         installation.system = system
 
-        if 'ks' not in install_options.kernel_options:
+        ks_keyword = install_options.ks_meta.get('ks_keyword', 'inst.ks')
+        if ks_keyword not in install_options.kernel_options:
             kickstart = generate_kickstart(install_options=install_options,
                                            distro_tree=distro_tree, system=system, user=user,
                                            installation=installation)
-            install_options.kernel_options['ks'] = kickstart.link
+            install_options.kernel_options[ks_keyword] = kickstart.link
         else:
             kickstart = None
         by_kernel = ImageType.uimage if system.kernel_type and system.kernel_type.uboot \

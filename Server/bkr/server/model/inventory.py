@@ -1546,13 +1546,15 @@ class System(DeclarativeMappedObject, ActivityMixin):
                             self.reprovision_distro_tree)
                     installation = self.reprovision_distro_tree.create_installation_from_tree()
                     installation.tree_url = self.reprovision_distro_tree.url_in_lab(lab_controller=self.lab_controller)
-                    if 'ks' not in install_options.kernel_options:
+
+                    ks_keyword = install_options.ks_meta.get('ks_keyword', 'inst.ks')
+                    if ks_keyword not in install_options.kernel_options:
                         rendered_kickstart = generate_kickstart(
                             install_options=install_options,
                             installation=installation,
                             distro_tree=self.reprovision_distro_tree,
                             system=self, user=self.owner)
-                        install_options.kernel_options['ks'] = rendered_kickstart.link
+                        install_options.kernel_options[ks_keyword] = rendered_kickstart.link
                     else:
                         rendered_kickstart = None
                     by_kernel = ImageType.uimage if self.kernel_type and self.kernel_type.uboot \
