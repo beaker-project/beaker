@@ -1328,7 +1328,8 @@ class GetInstallationForSystemTest(LabControllerTestCase):
         self.assertEqual(installinfo['initrd_url'],
                 u'http://example.invalid/installationforsystem/pxeboot/initrd')
         self.assertEqual(installinfo['kernel_options'],
-                'ks=%s netbootloader=pxelinux.0 noverifyssl' % self.recipe.installation.rendered_kickstart.link)
+                         'inst.ks=%s netbootloader=pxelinux.0 noverifyssl'
+                         % self.recipe.installation.rendered_kickstart.link)
 
 
 class HealthTest(LabControllerTestCase):

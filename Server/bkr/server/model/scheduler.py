@@ -2647,7 +2647,7 @@ class Recipe(TaskBase, ActivityMixin):
             if 'no_default_harness_repo' not in install_options.ks_meta \
                     and not self.harness_repo():
                 raise ValueError('Failed to find repo for harness')
-        ks_keyword = install_options.ks_meta.get('ks_keyword', 'ks')
+        ks_keyword = install_options.ks_meta.get('ks_keyword', 'inst.ks')
         # Use only user input for kickstart
         no_ks_template = 'no_ks_template' in install_options.ks_meta
         ks_appends = None
