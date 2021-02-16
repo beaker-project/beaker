@@ -191,3 +191,13 @@ Beaker 28.1
 * | `GH#80 <https://github.com/beaker-project/beaker/issues/80>`_:
     Beaker server no longer requires qpid package by default.
   | (Contributed by `Martin Styk <https://github.com/StykMartin>`_)
+
+Beaker 28.2
+~~~~~~~~~~~
+* | `GH#90 <https://github.com/beaker-project/beaker/issues/90>`_:
+    Replace deprecated kernel options for newer distros.
+  | (Contributed by `Renan Barbosa <https://github.com/renanrodrigo/>`_)
+* | `GH#86 <https://github.com/beaker-project/beaker/issues/86>`_:
+     Get console logs raises exception for guest recipes.  Change
+     made to not get console log if system name is not available.
+  | (Contributed by `Carol Bouchard <https://github.com/cbouchar>`_)
