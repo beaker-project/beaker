@@ -81,7 +81,7 @@ For example, to log the CPU information of the system under test::
 ============================
 
 The ``/distribution/beaker/dogfood`` task runs Beaker's test suite (unit
-tests and selenium tests) on a test system. It can be configured to
+tests) on a test system. It can be configured to
 either run the tests from the development branch of Beaker or the most
 recent released version.
 
