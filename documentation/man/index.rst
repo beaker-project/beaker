@@ -14,6 +14,5 @@ is installed on your system. See :manpage:`bkr(1)`.
    :maxdepth: 1
    :glob:
 
-   beaker-wizard
    bkr
    bkr-*

@@ -63,7 +63,6 @@ setup(
     entry_points={
         'console_scripts': (
             'bkr = bkr.client.main:main',
-            'beaker-wizard = bkr.client.wizard:main',
         ),
     },
 )

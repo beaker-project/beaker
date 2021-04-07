@@ -28,8 +28,6 @@ man_pages = [
         [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 1),
     ('man/bkr-workflow-xslt', 'bkr-workflow-xslt', 'XSLT-based Beaker job generator',
         [u'David Sommerseth <davids@redhat.com>'], 1),
-    ('man/beaker-wizard', 'beaker-wizard', 'Tool to ease the creation of a new Beaker task',
-        [u'Petr Splichal <psplicha@redhat.com>'], 1),
 ]
 man_server_pages = [
     ('admin-guide/man/beaker-create-kickstart',
