@@ -1,8 +1,3 @@
-%if 0%{?rhel} && 0%{?rhel} <= 6
-%{!?__python2: %global __python2 /usr/bin/python2}
-%{!?python2_sitelib: %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
-%endif
-
 %if 0%{?fedora} >= 30 || 0%{?rhel} >= 8
 %bcond_without python3
 %else
@@ -47,22 +42,13 @@ Source15:       https://github.com/jsmreese/moment-duration-format/archive/8d0bf
 
 BuildArch:      noarch
 BuildRequires:  make
-%if %{with python3}
 BuildRequires:  python3-setuptools
 BuildRequires:  python3-nose
 BuildRequires:  python3-mock
 BuildRequires:  python3-devel
 BuildRequires:  python3-docutils
 BuildRequires:  python3-sphinx
-%else
-BuildRequires:  python-setuptools
-BuildRequires:  python-nose >= 0.10
-BuildRequires:  python-mock
-BuildRequires:  python2-devel
-BuildRequires:  python-docutils >= 0.6
-BuildRequires:  python-sphinx >= 1.0
-BuildRequires:  python-sphinxcontrib-httpdomain
-%endif
+
 
 %package common
 Summary:        Common components for Beaker packages
@@ -76,7 +62,6 @@ Group:          Applications/Internet
 Requires:       %{name}-common = %{version}-%{release}
 # setup.py uses pkg-config to find the right installation paths
 BuildRequires:  pkgconfig(bash-completion)
-%if %{with python3}
 # These client dependencies are needed in build because of sphinx
 BuildRequires:  python3-gssapi
 BuildRequires:  python3-lxml
@@ -90,24 +75,7 @@ Requires:       python3-requests
 Requires:       python3-libxml2
 Requires:       python3-prettytable
 Requires:       python3-jinja2
-%else
-# old style Python package names
-# These client dependencies are needed in build because of sphinx
-BuildRequires:  python-gssapi
-BuildRequires:  python-lxml
-BuildRequires:  libxslt-python
-BuildRequires:  python-prettytable
-Requires:       python-six
-Requires:       python
-Requires:       python-setuptools
-Requires:       python-gssapi
-Requires:       python-lxml
-Requires:       python-requests
-Requires:       libxslt-python
-Requires:       libxml2-python
-Requires:       python-prettytable
-Requires:       python-jinja2
-%endif
+
 # beaker-wizard was moved from rhts-devel to here in 4.52
 Conflicts:      rhts-devel < 4.52
 
@@ -235,20 +203,12 @@ Requires:       sudo
 # old style Python package names
 # These LC dependencies are needed in build due to tests
 BuildRequires:  python-lxml
-%if 0%{?rhel} == 7
-BuildRequires:  python2-gevent112
-%else
 BuildRequires:  python-gevent >= 1.0
-%endif
 Requires:       python-cpio
 Requires:       python-setuptools
 Requires:       python-lxml
 Requires:       python-gssapi
-%if 0%{?rhel} == 7
-Requires:       python2-gevent112
-%else
 Requires:       python-gevent >= 1.0
-%endif
 Requires:       python-daemon
 Requires:       python-werkzeug
 Requires:       python-flask
