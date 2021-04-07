@@ -203,11 +203,6 @@ Requires:       openldap-servers
 Requires:       nss_wrapper
 # old style Python package names
 Requires:       python-nose >= 0.10
-%if 0%{?rhel}
-Requires:       selenium-python >= 2.12
-%else
-Requires:       python-selenium >= 2.12
-%endif
 Requires:       python-requests >= 1.0
 Requires:       python-requests-kerberos
 Requires:       python-gunicorn

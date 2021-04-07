@@ -8,7 +8,6 @@
 A fake SMTP server which runs in its own thread. Use this in tests to capture 
 e-mails sent by Beaker and assert their contents.
 
-See bkr.server.test.selenium.test_systems for an example of how to use this.
 """
 
 import threading
