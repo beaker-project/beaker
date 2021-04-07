@@ -448,9 +448,7 @@ chmod go-w %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 %{python2_sitelib}/beaker_client-*-nspkg.pth
 %{python2_sitelib}/beaker_client-*.egg-info/
 %endif
-%{_bindir}/beaker-wizard
 %{_bindir}/bkr
-%{_mandir}/man1/beaker-wizard.1.gz
 %{_mandir}/man1/bkr.1.gz
 %{_mandir}/man1/bkr-*.1.gz
 %if 0%{?fedora} >= 17 || 0%{?rhel} >= 7
