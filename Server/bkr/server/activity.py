@@ -7,8 +7,7 @@
 from sqlalchemy.orm import contains_eager
 from flask import request, jsonify
 from bkr.server.app import app
-from bkr.server.flask_util import json_collection, request_wants_json, \
-        render_tg_template
+from bkr.server.flask_util import json_collection
 from bkr.server.model import (Activity, User, Distro, DistroTree,
         LabController, System, Group, Arch, DistroActivity, DistroTreeActivity,
                               LabControllerActivity, SystemActivity, GroupActivity,
@@ -25,6 +24,7 @@ common_activity_search_columns = {
     'old_value': Activity.old_value,
     'new_value': Activity.new_value,
 }
+
 
 @app.route('/activity/', methods=['GET'])
 def get_activity():
@@ -59,15 +59,8 @@ def get_activity():
     json_result = json_collection(query,
             columns=common_activity_search_columns,
             skip_count=True)
-    if request_wants_json():
-        return jsonify(json_result)
-    return render_tg_template('bkr.server.templates.backgrid', {
-        'title': u'Activity',
-        'grid_collection_type': 'Activity',
-        'grid_collection_data': json_result,
-        'grid_collection_url': request.path,
-        'grid_view_type': 'ActivityView',
-    })
+    return jsonify(json_result)
+
 
 @app.route('/activity/distro', methods=['GET'])
 def get_distro_activity():
@@ -90,21 +83,17 @@ def get_distro_activity():
         # need to avoid a filesort due to MySQL picking distro as first table
         query = query.with_hint(DistroActivity.__table__,
                 'IGNORE INDEX (ix_distro_activity_distro_id)', 'mysql')
+    distro_columns = {
+        'distro': Distro.name,
+        'distro.name': Distro.name,
+    }
     json_result = json_collection(query,
-            columns=dict(common_activity_search_columns.items() + {
-                'distro': Distro.name,
-                'distro.name': Distro.name,
-                }.items()),
-            skip_count=True)
-    if request_wants_json():
-        return jsonify(json_result)
-    return render_tg_template('bkr.server.templates.backgrid', {
-        'title': u'Distro Activity',
-        'grid_collection_type': 'Activity',
-        'grid_collection_data': json_result,
-        'grid_collection_url': request.path,
-        'grid_view_type': 'DistroActivityView',
-    })
+                                  columns={
+                                      **common_activity_search_columns,
+                                      **distro_columns},
+                                  skip_count=True)
+    return jsonify(json_result)
+
 
 @app.route('/activity/distrotree', methods=['GET'])
 def get_distro_tree_activity():
@@ -134,23 +123,19 @@ def get_distro_tree_activity():
         # need to avoid a filesort due to MySQL picking distro_tree as first table
         query = query.with_hint(DistroTreeActivity.__table__,
                 'IGNORE INDEX (ix_distro_tree_activity_distro_tree_id)', 'mysql')
+    distro_tree_columns = {
+        'distro_tree.distro': Distro.name,
+        'distro_tree.distro.name': Distro.name,
+        'distro_tree.variant': DistroTree.variant,
+        'distro_tree.arch': Arch.arch,
+    }
     json_result = json_collection(query,
-            columns=dict(common_activity_search_columns.items() + {
-                'distro_tree.distro': Distro.name,
-                'distro_tree.distro.name': Distro.name,
-                'distro_tree.variant': DistroTree.variant,
-                'distro_tree.arch': Arch.arch,
-                }.items()),
-            skip_count=True)
-    if request_wants_json():
-        return jsonify(json_result)
-    return render_tg_template('bkr.server.templates.backgrid', {
-        'title': u'Distro Tree Activity',
-        'grid_collection_type': 'Activity',
-        'grid_collection_data': json_result,
-        'grid_collection_url': request.path,
-        'grid_view_type': 'DistroTreeActivityView',
-    })
+                                  columns={
+                                      **common_activity_search_columns,
+                                      **distro_tree_columns},
+                                  skip_count=True)
+    return jsonify(json_result)
+
 
 @app.route('/activity/group', methods=['GET'])
 def get_group_activity():
@@ -173,20 +158,16 @@ def get_group_activity():
         # need to avoid a filesort due to MySQL picking group as first table
         query = query.with_hint(GroupActivity.__table__,
                 'IGNORE INDEX (ix_group_activity_group_id)', 'mysql')
+    group_columns = {
+        'group': Group.group_name,
+        'group.group_name': Group.group_name,
+    }
     json_result = json_collection(query,
-            columns=dict(common_activity_search_columns.items() + {
-                'group': Group.group_name,
-                'group.group_name': Group.group_name,
-                }.items()))
-    if request_wants_json():
-        return jsonify(json_result)
-    return render_tg_template('bkr.server.templates.backgrid', {
-        'title': u'Group Activity',
-        'grid_collection_type': 'Activity',
-        'grid_collection_data': json_result,
-        'grid_collection_url': request.path,
-        'grid_view_type': 'GroupActivityView',
-    })
+                                  columns={
+                                      **common_activity_search_columns,
+                                      **group_columns
+                                  })
+    return jsonify(json_result)
 
 @app.route('/activity/labcontroller', methods=['GET'])
 def get_lab_controller_activity():
@@ -209,20 +190,17 @@ def get_lab_controller_activity():
         # need to avoid a filesort due to MySQL picking lab_controller as first table
         query = query.with_hint(LabControllerActivity.__table__,
                 'IGNORE INDEX (ix_lab_controller_activity_lab_controller_id)', 'mysql')
+    lc_columns = {
+        'lab_controller': LabController.fqdn,
+        'lab_controller.fqdn': LabController.fqdn,
+    }
     json_result = json_collection(query,
-            columns=dict(common_activity_search_columns.items() + {
-                'lab_controller': LabController.fqdn,
-                'lab_controller.fqdn': LabController.fqdn,
-                }.items()))
-    if request_wants_json():
-        return jsonify(json_result)
-    return render_tg_template('bkr.server.templates.backgrid', {
-        'title': u'Lab Controller Activity',
-        'grid_collection_type': 'Activity',
-        'grid_collection_data': json_result,
-        'grid_collection_url': request.path,
-        'grid_view_type': 'LabControllerActivityView',
-    })
+                                  columns={
+                                      **common_activity_search_columns,
+                                      **lc_columns
+                                  })
+    return jsonify(json_result)
+
 
 @app.route('/activity/system', methods=['GET'])
 def get_systems_activity(): # distinct from get_system_activity
@@ -245,21 +223,17 @@ def get_systems_activity(): # distinct from get_system_activity
         # need to avoid a filesort due to MySQL picking system as first table
         query = query.with_hint(SystemActivity.__table__,
                 'IGNORE INDEX (ix_system_activity_system_id)', 'mysql')
+    system_columns = {
+        'system': System.fqdn,
+        'system.fqdn': System.fqdn,
+    }
     json_result = json_collection(query,
-            columns=dict(common_activity_search_columns.items() + {
-                'system': System.fqdn,
-                'system.fqdn': System.fqdn,
-                }.items()),
-            skip_count=True)
-    if request_wants_json():
-        return jsonify(json_result)
-    return render_tg_template('bkr.server.templates.backgrid', {
-        'title': u'System Activity',
-        'grid_collection_type': 'Activity',
-        'grid_collection_data': json_result,
-        'grid_collection_url': request.path,
-        'grid_view_type': 'SystemsActivityView',
-    })
+                                  columns={
+                                      **common_activity_search_columns,
+                                      **system_columns
+                                  },
+                                  skip_count=True)
+    return jsonify(json_result)
 
 
 @app.route('/activity/pool', methods=['GET'])
@@ -287,20 +261,15 @@ def get_system_pools_activity():
             .options(contains_eager(SystemPoolActivity.object)) \
             .outerjoin(SystemPool.owning_user) \
             .outerjoin(SystemPool.owning_group)
+    pool_columns = {
+        'pool': SystemPool.name,
+        'pool.name': SystemPool.name,
+        'pool.owner.user_name': User.user_name,
+        'pool.owner.group_name': Group.group_name,
+    }
     json_result = json_collection(query,
-            columns=dict(common_activity_search_columns.items() + {
-                'pool': SystemPool.name,
-                'pool.name': SystemPool.name,
-                'pool.owner.user_name': User.user_name,
-                'pool.owner.group_name': Group.group_name,
-                }.items()),
-            skip_count=True)
-    if request_wants_json():
-        return jsonify(json_result)
-    return render_tg_template('bkr.server.templates.backgrid', {
-        'title': u'System Pool Activity',
-        'grid_collection_type': 'Activity',
-        'grid_collection_data': json_result,
-        'grid_collection_url': request.path,
-        'grid_view_type': 'SystemPoolActivityView',
-    })
+                                  columns={
+                                      **common_activity_search_columns,
+                                      **pool_columns},
+                                  skip_count=True)
+    return jsonify(json_result)
