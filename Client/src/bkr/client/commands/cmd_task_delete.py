@@ -67,6 +67,7 @@ class Task_Delete(BeakerCommand):
     """
     Delete task from task library
     """
+
     enabled = True
 
     def options(self):
@@ -79,16 +80,18 @@ class Task_Delete(BeakerCommand):
         failed = False
         for task in tasks:
             try:
-                task_id = self.hub.tasks.to_dict(task)['id']
+                task_id = self.hub.tasks.to_dict(task)["id"]
                 output = json.loads(self.hub.tasks.disable_from_ui(task_id))
-                print('{}: {}'.format('success' if output['success'] else 'failed', task))
-                failed = not output['success']
+                print(
+                    "{}: {}".format("success" if output["success"] else "failed", task)
+                )
+                failed = not output["success"]
             except (KeyboardInterrupt, SystemExit):
                 raise
             except xmlrpc_client.Fault as ex:
                 failed = True
-                sys.stderr.write(ex.faultString + '\n')
+                sys.stderr.write(ex.faultString + "\n")
             except Exception as ex:
                 failed = True
-                sys.stderr.write('Exception: %s\n' % ex)
+                sys.stderr.write("Exception: %s\n" % ex)
         exit(failed)

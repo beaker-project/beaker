@@ -62,6 +62,7 @@ class Harness_Test(BeakerWorkflow):
     """
     Workflow for testing harness installation
     """
+
     enabled = True
 
     def options(self):
@@ -74,25 +75,25 @@ class Harness_Test(BeakerWorkflow):
         self.parser.remove_option("--arch")
         # Re-add option Family with append options
         self.parser.add_option(
-            '--family',
-            action='append',
+            "--family",
+            action="append",
             default=[],
-            help='Test harness only on this family'
+            help="Test harness only on this family",
         )
 
     def run(self, *args, **kwargs):
         self.set_hub(**kwargs)
 
-        debug = kwargs.pop('debug', False)
-        dryrun = kwargs.pop('dryrun', False)
-        wait = kwargs.pop('wait', False)
-        taskParams = kwargs.pop('taskparam', [])
-        families = kwargs.pop('family', [])
-        kwargs.pop('variant', None)
-        kwargs.pop('arch', None)
+        debug = kwargs.pop("debug", False)
+        dryrun = kwargs.pop("dryrun", False)
+        wait = kwargs.pop("wait", False)
+        taskParams = kwargs.pop("taskparam", [])
+        families = kwargs.pop("family", [])
+        kwargs.pop("variant", None)
+        kwargs.pop("arch", None)
 
-        if not kwargs.get('whiteboard'):
-            kwargs['whiteboard'] = 'Test harness installation'
+        if not kwargs.get("whiteboard"):
+            kwargs["whiteboard"] = "Test harness installation"
 
         if not families:
             families = self.get_os_majors(**kwargs)
@@ -101,26 +102,36 @@ class Harness_Test(BeakerWorkflow):
 
         fva = set()  # all family-variant-arch combinations
         for family in families:
-            dts = self.hub.distrotrees.filter({'family': family})
+            dts = self.hub.distrotrees.filter({"family": family})
             for dt in dts:
-                fva.add((family, dt['variant'] or '', dt['arch']))
+                fva.add((family, dt["variant"] or "", dt["arch"]))
             # if this family has any variants, discard combinations which have blank variant
             if any(f == family and v for f, v, a in fva):
-                fva.difference_update([(f, v, a) for f, v, a in fva
-                                       if f == family and not v])
+                fva.difference_update(
+                    [(f, v, a) for f, v, a in fva if f == family and not v]
+                )
 
         job = BeakerJob(**kwargs)
         for family, variant, arch in sorted(fva):
             requestedTasks = self.get_tasks(family=family, **kwargs)
             recipe = BeakerRecipe()
-            recipe.add_base_requires(family=family, variant=variant, arch=arch, **kwargs)
-            arch_node = self.doc.createElement('distro_arch')
-            arch_node.setAttribute('op', '=')
-            arch_node.setAttribute('value', arch)
-            recipe = self.process_template(recipe, requestedTasks, taskParams=taskParams,
-                                           distroRequires=arch_node, arch=arch, family=family,
-                                           allow_empty_recipe=True, **kwargs)
-            recipe.whiteboard = ' '.join([family, variant, arch])
+            recipe.add_base_requires(
+                family=family, variant=variant, arch=arch, **kwargs
+            )
+            arch_node = self.doc.createElement("distro_arch")
+            arch_node.setAttribute("op", "=")
+            arch_node.setAttribute("value", arch)
+            recipe = self.process_template(
+                recipe,
+                requestedTasks,
+                taskParams=taskParams,
+                distroRequires=arch_node,
+                arch=arch,
+                family=family,
+                allow_empty_recipe=True,
+                **kwargs
+            )
+            recipe.whiteboard = " ".join([family, variant, arch])
             recipeset = BeakerRecipeSet(**kwargs)
             recipeset.add_recipe(recipe)
             job.add_recipe_set(recipeset)
@@ -141,7 +152,7 @@ class Harness_Test(BeakerWorkflow):
                 raise
             except Exception as ex:
                 failed = True
-                sys.stderr.write('Exception: %s\n' % ex)
+                sys.stderr.write("Exception: %s\n" % ex)
             if wait:
                 failed |= watch_tasks(self.hub, submitted_jobs)
         sys.exit(failed)

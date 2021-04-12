@@ -65,8 +65,8 @@ class Distros_Edit_Version(BeakerCommand):
     """
     Edit distros version
     """
-    enabled = True
 
+    enabled = True
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <version>" % self.normalized_name

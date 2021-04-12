@@ -11,16 +11,16 @@ Create Date: 2015-11-10 23:41:01.990834
 
 """
 
-revision = 'b830bfac525'
-down_revision = '1b4aec9ce90d'
+revision = "b830bfac525"
+down_revision = "1b4aec9ce90d"
 
 from alembic import op
 import sqlalchemy as sa
 
 
 def upgrade():
-    op.add_column('job', sa.Column('extra_xml', sa.UnicodeText(), nullable=True))
+    op.add_column("job", sa.Column("extra_xml", sa.UnicodeText(), nullable=True))
 
 
 def downgrade():
-    op.drop_column('job', 'extra_xml')
+    op.drop_column("job", "extra_xml")

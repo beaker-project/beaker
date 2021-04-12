@@ -12,14 +12,16 @@ Create Date: 2014-10-02 16:12:05.951034
 """
 
 # revision identifiers, used by Alembic.
-revision = '23cbe32ac74e'
-down_revision = '0f57781e6548'
+revision = "23cbe32ac74e"
+down_revision = "0f57781e6548"
 
 from alembic import op
 import sqlalchemy as sa
 
+
 def upgrade():
-    op.create_unique_constraint('fqdn', 'system', ['fqdn'])
+    op.create_unique_constraint("fqdn", "system", ["fqdn"])
+
 
 def downgrade():
-    op.drop_constraint('fqdn', 'system', type_='unique')
+    op.drop_constraint("fqdn", "system", type_="unique")

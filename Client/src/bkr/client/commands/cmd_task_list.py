@@ -110,6 +110,7 @@ class Task_List(BeakerCommand):
     """
     List tasks in Beaker's task library
     """
+
     enabled = True
 
     def options(self):
@@ -144,50 +145,54 @@ class Task_List(BeakerCommand):
         self.parser.add_option(
             "--destructive",
             action="store_true",
-            help=("Only include destructive tasks (Note: excludes both "
-                  "non-destructive and unmarked tasks)"),
+            help=(
+                "Only include destructive tasks (Note: excludes both "
+                "non-destructive and unmarked tasks)"
+            ),
         )
         self.parser.add_option(
             "--non-destructive",
             action="store_true",
-            help=("Only include non-destructive tasks (Note: excludes both "
-                  "destructive and unmarked tasks)"),
+            help=(
+                "Only include non-destructive tasks (Note: excludes both "
+                "destructive and unmarked tasks)"
+            ),
         )
 
     def run(self, *args, **kwargs):
         filter = dict()
-        filter['types'] = kwargs.pop("type", None)
-        filter['packages'] = kwargs.pop("package", None)
-        filter['distro_name'] = kwargs.pop("distro", None)
-        filter['valid'] = True
+        filter["types"] = kwargs.pop("type", None)
+        filter["packages"] = kwargs.pop("package", None)
+        filter["distro_name"] = kwargs.pop("distro", None)
+        filter["valid"] = True
 
         # Make sure they didn't specify both destructive and non_destructive.
         if not kwargs.get("destructive") or not kwargs.get("non_destructive"):
             if kwargs.get("destructive", None):
-                filter['destructive'] = 1
+                filter["destructive"] = 1
             if kwargs.get("non_destructive", None):
-                filter['destructive'] = 0
+                filter["destructive"] = 0
         params = kwargs.pop("params", [])
         xml = kwargs.pop("xml")
 
         self.set_hub(**kwargs)
         doc = Document()
-        xmlparams = doc.createElement('params')
+        xmlparams = doc.createElement("params")
         for param in params:
             try:
-                (key, value) = param.split('=', 1)
+                (key, value) = param.split("=", 1)
             except ValueError:
                 print("Params must be KEY=VALUE %s is not" % param)
                 sys.exit(1)
-            xmlparam = doc.createElement('param')
-            xmlparam.setAttribute('name', '%s' % key)
-            xmlparam.setAttribute('value', '%s' % value)
+            xmlparam = doc.createElement("param")
+            xmlparam.setAttribute("name", "%s" % key)
+            xmlparam.setAttribute("value", "%s" % value)
             xmlparams.appendChild(xmlparam)
         for task_dict in self.hub.tasks.filter(filter):
             if xml:
-                xmltask = doc.createElement('task')
-                xmltask.setAttribute('name', task_dict['name'])
+                xmltask = doc.createElement("task")
+                xmltask.setAttribute("name", task_dict["name"])
                 xmltask.appendChild(xmlparams)
                 print(xmltask.toprettyxml())
             else:
-                print(task_dict['name'])
+                print(task_dict["name"])

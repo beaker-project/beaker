@@ -86,17 +86,19 @@ class Job_Results(BeakerCommand):
     """
     Get Jobs/Recipes Results
     """
+
     enabled = True
     requires_login = False
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <taskspec>..." % self.normalized_name
         self.parser.add_option(
-            '--format',
-            type='choice', choices=['beaker-results-xml', 'junit-xml'],
-            default='beaker-results-xml',
-            help='Display results in this format: '
-                 'beaker-results-xml, junit-xml [default: %default]',
+            "--format",
+            type="choice",
+            choices=["beaker-results-xml", "junit-xml"],
+            default="beaker-results-xml",
+            help="Display results in this format: "
+            "beaker-results-xml, junit-xml [default: %default]",
         )
         self.parser.add_option(
             "--prettyxml",
@@ -105,9 +107,11 @@ class Job_Results(BeakerCommand):
             help="Pretty print the xml",
         )
         self.parser.add_option(
-            '--no-logs',
-            dest='include_logs', action='store_false', default=True,
-            help='Omit logs from results XML',
+            "--no-logs",
+            dest="include_logs",
+            action="store_false",
+            default=True,
+            help="Omit logs from results XML",
         )
 
     def run(self, *args, **kwargs):
@@ -115,29 +119,31 @@ class Job_Results(BeakerCommand):
 
         format = kwargs.pop("format")
         prettyxml = kwargs.pop("prettyxml", None)
-        include_logs = kwargs.pop('include_logs')
+        include_logs = kwargs.pop("include_logs")
 
         self.set_hub(**kwargs)
         requests_session = self.requests_session()
         for task in args:
-            if format == 'beaker-results-xml':
+            if format == "beaker-results-xml":
                 myxml = self.hub.taskactions.to_xml(task, False, True, include_logs)
                 # XML is really bytes, the fact that the server is sending the bytes as an
                 # XML-RPC Unicode string is just a mistake in Beaker's API
-                myxml = myxml.encode('utf8')
-                str_xml = lxml.etree.tostring(lxml.etree.fromstring(myxml),
-                                              pretty_print=prettyxml,
-                                              xml_declaration=prettyxml,
-                                              encoding='utf-8')
+                myxml = myxml.encode("utf8")
+                str_xml = lxml.etree.tostring(
+                    lxml.etree.fromstring(myxml),
+                    pretty_print=prettyxml,
+                    xml_declaration=prettyxml,
+                    encoding="utf-8",
+                )
                 if six.PY3:  # Decode bytes to string (otherwise print will be broken)
-                    str_xml = str_xml.decode('utf-8')
+                    str_xml = str_xml.decode("utf-8")
                 print(str_xml)
-            elif format == 'junit-xml':
-                type, colon, id = task.partition(':')
-                if type != 'J':
-                    self.parser.error('JUnit XML format is only available for jobs')
-                response = requests_session.get('jobs/%s.junit.xml' % id)
+            elif format == "junit-xml":
+                type, colon, id = task.partition(":")
+                if type != "J":
+                    self.parser.error("JUnit XML format is only available for jobs")
+                response = requests_session.get("jobs/%s.junit.xml" % id)
                 response.raise_for_status()
                 print(response.content)
             else:
-                raise RuntimeError('Format %s not implemented' % format)
+                raise RuntimeError("Format %s not implemented" % format)

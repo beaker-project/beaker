@@ -11,22 +11,24 @@ Create Date: 2016-07-05 12:56:44.933243
 """
 
 # revision identifiers, used by Alembic.
-revision = '38cfd9b8ce52'
-down_revision = '2e171e6198e6'
+revision = "38cfd9b8ce52"
+down_revision = "2e171e6198e6"
 
 from alembic import op
 from bkr.server.alembic.migration_utils import add_enum_value, drop_enum_value
 
+
 def upgrade():
-    add_enum_value('job', 'result', u'Skip', nullable=False)
-    add_enum_value('recipe_set', 'result', u'Skip', nullable=False)
-    add_enum_value('recipe', 'result', u'Skip', nullable=False)
-    add_enum_value('recipe_task', 'result', u'Skip', nullable=False)
-    add_enum_value('recipe_task_result', 'result', u'Skip', nullable=False)
+    add_enum_value("job", "result", u"Skip", nullable=False)
+    add_enum_value("recipe_set", "result", u"Skip", nullable=False)
+    add_enum_value("recipe", "result", u"Skip", nullable=False)
+    add_enum_value("recipe_task", "result", u"Skip", nullable=False)
+    add_enum_value("recipe_task_result", "result", u"Skip", nullable=False)
+
 
 def downgrade():
-    drop_enum_value('job', 'result', u'Skip', nullable=False)
-    drop_enum_value('recipe_set', 'result', u'Skip', nullable=False)
-    drop_enum_value('recipe', 'result', u'Skip', nullable=False)
-    drop_enum_value('recipe_task', 'result', u'Skip', nullable=False)
-    drop_enum_value('recipe_task_result', 'result', u'Skip', nullable=False)
+    drop_enum_value("job", "result", u"Skip", nullable=False)
+    drop_enum_value("recipe_set", "result", u"Skip", nullable=False)
+    drop_enum_value("recipe", "result", u"Skip", nullable=False)
+    drop_enum_value("recipe_task", "result", u"Skip", nullable=False)
+    drop_enum_value("recipe_task_result", "result", u"Skip", nullable=False)

@@ -72,6 +72,7 @@ class Workflow_Simple(BeakerWorkflow):
     """
     Simple workflow to generate job to scheduler
     """
+
     enabled = True
     doc = xml.dom.minidom.Document()
 
@@ -81,10 +82,16 @@ class Workflow_Simple(BeakerWorkflow):
 
     def run(self, *args, **kwargs):
 
-        if not kwargs.get("package", []) and not kwargs.get("task", []) \
-                and not kwargs.get("taskfile", []) and not kwargs.get("type", []):
-            self.parser.error('No tasks specified to be run\nHint: '
-                              'Use --task, --package, --taskfile or --task-type to select tasks\n')
+        if (
+            not kwargs.get("package", [])
+            and not kwargs.get("task", [])
+            and not kwargs.get("taskfile", [])
+            and not kwargs.get("type", [])
+        ):
+            self.parser.error(
+                "No tasks specified to be run\nHint: "
+                "Use --task, --package, --taskfile or --task-type to select tasks\n"
+            )
 
         self.set_hub(**kwargs)
 
@@ -125,34 +132,46 @@ class Workflow_Simple(BeakerWorkflow):
 
         # Add Host Requirements
         for arch in arches:
-            arch_node = self.doc.createElement('distro_arch')
-            arch_node.setAttribute('op', '=')
-            arch_node.setAttribute('value', arch)
+            arch_node = self.doc.createElement("distro_arch")
+            arch_node.setAttribute("op", "=")
+            arch_node.setAttribute("value", arch)
             recipe_set = BeakerRecipeSet(**kwargs)
             if self.multi_host:
                 for i in range(self.n_servers):
-                    recipe_set.add_recipe(self.process_template(recipe_template,
-                                                                requested_tasks,
-                                                                taskParams=taskParams,
-                                                                distroRequires=arch_node,
-                                                                role='SERVERS',
-                                                                arch=arch,
-                                                                **kwargs))
+                    recipe_set.add_recipe(
+                        self.process_template(
+                            recipe_template,
+                            requested_tasks,
+                            taskParams=taskParams,
+                            distroRequires=arch_node,
+                            role="SERVERS",
+                            arch=arch,
+                            **kwargs
+                        )
+                    )
                 for i in range(self.n_clients):
-                    recipe_set.add_recipe(self.process_template(recipe_template,
-                                                                requested_tasks,
-                                                                taskParams=taskParams,
-                                                                distroRequires=arch_node,
-                                                                role='CLIENTS',
-                                                                arch=arch,
-                                                                **kwargs))
+                    recipe_set.add_recipe(
+                        self.process_template(
+                            recipe_template,
+                            requested_tasks,
+                            taskParams=taskParams,
+                            distroRequires=arch_node,
+                            role="CLIENTS",
+                            arch=arch,
+                            **kwargs
+                        )
+                    )
             else:
-                recipe_set.add_recipe(self.process_template(recipe_template,
-                                                            requested_tasks,
-                                                            taskParams=taskParams,
-                                                            distroRequires=arch_node,
-                                                            arch=arch,
-                                                            **kwargs))
+                recipe_set.add_recipe(
+                    self.process_template(
+                        recipe_template,
+                        requested_tasks,
+                        taskParams=taskParams,
+                        distroRequires=arch_node,
+                        arch=arch,
+                        **kwargs
+                    )
+                )
             job.add_recipe_set(recipe_set)
 
         # jobxml
@@ -171,7 +190,7 @@ class Workflow_Simple(BeakerWorkflow):
                 raise
             except Exception as ex:
                 is_failed = True
-                sys.stderr.write('Exception: %s\n' % ex)
+                sys.stderr.write("Exception: %s\n" % ex)
             if wait:
                 is_failed |= watch_tasks(self.hub, submitted_jobs)
         sys.exit(is_failed)

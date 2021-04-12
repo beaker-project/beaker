@@ -60,16 +60,15 @@ class Watchdog_Show(BeakerCommand):
     """
     Display Task's Watchdog
     """
+
     enabled = True
     requires_login = False
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <task_id>..." % self.normalized_name
 
-
     def run(self, *args, **kwargs):
         self.set_hub(**kwargs)
         for task_id in args:
             seconds_left = self.hub.recipes.tasks.watchdog(task_id)
-            print("%s: %s" % (task_id, seconds_left or 'N/A'))
-
+            print("%s: %s" % (task_id, seconds_left or "N/A"))

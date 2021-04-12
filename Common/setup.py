@@ -11,26 +11,23 @@ from setuptools import setup, find_packages
 # metadata to the installed .egg-info directory for the main beaker package.
 
 setup(
-    name='beaker-common',
-    version='28.2',
-    description='Common components for Beaker packages',
-    author='Red Hat, Inc.',
-    author_email='beaker-devel@lists.fedorahosted.org',
-    url='https://beaker-project.org/',
-
-    packages=find_packages('.'),
-    package_dir={'': '.'},
-    package_data={'bkr.common': ['schema/*.rnc',
-                                 'schema/*.rng',
-                                 'schema/*.ttl',
-                                 'default.conf']},
-
+    name="beaker-common",
+    version="28.2",
+    description="Common components for Beaker packages",
+    author="Red Hat, Inc.",
+    author_email="beaker-devel@lists.fedorahosted.org",
+    url="https://beaker-project.org/",
+    packages=find_packages("."),
+    package_dir={"": "."},
+    package_data={
+        "bkr.common": ["schema/*.rnc", "schema/*.rng", "schema/*.ttl", "default.conf"]
+    },
     classifiers=[
-        'Development Status :: 5 - Production/Stable',
-        'Operating System :: POSIX :: Linux',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)',
+        "Development Status :: 5 - Production/Stable",
+        "Operating System :: POSIX :: Linux",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
     ],
 )

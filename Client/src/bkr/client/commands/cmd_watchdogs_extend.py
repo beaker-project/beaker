@@ -58,12 +58,14 @@ class Watchdogs_Extend(BeakerCommand):
     """
     Extend the Watchdog for all Tasks
     """
+
     enabled = True
 
     def options(self):
         self.parser.add_option(
             "--by",
-            default=7200, type="int",
+            default=7200,
+            type="int",
             help="Time in seconds to extend the watchdog by.",
         )
 

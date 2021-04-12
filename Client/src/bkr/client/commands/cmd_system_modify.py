@@ -127,84 +127,121 @@ class System_Modify(BeakerCommand):
     """
     Modify Beaker system attributes
     """
+
     enabled = True
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <fqdn> .." % self.normalized_name
 
-        self.parser.add_option('--owner', metavar='USERNAME',
-                               help='Change owner to USERNAME')
-        self.parser.add_option('--condition', type='choice',
-                               choices=['Automated', 'Manual', 'Broken', 'Removed'],
-                               help='Change condition: Automated, Manual, Broken, Removed')
-        self.parser.add_option('--host-hypervisor', metavar='TYPE',
-                               help='Change host hypervisor to TYPE')
-        self.parser.add_option('--pool-policy', metavar='POOL',
-                               help='Change active access policy to the access policy of POOL')
-        self.parser.add_option('--use-custom-policy', action='store_true', default=None,
-                               help="Change active access policy to the "
-                                    "system's custom access policy")
-        self.parser.add_option('--location',
-                               help='Physical location of the system')
-        self.parser.add_option('--power-type', metavar='TYPE',
-                               help='Remote power control type')
-        self.parser.add_option('--power-address', metavar='ADDRESS',
-                               help='Address passed to the power control script')
-        self.parser.add_option('--power-user', metavar='USERNAME',
-                               help='Username passed to the power control script')
-        self.parser.add_option('--power-password', metavar='PASSWORD',
-                               help='Password passed to the power control script')
-        self.parser.add_option('--power-id',
-                               help='Unique identifier passed to the power control script')
-        self.parser.add_option('--power-quiescent-period', metavar='SECONDS',
-                               help='Quiescent period for power control')
-        self.parser.add_option('--release-action', type='choice',
-                               choices=['PowerOff', 'LeaveOn', 'ReProvision'],
-                               help='Action to take whenever a reservation for this system is '
-                                    'returned')
+        self.parser.add_option(
+            "--owner", metavar="USERNAME", help="Change owner to USERNAME"
+        )
+        self.parser.add_option(
+            "--condition",
+            type="choice",
+            choices=["Automated", "Manual", "Broken", "Removed"],
+            help="Change condition: Automated, Manual, Broken, Removed",
+        )
+        self.parser.add_option(
+            "--host-hypervisor", metavar="TYPE", help="Change host hypervisor to TYPE"
+        )
+        self.parser.add_option(
+            "--pool-policy",
+            metavar="POOL",
+            help="Change active access policy to the access policy of POOL",
+        )
+        self.parser.add_option(
+            "--use-custom-policy",
+            action="store_true",
+            default=None,
+            help="Change active access policy to the " "system's custom access policy",
+        )
+        self.parser.add_option("--location", help="Physical location of the system")
+        self.parser.add_option(
+            "--power-type", metavar="TYPE", help="Remote power control type"
+        )
+        self.parser.add_option(
+            "--power-address",
+            metavar="ADDRESS",
+            help="Address passed to the power control script",
+        )
+        self.parser.add_option(
+            "--power-user",
+            metavar="USERNAME",
+            help="Username passed to the power control script",
+        )
+        self.parser.add_option(
+            "--power-password",
+            metavar="PASSWORD",
+            help="Password passed to the power control script",
+        )
+        self.parser.add_option(
+            "--power-id", help="Unique identifier passed to the power control script"
+        )
+        self.parser.add_option(
+            "--power-quiescent-period",
+            metavar="SECONDS",
+            help="Quiescent period for power control",
+        )
+        self.parser.add_option(
+            "--release-action",
+            type="choice",
+            choices=["PowerOff", "LeaveOn", "ReProvision"],
+            help="Action to take whenever a reservation for this system is " "returned",
+        )
 
     def run(self, *args, **kwargs):
-        owner = kwargs.pop('owner')
-        condition = kwargs.pop('condition')
-        host_hypervisor = kwargs.pop('host_hypervisor')
-        pool = kwargs.get('pool_policy')
-        custom_policy = kwargs.get('use_custom_policy')
+        owner = kwargs.pop("owner")
+        condition = kwargs.pop("condition")
+        host_hypervisor = kwargs.pop("host_hypervisor")
+        pool = kwargs.get("pool_policy")
+        custom_policy = kwargs.get("use_custom_policy")
 
         if not args:
-            self.parser.error('Specify one or more system FQDNs to modify')
+            self.parser.error("Specify one or more system FQDNs to modify")
 
         if pool and custom_policy:
-            self.parser.error('Only one of --pool-policy or'
-                              ' --use-custom-policy must be specified')
+            self.parser.error(
+                "Only one of --pool-policy or" " --use-custom-policy must be specified"
+            )
         system_attr = {}
         if owner:
-            system_attr['owner'] = {'user_name': owner}
+            system_attr["owner"] = {"user_name": owner}
         if condition:
-            system_attr['status'] = condition.title()
-        if host_hypervisor == '':
-            system_attr['hypervisor'] = None
+            system_attr["status"] = condition.title()
+        if host_hypervisor == "":
+            system_attr["hypervisor"] = None
         elif host_hypervisor:
-            system_attr['hypervisor'] = host_hypervisor
+            system_attr["hypervisor"] = host_hypervisor
         if pool:
-            system_attr['active_access_policy'] = {'pool_name': pool}
+            system_attr["active_access_policy"] = {"pool_name": pool}
         if custom_policy:
-            system_attr['active_access_policy'] = {'custom': True}
+            system_attr["active_access_policy"] = {"custom": True}
 
-        attrs = ['location', 'power_type', 'power_address', 'power_user',
-                 'power_password', 'power_id', 'power_quiescent_period',
-                 'release_action']
+        attrs = [
+            "location",
+            "power_type",
+            "power_address",
+            "power_user",
+            "power_password",
+            "power_id",
+            "power_quiescent_period",
+            "release_action",
+        ]
         for attr in attrs:
             value = kwargs.pop(attr, None)
             if value is not None:
                 system_attr[attr] = value
 
         if not system_attr:
-            self.parser.error('At least one option is required, specifying what to change')
+            self.parser.error(
+                "At least one option is required, specifying what to change"
+            )
 
         self.set_hub(**kwargs)
 
         requests_session = self.requests_session()
         for fqdn in args:
-            system_update_url = 'systems/%s/' % parse.quote(fqdn, '')
+            system_update_url = "systems/%s/" % parse.quote(fqdn, "")
             res = requests_session.patch(system_update_url, json=system_attr)
             res.raise_for_status()

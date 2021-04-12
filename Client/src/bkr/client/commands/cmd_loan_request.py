@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -75,6 +74,7 @@ class Loan_Request(BeakerCommand):
     """
     Send a Loan Request to ask for specific system
     """
+
     enabled = True
 
     def options(self):
@@ -83,18 +83,18 @@ class Loan_Request(BeakerCommand):
         self.parser.add_option(
             "--comment",
             help="Reason for the loan request",
-            )
+        )
 
     def run(self, *args, **kwargs):
         if len(args) != 1:
-            self.parser.error('Exactly one system fqdn must be given')
+            self.parser.error("Exactly one system fqdn must be given")
 
         fqdn = args[0]
-        comment = kwargs.pop('comment', None)
+        comment = kwargs.pop("comment", None)
 
         self.set_hub(**kwargs)
-        request_url = 'systems/%s/loan-requests/' % parse.quote(fqdn, '')
-        data = {'message': comment}
+        request_url = "systems/%s/loan-requests/" % parse.quote(fqdn, "")
+        data = {"message": comment}
         requests_session = self.requests_session()
         res = requests_session.post(request_url, json=data)
         res.raise_for_status()

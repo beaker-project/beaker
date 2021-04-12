@@ -11,13 +11,15 @@ Create Date: 2015-08-21 16:43:35.335744
 """
 
 # revision identifiers, used by Alembic.
-revision = '5ab8960cdb43'
-down_revision = '171c07fb4970'
+revision = "5ab8960cdb43"
+down_revision = "171c07fb4970"
 
 from alembic import op
 
+
 def upgrade():
-    op.execute("""
+    op.execute(
+        """
         DELETE FROM x
         USING osmajor_install_options x
         INNER JOIN (SELECT MAX(id) AS max_id, osmajor_id, arch_id
@@ -26,7 +28,9 @@ def upgrade():
         ON x.osmajor_id = y.osmajor_id AND
             (x.arch_id = y.arch_id OR x.arch_id IS NULL AND y.arch_id IS NULL) AND
             x.id != y.max_id
-        """)
+        """
+    )
+
 
 def downgrade():
-    pass # no downgrade because we are fixing up old data
+    pass  # no downgrade because we are fixing up old data

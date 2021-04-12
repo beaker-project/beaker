@@ -48,6 +48,7 @@ class LabController_List(BeakerCommand):
     """
     List lab controllers
     """
+
     enabled = True
     requires_login = False
 
@@ -64,4 +65,5 @@ class List_LabControllers(LabController_List):
     """
     To provide backwards compatibility
     """
+
     hidden = True

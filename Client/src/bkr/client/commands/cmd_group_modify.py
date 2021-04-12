@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -111,6 +110,7 @@ class Group_Modify(BeakerCommand):
     """
     Modify an existing Group
     """
+
     enabled = True
 
     def options(self):
@@ -119,45 +119,45 @@ class Group_Modify(BeakerCommand):
         self.parser.add_option(
             "--display-name",
             help="New display name of the group",
-            )
+        )
 
         self.parser.add_option(
             "--group-name",
             help="New name of the group",
-            )
+        )
 
         self.parser.add_option(
             "--description",
             help="New description of the group",
-            )
+        )
 
         self.parser.add_option(
             "--add-member",
-            action='append',
+            action="append",
             default=[],
             help="Username of the member to be added to the group",
-            )
+        )
 
         self.parser.add_option(
             "--remove-member",
-            action='append',
+            action="append",
             default=[],
             help="Username of the member to be removed from the group",
-            )
+        )
 
         self.parser.add_option(
             "--grant-owner",
-            action='append',
+            action="append",
             default=[],
             help="Username of the member to grant owner rights",
-            )
+        )
 
         self.parser.add_option(
             "--revoke-owner",
-            action='append',
+            action="append",
             default=[],
             help="Username of the member to revoke owner rights",
-            )
+        )
 
         self.parser.add_option(
             "--root-password",
@@ -167,57 +167,69 @@ class Group_Modify(BeakerCommand):
     def run(self, *args, **kwargs):
 
         if len(args) != 1:
-            self.parser.error('Exactly one group name must be specified.')
+            self.parser.error("Exactly one group name must be specified.")
 
         group = args[0]
 
-        display_name = kwargs.get('display_name', None)
-        group_name = kwargs.get('group_name', None)
-        description = kwargs.get('description', None)
-        add_member = kwargs.pop('add_member', [])
-        remove_member = kwargs.pop('remove_member', [])
-        grant_owner = kwargs.get('grant_owner', None)
-        revoke_owner = kwargs.get('revoke_owner', None)
-        password = kwargs.get('root_password', None)
+        display_name = kwargs.get("display_name", None)
+        group_name = kwargs.get("group_name", None)
+        description = kwargs.get("description", None)
+        add_member = kwargs.pop("add_member", [])
+        remove_member = kwargs.pop("remove_member", [])
+        grant_owner = kwargs.get("grant_owner", None)
+        revoke_owner = kwargs.get("revoke_owner", None)
+        password = kwargs.get("root_password", None)
 
-        if not any([group_name, display_name, description, add_member, grant_owner,
-            revoke_owner, password,remove_member]):
-            self.parser.error('Please specify an attribute to modify.')
+        if not any(
+            [
+                group_name,
+                display_name,
+                description,
+                add_member,
+                grant_owner,
+                revoke_owner,
+                password,
+                remove_member,
+            ]
+        ):
+            self.parser.error("Please specify an attribute to modify.")
 
         self.set_hub(**kwargs)
         requests_session = self.requests_session()
 
         for member in add_member:
-            url = 'groups/%s/members/' % parse.quote(group)
-            res = requests_session.post(url, json={'user_name': member})
+            url = "groups/%s/members/" % parse.quote(group)
+            res = requests_session.post(url, json={"user_name": member})
             res.raise_for_status()
 
         for member in remove_member:
-            url = 'groups/%s/members/' % parse.quote(group)
-            res = requests_session.delete(url, params={'user_name': member})
+            url = "groups/%s/members/" % parse.quote(group)
+            res = requests_session.delete(url, params={"user_name": member})
             res.raise_for_status()
 
         if grant_owner:
             for member in grant_owner:
-                url = 'groups/%s/owners/' % parse.quote(group)
-                res = requests_session.post(url, json={'user_name': member})
+                url = "groups/%s/owners/" % parse.quote(group)
+                res = requests_session.post(url, json={"user_name": member})
                 res.raise_for_status()
 
         if revoke_owner:
             for member in revoke_owner:
-                url = 'groups/%s/owners/' % parse.quote(group)
-                res = requests_session.delete(url, params={'user_name': member})
+                url = "groups/%s/owners/" % parse.quote(group)
+                res = requests_session.delete(url, params={"user_name": member})
                 res.raise_for_status()
 
         group_attrs = {}
         if group_name:
-            group_attrs['group_name'] = group_name
+            group_attrs["group_name"] = group_name
         if display_name:
-            group_attrs['display_name'] = display_name
+            group_attrs["display_name"] = display_name
         if description:
-            group_attrs['description'] = description
+            group_attrs["description"] = description
         if password:
-            group_attrs['root_password'] = password
+            group_attrs["root_password"] = password
         if group_attrs:
-            res = requests_session.patch('groups/%s' % parse.quote(group), json=group_attrs)
+            res = requests_session.patch(
+                "groups/%s" % parse.quote(group), json=group_attrs
+            )
             res.raise_for_status()

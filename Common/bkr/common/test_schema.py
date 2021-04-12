@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -8,9 +7,10 @@ import unittest
 import pkg_resources
 import lxml.etree
 
+
 class SchemaTestBase(unittest.TestCase):
 
-    schema_doc = None # filled by setUpClass
+    schema_doc = None  # filled by setUpClass
 
     def assert_valid(self, xml):
         schema = lxml.etree.RelaxNG(self.schema_doc)
@@ -22,15 +22,17 @@ class SchemaTestBase(unittest.TestCase):
         messages = [str(e.message) for e in schema.error_log]
         self.assert_(error_message in messages, messages)
 
-class TaskSchemaTest(SchemaTestBase):
 
+class TaskSchemaTest(SchemaTestBase):
     @classmethod
     def setUpClass(cls):
-        cls.schema_doc = lxml.etree.parse(pkg_resources.resource_stream(
-        'bkr.common', 'schema/beaker-task.rng'))
+        cls.schema_doc = lxml.etree.parse(
+            pkg_resources.resource_stream("bkr.common", "schema/beaker-task.rng")
+        )
 
     def test_minimal_task(self):
-        self.assert_valid('''
+        self.assert_valid(
+            """
             <task name='/distribution/example' 
                   creation_date='2010-05-0517:39:14'
                   destructive='0'
@@ -43,10 +45,12 @@ class TaskSchemaTest(SchemaTestBase):
               </rpms>
               <path>/mnt/test/distribution/example</path>
              </task>
-            ''')
+            """
+        )
 
     def test_maximal_task(self):
-        self.assert_valid('''
+        self.assert_valid(
+            """
             <task name='/distribution/example' 
                   creation_date='2010-05-05 17:39:14'
                   destructive='0'
@@ -79,18 +83,20 @@ class TaskSchemaTest(SchemaTestBase):
                 <bugzilla>3424623</bugzilla>
               </bugzillas>
             </task>
-           ''')
+           """
+        )
 
 
 class JobSchemaTest(SchemaTestBase):
-
     @classmethod
     def setUpClass(cls):
-        cls.schema_doc = lxml.etree.parse(pkg_resources.resource_stream(
-            'bkr.common', 'schema/beaker-job.rng'))
+        cls.schema_doc = lxml.etree.parse(
+            pkg_resources.resource_stream("bkr.common", "schema/beaker-job.rng")
+        )
 
     def test_minimal_job(self):
-        self.assert_valid('''
+        self.assert_valid(
+            """
             <job>
                 <recipeSet>
                     <recipe>
@@ -102,10 +108,12 @@ class JobSchemaTest(SchemaTestBase):
                     </recipe>
                 </recipeSet>
             </job>
-            ''')
+            """
+        )
 
     def test_minimal_job_with_system_inventory_status(self):
-        self.assert_valid('''
+        self.assert_valid(
+            """
             <job>
                 <recipeSet>
                     <recipe>
@@ -121,10 +129,12 @@ class JobSchemaTest(SchemaTestBase):
                     </recipe>
                 </recipeSet>
             </job>
-            ''')
+            """
+        )
 
     def test_minimal_job_with_system_inventory_date(self):
-        self.assert_valid('''
+        self.assert_valid(
+            """
             <job>
                 <recipeSet>
                     <recipe>
@@ -140,10 +150,12 @@ class JobSchemaTest(SchemaTestBase):
                     </recipe>
                 </recipeSet>
             </job>
-            ''')
+            """
+        )
 
     def test_minimal_job_with_invalid_system_inventory_date(self):
-        self.assert_not_valid('''
+        self.assert_not_valid(
+            """
             <job>
                 <recipeSet>
                     <recipe>
@@ -159,10 +171,13 @@ class JobSchemaTest(SchemaTestBase):
                     </recipe>
                 </recipeSet>
             </job>
-        ''', 'Element hostRequires has extra content: system')
+        """,
+            "Element hostRequires has extra content: system",
+        )
 
     def test_recipe_elements_in_different_order(self):
-        self.assert_valid('''
+        self.assert_valid(
+            """
             <job>
                 <recipeSet>
                     <recipe kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="">
@@ -183,10 +198,12 @@ class JobSchemaTest(SchemaTestBase):
                     </recipe>
                 </recipeSet>
             </job>
-            ''')
+            """
+        )
 
     def test_duplicate_elements(self):
-        self.assert_not_valid('''
+        self.assert_not_valid(
+            """
             <job>
                 <recipeSet>
                     <recipe kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="">
@@ -206,11 +223,13 @@ class JobSchemaTest(SchemaTestBase):
                     </recipe>
                 </recipeSet>
             </job>
-            ''',
-            'Extra element autopick in interleave')
+            """,
+            "Extra element autopick in interleave",
+        )
 
     def test_guestrecipe(self):
-        self.assert_valid('''
+        self.assert_valid(
+            """
             <job>
                 <recipeSet>
                     <recipe>
@@ -229,10 +248,12 @@ class JobSchemaTest(SchemaTestBase):
                     </recipe>
                 </recipeSet>
             </job>
-            ''')
+            """
+        )
 
     def test_optional_guestname(self):
-        self.assert_valid('''
+        self.assert_valid(
+            """
             <job>
                 <recipeSet>
                     <recipe>
@@ -251,10 +272,12 @@ class JobSchemaTest(SchemaTestBase):
                     </recipe>
                 </recipeSet>
             </job>
-            ''')
+            """
+        )
 
     def test_hostRequires_not_optional(self):
-        self.assert_not_valid('''
+        self.assert_not_valid(
+            """
             <job>
                 <recipeSet>
                     <recipe>
@@ -265,14 +288,16 @@ class JobSchemaTest(SchemaTestBase):
                     </recipe>
                 </recipeSet>
             </job>
-            ''',
-            'Invalid sequence in interleave')
+            """,
+            "Invalid sequence in interleave",
+        )
 
-    #https://bugzilla.redhat.com/show_bug.cgi?id=851354
+    # https://bugzilla.redhat.com/show_bug.cgi?id=851354
     def test_force_system(self):
 
         # force and hostRequires are mutually exclusive
-        self.assert_not_valid('''
+        self.assert_not_valid(
+            """
             <job>
                 <recipeSet>
                     <recipe>
@@ -287,10 +312,13 @@ class JobSchemaTest(SchemaTestBase):
                     </recipe>
                 </recipeSet>
             </job>
-            ''', 'Invalid attribute force for element hostRequires')
+            """,
+            "Invalid attribute force for element hostRequires",
+        )
 
         # <hostRequires><system>..</system></hostRequires>
-        self.assert_valid('''
+        self.assert_valid(
+            """
             <job>
                 <recipeSet>
                     <recipe>
@@ -304,10 +332,12 @@ class JobSchemaTest(SchemaTestBase):
 
                     </recipe>
                 </recipeSet>
-            </job>''')
+            </job>"""
+        )
 
         # test <hostRequires force='..' </hostRequires>
-        self.assert_valid('''
+        self.assert_valid(
+            """
             <job>
                 <recipeSet>
                     <recipe>
@@ -319,10 +349,12 @@ class JobSchemaTest(SchemaTestBase):
                     </recipe>
                 </recipeSet>
             </job>
-            ''')
+            """
+        )
 
     def test_device(self):
-        self.assert_valid('''
+        self.assert_valid(
+            """
             <job>
                 <recipeSet>
                     <recipe>
@@ -338,10 +370,12 @@ class JobSchemaTest(SchemaTestBase):
                     </recipe>
                 </recipeSet>
             </job>
-            ''')
+            """
+        )
 
     def test_device_driver(self):
-        self.assert_valid('''
+        self.assert_valid(
+            """
             <job>
                 <recipeSet>
                     <recipe>
@@ -353,10 +387,12 @@ class JobSchemaTest(SchemaTestBase):
                     </recipe>
                 </recipeSet>
             </job>
-            ''')
+            """
+        )
 
     def test_optional_op(self):
-        self.assert_valid('''
+        self.assert_valid(
+            """
             <job>
                 <recipeSet>
                     <recipe>
@@ -382,14 +418,15 @@ class JobSchemaTest(SchemaTestBase):
                     </recipe>
                 </recipeSet>
             </job>
-            ''')
+            """
+        )
 
     def test_disk_units(self):
         # These are all valid units for disk sizes:
-        units = ['bytes', 'B', 'kB', 'KB', 'KiB', 'MB', 'MiB',
-                 'GB', 'GiB', 'TB', 'TiB']
+        units = ["bytes", "B", "kB", "KB", "KiB", "MB", "MiB", "GB", "GiB", "TB", "TiB"]
         for unit in units:
-            self.assert_valid('''
+            self.assert_valid(
+                """
                 <job>
                     <recipeSet>
                         <recipe>
@@ -403,9 +440,12 @@ class JobSchemaTest(SchemaTestBase):
                         </recipe>
                     </recipeSet>
                 </job>
-                ''' % unit)
+                """
+                % unit
+            )
         # gigaquads are definitely not a valid unit for disk sizes
-        self.assert_not_valid('''
+        self.assert_not_valid(
+            """
             <job>
                 <recipeSet>
                     <recipe>
@@ -419,11 +459,13 @@ class JobSchemaTest(SchemaTestBase):
                     </recipe>
                 </recipeSet>
             </job>
-            ''',
-            'Element hostRequires has extra content: disk')
+            """,
+            "Element hostRequires has extra content: disk",
+        )
 
     def test_job_with_reservesys(self):
-        self.assert_valid('''
+        self.assert_valid(
+            """
             <job>
                 <recipeSet>
                     <recipe>
@@ -436,10 +478,12 @@ class JobSchemaTest(SchemaTestBase):
                     </recipe>
                 </recipeSet>
             </job>
-            ''')
+            """
+        )
 
     def test_job_with_reservesys_duration(self):
-        self.assert_valid('''
+        self.assert_valid(
+            """
             <job>
                 <recipeSet>
                     <recipe>
@@ -452,5 +496,5 @@ class JobSchemaTest(SchemaTestBase):
                     </recipe>
                 </recipeSet>
             </job>
-            ''')
-
+            """
+        )

@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -66,6 +65,7 @@ class System_Release(BeakerCommand):
     """
     Release a reserved system
     """
+
     enabled = True
 
     def options(self):
@@ -74,7 +74,7 @@ class System_Release(BeakerCommand):
     def run(self, *args, **kwargs):
         self.set_hub(**kwargs)
         for fqdn in args:
-            update_url = 'systems/%s/reservations/+current' % parse.quote(fqdn, '')
+            update_url = "systems/%s/reservations/+current" % parse.quote(fqdn, "")
             requests_session = self.requests_session()
-            res = requests_session.patch(update_url, json={'finish_time': 'now'})
+            res = requests_session.patch(update_url, json={"finish_time": "now"})
             res.raise_for_status()

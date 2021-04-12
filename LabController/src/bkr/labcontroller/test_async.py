@@ -22,7 +22,6 @@ from bkr.labcontroller.async import MonitoredSubprocess
 
 
 class SubprocessTest(unittest.TestCase):
-
     def _assert_child_is_process_group_leader(self, p):
         self.assertEqual(os.getpgid(p.pid), p.pid)
 
@@ -40,13 +39,15 @@ class SubprocessTest(unittest.TestCase):
 
     def test_runaway_output_is_discarded(self):
         def _test():
-            p = MonitoredSubprocess(['seq', '--format=%0.0f cans of spam on the wall',
-                                     str(1024 * 1024)], stdout=subprocess.PIPE,
-                                    timeout=5)
+            p = MonitoredSubprocess(
+                ["seq", "--format=%0.0f cans of spam on the wall", str(1024 * 1024)],
+                stdout=subprocess.PIPE,
+                timeout=5,
+            )
             p.dead.wait()
             out = p.stdout_reader.get()
             self.assert_(len(out) <= 4096013, len(out))
-            self.assert_(out.endswith('+++ DISCARDED'), out[:-10240])
+            self.assert_(out.endswith("+++ DISCARDED"), out[:-10240])
 
         greenlet = gevent.spawn(_test)
         gevent_wait()
@@ -54,7 +55,7 @@ class SubprocessTest(unittest.TestCase):
 
     def test_timeout_is_enforced(self):
         def _test():
-            p = MonitoredSubprocess(['sleep', '10'], timeout=1)
+            p = MonitoredSubprocess(["sleep", "10"], timeout=1)
             p.dead.wait()
             self.assertEquals(p.returncode, -signal.SIGTERM)
 
@@ -64,7 +65,7 @@ class SubprocessTest(unittest.TestCase):
 
     def test_child_is_process_group_leader(self):
         def _test():
-            p = MonitoredSubprocess(['sleep', '1'], timeout=2)
+            p = MonitoredSubprocess(["sleep", "1"], timeout=2)
             self._assert_child_is_process_group_leader(p)
             p.dead.wait()
 
@@ -90,7 +91,9 @@ class SubprocessTest(unittest.TestCase):
         # The process group leader should timeout, and everything in the
         # process group should be terminated/killed.
         def _test():
-            p = MonitoredSubprocess(['bash', '-c', '{ sleep 30 ; } & sleep 10'], timeout=1)
+            p = MonitoredSubprocess(
+                ["bash", "-c", "{ sleep 30 ; } & sleep 10"], timeout=1
+            )
             # The rest of this test hinges on this assertion
             self._assert_child_is_process_group_leader(p)
             p.dead.wait()
@@ -119,7 +122,9 @@ class SubprocessTest(unittest.TestCase):
         # These should all be in the same process group and should
         # all be killed when the process group leader exits normally.
         def _test():
-            p = MonitoredSubprocess(['bash', '-c', '{ sleep 60 ; } & sleep 1'], timeout=10)
+            p = MonitoredSubprocess(
+                ["bash", "-c", "{ sleep 60 ; } & sleep 1"], timeout=10
+            )
             # The rest of this test hinges on this assertion
             self._assert_child_is_process_group_leader(p)
             p.dead.wait()
@@ -133,8 +138,7 @@ class SubprocessTest(unittest.TestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=832250
     def test_reaper_race(self):
         def _test():
-            procs = [MonitoredSubprocess(['true'], timeout=10)
-                     for _ in xrange(600)]
+            procs = [MonitoredSubprocess(["true"], timeout=10) for _ in xrange(600)]
             for p in procs:
                 p.dead.wait()
 

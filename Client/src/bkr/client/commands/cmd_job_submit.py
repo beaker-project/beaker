@@ -127,8 +127,11 @@ combineTag = combine_tag
 def combine_attr(olddoc, newdoc, attr_name):
     # Take the attr from the first olddoc and set it to the newdoc.
     # py3 _attrs are None instead of {}
-    if (newdoc._attrs is None or attr_name not in newdoc._attrs
-            and (olddoc._attrs and attr_name in olddoc._attrs)):
+    if (
+        newdoc._attrs is None
+        or attr_name not in newdoc._attrs
+        and (olddoc._attrs and attr_name in olddoc._attrs)
+    ):
         newdoc.setAttribute(attr_name, olddoc.getAttribute(attr_name))
 
 
@@ -139,6 +142,7 @@ class Job_Submit(BeakerCommand):
     """
     Submit job(s) to scheduler
     """
+
     enabled = True
 
     def options(self):
@@ -162,7 +166,8 @@ stdin."""
             help="print the jobxml that it would submit",
         )
         self.parser.add_option(
-            "--dry-run", "--dryrun",
+            "--dry-run",
+            "--dryrun",
             dest="dryrun",
             default=False,
             action="store_true",
@@ -187,31 +192,37 @@ stdin."""
             help="wait on job completion",
         )
         self.parser.add_option(
-            '--ignore-missing-tasks', default=False, action='store_true',
-            help='silently discard tasks which do not exist on the scheduler',
+            "--ignore-missing-tasks",
+            default=False,
+            action="store_true",
+            help="silently discard tasks which do not exist on the scheduler",
         )
         self.parser.add_option(
-             '--job-owner', metavar='USERNAME',
-             help='Submit job on behalf of USERNAME. '
-                  'The existing user attribute in the job XML will be overridden if set. '
-                  '(submitting user must be a submission delegate for job owner)',
+            "--job-owner",
+            metavar="USERNAME",
+            help="Submit job on behalf of USERNAME. "
+            "The existing user attribute in the job XML will be overridden if set. "
+            "(submitting user must be a submission delegate for job owner)",
         )
 
     def run(self, *args, **kwargs):
-        convert  = kwargs.pop("convert", False)
-        combine  = kwargs.pop("combine", False)
-        debug   = kwargs.pop("debug", False)
+        convert = kwargs.pop("convert", False)
+        combine = kwargs.pop("combine", False)
+        debug = kwargs.pop("debug", False)
         print_xml = kwargs.pop("xml", False)
-        dryrun  = kwargs.pop("dryrun", False)
-        wait  = kwargs.pop("wait", False)
-        ignore_missing_tasks = kwargs.pop('ignore_missing_tasks', False)
+        dryrun = kwargs.pop("dryrun", False)
+        wait = kwargs.pop("wait", False)
+        ignore_missing_tasks = kwargs.pop("ignore_missing_tasks", False)
         job_owner = kwargs.pop("job_owner", None)
 
         jobs = args
         if not jobs:
-            jobs = ['-'] # read one job from stdin by default
-        job_schema = lxml.etree.RelaxNG(lxml.etree.parse(
-                pkg_resources.resource_stream('bkr.common', 'schema/beaker-job.rng')))
+            jobs = ["-"]  # read one job from stdin by default
+        job_schema = lxml.etree.RelaxNG(
+            lxml.etree.parse(
+                pkg_resources.resource_stream("bkr.common", "schema/beaker-job.rng")
+            )
+        )
 
         self.set_hub(**kwargs)
         submitted_jobs = []
@@ -220,9 +231,9 @@ stdin."""
         # Read in all jobs.
         jobxmls = []
         for job in jobs:
-            if job == '-':
+            if job == "-":
                 if six.PY3:  # Handle piped non UTF-8 data
-                    with open(0, 'rb') as f:
+                    with open(0, "rb") as f:
                         mystring = f.read()
                 else:
                     mystring = sys.stdin.read()
@@ -235,7 +246,7 @@ stdin."""
             # Split on jobs.
             for jobxml in doc.getElementsByTagName("job"):
                 if job_owner is not None:
-                    jobxml.setAttribute('user', job_owner)
+                    jobxml.setAttribute("user", job_owner)
                 jobxmls.append(jobxml.toxml())
 
         # Combine into one job if requested.
@@ -245,7 +256,9 @@ stdin."""
                 doc = xml.dom.minidom.parseString(jobxml)
                 combine_tag(doc, combined, "whiteboard")
                 combine_tag(doc, combined, "notify")
-                combine_attr(doc.getElementsByTagName("job")[0], combined, "retention_tag")
+                combine_attr(
+                    doc.getElementsByTagName("job")[0], combined, "retention_tag"
+                )
                 combine_attr(doc.getElementsByTagName("job")[0], combined, "product")
                 combine_attr(doc.getElementsByTagName("job")[0], combined, "user")
                 # Add all recipeSet(s) to combined job.
@@ -263,18 +276,19 @@ stdin."""
             try:
                 job_schema.assertValid(lxml.etree.fromstring(jobxml))
             except Exception as e:
-                sys.stderr.write('WARNING: job xml validation failed: %s\n' % e)
+                sys.stderr.write("WARNING: job xml validation failed: %s\n" % e)
             if not dryrun:
                 try:
-                    submitted_jobs.append(self.hub.jobs.upload(jobxml, ignore_missing_tasks))
+                    submitted_jobs.append(
+                        self.hub.jobs.upload(jobxml, ignore_missing_tasks)
+                    )
                 except (KeyboardInterrupt, SystemExit):
                     raise
                 except Exception as ex:
                     is_failed = True
-                    sys.stderr.write('Exception: %s\n' % ex)
+                    sys.stderr.write("Exception: %s\n" % ex)
         if not dryrun:
             print("Submitted: %s" % submitted_jobs)
             if wait:
                 is_failed |= watch_tasks(self.hub, submitted_jobs)
         sys.exit(is_failed)
-

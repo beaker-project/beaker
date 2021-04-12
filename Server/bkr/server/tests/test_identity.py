@@ -14,10 +14,10 @@ def acquire_cookie(user, proxied_by_user=None):
     # Fake prior successful authentication in order to get a valid cookie.
     with app.test_request_context():
         identity.set_authentication(user, proxied_by_user)
-        return '%s=%s' % (identity._token_cookie_name, identity._generate_token())
+        return "%s=%s" % (identity._token_cookie_name, identity._generate_token())
+
 
 class CheckAuthenticationUnitTest(unittest.TestCase):
-
     def setUp(self):
         session.begin()
         self.addCleanup(session.rollback)
@@ -27,14 +27,14 @@ class CheckAuthenticationUnitTest(unittest.TestCase):
         # authentication and the authentication was successful for this
         # request.
         user = data_setup.create_user()
-        environ = {'REMOTE_USER': user.user_name}
+        environ = {"REMOTE_USER": user.user_name}
         with app.test_request_context(environ_overrides=environ):
             identity.check_authentication()
             self.assertEqual(identity.current.user, user)
             self.assertIsNone(identity.current.proxied_by_user)
 
     def test_REMOTE_USER_is_ignored_if_user_does_not_exist(self):
-        environ = {'REMOTE_USER': 'idontexist'}
+        environ = {"REMOTE_USER": "idontexist"}
         with app.test_request_context(environ_overrides=environ):
             identity.check_authentication()
             self.assertIsNone(identity.current.user)
@@ -42,13 +42,13 @@ class CheckAuthenticationUnitTest(unittest.TestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1112925
     def test_user_is_created_if_REMOTE_USER_vars_are_populated(self):
-        new_username = 'mwatney'
-        new_user_display_name = 'Mark Watney'
-        new_user_email = 'mwatney@nasa.gov'
+        new_username = "mwatney"
+        new_user_display_name = "Mark Watney"
+        new_user_email = "mwatney@nasa.gov"
         environ = {
-            'REMOTE_USER': new_username,
-            'REMOTE_USER_FULLNAME': new_user_display_name,
-            'REMOTE_USER_EMAIL': new_user_email,
+            "REMOTE_USER": new_username,
+            "REMOTE_USER_FULLNAME": new_user_display_name,
+            "REMOTE_USER_EMAIL": new_user_email,
         }
         with app.test_request_context(environ_overrides=environ):
             identity.check_authentication()
@@ -59,7 +59,7 @@ class CheckAuthenticationUnitTest(unittest.TestCase):
     def test_obeys_token_in_cookie(self):
         user = data_setup.create_user()
         cookie = acquire_cookie(user)
-        with app.test_request_context(headers={'Cookie': cookie}):
+        with app.test_request_context(headers={"Cookie": cookie}):
             identity.check_authentication()
             self.assertEqual(identity.current.user, user)
             self.assertIsNone(identity.current.proxied_by_user)
@@ -68,7 +68,7 @@ class CheckAuthenticationUnitTest(unittest.TestCase):
         user = data_setup.create_user()
         proxy = data_setup.create_user()
         cookie = acquire_cookie(user, proxy)
-        with app.test_request_context(headers={'Cookie': cookie}):
+        with app.test_request_context(headers={"Cookie": cookie}):
             identity.check_authentication()
             self.assertEqual(identity.current.user, user)
             self.assertEqual(identity.current.proxied_by_user, proxy)
@@ -80,7 +80,7 @@ class CheckAuthenticationUnitTest(unittest.TestCase):
         cookie = acquire_cookie(user)
         session.delete(user)
         session.flush()
-        with app.test_request_context(headers={'Cookie': cookie}):
+        with app.test_request_context(headers={"Cookie": cookie}):
             identity.check_authentication()
             self.assertIsNone(identity.current.user)
             self.assertIsNone(identity.current.proxied_by_user)
@@ -92,7 +92,7 @@ class CheckAuthenticationUnitTest(unittest.TestCase):
         cookie = acquire_cookie(user, proxy)
         session.delete(proxy)
         session.flush()
-        with app.test_request_context(headers={'Cookie': cookie}):
+        with app.test_request_context(headers={"Cookie": cookie}):
             identity.check_authentication()
             self.assertIsNone(identity.current.user)
             self.assertIsNone(identity.current.proxied_by_user)
@@ -104,19 +104,21 @@ class CheckAuthenticationUnitTest(unittest.TestCase):
         old_user = data_setup.create_user()
         new_user = data_setup.create_user()
         cookie = acquire_cookie(old_user)
-        environ = {'REMOTE_USER': new_user.user_name}
-        with app.test_request_context(environ_overrides=environ,
-                                      headers={'Cookie': cookie}):
+        environ = {"REMOTE_USER": new_user.user_name}
+        with app.test_request_context(
+            environ_overrides=environ, headers={"Cookie": cookie}
+        ):
             identity.check_authentication()
             self.assertEqual(identity.current.user, new_user)
 
     def test_authentication_is_ignored_if_user_is_disabled(self):
         user = data_setup.create_user()
         cookie = acquire_cookie(user)
-        environ = {'REMOTE_USER': user.user_name}
+        environ = {"REMOTE_USER": user.user_name}
         user.disabled = True
-        with app.test_request_context(environ_overrides=environ,
-                                      headers={'Cookie': cookie}):
+        with app.test_request_context(
+            environ_overrides=environ, headers={"Cookie": cookie}
+        ):
             identity.check_authentication()
             self.assertIsNone(identity.current.user)
             self.assertIsNone(identity.current.proxied_by_user)

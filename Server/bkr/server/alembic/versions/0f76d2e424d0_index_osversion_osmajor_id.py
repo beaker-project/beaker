@@ -12,18 +12,20 @@ Create Date: 2014-10-10 12:38:16.945789
 """
 
 # revision identifiers, used by Alembic.
-revision = '0f76d2e424d0'
-down_revision = '2c0f1c0a668b'
+revision = "0f76d2e424d0"
+down_revision = "2c0f1c0a668b"
 
 from alembic import op
 import sqlalchemy as sa
 
+
 def upgrade():
-    indexes = sa.inspect(op.get_bind()).get_indexes('osversion')
-    if not any(index['column_names'] == ['osmajor_id'] for index in indexes):
-        op.create_index('ix_osversion_osmajor_id', 'osversion', ['osmajor_id'])
+    indexes = sa.inspect(op.get_bind()).get_indexes("osversion")
+    if not any(index["column_names"] == ["osmajor_id"] for index in indexes):
+        op.create_index("ix_osversion_osmajor_id", "osversion", ["osmajor_id"])
+
 
 def downgrade():
-    indexes = sa.inspect(op.get_bind()).get_indexes('osversion')
-    if any(index['name'] == 'ix_osversion_osmajor_id' for index in indexes):
-        op.drop_index('ix_osversion_osmajor_id', 'osversion')
+    indexes = sa.inspect(op.get_bind()).get_indexes("osversion")
+    if any(index["name"] == "ix_osversion_osmajor_id" for index in indexes):
+        op.drop_index("ix_osversion_osmajor_id", "osversion")

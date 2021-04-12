@@ -72,6 +72,7 @@ class Job_Watch(BeakerCommand):
     """
     Watch Jobs/Recipes
     """
+
     enabled = True
     requires_login = False
 
@@ -79,8 +80,8 @@ class Job_Watch(BeakerCommand):
         self.parser.usage = "%%prog %s [options] <taskspec>..." % self.normalized_name
         self.parser.add_option(
             "-v",
-            action='count',
-            dest='verbosity',
+            action="count",
+            dest="verbosity",
             help="the number of verbose indicates to how many subtasks down it will listen \
                   Ignored if not using message bus. Must be lower than task watching.\
                   Undetermined behaviour when listening on multiple tasks",
@@ -88,7 +89,7 @@ class Job_Watch(BeakerCommand):
 
     def run(self, *args, **kwargs):
         if not args:
-            self.parser.error('Please specify one or more tasks')
+            self.parser.error("Please specify one or more tasks")
         self.check_taskspec_args(args)
 
         self.set_hub(**kwargs)

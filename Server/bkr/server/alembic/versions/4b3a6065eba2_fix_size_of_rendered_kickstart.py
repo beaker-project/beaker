@@ -15,19 +15,25 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = '4b3a6065eba2'
-down_revision = '4cddc14ab090'
+revision = "4b3a6065eba2"
+down_revision = "4cddc14ab090"
 
 
 def upgrade():
-    op.alter_column('rendered_kickstart', 'kickstart',
-                    existing_type=sa.UnicodeText(),
-                    type_=sa.UnicodeText(length=262143),
-                    existing_nullable=True)
+    op.alter_column(
+        "rendered_kickstart",
+        "kickstart",
+        existing_type=sa.UnicodeText(),
+        type_=sa.UnicodeText(length=262143),
+        existing_nullable=True,
+    )
 
 
 def downgrade():
-    op.alter_column('rendered_kickstart', 'kickstart',
-                    existing_type=sa.UnicodeText(length=262143),
-                    type_=sa.UnicodeText(),
-                    existing_nullable=True)
+    op.alter_column(
+        "rendered_kickstart",
+        "kickstart",
+        existing_type=sa.UnicodeText(length=262143),
+        type_=sa.UnicodeText(),
+        existing_nullable=True,
+    )

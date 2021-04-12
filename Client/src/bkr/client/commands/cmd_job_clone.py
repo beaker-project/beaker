@@ -98,6 +98,7 @@ class Job_Clone(BeakerCommand):
     """
     Clone Jobs/RecipeSets
     """
+
     enabled = True
 
     def options(self):
@@ -109,7 +110,8 @@ class Job_Clone(BeakerCommand):
             help="wait on job completion",
         )
         self.parser.add_option(
-            "--dry-run", "--dryrun",
+            "--dry-run",
+            "--dryrun",
             dest="dryrun",
             default=False,
             action="store_true",
@@ -122,20 +124,22 @@ class Job_Clone(BeakerCommand):
             help="print the jobxml that it would submit",
         )
         self.parser.add_option(
-            "--pretty-xml", "--prettyxml",
+            "--pretty-xml",
+            "--prettyxml",
             dest="prettyxml",
             action="store_true",
             default=False,
             help="print the jobxml that it would submit, in pretty format",
         )
         self.parser.add_option(
-            '--job-owner', metavar='USERNAME',
-            help='Clone job on behalf of USERNAME '
-                 '(cloning user must be a submission delegate for job owner)',
+            "--job-owner",
+            metavar="USERNAME",
+            help="Clone job on behalf of USERNAME "
+            "(cloning user must be a submission delegate for job owner)",
         )
 
     def run(self, *args, **kwargs):
-        self.check_taskspec_args(args, permitted_types=['J', 'RS'])
+        self.check_taskspec_args(args, permitted_types=["J", "RS"])
 
         wait = kwargs.pop("wait", None)
         xml = kwargs.pop("xml", None)
@@ -144,7 +148,7 @@ class Job_Clone(BeakerCommand):
         job_owner = kwargs.pop("job_owner", None)
 
         if len(args) < 1:
-            self.parser.error('Please specify a job or recipeset to clone')
+            self.parser.error("Please specify a job or recipeset to clone")
 
         submitted_jobs = []
         failed = False
@@ -156,29 +160,34 @@ class Job_Clone(BeakerCommand):
                 jobxml = self.hub.taskactions.to_xml(task, clone, exclude_enclosing_job)
                 # XML is really bytes, the fact that the server is sending the bytes as an
                 # XML-RPC Unicode string is just a mistake in Beaker's API
-                jobxml = jobxml.encode('utf8')
+                jobxml = jobxml.encode("utf8")
                 if job_owner is not None:
                     # root is job tag
                     root = lxml.etree.fromstring(jobxml)
-                    root.set('user', job_owner)
-                    jobxml = lxml.etree.tostring(root, encoding='utf8')
+                    root.set("user", job_owner)
+                    jobxml = lxml.etree.tostring(root, encoding="utf8")
                 if xml or pretty:
-                    str_xml = lxml.etree.tostring(lxml.etree.fromstring(jobxml),
-                                                  pretty_print=pretty,
-                                                  xml_declaration=True,
-                                                  encoding='utf8')
+                    str_xml = lxml.etree.tostring(
+                        lxml.etree.fromstring(jobxml),
+                        pretty_print=pretty,
+                        xml_declaration=True,
+                        encoding="utf8",
+                    )
                     if six.PY3:
-                        str_xml = str_xml.decode('utf-8')
+                        str_xml = str_xml.decode("utf-8")
                     print(str_xml)
                 if not dryrun:
-                    submitted_jobs.append(self.hub.jobs.upload(
-                        jobxml.decode('utf-8') if six.PY3 else jobxml))
+                    submitted_jobs.append(
+                        self.hub.jobs.upload(
+                            jobxml.decode("utf-8") if six.PY3 else jobxml
+                        )
+                    )
                     print("Submitted: %s" % submitted_jobs)
             except (KeyboardInterrupt, SystemError):
                 raise
             except Exception as ex:
                 failed = True
-                sys.stderr.write('Exception: %s\n' % ex)
+                sys.stderr.write("Exception: %s\n" % ex)
         if not dryrun and wait:
             failed |= watch_tasks(self.hub, submitted_jobs)
         sys.exit(failed)

@@ -48,6 +48,7 @@ from bkr.client import BeakerCommand
 
 class WhoAmI(BeakerCommand):
     """Who Am I"""
+
     enabled = True
 
     def options(self):
@@ -56,14 +57,16 @@ class WhoAmI(BeakerCommand):
     def run(self, *args, **kwargs):
         self.set_hub(**kwargs)
         requests_session = self.requests_session()
-        response = requests_session.get('users/+self', headers={'Accept': 'application/json'})
+        response = requests_session.get(
+            "users/+self", headers={"Accept": "application/json"}
+        )
         response.raise_for_status()
         attributes = response.json()
         # Make the output match what came out of the old auth.who_am_i XMLRPC method
         result = {
-            'username': attributes['user_name'],
-            'email_address': attributes['email_address'],
+            "username": attributes["user_name"],
+            "email_address": attributes["email_address"],
         }
-        if attributes.get('proxied_by_user'):
-            result['proxied_by_username'] = attributes['proxied_by_user']['user_name']
+        if attributes.get("proxied_by_user"):
+            result["proxied_by_username"] = attributes["proxied_by_user"]["user_name"]
         print(json.dumps(result))

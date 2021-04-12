@@ -12,19 +12,29 @@ Create Date: 2014-10-10 15:51:03.548807
 """
 
 # revision identifiers, used by Alembic.
-revision = '53942581687f'
-down_revision = '348a7a0b9bba'
+revision = "53942581687f"
+down_revision = "348a7a0b9bba"
 
 from alembic import op
 import sqlalchemy as sa
 
+
 def upgrade():
-    op.alter_column('recipe', 'virt_status',
-            existing_type=sa.Enum('Possible', 'Precluded', 'Succeeded', 'Skipped', 'Failed'),
-            nullable=False)
-    op.alter_column('recipe_set', 'priority',
-            existing_type=sa.Enum('Low', 'Medium', 'Normal', 'High', 'Urgent'),
-            nullable=False)
+    op.alter_column(
+        "recipe",
+        "virt_status",
+        existing_type=sa.Enum(
+            "Possible", "Precluded", "Succeeded", "Skipped", "Failed"
+        ),
+        nullable=False,
+    )
+    op.alter_column(
+        "recipe_set",
+        "priority",
+        existing_type=sa.Enum("Low", "Medium", "Normal", "High", "Urgent"),
+        nullable=False,
+    )
+
 
 def downgrade():
-    pass # no downgrade because we are fixing a mistake in an upgrade
+    pass  # no downgrade because we are fixing a mistake in an upgrade

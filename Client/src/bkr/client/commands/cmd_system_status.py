@@ -64,59 +64,61 @@ class System_Status(BeakerCommand):
     """
     Return the current status of a system
     """
+
     enabled = True
 
     def options(self):
         self.parser.usage = "%%prog %s <options> <fqdn>" % self.normalized_name
-        self.parser.add_option('--format',
-                               type='choice',
-                               choices=['tabular', 'json'],
-                               default='tabular',
-                               help='Display results in FORMAT: '
-                                    'tabular, json [default: %default]')
+        self.parser.add_option(
+            "--format",
+            type="choice",
+            choices=["tabular", "json"],
+            default="tabular",
+            help="Display results in FORMAT: " "tabular, json [default: %default]",
+        )
 
     def run(self, *args, **kwargs):
         if len(args) != 1:
-            self.parser.error('Exactly one system fqdn must be given')
+            self.parser.error("Exactly one system fqdn must be given")
         fqdn = args[0]
-        format = kwargs.get('format')
+        format = kwargs.get("format")
         self.set_hub(**kwargs)
         requests_session = self.requests_session()
-        status_url = 'systems/%s/status' % parse.quote(fqdn, '')
+        status_url = "systems/%s/status" % parse.quote(fqdn, "")
         res = requests_session.get(status_url)
         res.raise_for_status()
-        if format == 'json':
+        if format == "json":
             print(res.text)
         else:
             system_status = loads(res.text)
-            condition = system_status.get('condition')
-            reservation_details = system_status.get('current_reservation')
-            msg = ['Condition: %s' % condition]
+            condition = system_status.get("condition")
+            reservation_details = system_status.get("current_reservation")
+            msg = ["Condition: %s" % condition]
             if reservation_details:
-                reserved_by = reservation_details.get('user_name')
-                recipe_id = reservation_details.get('recipe_id')
-                start_time = reservation_details.get('start_time')
-                msg.append('Current reservation:')
+                reserved_by = reservation_details.get("user_name")
+                recipe_id = reservation_details.get("recipe_id")
+                start_time = reservation_details.get("start_time")
+                msg.append("Current reservation:")
                 if reserved_by:
                     # The '%4s' % '' formatting is to indent the output
                     # and make it easier to read.
-                    msg.append('%4sUser: %s' % ('', reserved_by))
+                    msg.append("%4sUser: %s" % ("", reserved_by))
                 if recipe_id:
-                    msg.append('%4sRecipe ID: %s' % ('', recipe_id))
+                    msg.append("%4sRecipe ID: %s" % ("", recipe_id))
                 if start_time:
-                    msg.append('%4sStart time: %s' % ('', start_time))
+                    msg.append("%4sStart time: %s" % ("", start_time))
             else:
-                msg.append('Current reservation: %s' % None)
+                msg.append("Current reservation: %s" % None)
 
-            loan_details = system_status.get('current_loan')
+            loan_details = system_status.get("current_loan")
             if loan_details:
-                loaned_to = loan_details.get('recipient')
-                loan_comment = loan_details.get('comment')
-                msg.append('Current loan:')
+                loaned_to = loan_details.get("recipient")
+                loan_comment = loan_details.get("comment")
+                msg.append("Current loan:")
                 if loaned_to:
-                    msg.append('%4sUser: %s' % ('', loaned_to))
+                    msg.append("%4sUser: %s" % ("", loaned_to))
                 if loan_comment:
-                    msg.append('%4sComment: %s' % ('', loan_comment))
+                    msg.append("%4sComment: %s" % ("", loan_comment))
             else:
-                msg.append('Current loan: %s' % None)
-            print('\n'.join(msg))
+                msg.append("Current loan: %s" % None)
+            print("\n".join(msg))

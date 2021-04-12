@@ -12,13 +12,15 @@ Create Date: 2016-05-20 15:38:40.495128
 """
 
 # revision identifiers, used by Alembic.
-revision = '4a7454ee677a'
-down_revision = '29c945bb5b0f'
+revision = "4a7454ee677a"
+down_revision = "29c945bb5b0f"
 
 from alembic import op
 
+
 def upgrade():
-    op.execute("""
+    op.execute(
+        """
         DELETE log_recipe_task_result
         FROM log_recipe_task_result
         INNER JOIN recipe_task_result ON log_recipe_task_result.recipe_task_result_id = recipe_task_result.id
@@ -27,7 +29,9 @@ def upgrade():
         INNER JOIN recipe_set on recipe.recipe_set_id = recipe_set.id
         INNER JOIN job on recipe_set.job_id = job.id
         WHERE job.deleted IS NOT NULL
-        """)
+        """
+    )
+
 
 def downgrade():
-    pass # no downgrade because we are cleaning up old data.
+    pass  # no downgrade because we are cleaning up old data.

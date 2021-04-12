@@ -101,72 +101,74 @@ class Update_Inventory(BeakerCommand):
     """
     Submits a Inventory job
     """
+
     enabled = True
 
     def options(self):
         self.parser.usage = "%%prog %s <fqdn>.." % self.normalized_name
         self.parser.add_option(
-            '--dry-run', '--dryrun',
+            "--dry-run",
+            "--dryrun",
             default=False,
-            action='store_true',
-            dest='dryrun',
-            help='Do not submit an inventory job',
+            action="store_true",
+            dest="dryrun",
+            help="Do not submit an inventory job",
         )
         self.parser.add_option(
-            '--xml',
+            "--xml",
             default=False,
-            action='store_true',
-            help='Print the generated Job XML',
+            action="store_true",
+            help="Print the generated Job XML",
         )
         self.parser.add_option(
-            '--pretty-xml', '--prettyxml',
-            dest='prettyxml',
+            "--pretty-xml",
+            "--prettyxml",
+            dest="prettyxml",
             default=False,
-            action='store_true',
-            help='Pretty print the generated Job XML',
+            action="store_true",
+            help="Pretty print the generated Job XML",
         )
         self.parser.add_option(
-            '--wait',
+            "--wait",
             default=False,
-            action='store_true',
-            help='Wait on job completion',
+            action="store_true",
+            help="Wait on job completion",
         )
 
     def run(self, *args, **kwargs):
 
         if not args:
-            self.parser.error('One or more systems must be specified')
-        dryrun = kwargs.get('dryrun')
-        xml = kwargs.get('xml')
-        prettyxml = kwargs.get('prettyxml')
-        wait = kwargs.get('wait')
+            self.parser.error("One or more systems must be specified")
+        dryrun = kwargs.get("dryrun")
+        xml = kwargs.get("xml")
+        prettyxml = kwargs.get("prettyxml")
+        wait = kwargs.get("wait")
         self.set_hub(**kwargs)
         requests_session = self.requests_session()
         submitted_jobs = []
         failed = False
         for fqdn in args:
-            res = requests_session.post('jobs/+inventory',
-                                        json={'fqdn': fqdn,
-                                              'dryrun': dryrun})
+            res = requests_session.post(
+                "jobs/+inventory", json={"fqdn": fqdn, "dryrun": dryrun}
+            )
             try:
                 res.raise_for_status()
             except HTTPError as e:
-                sys.stderr.write('HTTP error: %s, %s\n' % (fqdn, e))
-                content_type, _ = cgi.parse_header(e.response.headers.get(
-                    'Content-Type', ''))
-                if content_type == 'text/plain':
-                    sys.stderr.write('\t' +
-                                     e.response.content.rstrip('\n') +
-                                     '\n')
+                sys.stderr.write("HTTP error: %s, %s\n" % (fqdn, e))
+                content_type, _ = cgi.parse_header(
+                    e.response.headers.get("Content-Type", "")
+                )
+                if content_type == "text/plain":
+                    sys.stderr.write("\t" + e.response.content.rstrip("\n") + "\n")
                 failed = True
             else:
                 res_data = res.json()
                 if xml:
-                    print(res_data['job_xml'])
+                    print(res_data["job_xml"])
                 if prettyxml:
-                    print(parseString(res_data['job_xml']).toprettyxml(encoding='utf8'))
+                    print(parseString(res_data["job_xml"]).toprettyxml(encoding="utf8"))
                 if not dryrun:
-                    submitted_jobs.append(res_data['job_id'])
+                    submitted_jobs.append(res_data["job_id"])
         if not dryrun:
             print("Submitted: %s" % submitted_jobs)
             if wait:

@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -23,6 +22,7 @@ target_metadata = base.DeclarativeMappedObject.metadata
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
+
 
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
@@ -63,10 +63,7 @@ def run_migrations_online():
     # then this migration has to written manually - But migration content can still help you
     # how to perform this migration
     connection = engine.connect()
-    context.configure(
-        connection=connection,
-        target_metadata=target_metadata
-    )
+    context.configure(connection=connection, target_metadata=target_metadata)
 
     try:
         with context.begin_transaction():

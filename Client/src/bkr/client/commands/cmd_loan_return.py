@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -62,6 +61,7 @@ class Loan_Return(BeakerCommand):
     """
     Return a previously granted loan
     """
+
     enabled = True
 
     def options(self):
@@ -69,11 +69,11 @@ class Loan_Return(BeakerCommand):
 
     def run(self, *args, **kwargs):
         if len(args) != 1:
-            self.parser.error('Exactly one system fqdn must be given')
+            self.parser.error("Exactly one system fqdn must be given")
         fqdn = args[0]
 
         self.set_hub(**kwargs)
-        update_url = 'systems/%s/loans/+current' % parse.quote(fqdn, '')
+        update_url = "systems/%s/loans/+current" % parse.quote(fqdn, "")
         requests_session = self.requests_session()
-        res = requests_session.patch(update_url, json={'finish': 'now'})
+        res = requests_session.patch(update_url, json={"finish": "now"})
         res.raise_for_status()

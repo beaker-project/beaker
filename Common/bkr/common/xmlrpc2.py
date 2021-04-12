@@ -20,6 +20,7 @@ import urlparse
 
 try:
     import kerberos
+
     USE_KERBEROS = True
 except ImportError:
     USE_KERBEROS = False
@@ -29,9 +30,8 @@ logger = logging.getLogger(__name__)
 
 
 class TimeoutHTTPConnection(httplib.HTTPConnection):
-
     def set_timeout(self, value):
-        setattr(self, '_timeout', value)
+        setattr(self, "_timeout", value)
 
     def connect(self):
         httplib.HTTPConnection.connect(self)
@@ -43,7 +43,9 @@ class TimeoutHTTPConnection(httplib.HTTPConnection):
 class TimeoutHTTPProxyConnection(TimeoutHTTPConnection):
     default_port = httplib.HTTPConnection.default_port
 
-    def __init__(self, host, proxy, port=None, proxy_user=None, proxy_password=None, **kwargs):
+    def __init__(
+        self, host, proxy, port=None, proxy_user=None, proxy_password=None, **kwargs
+    ):
         TimeoutHTTPConnection.__init__(self, proxy, **kwargs)
         self.proxy, self.proxy_port = self.host, self.port
         self.set_host_and_port(host, port)
@@ -63,7 +65,7 @@ class TimeoutHTTPProxyConnection(TimeoutHTTPConnection):
     def putrequest(self, method, url, skip_host=0, skip_accept_encoding=0):
         host = self.real_host
         if self.default_port != self.real_port:
-            host = host + ':' + str(self.real_port)
+            host = host + ":" + str(self.real_port)
         url = "http://%s%s" % (host, url)
         httplib.HTTPConnection.putrequest(self, method, url)
         self._add_auth_proxy_header()
@@ -85,10 +87,20 @@ class TimeoutHTTPProxyConnection(TimeoutHTTPConnection):
 class TimeoutHTTPSProxyConnection(TimeoutHTTPProxyConnection):
     default_port = httplib.HTTPSConnection.default_port
 
-    def __init__(self, host, proxy, port=None, proxy_user=None,
-                 proxy_password=None, cert_file=None, key_file=None, **kwargs):
-        TimeoutHTTPProxyConnection.__init__(self, host, proxy, port,
-            proxy_user, proxy_password, **kwargs)
+    def __init__(
+        self,
+        host,
+        proxy,
+        port=None,
+        proxy_user=None,
+        proxy_password=None,
+        cert_file=None,
+        key_file=None,
+        **kwargs
+    ):
+        TimeoutHTTPProxyConnection.__init__(
+            self, host, proxy, port, proxy_user, proxy_password, **kwargs
+        )
         self.cert_file = cert_file
         self.key_file = key_file
         self.connect()
@@ -114,19 +126,20 @@ class TimeoutHTTPSProxyConnection(TimeoutHTTPProxyConnection):
             self.close()
             raise socket.error(1001, response.status, response.msg)
 
-        self.sock = ssl.wrap_socket(self.sock, keyfile=self.key_file, certfile=self.cert_file)
+        self.sock = ssl.wrap_socket(
+            self.sock, keyfile=self.key_file, certfile=self.cert_file
+        )
 
     def putrequest(self, method, url, skip_host=0, skip_accept_encoding=0):
         return TimeoutHTTPConnection.putrequest(self, method, url)
 
 
 class TimeoutHTTPSConnection(httplib.HTTPSConnection):
-
     def set_timeout(self, value):
-        setattr(self, '_timeout', value)
+        setattr(self, "_timeout", value)
 
     def connect(self):
-        timeout = getattr(self, '_timeout', 0)
+        timeout = getattr(self, "_timeout", 0)
         if timeout:
             self.timeout = timeout
         httplib.HTTPSConnection.connect(self)
@@ -135,13 +148,31 @@ class TimeoutHTTPSConnection(httplib.HTTPSConnection):
 class TimeoutProxyHTTPS(TimeoutHTTPSProxyConnection):
     _connection_class = TimeoutHTTPSProxyConnection
 
-    def __init__(self, host='', proxy='', port=None, proxy_user=None,
-                 proxy_password=None, cert_file=None, key_file=None, **kwargs):
+    def __init__(
+        self,
+        host="",
+        proxy="",
+        port=None,
+        proxy_user=None,
+        proxy_password=None,
+        cert_file=None,
+        key_file=None,
+        **kwargs
+    ):
 
         if port == 0:
             port = None
-        TimeoutHTTPSProxyConnection.__init__(self, host, proxy, port, proxy_user, proxy_password,
-                                             cert_file, key_file, **kwargs)
+        TimeoutHTTPSProxyConnection.__init__(
+            self,
+            host,
+            proxy,
+            port,
+            proxy_user,
+            proxy_password,
+            cert_file,
+            key_file,
+            **kwargs
+        )
 
 
 class CookieResponse(object):
@@ -167,14 +198,14 @@ class CookieTransport(xmlrpclib.Transport):
     For https:// connections use SafeCookieTransport() instead.
     """
 
-    _use_datetime = False # fix for python 2.5+
+    _use_datetime = False  # fix for python 2.5+
     scheme = "http"
 
     def __init__(self, *args, **kwargs):
         cookiejar = kwargs.pop("cookiejar", None)
         self.timeout = kwargs.pop("timeout", 0)
         self.proxy_config = self._get_proxy(**kwargs)
-        self.no_proxy = os.environ.get("no_proxy", "").lower().split(',')
+        self.no_proxy = os.environ.get("no_proxy", "").lower().split(",")
 
         xmlrpclib.Transport.__init__(self, *args, **kwargs)
 
@@ -219,13 +250,13 @@ class CookieTransport(xmlrpclib.Transport):
                 location = urlparse.urlparse("http://%s" % proxy)[1]
 
             # Parse out username and password if present
-            if '@' in location:
-                userpas, location = location.split('@', 1)
+            if "@" in location:
+                userpas, location = location.split("@", 1)
                 if userpas and location and not proxy_user:
                     # Set proxy user only if proxy_user is not set yet
                     proxy_user = userpas
-                    if ':' in userpas:
-                        proxy_user, proxy_password = userpas.split(':', 1)
+                    if ":" in userpas:
+                        proxy_user, proxy_password = userpas.split(":", 1)
 
             proxy = location
 
@@ -241,13 +272,17 @@ class CookieTransport(xmlrpclib.Transport):
 
         host.lower()
 
-        if ':' in host:
+        if ":" in host:
             # Remove port from the host
-            host_ = host.split(':')[0]
+            host_ = host.split(":")[0]
         else:
             host_ = "%s:%s" % (host, TimeoutHTTPProxyConnection.default_port)
 
-        if self.proxy_config["proxy"] and host not in self.no_proxy and host_ not in self.no_proxy:
+        if (
+            self.proxy_config["proxy"]
+            and host not in self.no_proxy
+            and host_ not in self.no_proxy
+        ):
             CONNECTION_LOCK.acquire()
             host, _, _ = self.get_host_info(host)
             conn = TimeoutProxyHTTPS(host, **self.proxy_config)
@@ -321,7 +356,10 @@ class CookieTransport(xmlrpclib.Transport):
         splits = auth_header.split(" ", 1)
         if (len(splits) != 2) or (splits[0].lower() != "negotiate"):
             errcode = 401
-            errmsg = "KERBEROS: Incorrect WWW-Authenticate header in second HTTP response: %s" % auth_header
+            errmsg = (
+                "KERBEROS: Incorrect WWW-Authenticate header in second HTTP response: %s"
+                % auth_header
+            )
             raise xmlrpclib.ProtocolError(host + handler, errcode, errmsg, headers)
 
         # do another client step to verify response from server
@@ -364,10 +402,12 @@ class CookieTransport(xmlrpclib.Transport):
             response = h.getresponse(buffering=True)
 
             if response.status == 401 and USE_KERBEROS:
-                vc, challenge = self._kerberos_client_request(host, handler, response.status, response.reason, response.msg)
+                vc, challenge = self._kerberos_client_request(
+                    host, handler, response.status, response.reason, response.msg
+                )
 
                 # discard any response data
-                if (response.getheader("content-length", 0)):
+                if response.getheader("content-length", 0):
                     response.read()
 
                 # retry the original request & add the Authorization header:
@@ -389,14 +429,16 @@ class CookieTransport(xmlrpclib.Transport):
         except Exception:
             # All unexpected errors leave connection in
             # a strange state, so we clear it.
-            if hasattr(self, 'close'):
+            if hasattr(self, "close"):
                 self.close()
             raise
 
         # discard any response data and raise exception
         if response.getheader("content-length", 0):
             response.read()
-        raise xmlrpclib.ProtocolError(host + handler, response.status, response.reason, response.msg)
+        raise xmlrpclib.ProtocolError(
+            host + handler, response.status, response.reason, response.msg
+        )
 
     # Override the appropriate request method
     # we need to store/load cookies for request
@@ -421,11 +463,13 @@ class SafeCookieTransport(xmlrpclib.SafeTransport, CookieTransport):
     def __init__(self, *args, **kwargs):
         # SafeTransport.__init__ does this but we can't call that because we
         # have an inheritance diamond and these are old-style classes...
-        self.context = kwargs.pop('context', None)
+        self.context = kwargs.pop("context", None)
         CookieTransport.__init__(self, *args, **kwargs)
 
     def send_request(self, connection, handler, request_body):
-        return xmlrpclib.SafeTransport.send_request(self, connection, handler, request_body)
+        return xmlrpclib.SafeTransport.send_request(
+            self, connection, handler, request_body
+        )
 
     def send_host(self, connection, host):
         return xmlrpclib.SafeTransport.send_host(self, connection, host)
@@ -433,13 +477,17 @@ class SafeCookieTransport(xmlrpclib.SafeTransport, CookieTransport):
     def make_connection(self, host):
         host.lower()
 
-        if ':' in host:
+        if ":" in host:
             # Remove port from the host
-            host_ = host.split(':')[0]
+            host_ = host.split(":")[0]
         else:
             host_ = "%s:%s" % (host, TimeoutHTTPSProxyConnection.default_port)
 
-        if self.proxy_config["proxy"] and host not in self.no_proxy and host_ not in self.no_proxy:
+        if (
+            self.proxy_config["proxy"]
+            and host not in self.no_proxy
+            and host_ not in self.no_proxy
+        ):
             CONNECTION_LOCK.acquire()
             host, _, _ = self.get_host_info(host)
             conn = TimeoutProxyHTTPS(host, **self.proxy_config)
@@ -462,6 +510,7 @@ def retry_request_decorator(transport_class):
     """
     Use this class decorator on a Transport to retry requests which failed on socket errors.
     """
+
     class RetryTransportClass(transport_class):
         def __init__(self, *args, **kwargs):
             self.retry_count = kwargs.pop("retry_count", 5)
@@ -479,16 +528,28 @@ def retry_request_decorator(transport_class):
                     return result
                 except KeyboardInterrupt:
                     raise
-                except (socket.error, socket.herror, socket.gaierror, socket.timeout) as ex:
-                    if hasattr(self, 'close'):
+                except (
+                    socket.error,
+                    socket.herror,
+                    socket.gaierror,
+                    socket.timeout,
+                ) as ex:
+                    if hasattr(self, "close"):
                         self.close()
                     if i >= self.retry_count:
                         raise
                     retries_left = self.retry_count - i
-                    retries = (retries_left == 1 and "retry" or "retries")  # 1 retry left / X retries left
-                    logger.warning("XML-RPC connection to %s failed: %s, %d %s left",
-                            args[0], " ".join(ex.args[1:]), retries_left, retries,
-                            exc_info=True)
+                    retries = (
+                        retries_left == 1 and "retry" or "retries"
+                    )  # 1 retry left / X retries left
+                    logger.warning(
+                        "XML-RPC connection to %s failed: %s, %d %s left",
+                        args[0],
+                        " ".join(ex.args[1:]),
+                        retries_left,
+                        retries,
+                        exc_info=True,
+                    )
                     time.sleep(self.retry_timeout)
 
     RetryTransportClass.__name__ = transport_class.__name__

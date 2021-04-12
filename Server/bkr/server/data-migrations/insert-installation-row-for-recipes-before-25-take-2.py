@@ -26,7 +26,8 @@ logger = logging.getLogger(__name__)
 
 def migrate_one_batch(engine):
     with engine.begin() as connection:
-        result = connection.execute("""
+        result = connection.execute(
+            """
             INSERT INTO installation
             (created, distro_tree_id, recipe_id, arch_id, distro_name, osmajor, osminor, variant)
             SELECT UTC_TIMESTAMP(),
@@ -47,7 +48,8 @@ def migrate_one_batch(engine):
             LEFT OUTER JOIN installation ON installation.recipe_id = recipe.id
             WHERE job.status not in ('Completed', 'Cancelled', 'Aborted')
             AND installation.recipe_id is NULL;
-            """)
+            """
+        )
 
-    logger.info('Created installation row for %d recipes', result.rowcount)
+    logger.info("Created installation row for %d recipes", result.rowcount)
     return True

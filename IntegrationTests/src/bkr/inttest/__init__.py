@@ -5,8 +5,8 @@
 
 import pkg_resources
 
-pkg_resources.require('SQLAlchemy >= 0.6')
-pkg_resources.require('TurboGears >= 1.1')
+pkg_resources.require("SQLAlchemy >= 0.6")
+pkg_resources.require("TurboGears >= 1.1")
 
 import sys
 import os
@@ -25,6 +25,7 @@ import turbogears
 
 try:
     import glanceclient.v2.client
+
     has_glanceclient = True
 except ImportError:
     has_glanceclient = False
@@ -32,13 +33,21 @@ except ImportError:
 try:
     from keystoneauth1.identity import v3
     from keystoneauth1 import session as os_session
+
     has_keystoneauth1 = True
 except ImportError:
     has_keystoneauth1 = False
 
 from turbogears.database import session
 from bkr.server.controllers import Root
-from bkr.server.model import OpenStackRegion, ConfigItem, User, LabController, Task, Distro
+from bkr.server.model import (
+    OpenStackRegion,
+    ConfigItem,
+    User,
+    LabController,
+    Task,
+    Distro,
+)
 from bkr.server.util import load_config
 from bkr.server.tools import ipxe_image
 from bkr.server.tests import data_setup
@@ -47,12 +56,12 @@ from bkr.inttest.mail_capture import MailCaptureThread
 
 # hack to make turbogears.testutil not do dumb stuff at import time
 orig_cwd = os.getcwd()
-os.chdir('/tmp')
+os.chdir("/tmp")
 import turbogears.testutil
 
 os.chdir(orig_cwd)
 
-CONFIG_FILE = os.environ.get('BEAKER_CONFIG_FILE')
+CONFIG_FILE = os.environ.get("BEAKER_CONFIG_FILE")
 
 
 class DatabaseTestCase(unittest.TestCase):
@@ -77,7 +86,7 @@ class DatabaseTestCase(unittest.TestCase):
         # ORM instances which the test has stored as attributes on itself
         # (TestCase instances are kept for the life of the test runner!)
         for name in self.__dict__.keys():
-            if not name.startswith('_'):
+            if not name.startswith("_"):
                 del self.__dict__[name]
         session.close()
 
@@ -104,8 +113,10 @@ log = logging.getLogger(__name__)
 
 
 def get_server_base():
-    return os.environ.get('BEAKER_SERVER_BASE_URL',
-                          'http://localhost:%s/' % turbogears.config.get('server.socket_port'))
+    return os.environ.get(
+        "BEAKER_SERVER_BASE_URL",
+        "http://localhost:%s/" % turbogears.config.get("server.socket_port"),
+    )
 
 
 def with_transaction(func):
@@ -131,7 +142,7 @@ def fix_beakerd_repodata_perms():
     # The hacky fix is to just delete the repodata at the end of the test, and
     # let the application (running as apache) re-create it later.
     # Call this in a tearDown or tearDownClass method.
-    repodata = os.path.join(turbogears.config.get('basepath.rpms'), 'repodata')
+    repodata = os.path.join(turbogears.config.get("basepath.rpms"), "repodata")
     shutil.rmtree(repodata, ignore_errors=True)
 
 
@@ -142,10 +153,11 @@ def check_listen(port):
     """
     # with newer lsof we could just use -sTCP:LISTEN,
     # but RHEL5's lsof is too old so we have to filter for LISTEN state ourselves
-    output, error = subprocess.Popen(['lsof', '-iTCP:%d' % port],
-                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+    output, error = subprocess.Popen(
+        ["lsof", "-iTCP:%d" % port], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    ).communicate()
     for line in output.splitlines():
-        if '(LISTEN)' in line:
+        if "(LISTEN)" in line:
             return True
     return False
 
@@ -156,8 +168,15 @@ class Process(object):
     the process in setup/teardown.
     """
 
-    def __init__(self, name, args, env=None, listen_port=None,
-                 stop_signal=signal.SIGTERM, exec_dir=None):
+    def __init__(
+        self,
+        name,
+        args,
+        env=None,
+        listen_port=None,
+        stop_signal=signal.SIGTERM,
+        exec_dir=None,
+    ):
         self.name = name
         self.args = args
         self.env = env
@@ -166,28 +185,37 @@ class Process(object):
         self.exec_dir = exec_dir
 
     def start(self):
-        _cmd_line = ' '.join(self.args)
+        _cmd_line = " ".join(self.args)
         if self.env is None:
-            log.info('Spawning %s: %r', self.name, _cmd_line)
+            log.info("Spawning %s: %r", self.name, _cmd_line)
         else:
-            log.info('Spawning %s in %r: %r', self.name, self.env, _cmd_line)
+            log.info("Spawning %s in %r: %r", self.name, self.env, _cmd_line)
         env = dict(os.environ)
         if self.env:
             env.update(self.env)
         try:
-            discard_output = os.environ.get('DISCARD_SUBPROCESS_OUTPUT')
-            if discard_output == '1':
-                devnull = open(os.devnull, 'w')
+            discard_output = os.environ.get("DISCARD_SUBPROCESS_OUTPUT")
+            if discard_output == "1":
+                devnull = open(os.devnull, "w")
                 self.popen = subprocess.Popen(
-                    self.args, stdout=devnull, stderr=devnull, env=env, cwd=self.exec_dir)
+                    self.args,
+                    stdout=devnull,
+                    stderr=devnull,
+                    env=env,
+                    cwd=self.exec_dir,
+                )
             else:
                 self.popen = subprocess.Popen(
-                    self.args, stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT, env=env, cwd=self.exec_dir)
+                    self.args,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    env=env,
+                    cwd=self.exec_dir,
+                )
                 self.communicate_thread = CommunicateThread(popen=self.popen)
                 self.communicate_thread.start()
         except:
-            log.info('Failed to spawn %s', self.name)
+            log.info("Failed to spawn %s", self.name)
             raise
         if self.listen_port:
             self._wait_for_listen(self.listen_port)
@@ -199,20 +227,26 @@ class Process(object):
         """
         # XXX is there a better way to do this?
         for i in range(40):
-            log.info('Waiting for %s to listen on port %d', self.name, port)
+            log.info("Waiting for %s to listen on port %d", self.name, port)
             if check_listen(self.listen_port):
                 return
             time.sleep(1)
-        raise RuntimeError('Gave up waiting for LISTEN %d' % port)
+        raise RuntimeError("Gave up waiting for LISTEN %d" % port)
 
     def stop(self):
-        if not hasattr(self, 'popen'):
-            log.warning('%s never started, not killing', self.name)
+        if not hasattr(self, "popen"):
+            log.warning("%s never started, not killing", self.name)
         elif self.popen.poll() is not None:
-            log.warning('%s (pid %d) already dead, not killing', self.name, self.popen.pid)
+            log.warning(
+                "%s (pid %d) already dead, not killing", self.name, self.popen.pid
+            )
         else:
-            log.info('Sending signal %r to %s (pid %d)',
-                     self.stop_signal, self.name, self.popen.pid)
+            log.info(
+                "Sending signal %r to %s (pid %d)",
+                self.stop_signal,
+                self.name,
+                self.popen.pid,
+            )
             os.kill(self.popen.pid, self.stop_signal)
             self.popen.wait()
 
@@ -252,7 +286,7 @@ class CommunicateThread(threading.Thread):
 
     def finish_capture(self):
         self.capturing = False
-        result = ''.join(self.captured)
+        result = "".join(self.captured)
         del self.captured
         return result
 
@@ -263,12 +297,14 @@ slapd_data_dir = None
 
 def setup_slapd():
     global slapd_config_dir, slapd_data_dir
-    slapd_config_dir = tempfile.mkdtemp(prefix='beaker-tests-slapd-config')
-    slapd_data_dir = tempfile.mkdtemp(prefix='beaker-tests-slapd-data')
-    log.info('Populating slapd config')
-    slapadd = subprocess.Popen(['slapadd', '-F', slapd_config_dir, '-n0'],
-                               stdin=subprocess.PIPE)
-    slapadd.communicate("""
+    slapd_config_dir = tempfile.mkdtemp(prefix="beaker-tests-slapd-config")
+    slapd_data_dir = tempfile.mkdtemp(prefix="beaker-tests-slapd-data")
+    log.info("Populating slapd config")
+    slapadd = subprocess.Popen(
+        ["slapadd", "-F", slapd_config_dir, "-n0"], stdin=subprocess.PIPE
+    )
+    slapadd.communicate(
+        """
 dn: cn=config
 objectClass: olcGlobal
 cn: config
@@ -295,12 +331,23 @@ olcSuffix: dc=example,dc=invalid
 olcDbDirectory: %s
 olcDbIndex: objectClass eq
 olcAccess: to * by * read
-""" % slapd_data_dir)
+"""
+        % slapd_data_dir
+    )
     assert slapadd.returncode == 0
-    log.info('Populating slapd data')
-    subprocess.check_call(['slapadd', '-F', slapd_config_dir, '-n1', '-l',
-                           pkg_resources.resource_filename('bkr.inttest', 'ldap-data.ldif')],
-                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    log.info("Populating slapd data")
+    subprocess.check_call(
+        [
+            "slapadd",
+            "-F",
+            slapd_config_dir,
+            "-n1",
+            "-l",
+            pkg_resources.resource_filename("bkr.inttest", "ldap-data.ldif"),
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
 
 
 def cleanup_slapd():
@@ -314,19 +361,19 @@ mail_capture_thread = MailCaptureThread()
 def _glance():
     # First check if we have all dependencies for runtime
     if not has_glanceclient:
-        raise RuntimeError('python-glanceclient is not installed')
+        raise RuntimeError("python-glanceclient is not installed")
 
     if not has_keystoneauth1:
-        raise RuntimeError('python-keystoneauth1 is not installed')
+        raise RuntimeError("python-keystoneauth1 is not installed")
 
     # We upload the iPXE image to Glance using the same dummy credentials and
     # tenant on whose behalf we will be creating VMs later.
-    username = os.environ['OPENSTACK_DUMMY_USERNAME']
-    password = os.environ['OPENSTACK_DUMMY_PASSWORD']
-    project_name = os.environ['OPENSTACK_DUMMY_PROJECT_NAME']
-    auth_url = turbogears.config.get('openstack.identity_api_url')
-    user_domain_name = os.environ.get('OPENSTACK_DUMMY_USER_DOMAIN_NAME')
-    project_domain_name = os.environ.get('OPENSTACK_DUMMY_PROJECT_DOMAIN_NAME')
+    username = os.environ["OPENSTACK_DUMMY_USERNAME"]
+    password = os.environ["OPENSTACK_DUMMY_PASSWORD"]
+    project_name = os.environ["OPENSTACK_DUMMY_PROJECT_NAME"]
+    auth_url = turbogears.config.get("openstack.identity_api_url")
+    user_domain_name = os.environ.get("OPENSTACK_DUMMY_USER_DOMAIN_NAME")
+    project_domain_name = os.environ.get("OPENSTACK_DUMMY_PROJECT_DOMAIN_NAME")
 
     auth = v3.Password(
         auth_url=auth_url,
@@ -339,7 +386,9 @@ def _glance():
 
     sess = os_session.Session(auth=auth)
     auth_ref = auth.get_auth_ref(sess)
-    glance_url = auth_ref.service_catalog.url_for(service_type='image', interface='public')
+    glance_url = auth_ref.service_catalog.url_for(
+        service_type="image", interface="public"
+    )
 
     return glanceclient.v2.client.Client(glance_url, token=auth.get_token(sess))
 
@@ -351,17 +400,18 @@ def setup_openstack():
         # Use a distinctive guest name prefix to give us a greater chance of
         # tracking instances back to the test run which created them.
         admin_user = User.by_user_name(data_setup.ADMIN_USER)
-        guest_name_prefix = u'beaker-testsuite-%s-%s-' % (
-            datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S'),
-            socket.gethostname())
-        ConfigItem.by_name(u'guest_name_prefix').set(guest_name_prefix, user=admin_user)
-        ipxe_image.upload_image(_glance(), visibility=u'private')
+        guest_name_prefix = u"beaker-testsuite-%s-%s-" % (
+            datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
+            socket.gethostname(),
+        )
+        ConfigItem.by_name(u"guest_name_prefix").set(guest_name_prefix, user=admin_user)
+        ipxe_image.upload_image(_glance(), visibility=u"private")
 
 
 def cleanup_openstack():
     with session.begin():
         region = OpenStackRegion.query.one()
-        log.info('Cleaning up Glance image %s', region.ipxe_image_id)
+        log.info("Cleaning up Glance image %s", region.ipxe_image_id)
         _glance().images.delete(region.ipxe_image_id)
 
 
@@ -369,7 +419,7 @@ processes = None
 
 
 def edit_file(file, old_text, new_text):
-    with open(file, 'r') as f:
+    with open(file, "r") as f:
         contents = f.read()
     contents = re.sub(old_text, new_text, contents)
     tmp_config = tempfile.NamedTemporaryFile()
@@ -386,7 +436,7 @@ def start_process(name, env=None):
             found = True
             p.start()
     if found is False:
-        raise ValueError('%s is not a valid process name')
+        raise ValueError("%s is not a valid process name")
 
 
 def stop_process(name):
@@ -396,16 +446,17 @@ def stop_process(name):
             found = True
             p.stop()
     if found is False:
-        raise ValueError('%s is not a valid process name')
+        raise ValueError("%s is not a valid process name")
 
 
 def setup_package():
-    assert os.path.exists(CONFIG_FILE), 'Config file %s must exist' % CONFIG_FILE
+    assert os.path.exists(CONFIG_FILE), "Config file %s must exist" % CONFIG_FILE
     load_config(configfile=CONFIG_FILE)
     log_to_stream(sys.stdout, level=logging.DEBUG)
 
     from bkr.inttest import data_setup
-    if not 'BEAKER_SKIP_INIT_DB' in os.environ:
+
+    if not "BEAKER_SKIP_INIT_DB" in os.environ:
         data_setup.setup_model()
     with session.begin():
         # Fill in the bare minimum data which Beaker assumes will always be present.
@@ -414,30 +465,34 @@ def setup_package():
         if not LabController.query.count():
             data_setup.create_labcontroller()
         if not Task.query.count():
-            data_setup.create_task(name=u'/distribution/check-install')
-            data_setup.create_task(name=u'/distribution/reservesys',
-                                   requires=u'emacs vim-enhanced unifdef sendmail'.split())
-            data_setup.create_task(name=u'/distribution/utils/dummy')
-            data_setup.create_task(name=u'/distribution/inventory')
+            data_setup.create_task(name=u"/distribution/check-install")
+            data_setup.create_task(
+                name=u"/distribution/reservesys",
+                requires=u"emacs vim-enhanced unifdef sendmail".split(),
+            )
+            data_setup.create_task(name=u"/distribution/utils/dummy")
+            data_setup.create_task(name=u"/distribution/inventory")
         if not Distro.query.count():
             # The 'BlueShoeLinux5-5' string appears in many tests, because it's
             # the distro name used in complete-job.xml.
-            data_setup.create_distro_tree(osmajor=u'BlueShoeLinux5',
-                                          distro_name=u'BlueShoeLinux5-5')
+            data_setup.create_distro_tree(
+                osmajor=u"BlueShoeLinux5", distro_name=u"BlueShoeLinux5-5"
+            )
 
-    if os.path.exists(turbogears.config.get('basepath.rpms')):
+    if os.path.exists(turbogears.config.get("basepath.rpms")):
         # Remove any task RPMs left behind by previous test runs
-        for entry in os.listdir(turbogears.config.get('basepath.rpms')):
-            shutil.rmtree(os.path.join(
-                turbogears.config.get('basepath.rpms'),
-                entry), ignore_errors=True)
+        for entry in os.listdir(turbogears.config.get("basepath.rpms")):
+            shutil.rmtree(
+                os.path.join(turbogears.config.get("basepath.rpms"), entry),
+                ignore_errors=True,
+            )
     else:
-        os.mkdir(turbogears.config.get('basepath.rpms'))
+        os.mkdir(turbogears.config.get("basepath.rpms"))
 
     setup_slapd()
     mail_capture_thread.start()
 
-    if turbogears.config.get('openstack.identity_api_url'):
+    if turbogears.config.get("openstack.identity_api_url"):
         setup_openstack()
 
     turbogears.testutil.make_app(Root)
@@ -445,25 +500,48 @@ def setup_package():
 
     global processes
     processes = []
-    if 'BEAKER_SERVER_BASE_URL' not in os.environ:
+    if "BEAKER_SERVER_BASE_URL" not in os.environ:
         # need to start the server ourselves
         # Usual pkg_resources ugliness is needed to ensure gunicorn doesn't
         # import pkg_resources before we get a chance to specify our
         # requirements in bkr.server.wsgi
-        processes.extend([
-            Process('gunicorn', args=[sys.executable, '-c',
-                                      '__requires__ = ["CherryPy < 3.0"]; import pkg_resources; '
-                                      'from gunicorn.app.wsgiapp import run; run()',
-                                      '--bind', ':%s' % turbogears.config.get('server.socket_port'),
-                                      '--workers', '8', '--access-logfile', '-', '--preload',
-                                      'bkr.server.wsgi:application'],
-                    listen_port=turbogears.config.get('server.socket_port')),
-        ])
-    processes.extend([
-        Process('slapd', args=['slapd', '-d0', '-F' + slapd_config_dir,
-                               '-hldap://127.0.0.1:3899/'],
-                listen_port=3899, stop_signal=signal.SIGINT),
-    ])
+        processes.extend(
+            [
+                Process(
+                    "gunicorn",
+                    args=[
+                        sys.executable,
+                        "-c",
+                        '__requires__ = ["CherryPy < 3.0"]; import pkg_resources; '
+                        "from gunicorn.app.wsgiapp import run; run()",
+                        "--bind",
+                        ":%s" % turbogears.config.get("server.socket_port"),
+                        "--workers",
+                        "8",
+                        "--access-logfile",
+                        "-",
+                        "--preload",
+                        "bkr.server.wsgi:application",
+                    ],
+                    listen_port=turbogears.config.get("server.socket_port"),
+                ),
+            ]
+        )
+    processes.extend(
+        [
+            Process(
+                "slapd",
+                args=[
+                    "slapd",
+                    "-d0",
+                    "-F" + slapd_config_dir,
+                    "-hldap://127.0.0.1:3899/",
+                ],
+                listen_port=3899,
+                stop_signal=signal.SIGINT,
+            ),
+        ]
+    )
     try:
         for process in processes:
             process.start()
@@ -479,7 +557,7 @@ def teardown_package():
 
     turbogears.testutil.stop_server()
 
-    if turbogears.config.get('openstack.identity_api_url'):
+    if turbogears.config.get("openstack.identity_api_url"):
         cleanup_openstack()
 
     mail_capture_thread.stop()

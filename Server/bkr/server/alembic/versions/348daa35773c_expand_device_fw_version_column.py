@@ -12,14 +12,16 @@ Create Date: 2018-09-24 13:51:26.257198
 """
 
 # revision identifiers, used by Alembic.
-revision = '348daa35773c'
-down_revision = '292b2e042673'
+revision = "348daa35773c"
+down_revision = "292b2e042673"
 
 from alembic import op
 from sqlalchemy import Unicode
 
+
 def upgrade():
-    op.alter_column('device', 'fw_version', type_=Unicode(241), nullable=True)
+    op.alter_column("device", "fw_version", type_=Unicode(241), nullable=True)
+
 
 def downgrade():
-    op.alter_column('device', 'fw_version', type_=Unicode(32), nullable=True)
+    op.alter_column("device", "fw_version", type_=Unicode(32), nullable=True)

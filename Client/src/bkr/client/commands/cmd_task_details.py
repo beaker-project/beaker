@@ -61,6 +61,7 @@ class Task_Details(BeakerCommand):
     """
     Show details about Task
     """
+
     enabled = True
 
     def options(self):
@@ -97,6 +98,6 @@ class Task_Details(BeakerCommand):
             if xml:
                 print("%s\n%s" % (task, self.hub.tasks.to_xml(task, prettyxml, valid)))
             elif prettyxml:
-               print("%s\n%s" % (task, self.hub.tasks.to_xml(task, prettyxml, valid)))
+                print("%s\n%s" % (task, self.hub.tasks.to_xml(task, prettyxml, valid)))
             else:
-                print("%s %s" % (task, self.hub.tasks.to_dict(task,valid)))
+                print("%s %s" % (task, self.hub.tasks.to_dict(task, valid)))

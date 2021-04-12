@@ -38,27 +38,33 @@ class SnippetExtension(jinja2.ext.Extension):
     See http://jinja.pocoo.org/docs/extensions/
     """
 
-    tags = set(['snippet'])
+    tags = set(["snippet"])
 
     def parse(self, parser):
         lineno = parser.stream.next().lineno
         snippet_name = parser.parse_expression()
-        node = jinja2.nodes.Output([
-            jinja2.nodes.Call(jinja2.nodes.Name('snippet', 'load'),
-                              [snippet_name], [], None, None),
-        ])
+        node = jinja2.nodes.Output(
+            [
+                jinja2.nodes.Call(
+                    jinja2.nodes.Name("snippet", "load"), [snippet_name], [], None, None
+                ),
+            ]
+        )
         node.set_lineno(lineno)
         return node
 
 
 template_env = jinja2.sandbox.SandboxedEnvironment(
     cache_size=0,  # https://bugzilla.redhat.com/show_bug.cgi?id=862235
-    loader=jinja2.ChoiceLoader([
-        jinja2.FileSystemLoader('/etc/beaker'),
-        jinja2.PackageLoader('bkr.server', ''),
-    ]),
+    loader=jinja2.ChoiceLoader(
+        [
+            jinja2.FileSystemLoader("/etc/beaker"),
+            jinja2.PackageLoader("bkr.server", ""),
+        ]
+    ),
     trim_blocks=True,
-    extensions=[SnippetExtension])
+    extensions=[SnippetExtension],
+)
 
 
 def add_to_template_searchpath(dir):
@@ -75,7 +81,7 @@ def add_to_template_searchpath(dir):
             if isinstance(loader, jinja2.FileSystemLoader):
                 loader.searchpath.insert(0, dir)
                 break
-            elif getattr(loader, 'loaders', None):
+            elif getattr(loader, "loaders", None):
                 _add_template(loader.loaders, dir)
             else:
                 continue
@@ -138,7 +144,9 @@ class RestrictedArch(object):
 
 
 class RestrictedDistroTree(object):
-    def __init__(self, osmajor, osminor, name, variant, arch, tree_url, distro_tree=None):
+    def __init__(
+        self, osmajor, osminor, name, variant, arch, tree_url, distro_tree=None
+    ):
         self.distro = RestrictedDistro(osmajor, osminor, name)
         if variant is None:
             self.variant = None
@@ -174,17 +182,20 @@ class RestrictedRecipe(object):
 # http://jinja.pocoo.org/docs/api/#custom-filters
 # http://jinja.pocoo.org/docs/api/#custom-tests
 
-def dictsplit(s, delim=',', pairsep=':'):
+
+def dictsplit(s, delim=",", pairsep=":"):
     return dict(pair.split(pairsep, 1) for pair in s.split(delim))
 
 
-template_env.filters.update({
-    'split': string.split,
-    'dictsplit': dictsplit,
-    'urljoin': urlparse.urljoin,
-    'parsed_url': urlparse.urlparse,
-    'shell_quoted': pipes.quote,
-})
+template_env.filters.update(
+    {
+        "split": string.split,
+        "dictsplit": dictsplit,
+        "urljoin": urlparse.urljoin,
+        "parsed_url": urlparse.urlparse,
+        "shell_quoted": pipes.quote,
+    }
+)
 
 
 def is_arch(distro_tree, *arch_names):
@@ -196,15 +207,19 @@ def is_osmajor(distro, *osmajor_names):
 
 
 def is_osversion(distro, *osversion_names):
-    return (u'%s.%s' % (distro.osversion.osmajor.osmajor, distro.osversion.osminor)
-            in osversion_names)
+    return (
+        u"%s.%s" % (distro.osversion.osmajor.osmajor, distro.osversion.osminor)
+        in osversion_names
+    )
 
 
-template_env.tests.update({
-    'arch': is_arch,
-    'osmajor': is_osmajor,
-    'osversion': is_osversion,
-})
+template_env.tests.update(
+    {
+        "arch": is_arch,
+        "osmajor": is_osmajor,
+        "osversion": is_osversion,
+    }
+)
 
 
 @jinja2.contextfunction
@@ -212,39 +227,46 @@ def var(context, name):
     return context.resolve(name)
 
 
-template_env.globals.update({
-    're': re,
-    'netaddr': netaddr,
-    'chr': chr,
-    'ord': ord,
-    'var': var,
-    'absolute_url': absolute_url,
-})
+template_env.globals.update(
+    {
+        "re": re,
+        "netaddr": netaddr,
+        "chr": chr,
+        "ord": ord,
+        "var": var,
+        "absolute_url": absolute_url,
+    }
+)
 
 
 def kickstart_template(osmajor):
     candidates = [
-        'kickstarts/%s' % osmajor,
-        'kickstarts/%s' % osmajor.rstrip(string.digits),
-        'kickstarts/default',
+        "kickstarts/%s" % osmajor,
+        "kickstarts/%s" % osmajor.rstrip(string.digits),
+        "kickstarts/default",
     ]
     for candidate in candidates:
         try:
             return template_env.get_template(candidate)
         except jinja2.TemplateNotFound:
             continue
-    raise ValueError('No kickstart template found for %s, tried: %s'
-                     % (osmajor, ', '.join(candidates)))
+    raise ValueError(
+        "No kickstart template found for %s, tried: %s"
+        % (osmajor, ", ".join(candidates))
+    )
 
 
-def generate_kickstart(install_options,
-                       distro_tree,
-                       system, user,
-                       recipe=None,
-                       ks_appends=None,
-                       kickstart=None,
-                       installation=None,
-                       no_template=None):
+def generate_kickstart(
+    install_options,
+    distro_tree,
+    system,
+    user,
+    recipe=None,
+    ks_appends=None,
+    kickstart=None,
+    installation=None,
+    no_template=None,
+):
     if recipe:
         lab_controller = recipe.recipeset.lab_controller
     elif system:
@@ -252,7 +274,7 @@ def generate_kickstart(install_options,
     else:
         raise ValueError("Must specify either a system or a recipe")
 
-    recipe_whiteboard = job_whiteboard = ''
+    recipe_whiteboard = job_whiteboard = ""
     if recipe:
         if recipe.whiteboard:
             recipe_whiteboard = recipe.whiteboard
@@ -263,55 +285,76 @@ def generate_kickstart(install_options,
     # User-supplied templates don't get access to our model objects, in case
     # they do something foolish/naughty.
     restricted_context = {
-        'kernel_options_post': install_options.kernel_options_post_str,
-        'recipe_whiteboard': recipe_whiteboard,
-        'job_whiteboard': job_whiteboard,
-        'distro_tree': RestrictedDistroTree(installation.osmajor, installation.osminor,
-                                            installation.distro_name, installation.variant,
-                                            installation.arch.arch, installation.tree_url,
-                                            distro_tree),
-        'distro': RestrictedDistro(installation.osmajor, installation.osminor,
-                                   installation.distro_name),
-        'lab_controller': RestrictedLabController(lab_controller),
-        'recipe': RestrictedRecipe(recipe) if recipe else None,
-        'ks_appends': ks_appends or [],
+        "kernel_options_post": install_options.kernel_options_post_str,
+        "recipe_whiteboard": recipe_whiteboard,
+        "job_whiteboard": job_whiteboard,
+        "distro_tree": RestrictedDistroTree(
+            installation.osmajor,
+            installation.osminor,
+            installation.distro_name,
+            installation.variant,
+            installation.arch.arch,
+            installation.tree_url,
+            distro_tree,
+        ),
+        "distro": RestrictedDistro(
+            installation.osmajor, installation.osminor, installation.distro_name
+        ),
+        "lab_controller": RestrictedLabController(lab_controller),
+        "recipe": RestrictedRecipe(recipe) if recipe else None,
+        "ks_appends": ks_appends or [],
     }
 
     restricted_context.update(install_options.ks_meta)
 
     # System templates and snippets have access to more useful stuff.
     context = dict(restricted_context)
-    context.update({
-        'system': system,
-        'lab_controller': lab_controller,
-        'user': user,
-        'recipe': recipe,
-        'config': app.config,
-    })
+    context.update(
+        {
+            "system": system,
+            "lab_controller": lab_controller,
+            "user": user,
+            "recipe": recipe,
+            "config": app.config,
+        }
+    )
     if distro_tree:
-        context.update({
-            'distro_tree': distro_tree,
-            'distro': distro_tree.distro,
-        })
+        context.update(
+            {
+                "distro_tree": distro_tree,
+                "distro": distro_tree.distro,
+            }
+        )
     else:
         # But user-defined distros only get access to our "Restricted" model objects
-        context.update({
-            'distro_tree': RestrictedDistroTree(installation.osmajor, installation.osminor,
-                                                installation.distro_name, installation.variant,
-                                                installation.arch.arch, installation.tree_url),
-            'distro': RestrictedDistro(installation.osmajor, installation.osminor,
-                                       installation.distro_name),
-        })
+        context.update(
+            {
+                "distro_tree": RestrictedDistroTree(
+                    installation.osmajor,
+                    installation.osminor,
+                    installation.distro_name,
+                    installation.variant,
+                    installation.arch.arch,
+                    installation.tree_url,
+                ),
+                "distro": RestrictedDistro(
+                    installation.osmajor, installation.osminor, installation.distro_name
+                ),
+            }
+        )
 
     snippet_locations = []
     if system:
-        snippet_locations.append('snippets/per_system/%%s/%s' % system.fqdn)
-    snippet_locations.extend([
-        'snippets/per_lab/%%s/%s' % lab_controller.fqdn,
-        'snippets/per_osversion/%%s/%s.%s' % (installation.osmajor, installation.osminor),
-        'snippets/per_osmajor/%%s/%s' % installation.osmajor,
-        'snippets/%s',
-    ])
+        snippet_locations.append("snippets/per_system/%%s/%s" % system.fqdn)
+    snippet_locations.extend(
+        [
+            "snippets/per_lab/%%s/%s" % lab_controller.fqdn,
+            "snippets/per_osversion/%%s/%s.%s"
+            % (installation.osmajor, installation.osminor),
+            "snippets/per_osmajor/%%s/%s" % installation.osmajor,
+            "snippets/%s",
+        ]
+    )
 
     def snippet(name):
         template = None
@@ -324,19 +367,22 @@ def generate_kickstart(install_options,
                 continue
         if template:
             retval = template.render(context)
-            if retval and not retval.endswith('\n'):
-                retval += '\n'
+            if retval and not retval.endswith("\n"):
+                retval += "\n"
             return retval
         else:
-            return u'# no snippet data for %s\n' % name
+            return u"# no snippet data for %s\n" % name
 
-    restricted_context['snippet'] = snippet
-    context['snippet'] = snippet
+    restricted_context["snippet"] = snippet
+    context["snippet"] = snippet
 
     with TemplateRenderingEnvironment():
         if kickstart:
-            template_string = ("{% snippet 'install_method' %}\n" + kickstart
-                               if not no_template else kickstart)
+            template_string = (
+                "{% snippet 'install_method' %}\n" + kickstart
+                if not no_template
+                else kickstart
+            )
             template = template_env.from_string(template_string)
             result = template.render(restricted_context)
         else:
@@ -348,11 +394,11 @@ def generate_kickstart(install_options,
     try:
         session.flush()  # so that it has an id
     except DataError:
-        raise ValueError('Kickstart generation failed. Please report this issue.')
+        raise ValueError("Kickstart generation failed. Please report this issue.")
     return rendered_kickstart
 
 
-@app.route('/kickstart/<id>', methods=['GET'])
+@app.route("/kickstart/<id>", methods=["GET"])
 def get_kickstart(id):
     """
     Flask endpoint for serving up generated kickstarts.
@@ -361,6 +407,8 @@ def get_kickstart(id):
         kickstart = RenderedKickstart.by_id(id)
     except NoResultFound:
         abort(404)
-    return redirect(kickstart.url) if kickstart.url else Response(
-        kickstart.kickstart.encode('utf8'),
-        mimetype='text/plain')
+    return (
+        redirect(kickstart.url)
+        if kickstart.url
+        else Response(kickstart.kickstart.encode("utf8"), mimetype="text/plain")
+    )

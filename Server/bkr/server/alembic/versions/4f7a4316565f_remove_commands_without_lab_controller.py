@@ -12,20 +12,22 @@ Create Date: 2016-10-20 11:41:51.353958
 """
 
 # revision identifiers, used by Alembic.
-revision = '4f7a4316565f'
-down_revision = '1626ad29c170'
+revision = "4f7a4316565f"
+down_revision = "1626ad29c170"
 
 from alembic import op
 import sqlalchemy as sa
 
 
 def upgrade():
-    op.execute("""
+    op.execute(
+        """
     update command_queue
     set status = 'Aborted'
     where status in ('Queued', 'Running') and
     system_id in (select id from system where lab_controller_id is null)
-    """)
+    """
+    )
 
 
 def downgrade():

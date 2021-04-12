@@ -12,31 +12,41 @@ Create Date: 2015-10-23 13:35:02.391212
 """
 
 # revision identifiers, used by Alembic.
-revision = '2173486573fe'
-down_revision = '5ab8960cdb43'
+revision = "2173486573fe"
+down_revision = "5ab8960cdb43"
 
 from alembic import op
 
+
 def upgrade():
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE config_value_string
         DROP PRIMARY KEY,
         ADD PRIMARY KEY (id)
-        """)
-    op.execute("""
+        """
+    )
+    op.execute(
+        """
         ALTER TABLE config_value_int
         DROP PRIMARY KEY,
         ADD PRIMARY KEY (id)
-        """)
+        """
+    )
+
 
 def downgrade():
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE config_value_string
         DROP PRIMARY KEY,
         ADD PRIMARY KEY (id, config_item_id)
-        """)
-    op.execute("""
+        """
+    )
+    op.execute(
+        """
         ALTER TABLE config_value_int
         DROP PRIMARY KEY,
         ADD PRIMARY KEY (id, config_item_id)
-        """)
+        """
+    )

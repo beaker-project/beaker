@@ -65,41 +65,46 @@ class Group_List(BeakerCommand):
     """
     List groups
     """
+
     enabled = True
 
     def options(self):
         self.parser.usage = "%%prog %s [options] ..." % self.normalized_name
 
-        self.parser.add_option('--owner',
-                               metavar='USERNAME',
-                               help='List groups owned by owner USERNAME')
+        self.parser.add_option(
+            "--owner", metavar="USERNAME", help="List groups owned by owner USERNAME"
+        )
 
-        self.parser.add_option("--limit",
-                               default=50,
-                               type=int,
-                               help='Limit results to this many [default: %default]')
+        self.parser.add_option(
+            "--limit",
+            default=50,
+            type=int,
+            help="Limit results to this many [default: %default]",
+        )
 
     def run(self, *args, **kwargs):
-        owner = kwargs.get('owner', None)
-        limit = kwargs.get('limit')
+        owner = kwargs.get("owner", None)
+        limit = kwargs.get("limit")
 
         self.set_hub(**kwargs)
 
         requests_session = self.requests_session()
 
-        params = {'page_size': limit}
+        params = {"page_size": limit}
         if owner:
-            params['q'] = 'owner.user_name:%s' % owner
+            params["q"] = "owner.user_name:%s" % owner
 
-        response = requests_session.get('groups/', params=params, headers={'Accept': 'application/json'})
+        response = requests_session.get(
+            "groups/", params=params, headers={"Accept": "application/json"}
+        )
 
         response.raise_for_status()
         attributes = response.json()
-        groups = attributes['entries']
+        groups = attributes["entries"]
 
         if not groups:
-            sys.stderr.write('Nothing Matches\n')
+            sys.stderr.write("Nothing Matches\n")
             sys.exit(1)
 
         for group in groups:
-            print(group['group_name'])
+            print(group["group_name"])

@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -19,14 +18,30 @@ from bkr.server import identity, dynamic_virt
 from bkr.server.app import app
 from bkr.server.bexceptions import NoChangeException
 from bkr.server.flask_util import (
-    request_wants_json, auth_required, admin_auth_required, read_json_request,
-    convert_internal_errors, json_collection, Forbidden403, NotFound404,
-    Conflict409, render_tg_template, UnsupportedMediaType415,
-    MethodNotAllowed405, BadRequest400
+    request_wants_json,
+    auth_required,
+    admin_auth_required,
+    read_json_request,
+    convert_internal_errors,
+    json_collection,
+    Forbidden403,
+    NotFound404,
+    Conflict409,
+    render_tg_template,
+    UnsupportedMediaType415,
+    MethodNotAllowed405,
+    BadRequest400,
 )
 from bkr.server.model import (
-    User, Job, System, SystemAccessPolicyRule, GroupMembershipType, SystemStatus,
-    ConfigItem, SSHPubKey, SystemPool
+    User,
+    Job,
+    System,
+    SystemAccessPolicyRule,
+    GroupMembershipType,
+    SystemStatus,
+    ConfigItem,
+    SSHPubKey,
+    SystemPool,
 )
 from bkr.server.util import absolute_url
 from bkr.server.xmlrpccontroller import RPCRoot
@@ -39,7 +54,7 @@ class Users(RPCRoot):
     exposed = True
 
     @cherrypy.expose
-    @identity.require(identity.in_group('admin'))
+    @identity.require(identity.in_group("admin"))
     def remove_account(self, username, newowner=None):
         """
         Removes a Beaker user account. When the account is removed:
@@ -61,32 +76,31 @@ class Users(RPCRoot):
         try:
             user = User.by_user_name(username)
         except InvalidRequestError:
-            raise BX(_('Invalid User %s ' % username))
+            raise BX(_("Invalid User %s " % username))
 
         if newowner:
             owner = User.by_user_name(newowner)
             if owner is None:
-                raise BX(_('Invalid user name for owner %s' % newowner))
-            kwargs['newowner'] = owner
+                raise BX(_("Invalid user name for owner %s" % newowner))
+            kwargs["newowner"] = owner
 
         if user.removed:
-            raise BX(_('User already removed %s' % username))
+            raise BX(_("User already removed %s" % username))
 
-        _remove(user=user, method='XMLRPC', **kwargs)
+        _remove(user=user, method="XMLRPC", **kwargs)
 
 
-def _disable(user, method,
-             msg='Your account has been temporarily disabled'):
+def _disable(user, method, msg="Your account has been temporarily disabled"):
     # cancel all queued and running jobs
     Job.cancel_jobs_by_user(user, msg)
 
 
 def _remove(user, method, **kw):
     if user == identity.current.user:
-        raise BX(_('You cannot remove yourself'))
+        raise BX(_("You cannot remove yourself"))
 
     # cancel all running and queued jobs
-    Job.cancel_jobs_by_user(user, 'User %s removed' % user.user_name)
+    Job.cancel_jobs_by_user(user, "User %s removed" % user.user_name)
 
     # Return all systems in use by this user
     for system in System.query.filter(System.user == user):
@@ -94,28 +108,37 @@ def _remove(user, method, **kw):
         system.unreserve(reservation=reservation, service=method)
     # Return all loaned systems in use by this user
     for system in System.query.filter(System.loaned == user):
-        system.record_activity(user=identity.current.user, service=method,
-                               action=u'Changed', field=u'Loaned To',
-                               old=u'%s' % system.loaned, new=None)
+        system.record_activity(
+            user=identity.current.user,
+            service=method,
+            action=u"Changed",
+            field=u"Loaned To",
+            old=u"%s" % system.loaned,
+            new=None,
+        )
         system.loaned = None
     # Remove the user from all system access policies
     for rule in SystemAccessPolicyRule.query.filter_by(user=user):
         rule.record_deletion(service=method)
         session.delete(rule)
     # Change the owner to the caller
-    newowner = kw.get('newowner', identity.current.user)
+    newowner = kw.get("newowner", identity.current.user)
     for system in System.query.filter(System.owner == user):
         system.owner = newowner
-        system.record_activity(user=identity.current.user, service=method,
-                               action=u'Changed', field=u'Owner',
-                               old=u'%s' % user, new=u'%s' % newowner)
+        system.record_activity(
+            user=identity.current.user,
+            service=method,
+            action=u"Changed",
+            field=u"Owner",
+            old=u"%s" % user,
+            new=u"%s" % newowner,
+        )
     for pool in SystemPool.query.filter(SystemPool.owning_user == user):
         pool.change_owner(user=newowner, service=method)
     # Remove the user from all groups
     for group in user.groups:
         if not group.membership_type == GroupMembershipType.inverted:
-            group.remove_member(user=user,
-                                agent=identity.current.user, service=method)
+            group.remove_member(user=user, agent=identity.current.user, service=method)
     # Finally remove the user
     user.removed = datetime.utcnow()
 
@@ -125,7 +148,7 @@ def _unremove(user):
     user.disabled = False
 
 
-@app.route('/users/', methods=['GET'])
+@app.route("/users/", methods=["GET"])
 @auth_required
 def get_users():
     """
@@ -151,40 +174,51 @@ def get_users():
         which has not been deleted.
     """
     query = User.query.order_by(User.user_name)
-    json_result = json_collection(query, columns={
-        'id': User.id,
-        'user_name': User.user_name,
-        'display_name': User.display_name,
-        'email_address': User.email_address,
-        'disabled': User.disabled,
-        'removed': User.removed,
-    })
+    json_result = json_collection(
+        query,
+        columns={
+            "id": User.id,
+            "user_name": User.user_name,
+            "display_name": User.display_name,
+            "email_address": User.email_address,
+            "disabled": User.disabled,
+            "removed": User.removed,
+        },
+    )
     if request_wants_json():
         return jsonify(json_result)
-    return render_tg_template('bkr.server.templates.backgrid', {
-        'title': u'Users',
-        'grid_collection_type': 'Users',
-        'grid_collection_data': json_result,
-        'grid_collection_url': request.path,
-        'grid_view_type': 'UsersView',
-        'grid_add_label': 'Create',
-        'grid_add_view_type': 'UserCreateModal' if identity.current.user.is_admin() else 'null',
-    })
+    return render_tg_template(
+        "bkr.server.templates.backgrid",
+        {
+            "title": u"Users",
+            "grid_collection_type": "Users",
+            "grid_collection_data": json_result,
+            "grid_collection_url": request.path,
+            "grid_view_type": "UsersView",
+            "grid_add_label": "Create",
+            "grid_add_view_type": "UserCreateModal"
+            if identity.current.user.is_admin()
+            else "null",
+        },
+    )
 
 
-@app.route('/users/+typeahead')
+@app.route("/users/+typeahead")
 def users_typeahead():
-    if 'q' in request.args:
-        ldap = (len(request.args['q']) >= 3)  # be nice to the LDAP server
-        users = User.list_by_name(request.args['q'],
-                                  find_anywhere=False, find_ldap_users=ldap)
+    if "q" in request.args:
+        ldap = len(request.args["q"]) >= 3  # be nice to the LDAP server
+        users = User.list_by_name(
+            request.args["q"], find_anywhere=False, find_ldap_users=ldap
+        )
     else:
         # not sure if this is wise, the response may be several hundred KB...
-        users = User.query.filter(User.removed == None) \
-            .values(User.user_name, User.display_name)
-    data = [{'user_name': user_name, 'display_name': display_name,
-             'tokens': [user_name]}
-            for user_name, display_name in users]
+        users = User.query.filter(User.removed == None).values(
+            User.user_name, User.display_name
+        )
+    data = [
+        {"user_name": user_name, "display_name": display_name, "tokens": [user_name]}
+        for user_name, display_name in users
+    ]
     return jsonify(data=data)
 
 
@@ -193,24 +227,30 @@ def user_full_json(user):
     # objects (system owner, system user, etc) but we need more info here on
     # the user page.
     attributes = user.to_json()
-    attributes['job_count'] = Job.query.filter(not_(Job.is_finished())) \
-        .filter(Job.owner == user).count()
-    attributes['reservation_count'] = System.query.filter(System.user == user).count()
-    attributes['loan_count'] = System.query \
-        .filter(System.status != SystemStatus.removed) \
-        .filter(System.loaned == user).count()
-    attributes['owned_system_count'] = System.query \
-        .filter(System.status != SystemStatus.removed) \
-        .filter(System.owner == user).count()
-    attributes['owned_pool_count'] = SystemPool.query \
-        .filter(SystemPool.owning_user == user).count()
+    attributes["job_count"] = (
+        Job.query.filter(not_(Job.is_finished())).filter(Job.owner == user).count()
+    )
+    attributes["reservation_count"] = System.query.filter(System.user == user).count()
+    attributes["loan_count"] = (
+        System.query.filter(System.status != SystemStatus.removed)
+        .filter(System.loaned == user)
+        .count()
+    )
+    attributes["owned_system_count"] = (
+        System.query.filter(System.status != SystemStatus.removed)
+        .filter(System.owner == user)
+        .count()
+    )
+    attributes["owned_pool_count"] = SystemPool.query.filter(
+        SystemPool.owning_user == user
+    ).count()
     # Intentionally not counting membership in inverted groups because everyone
     # is always in those
-    attributes['group_membership_count'] = len(user.group_user_assocs)
+    attributes["group_membership_count"] = len(user.group_user_assocs)
     return attributes
 
 
-@app.route('/users/', methods=['POST'])
+@app.route("/users/", methods=["POST"])
 @admin_auth_required
 def create_user():
     """
@@ -218,34 +258,36 @@ def create_user():
     """
     data = read_json_request(request)
     with convert_internal_errors():
-        new_user_name = data.get('user_name', '').strip()
+        new_user_name = data.get("user_name", "").strip()
         existing_user = User.by_user_name(new_user_name)
         if existing_user is not None:
-            raise Conflict409('User %s already exists' % new_user_name)
-        new_display_name = data.get('display_name', '').strip()
-        new_email_address = data.get('email_address', '').strip()
-        user = User(user_name=new_user_name,
-                    display_name=new_display_name,
-                    email_address=new_email_address)
+            raise Conflict409("User %s already exists" % new_user_name)
+        new_display_name = data.get("display_name", "").strip()
+        new_email_address = data.get("email_address", "").strip()
+        user = User(
+            user_name=new_user_name,
+            display_name=new_display_name,
+            email_address=new_email_address,
+        )
         session.add(user)
         session.flush()  # to populate id
     response = jsonify(user_full_json(user))
     response.status_code = 201
-    response.headers.add('Location', absolute_url(user.href))
+    response.headers.add("Location", absolute_url(user.href))
     return response
 
 
 # For backwards compatibility with old TurboGears URLs.
-@app.route('/users/edit', methods=['GET'])
+@app.route("/users/edit", methods=["GET"])
 def old_get_group():
-    if 'id' in request.args:
-        user = User.by_id(request.args['id'])
+    if "id" in request.args:
+        user = User.by_id(request.args["id"])
         if user is not None:
             return flask_redirect(absolute_url(user.href))
     raise NotFound404()
 
 
-@app.route('/users/+self', methods=['GET'])
+@app.route("/users/+self", methods=["GET"])
 @auth_required
 def get_self():
     """
@@ -253,20 +295,20 @@ def get_self():
     """
     attributes = user_full_json(identity.current.user)
     if identity.current.proxied_by_user is not None:
-        attributes['proxied_by_user'] = user_full_json(identity.current.proxied_by_user)
+        attributes["proxied_by_user"] = user_full_json(identity.current.proxied_by_user)
     return jsonify(attributes)
 
 
 def _get_user(username):
     user = User.by_user_name(username)
     if user is None:
-        raise NotFound404('User %s does not exist' % username)
+        raise NotFound404("User %s does not exist" % username)
     return user
 
 
 # Note that usernames can contain /, for example Kerberos service principals,
 # so we have to use a path match in our route patterns
-@app.route('/users/<path:username>', methods=['GET'])
+@app.route("/users/<path:username>", methods=["GET"])
 @auth_required
 def get_user(username):
     """
@@ -278,13 +320,16 @@ def get_user(username):
     attributes = user_full_json(user)
     if request_wants_json():
         return jsonify(attributes)
-    return render_tg_template('bkr.server.templates.user_edit_form', {
-        'attributes': attributes,
-        'url': user.href,
-    })
+    return render_tg_template(
+        "bkr.server.templates.user_edit_form",
+        {
+            "attributes": attributes,
+            "url": user.href,
+        },
+    )
 
 
-@app.route('/users/<path:username>', methods=['PATCH'])
+@app.route("/users/<path:username>", methods=["PATCH"])
 @auth_required
 def update_user(username):
     """
@@ -321,83 +366,92 @@ def update_user(username):
     user = _get_user(username)
     data = read_json_request(request)
     renamed = False
-    if data.get('password') is not None:
+    if data.get("password") is not None:
         if not user.can_change_password(identity.current.user):
-            raise Forbidden403('Cannot change password for user %s' % user)
+            raise Forbidden403("Cannot change password for user %s" % user)
         with convert_internal_errors():
-            user.password = data.pop('password')
+            user.password = data.pop("password")
     if data:
         if not user.can_edit(identity.current.user):
-            raise Forbidden403('Cannot edit user %s' % user)
+            raise Forbidden403("Cannot edit user %s" % user)
         with convert_internal_errors():
-            if 'user_name' in data:
-                new_user_name = data['user_name'].strip()
+            if "user_name" in data:
+                new_user_name = data["user_name"].strip()
                 if user.user_name != new_user_name:
                     if not user.can_rename(identity.current.user):
-                        raise Forbidden403('Cannot rename user %s to %s'
-                                           % (user, new_user_name))
+                        raise Forbidden403(
+                            "Cannot rename user %s to %s" % (user, new_user_name)
+                        )
                     if User.by_user_name(new_user_name) is not None:
-                        raise Conflict409('User %s already exists' % new_user_name)
+                        raise Conflict409("User %s already exists" % new_user_name)
                     user.user_name = new_user_name
                     renamed = True
-            if 'display_name' in data:
-                user.display_name = data['display_name'].strip()
-            if 'email_address' in data:
-                user.email_address = data['email_address'].strip()
-            if 'root_password' in data:
-                new_root_password = data['root_password']
+            if "display_name" in data:
+                user.display_name = data["display_name"].strip()
+            if "email_address" in data:
+                user.email_address = data["email_address"].strip()
+            if "root_password" in data:
+                new_root_password = data["root_password"]
                 if user.root_password != new_root_password:
                     user.root_password = new_root_password
-            if 'use_old_job_page' in data:
-                user.use_old_job_page = data['use_old_job_page']
-            if 'notify_job_completion' in data:
-                user.notify_job_completion = data['notify_job_completion']
-            if 'notify_broken_system' in data:
-                user.notify_broken_system = data['notify_broken_system']
-            if 'notify_system_loan' in data:
-                user.notify_system_loan = data['notify_system_loan']
-            if 'notify_group_membership' in data:
-                user.notify_group_membership = data['notify_group_membership']
-            if 'notify_reservesys' in data:
-                user.notify_reservesys = data['notify_reservesys']
-            if 'disabled' in data:
-                user.disabled = data['disabled']
+            if "use_old_job_page" in data:
+                user.use_old_job_page = data["use_old_job_page"]
+            if "notify_job_completion" in data:
+                user.notify_job_completion = data["notify_job_completion"]
+            if "notify_broken_system" in data:
+                user.notify_broken_system = data["notify_broken_system"]
+            if "notify_system_loan" in data:
+                user.notify_system_loan = data["notify_system_loan"]
+            if "notify_group_membership" in data:
+                user.notify_group_membership = data["notify_group_membership"]
+            if "notify_reservesys" in data:
+                user.notify_reservesys = data["notify_reservesys"]
+            if "disabled" in data:
+                user.disabled = data["disabled"]
                 if user.disabled:
-                    _disable(user, method=u'HTTP')
-            if 'removed' in data:
-                if data['removed'] is None:
+                    _disable(user, method=u"HTTP")
+            if "removed" in data:
+                if data["removed"] is None:
                     _unremove(user)
-                elif data['removed'] == 'now':
-                    _remove(user, method=u'HTTP')
+                elif data["removed"] == "now":
+                    _remove(user, method=u"HTTP")
                 else:
                     raise ValueError('"removed" value must be "now" or null')
     session.flush()
     response = jsonify(user_full_json(user))
     if renamed:
-        response.headers.add('Location', absolute_url(user.href))
+        response.headers.add("Location", absolute_url(user.href))
     return response
 
 
-@app.route('/prefs/', methods=['GET'])
+@app.route("/prefs/", methods=["GET"])
 @auth_required
 def prefs():
     user = identity.current.user
     attributes = user_full_json(user)
     # Show all future root passwords, and the previous five
-    rootpw = ConfigItem.by_name('root_password')
-    rootpw_values = rootpw.values().filter(rootpw.value_class.valid_from > datetime.utcnow()) \
-                        .order_by(rootpw.value_class.valid_from.desc()).all() \
-                    + rootpw.values().filter(rootpw.value_class.valid_from <= datetime.utcnow()) \
-                          .order_by(rootpw.value_class.valid_from.desc())[:5]
-    return render_tg_template('bkr.server.templates.prefs', {
-        'user': user,
-        'attributes': attributes,
-        'default_root_password': rootpw.current_value(),
-        'default_root_passwords': rootpw_values,
-    })
+    rootpw = ConfigItem.by_name("root_password")
+    rootpw_values = (
+        rootpw.values()
+        .filter(rootpw.value_class.valid_from > datetime.utcnow())
+        .order_by(rootpw.value_class.valid_from.desc())
+        .all()
+        + rootpw.values()
+        .filter(rootpw.value_class.valid_from <= datetime.utcnow())
+        .order_by(rootpw.value_class.valid_from.desc())[:5]
+    )
+    return render_tg_template(
+        "bkr.server.templates.prefs",
+        {
+            "user": user,
+            "attributes": attributes,
+            "default_root_password": rootpw.current_value(),
+            "default_root_passwords": rootpw_values,
+        },
+    )
 
 
-@app.route('/users/<path:username>/ssh-public-keys/', methods=['POST'])
+@app.route("/users/<path:username>/ssh-public-keys/", methods=["POST"])
 @auth_required
 def add_ssh_public_key(username):
     """
@@ -410,26 +464,26 @@ def add_ssh_public_key(username):
     """
     user = _get_user(username)
     if not user.can_edit(identity.current.user):
-        raise Forbidden403('Cannot edit user %s' % user)
-    if request.mimetype != 'text/plain':
-        raise UnsupportedMediaType415('Request content type must be text/plain')
+        raise Forbidden403("Cannot edit user %s" % user)
+    if request.mimetype != "text/plain":
+        raise UnsupportedMediaType415("Request content type must be text/plain")
     with convert_internal_errors():
         keytext = request.data.strip()
-        if '\n' in keytext:
-            raise ValueError('SSH public keys may not contain newlines')
+        if "\n" in keytext:
+            raise ValueError("SSH public keys may not contain newlines")
         elements = keytext.split(None, 2)
         if len(elements) != 3:
-            raise ValueError('Invalid SSH public key')
+            raise ValueError("Invalid SSH public key")
         # 0 - key type; 1 - key; 2 - identity
         if elements[1] in [ssh_key.pubkey for ssh_key in user.sshpubkeys]:
-            raise ValueError('Duplicate SSH public key')
+            raise ValueError("Duplicate SSH public key")
         key = SSHPubKey(*elements)
         user.sshpubkeys.append(key)
         session.flush()  # to populate id
     return jsonify(key.__json__())
 
 
-@app.route('/users/<path:username>/ssh-public-keys/<int:id>', methods=['DELETE'])
+@app.route("/users/<path:username>/ssh-public-keys/<int:id>", methods=["DELETE"])
 @auth_required
 def delete_ssh_public_key(username, id):
     """
@@ -440,16 +494,18 @@ def delete_ssh_public_key(username, id):
     """
     user = _get_user(username)
     if not user.can_edit(identity.current.user):
-        raise Forbidden403('Cannot edit user %s' % user)
+        raise Forbidden403("Cannot edit user %s" % user)
     matching_keys = [k for k in user.sshpubkeys if k.id == id]
     if not matching_keys:
-        raise NotFound404('SSH public key id %s does not belong to user %s' % (id, user))
+        raise NotFound404(
+            "SSH public key id %s does not belong to user %s" % (id, user)
+        )
     key = matching_keys[0]
     session.delete(key)
-    return '', 204
+    return "", 204
 
 
-@app.route('/users/<path:username>/submission-delegates/', methods=['POST'])
+@app.route("/users/<path:username>/submission-delegates/", methods=["POST"])
 @auth_required
 def add_submission_delegate(username):
     """
@@ -461,21 +517,21 @@ def add_submission_delegate(username):
     """
     user = _get_user(username)
     if not user.can_edit(identity.current.user):
-        raise Forbidden403('Cannot edit user %s' % user)
+        raise Forbidden403("Cannot edit user %s" % user)
     data = read_json_request(request)
-    if 'user_name' not in data:
+    if "user_name" not in data:
         raise BadRequest400('Missing "user_name" key to specify submission delegate')
-    submission_delegate = User.by_user_name(data['user_name'])
+    submission_delegate = User.by_user_name(data["user_name"])
     if submission_delegate is None:
-        raise BadRequest400('Submission delegate %s does not exist' % data['user_name'])
+        raise BadRequest400("Submission delegate %s does not exist" % data["user_name"])
     try:
-        user.add_submission_delegate(submission_delegate, service=u'HTTP')
+        user.add_submission_delegate(submission_delegate, service=u"HTTP")
     except NoChangeException as e:
         raise Conflict409(unicode(e))
-    return 'Added', 201
+    return "Added", 201
 
 
-@app.route('/users/<path:username>/submission-delegates/', methods=['DELETE'])
+@app.route("/users/<path:username>/submission-delegates/", methods=["DELETE"])
 @auth_required
 def delete_submission_delegate(username):
     """
@@ -486,20 +542,23 @@ def delete_submission_delegate(username):
     """
     user = _get_user(username)
     if not user.can_edit(identity.current.user):
-        raise Forbidden403('Cannot edit user %s' % user)
-    if 'user_name' not in request.args:
+        raise Forbidden403("Cannot edit user %s" % user)
+    if "user_name" not in request.args:
         raise MethodNotAllowed405
-    submission_delegate = User.by_user_name(request.args['user_name'])
+    submission_delegate = User.by_user_name(request.args["user_name"])
     if submission_delegate is None:
-        raise NotFound404('Submission delegate %s does not exist' % request.args['user_name'])
+        raise NotFound404(
+            "Submission delegate %s does not exist" % request.args["user_name"]
+        )
     if not submission_delegate.is_delegate_for(user):
-        raise Conflict409('User %s is not a submission delegate for %s'
-                          % (submission_delegate, user))
+        raise Conflict409(
+            "User %s is not a submission delegate for %s" % (submission_delegate, user)
+        )
     user.remove_submission_delegate(submission_delegate)
-    return '', 204
+    return "", 204
 
 
-@app.route('/users/+self/keystone-trust', methods=['PUT'])
+@app.route("/users/+self/keystone-trust", methods=["PUT"])
 @auth_required
 def create_keystone_trust_for_self():
     """
@@ -522,7 +581,7 @@ def create_keystone_trust_for_self():
     return _create_keystone_trust(identity.current.user)
 
 
-@app.route('/users/<path:username>/keystone-trust', methods=['PUT'])
+@app.route("/users/<path:username>/keystone-trust", methods=["PUT"])
 @auth_required
 def create_keystone_trust(username):
     """
@@ -548,36 +607,43 @@ def create_keystone_trust(username):
 
 
 def _create_keystone_trust(user):
-    if not config.get('openstack.identity_api_url'):
+    if not config.get("openstack.identity_api_url"):
         raise BadRequest400("OpenStack Integration is not enabled")
     if not user.can_edit_keystone_trust(identity.current.user):
-        raise Forbidden403('Cannot edit Keystone trust of user %s' % user.user_name)
+        raise Forbidden403("Cannot edit Keystone trust of user %s" % user.user_name)
 
     data = read_json_request(request)
-    if 'openstack_username' not in data:
-        raise BadRequest400('No OpenStack username specified')
-    if 'openstack_password' not in data:
-        raise BadRequest400('No OpenStack password specified')
-    if 'openstack_project_name' not in data:
-        raise BadRequest400('No OpenStack project name specified')
+    if "openstack_username" not in data:
+        raise BadRequest400("No OpenStack username specified")
+    if "openstack_password" not in data:
+        raise BadRequest400("No OpenStack password specified")
+    if "openstack_project_name" not in data:
+        raise BadRequest400("No OpenStack project name specified")
 
     try:
         trust_id = dynamic_virt.create_keystone_trust(
-            trustor_username=data['openstack_username'],
-            trustor_password=data['openstack_password'],
-            trustor_project_name=data['openstack_project_name'],
-            trustor_user_domain_name=data.get('openstack_user_domain_name'),
-            trustor_project_domain_name=data.get('openstack_project_domain_name'))
+            trustor_username=data["openstack_username"],
+            trustor_password=data["openstack_password"],
+            trustor_project_name=data["openstack_project_name"],
+            trustor_user_domain_name=data.get("openstack_user_domain_name"),
+            trustor_project_domain_name=data.get("openstack_project_domain_name"),
+        )
     except ValueError as err:
         raise BadRequest400(
-            u'Could not authenticate with OpenStack using your credentials: %s' % unicode(err))
+            u"Could not authenticate with OpenStack using your credentials: %s"
+            % unicode(err)
+        )
     user.openstack_trust_id = trust_id
-    user.record_activity(user=identity.current.user, service=u'HTTP',
-                         field=u'OpenStack Trust ID', action=u'Changed')
-    return jsonify({'openstack_trust_id': trust_id})
+    user.record_activity(
+        user=identity.current.user,
+        service=u"HTTP",
+        field=u"OpenStack Trust ID",
+        action=u"Changed",
+    )
+    return jsonify({"openstack_trust_id": trust_id})
 
 
-@app.route('/users/<path:username>/keystone-trust', methods=['DELETE'])
+@app.route("/users/<path:username>/keystone-trust", methods=["DELETE"])
 @auth_required
 def delete_keystone_trust(username):
     """
@@ -588,9 +654,9 @@ def delete_keystone_trust(username):
     user = _get_user(username)
 
     if not user.can_edit(identity.current.user):
-        raise Forbidden403('Cannot edit Keystone trust of user %s' % username)
+        raise Forbidden403("Cannot edit Keystone trust of user %s" % username)
     if not user.openstack_trust_id:
-        raise BadRequest400('No Keystone trust created by user %s' % username)
+        raise BadRequest400("No Keystone trust created by user %s" % username)
     try:
         manager = dynamic_virt.VirtManager(user)
         manager.delete_keystone_trust()
@@ -603,10 +669,14 @@ def delete_keystone_trust(username):
         log.debug(e.message)
     old_trust_id = user.openstack_trust_id
     user.openstack_trust_id = None
-    user.record_activity(user=identity.current.user, service=u'HTTP',
-                         field=u'OpenStack Trust ID', action=u'Deleted',
-                         old=old_trust_id)
-    return '', 204
+    user.record_activity(
+        user=identity.current.user,
+        service=u"HTTP",
+        field=u"OpenStack Trust ID",
+        action=u"Deleted",
+        old=old_trust_id,
+    )
+    return "", 204
 
 
 # for sphinx

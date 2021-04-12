@@ -65,6 +65,7 @@ class Distros_Tag(BeakerCommand):
     """
     Tag distros
     """
+
     enabled = True
 
     def options(self):
@@ -83,7 +84,9 @@ class Distros_Tag(BeakerCommand):
         name = kwargs.pop("name", None)
         tag = args[0]
         if not name:
-            self.parser.error('If you really want to tag every distro in Beaker, use --name=%')
+            self.parser.error(
+                "If you really want to tag every distro in Beaker, use --name=%"
+            )
 
         self.set_hub(**kwargs)
         distros = self.hub.distros.tag(name, tag)

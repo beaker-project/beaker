@@ -78,27 +78,23 @@ class User_Modify(BeakerCommand):
     def options(self):
         self.parser.usage = "%%prog %s [options]" % self.normalized_name
         self.parser.add_option(
-            "-a",
-            "--add-submission-delegate",
-            help="Add a new submission delegate"
+            "-a", "--add-submission-delegate", help="Add a new submission delegate"
         )
 
         self.parser.add_option(
             "-r",
             "--remove-submission-delegate",
-            help="Remove an existing submission delegate"
+            help="Remove an existing submission delegate",
         )
 
     def run(self, *args, **kwargs):
-        delegate_to_add = kwargs.get('add_submission_delegate', None)
-        delegate_to_remove = kwargs.get('remove_submission_delegate', None)
+        delegate_to_add = kwargs.get("add_submission_delegate", None)
+        delegate_to_remove = kwargs.get("remove_submission_delegate", None)
         self.set_hub(**kwargs)
         if delegate_to_remove:
-            self.hub.prefs. \
-                remove_submission_delegate_by_name(delegate_to_remove)
-            print('Removed submission delegate %s' % delegate_to_remove)
+            self.hub.prefs.remove_submission_delegate_by_name(delegate_to_remove)
+            print("Removed submission delegate %s" % delegate_to_remove)
         if delegate_to_add:
-            self.hub.prefs. \
-                add_submission_delegate_by_name(delegate_to_add)
-            print('Added submission delegate %s' % delegate_to_add)
+            self.hub.prefs.add_submission_delegate_by_name(delegate_to_add)
+            print("Added submission delegate %s" % delegate_to_add)
         exit(0)

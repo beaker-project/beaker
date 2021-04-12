@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -19,6 +18,7 @@ class DummyTransport:
     """
     Helper to test retry_request_decorator
     """
+
     def __init__(self):
         self.request_count = 0
         self.close_count = 0
@@ -37,6 +37,7 @@ class DummyLogger:
     """
     Helper to test retry_request_decorator
     """
+
     def __init__(self):
         self.messages = []
 
@@ -49,7 +50,8 @@ class RetryTransportMixin:
 
     def make_transport(self):
         return xmlrpc_interface.retry_request_decorator(DummyTransport)(
-                retry_timeout=0.001)
+            retry_timeout=0.001
+        )
 
 
 class RetryTransportTestCase(RetryTransportMixin, unittest.TestCase):
@@ -68,8 +70,9 @@ class RetryTransportTestCase(RetryTransportMixin, unittest.TestCase):
     def test_complete_failure(self):
         transport = self.make_transport()
         failure_count = self.DEFAULT_RETRY_COUNT + 1
-        self.assertRaises(socket.error, transport.request, "dummy",
-                          failures = failure_count)
+        self.assertRaises(
+            socket.error, transport.request, "dummy", failures=failure_count
+        )
         # BZ#1059079: Ensure the connection has been forcibly closed
         self.assertEqual(transport.close_count, failure_count)
 
@@ -95,13 +98,17 @@ class RetryTransportLoggingTestCase(RetryTransportMixin, unittest.TestCase):
         transport = self.make_transport()
         self.assertEqual(transport.request("dummy", failures=2), 3)
         max_retries = self.DEFAULT_RETRY_COUNT
-        expected = list(range(max_retries, max_retries-2, -1))
+        expected = list(range(max_retries, max_retries - 2, -1))
         self.assertEqual(self.get_retry_counts(), expected)
         self.assertTrue(self.logger.messages[0][2]["exc_info"])
 
     def test_complete_failure(self):
         transport = self.make_transport()
-        self.assertRaises(socket.error, transport.request, "dummy",
-                          failures = self.DEFAULT_RETRY_COUNT + 1)
+        self.assertRaises(
+            socket.error,
+            transport.request,
+            "dummy",
+            failures=self.DEFAULT_RETRY_COUNT + 1,
+        )
         expected = list(range(self.DEFAULT_RETRY_COUNT, 0, -1))
         self.assertEqual(self.get_retry_counts(), expected)

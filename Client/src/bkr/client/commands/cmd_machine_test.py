@@ -80,6 +80,7 @@ class Machine_Test(BeakerWorkflow):
     """
     Workflow to generate job to test machines
     """
+
     enabled = True
     doc = xml.dom.minidom.Document()
 
@@ -105,7 +106,7 @@ class Machine_Test(BeakerWorkflow):
             "--inventory",
             action="store_true",
             default=False,
-            help="Run Inventory task as well"
+            help="Run Inventory task as well",
         )
         self.parser.usage = "%%prog %s [options] --machine=FQDN" % self.normalized_name
 
@@ -121,53 +122,63 @@ class Machine_Test(BeakerWorkflow):
 
         # Add in Inventory if requested
         if kwargs.get("inventory"):
-            kwargs['task'].append('/distribution/inventory')
+            kwargs["task"].append("/distribution/inventory")
 
         if not machine:
-            self.parser.error('Use --machine to specify machine to be tested')
+            self.parser.error("Use --machine to specify machine to be tested")
 
         if not kwargs.get("whiteboard"):
             kwargs["whiteboard"] = "Test %s" % machine
 
         # If family is specified on command line just do it.
         if family:
-            if not kwargs['arches']:
-                self.parser.error("If family is specified you must specify arches as well")
+            if not kwargs["arches"]:
+                self.parser.error(
+                    "If family is specified you must specify arches as well"
+                )
             families = dict(
-                (family, [arch for arch in kwargs['arches']]) for family in family)
+                (family, [arch for arch in kwargs["arches"]]) for family in family
+            )
         else:
             families = self.get_system_os_major_arches(*args, **kwargs)
 
         # Exit early
         if not families:
-            sys.stderr.write('Could not find an appropriate distro to provision system with.')
+            sys.stderr.write(
+                "Could not find an appropriate distro to provision system with."
+            )
             sys.exit(1)
 
         # Create Job
         job = BeakerJob(*args, **kwargs)
 
         for family, arches in families.items():
-            kwargs['family'] = family
+            kwargs["family"] = family
             # get all tasks requested
             requestedTasks = self.get_tasks(*args, **kwargs)
             # If arch is specified on command line limit to just those. (if they match)
-            if kwargs['arches']:
-                arches = set(kwargs['arches']).intersection(set(arches))
+            if kwargs["arches"]:
+                arches = set(kwargs["arches"]).intersection(set(arches))
             for arch in arches:
                 recipeTemplate = BeakerRecipe()
                 # Add Distro Requirements
                 temp = dict(kwargs)
-                temp['family'] = family
+                temp["family"] = family
                 recipeTemplate.add_base_requires(*args, **temp)
-                arch_node = self.doc.createElement('distro_arch')
-                arch_node.setAttribute('op', '=')
-                arch_node.setAttribute('value', arch)
+                arch_node = self.doc.createElement("distro_arch")
+                arch_node.setAttribute("op", "=")
+                arch_node.setAttribute("value", arch)
                 recipe_set = BeakerRecipeSet(**kwargs)
-                recipe_set.add_recipe(self.process_template(recipeTemplate,
-                                                            requestedTasks,
-                                                            taskParams=taskParams,
-                                                            allow_empty_recipe=True,
-                                                            distroRequires=arch_node, **temp))
+                recipe_set.add_recipe(
+                    self.process_template(
+                        recipeTemplate,
+                        requestedTasks,
+                        taskParams=taskParams,
+                        allow_empty_recipe=True,
+                        distroRequires=arch_node,
+                        **temp
+                    )
+                )
                 job.add_recipe_set(recipe_set)
 
         # jobxml

@@ -12,8 +12,8 @@ Create Date: 2017-11-13 17:48:17.686405
 """
 
 # revision identifiers, used by Alembic.
-revision = '3ba776df4c76'
-down_revision = '2441049ac32c'
+revision = "3ba776df4c76"
+down_revision = "2441049ac32c"
 
 from alembic import op
 import sqlalchemy as sa
@@ -24,12 +24,14 @@ def has_migration_run_before():
     # assume that the migration has already been run before. If the database
     # was left with some new columns left in the installation table, all bets
     # are off.
-    columns = sa.inspect(op.get_bind()).get_columns('installation')
-    return 'tree_url' in [c['name'] for c in columns]
+    columns = sa.inspect(op.get_bind()).get_columns("installation")
+    return "tree_url" in [c["name"] for c in columns]
+
 
 def upgrade():
     if not has_migration_run_before():
-        op.execute("""
+        op.execute(
+            """
             ALTER TABLE installation
             ADD COLUMN tree_url TEXT DEFAULT NULL,
             ADD COLUMN initrd_path TEXT DEFAULT NULL,
@@ -41,12 +43,14 @@ def upgrade():
             ADD COLUMN arch_id INT DEFAULT NULL,
             ADD CONSTRAINT installation_arch_id_fk FOREIGN KEY (arch_id)
                 REFERENCES arch (id)
-        """)
+        """
+        )
 
     # Create installation entries for recipes which have just been scheduled,
     # but don't re-create them in case this migration runs again after a former
     # downgrade.
-    op.execute("""
+    op.execute(
+        """
             INSERT INTO installation
             (created, distro_tree_id, recipe_id, arch_id, distro_name, osmajor, osminor, variant)
             SELECT UTC_TIMESTAMP(),
@@ -67,7 +71,8 @@ def upgrade():
             LEFT OUTER JOIN installation ON installation.recipe_id = recipe.id
             WHERE job.status not in ('Completed', 'Cancelled', 'Aborted')
             AND installation.recipe_id is NULL;
-            """)
+            """
+    )
 
 
 def downgrade():

@@ -65,6 +65,7 @@ class Distros_Untag(BeakerCommand):
     """
     Untag distros
     """
+
     enabled = True
 
     def options(self):
@@ -88,7 +89,9 @@ class Distros_Untag(BeakerCommand):
         name = kwargs.pop("name", None)
         tag = args[0]
         if not name:
-            self.parser.error('If you really want to untag every distro in Beaker, use --name=%')
+            self.parser.error(
+                "If you really want to untag every distro in Beaker, use --name=%"
+            )
 
         self.set_hub(**kwargs)
         distros = self.hub.distros.untag(name, tag)

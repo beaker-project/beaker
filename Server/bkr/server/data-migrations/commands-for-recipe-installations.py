@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -28,17 +27,23 @@ from sqlalchemy import inspect
 
 logger = logging.getLogger(__name__)
 
-def migrate_one_batch(engine):
-    if not any(info['name'] == 'callback' for info
-            in inspect(engine).get_columns('command_queue')):
-        logger.debug('Skipping migration: command_queue.callback column does not exist, '
-                'this database was not created by Beaker < 23')
-        return True # counts as complete
 
-    # Associate commands for provisioning recipes with their newly created 
+def migrate_one_batch(engine):
+    if not any(
+        info["name"] == "callback"
+        for info in inspect(engine).get_columns("command_queue")
+    ):
+        logger.debug(
+            "Skipping migration: command_queue.callback column does not exist, "
+            "this database was not created by Beaker < 23"
+        )
+        return True  # counts as complete
+
+    # Associate commands for provisioning recipes with their newly created
     # installation rows.
     with engine.begin() as connection:
-        result = connection.execute("""
+        result = connection.execute(
+            """
             UPDATE command_queue
             SET installation_id = (
                 SELECT installation.id
@@ -54,23 +59,26 @@ def migrate_one_batch(engine):
                 AND command_queue.installation_id IS NULL
             ORDER BY id DESC
             LIMIT 2000
-            """)
+            """
+        )
     if result.rowcount != 0:
-        logger.info('Associated %d commands with installations', result.rowcount)
-        return False # more work to do
+        logger.info("Associated %d commands with installations", result.rowcount)
+        return False  # more work to do
     else:
-        logger.info('Done associating commands with installations')
+        logger.info("Done associating commands with installations")
 
-    # Now go back and fill in kernel_options for the installations, copied from 
+    # Now go back and fill in kernel_options for the installations, copied from
     # the configure_netboot command.
     with engine.begin() as connection:
-        connection.execute("""
+        connection.execute(
+            """
             UPDATE installation
             INNER JOIN command_queue ON command_queue.installation_id = installation.id
             SET installation.kernel_options = command_queue.kernel_options
             WHERE command_queue.action = 'configure_netboot'
                 AND command_queue.kernel_options IS NOT NULL
                 AND installation.kernel_options = ''
-            """)
-    logger.info('Populated kernel options for installations')
-    return True # migration complete
+            """
+        )
+    logger.info("Populated kernel options for installations")
+    return True  # migration complete

@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -76,46 +75,53 @@ class Pool_Modify(BeakerCommand):
     """
     Modify attributes of an existing system pool
     """
+
     enabled = True
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <poolname>" % self.normalized_name
-        self.parser.add_option('--name', metavar='NAME',
-            help='Rename the pool to NAME')
-        self.parser.add_option('--description', metavar='DESCRIPTION',
-            help='Change the description of the pool to DESCRIPTION')
-        self.parser.add_option('--owner', metavar='USER',
-            help='Change the owner to USER')
-        self.parser.add_option('--owning-group', metavar='GROUP',
-            help='Change the owner to group GROUP')
+        self.parser.add_option("--name", metavar="NAME", help="Rename the pool to NAME")
+        self.parser.add_option(
+            "--description",
+            metavar="DESCRIPTION",
+            help="Change the description of the pool to DESCRIPTION",
+        )
+        self.parser.add_option(
+            "--owner", metavar="USER", help="Change the owner to USER"
+        )
+        self.parser.add_option(
+            "--owning-group", metavar="GROUP", help="Change the owner to group GROUP"
+        )
 
     def run(self, *args, **kwargs):
         if len(args) != 1:
-            self.parser.error('Exactly one pool name must be specified.')
+            self.parser.error("Exactly one pool name must be specified.")
         pool_name = args[0]
 
-        new_name = kwargs.get('name', None)
-        description = kwargs.get('description', None)
-        owner = kwargs.get('owner', None)
-        owning_group = kwargs.get('owning_group', None)
+        new_name = kwargs.get("name", None)
+        description = kwargs.get("description", None)
+        owner = kwargs.get("owner", None)
+        owning_group = kwargs.get("owning_group", None)
 
         if not any([new_name, description, owner, owning_group]):
-            self.parser.error('At least one option is required, specifying what to change')
+            self.parser.error(
+                "At least one option is required, specifying what to change"
+            )
         if owner and owning_group:
-            self.parser.error('Only one of --owner or --owning-group must be specified')
+            self.parser.error("Only one of --owner or --owning-group must be specified")
 
         pool_attr = {}
         if new_name:
-            pool_attr['name'] = new_name
+            pool_attr["name"] = new_name
         if description:
-            pool_attr['description'] = description
+            pool_attr["description"] = description
         if owner:
-            pool_attr['owner'] = {'user_name': owner}
+            pool_attr["owner"] = {"user_name": owner}
         if owning_group:
-            pool_attr['owner'] = {'group_name': owning_group}
+            pool_attr["owner"] = {"group_name": owning_group}
 
         self.set_hub(**kwargs)
         requests_session = self.requests_session()
-        url = 'pools/%s/' % pool_name
+        url = "pools/%s/" % pool_name
         res = requests_session.patch(url, json=pool_attr)
         res.raise_for_status()

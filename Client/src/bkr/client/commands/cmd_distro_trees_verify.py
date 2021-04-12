@@ -90,6 +90,7 @@ class Distro_Trees_Verify(BeakerCommand):
     """
     Verify distro trees
     """
+
     enabled = True
     requires_login = False
 
@@ -134,25 +135,33 @@ class Distro_Trees_Verify(BeakerCommand):
 
     def run(self, *args, **kwargs):
         onlybroken = kwargs.pop("broken", False)
-        filter = dict( limit    = kwargs.pop("limit", None),
-                       name     = kwargs.pop("name", None),
-                       treepath = kwargs.pop("treepath", None),
-                       family   = kwargs.pop("family", None),
-                       arch     = kwargs.pop("arch", None),
-                       tags     = kwargs.pop("tag", []),
-                     )
+        filter = dict(
+            limit=kwargs.pop("limit", None),
+            name=kwargs.pop("name", None),
+            treepath=kwargs.pop("treepath", None),
+            family=kwargs.pop("family", None),
+            arch=kwargs.pop("arch", None),
+            tags=kwargs.pop("tag", []),
+        )
 
         self.set_hub(**kwargs)
         lab_controllers = set(self.hub.lab_controllers())
         trees = self.hub.distrotrees.filter(filter)
         if trees:
             for tree in trees:
-                available_lcs = set(lc for lc, url in tree['available'])
+                available_lcs = set(lc for lc, url in tree["available"])
                 broken = lab_controllers.difference(available_lcs)
                 if not onlybroken or broken:
-                    print('%s %s %s %s Tags:%s' % (tree['distro_tree_id'],
-                                                   tree['distro_name'], tree['variant'] or '',
-                                                   tree['arch'], ','.join(tree['distro_tags'])))
+                    print(
+                        "%s %s %s %s Tags:%s"
+                        % (
+                            tree["distro_tree_id"],
+                            tree["distro_name"],
+                            tree["variant"] or "",
+                            tree["arch"],
+                            ",".join(tree["distro_tags"]),
+                        )
+                    )
                     if broken:
                         print("missing from labs %s" % list(broken))
         else:

@@ -12,13 +12,15 @@ Create Date: 2015-01-27 10:51:51.552217
 """
 
 # revision identifiers, used by Alembic.
-revision = '10436ef002a7'
-down_revision = '53942581687f'
+revision = "10436ef002a7"
+down_revision = "53942581687f"
 
 from alembic import op
 
+
 def upgrade():
-    op.create_index(u'ix_recipe_resource_fqdn', 'recipe_resource', ['fqdn'])
+    op.create_index(u"ix_recipe_resource_fqdn", "recipe_resource", ["fqdn"])
+
 
 def downgrade():
-    op.drop_index(u'ix_recipe_resource_fqdn', table_name='recipe_resource')
+    op.drop_index(u"ix_recipe_resource_fqdn", table_name="recipe_resource")

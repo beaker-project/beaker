@@ -19,15 +19,15 @@ from alembic import op
 from sqlalchemy import Unicode
 
 # revision identifiers, used by Alembic.
-revision = '4cddc14ab090'
-down_revision = '348daa35773c'
+revision = "4cddc14ab090"
+down_revision = "348daa35773c"
 
 
 def upgrade():
-    op.alter_column('job', 'whiteboard', type_=Unicode(4096), nullable=True)
-    op.alter_column('recipe', 'whiteboard', type_=Unicode(4096), nullable=True)
+    op.alter_column("job", "whiteboard", type_=Unicode(4096), nullable=True)
+    op.alter_column("recipe", "whiteboard", type_=Unicode(4096), nullable=True)
 
 
 def downgrade():
-    op.alter_column('job', 'whiteboard', type_=Unicode(2000), nullable=True)
-    op.alter_column('recipe', 'whiteboard', type_=Unicode(2000), nullable=True)
+    op.alter_column("job", "whiteboard", type_=Unicode(2000), nullable=True)
+    op.alter_column("recipe", "whiteboard", type_=Unicode(2000), nullable=True)

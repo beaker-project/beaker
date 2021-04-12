@@ -12,33 +12,83 @@ Create Date: 2014-10-07 14:56:14.828618
 """
 
 # revision identifiers, used by Alembic.
-revision = '19b9071910f9'
-down_revision = '431e4e2ccbba'
+revision = "19b9071910f9"
+down_revision = "431e4e2ccbba"
 
 from alembic import op
 import sqlalchemy as sa
 
+
 def upgrade():
-    op.alter_column('job', 'status',
-            existing_type=sa.Enum(u'New', u'Processed', u'Queued',
-                u'Scheduled', u'Waiting', u'Running', u'Completed',
-                u'Cancelled', u'Aborted', u'Reserved'),
-            nullable=False)
-    op.alter_column('recipe_set', 'status',
-            existing_type=sa.Enum(u'New', u'Processed', u'Queued',
-                u'Scheduled', u'Waiting', u'Running', u'Completed',
-                u'Cancelled', u'Aborted', u'Reserved'),
-            nullable=False)
-    op.alter_column('recipe', 'status',
-            existing_type=sa.Enum(u'New', u'Processed', u'Queued',
-                u'Scheduled', u'Waiting', u'Running', u'Completed',
-                u'Cancelled', u'Aborted', u'Reserved'),
-            nullable=False)
-    op.alter_column('recipe_task', 'status',
-            existing_type=sa.Enum(u'New', u'Processed', u'Queued',
-                u'Scheduled', u'Waiting', u'Running', u'Completed',
-                u'Cancelled', u'Aborted', u'Reserved'),
-            nullable=False)
+    op.alter_column(
+        "job",
+        "status",
+        existing_type=sa.Enum(
+            u"New",
+            u"Processed",
+            u"Queued",
+            u"Scheduled",
+            u"Waiting",
+            u"Running",
+            u"Completed",
+            u"Cancelled",
+            u"Aborted",
+            u"Reserved",
+        ),
+        nullable=False,
+    )
+    op.alter_column(
+        "recipe_set",
+        "status",
+        existing_type=sa.Enum(
+            u"New",
+            u"Processed",
+            u"Queued",
+            u"Scheduled",
+            u"Waiting",
+            u"Running",
+            u"Completed",
+            u"Cancelled",
+            u"Aborted",
+            u"Reserved",
+        ),
+        nullable=False,
+    )
+    op.alter_column(
+        "recipe",
+        "status",
+        existing_type=sa.Enum(
+            u"New",
+            u"Processed",
+            u"Queued",
+            u"Scheduled",
+            u"Waiting",
+            u"Running",
+            u"Completed",
+            u"Cancelled",
+            u"Aborted",
+            u"Reserved",
+        ),
+        nullable=False,
+    )
+    op.alter_column(
+        "recipe_task",
+        "status",
+        existing_type=sa.Enum(
+            u"New",
+            u"Processed",
+            u"Queued",
+            u"Scheduled",
+            u"Waiting",
+            u"Running",
+            u"Completed",
+            u"Cancelled",
+            u"Aborted",
+            u"Reserved",
+        ),
+        nullable=False,
+    )
+
 
 def downgrade():
-    pass # no downgrade because we are fixing a mistake in an upgrade
+    pass  # no downgrade because we are fixing a mistake in an upgrade

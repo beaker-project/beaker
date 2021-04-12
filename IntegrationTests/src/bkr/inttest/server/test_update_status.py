@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -11,22 +10,38 @@ import lxml.etree
 from turbogears.database import session
 from bkr.server.bexceptions import StaleTaskStatusException
 from bkr.inttest import data_setup, fix_beakerd_repodata_perms, DatabaseTestCase
-from bkr.server.model import TaskStatus, TaskResult, Watchdog, RecipeSet, \
-    Job, Recipe, System, SystemResource, Task, RecipeReservationCondition, \
-    SystemSchedulerStatus
+from bkr.server.model import (
+    TaskStatus,
+    TaskResult,
+    Watchdog,
+    RecipeSet,
+    Job,
+    Recipe,
+    System,
+    SystemResource,
+    Task,
+    RecipeReservationCondition,
+    SystemSchedulerStatus,
+)
 from bkr.server.tools import beakerd
 
+
 def watchdogs_for_job(job):
-    return Watchdog.query.join('recipe', 'recipeset', 'job')\
-            .filter(RecipeSet.job == job).all() + \
-           Watchdog.query.join('recipetask', 'recipe', 'recipeset', 'job')\
-            .filter(RecipeSet.job == job).all()
+    return (
+        Watchdog.query.join("recipe", "recipeset", "job")
+        .filter(RecipeSet.job == job)
+        .all()
+        + Watchdog.query.join("recipetask", "recipe", "recipeset", "job")
+        .filter(RecipeSet.job == job)
+        .all()
+    )
+
 
 class TestUpdateStatus(DatabaseTestCase):
-
     def setUp(self):
         session.begin()
         from bkr.server.jobs import Jobs
+
         self.controller = Jobs()
         self.user = data_setup.create_user()
         session.flush()
@@ -35,7 +50,8 @@ class TestUpdateStatus(DatabaseTestCase):
         session.commit()
 
     def test_abort_recipe_bubbles_status_to_job(self):
-        xmljob = lxml.etree.fromstring('''
+        xmljob = lxml.etree.fromstring(
+            """
             <job>
                 <whiteboard>job </whiteboard>
                 <recipeSet>
@@ -61,7 +77,8 @@ class TestUpdateStatus(DatabaseTestCase):
                     </recipe>
                 </recipeSet>
             </job>
-            ''')
+            """
+        )
         job = self.controller.process_xmljob(xmljob, self.user)
         session.flush()
         for recipeset in job.recipesets:
@@ -103,24 +120,24 @@ class TestUpdateStatus(DatabaseTestCase):
         data_setup.mark_recipe_running(job.recipesets[0].recipes[0], only=True)
         job.recipesets[0].recipes[0].tasks[-1].stop()
         job.update_status()
-        self.assertEquals(job.recipesets[0].recipes[0].status,
-                TaskStatus.completed)
-        self.assertEquals(job.recipesets[0].recipes[0].guests[0].status,
-                TaskStatus.aborted)
+        self.assertEquals(job.recipesets[0].recipes[0].status, TaskStatus.completed)
+        self.assertEquals(
+            job.recipesets[0].recipes[0].guests[0].status, TaskStatus.aborted
+        )
 
         # host aborts, but guest never started
         job = data_setup.create_job(num_recipes=1, num_guestrecipes=1)
         data_setup.mark_job_waiting(job)
-        job.recipesets[0].recipes[0].abort(msg='blorf')
+        job.recipesets[0].recipes[0].abort(msg="blorf")
         job.update_status()
-        self.assertEquals(job.recipesets[0].recipes[0].status,
-                TaskStatus.aborted)
-        self.assertEquals(job.recipesets[0].recipes[0].guests[0].status,
-                TaskStatus.aborted)
+        self.assertEquals(job.recipesets[0].recipes[0].status, TaskStatus.aborted)
+        self.assertEquals(
+            job.recipesets[0].recipes[0].guests[0].status, TaskStatus.aborted
+        )
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1309530
     def test_recipe_start_time_is_set_to_rebooted_timestamp(self):
-        # For a normal recipe running on a system, update_status should set 
+        # For a normal recipe running on a system, update_status should set
         # recipe.start_time to the rebooted timestamp.
         job = data_setup.create_job()
         data_setup.mark_job_scheduled(job)
@@ -134,25 +151,29 @@ class TestUpdateStatus(DatabaseTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1309530
     def test_recipe_start_time_is_set_to_first_task_start_time(self):
-        # For guest recipes, and systems without power control, there is no 
+        # For guest recipes, and systems without power control, there is no
         # rebooted timestamp. Instead the first task just gets started.
         job = data_setup.create_job(num_recipes=1, num_guestrecipes=1)
         data_setup.mark_job_scheduled(job)
         guestrecipe = job.recipesets[0].recipes[0].guests[0]
         self.assertIsNone(guestrecipe.start_time)
-        # /distribution/virt/install starts the first task before it starts 
+        # /distribution/virt/install starts the first task before it starts
         # running the guest installation.
         guestrecipe.provision()
         guestrecipe.first_task.start()
         guestrecipe.first_task.start_time = datetime.datetime(2016, 2, 18, 14, 0, 0)
         self.assertIsNone(guestrecipe.installation.rebooted)
         job.update_status()
-        self.assertEqual(guestrecipe.start_time, datetime.datetime(2016, 2, 18, 14, 0, 0))
+        self.assertEqual(
+            guestrecipe.start_time, datetime.datetime(2016, 2, 18, 14, 0, 0)
+        )
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=991245#c12
-    def test_status_is_Waiting_when_installation_is_finished_but_tasks_have_not_started(self):
-        # Beah <= 0.7.9 will consider 'Installing' to mean that the recipe is 
-        # finished, so we want the status to go back to 'Waiting' once the 
+    def test_status_is_Waiting_when_installation_is_finished_but_tasks_have_not_started(
+        self,
+    ):
+        # Beah <= 0.7.9 will consider 'Installing' to mean that the recipe is
+        # finished, so we want the status to go back to 'Waiting' once the
         # installation is finished.
         job = data_setup.create_job()
         recipe = job.recipesets[0].recipes[0]
@@ -166,9 +187,12 @@ class TestUpdateStatus(DatabaseTestCase):
     def test_scheduler_status_is_not_reset_on_already_released_systems(self):
         first_recipe = data_setup.create_recipe()
         second_recipe = data_setup.create_recipe()
-        job = data_setup.create_job_for_recipesets([
+        job = data_setup.create_job_for_recipesets(
+            [
                 data_setup.create_recipeset_for_recipes([first_recipe]),
-                data_setup.create_recipeset_for_recipes([second_recipe])])
+                data_setup.create_recipeset_for_recipes([second_recipe]),
+            ]
+        )
         data_setup.mark_recipe_complete(first_recipe)
         first_system = first_recipe.resource.system
         self.assertEquals(first_system.scheduler_status, SystemSchedulerStatus.pending)
@@ -177,53 +201,13 @@ class TestUpdateStatus(DatabaseTestCase):
 
         data_setup.mark_recipe_scheduled(second_recipe)
         job.update_status()
-        # The bug was that job.update_status() would reset the *first* recipe's 
-        # system back to pending, even though it had already been released and 
+        # The bug was that job.update_status() would reset the *first* recipe's
+        # system back to pending, even though it had already been released and
         # could potentially be reserved for another recipe already.
         self.assertEquals(first_system.scheduler_status, SystemSchedulerStatus.idle)
 
     def test_update_status_can_be_roundtripped_35508(self):
-        complete_job_xml = pkg_resources.resource_string('bkr.inttest', 'job_35508.xml')
-        xmljob = lxml.etree.fromstring(complete_job_xml)
-
-        data_setup.create_tasks(xmljob)
-        session.flush()
-
-        # Import the job xml
-        job = self.controller.process_xmljob(xmljob, self.user)
-        session.flush()
-
-        # Mark job waiting
-        data_setup.mark_job_waiting(job)
-        session.flush()
-
-        # watchdog's should exist 
-        self.assertNotEqual(len(watchdogs_for_job(job)), 0)
-
-        # Play back the original jobs results and status
-        data_setup.playback_job_results(job, xmljob)
-        session.flush()
-
-        # Verify that the original status and results match
-        self.assertEquals(TaskStatus.from_string(xmljob.get('status')), job.status)
-        self.assertEquals(TaskResult.from_string(xmljob.get('result')), job.result)
-        for i, recipeset in enumerate(xmljob.xpath('recipeSet')):
-            for j, recipe in enumerate(recipeset.xpath('recipe')):
-                self.assertEquals(TaskStatus.from_string(recipe.get('status')),
-                                  job.recipesets[i].recipes[j].status)
-                self.assertEquals(TaskResult.from_string(recipe.get('result')),
-                                  job.recipesets[i].recipes[j].result)
-                for k, task in enumerate(recipe.xpath('task')):
-                    self.assertEquals(TaskStatus.from_string(task.get('status')),
-                                      job.recipesets[i].recipes[j].tasks[k].status)
-                    self.assertEquals(TaskResult.from_string(task.get('result')),
-                                      job.recipesets[i].recipes[j].tasks[k].result)
-
-        # No watchdog's should exist when the job is complete
-        self.assertEquals(len(watchdogs_for_job(job)), 0)
-
-    def test_update_status_can_be_roundtripped_40214(self):
-        complete_job_xml = pkg_resources.resource_string('bkr.inttest', 'job_40214.xml')
+        complete_job_xml = pkg_resources.resource_string("bkr.inttest", "job_35508.xml")
         xmljob = lxml.etree.fromstring(complete_job_xml)
 
         data_setup.create_tasks(xmljob)
@@ -245,25 +229,81 @@ class TestUpdateStatus(DatabaseTestCase):
         session.flush()
 
         # Verify that the original status and results match
-        self.assertEquals(TaskStatus.from_string(xmljob.get('status')), job.status)
-        self.assertEquals(TaskResult.from_string(xmljob.get('result')), job.result)
-        for i, recipeset in enumerate(xmljob.xpath('recipeSet')):
-            for j, recipe in enumerate(recipeset.xpath('recipes')):
-                self.assertEquals(TaskStatus.from_string(recipe.get('status')),
-                                  job.recipesets[i].recipes[j].status)
-                self.assertEquals(TaskResult.from_string(recipe.get('result')),
-                                  job.recipesets[i].recipes[j].result)
-                for k, task in enumerate(recipe.xpath('task')):
-                    self.assertEquals(TaskStatus.from_string(task.get('status')),
-                                      job.recipesets[i].recipes[j].tasks[k].status)
-                    self.assertEquals(TaskResult.from_string(task.get('result')),
-                                      job.recipesets[i].recipes[j].tasks[k].result)
+        self.assertEquals(TaskStatus.from_string(xmljob.get("status")), job.status)
+        self.assertEquals(TaskResult.from_string(xmljob.get("result")), job.result)
+        for i, recipeset in enumerate(xmljob.xpath("recipeSet")):
+            for j, recipe in enumerate(recipeset.xpath("recipe")):
+                self.assertEquals(
+                    TaskStatus.from_string(recipe.get("status")),
+                    job.recipesets[i].recipes[j].status,
+                )
+                self.assertEquals(
+                    TaskResult.from_string(recipe.get("result")),
+                    job.recipesets[i].recipes[j].result,
+                )
+                for k, task in enumerate(recipe.xpath("task")):
+                    self.assertEquals(
+                        TaskStatus.from_string(task.get("status")),
+                        job.recipesets[i].recipes[j].tasks[k].status,
+                    )
+                    self.assertEquals(
+                        TaskResult.from_string(task.get("result")),
+                        job.recipesets[i].recipes[j].tasks[k].result,
+                    )
 
         # No watchdog's should exist when the job is complete
         self.assertEquals(len(watchdogs_for_job(job)), 0)
 
-class TestUpdateStatusReserved(DatabaseTestCase):
+    def test_update_status_can_be_roundtripped_40214(self):
+        complete_job_xml = pkg_resources.resource_string("bkr.inttest", "job_40214.xml")
+        xmljob = lxml.etree.fromstring(complete_job_xml)
 
+        data_setup.create_tasks(xmljob)
+        session.flush()
+
+        # Import the job xml
+        job = self.controller.process_xmljob(xmljob, self.user)
+        session.flush()
+
+        # Mark job waiting
+        data_setup.mark_job_waiting(job)
+        session.flush()
+
+        # watchdog's should exist
+        self.assertNotEqual(len(watchdogs_for_job(job)), 0)
+
+        # Play back the original jobs results and status
+        data_setup.playback_job_results(job, xmljob)
+        session.flush()
+
+        # Verify that the original status and results match
+        self.assertEquals(TaskStatus.from_string(xmljob.get("status")), job.status)
+        self.assertEquals(TaskResult.from_string(xmljob.get("result")), job.result)
+        for i, recipeset in enumerate(xmljob.xpath("recipeSet")):
+            for j, recipe in enumerate(recipeset.xpath("recipes")):
+                self.assertEquals(
+                    TaskStatus.from_string(recipe.get("status")),
+                    job.recipesets[i].recipes[j].status,
+                )
+                self.assertEquals(
+                    TaskResult.from_string(recipe.get("result")),
+                    job.recipesets[i].recipes[j].result,
+                )
+                for k, task in enumerate(recipe.xpath("task")):
+                    self.assertEquals(
+                        TaskStatus.from_string(task.get("status")),
+                        job.recipesets[i].recipes[j].tasks[k].status,
+                    )
+                    self.assertEquals(
+                        TaskResult.from_string(task.get("result")),
+                        job.recipesets[i].recipes[j].tasks[k].result,
+                    )
+
+        # No watchdog's should exist when the job is complete
+        self.assertEquals(len(watchdogs_for_job(job)), 0)
+
+
+class TestUpdateStatusReserved(DatabaseTestCase):
     def setUp(self):
         session.begin()
         self.addCleanup(session.rollback)
@@ -271,7 +311,7 @@ class TestUpdateStatusReserved(DatabaseTestCase):
         self.job = data_setup.create_job_for_recipes([self.recipe])
 
     def test_recipe_running_then_cancelled(self):
-        """ This tests the case where the recipe is running, has a valid
+        """This tests the case where the recipe is running, has a valid
         reservation request, but is cancelled before it's completed.
         """
         data_setup.mark_recipe_running(self.recipe)
@@ -287,12 +327,13 @@ class TestUpdateStatusReserved(DatabaseTestCase):
         self.assertEqual(self.recipe.status, TaskStatus.cancelled)
 
     def test_recipe_running_then_watchdog_expired(self):
-        """ This tests the case where the recipe is running, has a valid
+        """This tests the case where the recipe is running, has a valid
         reservation request, but the watchdog expires before it's
         completed.
         """
-        data_setup.mark_recipe_tasks_finished(self.recipe,
-                                              task_status=TaskStatus.aborted)
+        data_setup.mark_recipe_tasks_finished(
+            self.recipe, task_status=TaskStatus.aborted
+        )
         self.job.update_status()
         self.assertEqual(self.recipe.status, TaskStatus.reserved)
 
@@ -303,7 +344,7 @@ class TestUpdateStatusReserved(DatabaseTestCase):
     def test_recipe_installing_then_aborted(self):
         """Like the previous case, but aborts during installation."""
         data_setup.mark_recipe_installing(self.recipe)
-        self.recipe.abort(msg=u'Installation failed')
+        self.recipe.abort(msg=u"Installation failed")
         self.job.update_status()
         self.assertEqual(self.recipe.status, TaskStatus.reserved)
 
@@ -312,7 +353,7 @@ class TestUpdateStatusReserved(DatabaseTestCase):
         self.assertEqual(self.recipe.status, TaskStatus.aborted)
 
     def test_reserved_then_watchdog_expired(self):
-        """ This tests the case where the external
+        """This tests the case where the external
         watchdog expires when the recipe is in Reserved state
         """
         data_setup.mark_recipe_tasks_finished(self.recipe)
@@ -324,7 +365,7 @@ class TestUpdateStatusReserved(DatabaseTestCase):
         self.assertEqual(self.recipe.status, TaskStatus.completed)
 
     def test_reserved_then_job_cancelled(self):
-        """ This tests the case where the recipe is Reserved
+        """This tests the case where the recipe is Reserved
         but the job is cancelled
         """
         data_setup.mark_recipe_tasks_finished(self.recipe)
@@ -352,7 +393,9 @@ class TestUpdateStatusReserved(DatabaseTestCase):
 
     def test_onabort_reserves_when_aborted(self):
         self.recipe.reservation_request.when = RecipeReservationCondition.onabort
-        data_setup.mark_recipe_tasks_finished(self.recipe, task_status=TaskStatus.aborted)
+        data_setup.mark_recipe_tasks_finished(
+            self.recipe, task_status=TaskStatus.aborted
+        )
         self.job.update_status()
         self.assertEquals(self.recipe.status, TaskStatus.reserved)
 
@@ -364,7 +407,9 @@ class TestUpdateStatusReserved(DatabaseTestCase):
 
     def test_onfail_reserves_when_aborted(self):
         self.recipe.reservation_request.when = RecipeReservationCondition.onfail
-        data_setup.mark_recipe_tasks_finished(self.recipe, task_status=TaskStatus.aborted)
+        data_setup.mark_recipe_tasks_finished(
+            self.recipe, task_status=TaskStatus.aborted
+        )
         self.job.update_status()
         self.assertEquals(self.recipe.status, TaskStatus.reserved)
 
@@ -382,7 +427,9 @@ class TestUpdateStatusReserved(DatabaseTestCase):
 
     def test_onwarn_reserves_when_aborted(self):
         self.recipe.reservation_request.when = RecipeReservationCondition.onwarn
-        data_setup.mark_recipe_tasks_finished(self.recipe, task_status=TaskStatus.aborted)
+        data_setup.mark_recipe_tasks_finished(
+            self.recipe, task_status=TaskStatus.aborted
+        )
         self.job.update_status()
         self.assertEquals(self.recipe.status, TaskStatus.reserved)
 
@@ -406,17 +453,16 @@ class TestUpdateStatusReserved(DatabaseTestCase):
 
 
 class ConcurrentUpdateTest(DatabaseTestCase):
-
     @classmethod
     def tearDownClass(cls):
         fix_beakerd_repodata_perms()
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=807237
     def test_concurrent_recipe_completion(self):
-        # This test simulates two recipes finishing at the same time. So we 
+        # This test simulates two recipes finishing at the same time. So we
         # have two concurrent transactions both updating the respective task states.
-        # Previously there was no separate job.update_status() step, so the two 
-        # transactions would update the job status using out-of-date values in 
+        # Previously there was no separate job.update_status() step, so the two
+        # transactions would update the job status using out-of-date values in
         # both transactions, leaving the job running.
         with session.begin():
             recipe1 = data_setup.create_recipe()
@@ -426,8 +472,8 @@ class ConcurrentUpdateTest(DatabaseTestCase):
             assert len(recipe2.tasks) == 1
             data_setup.mark_recipe_running(recipe1)
             data_setup.mark_recipe_running(recipe2)
-            recipe1.tasks[-1].pass_(u'/', 0, u'Pass')
-            recipe2.tasks[-1].pass_(u'/', 0, u'Pass')
+            recipe1.tasks[-1].pass_(u"/", 0, u"Pass")
+            recipe2.tasks[-1].pass_(u"/", 0, u"Pass")
 
         # Complete the recipes "concurrently" in two separate transactions
         class RecipeCompletionThread(Thread):
@@ -436,6 +482,7 @@ class ConcurrentUpdateTest(DatabaseTestCase):
                 self.recipe_id = recipe_id
                 self.ready_evt = Event()
                 self.continue_evt = Event()
+
             def run(self):
                 session.begin()
                 recipe = Recipe.by_id(self.recipe_id)
@@ -443,8 +490,9 @@ class ConcurrentUpdateTest(DatabaseTestCase):
                 self.continue_evt.wait()
                 recipe.tasks[-1].stop()
                 session.commit()
-        thread1 = RecipeCompletionThread(name='recipe1', recipe_id=recipe1.id)
-        thread2 = RecipeCompletionThread(name='recipe2', recipe_id=recipe2.id)
+
+        thread1 = RecipeCompletionThread(name="recipe1", recipe_id=recipe1.id)
+        thread2 = RecipeCompletionThread(name="recipe2", recipe_id=recipe2.id)
         thread1.start()
         thread2.start()
         # Wait for both threads to start their transactions
@@ -473,22 +521,27 @@ class ConcurrentUpdateTest(DatabaseTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=715226
     def test_cancel_while_scheduling(self):
-        # This test simulates a user cancelling their job at the same time as 
-        # beakerd is scheduling it. beakerd assigns a system and creates 
-        # a watchdog and sets the recipe status to Waiting, then it's 
+        # This test simulates a user cancelling their job at the same time as
+        # beakerd is scheduling it. beakerd assigns a system and creates
+        # a watchdog and sets the recipe status to Waiting, then it's
         # overwritten by another transaction setting the status to Cancelled.
         with session.begin():
             lab_controller = data_setup.create_labcontroller()
-            system = data_setup.create_system(shared=True,
-                    lab_controller=lab_controller)
-            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20',
-                    lab_controllers=[lab_controller])
+            system = data_setup.create_system(
+                shared=True, lab_controller=lab_controller
+            )
+            distro_tree = data_setup.create_distro_tree(
+                osmajor=u"Fedora20", lab_controllers=[lab_controller]
+            )
             job = data_setup.create_job(distro_tree=distro_tree)
-            job.recipesets[0].recipes[0]._host_requires = (u"""
+            job.recipesets[0].recipes[0]._host_requires = (
+                u"""
                 <hostRequires>
                     <hostname op="=" value="%s" />
                 </hostRequires>
-                """ % system.fqdn)
+                """
+                % system.fqdn
+            )
         beakerd.process_new_recipes()
         beakerd.update_dirty_jobs()
         with session.begin():
@@ -497,13 +550,14 @@ class ConcurrentUpdateTest(DatabaseTestCase):
             self.assertEquals(job.status, TaskStatus.processed)
             self.assertEquals(job.recipesets[0].recipes[0].systems, [system])
 
-        # Two "concurrent" transactions, in the first one beakerd has 
+        # Two "concurrent" transactions, in the first one beakerd has
         # scheduled the recipe and is about to commit...
         class ScheduleThread(Thread):
             def __init__(self, **kwargs):
                 super(ScheduleThread, self).__init__(**kwargs)
                 self.ready_evt = Event()
                 self.continue_evt = Event()
+
             def run(self):
                 session.begin()
                 recipeset = Job.by_id(job.id).recipesets[0]
@@ -512,9 +566,9 @@ class ConcurrentUpdateTest(DatabaseTestCase):
                 self.continue_evt.wait()
                 try:
                     beakerd.queue_processed_recipeset(recipeset.id)
-                    assert False, 'should raise'
+                    assert False, "should raise"
                 except StaleTaskStatusException:
-                    pass # expected
+                    pass  # expected
                 session.rollback()
 
         # ... and in the second transaction the user is cancelling the recipe.
@@ -523,6 +577,7 @@ class ConcurrentUpdateTest(DatabaseTestCase):
                 super(CancelThread, self).__init__(**kwargs)
                 self.ready_evt = Event()
                 self.continue_evt = Event()
+
             def run(self):
                 session.begin()
                 recipe = Job.by_id(job.id).recipesets[0].recipes[0]
@@ -550,12 +605,13 @@ class ConcurrentUpdateTest(DatabaseTestCase):
             self.assertEquals(job.recipesets[0].recipes[0].watchdog, None)
             self.assertEquals(system.open_reservation, None)
 
+
 class RecoveryTest(DatabaseTestCase):
 
-    # These tests assert that the update_status method can recover the various 
-    # bad states that have been observed in the past due to race conditions in 
+    # These tests assert that the update_status method can recover the various
+    # bad states that have been observed in the past due to race conditions in
     # status updates.
-    # It should no longer be possible to get into the bad states which we are 
+    # It should no longer be possible to get into the bad states which we are
     # testing in this class. The tests above assert that.
 
     def setUp(self):
@@ -576,16 +632,14 @@ class RecoveryTest(DatabaseTestCase):
         job.recipesets[0].recipes[1].tasks[-1].stop()
         job.recipesets[0].recipes[1]._update_status()
         session.flush()
-        self.assertEquals(job.recipesets[0].recipes[0].status,
-                TaskStatus.completed)
-        self.assertEquals(job.recipesets[0].recipes[1].status,
-                TaskStatus.completed)
+        self.assertEquals(job.recipesets[0].recipes[0].status, TaskStatus.completed)
+        self.assertEquals(job.recipesets[0].recipes[1].status, TaskStatus.completed)
         self.assertEquals(job.recipesets[0].status, TaskStatus.running)
         self.assertEquals(job.status, TaskStatus.running)
         self.assert_(systems[0].open_reservation is not None)
         self.assert_(systems[1].open_reservation is not None)
 
-        job._mark_dirty() # in reality, we did this by hand
+        job._mark_dirty()  # in reality, we did this by hand
         job.update_status()
         session.flush()
         session.expire_all()
@@ -611,7 +665,7 @@ class RecoveryTest(DatabaseTestCase):
         self.assert_(system.user is not None)
         self.assert_(recipe.watchdog is not None)
 
-        recipe.recipeset.job._mark_dirty() # in reality, we did this by hand
+        recipe.recipeset.job._mark_dirty()  # in reality, we did this by hand
         recipe.recipeset.job.update_status()
         session.flush()
         session.expire_all()
@@ -627,8 +681,10 @@ class RecoveryTest(DatabaseTestCase):
         job.recipesets[0].recipes[0].tasks[-1].status = TaskStatus.running
         session.flush()
 
-        job._mark_dirty() # in reality, we did this by hand
+        job._mark_dirty()  # in reality, we did this by hand
         job.update_status()
         self.assertEquals(job.status, TaskStatus.aborted)
         self.assertEquals(job.recipesets[0].recipes[0].status, TaskStatus.aborted)
-        self.assertEquals(job.recipesets[0].recipes[0].tasks[-1].status, TaskStatus.aborted)
+        self.assertEquals(
+            job.recipesets[0].recipes[0].tasks[-1].status, TaskStatus.aborted
+        )

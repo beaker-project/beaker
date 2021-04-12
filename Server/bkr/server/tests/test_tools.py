@@ -14,34 +14,36 @@ class LogDelete(unittest.TestCase):
 
     def test_remove_descendants(self):
         input = [
-            'http://server/a/x/',
-            'http://server/a/y/',
-            'http://server/a/',
-            'http://server/b/',
-            'http://server/b/z/',
-            'http://server/c/',
+            "http://server/a/x/",
+            "http://server/a/y/",
+            "http://server/a/",
+            "http://server/b/",
+            "http://server/b/z/",
+            "http://server/c/",
         ]
         expected = [
-            'http://server/a/',
-            'http://server/b/',
-            'http://server/c/',
+            "http://server/a/",
+            "http://server/b/",
+            "http://server/c/",
         ]
         self.assertEquals(list(log_delete.remove_descendants(input)), expected)
 
 
 def list_msdos_filesystem(image_filename):
-    mdir = subprocess.Popen(['mdir', '-i', image_filename, '-/', '-b', '::'],
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    mdir = subprocess.Popen(
+        ["mdir", "-i", image_filename, "-/", "-b", "::"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
     out, err = mdir.communicate()
     if mdir.returncode != 0:
-        raise RuntimeError('mdir failed: %s' % err)
+        raise RuntimeError("mdir failed: %s" % err)
     return out.splitlines()
 
 
 class IpxeImageTest(unittest.TestCase):
-
     def test_image_generation(self):
         f = ipxe_image.generate_image()
         self.assertItemsEqual(
-            list_msdos_filesystem(f.name),
-            ['::/syslinux.cfg', '::/ipxe.lkrn'])
+            list_msdos_filesystem(f.name), ["::/syslinux.cfg", "::/ipxe.lkrn"]
+        )

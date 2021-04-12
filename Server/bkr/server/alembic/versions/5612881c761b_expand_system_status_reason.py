@@ -12,15 +12,17 @@ Create Date: 2014-10-01 17:43:47.862690
 """
 
 # revision identifiers, used by Alembic.
-revision = '5612881c761b'
-down_revision = '42c18b6580e0'
+revision = "5612881c761b"
+down_revision = "42c18b6580e0"
 
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import mysql
 
+
 def upgrade():
-    op.alter_column('system', 'status_reason', type_=sa.Unicode(4000), nullable=True)
+    op.alter_column("system", "status_reason", type_=sa.Unicode(4000), nullable=True)
+
 
 def downgrade():
-    op.alter_column('system', 'status_reason', type_=sa.Unicode(255), nullable=True)
+    op.alter_column("system", "status_reason", type_=sa.Unicode(255), nullable=True)

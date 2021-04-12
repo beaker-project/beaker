@@ -35,8 +35,10 @@ def load_config_or_exit(configfile=None):
     try:
         load_config(configfile=configfile)
     except Exception as e:
-        sys.stderr.write('Failed to read server configuration. %s.\n'
-                         'Hint: run this command as root\n' % e)
+        sys.stderr.write(
+            "Failed to read server configuration. %s.\n"
+            "Hint: run this command as root\n" % e
+        )
         sys.exit(1)
 
 
@@ -48,17 +50,18 @@ def load_config(configfile=None):
     curdir = os.getcwd()
     if configfile and os.path.exists(configfile):
         pass
-    elif 'BEAKER_CONFIG_FILE' in os.environ:
-        configfile = os.environ['BEAKER_CONFIG_FILE']
-    elif os.path.exists(os.path.join(setupdir, 'setup.py')) \
-            and os.path.exists(os.path.join(setupdir, 'dev.cfg')):
-        configfile = os.path.join(setupdir, 'dev.cfg')
-    elif os.path.exists(os.path.join(curdir, 'beaker.cfg')):
-        configfile = os.path.join(curdir, 'beaker.cfg')
-    elif os.path.exists('/etc/beaker.cfg'):
-        configfile = '/etc/beaker.cfg'
-    elif os.path.exists('/etc/beaker/server.cfg'):
-        configfile = '/etc/beaker/server.cfg'
+    elif "BEAKER_CONFIG_FILE" in os.environ:
+        configfile = os.environ["BEAKER_CONFIG_FILE"]
+    elif os.path.exists(os.path.join(setupdir, "setup.py")) and os.path.exists(
+        os.path.join(setupdir, "dev.cfg")
+    ):
+        configfile = os.path.join(setupdir, "dev.cfg")
+    elif os.path.exists(os.path.join(curdir, "beaker.cfg")):
+        configfile = os.path.join(curdir, "beaker.cfg")
+    elif os.path.exists("/etc/beaker.cfg"):
+        configfile = "/etc/beaker.cfg"
+    elif os.path.exists("/etc/beaker/server.cfg"):
+        configfile = "/etc/beaker/server.cfg"
     else:
         raise RuntimeError("Unable to find configuration to load!")
 
@@ -70,15 +73,14 @@ def load_config(configfile=None):
     if _config_loaded is not None and configfile == _config_loaded:
         return
     elif _config_loaded is not None and configfile != _config_loaded:
-        raise RuntimeError('Config has already been loaded from %s' % \
-                           _config_loaded)
+        raise RuntimeError("Config has already been loaded from %s" % _config_loaded)
 
     # In general, we want all messages from application code, but no debugging
     # messages from the libraries we are using.
     logging.getLogger().setLevel(logging.INFO)
-    logging.getLogger('bkr').setLevel(logging.DEBUG)
+    logging.getLogger("bkr").setLevel(logging.DEBUG)
     # We don't need access logs from TurboGears, we have the Apache logs.
-    logging.getLogger('turbogears.access').setLevel(logging.WARN)
+    logging.getLogger("turbogears.access").setLevel(logging.WARN)
     # Note that the actual level of log output is controlled by the handlers,
     # not the loggers (for example command line tools will typically log to
     # stderr at WARNING level). The main entry point for the program should
@@ -88,38 +90,42 @@ def load_config(configfile=None):
     # double-check the user hasn't left an old [logging] section in their
     # config file.
     from configobj import ConfigObj
+
     configdata = ConfigObj(configfile, unrepr=True)
-    if 'logging' in configdata:
-        raise RuntimeError('TurboGears logging configuration is not supported, '
-                           'remove [logging] section from config file %s' % configfile)
-    if not 'global' in configdata:
-        raise RuntimeError('Config file is missing section [global]')
+    if "logging" in configdata:
+        raise RuntimeError(
+            "TurboGears logging configuration is not supported, "
+            "remove [logging] section from config file %s" % configfile
+        )
+    if not "global" in configdata:
+        raise RuntimeError("Config file is missing section [global]")
 
     # Read our beaker config and store it to Flask config
-    app.config.update(configdata['global'])
+    app.config.update(configdata["global"])
     # Keep this until we completely remove TurboGears
     turbogears.update_config(configfile=configfile, modulename="bkr.server.config")
     _config_loaded = configfile
 
 
-def to_unicode(obj, encoding='utf-8'):
+def to_unicode(obj, encoding="utf-8"):
     # TODO: Not needed for Python 3
     if isinstance(obj, basestring):
         if not isinstance(obj, unicode):
-            obj = unicode(obj, encoding, 'replace')
+            obj = unicode(obj, encoding, "replace")
     return obj
 
 
 def strip_webpath(url):
-    webpath = (config.get('server.webpath') or '').rstrip('/')
+    webpath = (config.get("server.webpath") or "").rstrip("/")
     if webpath and url.startswith(webpath):
-        return url[len(webpath):]
+        return url[len(webpath) :]
     return url
 
 
 # TG1.1 has this: http://docs.turbogears.org/1.1/URLs#turbogears-absolute-url
-def absolute_url(tgpath, tgparams=None, scheme=None,
-                 labdomain=False, webpath=True, **kw):
+def absolute_url(
+    tgpath, tgparams=None, scheme=None, labdomain=False, webpath=True, **kw
+):
     """
     Like turbogears.url, but makes the URL absolute (with scheme, hostname,
     and port from the tg.url_scheme and tg.url_domain configuration
@@ -128,17 +134,17 @@ def absolute_url(tgpath, tgparams=None, scheme=None,
     in server.cfg.  This is to support multi-home systems which have
     different external vs internal names.
     """
-    if labdomain and app.config.get('tg.lab_domain'):
-        host_port = app.config.get('tg.lab_domain')
-    elif app.config.get('tg.url_domain'):
-        host_port = app.config.get('tg.url_domain')
-    elif app.config.get('servername'):  # deprecated
-        host_port = app.config.get('servername')
+    if labdomain and app.config.get("tg.lab_domain"):
+        host_port = app.config.get("tg.lab_domain")
+    elif app.config.get("tg.url_domain"):
+        host_port = app.config.get("tg.url_domain")
+    elif app.config.get("servername"):  # deprecated
+        host_port = app.config.get("servername")
     else:
         # System hostname is cheap to look up (no DNS calls) but there is no
         # requirement that it be fully qualified.
         kernel_hostname = socket.gethostname()
-        if '.' in kernel_hostname:
+        if "." in kernel_hostname:
             host_port = kernel_hostname
         else:
             # Last resort, let glibc do a DNS lookup through search domains etc.
@@ -148,9 +154,9 @@ def absolute_url(tgpath, tgparams=None, scheme=None,
     theurl = url(tgpath, tgparams, **kw)
     if not webpath:
         theurl = strip_webpath(theurl)
-    assert theurl.startswith('/')
-    scheme = scheme or app.config.get('tg.url_scheme', 'http')
-    return '%s://%s%s' % (scheme, host_port, theurl)
+    assert theurl.startswith("/")
+    scheme = scheme or app.config.get("tg.url_scheme", "http")
+    return "%s://%s%s" % (scheme, host_port, theurl)
 
 
 _reports_engine = None
@@ -158,19 +164,19 @@ _reports_engine = None
 
 def get_reports_engine():
     global _reports_engine
-    if app.config.get('reports_engine.dburi'):
+    if app.config.get("reports_engine.dburi"):
         if not _reports_engine:
             # same logic as in turbogears.database.get_engine
             engine_args = dict()
             for k, v in app.config.iteritems():
-                if k.startswith('reports_engine.'):
-                    engine_args[k[len('reports_engine.'):]] = v
-            dburi = engine_args.pop('dburi')
+                if k.startswith("reports_engine."):
+                    engine_args[k[len("reports_engine.") :]] = v
+            dburi = engine_args.pop("dburi")
             _reports_engine = create_engine(dburi, **engine_args)
-            log.debug('Created reports_engine %r', _reports_engine)
+            log.debug("Created reports_engine %r", _reports_engine)
         return _reports_engine
     else:
-        log.debug('Using default engine for reports_engine')
+        log.debug("Using default engine for reports_engine")
         return get_engine()
 
 
@@ -186,7 +192,7 @@ def log_traceback(logger):
             try:
                 return func(*args, **kwargs)
             except:
-                logger.exception('Uncaught exception in %s', func.__name__)
+                logger.exception("Uncaught exception in %s", func.__name__)
                 raise
 
         decorated.__name__ = func.__name__
@@ -198,21 +204,21 @@ def log_traceback(logger):
 
 
 def run_createrepo(cwd=None, update=False):
-    createrepo_command = config.get('beaker.createrepo_command', 'createrepo_c')
-    args = [createrepo_command, '-q', '--no-database', '--checksum', 'sha']
+    createrepo_command = config.get("beaker.createrepo_command", "createrepo_c")
+    args = [createrepo_command, "-q", "--no-database", "--checksum", "sha"]
     if update:
-        args.append('--update')
-    args.append('.')
-    log.debug('Running createrepo as %r in %s', args, cwd)
-    p = subprocess.Popen(args, cwd=cwd, stderr=subprocess.PIPE,
-                         stdout=subprocess.PIPE)
+        args.append("--update")
+    args.append(".")
+    log.debug("Running createrepo as %r in %s", args, cwd)
+    p = subprocess.Popen(args, cwd=cwd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
     out, err = p.communicate()
     # Perhaps a bit fragile, but maybe better than checking version?
-    if p.returncode != 0 and 'no such option: --no-database' in err:
-        args.remove('--no-database')
-        log.debug('Re-trying createrepo as %r in %s', args, cwd)
-        p = subprocess.Popen(args, cwd=cwd, stderr=subprocess.PIPE,
-                             stdout=subprocess.PIPE)
+    if p.returncode != 0 and "no such option: --no-database" in err:
+        args.remove("--no-database")
+        log.debug("Re-trying createrepo as %r in %s", args, cwd)
+        p = subprocess.Popen(
+            args, cwd=cwd, stderr=subprocess.PIPE, stdout=subprocess.PIPE
+        )
         out, err = p.communicate()
     RepoCreate = namedtuple("RepoCreate", "command returncode out err")
     return RepoCreate(createrepo_command, p.returncode, out, err)
@@ -220,9 +226,11 @@ def run_createrepo(cwd=None, update=False):
 
 # Validate FQDN for a system
 # http://stackoverflow.com/questions/1418423/_/1420225#1420225
-VALID_FQDN_REGEX = (r"^(?=.{1,255}$)[0-9A-Za-z]"
-                    r"(?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z]"
-                    r"(?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?)*\.?$")
+VALID_FQDN_REGEX = (
+    r"^(?=.{1,255}$)[0-9A-Za-z]"
+    r"(?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z]"
+    r"(?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?)*\.?$"
+)
 # do this at the global scope to avoid compiling it on every call
 regex_compiled = re.compile(VALID_FQDN_REGEX)
 
@@ -253,5 +261,5 @@ def parse_untrusted_xml(s):
     root = lxml.etree.fromstring(s, parser)
     for ent in root.iter(lxml.etree.Entity):
         # fail once we find any system entity which is not supported
-        raise ValueError('XML entity with name %s not permitted' % ent)
+        raise ValueError("XML entity with name %s not permitted" % ent)
     return root

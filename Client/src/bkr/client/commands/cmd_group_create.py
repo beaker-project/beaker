@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -70,6 +69,7 @@ class Group_Create(BeakerCommand):
     """
     Create a Group
     """
+
     enabled = True
 
     def options(self):
@@ -99,23 +99,28 @@ class Group_Create(BeakerCommand):
     def run(self, *args, **kwargs):
 
         if len(args) != 1:
-            self.parser.error('Exactly one group name must be specified.')
+            self.parser.error("Exactly one group name must be specified.")
 
         group_name = args[0]
-        display_name = kwargs.get('display_name')
-        description = kwargs.get('description', None)
+        display_name = kwargs.get("display_name")
+        description = kwargs.get("description", None)
         if not display_name:
             display_name = group_name
-        ldap = kwargs.get('ldap', False)
-        password = kwargs.get('root_password', None)
+        ldap = kwargs.get("ldap", False)
+        password = kwargs.get("root_password", None)
 
         self.set_hub(**kwargs)
 
         request_session = self.requests_session()
-        res = request_session.post('groups/', json=dict(group_name=group_name,
-                                                        root_password=password,
-                                                        display_name=display_name,
-                                                        description=description,
-                                                        ldap=ldap))
+        res = request_session.post(
+            "groups/",
+            json=dict(
+                group_name=group_name,
+                root_password=password,
+                display_name=display_name,
+                description=description,
+                ldap=ldap,
+            ),
+        )
         res.raise_for_status()
-        print('Group created: %s.' % group_name)
+        print("Group created: %s." % group_name)

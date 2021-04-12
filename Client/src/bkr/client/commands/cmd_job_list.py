@@ -124,141 +124,116 @@ class Job_List(BeakerCommand):
     """
     List Beaker jobs
     """
+
     enabled = True
     requires_login = False
 
     def options(self):
         self.parser.usage = "%%prog %s [options] ..." % self.normalized_name
         self.parser.add_option(
-            "-f",
-            "--family",
-            help="Family for which the Job is run against"
+            "-f", "--family", help="Family for which the Job is run against"
         )
 
         self.parser.add_option(
             "-c",
             "--completeDays",
-            type='int',
-            help="Number of days job has been completed for"
+            type="int",
+            help="Number of days job has been completed for",
         )
 
         self.parser.add_option(
-            "-t",
-            "--tag",
-            action="append",
-            help="Jobs with a particular tag"
+            "-t", "--tag", action="append", help="Jobs with a particular tag"
         )
 
-        self.parser.add_option(
-            "-p",
-            "--product",
-            help="Jobs for a particular product"
-        )
+        self.parser.add_option("-p", "--product", help="Jobs for a particular product")
+
+        self.parser.add_option("-o", "--owner", help="Jobs with a particular owner")
+
+        self.parser.add_option("-g", "--group", help="Jobs with a particular group")
 
         self.parser.add_option(
-            "-o",
-            "--owner",
-            help="Jobs with a particular owner"
-        )
-
-        self.parser.add_option(
-            "-g",
-            "--group",
-            help="Jobs with a particular group"
-        )
-
-        self.parser.add_option(
-            "--my-groups", "--mygroups",
+            "--my-groups",
+            "--mygroups",
             action="store_true",
-            dest='my-groups',
-            help="Jobs with a particular group that querying user is part of"
+            dest="my-groups",
+            help="Jobs with a particular group that querying user is part of",
         )
 
         self.parser.add_option(
             "-w",
             "--whiteboard",
-            metavar='STRING',
-            help='Jobs with whiteboard containing STRING',
+            metavar="STRING",
+            help="Jobs with whiteboard containing STRING",
         )
 
         self.parser.add_option(
-            "--mine",
+            "--mine", action="store_true", help="Jobs owned by the querying user"
+        )
+
+        self.parser.add_option(
+            "-l", "--limit", help="Place a limit on the number of results"
+        )
+
+        self.parser.add_option("--min-id", type="int", help="Min Job ID to look into")
+
+        self.parser.add_option("--max-id", type="int", help="Max Job ID to look into")
+
+        self.parser.add_option(
+            "--finished",
             action="store_true",
-            help="Jobs owned by the querying user"
+            help="Limit to finished jobs (Completed, Aborted, Cancelled)",
         )
 
         self.parser.add_option(
-            "-l",
-            "--limit",
-            help="Place a limit on the number of results"
+            "--unfinished",
+            action="store_true",
+            help="Limit to jobs which are not finished",
         )
 
         self.parser.add_option(
-            "--min-id",
-            type='int',
-            help="Min Job ID to look into"
-        )
-
-        self.parser.add_option(
-            "--max-id",
-            type='int',
-            help="Max Job ID to look into"
-        )
-
-        self.parser.add_option(
-            '--finished',
-            action='store_true',
-            help='Limit to finished jobs (Completed, Aborted, Cancelled)',
-        )
-
-        self.parser.add_option(
-            '--unfinished',
-            action='store_true',
-            help='Limit to jobs which are not finished',
-        )
-
-        self.parser.add_option(
-            '--format',
-            type='choice',
-            choices=['list', 'json'],
-            default='json',
-            help='Results display format: list, json [default: %default]',
+            "--format",
+            type="choice",
+            choices=["list", "json"],
+            default="json",
+            help="Results display format: list, json [default: %default]",
         )
 
     def run(self, *args, **kwargs):
-        family = kwargs.pop('family', None)
-        tags = kwargs.pop('tag', None)
-        product = kwargs.pop('product', None)
-        complete_days = kwargs.pop('completeDays', None)
-        owner = kwargs.pop('owner', None)
-        group = kwargs.pop('group', None)
-        my_groups = kwargs.pop('my-groups', None)
-        whiteboard = kwargs.pop('whiteboard', None)
-        mine = kwargs.pop('mine', None)
-        limit = kwargs.pop('limit', None)
-        format = kwargs['format']
-        finished = kwargs.pop('finished', None)
-        unfinished = kwargs.pop('unfinished', True)
+        family = kwargs.pop("family", None)
+        tags = kwargs.pop("tag", None)
+        product = kwargs.pop("product", None)
+        complete_days = kwargs.pop("completeDays", None)
+        owner = kwargs.pop("owner", None)
+        group = kwargs.pop("group", None)
+        my_groups = kwargs.pop("my-groups", None)
+        whiteboard = kwargs.pop("whiteboard", None)
+        mine = kwargs.pop("mine", None)
+        limit = kwargs.pop("limit", None)
+        format = kwargs["format"]
+        finished = kwargs.pop("finished", None)
+        unfinished = kwargs.pop("unfinished", True)
 
         # Process Job IDs if specified and sanity checking
-        minid = kwargs.pop('min_id', None)
-        maxid = kwargs.pop('max_id', None)
+        minid = kwargs.pop("min_id", None)
+        maxid = kwargs.pop("max_id", None)
         if minid or maxid:
             if minid and minid <= 0 or maxid and maxid <= 0:
-                self.parser.error('Please specify a non zero positive Job ID')
+                self.parser.error("Please specify a non zero positive Job ID")
             if minid and maxid:
                 if maxid < minid:
-                    self.parser.error('Max Job ID should be greater than or equal to min Job ID')
+                    self.parser.error(
+                        "Max Job ID should be greater than or equal to min Job ID"
+                    )
 
         if complete_days is not None and complete_days < 1:
-            self.parser.error('Please pass a positive integer to completeDays')
+            self.parser.error("Please pass a positive integer to completeDays")
 
         if args:
-            self.parser.error('This command does not accept any arguments')
+            self.parser.error("This command does not accept any arguments")
 
         is_finished = None
         if finished and unfinished:
-            self.parser.error('Only one of --finished or --unfinished may be specified')
+            self.parser.error("Only one of --finished or --unfinished may be specified")
         elif finished:
             is_finished = True
         elif unfinished:
@@ -267,23 +242,27 @@ class Job_List(BeakerCommand):
         self.set_hub(**kwargs)
         if mine or my_groups:
             self.hub._login()
-        jobs = self.hub.jobs.filter(dict(tags=tags,
-                                         daysComplete=complete_days,
-                                         family=family,
-                                         product=product,
-                                         owner=owner,
-                                         group=group,
-                                         my_groups=my_groups,
-                                         whiteboard=whiteboard,
-                                         mine=mine,
-                                         minid=minid,
-                                         maxid=maxid,
-                                         limit=limit,
-                                         is_finished=is_finished))
+        jobs = self.hub.jobs.filter(
+            dict(
+                tags=tags,
+                daysComplete=complete_days,
+                family=family,
+                product=product,
+                owner=owner,
+                group=group,
+                my_groups=my_groups,
+                whiteboard=whiteboard,
+                mine=mine,
+                minid=minid,
+                maxid=maxid,
+                limit=limit,
+                is_finished=is_finished,
+            )
+        )
 
-        if format == 'list':
+        if format == "list":
             for job_id in jobs:
                 print(job_id)
 
-        if format == 'json':
+        if format == "json":
             print(json.dumps(jobs))

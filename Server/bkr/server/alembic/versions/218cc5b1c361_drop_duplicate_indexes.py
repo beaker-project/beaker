@@ -12,27 +12,34 @@ Create Date: 2014-10-10 13:27:38.315552
 """
 
 # revision identifiers, used by Alembic.
-revision = '218cc5b1c361'
-down_revision = '41763e5d07cb'
+revision = "218cc5b1c361"
+down_revision = "41763e5d07cb"
 
 from alembic import op
 import sqlalchemy as sa
 
+
 def upgrade():
-    indexes = sa.inspect(op.get_bind()).get_indexes('job')
-    if (any(index['name'] == 'result_2' for index in indexes) and
-            any(index['name'] == 'status_2' for index in indexes)):
+    indexes = sa.inspect(op.get_bind()).get_indexes("job")
+    if any(index["name"] == "result_2" for index in indexes) and any(
+        index["name"] == "status_2" for index in indexes
+    ):
         op.execute("ALTER TABLE job DROP INDEX result_2, DROP INDEX status_2")
-    indexes = sa.inspect(op.get_bind()).get_indexes('recipe_set')
-    if (any(index['name'] == 'result_2' for index in indexes) and
-            any(index['name'] == 'status_2' for index in indexes) and
-            any(index['name'] == 'priority_2' for index in indexes)):
-        op.execute("""
+    indexes = sa.inspect(op.get_bind()).get_indexes("recipe_set")
+    if (
+        any(index["name"] == "result_2" for index in indexes)
+        and any(index["name"] == "status_2" for index in indexes)
+        and any(index["name"] == "priority_2" for index in indexes)
+    ):
+        op.execute(
+            """
             ALTER TABLE recipe_set
             DROP INDEX result_2,
             DROP INDEX status_2,
             DROP INDEX priority_2
-            """)
+            """
+        )
+
 
 def downgrade():
-    pass # no downgrade because this was a schema mistake
+    pass  # no downgrade because this was a schema mistake

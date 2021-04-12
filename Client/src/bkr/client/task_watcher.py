@@ -12,10 +12,7 @@ import sys
 import six
 import time
 
-__all__ = (
-    "TaskWatcher",
-    "watch_tasks"
-)
+__all__ = ("TaskWatcher", "watch_tasks")
 
 
 def display_tasklist_status(task_list):
@@ -24,9 +21,11 @@ def display_tasklist_status(task_list):
         for state, value in six.iteritems(task.get_state_dict()):
             state_dict.setdefault(state, 0)
             state_dict[state] += value
-    print("--> " + " ".join(("%s: %s" % (key, state_dict[key])
-                             for key in sorted(state_dict)))
-          + " [total: %s]" % sum(state_dict.values()))
+    print(
+        "--> "
+        + " ".join(("%s: %s" % (key, state_dict[key]) for key in sorted(state_dict)))
+        + " [total: %s]" % sum(state_dict.values())
+    )
 
 
 def watch_tasks(hub, task_id_list, indentation_level=0, sleep_time=30, task_url=None):
@@ -58,7 +57,9 @@ def watch_tasks(hub, task_id_list, indentation_level=0, sleep_time=30, task_url=
                 break
             time.sleep(sleep_time)
     except KeyboardInterrupt:
-        running_task_list = [t.task_id for t in watcher.task_list if not watcher.is_finished(t)]
+        running_task_list = [
+            t.task_id for t in watcher.task_list if not watcher.is_finished(t)
+        ]
         if running_task_list:
             print("Tasks still running: %s" % running_task_list)
             # Don't report pass on jobs still running.
@@ -111,8 +112,14 @@ class TaskWatcher(object):
             # compare and note status changes
             laststate = last["state"]
             if laststate != state:
-                print("%s: %s -> %s" % (task, task.display_state(last),
-                                        task.display_state(task.task_info)))
+                print(
+                    "%s: %s -> %s"
+                    % (
+                        task,
+                        task.display_state(last),
+                        task.display_state(task.task_info),
+                    )
+                )
                 changed = True
         else:
             # first time we're seeing this task, so just show the current state
@@ -126,7 +133,6 @@ class TaskWatcher(object):
 
 
 class Task(object):
-
     def __init__(self, hub, task_id, indentation_level=0):
         self.hub = hub
         self.task_id = task_id

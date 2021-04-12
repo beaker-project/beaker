@@ -12,15 +12,17 @@ Create Date: 2014-10-10 13:47:00.327503
 """
 
 # revision identifiers, used by Alembic.
-revision = '01a7a1210068'
-down_revision = '218cc5b1c361'
+revision = "01a7a1210068"
+down_revision = "218cc5b1c361"
 
 from alembic import op
 import sqlalchemy as sa
 from bkr.server.alembic.migration_utils import create_unique_if_absent
 
+
 def upgrade():
-    create_unique_if_absent('tag', 'beaker_tag', ['tag', 'type'])
+    create_unique_if_absent("tag", "beaker_tag", ["tag", "type"])
+
 
 def downgrade():
-    pass # no downgrade because we are fixing a mistake in an upgrade
+    pass  # no downgrade because we are fixing a mistake in an upgrade

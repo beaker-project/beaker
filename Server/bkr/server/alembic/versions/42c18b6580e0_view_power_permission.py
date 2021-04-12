@@ -12,18 +12,22 @@ Create Date: 2014-10-01 17:17:28.553310
 """
 
 # revision identifiers, used by Alembic.
-revision = '42c18b6580e0'
-down_revision = '50bc9c21974b'
+revision = "42c18b6580e0"
+down_revision = "50bc9c21974b"
 
 from alembic import op
 import sqlalchemy as sa
 from bkr.server.alembic.migration_utils import add_enum_value, drop_enum_value
 
+
 def upgrade():
-    add_enum_value('system_access_policy_rule', 'permission',
-            'view_power', nullable=False)
+    add_enum_value(
+        "system_access_policy_rule", "permission", "view_power", nullable=False
+    )
+
 
 def downgrade():
     op.execute("DELETE FROM system_access_policy_rule WHERE permission = 'view_power'")
-    drop_enum_value('system_access_policy_rule', 'permission',
-            'view_power', nullable=True)
+    drop_enum_value(
+        "system_access_policy_rule", "permission", "view_power", nullable=True
+    )

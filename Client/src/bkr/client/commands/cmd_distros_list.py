@@ -96,6 +96,7 @@ class Distros_List(BeakerCommand):
     """
     List distros
     """
+
     enabled = True
     requires_login = False
 
@@ -109,11 +110,11 @@ class Distros_List(BeakerCommand):
             help="Limit results to this many (default 10)",
         )
         self.parser.add_option(
-            '--format',
-            type='choice',
-            choices=['tabular', 'json'],
-            default='tabular',
-            help='Display results in this format: tabular, json [default: %default]',
+            "--format",
+            type="choice",
+            choices=["tabular", "json"],
+            default="tabular",
+            help="Display results in this format: tabular, json [default: %default]",
         )
         self.parser.add_option(
             "--tag",
@@ -137,26 +138,27 @@ class Distros_List(BeakerCommand):
         )
 
     def run(self, *args, **kwargs):
-        filter = dict( limit    = kwargs.pop("limit", None),
-                       name     = kwargs.pop("name", None),
-                       family   = kwargs.pop("family", None),
-                       tags     = kwargs.pop("tag", []),
-                       distroid = kwargs.pop("distro_id", None),
-                     )
-        format = kwargs['format']
+        filter = dict(
+            limit=kwargs.pop("limit", None),
+            name=kwargs.pop("name", None),
+            family=kwargs.pop("family", None),
+            tags=kwargs.pop("tag", []),
+            distroid=kwargs.pop("distro_id", None),
+        )
+        format = kwargs["format"]
 
         self.set_hub(**kwargs)
         distros = self.hub.distros.filter(filter)
-        if format == 'json':
+        if format == "json":
             print(json.dumps(distros, indent=4))
-        elif format == 'tabular':
+        elif format == "tabular":
             if distros:
                 print("-" * 70)
                 for distro in distros:
-                    print("       ID: %s" % distro['distro_id'])
-                    print("     Name: %s" % distro['distro_name'])
-                    print("OSVersion: %s" % distro['distro_version'])
-                    print("     Tags: %s" % ", ".join(distro['distro_tags']))
+                    print("       ID: %s" % distro["distro_id"])
+                    print("     Name: %s" % distro["distro_name"])
+                    print("OSVersion: %s" % distro["distro_version"])
+                    print("     Tags: %s" % ", ".join(distro["distro_tags"]))
                     print("-" * 70)
             else:
                 sys.stderr.write("Nothing Matches\n")

@@ -57,7 +57,11 @@ def yes_no_prompt(prompt, default_value=None):
             raise ValueError("Invalid default value: %s" % default_value)
         default_value = default_value.upper()
 
-    prompt = "%s [%s/%s]: " % (prompt, ("y", "Y")[default_value == "Y"], ("n", "N")[default_value == "N"])
+    prompt = "%s [%s/%s]: " % (
+        prompt,
+        ("y", "Y")[default_value == "Y"],
+        ("n", "N")[default_value == "N"],
+    )
     sys.stderr.write(prompt)
 
     while True:
@@ -156,7 +160,9 @@ class PluginContainer(object):
         """
 
         result = {}
-        parent_plugins = cls._get_parent_plugins(cls.normalize_name)  # pylint: disable=no-member
+        parent_plugins = cls._get_parent_plugins(
+            cls.normalize_name
+        )  # pylint: disable=no-member
         class_plugins = getattr(cls, "_class_plugins", {})
         d = parent_plugins.copy()
         d.update(class_plugins)
@@ -177,11 +183,15 @@ class PluginContainer(object):
                 continue
 
             # read inherited plugins first (conflicts are resolved recursively)
-            plugins = parent._get_parent_plugins(normalize_function)  # pylint: disable=no-member
+            plugins = parent._get_parent_plugins(
+                normalize_function
+            )  # pylint: disable=no-member
 
             # read class plugins, override inherited on name conflicts
             if hasattr(parent, "_class_plugins"):
-                for plugin_class in parent._class_plugins.values():  # pylint: disable=no-member
+                for (
+                    plugin_class
+                ) in parent._class_plugins.values():  # pylint: disable=no-member
                     normalized_name = normalize_function(plugin_class.__name__)
                     plugins[normalized_name] = plugin_class
 
@@ -190,7 +200,8 @@ class PluginContainer(object):
                     raise RuntimeError(
                         "Cannot register plugin '%s'. "
                         "Another plugin with the same normalized name (%s) "
-                        "is already in the container." % (str(value), normalized_name))
+                        "is already in the container." % (str(value), normalized_name)
+                    )
 
             result.update(plugins)
 
@@ -269,8 +280,11 @@ class PluginContainer(object):
                     __import__(module.__name__, {}, {}, [mod])
                 except:
                     import sys
-                    sys.stderr.write("WARNING: Skipping broken plugin module: %s.%s"
-                                     % (module.__name__, mod))
+
+                    sys.stderr.write(
+                        "WARNING: Skipping broken plugin module: %s.%s"
+                        % (module.__name__, mod)
+                    )
                     module_list.remove(mod)
         else:
             __import__(module.__name__, {}, {}, module_list)
@@ -279,7 +293,11 @@ class PluginContainer(object):
             mod = getattr(module, mn)
             for pn in dir(mod):
                 plugin = getattr(mod, pn)
-                if type(plugin) is type and issubclass(plugin, Plugin) and plugin is not Plugin:
+                if (
+                    type(plugin) is type
+                    and issubclass(plugin, Plugin)
+                    and plugin is not Plugin
+                ):
                     cls.register_plugin(plugin)
 
 
@@ -287,6 +305,7 @@ class BeakerClientConfigurationError(ValueError):
     """
     Raised to indicate that the Beaker client is not configured properly.
     """
+
     pass
 
 
@@ -300,11 +319,10 @@ class CommandContainer(PluginContainer):
         """
         Replace some characters in command names.
         """
-        return name.lower().replace('_', '-').replace(' ', '-')
+        return name.lower().replace("_", "-").replace(" ", "-")
 
 
 class ClientCommandContainer(CommandContainer):
-
     def __init__(self, conf, **kwargs):
         self.conf = PyConfigParser()
         self.conf.load_from_conf(conf)
@@ -320,10 +338,11 @@ class ClientCommandContainer(CommandContainer):
         if proxy_user:
             self.conf["PROXY_USER"] = proxy_user
 
-        cacert = self.conf.get('CA_CERT')
+        cacert = self.conf.get("CA_CERT")
         if cacert and not os.path.exists(cacert):
             raise BeakerClientConfigurationError(
-                'CA_CERT configuration points to non-existing file: %s' % cacert)
+                "CA_CERT configuration points to non-existing file: %s" % cacert
+            )
 
         self.hub = HubProxy(conf=self.conf, auto_login=auto_login)
 
@@ -331,19 +350,21 @@ class ClientCommandContainer(CommandContainer):
 class CommandOptionParser(optparse.OptionParser):
     """Enhanced OptionParser with plugin support."""
 
-    def __init__(self,
-                 usage=None,
-                 option_list=None,
-                 option_class=Option,
-                 version=None,
-                 conflict_handler="error",
-                 description=None,
-                 formatter=None,
-                 add_help_option=True,
-                 prog=None,
-                 command_container=None,
-                 default_command="help",
-                 add_username_password_options=False):
+    def __init__(
+        self,
+        usage=None,
+        option_list=None,
+        option_class=Option,
+        version=None,
+        conflict_handler="error",
+        description=None,
+        formatter=None,
+        add_help_option=True,
+        prog=None,
+        command_container=None,
+        default_command="help",
+        add_username_password_options=False,
+    ):
 
         usage = usage or "%prog <command> [args] [--help]"
         self.container = command_container
@@ -351,9 +372,18 @@ class CommandOptionParser(optparse.OptionParser):
         self.command = None
         formatter = formatter or optparse.IndentedHelpFormatter(max_help_position=33)
 
-        optparse.OptionParser.__init__(self, usage, option_list, option_class, version,
-                                       conflict_handler, description, formatter, add_help_option,
-                                       prog)
+        optparse.OptionParser.__init__(
+            self,
+            usage,
+            option_list,
+            option_class,
+            version,
+            conflict_handler,
+            description,
+            formatter,
+            add_help_option,
+            prog,
+        )
 
         if add_username_password_options:
             option_list = [
@@ -375,10 +405,13 @@ class CommandOptionParser(optparse.OptionParser):
         admin_commands = []
 
         for name, plugin in sorted(six.iteritems(self.container.plugins)):
-            if getattr(plugin, 'hidden', False):
+            if getattr(plugin, "hidden", False):
                 continue
             is_admin = getattr(plugin, "admin", False)
-            text = "  %-30s %s" % (name, plugin.__doc__.strip() if plugin.__doc__ else "")
+            text = "  %-30s %s" % (
+                name,
+                plugin.__doc__.strip() if plugin.__doc__ else "",
+            )
             if is_admin:
                 if admin:
                     admin_commands.append(text)
@@ -432,6 +465,7 @@ class Help(Command):
     """
     Show this help message and exit
     """
+
     enabled = True
 
     def options(self):
@@ -445,6 +479,7 @@ class Help_Admin(Command):
     """
     Show help message about administrative commands and exit
     """
+
     enabled = True
 
     def options(self):

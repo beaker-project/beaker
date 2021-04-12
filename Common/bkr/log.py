@@ -19,15 +19,17 @@ def log_to_stream(stream, level=logging.WARNING):
     """
     stream_handler = logging.StreamHandler(stream)
     stream_handler.setLevel(level)
-    stream_handler.setFormatter(logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s'))
+    stream_handler.setFormatter(
+        logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s")
+    )
     logging.getLogger().handlers = [stream_handler]
 
 
 def log_to_syslog(program_name, facility=syslog.LOG_DAEMON):
     syslog.openlog(program_name, syslog.LOG_PID, facility)
     syslog_handler = SysLogHandler()
-    syslog_handler.setLevel(logging.DEBUG) # syslog can do the filtering instead
-    syslog_handler.setFormatter(logging.Formatter('%(name)s %(levelname)s %(message)s'))
+    syslog_handler.setLevel(logging.DEBUG)  # syslog can do the filtering instead
+    syslog_handler.setFormatter(logging.Formatter("%(name)s %(levelname)s %(message)s"))
     logging.getLogger().handlers = [syslog_handler]
 
 
@@ -47,11 +49,11 @@ class SysLogHandler(logging.Handler):
         priority = self._level_to_priority.get(record.levelno, syslog.LOG_WARNING)
         msg = self.format(record)
         if isinstance(msg, unicode):
-            msg = msg.encode('utf8')
-        msg = msg.replace('\x00', r'\x00')
+            msg = msg.encode("utf8")
+        msg = msg.replace("\x00", r"\x00")
         for i, line in enumerate(msg.splitlines()):
             if i > 0:
-                line = ' ' + line
+                line = " " + line
             try:
                 syslog.syslog(priority, line)
             except Exception:

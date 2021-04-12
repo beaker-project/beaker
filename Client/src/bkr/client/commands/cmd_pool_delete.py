@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -56,6 +55,7 @@ class Pool_Delete(BeakerCommand):
     """
     Deletes a system pool
     """
+
     enabled = True
 
     def options(self):
@@ -64,9 +64,9 @@ class Pool_Delete(BeakerCommand):
     def run(self, *args, **kwargs):
 
         if not args:
-            self.parser.error('One or more system pool names must be specified')
+            self.parser.error("One or more system pool names must be specified")
         self.set_hub(**kwargs)
         requests_session = self.requests_session()
         for pool in args:
-            res = requests_session.delete('pools/%s/' % parse.quote(pool, ''))
+            res = requests_session.delete("pools/%s/" % parse.quote(pool, ""))
             res.raise_for_status()

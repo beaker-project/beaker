@@ -65,6 +65,7 @@ class Task_Add(BeakerCommand):
     """
     Add/Update task to scheduler
     """
+
     enabled = True
 
     def options(self):
@@ -85,7 +86,7 @@ class Task_Add(BeakerCommand):
                 raise
             except Exception as ex:
                 failed = True
-                sys.stderr.write('Exception: %s\n' % ex)
+                sys.stderr.write("Exception: %s\n" % ex)
 
         if failed:
             sys.exit(1)

@@ -122,46 +122,67 @@ class System_Provision(BeakerCommand):
     """
     Provision a system with a distro
     """
+
     enabled = True
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <fqdn>" % self.normalized_name
-        self.parser.add_option('--distro-tree', metavar='ID',
-                               help='Provision distro tree identified by ID')
-        self.parser.add_option('--distro', help=optparse.SUPPRESS_HELP)
-        self.parser.add_option('--ks-meta', metavar='OPTS',
-                               help='Pass OPTS as kickstart metadata')
-        self.parser.add_option('--kernel-options', metavar='OPTS',
-                               help='Pass OPTS as kernel options during installation')
-        self.parser.add_option('--kernel-options-post', metavar='OPTS',
-                               help='Pass OPTS as kernel options after installation')
-        self.parser.add_option('--kickstart', metavar='FILENAME',
-                               help='Read complete kickstart from FILENAME (- for stdin)')
-        self.parser.add_option('--no-reboot',
-                               action='store_false', dest='reboot',
-                               help="Configure installation but don't reboot system")
+        self.parser.add_option(
+            "--distro-tree", metavar="ID", help="Provision distro tree identified by ID"
+        )
+        self.parser.add_option("--distro", help=optparse.SUPPRESS_HELP)
+        self.parser.add_option(
+            "--ks-meta", metavar="OPTS", help="Pass OPTS as kickstart metadata"
+        )
+        self.parser.add_option(
+            "--kernel-options",
+            metavar="OPTS",
+            help="Pass OPTS as kernel options during installation",
+        )
+        self.parser.add_option(
+            "--kernel-options-post",
+            metavar="OPTS",
+            help="Pass OPTS as kernel options after installation",
+        )
+        self.parser.add_option(
+            "--kickstart",
+            metavar="FILENAME",
+            help="Read complete kickstart from FILENAME (- for stdin)",
+        )
+        self.parser.add_option(
+            "--no-reboot",
+            action="store_false",
+            dest="reboot",
+            help="Configure installation but don't reboot system",
+        )
         self.parser.set_defaults(reboot=True)
 
     def run(self, *args, **kwargs):
         if len(args) != 1:
-            self.parser.error('Exactly one system fqdn must be given')
+            self.parser.error("Exactly one system fqdn must be given")
         fqdn = args[0]
 
         # Accept --distro for backwards compat
-        if kwargs['distro'] and not kwargs['distro_tree']:
-            kwargs['distro_tree'] = kwargs['distro']
+        if kwargs["distro"] and not kwargs["distro_tree"]:
+            kwargs["distro_tree"] = kwargs["distro"]
 
-        if not kwargs['distro_tree']:
-            self.parser.error('Distro tree must be specified with --distro-tree')
+        if not kwargs["distro_tree"]:
+            self.parser.error("Distro tree must be specified with --distro-tree")
 
-        if kwargs['kickstart'] == '-':
+        if kwargs["kickstart"] == "-":
             kickstart = sys.stdin.read()
-        elif kwargs['kickstart']:
-            kickstart = open(kwargs['kickstart'], 'r').read()
+        elif kwargs["kickstart"]:
+            kickstart = open(kwargs["kickstart"], "r").read()
         else:
             kickstart = None
 
         self.set_hub(**kwargs)
-        self.hub.systems.provision(fqdn, kwargs['distro_tree'],
-                                   kwargs['ks_meta'], kwargs['kernel_options'],
-                                   kwargs['kernel_options_post'], kickstart, kwargs['reboot'])
+        self.hub.systems.provision(
+            fqdn,
+            kwargs["distro_tree"],
+            kwargs["ks_meta"],
+            kwargs["kernel_options"],
+            kwargs["kernel_options_post"],
+            kickstart,
+            kwargs["reboot"],
+        )

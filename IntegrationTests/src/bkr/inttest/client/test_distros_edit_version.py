@@ -9,13 +9,13 @@ from bkr.inttest.client import run_client, ClientTestCase
 
 
 class DistrosEditVersionTest(ClientTestCase):
-
     def test_edit_distro_version(self):
         with session.begin():
             distro = data_setup.create_distro()
-        run_client(['bkr', 'distros-edit-version', '--name', distro.name,
-                    'SillyVersion2.1'])
+        run_client(
+            ["bkr", "distros-edit-version", "--name", distro.name, "SillyVersion2.1"]
+        )
         with session.begin():
             session.refresh(distro)
-            self.assertEquals(distro.osversion.osmajor.osmajor, u'SillyVersion2')
-            self.assertEquals(distro.osversion.osminor, u'1')
+            self.assertEquals(distro.osversion.osmajor.osmajor, u"SillyVersion2")
+            self.assertEquals(distro.osversion.osminor, u"1")

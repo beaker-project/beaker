@@ -12,26 +12,32 @@ Create Date: 2017-11-23 10:14:55.165056
 """
 
 # revision identifiers, used by Alembic.
-revision = '357e67243615'
-down_revision = '3ba776df4c76'
+revision = "357e67243615"
+down_revision = "3ba776df4c76"
 
 from alembic import op
 
 
 def upgrade():
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE installation
         MODIFY distro_tree_id INT;
-    """)
+    """
+    )
 
 
 def downgrade():
-    op.execute("""
+    op.execute(
+        """
     UPDATE installation
         SET distro_tree_id = (SELECT MIN(id) FROM distro_tree)
         WHERE distro_tree_id IS NULL;
-    """)
-    op.execute("""
+    """
+    )
+    op.execute(
+        """
         ALTER TABLE installation
         MODIFY distro_tree_id INT NOT NULL;
-    """)
+    """
+    )

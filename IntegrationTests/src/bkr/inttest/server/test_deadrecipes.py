@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -7,14 +6,17 @@
 import lxml.etree
 from bkr.server.model import TaskStatus, Job, LabControllerDistroTree
 from turbogears.database import session
-from bkr.inttest import data_setup, with_transaction, fix_beakerd_repodata_perms, \
-    DatabaseTestCase
+from bkr.inttest import (
+    data_setup,
+    with_transaction,
+    fix_beakerd_repodata_perms,
+    DatabaseTestCase,
+)
 from bkr.server.tools import beakerd
 from bkr.server.jobs import Jobs
 
 
 class TestBeakerd(DatabaseTestCase):
-
     @with_transaction
     def setUp(cls):
         # Create two unique labs
@@ -24,10 +26,12 @@ class TestBeakerd(DatabaseTestCase):
         cls.distro_tree1 = data_setup.create_distro_tree()
         cls.distro_tree2 = data_setup.create_distro_tree()
         session.flush()
-        cls.distro_tree1.lab_controller_assocs = [LabControllerDistroTree(
-                lab_controller=lab2, url=u'http://notimportant')]
-        cls.distro_tree2.lab_controller_assocs = [LabControllerDistroTree(
-                lab_controller=lab1, url=u'http://notimportant')]
+        cls.distro_tree1.lab_controller_assocs = [
+            LabControllerDistroTree(lab_controller=lab2, url=u"http://notimportant")
+        ]
+        cls.distro_tree2.lab_controller_assocs = [
+            LabControllerDistroTree(lab_controller=lab1, url=u"http://notimportant")
+        ]
 
         # Create a user
         user = data_setup.create_user()
@@ -39,7 +43,7 @@ class TestBeakerd(DatabaseTestCase):
         session.flush()
 
         # Create two jobs, one requiring distro_tree1 and one requiring distro_tree2
-        job = '''
+        job = """
             <job>
                 <whiteboard>%s</whiteboard>
                 <recipeSet>
@@ -56,11 +60,13 @@ class TestBeakerd(DatabaseTestCase):
                     </recipe>
                 </recipeSet>
             </job>
-                 ''' 
-        xmljob1 = lxml.etree.fromstring(job % (cls.distro_tree1.distro.name,
-                                               cls.distro_tree1.distro.name))
-        xmljob2 = lxml.etree.fromstring(job % (cls.distro_tree2.distro.name,
-                                               cls.distro_tree2.distro.name))
+                 """
+        xmljob1 = lxml.etree.fromstring(
+            job % (cls.distro_tree1.distro.name, cls.distro_tree1.distro.name)
+        )
+        xmljob2 = lxml.etree.fromstring(
+            job % (cls.distro_tree2.distro.name, cls.distro_tree2.distro.name)
+        )
 
         cls.job1 = Jobs().process_xmljob(xmljob1, user)
         cls.job2 = Jobs().process_xmljob(xmljob2, user)
@@ -80,7 +86,7 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.process_new_recipes()
         beakerd.update_dirty_jobs()
         with session.begin():
-            job =  Job.by_id(self.job2.id)
+            job = Job.by_id(self.job2.id)
             self.assertEqual(job.status, TaskStatus.processed)
             # check if rows in system_recipe_map
             self.assertNotEqual(len(job.recipesets[0].recipes[0].systems), 0)
@@ -92,7 +98,7 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.abort_dead_recipes()
         beakerd.update_dirty_jobs()
         with session.begin():
-            job =  Job.by_id(self.job2.id)
+            job = Job.by_id(self.job2.id)
             self.assertEqual(job.status, TaskStatus.aborted)
             # https://bugzilla.redhat.com/show_bug.cgi?id=1173376
             # check if no rows system_recipe_map

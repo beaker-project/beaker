@@ -11,32 +11,40 @@ Create Date: 2017-12-13 16:52:07.203232
 """
 
 # revision identifiers, used by Alembic.
-revision = '404960aab655'
-down_revision = '17c55b3225a9'
+revision = "404960aab655"
+down_revision = "17c55b3225a9"
 
 from alembic import op
 
+
 def upgrade():
-    # Previously, update_date was only set when the row was UPDATE'd meaning it 
-    # would be left as NULL if a task was never touched after it was 
+    # Previously, update_date was only set when the row was UPDATE'd meaning it
+    # would be left as NULL if a task was never touched after it was
     # first uploaded.
-    op.execute("""
+    op.execute(
+        """
         UPDATE task
         SET update_date = creation_date
         WHERE update_date IS NULL
-        """)
+        """
+    )
     # Very old tasks may have NULLs here
-    op.execute("""
+    op.execute(
+        """
         UPDATE task
         SET rpm = CONCAT('nonexistent-rpm-', id)
         WHERE rpm IS NULL
-        """)
-    op.execute("""
+        """
+    )
+    op.execute(
+        """
         UPDATE task
         SET owner = ''
         WHERE owner IS NULL
-        """)
-    op.execute("""
+        """
+    )
+    op.execute(
+        """
         ALTER TABLE task
         MODIFY name VARCHAR(255) NOT NULL,
         MODIFY rpm VARCHAR(255) NOT NULL,
@@ -48,10 +56,13 @@ def upgrade():
         MODIFY owner VARCHAR(255) NOT NULL,
         MODIFY version VARCHAR(256) NOT NULL,
         MODIFY license VARCHAR(256) NOT NULL
-        """)
+        """
+    )
+
 
 def downgrade():
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE task
         MODIFY name VARCHAR(255),
         MODIFY rpm VARCHAR(255),
@@ -63,4 +74,5 @@ def downgrade():
         MODIFY owner VARCHAR(255),
         MODIFY version VARCHAR(256),
         MODIFY license VARCHAR(256)
-        """)
+        """
+    )

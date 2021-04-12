@@ -90,39 +90,49 @@ class System_History_List(BeakerCommand):
     """
     Export JSON history of activity of a system
     """
+
     enabled = True
 
     def check_valid_date(self, since):
         try:
-            valid_since = datetime.strptime(since, '%Y-%m-%d')
+            valid_since = datetime.strptime(since, "%Y-%m-%d")
         except ValueError:
-            self.parser.error('Incorrect date format, should be YYYY-MM-DD')
+            self.parser.error("Incorrect date format, should be YYYY-MM-DD")
         return valid_since
 
     def options(self):
         self.parser.usage = "%%prog %s <options> " % self.normalized_name
-        self.parser.add_option('--since', action="store", type="string",
-                               dest="since",
-                               help="Start date defined in following format YYYY-MM-DD")
-        self.parser.add_option("--pretty",
-                               default=False,
-                               action="store_true",
-                               help="Pretty print the JSON output",
-                               )
+        self.parser.add_option(
+            "--since",
+            action="store",
+            type="string",
+            dest="since",
+            help="Start date defined in following format YYYY-MM-DD",
+        )
+        self.parser.add_option(
+            "--pretty",
+            default=False,
+            action="store_true",
+            help="Pretty print the JSON output",
+        )
 
     def run(self, *args, **kwargs):
         if len(args) != 1:
-            self.parser.error('Exactly one system FQDN must be given')
+            self.parser.error("Exactly one system FQDN must be given")
         fqdn = args[0]
-        since = kwargs.pop('since', None)
-        pretty = kwargs.pop('pretty')
+        since = kwargs.pop("since", None)
+        pretty = kwargs.pop("pretty")
         since = since and self.check_valid_date(since)
 
         # This will log us in using XML-RPC
         self.set_hub(**kwargs)
 
         action_list = self.hub.systems.history(fqdn, since)
-        print(json.dumps({i: action for i, action in enumerate(action_list)},
-                         default=json_serial,
-                         sort_keys=True,
-                         indent=4 if pretty else None))
+        print(
+            json.dumps(
+                {i: action for i, action in enumerate(action_list)},
+                default=json_serial,
+                sort_keys=True,
+                indent=4 if pretty else None,
+            )
+        )

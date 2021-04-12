@@ -12,8 +12,8 @@ Create Date: 2016-10-24 15:21:13.433339
 """
 
 # revision identifiers, used by Alembic.
-revision = '1626ad29c170'
-down_revision = '4e8b85360255'
+revision = "1626ad29c170"
+down_revision = "4e8b85360255"
 
 from alembic import op
 from bkr.server.alembic import migration_utils
@@ -21,17 +21,22 @@ from bkr.server.alembic import migration_utils
 
 def upgrade():
     # remove any orphans and then duplicates before the current unique column is dropped
-    op.execute("""
+    op.execute(
+        """
         DELETE FROM task_exclude_osmajor
         WHERE task_id IS NULL
         OR osmajor_id IS NULL
-        """)
-    op.execute("""
+        """
+    )
+    op.execute(
+        """
         DELETE FROM task_exclude_arch
         WHERE task_id IS NULL
         OR arch_id IS NULL
-        """)
-    op.execute("""
+        """
+    )
+    op.execute(
+        """
         DELETE a
         FROM task_exclude_osmajor a
         LEFT JOIN (
@@ -42,8 +47,10 @@ def upgrade():
             AND a.task_id = b.task_id
             AND a.osmajor_id = b.osmajor_id
         WHERE b.max_id IS NULL
-        """)
-    op.execute("""
+        """
+    )
+    op.execute(
+        """
         DELETE a
         FROM task_exclude_arch a
         LEFT JOIN (
@@ -54,17 +61,19 @@ def upgrade():
             AND a.task_id = b.task_id
             AND a.arch_id = b.arch_id
         WHERE b.max_id IS NULL
-        """)
+        """
+    )
     # do the alter statements after the data has been cleaned up in the respective
     # tables
-    task_osmajor_fk = migration_utils.find_fk('task_exclude_osmajor', ['task_id'])
-    osmajor_fk = migration_utils.find_fk('task_exclude_osmajor', ['osmajor_id'])
+    task_osmajor_fk = migration_utils.find_fk("task_exclude_osmajor", ["task_id"])
+    osmajor_fk = migration_utils.find_fk("task_exclude_osmajor", ["osmajor_id"])
     # alter the constraints and primary keys on the task_exclude_osmajor table
     # - drop redundant primary key column id of task_id and osmajor_id
     # - create new composite primary key
     # - alter the foreign keys constraints for task_id and osmajor_id to have cascade rules
     # - alter task_id and osmajor_id to NOT NULL
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE task_exclude_osmajor
             DROP COLUMN id,
             ADD PRIMARY KEY(task_id, osmajor_id),
@@ -74,16 +83,20 @@ def upgrade():
             ADD CONSTRAINT `task_exclude_osmajor_fk_osmajor` FOREIGN KEY (`osmajor_id`) REFERENCES `osmajor`(`id`) ON DELETE CASCADE ON UPDATE CASCADE,
             MODIFY COLUMN task_id INT(11) NOT NULL,
             MODIFY COLUMN osmajor_id INT(11) NOT NULL
-        """.format(task_osmajor_fk=task_osmajor_fk, osmajor_fk=osmajor_fk))
+        """.format(
+            task_osmajor_fk=task_osmajor_fk, osmajor_fk=osmajor_fk
+        )
+    )
 
-    task_arch_fk = migration_utils.find_fk('task_exclude_arch', ['task_id'])
-    arch_fk = migration_utils.find_fk('task_exclude_arch', ['arch_id'])
+    task_arch_fk = migration_utils.find_fk("task_exclude_arch", ["task_id"])
+    arch_fk = migration_utils.find_fk("task_exclude_arch", ["arch_id"])
     # alter the constraints and primary key on the task_exclude_arch table
     # - drop redundant primary key column id
     # - create new composite primary key of task_id and arch_id
     # - alter the foreign keys constraints for task_id and archr_id to have cascade rules
     # - alter task_id and arch_id to NOT NULL
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE task_exclude_arch
             DROP COLUMN id,
             ADD PRIMARY KEY(task_id, arch_id),
@@ -93,13 +106,17 @@ def upgrade():
             ADD CONSTRAINT `task_exclude_arch_fk_arch` FOREIGN KEY (`arch_id`) REFERENCES `arch`(`id`) ON DELETE CASCADE ON UPDATE CASCADE,
             MODIFY COLUMN task_id INT(11) NOT NULL,
             MODIFY COLUMN arch_id INT(11) NOT NULL
-        """.format(task_arch_fk=task_arch_fk, arch_fk=arch_fk))
+        """.format(
+            task_arch_fk=task_arch_fk, arch_fk=arch_fk
+        )
+    )
 
 
 def downgrade():
-    task_osmajor_fk = migration_utils.find_fk('task_exclude_osmajor', ['task_id'])
-    osmajor_fk = migration_utils.find_fk('task_exclude_osmajor', ['osmajor_id'])
-    op.execute("""
+    task_osmajor_fk = migration_utils.find_fk("task_exclude_osmajor", ["task_id"])
+    osmajor_fk = migration_utils.find_fk("task_exclude_osmajor", ["osmajor_id"])
+    op.execute(
+        """
         ALTER TABLE task_exclude_osmajor
             DROP FOREIGN KEY `{task_osmajor_fk}`,
             DROP FOREIGN KEY `{osmajor_fk}`,
@@ -109,11 +126,15 @@ def downgrade():
             ADD CONSTRAINT `task_exclude_osmajor_ibfk_osmajor` FOREIGN KEY (`osmajor_id`) REFERENCES `osmajor`(`id`),
             MODIFY COLUMN task_id INT(11),
             MODIFY COLUMN osmajor_id INT(11)
-        """.format(task_osmajor_fk=task_osmajor_fk, osmajor_fk=osmajor_fk))
+        """.format(
+            task_osmajor_fk=task_osmajor_fk, osmajor_fk=osmajor_fk
+        )
+    )
 
-    task_arch_fk = migration_utils.find_fk('task_exclude_arch', ['task_id'])
-    arch_fk = migration_utils.find_fk('task_exclude_arch', ['arch_id'])
-    op.execute("""
+    task_arch_fk = migration_utils.find_fk("task_exclude_arch", ["task_id"])
+    arch_fk = migration_utils.find_fk("task_exclude_arch", ["arch_id"])
+    op.execute(
+        """
         ALTER TABLE task_exclude_arch
             DROP FOREIGN KEY `{task_arch_fk}`,
             DROP FOREIGN KEY `{arch_fk}`,
@@ -123,4 +144,7 @@ def downgrade():
             ADD CONSTRAINT `task_exclude_arch_ibfk_arch` FOREIGN KEY (`arch_id`) REFERENCES `arch`(`id`),
             MODIFY COLUMN task_id INT(11),
             MODIFY COLUMN arch_id INT(11)
-        """.format(task_arch_fk=task_arch_fk, arch_fk=arch_fk))
+        """.format(
+            task_arch_fk=task_arch_fk, arch_fk=arch_fk
+        )
+    )

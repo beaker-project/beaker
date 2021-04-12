@@ -144,29 +144,29 @@ class Job_Modify(BeakerCommand):
 
         self.parser.add_option(
             "--priority",
-            type='choice',
-            choices=['Low', 'Medium', 'Normal', 'High', 'Urgent'],
-            help='Change job priority: Low, Medium, Normal, High, Urgent',
+            type="choice",
+            choices=["Low", "Medium", "Normal", "High", "Urgent"],
+            help="Change job priority: Low, Medium, Normal, High, Urgent",
         )
         self.parser.add_option(
-            '--whiteboard',
-            help='Set job or recipe whiteboard',
+            "--whiteboard",
+            help="Set job or recipe whiteboard",
         )
 
     def run(self, *args, **kwargs):
-        response = kwargs.pop('response', None)
-        retention_tag = kwargs.pop('retention_tag', None)
-        product = kwargs.pop('product', None)
-        priority = kwargs.pop('priority', None)
-        whiteboard = kwargs.pop('whiteboard', None)
+        response = kwargs.pop("response", None)
+        retention_tag = kwargs.pop("retention_tag", None)
+        product = kwargs.pop("product", None)
+        priority = kwargs.pop("priority", None)
+        whiteboard = kwargs.pop("whiteboard", None)
 
         self.set_hub(**kwargs)
         if response or priority:
-            self.check_taskspec_args(args, permitted_types=['J', 'RS'])
+            self.check_taskspec_args(args, permitted_types=["J", "RS"])
         if retention_tag or product is not None:
-            self.check_taskspec_args(args, permitted_types=['J'])
+            self.check_taskspec_args(args, permitted_types=["J"])
         if whiteboard:
-            self.check_taskspec_args(args, permitted_types=['J', 'R'])
+            self.check_taskspec_args(args, permitted_types=["J", "R"])
         modded = []
         error = False
         requests_session = self.requests_session()
@@ -176,33 +176,40 @@ class Job_Modify(BeakerCommand):
                     self.hub.jobs.set_response(taskspec, response)
                     modded.append(taskspec)
                 if retention_tag or product is not None:
-                    self.hub.jobs.set_retention_product(taskspec, retention_tag,
-                                                        product, )
+                    self.hub.jobs.set_retention_product(
+                        taskspec,
+                        retention_tag,
+                        product,
+                    )
                     modded.append(taskspec)
                 if priority:
-                    res = requests_session.patch('recipesets/by-taskspec/%s'
-                                                 % taskspec, json={'priority': priority.title()})
+                    res = requests_session.patch(
+                        "recipesets/by-taskspec/%s" % taskspec,
+                        json={"priority": priority.title()},
+                    )
                     res.raise_for_status()
                     modded.append(taskspec)
                 if whiteboard:
-                    type, id = taskspec.split(':', 1)
-                    if type == 'J':
-                        res = requests_session.patch('jobs/%s' % id,
-                                                     json={'whiteboard': whiteboard})
+                    type, id = taskspec.split(":", 1)
+                    if type == "J":
+                        res = requests_session.patch(
+                            "jobs/%s" % id, json={"whiteboard": whiteboard}
+                        )
                         res.raise_for_status()
-                    elif type == 'R':
-                        res = requests_session.patch('recipes/%s' % id,
-                                                     json={'whiteboard': whiteboard})
+                    elif type == "R":
+                        res = requests_session.patch(
+                            "recipes/%s" % id, json={"whiteboard": whiteboard}
+                        )
                         res.raise_for_status()
                     modded.append(taskspec)
             except (Fault, requests.HTTPError) as e:
-                sys.stderr.write('Failed to modify %s: %s\n' % (taskspec, e))
+                sys.stderr.write("Failed to modify %s: %s\n" % (taskspec, e))
                 error = True
         if modded:
             modded = set(modded)
-            print('Successfully modified jobs %s' % ' '.join(modded))
+            print("Successfully modified jobs %s" % " ".join(modded))
         else:
-            print('No jobs modified')
+            print("No jobs modified")
 
         if error:
             sys.exit(1)

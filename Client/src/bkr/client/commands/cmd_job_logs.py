@@ -65,24 +65,28 @@ class Job_Logs(BeakerCommand):
     """
     Print URLs of recipe log files
     """
+
     enabled = True
     requires_login = False
 
     def options(self):
-        self.parser.add_option('--size', action='store_true',
-                               help='Print file size alongside each log file')
+        self.parser.add_option(
+            "--size",
+            action="store_true",
+            help="Print file size alongside each log file",
+        )
         self.parser.usage = "%%prog %s [options] <taskspec>..." % self.normalized_name
 
     def _log_size(self, url):
         response = self.session.head(url, allow_redirects=True)
         if response.status_code in (404, 410):
-            return '<missing>'
+            return "<missing>"
         elif response.status_code >= 400:
-            return '<error:%s>' % response.status_code
+            return "<error:%s>" % response.status_code
         try:
-            return '%6d' % int(response.headers['Content-Length'])
+            return "%6d" % int(response.headers["Content-Length"])
         except ValueError:
-            return '<invalid>'
+            return "<invalid>"
 
     def run(self, *args, **kwargs):
         self.check_taskspec_args(args)
@@ -92,7 +96,7 @@ class Job_Logs(BeakerCommand):
         for task in args:
             logfiles = self.hub.taskactions.files(task)
             for log in logfiles:
-                if kwargs.get('size'):
-                    print(self._log_size(log['url']), log['url'])
+                if kwargs.get("size"):
+                    print(self._log_size(log["url"]), log["url"])
                 else:
-                    print(log['url'])
+                    print(log["url"])

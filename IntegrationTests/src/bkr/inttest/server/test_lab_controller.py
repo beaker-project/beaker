@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -10,10 +9,10 @@ from bkr.server.model import TaskStatus, RecipeSet, LabController, System
 from bkr.server.bexceptions import BX
 from bkr.inttest import data_setup, DatabaseTestCase
 
-class TestLabController(DatabaseTestCase):
 
+class TestLabController(DatabaseTestCase):
     def setUp(self):
-        self.lc_fqdn = u'lab.domain.com'
+        self.lc_fqdn = u"lab.domain.com"
         with session.begin():
             lc = data_setup.create_labcontroller(fqdn=self.lc_fqdn)
 

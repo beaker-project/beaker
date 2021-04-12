@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -18,7 +17,6 @@ log = getLogger(__name__)
 
 
 class _QueueAccess:
-
     def __init__(self, in_q, out_q):
         self.in_queue = in_q
         self.out_queue = out_q
@@ -35,7 +33,9 @@ class BkrThreadPool:
     @classmethod
     def create_and_run(cls, name, target_f, target_args, num=30, *args, **kw):
         if name in cls._qpool:
-            raise Exception('%s has already been initialised in the BkrThreadPool' % name)
+            raise Exception(
+                "%s has already been initialised in the BkrThreadPool" % name
+            )
 
         out_q = queue.Queue()
         in_q = queue.Queue()
@@ -57,12 +57,13 @@ class BkrThreadPool:
         for t in tpool:
             t.join(timeout)
             if t.isAlive():
-                log.warn('Thread %s did not shutdown cleanly' % t.ident)
+                log.warn("Thread %s did not shutdown cleanly" % t.ident)
 
 
 class RepeatTimer(Thread):
-
-    def __init__(self, interval, function, stop_on_exception=True, args=None, kwargs=None):
+    def __init__(
+        self, interval, function, stop_on_exception=True, args=None, kwargs=None
+    ):
         Thread.__init__(self)
 
         if kwargs is None:
@@ -96,13 +97,13 @@ class RepeatTimer(Thread):
                         self.finished.clear()
                         raise
                     # TODO: Not strictly for auth'ing, think of something better
-                    log.exception('Login Fail')
+                    log.exception("Login Fail")
             self.finished.clear()
 
 
 class SensitiveUnicode(unicode):
     def __repr__(self):
-        return '<repr blocked>'
+        return "<repr blocked>"
 
     def encode(self, *args, **kwargs):
         return SensitiveStr(super(SensitiveUnicode, self).encode(*args, **kwargs))
@@ -110,7 +111,7 @@ class SensitiveUnicode(unicode):
 
 class SensitiveStr(str):
     def __repr__(self):
-        return '<repr blocked>'
+        return "<repr blocked>"
 
     def decode(self, *args, **kwargs):
         return SensitiveUnicode(super(SensitiveStr, self).decode(*args, **kwargs))
@@ -140,9 +141,9 @@ class AtomicFileReplacement(object):
     def create_temp(self):
         """Create the temporary file that may later be renamed"""
         dirname, basename = os.path.split(self.dest_path)
-        fd, temp_path = tempfile.mkstemp(prefix='.' + basename, dir=dirname)
+        fd, temp_path = tempfile.mkstemp(prefix="." + basename, dir=dirname)
         try:
-            f = os.fdopen(fd, 'w')
+            f = os.fdopen(fd, "w")
         except:
             os.unlink(temp_path)
             raise
@@ -182,13 +183,15 @@ class AtomicFileReplacement(object):
         else:
             self.destroy_temp()
 
+
 # Backwards compatibility alias
 atomically_replaced_file = AtomicFileReplacement
 
 
 def atomic_link(source, dest):
-    temp_path = tempfile.mktemp(prefix=os.path.basename(dest),
-            dir=os.path.dirname(dest))
+    temp_path = tempfile.mktemp(
+        prefix=os.path.basename(dest), dir=os.path.dirname(dest)
+    )
     os.link(source, temp_path)
     try:
         os.rename(temp_path, dest)
@@ -203,8 +206,9 @@ def atomic_link(source, dest):
 
 
 def atomic_symlink(source, dest):
-    temp_path = tempfile.mktemp(prefix=os.path.basename(dest),
-            dir=os.path.dirname(dest))
+    temp_path = tempfile.mktemp(
+        prefix=os.path.basename(dest), dir=os.path.dirname(dest)
+    )
     os.symlink(source, temp_path)
     try:
         os.rename(temp_path, dest)
@@ -276,5 +280,6 @@ def total_seconds(td):
     Returns the total number of seconds (float)
     represented by the given timedelta.
     """
-    return (float(td.microseconds) + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
-
+    return (
+        float(td.microseconds) + (td.seconds + td.days * 24 * 3600) * 10 ** 6
+    ) / 10 ** 6

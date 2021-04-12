@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -22,6 +21,7 @@ import sys
 from optparse import OptionParser
 from bkr.labcontroller import netboot
 
+
 def main():
     usage = "usage: %prog FQDN"
     description = "Clears the Beaker TFTP netboot files for the given FQDN"
@@ -39,5 +39,5 @@ def main():
         netboot.clear_all(fqdn)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

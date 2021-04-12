@@ -92,47 +92,56 @@ from bkr.client import BeakerCommand
 
 class Update_Openstack_Trust(BeakerCommand):
     """Update OpenStack Keystone trust preferences"""
+
     enabled = True
 
     def options(self):
         self.parser.usage = "%%prog %s [options] ..." % self.normalized_name
-        self.parser.add_option('--os-username',
-                               action='store',
-                               type='string',
-                               help='OpenStack username')
-        self.parser.add_option('--os-password',
-                               action='store',
-                               type='string',
-                               help='OpenStack password')
-        self.parser.add_option('--os-project-name',
-                               action='store',
-                               type='string',
-                               help='OpenStack project name')
-        self.parser.add_option('--os-project-domain-name',
-                               action='store',
-                               type='string',
-                               help='OpenStack project domain name')
-        self.parser.add_option('--os-user-domain-name',
-                               action='store',
-                               type='string',
-                               help='OpenStack user domain name')
+        self.parser.add_option(
+            "--os-username", action="store", type="string", help="OpenStack username"
+        )
+        self.parser.add_option(
+            "--os-password", action="store", type="string", help="OpenStack password"
+        )
+        self.parser.add_option(
+            "--os-project-name",
+            action="store",
+            type="string",
+            help="OpenStack project name",
+        )
+        self.parser.add_option(
+            "--os-project-domain-name",
+            action="store",
+            type="string",
+            help="OpenStack project domain name",
+        )
+        self.parser.add_option(
+            "--os-user-domain-name",
+            action="store",
+            type="string",
+            help="OpenStack user domain name",
+        )
 
     def run(self, *args, **kwargs):
         self.set_hub(**kwargs)
         requests_session = self.requests_session()
-        data = {'openstack_username': kwargs.get('os_username'),
-                'openstack_password': kwargs.get('os_password'),
-                'openstack_project_name': kwargs.get('os_project_name')}
+        data = {
+            "openstack_username": kwargs.get("os_username"),
+            "openstack_password": kwargs.get("os_password"),
+            "openstack_project_name": kwargs.get("os_project_name"),
+        }
         if not all(data.values()):
-            self.parser.error('The following options are required: '
-                              ' --os-username, --os-password and --os-project-name')
+            self.parser.error(
+                "The following options are required: "
+                " --os-username, --os-password and --os-project-name"
+            )
 
         # These command line arguments are optional because they were not
         # required for all OpenStack instances.
-        if kwargs.get('os_project_domain_name'):
-            data["openstack_project_domain_name"] = kwargs.get('os_project_domain_name')
-        if kwargs.get('os_user_domain_name'):
-            data["openstack_user_domain_name"] = kwargs.get('os_user_domain_name')
+        if kwargs.get("os_project_domain_name"):
+            data["openstack_project_domain_name"] = kwargs.get("os_project_domain_name")
+        if kwargs.get("os_user_domain_name"):
+            data["openstack_user_domain_name"] = kwargs.get("os_user_domain_name")
 
-        res = requests_session.put('users/+self/keystone-trust', json=data)
+        res = requests_session.put("users/+self/keystone-trust", json=data)
         res.raise_for_status()

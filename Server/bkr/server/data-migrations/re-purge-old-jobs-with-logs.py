@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -17,10 +16,12 @@ from sqlalchemy import inspect
 
 logger = logging.getLogger(__name__)
 
+
 def migrate_one_batch(engine):
-    logger.info('Clearing purged timestamp on jobs with logs')
+    logger.info("Clearing purged timestamp on jobs with logs")
     with engine.begin() as connection:
-        result = connection.execute("""
+        result = connection.execute(
+            """
             UPDATE job
             SET purged = NULL
             WHERE purged IS NOT NULL
@@ -36,6 +37,7 @@ def migrate_one_batch(engine):
                 INNER JOIN recipe_set ON recipe.recipe_set_id = recipe_set.id
                 WHERE recipe_set.job_id = job.id
             )
-            """)
-    logger.info('Cleared purged timestamp on %d jobs with logs', result.rowcount)
-    return True # migration complete
+            """
+        )
+    logger.info("Cleared purged timestamp on %d jobs with logs", result.rowcount)
+    return True  # migration complete

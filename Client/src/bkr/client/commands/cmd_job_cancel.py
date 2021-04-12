@@ -68,6 +68,7 @@ class Job_Cancel(BeakerCommand):
     """
     Cancel Jobs/Recipes
     """
+
     enabled = True
 
     def options(self):
@@ -77,17 +78,18 @@ class Job_Cancel(BeakerCommand):
             help="Optional message to record as to why you cancelled",
         )
 
-        self.parser.usage = "%%prog %s [options] [J:<id> | RS:<id> ...]" % self.normalized_name
-
+        self.parser.usage = (
+            "%%prog %s [options] [J:<id> | RS:<id> ...]" % self.normalized_name
+        )
 
     def run(self, *args, **kwargs):
         if len(args) < 1:
-            self.parser.error('Please specify a taskspec to cancel')
-        self.check_taskspec_args(args, permitted_types=['J', 'RS', 'T'])
+            self.parser.error("Please specify a taskspec to cancel")
+        self.check_taskspec_args(args, permitted_types=["J", "RS", "T"])
 
         msg = kwargs.pop("msg", None)
 
         self.set_hub(**kwargs)
         for task in args:
-            self.hub.taskactions.stop(task, 'cancel', msg)
-            print('Cancelled %s' % task)
+            self.hub.taskactions.stop(task, "cancel", msg)
+            print("Cancelled %s" % task)

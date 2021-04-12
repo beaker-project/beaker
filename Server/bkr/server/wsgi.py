@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -13,14 +12,17 @@ application container.
 """
 
 import __main__
-__main__.__requires__ = ['CherryPy < 3.0']
+
+__main__.__requires__ = ["CherryPy < 3.0"]
 import pkg_resources
 
 # Terrible hack to prevent CherryPy from futzing with signal handlers on import
 import signal
+
 orig_signal_signal = signal.signal
 signal.signal = lambda signum, handler: None
 import cherrypy._cpengine
+
 signal.signal = orig_signal_signal
 del orig_signal_signal
 
@@ -42,21 +44,24 @@ log = logging.getLogger(__name__)
 # Load config.
 from bkr.log import log_to_stream
 from bkr.server.util import load_config
+
 load_config()
 log_to_stream(sys.stderr, level=logging.DEBUG)
 
 # Keep the code before the imports, otherwise we'll end up with function names
 # not marked as executed (see: Coverage.py FAQ)
-if config.get('coverage', False):
+if config.get("coverage", False):
     import coverage
     import atexit
 
-    log.debug('Starting coverage analysis')
-    cov = coverage.coverage(data_suffix=True, cover_pylib=False, timid=True, omit=['*.kid'])
+    log.debug("Starting coverage analysis")
+    cov = coverage.coverage(
+        data_suffix=True, cover_pylib=False, timid=True, omit=["*.kid"]
+    )
     cov.start()
 
     def save_coverage():
-        log.debug('Saving coverage')
+        log.debug("Saving coverage")
         cov.stop()
         cov.save()
 
@@ -88,10 +93,15 @@ def init():
     # Make TG's run_with_transaction a no-op, we manage the transaction here
     # through Flask instead.
     import turbogears.database
+
     def run_with_transaction_noop(func, *args, **kwargs):
         return func(*args, **kwargs)
+
     turbogears.database.run_with_transaction = run_with_transaction_noop
-    class EndTransactionsFilterNoop(BaseFilter): pass
+
+    class EndTransactionsFilterNoop(BaseFilter):
+        pass
+
     turbogears.database.EndTransactionsFilter = EndTransactionsFilterNoop
     turbogears.startup.EndTransactionsFilter = EndTransactionsFilterNoop
 
@@ -102,18 +112,22 @@ def init():
     def restart_transaction_patched(args):
         session.rollback()
         session.begin()
+
     turbogears.database.restart_transaction = restart_transaction_patched
 
     # Set up old CherryPy stuff.
     import bkr.server.controllers
+
     cherrypy.root = bkr.server.controllers.Root()
     cherrypy.server.start(init_only=True, server_class=None)
 
     # If rlimit_as is defined in the config file then set the limit here.
-    if config.get('rlimit_as'):
+    if config.get("rlimit_as"):
         import resource
-        resource.setrlimit(resource.RLIMIT_AS, (config.get('rlimit_as'),
-                                                config.get('rlimit_as')))
+
+        resource.setrlimit(
+            resource.RLIMIT_AS, (config.get("rlimit_as"), config.get("rlimit_as"))
+        )
 
     # Build assets. If assets.auto_build is True in the config, this will also
     # happen on page request. Otherwise, it only happens once at startup here.
@@ -123,21 +137,26 @@ def init():
     # https://sourceforge.net/p/turbogears1/tickets/34/
     import tgmochikit
     from turbogears.widgets.base import register_static_directory
+
     tgmochikit.init(register_static_directory, config)
 
     # Global device class list... a terrible hack, desperately needs deleting
     from bkr.server import model
+
     with session.begin():
         model.device_classes = [c.device_class for c in model.DeviceClass.query]
 
-    log.debug('Application initialised')
+    log.debug("Application initialised")
+
 
 # NOTE: order of before_request/after_request functions is important!
 # Flask runs them in the reverse of the order in which they were added.
 
+
 @app.before_request
 def begin_session():
     session.begin()
+
 
 @app.after_request
 def commit_or_rollback_session(response):
@@ -147,17 +166,19 @@ def commit_or_rollback_session(response):
         if response.status_code >= 200 and response.status_code < 400:
             session.commit()
         else:
-            log.debug('Rolling back for %s response', response.status_code)
+            log.debug("Rolling back for %s response", response.status_code)
             session.rollback()
     return response
 
+
 @app.after_request
 def set_extra_headers(response):
-    response.headers.add('X-Beaker-Version', __version__)
+    response.headers.add("X-Beaker-Version", __version__)
     # Most of our request handlers are doing content negotation, so we need to specify
     # "Vary: Accept" header unconditionally.
-    response.headers.add('Vary', 'Accept')
+    response.headers.add("Vary", "Accept")
     return response
+
 
 @app.teardown_appcontext
 def close_session(exception=None):
@@ -175,8 +196,10 @@ def close_session(exception=None):
         # MemoryError.
         os.abort()
 
+
 app.before_request(identity.check_authentication)
 app.after_request(identity.update_response)
+
 
 @app.after_request
 def fall_back_to_cherrypy(flask_response):

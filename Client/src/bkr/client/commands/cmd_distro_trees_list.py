@@ -115,6 +115,7 @@ class Distro_Trees_List(BeakerCommand):
     """
     List distro trees
     """
+
     enabled = True
     requires_login = False
 
@@ -128,11 +129,11 @@ class Distro_Trees_List(BeakerCommand):
             help="Limit results to this many (default 10)",
         )
         self.parser.add_option(
-            '--format',
-            type='choice',
-            choices=['tabular', 'json'],
-            default='tabular',
-            help='Display results in this format: tabular, json [default: %default]',
+            "--format",
+            type="choice",
+            choices=["tabular", "json"],
+            default="tabular",
+            help="Display results in this format: tabular, json [default: %default]",
         )
         self.parser.add_option(
             "--tag",
@@ -175,40 +176,47 @@ class Distro_Trees_List(BeakerCommand):
             help="filter by Distro Tree ID",
         )
         self.parser.add_option(
-            '--xml-filter', default=None, metavar='XML',
-            help='filter by XML criteria, as in <distroRequires/>',
+            "--xml-filter",
+            default=None,
+            metavar="XML",
+            help="filter by XML criteria, as in <distroRequires/>",
         )
 
     def run(self, *args, **kwargs):
-        filter = dict( limit    = kwargs.pop("limit", None),
-                       name     = kwargs.pop("name", None),
-                       treepath = kwargs.pop("treepath", None),
-                       labcontroller = kwargs.pop("labcontroller", None),
-                       family   = kwargs.pop("family", None),
-                       arch     = kwargs.pop("arch", None),
-                       tags     = kwargs.pop("tag", []),
-                       distro_id = kwargs.pop("distro_id", None),
-                       distro_tree_id = kwargs.pop("distro_tree_id", None),
-                       xml      = kwargs.pop('xml_filter', None),
-                     )
-        format = kwargs['format']
+        filter = dict(
+            limit=kwargs.pop("limit", None),
+            name=kwargs.pop("name", None),
+            treepath=kwargs.pop("treepath", None),
+            labcontroller=kwargs.pop("labcontroller", None),
+            family=kwargs.pop("family", None),
+            arch=kwargs.pop("arch", None),
+            tags=kwargs.pop("tag", []),
+            distro_id=kwargs.pop("distro_id", None),
+            distro_tree_id=kwargs.pop("distro_tree_id", None),
+            xml=kwargs.pop("xml_filter", None),
+        )
+        format = kwargs["format"]
 
         self.set_hub(**kwargs)
         distro_trees = self.hub.distrotrees.filter(filter)
-        if format == 'json':
+        if format == "json":
             print(json.dumps(distro_trees, indent=4))
-        elif format == 'tabular':
+        elif format == "tabular":
             if distro_trees:
                 print("-" * 70)
                 for dt in distro_trees:
-                    print("       ID: %s" % dt['distro_tree_id'])
-                    print("     Name: %-34.34s Arch: %s" % (dt['distro_name'], dt['arch']))
-                    print("OSVersion: %-34.34s Variant: %s" % (
-                        dt['distro_osversion'], dt['variant']))
-                    print("     Tags: %s" % ", ".join(dt['distro_tags']))
+                    print("       ID: %s" % dt["distro_tree_id"])
+                    print(
+                        "     Name: %-34.34s Arch: %s" % (dt["distro_name"], dt["arch"])
+                    )
+                    print(
+                        "OSVersion: %-34.34s Variant: %s"
+                        % (dt["distro_osversion"], dt["variant"])
+                    )
+                    print("     Tags: %s" % ", ".join(dt["distro_tags"]))
                     print()
                     print("  Lab controller/URLs:")
-                    for labc, url in dt['available']:
+                    for labc, url in dt["available"]:
                         print("     %-32s: %s" % (labc, url))
                     print("-" * 70)
             else:

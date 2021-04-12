@@ -71,41 +71,50 @@ class Watchdog_Extend(BeakerCommand):
     """
     Extend Recipe's Watchdog
     """
+
     enabled = True
 
     def options(self):
         self.parser.add_option(
             "--by",
-            default=7200, type="int",
+            default=7200,
+            type="int",
             help="Time in seconds to extend the watchdog by.",
         )
-        self.parser.usage = "%%prog %s [options] [<taskspec> | <fqdn>]..." % self.normalized_name
+        self.parser.usage = (
+            "%%prog %s [options] [<taskspec> | <fqdn>]..." % self.normalized_name
+        )
 
     def run(self, *args, **kwargs):
         extend_by = kwargs.pop("by", None)
         if not args:
             self.parser.error(
-                'Please either specify one or more <taskspec> arguments or system FQDNs')
+                "Please either specify one or more <taskspec> arguments or system FQDNs"
+            )
         taskspecs = []
         systems = []
         for arg in args:
-            if ':' in arg:
+            if ":" in arg:
                 taskspecs.append(arg)
             # for back compatibility to support plain task id
             elif arg.isdigit():
-                taskspecs.append('T:%s' % arg)
+                taskspecs.append("T:%s" % arg)
             else:
                 systems.append(arg)
         if taskspecs:
-            self.check_taskspec_args(taskspecs, permitted_types=['R', 'T'])
+            self.check_taskspec_args(taskspecs, permitted_types=["R", "T"])
         self.set_hub(**kwargs)
         requests_session = self.requests_session()
         for s in systems:
-            res = requests_session.post('recipes/by-fqdn/%s/watchdog' %
-                                        parse.quote(s, ''), json={'kill_time': extend_by})
+            res = requests_session.post(
+                "recipes/by-fqdn/%s/watchdog" % parse.quote(s, ""),
+                json={"kill_time": extend_by},
+            )
             res.raise_for_status()
 
         for t in taskspecs:
-            res = requests_session.post('recipes/by-taskspec/%s/watchdog' %
-                                        parse.quote(t), json={'kill_time': extend_by})
+            res = requests_session.post(
+                "recipes/by-taskspec/%s/watchdog" % parse.quote(t),
+                json={"kill_time": extend_by},
+            )
             res.raise_for_status()

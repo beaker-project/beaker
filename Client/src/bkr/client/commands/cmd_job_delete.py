@@ -90,28 +90,24 @@ class Job_Delete(BeakerCommand):
     """
     Delete Jobs in Beaker
     """
+
     enabled = True
 
     def options(self):
         self.parser.usage = "%%prog %s [options] ..." % self.normalized_name
         self.parser.add_option(
-            "-f",
-            "--family",
-            help="Family for which the Job is run against"
+            "-f", "--family", help="Family for which the Job is run against"
         )
 
         self.parser.add_option(
-            "-t",
-            "--tag",
-            action="append",
-            help="Jobs with a particular Tag"
+            "-t", "--tag", action="append", help="Jobs with a particular Tag"
         )
 
         self.parser.add_option(
             "-p",
             "--product",
             action="append",
-            help="Jobs that are designated for a particular product"
+            help="Jobs that are designated for a particular product",
         )
         """
         self.parser.add_option(
@@ -133,8 +129,8 @@ class Job_Delete(BeakerCommand):
         self.parser.add_option(
             "-c",
             "--completeDays",
-            type='int',
-            help="Number of days it's been complete for"
+            type="int",
+            help="Number of days it's been complete for",
         )
 
         """
@@ -151,11 +147,11 @@ class Job_Delete(BeakerCommand):
         """
 
     def run(self, *args, **kwargs):
-        tag = kwargs.pop('tag', None)
-        product = kwargs.pop('product', None)
-        complete_days = kwargs.pop('completeDays', None)
-        family = kwargs.pop('family', None)
-        dryrun = kwargs.pop('dryrun', None)
+        tag = kwargs.pop("tag", None)
+        product = kwargs.pop("product", None)
+        complete_days = kwargs.pop("completeDays", None)
+        family = kwargs.pop("family", None)
+        dryrun = kwargs.pop("dryrun", None)
         # FIXME This is only useful for admins, will enable when we have the admin delete fucntionality
         """
         if user_deleted is True:
@@ -164,29 +160,37 @@ class Job_Delete(BeakerCommand):
         """
 
         if complete_days is not None and complete_days < 1:
-            self.parser.error('Please pass a positive integer to completeDays')
+            self.parser.error("Please pass a positive integer to completeDays")
 
-        if (len(args) < 1
-                and tag is None
-                and complete_days is None
-                and family is None
-                and product is None
+        if (
+            len(args) < 1
+            and tag is None
+            and complete_days is None
+            and family is None
+            and product is None
         ):
-            self.parser.error('Please specify either a job, recipeset, tag, family, product or '
-                              'complete days')
+            self.parser.error(
+                "Please specify either a job, recipeset, tag, family, product or "
+                "complete days"
+            )
         if len(args) > 0:
-            if (tag is not None
-                    or complete_days is not None
-                    or family is not None
-                    or product is not None
+            if (
+                tag is not None
+                or complete_days is not None
+                or family is not None
+                or product is not None
             ):
-                self.parser.error('Please either delete by job or tag/complete/family/product, '
-                                  'not by both')
-            self.check_taskspec_args(args, permitted_types=['J'])
+                self.parser.error(
+                    "Please either delete by job or tag/complete/family/product, "
+                    "not by both"
+                )
+            self.check_taskspec_args(args, permitted_types=["J"])
 
         self.set_hub(**kwargs)
         jobs = []
         if args:
             for job in args:
                 jobs.append(job)
-        print(self.hub.jobs.delete_jobs(jobs, tag, complete_days, family, dryrun, product))
+        print(
+            self.hub.jobs.delete_jobs(jobs, tag, complete_days, family, dryrun, product)
+        )

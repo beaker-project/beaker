@@ -1,4 +1,3 @@
-
 import sys
 import os
 import pkg_resources
@@ -10,6 +9,7 @@ from bkr.inttest import Process
 from bkr.inttest.labcontroller import LabControllerTestCase
 from bkr.labcontroller.pxemenu import write_menus
 
+
 class PxemenuTest(LabControllerTestCase):
 
     maxDiff = None
@@ -20,13 +20,19 @@ class PxemenuTest(LabControllerTestCase):
         # HTTP, so that beaker-pxemenu can download the images when it builds
         # the menus.
         cls.distro_dir = tempfile.mkdtemp()
-        os.mkdir(os.path.join(cls.distro_dir, 'pxeboot'))
-        open(os.path.join(cls.distro_dir, 'pxeboot/vmlinuz'), 'w').write('lol')
-        open(os.path.join(cls.distro_dir, 'pxeboot/initrd'), 'w').write('lol')
-        cls.distro_server = Process('http_server.py', args=[sys.executable,
-                    pkg_resources.resource_filename('bkr.inttest', 'http_server.py'),
-                    '--base', cls.distro_dir],
-                listen_port=19998)
+        os.mkdir(os.path.join(cls.distro_dir, "pxeboot"))
+        open(os.path.join(cls.distro_dir, "pxeboot/vmlinuz"), "w").write("lol")
+        open(os.path.join(cls.distro_dir, "pxeboot/initrd"), "w").write("lol")
+        cls.distro_server = Process(
+            "http_server.py",
+            args=[
+                sys.executable,
+                pkg_resources.resource_filename("bkr.inttest", "http_server.py"),
+                "--base",
+                cls.distro_dir,
+            ],
+            listen_port=19998,
+        )
         cls.distro_server.start()
         cls.tftp_dir = tempfile.mkdtemp()
 
@@ -39,43 +45,57 @@ class PxemenuTest(LabControllerTestCase):
     def test_distro_tree_with_bad_url_throws_relevant_error(self):
         with session.begin():
             lc = self.get_lc()
-            tag = u'test_bad_url'
+            tag = u"test_bad_url"
             distro_tree = data_setup.create_distro_tree(
-                    osmajor=u'SuperBadWindows10', osminor=u'1',
-                    distro_tags=[tag],
-                    arch=u'x86_64', lab_controllers=[lc],
-                    urls=[u'barf://localhost:19998/error/404'])
+                osmajor=u"SuperBadWindows10",
+                osminor=u"1",
+                distro_tags=[tag],
+                arch=u"x86_64",
+                lab_controllers=[lc],
+                urls=[u"barf://localhost:19998/error/404"],
+            )
         with self.assertRaises(ValueError) as exc:
             write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
-        self.assertIn('Unrecognised URL scheme found in distro tree URL(s)', exc.exception.message)
+        self.assertIn(
+            "Unrecognised URL scheme found in distro tree URL(s)", exc.exception.message
+        )
 
     def test_skip_distro_tree_for_which_image_cannot_be_fetched(self):
         with session.begin():
             lc = self.get_lc()
-            tag = u'test_image_not_found'
+            tag = u"test_image_not_found"
             distro_tree = data_setup.create_distro_tree(
-                    osmajor=u'SuperBadWindows10', osminor=u'1',
-                    distro_tags=[tag],
-                    arch=u'x86_64', lab_controllers=[lc],
-                    urls=[u'http://localhost:19998/error/404'])
+                osmajor=u"SuperBadWindows10",
+                osminor=u"1",
+                distro_tags=[tag],
+                arch=u"x86_64",
+                lab_controllers=[lc],
+                urls=[u"http://localhost:19998/error/404"],
+            )
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
-        menu = open(os.path.join(self.tftp_dir, 'pxelinux.cfg', 'beaker_menu')).read()
-        self.assertNotIn('menu title SuperBadWindows10', menu)
-        menu = open(os.path.join(self.tftp_dir, 'ipxe', 'beaker_menu')).read()
-        self.assertNotIn('menu SuperBadWindows10', menu)
+        menu = open(os.path.join(self.tftp_dir, "pxelinux.cfg", "beaker_menu")).read()
+        self.assertNotIn("menu title SuperBadWindows10", menu)
+        menu = open(os.path.join(self.tftp_dir, "ipxe", "beaker_menu")).read()
+        self.assertNotIn("menu SuperBadWindows10", menu)
 
     def test_pxelinux_menu(self):
         with session.begin():
             lc = self.get_lc()
-            tag = u'test_pxelinux_menu'
+            tag = u"test_pxelinux_menu"
             distro_tree = data_setup.create_distro_tree(
-                    osmajor=u'PinkUshankaLinux8', osminor=u'1',
-                    distro_name=u'PinkUshankaLinux8.1-20140620.0', distro_tags=[tag],
-                    arch=u'x86_64', lab_controllers=[lc],
-                    urls=[u'http://localhost:19998/'])
+                osmajor=u"PinkUshankaLinux8",
+                osminor=u"1",
+                distro_name=u"PinkUshankaLinux8.1-20140620.0",
+                distro_tags=[tag],
+                arch=u"x86_64",
+                lab_controllers=[lc],
+                urls=[u"http://localhost:19998/"],
+            )
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
-        menu = open(os.path.join(self.tftp_dir, 'pxelinux.cfg', 'beaker_menu')).read()
-        self.assertEquals(menu, '''\
+        menu = open(os.path.join(self.tftp_dir, "pxelinux.cfg", "beaker_menu")).read()
+        self.assertEquals(
+            menu,
+            """\
 default menu
 prompt 0
 timeout 6000
@@ -100,20 +120,29 @@ label PinkUshankaLinux8.1-20140620.0-Server-x86_64
 menu end
 
 menu end
-'''.format(distro_tree.id))
+""".format(
+                distro_tree.id
+            ),
+        )
 
     def test_ipxe_menu(self):
         with session.begin():
             lc = self.get_lc()
-            tag = u'test_ipxe_menu'
+            tag = u"test_ipxe_menu"
             distro_tree = data_setup.create_distro_tree(
-                    osmajor=u'PinkUshankaLinux8', osminor=u'1',
-                    distro_name=u'PinkUshankaLinux8.1-20140620.42', distro_tags=[tag],
-                    arch=u'x86_64', lab_controllers=[lc],
-                    urls=['http://localhost:19998/'])
+                osmajor=u"PinkUshankaLinux8",
+                osminor=u"1",
+                distro_name=u"PinkUshankaLinux8.1-20140620.42",
+                distro_tags=[tag],
+                arch=u"x86_64",
+                lab_controllers=[lc],
+                urls=["http://localhost:19998/"],
+            )
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
-        menu = open(os.path.join(self.tftp_dir, 'ipxe', 'beaker_menu')).read()
-        self.assertEquals(menu, '''\
+        menu = open(os.path.join(self.tftp_dir, "ipxe", "beaker_menu")).read()
+        self.assertEquals(
+            menu,
+            """\
 #!ipxe
 
 chain /ipxe/${ip:hexraw} ||
@@ -153,51 +182,73 @@ initrd /distrotrees/%s/initrd || goto PinkUshankaLinux8.1
 imgargs ${options} ${useropts}
 boot || goto PinkUshankaLinux8.1
 
-''' % (distro_tree.id, distro_tree.id))
+"""
+            % (distro_tree.id, distro_tree.id),
+        )
 
     def test_efigrub_menu(self):
         with session.begin():
             lc = self.get_lc()
-            tag = u'test_efigrub_menu'
+            tag = u"test_efigrub_menu"
             distro_tree = data_setup.create_distro_tree(
-                    osmajor=u'PinkUshankaLinux8', osminor=u'1',
-                    distro_name=u'PinkUshankaLinux8.1-20140620.1', distro_tags=[tag],
-                    arch=u'x86_64', lab_controllers=[lc],
-                    urls=[u'http://localhost:19998/'])
+                osmajor=u"PinkUshankaLinux8",
+                osminor=u"1",
+                distro_name=u"PinkUshankaLinux8.1-20140620.1",
+                distro_tags=[tag],
+                arch=u"x86_64",
+                lab_controllers=[lc],
+                urls=[u"http://localhost:19998/"],
+            )
             # https://bugzilla.redhat.com/show_bug.cgi?id=1420471
             # i386 and RHEL3-5 should be filtered out
             ignored_combos = [
-                (u'PinkUshankaLinux8', u'1', u'i386'),
-                (u'RedHatEnterpriseLinux3', u'9', u'x86_64'),
-                (u'RedHatEnterpriseLinux4', u'9', u'x86_64'),
-                (u'RedHatEnterpriseLinuxServer5', u'10', u'x86_64'),
+                (u"PinkUshankaLinux8", u"1", u"i386"),
+                (u"RedHatEnterpriseLinux3", u"9", u"x86_64"),
+                (u"RedHatEnterpriseLinux4", u"9", u"x86_64"),
+                (u"RedHatEnterpriseLinuxServer5", u"10", u"x86_64"),
             ]
             for osmajor, osminor, arch in ignored_combos:
-                data_setup.create_distro_tree(osmajor=osmajor, osminor=osminor,
-                        arch=arch, distro_tags=[tag], lab_controllers=[lc],
-                        urls=['http://localhost:19998/'])
+                data_setup.create_distro_tree(
+                    osmajor=osmajor,
+                    osminor=osminor,
+                    arch=arch,
+                    distro_tags=[tag],
+                    lab_controllers=[lc],
+                    urls=["http://localhost:19998/"],
+                )
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
-        menu = open(os.path.join(self.tftp_dir, 'grub', 'efidefault')).read()
-        self.assertEquals(menu, '''\
+        menu = open(os.path.join(self.tftp_dir, "grub", "efidefault")).read()
+        self.assertEquals(
+            menu,
+            """\
 
 title PinkUshankaLinux8.1-20140620.1 Server x86_64
     root (nd)
     kernel /distrotrees/{0}/kernel method=http://localhost:19998/ repo=http://localhost:19998/
     initrd /distrotrees/{0}/initrd
-'''.format(distro_tree.id))
+""".format(
+                distro_tree.id
+            ),
+        )
 
     def test_aarch64_menu(self):
         with session.begin():
             lc = self.get_lc()
-            tag = u'test_aarch64_menu'
+            tag = u"test_aarch64_menu"
             distro_tree = data_setup.create_distro_tree(
-                    osmajor=u'PinkUshankaLinux8', osminor=u'1',
-                    distro_name=u'PinkUshankaLinux8.1-20140620.2', distro_tags=[tag],
-                    arch=u'aarch64', lab_controllers=[lc],
-                    urls=[u'http://localhost:19998/'])
+                osmajor=u"PinkUshankaLinux8",
+                osminor=u"1",
+                distro_name=u"PinkUshankaLinux8.1-20140620.2",
+                distro_tags=[tag],
+                arch=u"aarch64",
+                lab_controllers=[lc],
+                urls=[u"http://localhost:19998/"],
+            )
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
-        menu = open(os.path.join(self.tftp_dir, 'aarch64', 'beaker_menu.cfg')).read()
-        self.assertEquals(menu, '''\
+        menu = open(os.path.join(self.tftp_dir, "aarch64", "beaker_menu.cfg")).read()
+        self.assertEquals(
+            menu,
+            """\
 set default="Exit PXE"
 set timeout=60
 menuentry "Exit PXE" {
@@ -216,22 +267,31 @@ menuentry "PinkUshankaLinux8.1-20140620.2 Server aarch64" {
 }
 
 }
-''' % (distro_tree.id, distro_tree.id))
+"""
+            % (distro_tree.id, distro_tree.id),
+        )
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1087090
     def test_grub2_menu_for_efi(self):
         with session.begin():
             lc = self.get_lc()
-            tag = u'test_grub2_menu_for_efi'
+            tag = u"test_grub2_menu_for_efi"
             distro_tree = data_setup.create_distro_tree(
-                    osmajor=u'PinkUshankaLinux8', osminor=u'1',
-                    distro_name=u'PinkUshankaLinux8.1-20140620.3', distro_tags=[tag],
-                    arch=u'x86_64', lab_controllers=[lc],
-                    urls=[u'http://localhost:19998/'])
+                osmajor=u"PinkUshankaLinux8",
+                osminor=u"1",
+                distro_name=u"PinkUshankaLinux8.1-20140620.3",
+                distro_tags=[tag],
+                arch=u"x86_64",
+                lab_controllers=[lc],
+                urls=[u"http://localhost:19998/"],
+            )
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
-        menu = open(os.path.join(self.tftp_dir, 'boot', 'grub2',
-            'beaker_menu_x86.cfg')).read()
-        self.assertEquals(menu, '''\
+        menu = open(
+            os.path.join(self.tftp_dir, "boot", "grub2", "beaker_menu_x86.cfg")
+        ).read()
+        self.assertEquals(
+            menu,
+            """\
 set default="Exit PXE"
 set timeout=60
 menuentry "Exit PXE" {
@@ -250,4 +310,6 @@ menuentry "PinkUshankaLinux8.1-20140620.3 Server x86_64" {
 }
 
 }
-''' % (distro_tree.id, distro_tree.id))
+"""
+            % (distro_tree.id, distro_tree.id),
+        )

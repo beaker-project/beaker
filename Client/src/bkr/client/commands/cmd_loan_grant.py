@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -77,6 +76,7 @@ class Loan_Grant(BeakerCommand):
     """
     Loan a system to a specific user
     """
+
     enabled = True
 
     def options(self):
@@ -85,24 +85,24 @@ class Loan_Grant(BeakerCommand):
         self.parser.add_option(
             "--recipient",
             help="Username of the loan recipient",
-            )
+        )
 
         self.parser.add_option(
             "--comment",
             help="Comment regarding the loan",
-            )
+        )
 
     def run(self, *args, **kwargs):
         if len(args) != 1:
-            self.parser.error('Exactly one system fqdn must be given')
+            self.parser.error("Exactly one system fqdn must be given")
 
         fqdn = args[0]
-        recipient = kwargs.pop('recipient', None)
-        comment = kwargs.pop('comment', None)
+        recipient = kwargs.pop("recipient", None)
+        comment = kwargs.pop("comment", None)
 
         self.set_hub(**kwargs)
-        grant_url = 'systems/%s/loans/' % parse.quote(fqdn, '')
-        data = {'recipient': recipient, 'comment': comment}
+        grant_url = "systems/%s/loans/" % parse.quote(fqdn, "")
+        data = {"recipient": recipient, "comment": comment}
         requests_session = self.requests_session()
         res = requests_session.post(grant_url, json=data)
         res.raise_for_status()

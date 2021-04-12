@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -70,23 +69,25 @@ class Remove_Account(BeakerCommand):
     Remove user accounts
     """
 
-    enabled=True
+    enabled = True
 
     def options(self):
-        self.parser.usage = '%%prog %s' % self.normalized_name
+        self.parser.usage = "%%prog %s" % self.normalized_name
         self.parser.add_option(
-            '--new-owner',
-            metavar='USERNAME',
-            help=('Transfer ownership of any systems currently owned by '
-                  'the closed accounts to USERNAME [default: '
-                  'the admin running this command]')
+            "--new-owner",
+            metavar="USERNAME",
+            help=(
+                "Transfer ownership of any systems currently owned by "
+                "the closed accounts to USERNAME [default: "
+                "the admin running this command]"
+            ),
         )
 
     def run(self, *args, **kwargs):
 
         if not args:
-            self.parser.error('Please provide the username(s) of the account to remove')
+            self.parser.error("Please provide the username(s) of the account to remove")
 
         self.set_hub(**kwargs)
         for username in args:
-            self.hub.users.remove_account(username, kwargs.get('new_owner'))
+            self.hub.users.remove_account(username, kwargs.get("new_owner"))

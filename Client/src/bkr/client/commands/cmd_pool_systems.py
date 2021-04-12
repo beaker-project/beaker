@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -62,34 +61,36 @@ class Pool_Systems(BeakerCommand):
     """
     List systems in a pool
     """
+
     enabled = True
 
     def options(self):
         self.parser.usage = "%%prog %s <pool-name>" % self.normalized_name
         self.parser.add_option(
-            '--format',
-            type='choice',
-            choices=['list', 'json'],
-            default='list',
-            help='Results display format: json, list [default: %default]',
+            "--format",
+            type="choice",
+            choices=["list", "json"],
+            default="list",
+            help="Results display format: json, list [default: %default]",
         )
 
     def run(self, *args, **kwargs):
 
         if len(args) != 1:
-            self.parser.error('Exactly one pool name must be specified')
+            self.parser.error("Exactly one pool name must be specified")
 
         pool_name = args[0]
 
         self.set_hub(**kwargs)
         requests_session = self.requests_session()
-        response = requests_session.get('pools/%s' % pool_name,
-                                        headers={'Accept': 'application/json'})
+        response = requests_session.get(
+            "pools/%s" % pool_name, headers={"Accept": "application/json"}
+        )
         response.raise_for_status()
         attributes = response.json()
-        systems = attributes['systems']
+        systems = attributes["systems"]
 
-        if kwargs['format'] == 'json':
+        if kwargs["format"] == "json":
             print(json.dumps(systems))
         else:
             for system in systems:

@@ -38,11 +38,14 @@ import tokenize
 import six
 from six.moves import StringIO
 
+
 class ImproperlyConfigured(Exception):
     """
     Program is improperly configured.
     """
+
     pass
+
 
 def get_dict_value(dictionary, key):
     """
@@ -61,7 +64,7 @@ def get_dict_value(dictionary, key):
         if isinstance(key, str):
             matches = []
             for pattern in six.iterkeys(dictionary):
-                if pattern == '*' or not isinstance(pattern, str):
+                if pattern == "*" or not isinstance(pattern, str):
                     # exclude '*', because it would match every time
                     continue
                 if fnmatch.fnmatchcase(key, pattern):
@@ -70,8 +73,8 @@ def get_dict_value(dictionary, key):
                 return dictionary[matches[0]]
             elif len(matches) > 1:
                 raise KeyError("Key matches multiple values: %s" % key)
-        if '*' in dictionary:
-            return dictionary['*']
+        if "*" in dictionary:
+            return dictionary["*"]
         raise
 
 
@@ -148,12 +151,14 @@ class PyConfigParser(dict):
                 continue
 
             if keyword.iskeyword(self._tok_value):
-                raise SyntaxError("Cannot assign to a python keyword: %s" % self._tok_value)
+                raise SyntaxError(
+                    "Cannot assign to a python keyword: %s" % self._tok_value
+                )
 
             if self._tok_name == "ENDMARKER":
                 break
 
-            self._assert_token(("NAME", ))
+            self._assert_token(("NAME",))
             key = self._tok_value
 
             self._get_token()
@@ -169,21 +174,33 @@ class PyConfigParser(dict):
         *args are tuples (name, value), (name, )
         """
         for i in args:
-            if len(i) == 1 and i == (self._tok_name, ):
+            if len(i) == 1 and i == (self._tok_name,):
                 return
             if len(i) == 2 and i == (self._tok_name, self._tok_value):
                 return
-        raise SyntaxError("Invalid syntax: file: %s, begin: %s, end: %s, text: %s" % (self._open_file, self._tok_begin, self._tok_end, self._tok_line))
+        raise SyntaxError(
+            "Invalid syntax: file: %s, begin: %s, end: %s, text: %s"
+            % (self._open_file, self._tok_begin, self._tok_end, self._tok_line)
+        )
 
     def _get_token(self, skip_newline=True):
         """
         Get a new token from token generator.
         """
-        self._tok_number, self._tok_value, self._tok_begin, self._tok_end, self._tok_line = next(self._tokens)
+        (
+            self._tok_number,
+            self._tok_value,
+            self._tok_begin,
+            self._tok_end,
+            self._tok_line,
+        ) = next(self._tokens)
         self._tok_name = token.tok_name.get(self._tok_number, None)
 
         if self._debug:
-            print("%2s %16s %s" % (self._tok_number, self._tok_name, self._tok_value.strip()))
+            print(
+                "%2s %16s %s"
+                % (self._tok_number, self._tok_name, self._tok_value.strip())
+            )
 
         # skip some tokens
         if self._tok_name in ["COMMENT", "INDENT", "DEDENT"]:
@@ -218,7 +235,7 @@ class PyConfigParser(dict):
 
         # look at next token if "%s" follows the string
         self._tokens, tmp = itertools.tee(self._tokens)
-        if next(tmp)[1:2] != ("%", ):
+        if next(tmp)[1:2] != ("%",):
             # just a regular string
             return result
 
@@ -248,11 +265,19 @@ class PyConfigParser(dict):
         if get_next:
             self._get_token()
 
-        self._assert_token(("NAME", ), ("NUMBER", ), ("STRING", ), ("OP", "{"), ("OP", "["), ("OP", "("), ("OP", "-"))
+        self._assert_token(
+            ("NAME",),
+            ("NUMBER",),
+            ("STRING",),
+            ("OP", "{"),
+            ("OP", "["),
+            ("OP", "("),
+            ("OP", "-"),
+        )
 
         if (self._tok_name, self._tok_value) == ("OP", "-"):
             self._get_token()
-            self._assert_token(("NUMBER", ))
+            self._assert_token(("NUMBER",))
             return self._get_NUMBER(negative=True)
 
         if self._tok_name in ["NAME", "NUMBER", "STRING"]:
@@ -268,7 +293,7 @@ class PyConfigParser(dict):
             if (self._tok_name, self._tok_value) == ("OP", "("):
                 return self._get_tuple()
 
-        self._assert_token(("FOO", ))
+        self._assert_token(("FOO",))
 
     def _get_from_import(self):
         """
@@ -290,12 +315,14 @@ class PyConfigParser(dict):
         imports = []
         self._get_token()
         while self._tok_name not in ("NL", "NEWLINE"):
-            self._assert_token(("NAME", ), ("OP", "*"))
+            self._assert_token(("NAME",), ("OP", "*"))
             imports.append(self._tok_value)
             self._get_token(skip_newline=False)
             self._skip_commas(skip_newline=False)
 
-        imported_config = self.__class__(config_file_suffix=self._config_file_suffix, debug=self._debug)
+        imported_config = self.__class__(
+            config_file_suffix=self._config_file_suffix, debug=self._debug
+        )
         imported_config.load_from_file(file_name)
 
         if "*" in imports:

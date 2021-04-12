@@ -11,14 +11,16 @@ Create Date: 2017-12-20 16:43:35.364824
 """
 
 # revision identifiers, used by Alembic.
-revision = '2a6c3722f063'
-down_revision = '21330bf93a75'
+revision = "2a6c3722f063"
+down_revision = "21330bf93a75"
 
 from alembic import op
 from sqlalchemy import Integer
 
+
 def upgrade():
-    op.alter_column('task_bugzilla', 'task_id', existing_type=Integer, nullable=False)
+    op.alter_column("task_bugzilla", "task_id", existing_type=Integer, nullable=False)
+
 
 def downgrade():
-    op.alter_column('task_bugzilla', 'task_id', existing_type=Integer, nullable=True)
+    op.alter_column("task_bugzilla", "task_id", existing_type=Integer, nullable=True)
