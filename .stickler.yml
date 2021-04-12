@@ -1,7 +1,7 @@
 linters:
   flake8:
-    python: 2
-    max-line-length: 100
+    python: 3
+    max-line-length: 120
     max-complexity: 20
   csslint: {  }
   shellcheck:
