@@ -4,14 +4,18 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from sqlalchemy.orm import contains_eager
 from flask import request, jsonify
+from sqlalchemy.orm import contains_eager
+
 from bkr.server.app import app
 from bkr.server.flask_util import json_collection
-from bkr.server.model import (Activity, User, Distro, DistroTree,
-        LabController, System, Group, Arch, DistroActivity, DistroTreeActivity,
-                              LabControllerActivity, SystemActivity, GroupActivity,
-                              SystemPool, SystemPoolActivity)
+from bkr.server.model import (
+    Activity, User, Distro, DistroTree,
+    LabController, System, Group, Arch, DistroActivity,
+    DistroTreeActivity,
+    LabControllerActivity, SystemActivity, GroupActivity,
+    SystemPool, SystemPoolActivity
+)
 
 # Search field mapping which applies to all activity types.
 common_activity_search_columns = {
