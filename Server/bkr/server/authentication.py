@@ -34,6 +34,9 @@ def login_password():
 
     payload = read_json_request(request)
     proxy_user = payload.get("proxy_user")
+
+    if not request.authorization:
+        raise Unauthorised401("Authorization header is missing")
     username = request.authorization.username
     password = request.authorization.password
 
