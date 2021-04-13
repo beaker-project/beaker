@@ -24,28 +24,25 @@ def login_password():
     The caller may act as a proxy on behalf of another user by passing the
     *proxy_user* key. This requires that the caller has 'proxy_auth'
     permission.
-    The request body must be a JSON object containing username and password.
+    The request must contain Authorization header that contains the word Basic
+    followed by a space and a base64-encoded string username:password.
     Proxy_user is optional.
 
-    :jsonparam string username: Username
-    :jsonparam string password: Password
     :jsonparam string proxy_user: Username on whose behalf the caller is proxying
 
     """
 
     payload = read_json_request(request)
-    username = payload.get("username")
-    password = payload.get("password")
     proxy_user = payload.get("proxy_user")
+    username = request.authorization.username
+    password = request.authorization.password
 
     user = User.by_user_name(username)
-    if user is None:
-        raise Unauthorised401(u"Invalid username or password")
-    if not user.can_log_in():
+    if (user is None
+            or not user.can_log_in()
+            or not user.check_password(password)):
         raise Unauthorised401(u"Invalid username or password")
 
-    if not user.check_password(password):
-        raise Unauthorised401(u"Invalid username or password")
     if proxy_user:
         if not user.has_permission(u"proxy_auth"):
             raise Unauthorised401(u"%s does not have proxy_auth permission" % user.user_name)
