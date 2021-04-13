@@ -44,11 +44,11 @@ def login_password():
         raise Unauthorised401(u"Invalid username or password")
 
     if proxy_user:
-        if not user.has_permission(u"proxy_auth"):
-            raise Unauthorised401(u"%s does not have proxy_auth permission" % user.user_name)
+        if not user.has_permission("proxy_auth"):
+            raise Unauthorised401("%s does not have proxy_auth permission" % user.user_name)
         proxied_user = User.by_user_name(proxy_user)
         if proxied_user is None:
-            raise Unauthorised401(u"Proxy user %s does not exist" % proxy_user)
+            raise Unauthorised401("Proxy user %s does not exist" % proxy_user)
         identity.set_authentication(proxied_user, proxied_by=user)
     else:
         identity.set_authentication(user)
