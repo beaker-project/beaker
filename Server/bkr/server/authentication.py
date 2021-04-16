@@ -10,7 +10,7 @@ from flask import request
 
 from bkr.server import identity
 from bkr.server.app import app
-from bkr.server.flask_util import auth_required, read_json_request, Unauthorised401
+from bkr.server.flask_util import auth_required, read_json_request, Unauthorised401, UnsupportedMediaType415
 from bkr.server.model import User
 
 log = logging.getLogger(__name__)
@@ -32,8 +32,11 @@ def login_password():
 
     """
 
-    payload = read_json_request(request)
-    proxy_user = payload.get("proxy_user")
+    try:
+        payload = read_json_request(request)
+        proxy_user = payload.get("proxy_user")
+    except UnsupportedMediaType415:
+        proxy_user = None
 
     if not request.authorization:
         raise Unauthorised401("Authorization header is missing")
