@@ -90,11 +90,9 @@ def get_distro_activity():
     distro_columns = {
         'distro': Distro.name,
         'distro.name': Distro.name,
-    }
+    }.update(common_activity_search_columns)
     json_result = json_collection(query,
-                                  columns={
-                                      **common_activity_search_columns,
-                                      **distro_columns},
+                                  columns=distro_columns,
                                   skip_count=True)
     return jsonify(json_result)
 
@@ -132,11 +130,9 @@ def get_distro_tree_activity():
         'distro_tree.distro.name': Distro.name,
         'distro_tree.variant': DistroTree.variant,
         'distro_tree.arch': Arch.arch,
-    }
+    }.update(common_activity_search_columns)
     json_result = json_collection(query,
-                                  columns={
-                                      **common_activity_search_columns,
-                                      **distro_tree_columns},
+                                  columns=distro_tree_columns,
                                   skip_count=True)
     return jsonify(json_result)
 
@@ -165,12 +161,9 @@ def get_group_activity():
     group_columns = {
         'group': Group.group_name,
         'group.group_name': Group.group_name,
-    }
+    }.update(common_activity_search_columns)
     json_result = json_collection(query,
-                                  columns={
-                                      **common_activity_search_columns,
-                                      **group_columns
-                                  })
+                                  columns=group_columns)
     return jsonify(json_result)
 
 @app.route('/activity/labcontroller', methods=['GET'])
@@ -197,12 +190,9 @@ def get_lab_controller_activity():
     lc_columns = {
         'lab_controller': LabController.fqdn,
         'lab_controller.fqdn': LabController.fqdn,
-    }
+    }.update(common_activity_search_columns)
     json_result = json_collection(query,
-                                  columns={
-                                      **common_activity_search_columns,
-                                      **lc_columns
-                                  })
+                                  columns=lc_columns)
     return jsonify(json_result)
 
 
@@ -230,12 +220,9 @@ def get_systems_activity(): # distinct from get_system_activity
     system_columns = {
         'system': System.fqdn,
         'system.fqdn': System.fqdn,
-    }
+    }.update(common_activity_search_columns)
     json_result = json_collection(query,
-                                  columns={
-                                      **common_activity_search_columns,
-                                      **system_columns
-                                  },
+                                  columns=system_columns,
                                   skip_count=True)
     return jsonify(json_result)
 
@@ -270,10 +257,8 @@ def get_system_pools_activity():
         'pool.name': SystemPool.name,
         'pool.owner.user_name': User.user_name,
         'pool.owner.group_name': Group.group_name,
-    }
+    }.update(common_activity_search_columns)
     json_result = json_collection(query,
-                                  columns={
-                                      **common_activity_search_columns,
-                                      **pool_columns},
+                                  columns=pool_columns,
                                   skip_count=True)
     return jsonify(json_result)
