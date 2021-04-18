@@ -68,7 +68,6 @@ from bkr.server.task_actions import TaskActions
 from bkr.server.tasks import Tasks
 from bkr.server.user import Users
 from bkr.server.util import absolute_url
-from bkr.server.watchdog import Watchdogs
 from bkr.server.widgets import TaskSearchForm, SearchBar, \
     SystemInstallOptions, \
     SystemKeys, SystemExclude, SystemDetails, \
@@ -168,7 +167,6 @@ class Root(RPCRoot):
     reports = Reports()
     matrix = JobMatrix()
     reserveworkflow = ReserveWorkflow()
-    watchdogs = Watchdogs()
     retentiontag = RetentionTagController()
     system_action = SystemActionController()
     systems = SystemsController()
