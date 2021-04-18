@@ -53,9 +53,9 @@ class Activity(DeclarativeMappedObject):
         self.action = action
 
         if old_value is not None:
-            old_value = unicode(old_value)[:old_value_max_length]
+            old_value = u"{}".format(old_value)[:old_value_max_length]
         if new_value is not None:
-            new_value = unicode(new_value)[:new_value_max_length]
+            new_value = u"{}".format(new_value)[:new_value_max_length]
 
         self.old_value = old_value
         self.new_value = new_value
