@@ -41,7 +41,7 @@ def system_utilisation(system, start, end):
                 SystemStatusDuration.start_time < end,
                 or_(
                     SystemStatusDuration.finish_time >= start,
-                    SystemStatusDuration.finish_time == None,
+                    SystemStatusDuration.finish_time is None,
                 ),
             )
         )
@@ -52,7 +52,7 @@ def system_utilisation(system, start, end):
         system.dyn_reservations.filter(
             and_(
                 Reservation.start_time < end,
-                or_(Reservation.finish_time >= start, Reservation.finish_time == None),
+                or_(Reservation.finish_time >= start, Reservation.finish_time is None),
             )
         )
         .order_by(Reservation.start_time)
