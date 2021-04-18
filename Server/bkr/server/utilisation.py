@@ -7,7 +7,6 @@
 import datetime
 from collections import defaultdict
 from sqlalchemy.sql import and_, or_, func, literal_column
-from turbogears.database import session
 from bkr.server.model import System, SystemStatusDuration, Reservation
 
 def update_status_durations_in_period(tally, status_durations, start, end):
