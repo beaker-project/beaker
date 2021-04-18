@@ -81,6 +81,7 @@ import bkr.server.power
 import bkr.server.labcontroller
 import bkr.server.tasks
 import bkr.server.controllers
+import bkr.server.watchdog  # noqa
 
 
 @app.before_first_request
