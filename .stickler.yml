@@ -3,6 +3,10 @@ linters:
     python: 3
     max-line-length: 120
     max-complexity: 20
+    # We ignore the following because we use black to handle code-formatting
+    # E203: Whitespace before ':'
+    # W503: Line break occurred before a binary operator
+    ignore: "E203,W503"
   black:
     fixer: false
   csslint: {  }
