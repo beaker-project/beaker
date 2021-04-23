@@ -3,6 +3,8 @@ linters:
     python: 3
     max-line-length: 120
     max-complexity: 20
+  black:
+    fixer: false
   csslint: {  }
   shellcheck:
     shell: bash
