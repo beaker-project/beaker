@@ -31,7 +31,7 @@ from bkr.server.model.scheduler import machine_guest_map
 from bkr.server.needpropertyxml import XmlHost
 from bkr.server.util import load_config_or_exit, log_traceback
 from bkr.server.recipetasks import RecipeTasks
-from turbogears.database import session, get_engine
+from bkr.server.database import session, get_engine
 from turbogears import config
 from turbomail.control import interface
 from xmlrpclib import ProtocolError

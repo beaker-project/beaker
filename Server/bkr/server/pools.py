@@ -18,7 +18,7 @@ from bkr.server.flask_util import auth_required, \
 from bkr.server.util import absolute_url
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm.exc import NoResultFound
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server.systems import _get_system_by_FQDN, _edit_access_policy_rules
 import datetime
 from bkr.server.bexceptions import DatabaseLookupError

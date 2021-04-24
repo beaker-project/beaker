@@ -11,7 +11,7 @@ from datetime import datetime
 import cherrypy, cherrypy.config
 import turbogears
 from turbogears import controllers
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server import identity
 from formencode.api import Invalid
 

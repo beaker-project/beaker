@@ -35,7 +35,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import select, union, and_, or_, not_, func, literal, exists, delete
 from turbogears import url
 from turbogears.config import get
-from turbogears.database import session
+from bkr.server.database import session
 
 from bkr.common.helpers import makedirs_ignore, total_seconds
 from bkr.server import identity, mail

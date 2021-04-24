@@ -7,7 +7,7 @@
 import os
 import sys
 import logging
-from turbogears.database import get_engine
+from bkr.server.database import get_engine
 from sqlalchemy import event
 from bkr.server.util import load_config
 from bkr.log import log_to_stream

@@ -28,7 +28,7 @@ import os
 import sys
 import logging
 from turbogears import config
-from turbogears.database import session
+from bkr.server.database import session
 import cherrypy
 import cherrypy._cpwsgi
 from cherrypy.filters.basefilter import BaseFilter

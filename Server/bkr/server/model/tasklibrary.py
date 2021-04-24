@@ -17,7 +17,7 @@ from sqlalchemy.sql.expression import and_, or_, not_, true
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import relationship
 from turbogears.config import get
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.common.helpers import (AtomicFileReplacement, Flock,
                                 makedirs_ignore, unlink_ignore)
 from bkr.server import identity, testinfo

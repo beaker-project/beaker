@@ -13,7 +13,7 @@ import pkg_resources
 from sqlalchemy import Column, Integer, Unicode, DateTime
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.inspection import inspect
-from turbogears.database import session, get_engine
+from bkr.server.database import session
 from .base import DeclarativeMappedObject
 
 logger = logging.getLogger(__name__)

@@ -25,7 +25,7 @@ from bkr.server.model import (User, Group, Permission, Hypervisor, KernelType,
                               Arch, PowerType, Key, RetentionTag, ConfigItem, UserGroup,
                               DataMigration)
 from bkr.server.util import load_config_or_exit, log_traceback
-from turbogears.database import session, metadata as tg_metadata
+from bkr.server.database import session, metadata as tg_metadata
 from optparse import OptionParser
 import alembic.config, alembic.script, alembic.environment
 import errno
@@ -439,7 +439,7 @@ def main():
 @log_traceback(logger)
 def doit(opts, metadata=None):
     if not metadata:
-        from turbogears.database import metadata, bind_metadata
+        from bkr.server.database import metadata, bind_metadata
         bind_metadata()
 
     if opts.check:

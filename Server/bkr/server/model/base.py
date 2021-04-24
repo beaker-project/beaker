@@ -7,7 +7,7 @@
 import logging
 import random
 import time
-from turbogears.database import metadata, session
+from bkr.server.database import metadata, session
 from sqlalchemy import util
 from sqlalchemy.sql import and_
 from sqlalchemy.exc import OperationalError
