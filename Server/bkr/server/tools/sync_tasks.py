@@ -16,7 +16,7 @@ import urllib2
 from optparse import OptionParser
 
 import turbogears.config
-from bkr.server.database import session
+from bkr.server.database import session  # noqa
 
 from bkr.common.helpers import siphon
 from bkr.server.model import TaskLibrary, Task
