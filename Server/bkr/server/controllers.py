@@ -28,7 +28,7 @@ import bkr.server.rdf
 import bkr.server.recipes
 import bkr.server.search_utility as su
 import bkr.server.stdvars
-from bkr.server import metrics, identity
+from bkr.server import identity
 from bkr.server.CSV_import_export import CSV
 from bkr.server.app import app
 from bkr.server.bexceptions import BX
@@ -1142,8 +1142,6 @@ def startup_time_start():
 def startup_time_end():
     duration = time.time() - _startup_time
     log.info('Server startup in %s seconds' % duration)
-    metrics.measure('durations.cherrypy_startup', duration)
-    metrics.increment('counters.cherrypy_startup')
 
 
 cherrypy.server.on_start_server_list.insert(0, startup_time_start)

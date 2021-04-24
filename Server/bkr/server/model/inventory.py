@@ -28,7 +28,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from turbogears import url, config
 from turbogears.config import get
 from turbogears.database import session
-from bkr.server import identity, metrics, mail
+from bkr.server import identity, mail
 from bkr.server.bexceptions import (BX, InsufficientSystemPermissions,
         StaleCommandStatusException, StaleSystemUserException)
 from bkr.server.helpers import make_link
@@ -170,19 +170,6 @@ class Command(DeclarativeMappedObject):
             self.start_time = datetime.utcnow()
         if self.status in [CommandStatus.completed, CommandStatus.failed]:
             self.finish_time = datetime.utcnow()
-        # update metrics counters if command has finished
-        if self.status.finished:
-            categories = ['all']
-            if self.system.lab_controller:
-                categories.append('by_lab.%s'
-                        % self.system.lab_controller.fqdn.replace('.', '_'))
-            if self.system.power and self.system.power.power_type:
-                categories.append('by_power_type.%s'
-                        % self.system.power.power_type.name)
-            categories.extend('by_arch.%s' % arch.arch for arch in self.system.arch)
-            for category in categories:
-                metrics.increment('counters.system_commands_%s.%s'
-                        % (self.status.name, category))
 
     def log_to_system_history(self):
         self.system.record_activity(user=self.user, service=self.service,
@@ -1695,7 +1682,6 @@ class System(DeclarativeMappedObject, ActivityMixin):
             .value(func.count(DistroTree.id.distinct()))
         if count >= 2:
             # Broken!
-            metrics.increment('counters.suspicious_aborts')
             reason = unicode(_(u'System has a run of aborted recipes '
                     'with reliable distros'))
             log.warn(reason)

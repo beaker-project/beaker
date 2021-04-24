@@ -38,7 +38,7 @@ from turbogears.config import get
 from turbogears.database import session
 
 from bkr.common.helpers import makedirs_ignore, total_seconds
-from bkr.server import identity, metrics, mail
+from bkr.server import identity, mail
 from bkr.server.bexceptions import BX, BeakerException, StaleTaskStatusException
 from bkr.server.helpers import make_link, make_fake_link
 from bkr.server.hybrid import hybrid_method, hybrid_property
@@ -2563,7 +2563,6 @@ class Recipe(TaskBase, ActivityMixin):
             send_scheduler_update(self)
 
         if status_changed and self.is_finished():
-            metrics.increment('counters.recipes_%s' % self.status.name)
             if self.is_suspiciously_aborted and \
                     getattr(self.resource, 'system', None) and self.distro_tree and \
                     get('beaker.reliable_distro_tag', None) in self.distro_tree.distro.tags:

@@ -39,7 +39,6 @@ Contents
    watchdog-script
    theming
    openstack
-   graphite
    reporting-queries
    how-do-i
    man/index
