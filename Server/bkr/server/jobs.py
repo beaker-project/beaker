@@ -19,7 +19,7 @@ from bkr.server.widgets import myPaginateDataGrid, \
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link, markdown_first_paragraph
 from bkr.server.junitxml import job_to_junit_xml
-from bkr.server import search_utility, identity, metrics
+from bkr.server import search_utility, identity
 from bkr.server.needpropertyxml import XmlHost
 from bkr.server.installopts import InstallOptions
 from bkr.server.controller_utilities import _custom_status, _custom_result, \
@@ -572,7 +572,6 @@ class Jobs(RPCRoot):
         if not job.recipesets:
             raise BX(_('No RecipeSets! You can not have a Job with no recipeSets!'))
         session.add(job)
-        metrics.measure('counters.recipes_submitted', len(list(job.all_recipes)))
         return job
 
     def _jobs(self,job,**kw):

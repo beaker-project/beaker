@@ -18,10 +18,8 @@ from collections import namedtuple
 
 import lxml.etree
 import turbogears
-from sqlalchemy import create_engine
 from sqlalchemy.orm.exc import NoResultFound
 from turbogears import config, url
-from turbogears.database import get_engine
 
 from bkr.server.app import app
 from bkr.server.bexceptions import DatabaseLookupError
@@ -154,24 +152,6 @@ def absolute_url(tgpath, tgparams=None, scheme=None,
 
 
 _reports_engine = None
-
-
-def get_reports_engine():
-    global _reports_engine
-    if app.config.get('reports_engine.dburi'):
-        if not _reports_engine:
-            # same logic as in turbogears.database.get_engine
-            engine_args = dict()
-            for k, v in app.config.iteritems():
-                if k.startswith('reports_engine.'):
-                    engine_args[k[len('reports_engine.'):]] = v
-            dburi = engine_args.pop('dburi')
-            _reports_engine = create_engine(dburi, **engine_args)
-            log.debug('Created reports_engine %r', _reports_engine)
-        return _reports_engine
-    else:
-        log.debug('Using default engine for reports_engine')
-        return get_engine()
 
 
 # Based on a similar decorator from kobo.decorators

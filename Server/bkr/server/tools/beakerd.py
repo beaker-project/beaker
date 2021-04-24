@@ -17,7 +17,7 @@ import os
 import random
 from bkr.common import __version__
 from bkr.log import log_to_stream, log_to_syslog
-from bkr.server import needpropertyxml, utilisation, metrics, dynamic_virt
+from bkr.server import needpropertyxml, utilisation, dynamic_virt
 from bkr.server.bexceptions import BX, \
     StaleTaskStatusException, InsufficientSystemPermissions, \
     StaleSystemUserException
@@ -29,8 +29,7 @@ from bkr.server.model import (Job, RecipeSet, Recipe, MachineRecipe,
         Power, PowerType, DataMigration, SystemSchedulerStatus)
 from bkr.server.model.scheduler import machine_guest_map
 from bkr.server.needpropertyxml import XmlHost
-from bkr.server.util import load_config_or_exit, log_traceback, \
-        get_reports_engine
+from bkr.server.util import load_config_or_exit, log_traceback
 from bkr.server.recipetasks import RecipeTasks
 from turbogears.database import session, get_engine
 from turbogears import config
@@ -623,110 +622,6 @@ def run_data_migrations():
         _outstanding_data_migrations.pop(0)
     return True
 
-# Real-time metrics reporting
-
-# Recipe queue
-def _recipe_count_metrics_for_query(name, query=None):
-    for status, count in MachineRecipe.get_queue_stats(query).items():
-        metrics.measure('gauges.recipes_%s.%s' % (status, name), count)
-
-def _recipe_count_metrics_for_query_grouped(name, grouping, query):
-    group_counts = MachineRecipe.get_queue_stats_by_group(grouping, query)
-    for group, counts in group_counts.iteritems():
-        for status, count in counts.iteritems():
-            metrics.measure('gauges.recipes_%s.%s.%s' %
-                                   (status, name, group), count)
-
-def recipe_count_metrics():
-    _recipe_count_metrics_for_query('all')
-    _recipe_count_metrics_for_query(
-            'dynamic_virt_possible',
-            MachineRecipe.query.filter(
-                MachineRecipe.virt_status == RecipeVirtStatus.possible)
-            )
-    _recipe_count_metrics_for_query_grouped(
-            'by_arch', Arch.arch,
-            MachineRecipe.query.join(DistroTree).join(Arch))
-
-
-# System utilisation
-def _system_count_metrics_for_query(name, query):
-    counts = utilisation.system_utilisation_counts(query)
-    for state, count in counts.iteritems():
-        if state != 'idle_removed':
-            metrics.measure('gauges.systems_%s.%s' % (state, name), count)
-
-def _system_count_metrics_for_query_grouped(name, grouping, query):
-    group_counts = utilisation.system_utilisation_counts_by_group(grouping, query)
-    for group, counts in group_counts.iteritems():
-        for state, count in counts.iteritems():
-            if state != 'idle_removed':
-                metrics.measure('gauges.systems_%s.%s.%s' % (state, name,
-                        group.replace('.', '_')), count)
-
-def system_count_metrics():
-    _system_count_metrics_for_query('all', System.query)
-    _system_count_metrics_for_query('shared', System.query
-            .outerjoin(System.active_access_policy)
-            .filter(SystemAccessPolicy.grants_everybody(SystemPermission.reserve)))
-    _system_count_metrics_for_query_grouped('by_arch', Arch.arch,
-            System.query.join(System.arch))
-    _system_count_metrics_for_query_grouped('by_lab', LabController.fqdn,
-            System.query.join(System.lab_controller))
-
-# System power commands
-def _system_command_metrics_for_query(name, query):
-    for status, count in Command.get_queue_stats(query).items():
-        metrics.measure('gauges.system_commands_%s.%s' % (status, name), count)
-
-def _system_command_metrics_for_query_grouped(name, grouping, query):
-    group_counts = Command.get_queue_stats_by_group(grouping, query)
-    for group, counts in group_counts.iteritems():
-        for status, count in counts.iteritems():
-            metrics.measure('gauges.system_commands_%s.%s.%s'
-                    % (status, name, group.replace('.', '_')), count)
-
-def system_command_metrics():
-    _system_command_metrics_for_query('all', Command.query)
-    _system_command_metrics_for_query_grouped('by_lab', LabController.fqdn,
-            Command.query.join(Command.system).join(System.lab_controller))
-    _system_command_metrics_for_query_grouped('by_arch', Arch.arch,
-            Command.query.join(Command.system).join(System.arch))
-    _system_command_metrics_for_query_grouped('by_power_type', PowerType.name,
-            Command.query.join(Command.system).join(System.power)
-                .join(Power.power_type))
-
-# Dirty jobs
-def dirty_job_metrics():
-    metrics.measure('gauges.dirty_jobs', Job.query.filter(Job.is_dirty).count())
-
-# These functions are run in separate threads, so we want to log any uncaught
-# exceptions instead of letting them be written to stderr and lost to the ether
-
-@log_traceback(log)
-def metrics_loop(*args, **kwargs):
-    # bind thread local session to reports_engine
-    metrics_session = create_session(bind=get_reports_engine())
-    session.registry.set(metrics_session)
-
-    while running:
-        start = time.time()
-        try:
-            session.begin()
-            recipe_count_metrics()
-            system_count_metrics()
-            dirty_job_metrics()
-            system_command_metrics()
-        except Exception:
-            log.exception('Exception in metrics loop')
-        finally:
-            session.close()
-        end = time.time()
-        duration = end - start
-        if duration >= 30.0:
-            log.debug("Metrics collection took %d seconds", duration)
-        time.sleep(max(30.0 - duration, 5.0))
-
 def _main_recipes():
     work_done = False
     if update_dirty_jobs():
@@ -774,12 +669,6 @@ def schedule():
                 ', '.join(m.name for m in _outstanding_data_migrations))
 
     interface.start(config)
-
-    if config.get('carbon.address'):
-        log.debug('starting metrics thread')
-        metrics_thread = threading.Thread(target=metrics_loop, name='metrics')
-        metrics_thread.daemon = True
-        metrics_thread.start()
 
     beakerd_threads = set(["main_recipes"])
 
