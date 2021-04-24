@@ -25,7 +25,7 @@ from bkr.log import log_to_stream
 from optparse import OptionParser
 from bkr.server.model import Job
 from bkr.server.util import load_config_or_exit
-from turbogears.database import session
+from bkr.server.database import session
 import logging
 
 try:

@@ -21,7 +21,7 @@ from sqlalchemy.orm import mapper, relationship, validates, synonym
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import not_, and_, or_, exists
 from turbogears.config import get
-from turbogears.database import session
+from bkr.server.database import session
 from turbogears import validators
 from formencode.api import Invalid
 from bkr.server.bexceptions import BX, NoChangeException

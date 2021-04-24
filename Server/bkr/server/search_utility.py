@@ -18,7 +18,7 @@ from sqlalchemy.sql.expression import true, false
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import aliased, joinedload
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server.model import Key as KeyModel
 from bkr.common.bexceptions import BeakerException
 import logging

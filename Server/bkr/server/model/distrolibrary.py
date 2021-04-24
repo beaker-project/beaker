@@ -17,7 +17,7 @@ from sqlalchemy.orm import (relationship, backref, dynamic_loader, synonym,
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.associationproxy import association_proxy
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server import identity
 from bkr.server.helpers import make_link
 from bkr.server.util import convert_db_lookup_error

@@ -21,7 +21,7 @@ from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
 from turbogears import expose, flash, widgets, validate, error_handler, paginate, url
 from turbogears import redirect, config
-from turbogears.database import session
+from bkr.server.database import session
 
 import bkr
 import bkr.server.rdf

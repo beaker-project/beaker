@@ -12,7 +12,7 @@ from flask import request, jsonify, redirect as flask_redirect
 from sqlalchemy import not_
 from sqlalchemy.exc import InvalidRequestError
 from turbogears import config
-from turbogears.database import session
+from bkr.server.database import session
 
 from bkr.common.bexceptions import BX
 from bkr.server import identity, dynamic_virt

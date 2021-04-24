@@ -4,7 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from turbogears.database import session
+from bkr.server.database import session
 from turbogears import expose, flash, widgets, error_handler, validators, redirect, paginate, url
 from bkr.server import identity
 from bkr.server.helpers import make_link, make_edit_link

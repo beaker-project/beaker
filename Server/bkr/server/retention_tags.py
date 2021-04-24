@@ -5,7 +5,7 @@
 # (at your option) any later version.
 
 from kid import XML
-from turbogears.database import session
+from bkr.server.database import session
 from turbogears import expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from bkr.server import identity
 from bkr.server.widgets import myPaginateDataGrid, HorizontalForm

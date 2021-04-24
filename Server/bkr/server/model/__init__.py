@@ -8,7 +8,7 @@ from datetime import datetime
 from sqlalchemy import Column, Integer, Unicode
 from sqlalchemy.sql import and_
 from sqlalchemy.orm import class_mapper, relationship, dynamic_loader
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server.bexceptions import BeakerException, BX, \
         StaleTaskStatusException, \
         InsufficientSystemPermissions, StaleSystemUserException, \

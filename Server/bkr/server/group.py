@@ -4,7 +4,7 @@
 # (at your option) any later version.
 
 from turbogears import expose, config
-from turbogears.database import session
+from bkr.server.database import session
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
 from flask import jsonify, request, redirect as flask_redirect

@@ -13,7 +13,7 @@ from sqlalchemy import and_, desc, not_
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm.exc import NoResultFound
 from turbogears import expose, controllers
-from turbogears.database import session
+from bkr.server.database import session
 
 from bkr.server import identity, mail
 from bkr.server.app import app

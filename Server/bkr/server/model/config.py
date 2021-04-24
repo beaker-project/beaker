@@ -9,7 +9,6 @@ from sqlalchemy import (Column, ForeignKey, Integer, Unicode, Boolean,
         DateTime, TEXT)
 from sqlalchemy.sql import and_
 from sqlalchemy.orm import relationship
-from turbogears.database import session
 from bkr.server import identity
 from bkr.server.bexceptions import BX
 from .base import DeclarativeMappedObject
