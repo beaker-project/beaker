@@ -7,8 +7,8 @@ linters:
     # E203: Whitespace before ':'
     # W503: Line break occurred before a binary operator
     ignore: "E203,W503"
-  black:
-    fixer: false
+  #black:
+  #  fixer: false
   csslint: {  }
   shellcheck:
     shell: bash
