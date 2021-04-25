@@ -441,10 +441,11 @@ chmod go-w %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 %doc Client/client.conf.example
 %if %{with python3}
 %{python3_sitelib}/bkr/client/
+%{python3_sitelib}/bkr/future/
 %{python3_sitelib}/%{name}_client-*-nspkg.pth
 %{python3_sitelib}/%{name}_client-*.egg-info/
 %else
-%{python2_sitelib}/bkr/client/
+%{python2_sitelib}/bkr/future/
 %{python2_sitelib}/beaker_client-*-nspkg.pth
 %{python2_sitelib}/beaker_client-*.egg-info/
 %endif
