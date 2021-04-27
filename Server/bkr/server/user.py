@@ -34,47 +34,6 @@ from bkr.server.xmlrpccontroller import RPCRoot
 log = logging.getLogger(__name__)
 
 
-class Users(RPCRoot):
-    # For XMLRPC methods in this class.
-    exposed = True
-
-    @cherrypy.expose
-    @identity.require(identity.in_group('admin'))
-    def remove_account(self, username, newowner=None):
-        """
-        Removes a Beaker user account. When the account is removed:
-
-        * it is removed from all groups and access policies
-        * any running jobs owned by the account are cancelled
-        * any systems reserved by or loaned to the account are returned
-        * any systems and system pools owned by the account are transferred to
-          the admin running this command, or some other user if specified using
-          the *newowner* parameter
-        * the account is disabled for further login
-
-        :param username: An existing username
-        :param newowner: An optional username to assign all systems to.
-        :type username: string
-        """
-        kwargs = {}
-
-        try:
-            user = User.by_user_name(username)
-        except InvalidRequestError:
-            raise BX(_('Invalid User %s ' % username))
-
-        if newowner:
-            owner = User.by_user_name(newowner)
-            if owner is None:
-                raise BX(_('Invalid user name for owner %s' % newowner))
-            kwargs['newowner'] = owner
-
-        if user.removed:
-            raise BX(_('User already removed %s' % username))
-
-        _remove(user=user, method='XMLRPC', **kwargs)
-
-
 def _disable(user, method,
              msg='Your account has been temporarily disabled'):
     # cancel all queued and running jobs
@@ -607,7 +566,3 @@ def delete_keystone_trust(username):
                          field=u'OpenStack Trust ID', action=u'Deleted',
                          old=old_trust_id)
     return '', 204
-
-
-# for sphinx
-users = Users
