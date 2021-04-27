@@ -65,7 +65,6 @@ from bkr.server.systems import SystemsController
 from bkr.server.tag import Tags
 from bkr.server.task_actions import TaskActions
 from bkr.server.tasks import Tasks
-from bkr.server.user import Users
 from bkr.server.util import absolute_url
 from bkr.server.widgets import TaskSearchForm, SearchBar, \
     SystemInstallOptions, \
@@ -155,7 +154,6 @@ class Root(RPCRoot):
     labcontrollers = LabControllers()
     distros = Distros()
     distrotrees = DistroTrees()
-    users = Users()
     arches = Arches()
     csv = CSV()
     jobs = Jobs()
