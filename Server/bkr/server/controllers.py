@@ -55,7 +55,6 @@ from bkr.server.model import (TaskBase, Device, System,
                               DistroTag)
 from bkr.server.needpropertyxml import XmlHost
 from bkr.server.osversion import OSVersions
-from bkr.server.preferences import Preferences
 from bkr.server.recipes import Recipes
 from bkr.server.recipesets import RecipeSets
 from bkr.server.reports import Reports
@@ -170,7 +169,6 @@ class Root(RPCRoot):
     retentiontag = RetentionTagController()
     system_action = SystemActionController()
     systems = SystemsController()
-    prefs = Preferences()
 
     for entry_point in pkg_resources.iter_entry_points('bkr.controllers'):
         controller = entry_point.load()
