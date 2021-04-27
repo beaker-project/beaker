@@ -696,7 +696,47 @@ def extend_watchdog(recipe_id):
     data = read_json_request(request)
     return _extend_watchdog(recipe_id, data)
 
-@app.route('/recipes/by-taskspec/<taskspec>/watchdog', methods=['POST'])
+
+def get_recipe_by_taskspec(taskspec):
+    """Get recipe identified by a taskspec.
+
+    The valid type of a taskspec is either R(recipe) or T(recipe-task).
+    See :ref:`Specifying tasks <taskspec>` in :manpage:`bkr(1)`.
+
+    :param taskspec: A taskspec argument that identifies a recipe or recipe task.
+    """
+    if not taskspec.startswith(("R", "T")):
+        raise BadRequest400("Taskspec type must be one of [R, T]")
+
+    try:
+        obj = TaskBase.get_by_t_id(taskspec)
+    except BeakerException as exc:
+        raise NotFound404(u"{}".format(exc))
+
+    if isinstance(obj, Recipe):
+        recipe = obj
+    else:
+        recipe = obj.recipe
+
+    recipe = _get_recipe_by_id(recipe.id)
+    return recipe
+
+
+@app.route("/recipes/by-taskspec/<taskspec>/watchdog", methods=["GET"])
+@auth_required
+def get_watchdog_by_taskspec(taskspec):
+    """
+    Get the watchdog for a recipe identified by a taskspec. The valid type
+    of a taskspec is either R(recipe) or T(recipe-task).
+    See :ref:`Specifying tasks <taskspec>` in :manpage:`bkr(1)`.
+
+    :param taskspec: A taskspec argument that identifies a recipe or recipe task.
+    """
+    recipe = get_recipe_by_taskspec(taskspec)
+    return jsonify({"seconds": recipe.status_watchdog()})
+
+
+@app.route("/recipes/by-taskspec/<taskspec>/watchdog", methods=["POST"])
 @auth_required
 def extend_watchdog_by_taskspec(taskspec):
     """
@@ -707,22 +747,35 @@ def extend_watchdog_by_taskspec(taskspec):
     :param taskspec: A taskspec argument that identifies a recipe or recipe task.
     :jsonparam string kill_time: Time in seconds to extend the watchdog by.
     """
-    if not taskspec.startswith(('R', 'T')):
-        raise BadRequest400('Taskspec type must be one of [R, T]')
-
-    try:
-        obj = TaskBase.get_by_t_id(taskspec)
-    except BeakerException as exc:
-        raise NotFound404(unicode(exc))
-
-    if isinstance(obj, Recipe):
-        recipe = obj
-    else:
-        recipe = obj.recipe
+    recipe = get_recipe_by_taskspec(taskspec)
     data = read_json_request(request)
     return _extend_watchdog(recipe.id, data)
 
-@app.route('/recipes/by-fqdn/<fqdn>/watchdog', methods=['POST'])
+
+def get_recipe_by_fqdn(fqdn):
+    """Get recipe identified by a FQDN."""
+    try:
+        recipe = Recipe.query.join(Recipe.watchdog, Recipe.resource)\
+            .filter(RecipeResource.fqdn == fqdn)\
+            .filter(Recipe.status == TaskStatus.running).one()
+    except NoResultFound:
+        raise NotFound404("Cannot find any recipe running on %s" % fqdn)
+    return recipe
+
+
+@app.route("/recipes/by-fqdn/<fqdn>/watchdog", methods=["GET"])
+@auth_required
+def get_watchdog_by_fqdn(fqdn):
+    """
+    Get the watchdog for a recipe that is running on the system.
+
+    :param fqdn: The system's fully-qualified domain name.
+    """
+    recipe = get_recipe_by_fqdn(fqdn)
+    return jsonify({"seconds": recipe.status_watchdog()})
+
+
+@app.route("/recipes/by-fqdn/<fqdn>/watchdog", methods=["POST"])
 @auth_required
 def extend_watchdog_by_fqdn(fqdn):
     """
@@ -731,12 +784,7 @@ def extend_watchdog_by_fqdn(fqdn):
     :param fqdn: The system's fully-qualified domain name.
     :jsonparam string kill_time: Time in seconds to extend the watchdog by.
     """
-    try:
-        recipe = Recipe.query.join(Recipe.watchdog, Recipe.resource)\
-            .filter(RecipeResource.fqdn == fqdn)\
-            .filter(Recipe.status == TaskStatus.running).one()
-    except NoResultFound:
-        raise NotFound404('Cannot find any recipe running on %s' % fqdn)
+    recipe = get_recipe_by_fqdn(fqdn)
     data = read_json_request(request)
     return _extend_watchdog(recipe.id, data)
 
