@@ -21,7 +21,7 @@ class PrefixedFlask(Flask):
 
 
 app = PrefixedFlask('bkr.server')
-CORS(app, vary_header=False)
+CORS(app, vary_header=False, supports_credentials=True)
 
 # Make flask.jsonify use TurboJson
 app.json_encoder = turbojson.jsonify.GenericJSON
