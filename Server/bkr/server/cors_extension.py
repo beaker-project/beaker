@@ -1,6 +1,9 @@
 """Flask-CORS extension"""
 import logging
-from urllib.parse import unquote_plus
+try:
+    from urllib.parse import unquote_plus
+except ImportError:
+    from urllib import unquote_plus
 
 from flask import request
 

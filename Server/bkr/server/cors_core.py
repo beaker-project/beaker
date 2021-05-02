@@ -2,7 +2,10 @@
 import re
 import logging
 
-from collections.abc import Iterable
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 from datetime import timedelta
 from flask import request, current_app
 from werkzeug.datastructures import Headers, MultiDict
