@@ -60,7 +60,7 @@ Getting further help
 ====================
 
 The best way to interact with Beaker developers and users is in the `#beaker 
-<irc://chat.freenode.net/beaker>`_ IRC channel on irc.freenode.net. The Beaker 
+<irc://irc.libera.chat/beaker>`_ IRC channel on irc.libera.chat. The Beaker 
 developers monitor this channel, and development discussions often happen 
 there.
 
