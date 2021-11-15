@@ -114,7 +114,7 @@ def default_install_options_for_distro(osmajor_name, osminor, variant, arch):
         del ks_meta['has_unsupported_hardware']
     # support for %onerror
     ks_meta['has_onerror'] = True
-    if rhel in ('5', '6'):
+    if rhel in ('5', '6') or (rhel == '7' and int(osminor) <= 3):
         del ks_meta['has_onerror']
 
     # mode
