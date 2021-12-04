@@ -27,7 +27,7 @@ data_files = [
     ('/var/lib/beaker', ['addDistro/addDistro.sh']),
     ('/var/lib/beaker/addDistro.d', glob('addDistro/addDistro.d/*')),
     ('/var/www/beaker/logs', []),
-    ('/usr/share/bkr/lab-controller', ['apache/404.html'] + glob('aux/*')),
+    ('/usr/share/bkr/lab-controller', ['apache/404.html'] + glob('extra/*')),
 ]
 if systemd_unit_dir():
     data_files.extend([
