@@ -10,6 +10,14 @@ if [ -e "/etc/default/grub" ] ; then
     sed --in-place=.orig -e '/^GRUB_SERIAL_COMMAND="serial/ {s/--unit=[0-9]\+//; s/"$/ --port={{ grubport }}"/}' /etc/default/grub
     for file in /boot/grub2/grub.cfg /boot/efi/EFI/redhat/grub.cfg ; do
         if [ -f "$file" ] && [ ! -L "$file" ] ; then
+            # Since Fedora 34, grub.cfg is unified to /boot/grub2/grub.cfg.
+            # /boot/efi/EFI/redhat/grub.cfg reads the unified config using
+            # 'configfile'.  So the file exists but should not be modified.
+            # https://fedoraproject.org/wiki/Changes/UnifyGrubConfig
+            # https://bugzilla.redhat.com/show_bug.cgi?id=1918817
+            if grep -q "configfile" "$file"; then
+                continue
+            fi
             grub2-mkconfig -o "$file"
         fi
     done
