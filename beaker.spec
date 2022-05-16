@@ -49,8 +49,7 @@ BuildArch:      noarch
 BuildRequires:  make
 %if %{with python3}
 BuildRequires:  python3-setuptools
-BuildRequires:  python3-nose
-BuildRequires:  python3-mock
+BuildRequires:  python3-pytest
 BuildRequires:  python3-devel
 BuildRequires:  python3-docutils
 BuildRequires:  python3-sphinx

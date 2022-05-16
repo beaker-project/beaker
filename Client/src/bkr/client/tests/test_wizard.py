@@ -5,10 +5,14 @@
 
 import unittest
 from datetime import date
-from mock import Mock, patch
 from six.moves import StringIO
 
 from bkr.client import wizard
+
+try:
+    from unittest.mock import Mock, patch
+except ImportError:
+    from mock import Mock, patch
 
 EXPECTED_GPL_HEADER = ("Copyright (c) %s %s.\n" %
                        (date.today().year, wizard.LICENSE_ORGANISATION))
