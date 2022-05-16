@@ -4,12 +4,12 @@ set -x
 
 # Use Python 2 version if BKR_PY3 is not defined
 if [[ -z ${BKR_PY3} ]]; then
-    nose_command="nosetests";
+    pytest_command="py.test-2";
 elif [[ ${BKR_PY3} == 1 ]]; then
-    nose_command="nosetests-3";
+    pytest_command="pytest-3";
 else
-    nose_command="nosetests";
+    pytest_command="py.test-2";
 fi
 
 env PYTHONPATH=../Client/src:../Common${PYTHONPATH:+:$PYTHONPATH} \
-    $nose_command ${*:--v --traverse-namespace bkr.client.tests}
+    $pytest_command
