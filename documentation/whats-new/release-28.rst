@@ -201,3 +201,14 @@ Beaker 28.2
      Get console logs raises exception for guest recipes.  Change
      made to not get console log if system name is not available.
   | (Contributed by `Carol Bouchard <https://github.com/cbouchar>`_)
+
+Beaker 28.3
+~~~~~~~~~~~
+* | `GH#141 <https://github.com/beaker-project/beaker/issues/141>`_:
+    Enable Beaker Client to build for CentOS 9 Stream. Python nose
+    was replaced with pytest.
+  | (Contributed by `Martin Styk <https://github.com/StykMartin>`_)
+* | `GH#143 <https://github.com/beaker-project/beaker/issues/143>`_:
+    Kickstart no longer contains `%onerror` section on RHEL <= 7.3
+    as it is not supported.
+  | (Contributed by `Matej Dujava <https://github.com/mdujava>`_)
