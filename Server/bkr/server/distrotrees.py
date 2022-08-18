@@ -228,9 +228,9 @@ gpgcheck=0
         Old URL will be replaced if new URL uses the same scheme
         """
         new_urls_by_scheme = dict(
-            (urlparse.urlparse(url, scheme=None).scheme, url) for url in urls)
-        if None in new_urls_by_scheme:
-            raise ValueError('URL %r is not absolute' % new_urls_by_scheme[None])
+            (urlparse.urlparse(url, scheme='invalid').scheme, url) for url in urls)
+        if 'invalid' in new_urls_by_scheme:
+            raise ValueError('URL %r is not absolute' % new_urls_by_scheme['invalid'])
         for lca in distro_tree.lab_controller_assocs:
             if lca.lab_controller == lab_controller:
                 scheme = urlparse.urlparse(lca.url).scheme
