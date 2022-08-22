@@ -32,6 +32,43 @@ def _get_url(available):
                      [url for lc, url in available])
 
 
+def _is_newer_distro(osmajor):
+    if ((osmajor == 'FedoraELN') or (osmajor == 'Fedorarawhide') or
+            (osmajor == 'FedoraRawhide')):
+        return True
+    split_str = re.split("(RedHatEnterpriseLinux|Fedora|CentOSStream)(\d+)", osmajor)  # noqa: W605
+    if (len(split_str) == 4):
+        if (((split_str[1] == 'RedHatEnterpriseLinux') and
+            (int(split_str[2]) > 8)) or
+           ((split_str[1] == 'Fedora') and
+            (int(split_str[2]) > 33)) or
+           ((split_str[1] == 'CentOSStream') and
+                (int(split_str[2]) > 8))):
+            return True
+    return False
+
+
+def _get_repo_prefix(osmajor):
+    """
+    Newer distros require prefix of 'inst.' to repo kernel variable
+    which ultimately results in inst.repo.
+    """
+    if (_is_newer_distro(osmajor)):
+        return 'inst.'
+    return ''
+
+
+def _get_method(osmajor, available):
+    """
+    Older distros use 'method' kernel variable which has been deprecated by
+    inst.repo in newer distros.
+    """
+    if (_is_newer_distro(osmajor)):
+        return ''
+    url = _get_url(available)
+    return 'method='+url
+
+
 def _group_distro_trees(distro_trees):
     grouped = {}
     for dt in distro_trees:
@@ -78,6 +115,8 @@ def _get_all_images(tftp_root, distro_trees):
 template_env = Environment(loader=PackageLoader('bkr.labcontroller', 'pxemenu-templates'),
                            trim_blocks=True)
 template_env.filters['get_url'] = _get_url
+template_env.filters['get_repo_prefix'] = _get_repo_prefix
+template_env.filters['get_method'] = _get_method
 
 
 def write_menu(menu, template_name, distro_trees):
