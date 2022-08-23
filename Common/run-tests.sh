@@ -2,14 +2,12 @@
 
 set -x
 
-# Use Python 2 version if BKR_PY3 is not defined
-if [[ -z ${BKR_PY3} ]]; then
-    pytest_command="py.test-2";
-elif [[ ${BKR_PY3} == 1 ]]; then
-    pytest_command="pytest-3";
+# if BKR_PY3 is not present and NOT python3
+if [[ -z ${BKR_PY3} ]] || [[ ${BKR_PY3} != 1 ]]; then
+    test_command="nosetests ${*:--v bkr}";
 else
-    pytest_command="py.test-2";
+    test_command="pytest-3";
 fi
 
-env PYTHONPATH=../Client/src:../Common${PYTHONPATH:+:$PYTHONPATH} \
-    $pytest_command
+env PYTHONPATH=../Client/src:../Common${PYTHONPATH:+:$PYTHONPATH} ${test_command}
+
