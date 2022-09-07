@@ -737,12 +737,14 @@ class Jobs(RPCRoot):
         tree_url = distro.find("tree").get("url")
         initrd_path = distro.find("initrd").get("url")
         kernel_path = distro.find("kernel").get("url")
+        image_path = distro.find("image").get("url") if distro.find("image") is not None else None
         osmajor = distro.find("osversion").get("major")
         osminor = distro.find("osversion").get("minor", "0")
         name = distro.find("name").get("value") if distro.find("name") is not None else None
         variant = distro.find("variant").get("value") if distro.find("variant") is not None else None
         return Installation(tree_url=tree_url, initrd_path=initrd_path, kernel_path=kernel_path,
-                            arch=arch, distro_name=name, osmajor=osmajor, osminor=osminor, variant=variant)
+                            arch=arch, distro_name=name, osmajor=osmajor, osminor=osminor,
+                            variant=variant, image_path=image_path)
 
     @expose('json')
     def update_recipe_set_response(self, recipe_set_id, response_id):

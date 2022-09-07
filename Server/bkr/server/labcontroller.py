@@ -449,6 +449,12 @@ class LabControllers(RPCRoot):
                     'initrd_url': urlparse.urljoin(distro_tree_url, installation.initrd_path),
                     'kernel_options': installation.kernel_options or '',
                 }
+                if installation.image_path:
+                    d["netboot"]["image_url"] = urlparse.urljoin(
+                        distro_tree_url, installation.image_path
+                    )
+                else:
+                    d['netboot']['image_url'] = None
                 if distro_tree:
                     d['netboot']['distro_tree_id'] = distro_tree.id
                 else:
