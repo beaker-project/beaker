@@ -61,6 +61,7 @@ class Installation(DeclarativeMappedObject):
     osmajor = Column(UnicodeText)
     osminor = Column(UnicodeText)
     variant = Column(UnicodeText)
+    image_path = Column(UnicodeText)
 
     def distro_to_xml(self):
         distro_xml = E.distro(
@@ -70,6 +71,8 @@ class Installation(DeclarativeMappedObject):
             E.arch(value=self.arch.arch),
             E.osversion(major=self.osmajor, minor=self.osminor)
         )
+        if self.image_path:
+            distro_xml.append(E.image(url=self.image_path))
         if self.distro_name:
             distro_xml.append(E.name(value=self.distro_name))
         if self.variant:
@@ -77,16 +80,35 @@ class Installation(DeclarativeMappedObject):
         return distro_xml
 
     def __repr__(self):
-        return ('%s(created=%r, system=%r, distro_tree=%r, kernel_options=%r, '
-                'rendered_kickstart=%r, rebooted=%r, install_started=%r, '
-                'install_finished=%r, postinstall_finished=%r, tree_url=%r,'
-                ' initrd_path=%r, kernel_path=%r, arch=%r, distro_name=%r, osmajor=%r, osminor=%r,'
-                ' variant=%r)' % (self.__class__.__name__, self.created, self.system,
-                self.distro_tree, self.kernel_options, self.rendered_kickstart,
-                self.rebooted, self.install_started, self.install_finished,
-                self.postinstall_finished, self.tree_url, self.initrd_path,
-                self.kernel_path, self.arch, self.distro_name, self.osmajor, self.osminor,
-                self.variant))
+        return (
+            "%s(created=%r, system=%r, distro_tree=%r, kernel_options=%r, "
+            "rendered_kickstart=%r, rebooted=%r, install_started=%r, "
+            "install_finished=%r, postinstall_finished=%r, tree_url=%r,"
+            " initrd_path=%r, kernel_path=%r, arch=%r, distro_name=%r,"
+            " osmajor=%r, osminor=%r, image_path=%r,"
+            " variant=%r)"
+            % (
+                self.__class__.__name__,
+                self.created,
+                self.system,
+                self.distro_tree,
+                self.kernel_options,
+                self.rendered_kickstart,
+                self.rebooted,
+                self.install_started,
+                self.install_finished,
+                self.postinstall_finished,
+                self.tree_url,
+                self.initrd_path,
+                self.kernel_path,
+                self.arch,
+                self.distro_name,
+                self.osmajor,
+                self.osminor,
+                self.image_path,
+                self.variant,
+            )
+        )
 
     def __json__(self):
         return {
@@ -102,6 +124,7 @@ class Installation(DeclarativeMappedObject):
             'tree_url': self.tree_url,
             'initrd_path': self.initrd_path,
             'kernel_path': self.kernel_path,
+            'image_path': self.image_path,
             'arch': self.arch,
             'distro_name': self.distro_name,
             'osmajor': self.osmajor,
