@@ -589,6 +589,15 @@ the Free Software Foundation; either version 2 of the License, or
       </a:documentation>
       <attribute name="url"/>
     </element>
+    <optional>
+      <element name="image">
+        <a:documentation xml:lang="en">
+          Location of the installer netboot image. May be specified as
+          an absolute URL or as a path relative to the installation tree URL.
+        </a:documentation>
+        <attribute name="url"/>
+      </element>
+    </optional>
     <element name="arch">
       <a:documentation xml:lang="en">
         CPU architecture that the distro is built for.

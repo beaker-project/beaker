@@ -228,7 +228,8 @@ def handle_configure_netboot(command):
                           command['netboot']['distro_tree_id'],
                           command['netboot']['kernel_url'],
                           command['netboot']['initrd_url'],
-                          command['netboot']['kernel_options'])
+                          command['netboot']['kernel_options'],
+                          command['netboot']['image_url'])
 
 def handle_clear_netboot(command):
     netboot.clear_all(command['fqdn'])
