@@ -102,6 +102,16 @@ def copy_default_loader_images():
             '/usr/share/syslinux/menu.c32')
 
 
+def fetch_bootloader_image(fqdn, fqdn_dir, distro_tree_id, image_url):
+    timeout = get_conf().get('IMAGE_FETCH_TIMEOUT')
+    logger.debug('Fetching bootloader image %s for %s', image_url, fqdn)
+    with atomically_replaced_file(os.path.join(fqdn_dir, 'image')) as dest:
+        try:
+            siphon(urllib2.urlopen(image_url, timeout=timeout), dest)
+        except Exception as e:
+            raise ImageFetchingError(image_url, distro_tree_id, e)
+
+
 def fetch_images(distro_tree_id, kernel_url, initrd_url, fqdn):
     """
     Creates references to kernel and initrd files at:
@@ -181,12 +191,13 @@ def extract_arg(arg, kernel_options):
 
 def configure_grub2(fqdn, default_config_loc,
                     config_file, kernel_options, devicetree=''):
+    grub2_postfix, kernel_options = extract_arg('grub2_postfix=', kernel_options)
     config = """\
-linux  /images/%s/kernel %s netboot_method=grub2
-initrd /images/%s/initrd
+linux%s  /images/%s/kernel %s netboot_method=grub2
+initrd%s /images/%s/initrd
 %s
 boot
-""" % (fqdn, kernel_options, fqdn, devicetree)
+""" % (grub2_postfix or '', fqdn, kernel_options, grub2_postfix or '', fqdn, devicetree)
     with atomically_replaced_file(config_file) as f:
         f.write(config)
     # We also ensure a default config exists that exits
@@ -203,17 +214,28 @@ def configure_aarch64(fqdn, kernel_options, basedir):
     Creates PXE bootloader files for aarch64 Linux
 
     <get_tftp_root()>/aarch64/grub.cfg-<pxe_basename(fqdn)>
+    <get_tftp_root()>/EFI/BOOT/grub.cfg-<pxe_basename(fqdn)>
+    <get_tftp_root()>/EFI/BOOT/grub.cfg
     """
+    grub2_conf = "grub.cfg-%s" % pxe_basename(fqdn)
     pxe_base = os.path.join(basedir, 'aarch64')
     makedirs_ignore(pxe_base, mode=0o755)
+
+    efi_conf_dir = os.path.join(basedir, 'EFI', 'BOOT')
+    makedirs_ignore(efi_conf_dir, mode=0o755)
+
     devicetree, kernel_options = extract_arg('devicetree=', kernel_options)
     if devicetree:
         devicetree = 'devicetree %s' % devicetree
     else:
         devicetree = ''
-    basename = "grub.cfg-%s" % pxe_basename(fqdn)
-    logger.debug('Writing aarch64 config for %s as %s', fqdn, basename)
-    grub_cfg_file = os.path.join(pxe_base, basename)
+
+    grub_cfg_file = os.path.join(efi_conf_dir, grub2_conf)
+    logger.debug('Writing aarch64 config for %s as %s', fqdn, grub_cfg_file)
+    configure_grub2(fqdn, efi_conf_dir, grub_cfg_file, kernel_options, devicetree)
+
+    grub_cfg_file = os.path.join(pxe_base, grub2_conf)
+    logger.debug('Writing aarch64 config for %s as %s', fqdn, grub_cfg_file)
     configure_grub2(fqdn, pxe_base, grub_cfg_file, kernel_options, devicetree)
 
 
@@ -356,7 +378,7 @@ def configure_ipxe(fqdn, kernel_options, basedir):
     <get_tftp_root()>/ipxe/default
     """
     ipxe_dir = os.path.join(basedir, 'ipxe')
-    makedirs_ignore(ipxe_dir, mode=0755)
+    makedirs_ignore(ipxe_dir, mode=0o755)
 
     basename = pxe_basename(fqdn).lower()
     # Unfortunately the initrd kernel arg needs some special handling. It can be
@@ -580,15 +602,24 @@ def configure_x86_64(fqdn, kernel_options, basedir):
     Calls configure_grub2() to create the machine config files to GRUB2
     boot loader.
 
+    <get_tftp_root()>/EFI/BOOT/grub.cfg-<pxe_basename(fqdn)>
+    <get_tftp_root()>/EFI/BOOT/grub.cfg
     <get_tftp_root()>/x86_64/grub.cfg-<pxe_basename(fqdn)>
     <get_tftp_root()>/x86_64/grub.cfg
     <get_tftp_root()>/boot/grub2/grub.cfg-<pxe_basename(fqdn)>
     <get_tftp_root()>/boot/grub2/grub.cfg
     """
-    x86_64_dir = os.path.join(basedir, 'x86_64')
-    makedirs_ignore(x86_64_dir, mode=0o755)
+
     grub2_conf = "grub.cfg-%s" % pxe_basename(fqdn)
 
+    efi_conf_dir = os.path.join(basedir, 'EFI', 'BOOT')
+    makedirs_ignore(efi_conf_dir, mode=0o755)
+    grub_cfg_file = os.path.join(efi_conf_dir, grub2_conf)
+    logger.debug('Writing grub2/x86_64 config for %s as %s', fqdn, grub_cfg_file)
+    configure_grub2(fqdn, efi_conf_dir, grub_cfg_file, kernel_options)
+
+    x86_64_dir = os.path.join(basedir, 'x86_64')
+    makedirs_ignore(x86_64_dir, mode=0o755)
     grub_cfg_file = os.path.join(x86_64_dir, grub2_conf)
     logger.debug('Writing grub2/x86_64 config for %s as %s', fqdn, grub_cfg_file)
     configure_grub2(fqdn, x86_64_dir, grub_cfg_file, kernel_options)
@@ -768,22 +799,14 @@ add_bootloader("petitboot", configure_petitboot, clear_petitboot)
 
 
 # Custom bootloader stuff
-def configure_netbootloader_directory(fqdn, kernel_options, netbootloader):
-    tftp_root = get_tftp_root()
-    if netbootloader:
-        fqdn_dir = os.path.join(tftp_root, 'bootloader', fqdn)
-        logger.debug('Creating custom netbootloader tree for %s in %s', fqdn, fqdn_dir)
-        makedirs_ignore(fqdn_dir, mode=0o755)
-        grub2_cfg_file = os.path.join(fqdn_dir, 'grub.cfg-%s'%pxe_basename(fqdn))
-        configure_grub2(fqdn, fqdn_dir, grub2_cfg_file, kernel_options)
-        configure_pxelinux(fqdn, kernel_options, fqdn_dir, symlink=True)
-        configure_ipxe(fqdn, kernel_options, fqdn_dir)
-        configure_yaboot(fqdn, kernel_options, fqdn_dir, yaboot_symlink=False)
-
-        # create the symlink to the specified bootloader w.r.t the tftp_root
-        if netbootloader.startswith('/'):
-            netbootloader = netbootloader.lstrip('/')
-        atomic_symlink(os.path.join('../../', netbootloader), os.path.join(fqdn_dir, 'image'))
+def configure_netbootloader_directory(fqdn, fqdn_dir, kernel_options):
+    logger.debug('Creating custom netbootloader tree for %s in %s', fqdn, fqdn_dir)
+    makedirs_ignore(fqdn_dir, mode=0o755)
+    grub2_cfg_file = os.path.join(fqdn_dir, 'grub.cfg-%s' % pxe_basename(fqdn))
+    configure_grub2(fqdn, fqdn_dir, grub2_cfg_file, kernel_options)
+    configure_pxelinux(fqdn, kernel_options, fqdn_dir, symlink=True)
+    configure_ipxe(fqdn, kernel_options, fqdn_dir)
+    configure_yaboot(fqdn, kernel_options, fqdn_dir, yaboot_symlink=False)
 
 
 def clear_netbootloader_directory(fqdn):
@@ -798,7 +821,8 @@ def clear_netbootloader_directory(fqdn):
 
 
 def configure_all(fqdn, arch, distro_tree_id,
-                  kernel_url, initrd_url, kernel_options, basedir=None):
+                  kernel_url, initrd_url, kernel_options,
+                  image_url, basedir=None):
     """Configure images and all bootloader files for given fqdn"""
     fetch_images(distro_tree_id, kernel_url, initrd_url, fqdn)
     if not basedir:
@@ -812,7 +836,23 @@ def configure_all(fqdn, arch, distro_tree_id,
         bootloader.configure(fqdn, kernel_options, basedir)
     if arch == 's390' or arch == 's390x':
         configure_zpxe(fqdn, kernel_url, initrd_url, kernel_options, basedir)
-    configure_netbootloader_directory(fqdn, kernel_options, netbootloader)
+
+    # Custom boot loader code
+    tftp_root = get_tftp_root()
+    fqdn_dir = os.path.join(tftp_root, 'bootloader', fqdn)
+
+    if image_url or netbootloader:
+        configure_netbootloader_directory(fqdn, fqdn_dir, kernel_options)
+
+        if image_url:
+            fetch_bootloader_image(fqdn, fqdn_dir, distro_tree_id, image_url)
+        else:
+            # create the symlink to the specified bootloader w.r.t the tftp_root
+            if netbootloader.startswith("/"):
+                netbootloader = netbootloader.lstrip("/")
+            atomic_symlink(
+                os.path.join("../../", netbootloader), os.path.join(fqdn_dir, "image")
+            )
 
 
 def clear_all(fqdn, basedir=None):
