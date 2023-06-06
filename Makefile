@@ -36,5 +36,5 @@ deps:
 	sudo $(DEPCMD) -y beaker.spec
 
 submods:
-	git submodules init
-	git submodules update
+	git submodule init
+	git submodule update
