@@ -138,6 +138,9 @@ class Job_Results(BeakerCommand):
                     self.parser.error('JUnit XML format is only available for jobs')
                 response = requests_session.get('jobs/%s.junit.xml' % id)
                 response.raise_for_status()
-                print(response.content)
+                str_xml = response.content
+                if six.PY3:
+                    str_xml = str_xml.decode('utf-8')
+                print(str_xml)
             else:
                 raise RuntimeError('Format %s not implemented' % format)
