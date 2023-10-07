@@ -433,6 +433,19 @@ the Free Software Foundation; either version 2 of the License, or
             task must exist in Beaker's task library.
           </a:documentation>
         </attribute>
+	<optional>
+	  <attribute name="keepchanges">
+	    <a:documentation xml:lang="en">
+	      Enable the Restraint keepchanges feature.
+	    </a:documentation>
+	  </attribute>
+	  <attribute name="fetch_opts">
+	    <a:documentation xml:lang="en">
+	      Restraint fetch options, e.g:
+                fetch_opts="retry=8,timeo=16,abort-recipe-on-fetch-fail"
+                fetch_opts="retry=8,keepchanges"
+	    </a:documentation>
+	</optional>
         <group>
           <element name="fetch">
             <attribute name="url">
