@@ -453,6 +453,11 @@ the Free Software Foundation; either version 2 of the License, or
                   the task is at the root of the archive.
                 </a:documentation>
               </attribute>
+              <attribute name="retry">
+                <a:documentation xml:lang="en">
+                  Max retry number before give up fetching.
+                </a:documentation>
+              </attribute>
             </optional>
           </element>
           <optional>

@@ -464,7 +464,8 @@ task =
               "                "
             ]
           ]
-          attribute subdir { text }?
+          attribute subdir { text }?,
+          attribute retry { text }?
         },
         [
           a:documentation [
