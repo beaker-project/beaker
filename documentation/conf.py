@@ -65,7 +65,7 @@ intersphinx_mapping = {'python': ('http://docs.python.org/', None),
                        'beakerdev': ('http://beaker-project.org/dev', None),
                       }
 extlinks = {
-    'issue': ('https://bugzilla.redhat.com/show_bug.cgi?id=%s', '#'),
+    'issue': ('https://bugzilla.redhat.com/show_bug.cgi?id=%s', '#%s'),
 }
 
 if six.PY3:
