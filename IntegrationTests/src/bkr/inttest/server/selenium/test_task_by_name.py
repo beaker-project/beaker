@@ -24,10 +24,10 @@ class TaskByName(WebDriverTestCase):
         task_name = self.my_task.name
 
         b.get(get_server_base() + 'tasks%s' % task_name)
-        self.assert_('Task %s' % task_name in b.find_element_by_xpath('//body').text)
+        self.assertTrue('Task %s' % task_name in b.find_element_by_xpath('//body').text)
 
         b.get(get_server_base() + 'tasks/%s' % task_id)
-        self.assert_('Task %s' % task_name in b.find_element_by_xpath('//body').text)
+        self.assertTrue('Task %s' % task_name in b.find_element_by_xpath('//body').text)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1614171
     def test_task_404_by_name(self):

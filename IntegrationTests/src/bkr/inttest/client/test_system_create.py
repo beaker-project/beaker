@@ -63,14 +63,14 @@ class CreateSystem(ClientTestCase):
                     fqdn])
         with session.begin():
             system = System.by_fqdn(fqdn, User.by_user_name(u'admin'))
-            self.assertEquals(system.power.power_type, PowerType.by_name(u'apc_snmp_then_etherwake'))
-            self.assertEquals(system.power.power_address, u'dummyaddress')
-            self.assertEquals(system.power.power_user, u'dummyuser')
-            self.assertEquals(system.power.power_passwd, u'dummypassword')
-            self.assertEquals(system.power.power_id, u'dummyvm')
-            self.assertEquals(system.power.power_quiescent_period, 5)
-            self.assertEquals(system.release_action, ReleaseAction.leave_on)
-            self.assertEquals(system.reprovision_distro_tree, distro_tree)
+            self.assertEqual(system.power.power_type, PowerType.by_name(u'apc_snmp_then_etherwake'))
+            self.assertEqual(system.power.power_address, u'dummyaddress')
+            self.assertEqual(system.power.power_user, u'dummyuser')
+            self.assertEqual(system.power.power_passwd, u'dummypassword')
+            self.assertEqual(system.power.power_id, u'dummyvm')
+            self.assertEqual(system.power.power_quiescent_period, 5)
+            self.assertEqual(system.release_action, ReleaseAction.leave_on)
+            self.assertEqual(system.reprovision_distro_tree, distro_tree)
 
     def test_create_system_set_host_hypervisor(self):
         fqdn = data_setup.unique_name(u'mysystem%s')
@@ -78,8 +78,8 @@ class CreateSystem(ClientTestCase):
                     '--host-hypervisor=KVM'])
         with session.begin():
             system = System.by_fqdn(fqdn, User.by_user_name(u'admin'))
-            self.assertEquals(str(system.hypervisor), u'KVM')
-            self.assertEquals(system.activity[0].new_value, u'KVM')
+            self.assertEqual(str(system.hypervisor), u'KVM')
+            self.assertEqual(system.activity[0].new_value, u'KVM')
 
     def test_create_system_set_condition(self):
         fqdn = data_setup.unique_name(u'mysystem%s')
@@ -91,4 +91,4 @@ class CreateSystem(ClientTestCase):
         with session.begin():
             system = System.by_fqdn(fqdn, User.by_user_name(u'admin'))
             self.assertTrue(system.lab_controller, lc)
-            self.assertEquals(str(system.status), u'Automated')
+            self.assertEqual(str(system.status), u'Automated')

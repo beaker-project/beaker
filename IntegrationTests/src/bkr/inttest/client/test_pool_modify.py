@@ -37,7 +37,7 @@ class PoolModifyTest(ClientTestCase):
                     pool.name])
         with session.begin():
             session.refresh(pool)
-            self.assertEquals(pool.name, new_name)
+            self.assertEqual(pool.name, new_name)
 
         # rename to an existing pool will error out
         try:
@@ -57,7 +57,7 @@ class PoolModifyTest(ClientTestCase):
                     pool.name])
         with session.begin():
             session.refresh(pool)
-            self.assertEquals(pool.description, 'Oh my pool')
+            self.assertEqual(pool.description, 'Oh my pool')
 
     def test_pool_change_owner_to_group(self):
         with session.begin():

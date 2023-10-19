@@ -6,6 +6,7 @@
 
 import datetime
 from collections import namedtuple
+from six import assertRaisesRegex
 from bkr.server.model import session, System, SystemType, SystemStatus, Cpu, \
         Arch, Numa, Key, Key_Value_String, Key_Value_Int, Disk
 from bkr.server.needpropertyxml import XmlHost
@@ -181,7 +182,7 @@ class SystemFilteringTest(DatabaseTestCase):
             present=[sys_today1, sys_today2], absent=[sys_tomorrow])
 
         # on a date time
-        with self.assertRaisesRegexp(ValueError, 'Invalid date format'):
+        with assertRaisesRegex(self, ValueError, 'Invalid date format'):
             self.check_filter("""
                 <hostRequires>
                     <system><added op="=" value="%s" /></system>
@@ -259,7 +260,7 @@ class SystemFilteringTest(DatabaseTestCase):
                 present=[inv3], absent=[not_inv, inv1, inv2])
 
         # Invalid date with &gt;
-        with self.assertRaisesRegexp(ValueError, 'Invalid date format'):
+        with assertRaisesRegex(self, ValueError, 'Invalid date format'):
             self.check_filter("""
                 <hostRequires>
                     <system> <last_inventoried op="&gt;" value="foo-bar-baz f:b:z" /> </system>
@@ -267,7 +268,7 @@ class SystemFilteringTest(DatabaseTestCase):
                 """)
 
         # Invalid date format with =
-        with self.assertRaisesRegexp(ValueError, 'Invalid date format'):
+        with assertRaisesRegex(self, ValueError, 'Invalid date format'):
             self.check_filter("""
                 <hostRequires>
                     <system> <last_inventoried op="=" value="2013-10-10 00:00:10" /> </system>
@@ -662,11 +663,11 @@ class SystemFilteringTest(DatabaseTestCase):
             </hostRequires>
             """ % system.fqdn
         query = XmlHost.from_string(filter).apply_filter(System.query)
-        self.assertEquals(len(query.all()), 1)
+        self.assertEqual(len(query.all()), 1)
         # with the bug this count comes out as 3 instead of 1,
         # which doesn't sound so bad...
         # but when it's 926127 instead of 278, that's bad
-        self.assertEquals(query.count(), 1)
+        self.assertEqual(query.count(), 1)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1183239
     def test_arch_inside_or(self):
@@ -686,11 +687,11 @@ class SystemFilteringTest(DatabaseTestCase):
             </hostRequires>
             """
         query = XmlHost.from_string(filter).apply_filter(System.query)
-        self.assertEquals(len(query.all()), 1)
+        self.assertEqual(len(query.all()), 1)
         # with the bug this count comes out as 2 instead of 1,
         # which doesn't sound so bad...
         # but when it's 30575826 instead of 4131, that's bad
-        self.assertEquals(query.count(), 1)
+        self.assertEqual(query.count(), 1)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=824050
     def test_multiple_nonexistent_keys(self):
@@ -1344,7 +1345,7 @@ class VirtualisabilityTestCase(DatabaseTestCase):
 
     def check_filter(self, filterxml, virtualisable_expected):
         result = XmlHost.from_string(filterxml).virtualisable()
-        self.assertEquals(result, virtualisable_expected)
+        self.assertEqual(result, virtualisable_expected)
 
     def test_not_virtualisable_by_default(self):
         # There are a lot of host requirements which can never be satisfied by 

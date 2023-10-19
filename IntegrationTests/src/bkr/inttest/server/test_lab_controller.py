@@ -20,4 +20,4 @@ class TestLabController(DatabaseTestCase):
             system = data_setup.create_system(private=True)
         lab_controller_user = LabController.by_name(self.lc_fqdn).user
         system2 = System.by_fqdn(str(system.fqdn), user=lab_controller_user)
-        self.assertEquals(system, system2)
+        self.assertEqual(system, system2)

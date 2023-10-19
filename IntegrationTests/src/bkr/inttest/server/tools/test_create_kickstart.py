@@ -73,7 +73,7 @@ class CreateKickstartTest(DatabaseTestCase):
 
     def test_version(self):
         out = run_command('create_kickstart.py', 'beaker-create-kickstart', ['--version'])
-        self.assertEquals(out.strip(), __version__)
+        self.assertEqual(out.strip(), __version__)
 
     def test_nonexistent_recipe_id(self):
         try:

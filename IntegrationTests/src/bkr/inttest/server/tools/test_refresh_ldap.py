@@ -22,7 +22,7 @@ class RefreshLdapTest(DatabaseTestCase):
 
     def test_version(self):
         out = run_command('refresh_ldap.py', 'beaker-refresh-ldap', ['--version'])
-        self.assertEquals(out.strip(), __version__)
+        self.assertEqual(out.strip(), __version__)
 
     def test_refresh_ldap_group_membership(self):
         """
@@ -39,9 +39,9 @@ class RefreshLdapTest(DatabaseTestCase):
         run_command('refresh_ldap.py', 'beaker-refresh-ldap')
         with session.begin():
             session.expire_all()
-            self.assertEquals(group.users, [User.by_user_name(u'jgillard')])
+            self.assertEqual(group.users, [User.by_user_name(u'jgillard')])
         # second time is a no-op
         run_command('refresh_ldap.py', 'beaker-refresh-ldap')
         with session.begin():
             session.expire_all()
-            self.assertEquals(group.users, [User.by_user_name(u'jgillard')])
+            self.assertEqual(group.users, [User.by_user_name(u'jgillard')])

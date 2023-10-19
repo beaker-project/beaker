@@ -28,30 +28,30 @@ class TaskDetailsTest(ClientTestCase):
         out = run_client(['bkr', 'task-details', '--xml', task.name])
 
         task_elem = lxml.etree.fromstring(re.sub(task.name, '', out, count=1))
-        self.assert_(task_elem.get('version') == task.version)
-        self.assert_(task_elem.get('nda')  == task.nda or 'False')
-        self.assert_(task_elem.get('name') == task.name)
-        self.assert_(task_elem.get('destructive') == task.destructive or 'False')
-        self.assert_(task_elem.find('description').text == task.description)
-        self.assert_(task_elem.find('owner').text == task.owner)
-        self.assert_(task_elem.find('path').text == task.path)
+        self.assertTrue(task_elem.get('version') == task.version)
+        self.assertTrue(task_elem.get('nda')  == task.nda or 'False')
+        self.assertTrue(task_elem.get('name') == task.name)
+        self.assertTrue(task_elem.get('destructive') == task.destructive or 'False')
+        self.assertTrue(task_elem.find('description').text == task.description)
+        self.assertTrue(task_elem.find('owner').text == task.owner)
+        self.assertTrue(task_elem.find('path').text == task.path)
 
-        self.assert_(len(task_elem.xpath("types/type[text()='type3']")) == 1)
-        self.assert_(len(task_elem.xpath("types/type[text()='type4']")) == 1)
-        self.assert_(len(task_elem.xpath("requires/package[text()='Tofudebeast']")) == 1)
-        self.assert_(len(task_elem.xpath("requires/package[text()='2+2']")) == 1)
-        self.assert_(len(task_elem.xpath("runFor/package[text()='philip']")) == 1)
-        self.assert_(len(task_elem.xpath("runFor/package[text()='bradley']")) == 1)
-        self.assert_(len(task_elem.xpath("excludedDistroFamilies/distroFamily[text()='MajorFoo']")) == 1)
-        self.assert_(len(task_elem.xpath("excludedDistroFamilies/distroFamily[text()='WunderFooBar']")) == 1)
-        self.assert_(len(task_elem.xpath("excludedArches/arch[text()='i386']")) == 1)
-        self.assert_(len(task_elem.xpath("excludedArches/arch[text()='ppc']")) == 1)
+        self.assertTrue(len(task_elem.xpath("types/type[text()='type3']")) == 1)
+        self.assertTrue(len(task_elem.xpath("types/type[text()='type4']")) == 1)
+        self.assertTrue(len(task_elem.xpath("requires/package[text()='Tofudebeast']")) == 1)
+        self.assertTrue(len(task_elem.xpath("requires/package[text()='2+2']")) == 1)
+        self.assertTrue(len(task_elem.xpath("runFor/package[text()='philip']")) == 1)
+        self.assertTrue(len(task_elem.xpath("runFor/package[text()='bradley']")) == 1)
+        self.assertTrue(len(task_elem.xpath("excludedDistroFamilies/distroFamily[text()='MajorFoo']")) == 1)
+        self.assertTrue(len(task_elem.xpath("excludedDistroFamilies/distroFamily[text()='WunderFooBar']")) == 1)
+        self.assertTrue(len(task_elem.xpath("excludedArches/arch[text()='i386']")) == 1)
+        self.assertTrue(len(task_elem.xpath("excludedArches/arch[text()='ppc']")) == 1)
 
         # pretty xml
         pretty_out = run_client(['bkr', 'task-details', '--prettyxml', task.name])
         pretty_minus_leading_name = re.sub(task.name, '', pretty_out, count=1)
         task_elem_pretty = lxml.etree.tostring(task_elem, pretty_print=True, encoding='utf8')
-        self.assert_(task_elem_pretty.strip() == pretty_minus_leading_name.strip())
+        self.assertTrue(task_elem_pretty.strip() == pretty_minus_leading_name.strip())
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=624417
     def test_details_include_owner_and_priority(self):
@@ -60,8 +60,8 @@ class TaskDetailsTest(ClientTestCase):
             task = data_setup.create_task(owner=owner, priority=u'Low')
         out = run_client(['bkr', 'task-details', task.name])
         details = eval(out[len(task.name) + 1:]) # XXX dodgy
-        self.assertEquals(details['owner'], owner)
-        self.assertEquals(details['priority'], u'Low')
+        self.assertEqual(details['owner'], owner)
+        self.assertEqual(details['priority'], u'Low')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=624417
     def test_details_without_owner(self):
@@ -73,7 +73,7 @@ class TaskDetailsTest(ClientTestCase):
             task.owner = u''
         out = run_client(['bkr', 'task-details', task.name])
         details = eval(out[len(task.name) + 1:]) # XXX dodgy
-        self.assertEquals(details['owner'], '')
+        self.assertEqual(details['owner'], '')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=624417
     def test_details_without_uploader(self):
@@ -83,7 +83,7 @@ class TaskDetailsTest(ClientTestCase):
             task.uploader = None
         out = run_client(['bkr', 'task-details', task.name])
         details = eval(out[len(task.name) + 1:]) # XXX dodgy
-        self.assertEquals(details['uploader'], None)
+        self.assertEqual(details['uploader'], None)
 
     def test_details_invalid_tasks(self):
         with session.begin():
@@ -91,7 +91,7 @@ class TaskDetailsTest(ClientTestCase):
             task.uploader = None
         out = run_client(['bkr', 'task-details', '--invalid', task.name])
         details = eval(out[len(task.name) + 1:]) # XXX dodgy
-        self.assertEquals(details['name'], 'invalid_task')
+        self.assertEqual(details['name'], 'invalid_task')
 
     def test_details_without_destructive(self):
         with session.begin():
@@ -99,13 +99,13 @@ class TaskDetailsTest(ClientTestCase):
             task.destructive = None
         out = run_client(['bkr', 'task-details', task.name])
         details = eval(out[len(task.name) + 1:]) # XXX dodgy
-        self.assertEquals(details['destructive'], None)
+        self.assertEqual(details['destructive'], None)
 
         # output in xml format
         out = run_client(['bkr', 'task-details', '--xml', task.name])
 
         task_elem = lxml.etree.fromstring(re.sub(task.name, '', out, count=1))
-        self.assert_(task_elem.get('destructive') == None)
+        self.assertTrue(task_elem.get('destructive') == None)
 
     def test_details_without_nda(self):
         with session.begin():
@@ -113,13 +113,13 @@ class TaskDetailsTest(ClientTestCase):
             task.nda = None
         out = run_client(['bkr', 'task-details', task.name])
         details = eval(out[len(task.name) + 1:]) # XXX dodgy
-        self.assertEquals(details['nda'], None)
+        self.assertEqual(details['nda'], None)
 
         # output in xml format
         out = run_client(['bkr', 'task-details', '--xml', task.name])
 
         task_elem = lxml.etree.fromstring(re.sub(task.name, '', out, count=1))
-        self.assert_(task_elem.get('nda') == None)
+        self.assertTrue(task_elem.get('nda') == None)
 
     def test_details_nonexistent_task(self):
         try:

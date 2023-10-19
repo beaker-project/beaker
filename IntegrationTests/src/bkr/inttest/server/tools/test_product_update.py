@@ -27,7 +27,7 @@ class ProductUpdateTest(DatabaseTestCase):
 
     def test_version(self):
         out = run_command('product_update.py', 'product-update', ['--version'])
-        self.assertEquals(out.strip(), __version__)
+        self.assertEqual(out.strip(), __version__)
 
     def test_errors_out_if_file_not_specified(self):
         try:
@@ -86,8 +86,8 @@ class ProductUpdateTest(DatabaseTestCase):
         xml_file.flush()
         run_command('product_update.py', 'product-update', ['-f', xml_file.name])
         with session.begin():
-            self.assertEquals(Product.query.filter(Product.name == u'').count(), 0)
-            self.assertEquals(Product.query.filter(Product.name == u'None').count(), 0)
+            self.assertEqual(Product.query.filter(Product.name == u'').count(), 0)
+            self.assertEqual(Product.query.filter(Product.name == u'None').count(), 0)
 
     def test_loads_cpe_identifiers_from_xml_url(self):
         with open(os.path.join(self.product_docroot, 'product.xml'), 'wb') as xml_file:

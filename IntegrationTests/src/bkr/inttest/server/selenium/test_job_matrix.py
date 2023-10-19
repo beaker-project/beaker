@@ -42,7 +42,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         b.get(get_server_base() + 'matrix')
         b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % whiteboard).click()
         b.find_element_by_xpath('//button[@type="submit" and text()="Generate"]').click()
-        self.failUnless(is_text_present(b, "Your whiteboard contains %d jobs, only %s will be used" % (c, Job.max_by_whiteboard)))
+        self.assertTrue(is_text_present(b, "Your whiteboard contains %d jobs, only %s will be used" % (c, Job.max_by_whiteboard)))
 
     def test_whiteboard_filtering(self):
         whiteboard = u'Colonel Tear Won'
@@ -85,7 +85,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         whiteboard_options = b.find_element_by_xpath("//select[@name='whiteboard']").text
 
         # Confirm the whitebaoard is there before we delete it
-        self.assert_(self.passed_job.whiteboard in whiteboard_options)
+        self.assertTrue(self.passed_job.whiteboard in whiteboard_options)
 
         #Now delete the only job with that whiteboard
         with session.begin():
@@ -94,7 +94,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         # Confirm it is no longer there
         b.get(get_server_base() + 'matrix')
         whiteboard_options = b.find_element_by_xpath("//select[@name='whiteboard']").text
-        self.assert_(self.passed_job.whiteboard not in whiteboard_options)
+        self.assertTrue(self.passed_job.whiteboard not in whiteboard_options)
 
     def test_deleted_job_results_not_shown(self):
         with session.begin():
@@ -112,7 +112,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % self.job_whiteboard).click()
         b.find_element_by_xpath('//button[@type="submit" and text()="Generate"]').click()
         report_text = b.find_element_by_xpath("//div[@id='matrix-report']").text
-        self.assert_('Pass: 1' in report_text)
+        self.assertTrue('Pass: 1' in report_text)
 
         # Delete Job
         with session.begin():
@@ -123,7 +123,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % self.job_whiteboard).click()
         b.find_element_by_xpath('//button[@type="submit" and text()="Generate"]').click()
         report_text = b.find_element_by_xpath("//div[@id='matrix-report']").text
-        self.assert_('Pass: 1' not in report_text)
+        self.assertTrue('Pass: 1' not in report_text)
 
     def test_nacked_recipe_results_not_shown(self):
         with session.begin():
@@ -142,7 +142,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         b.find_element_by_xpath("//input[@name='toggle_nacks_on']").click()
         b.find_element_by_xpath('//button[@type="submit" and text()="Generate"]').click()
         report_text = b.find_element_by_xpath("//div[@id='matrix-report']").text
-        self.assert_('Pass: 1' in report_text)
+        self.assertTrue('Pass: 1' in report_text)
 
         # Nack Recipe
         with session.begin():
@@ -154,7 +154,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         b.find_element_by_xpath("//input[@name='toggle_nacks_on']").click()
         b.find_element_by_xpath('//button[@type="submit" and text()="Generate"]').click()
         report_text = b.find_element_by_xpath("//div[@id='matrix-report']").text
-        self.assert_('Pass: 1' not in report_text)
+        self.assertTrue('Pass: 1' not in report_text)
 
     def test_single_job(self):
         with session.begin():
@@ -185,7 +185,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         tasks_table = b.find_element_by_css_selector('table.tasks')
         task_ids = [e.text for e in tasks_table.find_elements_by_xpath(
                 'tbody/tr/td[1][@class="task"]')]
-        self.assertEquals(task_ids, [single_job.recipesets[0].recipes[0].tasks[0].t_id])
+        self.assertEqual(task_ids, [single_job.recipesets[0].recipes[0].tasks[0].t_id])
 
         # Test by job id
         # See https://bugzilla.redhat.com/show_bug.cgi?id=803713
@@ -204,7 +204,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         tasks_table = b.find_element_by_css_selector('table.tasks')
         task_ids = [e.text for e in tasks_table.find_elements_by_xpath(
                 'tbody/tr/td[1][@class="task"]')]
-        self.assertEquals(task_ids, [single_job_2.recipesets[0].recipes[0].tasks[0].t_id])
+        self.assertEqual(task_ids, [single_job_2.recipesets[0].recipes[0].tasks[0].t_id])
 
 class TestJobMatrix(WebDriverTestCase):
 

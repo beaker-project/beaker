@@ -1239,19 +1239,19 @@ class DistroImportTest(LabControllerTestCase):
     def test_invalid_arch(self):
         rhel7_trees = self.dry_run_import_trees(['--arch', 'i386', '--arch', 'x86_64',
             '%sRHEL7Alpha3/' % self.distro_url])
-        self.assertEquals(len(rhel7_trees), 4)
+        self.assertEqual(len(rhel7_trees), 4)
 
         f18_trees = self.dry_run_import_trees(['--arch', 'CISC', '--arch', 'x86_64',
             '%sF-18/GOLD/Fedora' % self.distro_url])
-        self.assertEquals(len(f18_trees), 1)
+        self.assertEqual(len(f18_trees), 1)
 
         rhel6_trees = self.dry_run_import_trees(['--arch', 'AVR', '--arch', 'x86_64',
             '%sRHEL6-Server/' % self.distro_url])
-        self.assertEquals(len(rhel6_trees), 1)
+        self.assertEqual(len(rhel6_trees), 1)
 
         rhel5_trees = self.dry_run_import_trees(['--arch', 'RISC', '--arch', 'x86_64',
             '%sRHEL5-Server/' % self.distro_url])
-        self.assertEquals(len(rhel5_trees), 1)
+        self.assertEqual(len(rhel5_trees), 1)
 
     def test_rhel6_naked_import(self):
         trees = self.dry_run_import_trees(['%sRHEL-6-Server-RHEV/6.4/6.4.1.1/' % \
@@ -1263,7 +1263,7 @@ class DistroImportTest(LabControllerTestCase):
         tree = trees[0]
         # Naked imports return the current time
         tree['tree_build_time'] = 1366007531.817827
-        self.assertEquals(tree, self.x86_64_rhel6_naked)
+        self.assertEqual(tree, self.x86_64_rhel6_naked)
 
     def test_rhel5_tree_import_compose(self):
         trees = self.dry_run_import_trees(['%sRHEL5-Server/' % self.distro_url])
@@ -1276,18 +1276,18 @@ class DistroImportTest(LabControllerTestCase):
     def test_rhel5_tree_import_tree(self):
         trees = self.dry_run_import_trees(['%sRHEL5-Server/i386/os/'
             % self.distro_url])
-        self.assertEquals(len(trees), 1)
+        self.assertEqual(len(trees), 1)
         tree = trees.pop()
         # See https://bugzilla.redhat.com/show_bug.cgi?id=910243
         # The following is actually a bug, but current behaviour
         # if there is no 'name' in .treeinfo's [general] section
         self.i386_rhel5['name'] = 'RedHatEnterpriseLinuxServer-5.9'
-        self.assertEquals(tree, self.i386_rhel5)
+        self.assertEqual(tree, self.i386_rhel5)
 
     def test_rhel5_tree_import_tree_with_iso(self):
         trees = self.dry_run_import_trees(['%sRHEL5-Server/i386/os/'
             % self.distro_url, 'nfs://fake.example.com:/nfs/RHEL5-Server/i386/os/'])
-        self.assertEquals(len(trees), 1)
+        self.assertEqual(len(trees), 1)
         tree = trees.pop()
         # See https://bugzilla.redhat.com/show_bug.cgi?id=910243
         # The following is actually a bug, but current behaviour
@@ -1296,13 +1296,13 @@ class DistroImportTest(LabControllerTestCase):
         self.i386_rhel5['urls']. \
             extend(['nfs://fake.example.com:/nfs/RHEL5-Server/i386/os/',
                 'nfs+iso://fake.example.com:/nfs/RHEL5-Server/i386/iso/'])
-        self.assertEquals(tree, self.i386_rhel5)
+        self.assertEqual(tree, self.i386_rhel5)
 
     def test_rhel6_import_tree_with_iso(self):
         trees = self.dry_run_import_trees(['%sRHEL6-Server/x86_64/os/'
             % self.distro_url,
             'nfs://invalid.example.com/RHEL6-Server/x86_64/os/'])
-        self.assertEquals(len(trees), 1)
+        self.assertEqual(len(trees), 1)
         tree = trees.pop()
         # See https://bugzilla.redhat.com/show_bug.cgi?id=910243
         # The following is actually a bug, but current behaviour
@@ -1311,18 +1311,18 @@ class DistroImportTest(LabControllerTestCase):
         self.x86_64_rhel6['urls'].extend(
             ['nfs://invalid.example.com/RHEL6-Server/x86_64/os/',
             'nfs+iso://invalid.example.com/RHEL6-Server/x86_64/iso/'])
-        self.assertEquals(tree, self.x86_64_rhel6)
+        self.assertEqual(tree, self.x86_64_rhel6)
 
     def test_rhel6_tree_import_tree(self):
         trees = self.dry_run_import_trees(['%sRHEL6-Server/x86_64/os/'
             % self.distro_url])
-        self.assertEquals(len(trees), 1)
+        self.assertEqual(len(trees), 1)
         tree = trees.pop()
         # See https://bugzilla.redhat.com/show_bug.cgi?id=910243
         # The following is actually a bug, but current behaviour
         # if there is no 'name' in .treeinfo's [general] section
         self.x86_64_rhel6['name'] = 'RedHatEnterpriseLinux-6.0'
-        self.assertEquals(tree, self.x86_64_rhel6)
+        self.assertEqual(tree, self.x86_64_rhel6)
 
     def test_rhel7_tree_import_compose(self):
         trees = self.dry_run_import_trees(['%sRHEL7/'% self.distro_url])
@@ -1337,7 +1337,7 @@ class DistroImportTest(LabControllerTestCase):
         trees = self.dry_run_import_trees(['%sRHEL7Alpha3/'% self.distro_url,
             'nfs://fake.example.com:/nfes/RHEL7Alpha3/'])
 
-        self.assertEquals(len(trees), 6)
+        self.assertEqual(len(trees), 6)
         for tree in trees:
             if tree['arch'] == u'x86_64':
                 x86_64_tree = tree
@@ -1346,9 +1346,9 @@ class DistroImportTest(LabControllerTestCase):
             if tree['arch'] == u'ppc64':
                 ppc64_tree = tree
 
-        self.assertEquals(x86_64_tree, self.x86_64_rhel7_alpha3_compose)
-        self.assertEquals(s390x_tree, self.s390x_rhel7_alpha3_compose)
-        self.assertEquals(ppc64_tree, self.ppc64_rhel7_alpha3_compose)
+        self.assertEqual(x86_64_tree, self.x86_64_rhel7_alpha3_compose)
+        self.assertEqual(s390x_tree, self.s390x_rhel7_alpha3_compose)
+        self.assertEqual(ppc64_tree, self.ppc64_rhel7_alpha3_compose)
 
     def test_f17_tree_import_i386(self):
 
@@ -1492,19 +1492,19 @@ class DistroImportTest(LabControllerTestCase):
         # .treeinfo (whether intentionally or not).
         trees = self.dry_run_import_trees(['%sRHEL-6.6-incomplete' % self.distro_url,
                 '--ignore-missing-tree-compose'])
-        self.assertEquals(trees[0]['tags'], [u'Beta-1.1'])
+        self.assertEqual(trees[0]['tags'], [u'Beta-1.1'])
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=907242
     def test_cannot_import_osmajor_existing_alias(self):
         trees = self.import_trees(['%sRHEL6-Server/' % self.distro_url])
-        self.assertEquals(len(trees), 2) # Expecting two trees
+        self.assertEqual(len(trees), 2) # Expecting two trees
 
         # set an alias
         myalias = u'RHEL6'
         with session.begin():
             distro1 = OSMajor.by_name(u'RedHatEnterpriseLinux6')
             distro1.alias = myalias
-            self.assert_(distro1.alias is myalias)
+            self.assertTrue(distro1.alias is myalias)
 
         # import the same tree with osmajor same as myalias
         # beaker-import constructs the osmajor from family name and version
@@ -1514,7 +1514,7 @@ class DistroImportTest(LabControllerTestCase):
                                         '%sRHEL6-Server/' % self.distro_url])
             self.fail('Must fail or die')
         except TreeImportError as e:
-            self.assert_('Cannot import distro as RHEL6: '
+            self.assertTrue('Cannot import distro as RHEL6: '
                          'it is configured as an alias for RedHatEnterpriseLinux6' in
                          e.stderr_output, e.stderr_output)
 

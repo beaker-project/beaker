@@ -44,26 +44,26 @@ class ConditionalInsertTest(unittest.TestCase):
         # https://bitbucket.org/logilab/astroid/issue/39/support-for-sqlalchemy
         # pylint: disable=E1120
         compiled = clause.compile(dialect=MySQLDialect())
-        self.assertEquals(str(compiled),
+        self.assertEqual(str(compiled),
                           'INSERT INTO `table` (name)\n'
                           'SELECT %s\n'
                           'FROM DUAL\n'
                           'WHERE NOT (EXISTS (SELECT 1 \n'
                           'FROM `table` \n'
                           'WHERE `table`.name = %s FOR UPDATE))')
-        self.assertEquals(compiled.positiontup, ['name', 'name_1'])
-        self.assertEquals(compiled.params, {'name': 'asdf', 'name_1': 'asdf'})
+        self.assertEqual(compiled.positiontup, ['name', 'name_1'])
+        self.assertEqual(compiled.params, {'name': 'asdf', 'name_1': 'asdf'})
 
         # pylint: disable=E1120
         compiled = clause.compile(dialect=SQLiteDialect())
-        self.assertEquals(str(compiled),
+        self.assertEqual(str(compiled),
                           'INSERT INTO "table" (name)\n'
                           'SELECT ?\n'
                           'WHERE NOT (EXISTS (SELECT 1 \n'
                           'FROM "table" \n'
                           'WHERE "table".name = ?))')
-        self.assertEquals(compiled.positiontup, ['name', 'name_1'])
-        self.assertEquals(compiled.params, {'name': 'asdf', 'name_1': 'asdf'})
+        self.assertEqual(compiled.positiontup, ['name', 'name_1'])
+        self.assertEqual(compiled.params, {'name': 'asdf', 'name_1': 'asdf'})
 
     def test_with_extra_params(self):
         metadata = MetaData()
@@ -77,27 +77,27 @@ class ConditionalInsertTest(unittest.TestCase):
 
         # pylint: disable=E1120
         compiled = clause.compile(dialect=MySQLDialect())
-        self.assertEquals(str(compiled),
+        self.assertEqual(str(compiled),
                           'INSERT INTO `table` (name, extra)\n'
                           'SELECT %s, %s\n'
                           'FROM DUAL\n'
                           'WHERE NOT (EXISTS (SELECT 1 \n'
                           'FROM `table` \n'
                           'WHERE `table`.name = %s FOR UPDATE))')
-        self.assertEquals(compiled.positiontup, ['name', 'extra', 'name_1'])
-        self.assertEquals(compiled.params, {'name': 'asdf',
+        self.assertEqual(compiled.positiontup, ['name', 'extra', 'name_1'])
+        self.assertEqual(compiled.params, {'name': 'asdf',
                                             'extra': 'something', 'name_1': 'asdf'})
 
         # pylint: disable=E1120
         compiled = clause.compile(dialect=SQLiteDialect())
-        self.assertEquals(str(compiled),
+        self.assertEqual(str(compiled),
                           'INSERT INTO "table" (name, extra)\n'
                           'SELECT ?, ?\n'
                           'WHERE NOT (EXISTS (SELECT 1 \n'
                           'FROM "table" \n'
                           'WHERE "table".name = ?))')
-        self.assertEquals(compiled.positiontup, ['name', 'extra', 'name_1'])
-        self.assertEquals(compiled.params, {'name': 'asdf',
+        self.assertEqual(compiled.positiontup, ['name', 'extra', 'name_1'])
+        self.assertEqual(compiled.params, {'name': 'asdf',
                                             'extra': 'something', 'name_1': 'asdf'})
 
 
@@ -112,7 +112,7 @@ class TaskLibraryTest(unittest.TestCase):
             rpmspath = test_rpmspath
 
         self.tasklibrary = TestTaskLibrary()
-        self.assertEquals(self.tasklibrary.rpmspath, test_rpmspath)
+        self.assertEqual(self.tasklibrary.rpmspath, test_rpmspath)
 
     def tearDown(self):
         # Make sure sane value is left after test run
@@ -142,7 +142,7 @@ class TaskLibraryTest(unittest.TestCase):
         hashed_file1 = self._hash_repodata_file(file1_content)
         hashed_file2 = self._hash_repodata_file(file2_content)
         # Assert the contents of the files are indeed the same
-        self.assertEquals(hashed_file2, hashed_file1)
+        self.assertEqual(hashed_file2, hashed_file1)
 
     def test_createrepo_c_command(self):
         update({'beaker.createrepo_command': 'createrepo_c'})

@@ -50,7 +50,7 @@ class RepoUpdate(DatabaseTestCase):
 
     def test_version(self):
         out = run_command('repo_update.py', 'beaker-repo-update', ['--version'])
-        self.assertEquals(out.strip(), __version__)
+        self.assertEqual(out.strip(), __version__)
 
     def test_update_harness_repos(self):
         """Test that the update_repo() call runs as expected.
@@ -102,7 +102,7 @@ class RepoUpdate(DatabaseTestCase):
         run_command('repo_update.py', 'beaker-repo-update',
                 ['-b', self.harness_repo_url, '-d', local_harness_dir],
                 ignore_stderr=True)
-        self.assertEquals(os.path.getmtime(repodata_dir), mtime)
+        self.assertEqual(os.path.getmtime(repodata_dir), mtime)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1213225
     def test_exclude_nonexistent_osmajor(self):
@@ -141,6 +141,6 @@ class RepoUpdate(DatabaseTestCase):
         run_command('repo_update.py', 'beaker-repo-update',
                 ['--debug', '-b', self.harness_repo_url, '-d', local_harness_dir],
                 ignore_stderr=True)
-        self.assertEquals(
+        self.assertEqual(
                 open(os.path.join(self.harness_repo_dir, osmajor, package), 'rb').read(),
                 open(os.path.join(local_harness_dir, osmajor, package), 'rb').read())

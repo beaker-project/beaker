@@ -8,6 +8,7 @@
 import datetime
 import re
 from turbogears.database import session
+from six import assertRegex
 from unittest import SkipTest
 
 from bkr.server.model import TaskStatus, TaskResult, RecipeTaskResult
@@ -72,7 +73,7 @@ class TestRecipeView(WebDriverTestCase):
         b.find_element_by_link_text(self.system.user.user_name)
         # Make sure we only have one system against our recipe
         system_rows = b.find_elements_by_xpath('//table[@id="widget"]/tbody/tr')
-        self.assert_(len(system_rows) == 1)
+        self.assertTrue(len(system_rows) == 1)
 
     def test_log_url_looks_right(self):
         b = self.browser
@@ -83,13 +84,13 @@ class TestRecipeView(WebDriverTestCase):
         rt_log_server_link = b.find_element_by_xpath(
             "//tr[@class='pass_recipe_%s recipe_%s']//td[position()=4]//a" % (
             r.id, r.id)).get_attribute('href')
-        self.assertEquals(rt_log_server_link,
+        self.assertEqual(rt_log_server_link,
                           get_server_base() + 'recipes/%s/tasks/%s/logs/tasks/dummy.txt'
                           % (r.id, r.tasks[0].id))
         b.find_element_by_xpath('//div[@id="recipe%s"]//button[text()="Logs"]' % r.id).click()
         r_server_link = b.find_element_by_xpath(
             "//table/tbody//tr[position()=6]/td//a").get_attribute('href')
-        self.assertEquals(r_server_link,
+        self.assertEqual(r_server_link,
                           get_server_base() + 'recipes/%s/logs/recipe_path/dummy.txt' % r.id)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1072133
@@ -105,14 +106,14 @@ class TestRecipeView(WebDriverTestCase):
         b.find_element_by_link_text('Show Results').click()
         duration = b.find_element_by_xpath('//tr[contains(@class, "recipe_%s")][1]'
                                            '//div[@class="task-duration"]' % recipe.id)
-        self.assertRegexpMatches(duration.text, r'^Time Remaining 1:23:\d\d$')
+        assertRegex(self, duration.text, r'^Time Remaining 1:23:\d\d$')
         with session.begin():
             recipe.watchdog.kill_time = (datetime.datetime.utcnow() +
                                          datetime.timedelta(days=2, seconds=83 * 60 + 30))
         self.go_to_recipe_view(recipe)
         duration = b.find_element_by_xpath('//tr[contains(@class, "recipe_%s")][1]'
                                            '//div[@class="task-duration"]' % recipe.id)
-        self.assertRegexpMatches(duration.text, r'^Time Remaining 2 days, 1:23:\d\d$')
+        assertRegex(self, duration.text, r'^Time Remaining 2 days, 1:23:\d\d$')
 
     def test_task_pagination(self):
         with session.begin():
@@ -324,7 +325,7 @@ class TestRecipeView(WebDriverTestCase):
             '/tbody/tr[2]/td[3]' % recipe.id).text)
 
     def check_datetime_localised(self, dt):
-        self.assert_(re.match(r'\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d [-+]\d\d:\d\d$', dt),
+        self.assertTrue(re.match(r'\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d [-+]\d\d:\d\d$', dt),
                      '%r does not look like a localised datetime' % dt)
 
     def test_return_system_reservation(self):
@@ -342,13 +343,13 @@ class TestRecipeView(WebDriverTestCase):
         self.go_to_recipe_view(recipe)
         b.find_element_by_xpath('//span[@class="statusReserved"]')
         duration = b.find_element_by_xpath('//span[@class="reservation_duration"]').text
-        self.assertRegexpMatches(duration, r'(0:\d\d:\d\d remaining)')
+        assertRegex(self, duration, r'(0:\d\d:\d\d remaining)')
         b.find_element_by_link_text('Release System').click()
         b.find_element_by_xpath('//h1[text()="Release reserved system for Recipe %s"]' % recipe.id)
         b.find_element_by_xpath(
             '//form[@id="end_recipe_reservation"]//input[@type="submit"]').click()
         flash_text = b.find_element_by_class_name('flash').text
-        self.assertEquals('Successfully released reserved system for %s' % recipe.t_id,
+        self.assertEqual('Successfully released reserved system for %s' % recipe.t_id,
                           flash_text)
 
     def test_opening_recipe_page_marks_it_as_reviewed(self):

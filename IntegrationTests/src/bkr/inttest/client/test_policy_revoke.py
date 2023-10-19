@@ -76,13 +76,13 @@ class PolicyRevokeTest(ClientTestCase):
             pol.add_rule(SystemPermission.reserve, group=group)
             pol.add_rule(SystemPermission.view_power, group=group)
             # there is always the rule granting everybody view
-            self.assertEquals(len(self.system.custom_access_policy.rules), 5)
+            self.assertEqual(len(self.system.custom_access_policy.rules), 5)
         run_client(['bkr', 'policy-revoke', '--system', self.system.fqdn,
                 '--permission=reserve', '--permission=view_power',
                 '--user', user.user_name, '--group', group.group_name])
         with session.begin():
             session.expire_all()
-            self.assertEquals(len(self.system.custom_access_policy.rules), 1)
+            self.assertEqual(len(self.system.custom_access_policy.rules), 1)
 
     def test_revoke_policy_pool(self):
         with session.begin():

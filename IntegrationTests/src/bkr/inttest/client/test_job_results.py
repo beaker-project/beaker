@@ -18,21 +18,21 @@ class JobResultsTest(ClientTestCase):
 
     def test_by_job(self):
         out = run_client(['bkr', 'job-results', self.job.t_id])
-        self.assert_(out.startswith('<job '))
+        self.assertTrue(out.startswith('<job '))
 
     def test_by_recipeset(self):
         out = run_client(['bkr', 'job-results', self.job.recipesets[0].t_id])
-        self.assert_(out.startswith('<recipeSet '))
+        self.assertTrue(out.startswith('<recipeSet '))
 
     def test_by_recipe(self):
         out = run_client(['bkr', 'job-results',
                 self.job.recipesets[0].recipes[0].t_id])
-        self.assert_(out.startswith('<recipe '))
+        self.assertTrue(out.startswith('<recipe '))
 
     def test_by_recipetask(self):
         out = run_client(['bkr', 'job-results',
                 self.job.recipesets[0].recipes[0].tasks[0].t_id])
-        self.assert_(out.startswith('<task '))
+        self.assertTrue(out.startswith('<task '))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=595512
     def test_invalid_taskspec(self):
@@ -40,7 +40,7 @@ class JobResultsTest(ClientTestCase):
             run_client(['bkr', 'job-results', '12345'])
             self.fail('should raise')
         except ClientError as e:
-            self.assert_('Invalid taskspec' in e.stderr_output)
+            self.assertTrue('Invalid taskspec' in e.stderr_output)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1014623
     def test_nonascii_chars_in_job_xml(self):

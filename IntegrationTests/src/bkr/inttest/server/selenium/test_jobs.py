@@ -122,7 +122,7 @@ class TestViewJob(WebDriverTestCase):
         b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
         with session.begin():
             session.expire_all()
-            self.assertEquals(job.cc,
+            self.assertEqual(job.cc,
                               ['gagarin@kosmonavt.su', u'tereshkova@kosmonavt.su'])
 
     def test_edit_job_whiteboard(self):
@@ -136,7 +136,7 @@ class TestViewJob(WebDriverTestCase):
         b.find_element_by_xpath('//button[normalize-space(string(.))="Edit"]').click()
         modal = b.find_element_by_class_name('modal')
         textarea = modal.find_element_by_name('whiteboard')
-        self.assertEquals(textarea.get_attribute('value'), job.whiteboard)
+        self.assertEqual(textarea.get_attribute('value'), job.whiteboard)
         textarea.clear()
         textarea.send_keys(new_whiteboard)
         modal.find_element_by_tag_name('form').submit()
@@ -145,7 +145,7 @@ class TestViewJob(WebDriverTestCase):
                                 % new_whiteboard)
         with session.begin():
             session.refresh(job)
-            self.assertEquals(job.whiteboard, new_whiteboard)
+            self.assertEqual(job.whiteboard, new_whiteboard)
 
     def test_change_product(self):
         with session.begin():
@@ -165,7 +165,7 @@ class TestViewJob(WebDriverTestCase):
         b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
         with session.begin():
             session.expire_all()
-            self.assertEquals(job.product, new_product)
+            self.assertEqual(job.product, new_product)
 
     def test_change_retention_tag(self):
         with session.begin():
@@ -183,7 +183,7 @@ class TestViewJob(WebDriverTestCase):
         b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
         with session.begin():
             session.expire_all()
-            self.assertEquals(job.retention_tag.tag, u'60days')
+            self.assertEqual(job.retention_tag.tag, u'60days')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1022333
     def test_change_retention_tag_clearing_product(self):
@@ -203,8 +203,8 @@ class TestViewJob(WebDriverTestCase):
         b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
         with session.begin():
             session.expire_all()
-            self.assertEquals(job.retention_tag.tag, u'scratch')
-            self.assertEquals(job.product, None)
+            self.assertEqual(job.retention_tag.tag, u'scratch')
+            self.assertEqual(job.product, None)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=662703
     def test_product_dropdown_is_sorted(self):
@@ -243,7 +243,7 @@ class TestViewJob(WebDriverTestCase):
         with session.begin():
             session.expire_all()
             job.update_status()
-            self.assertEquals(job.status, TaskStatus.cancelled)
+            self.assertEqual(job.status, TaskStatus.cancelled)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1335370
     def test_cancel_job_submission_ctrl_enter(self):
@@ -264,7 +264,7 @@ class TestViewJob(WebDriverTestCase):
         with session.begin():
             session.expire_all()
             job.update_status()
-            self.assertEquals(job.status, TaskStatus.cancelled)
+            self.assertEqual(job.status, TaskStatus.cancelled)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1346115
     def test_ctrl_enter_submit_posts_once(self):
@@ -309,7 +309,7 @@ class TestViewJob(WebDriverTestCase):
         with session.begin():
             session.expire_all()
             job.update_status()
-            self.assertEquals(recipeset.status, TaskStatus.cancelled)
+            self.assertEqual(recipeset.status, TaskStatus.cancelled)
 
     def test_change_recipeset_priority(self):
         with session.begin():
@@ -329,7 +329,7 @@ class TestViewJob(WebDriverTestCase):
         b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
         with session.begin():
             session.expire_all()
-            self.assertEquals(recipeset.priority, TaskPriority.low)
+            self.assertEqual(recipeset.priority, TaskPriority.low)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=980711
     def test_priority_button_visible_on_job_complete(self):
@@ -377,12 +377,12 @@ class TestViewJob(WebDriverTestCase):
             job.recipesets[0].recipes.append(host)
             host.guests.append(guest)
             session.flush()
-            self.assert_(guest.id < host.id)
+            self.assertTrue(guest.id < host.id)
         b = self.browser
         self.go_to_job_page(job)
         recipe_order = [elem.text for elem in b.find_elements_by_xpath(
             '//a[@class="recipe-id"]')]
-        self.assertEquals(recipe_order, [host.t_id, guest.t_id])
+        self.assertEqual(recipe_order, [host.t_id, guest.t_id])
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=995012
     def test_job_activities_view(self):
@@ -659,7 +659,7 @@ class TestViewJob(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'jobs/%s#RS_%s' % (job.id, recipeset.id))
         b.find_element_by_xpath('//tbody[@id="set%s" and @class="highlight"]' % recipeset.id)
-        self.assertEquals(b.current_url,
+        self.assertEqual(b.current_url,
                           get_server_base() + 'jobs/%s#set%s' % (job.id, recipeset.id))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1334552
@@ -673,7 +673,7 @@ class TestViewJob(WebDriverTestCase):
         self.go_to_job_page(job)
         expected_html = u'<a href="http://www.google.com">google</a> is a <em>really</em> cool site!'
         recipe_row = b.find_element_by_xpath("//td/span[@class='recipe-whiteboard']")
-        self.assertEquals(expected_html, recipe_row.get_attribute('innerHTML'))
+        self.assertEqual(expected_html, recipe_row.get_attribute('innerHTML'))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1334552
     def test_weird_recipe_whiteboard_content_should_not_be_shown(self):
@@ -685,7 +685,7 @@ class TestViewJob(WebDriverTestCase):
         login(b)
         self.go_to_job_page(job)
         recipe_row = b.find_element_by_xpath("//td/span[@class='recipe-whiteboard']")
-        self.assertEquals(recipe_row.get_attribute('innerHTML'), u'')
+        self.assertEqual(recipe_row.get_attribute('innerHTML'), u'')
 
 
 class NewJobTestWD(WebDriverTestCase):
@@ -791,7 +791,7 @@ class NewJobTestWD(WebDriverTestCase):
         b.find_element_by_xpath("//button[text()='Submit Data']").click()
         b.find_element_by_xpath("//button[text()='Queue']").click()
         flash_text = b.find_element_by_class_name('flash').text
-        self.assert_('Success!' in flash_text, flash_text)
+        self.assertTrue('Success!' in flash_text, flash_text)
         self.assertEqual(b.title, 'My Jobs')
 
     def test_invalid_submission_delegate(self):
@@ -827,7 +827,7 @@ class NewJobTestWD(WebDriverTestCase):
         b.find_element_by_xpath("//button[text()='Submit Data']").click()
         b.find_element_by_xpath("//button[text()='Queue']").click()
         flash_text = b.find_element_by_class_name('flash').text
-        self.assertEquals('Failed to import job because of: %s is not a valid'
+        self.assertEqual('Failed to import job because of: %s is not a valid'
                           ' submission delegate for %s' % (
                           invalid_delegate.user_name, user.user_name), flash_text, flash_text)
 
@@ -861,7 +861,7 @@ class NewJobTestWD(WebDriverTestCase):
         b.find_element_by_xpath("//button[text()='Submit Data']").click()
         b.find_element_by_xpath("//button[text()='Queue']").click()
         flash_text = b.find_element_by_class_name('flash').text
-        self.assert_('Success!' in flash_text, flash_text)
+        self.assertTrue('Success!' in flash_text, flash_text)
         self.assertEqual(b.title, 'My Jobs')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=972412
@@ -875,7 +875,7 @@ class NewJobTestWD(WebDriverTestCase):
         b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
         b.find_element_by_xpath("//button[text()='Submit Data']").click()
         flash_text = b.find_element_by_class_name('flash').text
-        self.assertEquals(flash_text,
+        self.assertEqual(flash_text,
                           "Invalid job XML: 'utf8' codec can't decode byte 0x89 "
                           "in position 0: invalid start byte")
 
@@ -908,7 +908,7 @@ class NewJobTestWD(WebDriverTestCase):
         b.find_element_by_xpath("//button[text()='Submit Data']").click()
         b.find_element_by_xpath("//button[text()='Queue']").click()
         flash_text = b.find_element_by_class_name('flash').text
-        self.assert_('Success!' in flash_text, flash_text)
+        self.assertTrue('Success!' in flash_text, flash_text)
         self.assertEqual(b.title, 'My Jobs')
 
 
@@ -953,7 +953,7 @@ class NewJobTest(WebDriverTestCase):
         b.find_element_by_xpath('//button[text()="Queue despite validation errors"]').click()
         b.find_element_by_xpath('//title[text()="My Jobs"]')
         flash_message = b.find_element_by_class_name('flash').text
-        self.assert_(flash_message.startswith('Success!'), flash_message)
+        self.assertTrue(flash_message.startswith('Success!'), flash_message)
 
     def test_refuses_to_accept_unparseable_xml(self):
         b = self.browser
@@ -988,7 +988,7 @@ class NewJobTest(WebDriverTestCase):
         b.find_element_by_xpath('//button[text()="Submit Data"]').click()
         b.find_element_by_xpath('//button[text()="Queue"]').click()
         flash_message = b.find_element_by_class_name('flash').text
-        self.assert_(flash_message.startswith('Success!'), flash_message)
+        self.assertTrue(flash_message.startswith('Success!'), flash_message)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=661652
     def test_job_with_excluded_task(self):
@@ -1025,7 +1025,7 @@ class NewJobTest(WebDriverTestCase):
         b.find_element_by_xpath('//button[text()="Submit Data"]').click()
         b.find_element_by_xpath('//button[text()="Queue"]').click()
         flash_message = b.find_element_by_class_name('flash').text
-        self.assert_(flash_message.startswith('Success!'), flash_message)
+        self.assertTrue(flash_message.startswith('Success!'), flash_message)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=689344
     def test_partition_without_fs_doesnt_trigger_validation_warning(self):
@@ -1056,7 +1056,7 @@ class NewJobTest(WebDriverTestCase):
         b.find_element_by_xpath('//button[text()="Submit Data"]').click()
         b.find_element_by_xpath('//button[text()="Queue"]').click()
         flash_message = b.find_element_by_class_name('flash').text
-        self.assert_(flash_message.startswith('Success!'), flash_message)
+        self.assertTrue(flash_message.startswith('Success!'), flash_message)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=730983
     def test_duplicate_notify_cc_addresses_are_merged(self):
@@ -1090,7 +1090,7 @@ class NewJobTest(WebDriverTestCase):
         b.find_element_by_xpath('//button[text()="Submit Data"]').click()
         b.find_element_by_xpath('//button[text()="Queue"]').click()
         flash_message = b.find_element_by_class_name('flash').text
-        self.assert_(flash_message.startswith('Success!'), flash_message)
+        self.assertTrue(flash_message.startswith('Success!'), flash_message)
         with session.begin():
             job = Job.query.filter(Job.owner == user).order_by(Job.id.desc()).first()
             self.assertEqual(job.cc, ['person@example.invalid'])
@@ -1154,7 +1154,7 @@ class NewJobTest(WebDriverTestCase):
         b.find_element_by_xpath('//button[text()="Submit Data"]').click()
         b.find_element_by_xpath('//button[text()="Queue"]').click()
         flash_message = b.find_element_by_class_name('flash').text
-        self.assert_(flash_message.startswith('Success!'), flash_message)
+        self.assertTrue(flash_message.startswith('Success!'), flash_message)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1112131
     def test_preserves_arbitrary_xml_just_fine(self):
@@ -1192,7 +1192,7 @@ class NewJobTest(WebDriverTestCase):
         b.find_element_by_xpath('//button[text()="Submit Data"]').click()
         b.find_element_by_xpath('//button[text()="Queue"]').click()
         flash_message = b.find_element_by_class_name('flash').text
-        self.assert_(flash_message.startswith('Success!'), flash_message)
+        self.assertTrue(flash_message.startswith('Success!'), flash_message)
 
         with session.begin():
             job = Job.query.all()[-1]
@@ -1224,7 +1224,7 @@ class NewJobTest(WebDriverTestCase):
         b.find_element_by_xpath('//button[text()="Submit Data"]').click()
         b.find_element_by_xpath('//button[text()="Queue"]').click()
         flash_message = b.find_element_by_class_name('flash').text
-        self.assert_(flash_message.startswith('Success!'), flash_message)
+        self.assertTrue(flash_message.startswith('Success!'), flash_message)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=869455
     # https://bugzilla.redhat.com/show_bug.cgi?id=896622
@@ -1282,7 +1282,7 @@ class NewJobTest(WebDriverTestCase):
         b.find_element_by_xpath('//button[text()="Submit Data"]').click()
         b.find_element_by_xpath('//button[text()="Queue"]').click()
         flash_message = b.find_element_by_class_name('flash').text
-        self.assert_(flash_message.startswith('Success!'), flash_message)
+        self.assertTrue(flash_message.startswith('Success!'), flash_message)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1171936
     def test_useful_error_message_on_ksmeta_syntax_error(self):
@@ -1309,7 +1309,7 @@ class NewJobTest(WebDriverTestCase):
         b.find_element_by_id('jobs_filexml').send_keys(xml_file.name)
         b.find_element_by_xpath('//button[text()="Submit Data"]').click()
         b.find_element_by_xpath('//button[text()="Queue"]').click()
-        self.assertEquals(b.find_element_by_class_name('flash').text,
+        self.assertEqual(b.find_element_by_class_name('flash').text,
                           'Failed to import job because of: '
                           'Error parsing ks_meta: No closing quotation')
 
@@ -1341,7 +1341,7 @@ class NewJobTest(WebDriverTestCase):
         b.find_element_by_id('jobs_filexml').send_keys(xml_file.name)
         b.find_element_by_xpath('//button[text()="Submit Data"]').click()
         b.find_element_by_xpath('//button[text()="Queue"]').click()
-        self.assertEquals(b.find_element_by_class_name('flash').text,
+        self.assertEqual(b.find_element_by_class_name('flash').text,
                           'Failed to import job because of: '
                           'XML entity with name &xxe; not permitted')
 
@@ -1386,11 +1386,11 @@ class TestJobsGrid(WebDriverTestCase):
         job_id = b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[1]' % rownum).text
         group_name = b.find_element_by_xpath(
             '//table[@id="widget"]/tbody/tr[%d]/td[3]' % rownum).text
-        self.assertEquals(job_id, job_t_id)
+        self.assertEqual(job_id, job_t_id)
         if group:
-            self.assertEquals(group_name, group.group_name)
+            self.assertEqual(group_name, group.group_name)
         else:
-            self.assertEquals(group_name, "")
+            self.assertEqual(group_name, "")
 
     def test_myjobs_group(self):
         with session.begin():
@@ -1470,9 +1470,9 @@ class TestJobsGrid(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'jobs/')
         whiteboard_cell = b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[1]/td[2]')
-        self.assertEquals(whiteboard_cell.text, 'hello & here is a link lol')
-        self.assertEquals(whiteboard_cell.find_element_by_xpath('./em').text, 'here')
-        self.assertEquals(
+        self.assertEqual(whiteboard_cell.text, 'hello & here is a link lol')
+        self.assertEqual(whiteboard_cell.find_element_by_xpath('./em').text, 'here')
+        self.assertEqual(
             whiteboard_cell.find_element_by_xpath('./a').get_attribute('href'),
             'http://example.com/')
 
@@ -1496,7 +1496,7 @@ class SystemUpdateInventoryHTTPTest(WebDriverTestCase):
     def test_submit_inventory_job(self):
         s = requests.Session()
         response = s.post(get_server_base() + 'jobs/+inventory')
-        self.assertEquals(response.status_code, 401)
+        self.assertEqual(response.status_code, 401)
         s.post(get_server_base() + 'login',
                data={'user_name': self.owner.user_name,
                      'password': 'theowner'}).raise_for_status()
@@ -1510,7 +1510,7 @@ class SystemUpdateInventoryHTTPTest(WebDriverTestCase):
         response = post_json(get_server_base() + 'jobs/+inventory',
                              session=s,
                              data={'fqdn': 'i.donotexist.name'})
-        self.assertEquals(response.status_code, 400)
+        self.assertEqual(response.status_code, 400)
         self.assertIn('System not found: i.donotexist.name', response.text)
 
 
@@ -1530,8 +1530,8 @@ class JobHTTPTest(DatabaseTestCase):
                                 headers={'Accept': 'application/json'})
         response.raise_for_status()
         json = response.json()
-        self.assertEquals(json['id'], self.job.id)
-        self.assertEquals(json['owner']['user_name'], self.owner.user_name)
+        self.assertEqual(json['id'], self.job.id)
+        self.assertEqual(json['owner']['user_name'], self.owner.user_name)
 
     def test_get_job_which_does_not_have_submitter(self):
         # A job may not have a submitter prior to Beaker 14.
@@ -1543,14 +1543,14 @@ class JobHTTPTest(DatabaseTestCase):
                                 headers={'Accept': 'application/json'})
         response.raise_for_status()
         json = response.json()
-        self.assertEquals(json['id'], job.id)
-        self.assertEquals(json['submitter']['user_name'], self.owner.user_name)
+        self.assertEqual(json['id'], job.id)
+        self.assertEqual(json['submitter']['user_name'], self.owner.user_name)
 
     def test_get_job_xml(self):
         response = requests.get(get_server_base() + 'jobs/%s.xml' % self.job.id)
         response.raise_for_status()
-        self.assertEquals(response.status_code, 200)
-        self.assertEquals(
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
             lxml.etree.tostring(self.job.to_xml(), pretty_print=True, encoding='utf8'),
             response.content)
 
@@ -1565,7 +1565,7 @@ class JobHTTPTest(DatabaseTestCase):
             data_setup.mark_job_complete(self.job)
         response = requests.get(get_server_base() + 'jobs/%s.junit.xml' % self.job.id)
         response.raise_for_status()
-        self.assertEquals(response.status_code, 200)
+        self.assertEqual(response.status_code, 200)
         junitxml = lxml.etree.fromstring(response.content)
         self.assertEqual(junitxml.tag, 'testsuites')
 
@@ -1582,10 +1582,10 @@ class JobHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.job.whiteboard, 'newwhiteboard')
-            self.assertEquals(self.job.activity[0].field_name, u'Whiteboard')
-            self.assertEquals(self.job.activity[0].action, u'Changed')
-            self.assertEquals(self.job.activity[0].new_value, u'newwhiteboard')
+            self.assertEqual(self.job.whiteboard, 'newwhiteboard')
+            self.assertEqual(self.job.activity[0].field_name, u'Whiteboard')
+            self.assertEqual(self.job.activity[0].action, u'Changed')
+            self.assertEqual(self.job.activity[0].new_value, u'newwhiteboard')
 
     def test_set_retention_tag_and_product(self):
         with session.begin():
@@ -1599,16 +1599,16 @@ class JobHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.job.retention_tag, retention_tag)
-            self.assertEquals(self.job.product, product)
-            self.assertEquals(self.job.activity[0].field_name, u'Product')
-            self.assertEquals(self.job.activity[0].action, u'Changed')
-            self.assertEquals(self.job.activity[0].old_value, None)
-            self.assertEquals(self.job.activity[0].new_value, product.name)
-            self.assertEquals(self.job.activity[1].field_name, u'Retention Tag')
-            self.assertEquals(self.job.activity[1].action, u'Changed')
-            self.assertEquals(self.job.activity[1].old_value, u'scratch')
-            self.assertEquals(self.job.activity[1].new_value, retention_tag.tag)
+            self.assertEqual(self.job.retention_tag, retention_tag)
+            self.assertEqual(self.job.product, product)
+            self.assertEqual(self.job.activity[0].field_name, u'Product')
+            self.assertEqual(self.job.activity[0].action, u'Changed')
+            self.assertEqual(self.job.activity[0].old_value, None)
+            self.assertEqual(self.job.activity[0].new_value, product.name)
+            self.assertEqual(self.job.activity[1].field_name, u'Retention Tag')
+            self.assertEqual(self.job.activity[1].action, u'Changed')
+            self.assertEqual(self.job.activity[1].old_value, u'scratch')
+            self.assertEqual(self.job.activity[1].new_value, retention_tag.tag)
 
     def test_cannot_set_product_if_retention_tag_does_not_need_one(self):
         with session.begin():
@@ -1619,8 +1619,8 @@ class JobHTTPTest(DatabaseTestCase):
         response = patch_json(get_server_base() +
                               'jobs/%s' % self.job.id, session=s,
                               data={'retention_tag': retention_tag.tag, 'product': product.name})
-        self.assertEquals(response.status_code, 400)
-        self.assertEquals(
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
             'Cannot change retention tag as it does not support a product',
             response.text)
         # Same thing, but the retention tag is already set and we are just setting the product.
@@ -1628,8 +1628,8 @@ class JobHTTPTest(DatabaseTestCase):
             self.job.retention_tag = retention_tag
         response = patch_json(get_server_base() + 'jobs/%s' % self.job.id,
                               session=s, data={'product': product.name})
-        self.assertEquals(response.status_code, 400)
-        self.assertEquals(
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
             'Cannot change product as the current retention tag does not support a product',
             response.text)
 
@@ -1644,12 +1644,12 @@ class JobHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.job.retention_tag, retention_tag)
-            self.assertEquals(self.job.product, None)
-            self.assertEquals(self.job.activity[0].field_name, u'Retention Tag')
-            self.assertEquals(self.job.activity[0].action, u'Changed')
-            self.assertEquals(self.job.activity[0].old_value, u'scratch')
-            self.assertEquals(self.job.activity[0].new_value, retention_tag.tag)
+            self.assertEqual(self.job.retention_tag, retention_tag)
+            self.assertEqual(self.job.product, None)
+            self.assertEqual(self.job.activity[0].field_name, u'Retention Tag')
+            self.assertEqual(self.job.activity[0].action, u'Changed')
+            self.assertEqual(self.job.activity[0].old_value, u'scratch')
+            self.assertEqual(self.job.activity[0].new_value, retention_tag.tag)
         # Same thing, but with {product: null} which is equivalent.
         response = patch_json(get_server_base() +
                               'jobs/%s' % self.job.id, session=s,
@@ -1657,8 +1657,8 @@ class JobHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.job.retention_tag, retention_tag)
-            self.assertEquals(self.job.product, None)
+            self.assertEqual(self.job.retention_tag, retention_tag)
+            self.assertEqual(self.job.product, None)
 
     def test_set_retention_tag_clearing_product(self):
         # The difference here compared with the test case above is that in this
@@ -1678,15 +1678,15 @@ class JobHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.job.retention_tag, retention_tag)
-            self.assertEquals(self.job.product, None)
-            self.assertEquals(self.job.activity[0].field_name, u'Product')
-            self.assertEquals(self.job.activity[0].action, u'Changed')
-            self.assertEquals(self.job.activity[0].new_value, None)
-            self.assertEquals(self.job.activity[1].field_name, u'Retention Tag')
-            self.assertEquals(self.job.activity[1].action, u'Changed')
-            self.assertEquals(self.job.activity[1].old_value, old_retention_tag.tag)
-            self.assertEquals(self.job.activity[1].new_value, retention_tag.tag)
+            self.assertEqual(self.job.retention_tag, retention_tag)
+            self.assertEqual(self.job.product, None)
+            self.assertEqual(self.job.activity[0].field_name, u'Product')
+            self.assertEqual(self.job.activity[0].action, u'Changed')
+            self.assertEqual(self.job.activity[0].new_value, None)
+            self.assertEqual(self.job.activity[1].field_name, u'Retention Tag')
+            self.assertEqual(self.job.activity[1].action, u'Changed')
+            self.assertEqual(self.job.activity[1].old_value, old_retention_tag.tag)
+            self.assertEqual(self.job.activity[1].new_value, retention_tag.tag)
 
     def test_cannot_set_retention_tag_without_product_if_tag_needs_one(self):
         with session.begin():
@@ -1696,16 +1696,16 @@ class JobHTTPTest(DatabaseTestCase):
         response = patch_json(get_server_base() +
                               'jobs/%s' % self.job.id, session=s,
                               data={'retention_tag': retention_tag.tag})
-        self.assertEquals(response.status_code, 400)
-        self.assertEquals(
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
             'Cannot change retention tag as it requires a product',
             response.text)
         # Same thing, but with {product: null} which is equivalent.
         response = patch_json(get_server_base() +
                               'jobs/%s' % self.job.id, session=s,
                               data={'retention_tag': retention_tag.tag, 'product': None})
-        self.assertEquals(response.status_code, 400)
-        self.assertEquals(
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
             'Cannot change retention tag as it requires a product',
             response.text)
 
@@ -1724,11 +1724,11 @@ class JobHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.job.product, other_product)
-            self.assertEquals(self.job.activity[0].field_name, u'Product')
-            self.assertEquals(self.job.activity[0].action, u'Changed')
-            self.assertEquals(self.job.activity[0].old_value, product.name)
-            self.assertEquals(self.job.activity[0].new_value, other_product.name)
+            self.assertEqual(self.job.product, other_product)
+            self.assertEqual(self.job.activity[0].field_name, u'Product')
+            self.assertEqual(self.job.activity[0].action, u'Changed')
+            self.assertEqual(self.job.activity[0].old_value, product.name)
+            self.assertEqual(self.job.activity[0].new_value, other_product.name)
 
     def test_set_cc(self):
         with session.begin():
@@ -1741,21 +1741,21 @@ class JobHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.job.cc, ['captain-planet@example.com'])
-            self.assertEquals(self.job.activity[0].field_name, u'Cc')
-            self.assertEquals(self.job.activity[0].action, u'Removed')
-            self.assertEquals(self.job.activity[0].old_value, u'capn-crunch@example.com')
-            self.assertEquals(self.job.activity[1].field_name, u'Cc')
-            self.assertEquals(self.job.activity[1].action, u'Added')
-            self.assertEquals(self.job.activity[1].new_value, u'captain-planet@example.com')
+            self.assertEqual(self.job.cc, ['captain-planet@example.com'])
+            self.assertEqual(self.job.activity[0].field_name, u'Cc')
+            self.assertEqual(self.job.activity[0].action, u'Removed')
+            self.assertEqual(self.job.activity[0].old_value, u'capn-crunch@example.com')
+            self.assertEqual(self.job.activity[1].field_name, u'Cc')
+            self.assertEqual(self.job.activity[1].action, u'Added')
+            self.assertEqual(self.job.activity[1].new_value, u'captain-planet@example.com')
 
     def test_invalid_email_address_in_cc_is_rejected(self):
         s = requests.Session()
         requests_login(s, user=self.owner, password=u'theowner')
         response = patch_json(get_server_base() + 'jobs/%s' % self.job.id,
                               session=s, data={'cc': ['bork;one1']})
-        self.assertEquals(response.status_code, 400)
-        self.assertEquals(
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
             "Invalid email address u'bork;one1' in cc: "
             "An email address must contain a single @",
             response.text)
@@ -1767,8 +1767,8 @@ class JobHTTPTest(DatabaseTestCase):
         s = requests.Session()
         requests_login(s, user=user, password=u'other')
         response = s.delete(get_server_base() + 'jobs/%s' % self.job.id)
-        self.assertEquals(response.status_code, 403)
-        self.assertEquals('Insufficient permissions: Cannot delete job', response.text)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual('Insufficient permissions: Cannot delete job', response.text)
 
     def test_delete_job(self):
         with session.begin():
@@ -1787,8 +1787,8 @@ class JobHTTPTest(DatabaseTestCase):
         s = requests.Session()
         requests_login(s, user=self.owner, password=u'theowner')
         response = s.delete(get_server_base() + 'jobs/%s' % self.job.id)
-        self.assertEquals(response.status_code, 400)
-        self.assertEquals('Cannot delete running job', response.text)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual('Cannot delete running job', response.text)
 
     def test_cannot_delete_already_deleted_job(self):
         with session.begin():
@@ -1797,13 +1797,13 @@ class JobHTTPTest(DatabaseTestCase):
         s = requests.Session()
         requests_login(s, user=self.owner, password=u'theowner')
         response = s.delete(get_server_base() + 'jobs/%s' % self.job.id)
-        self.assertEquals(response.status_code, 409)
-        self.assertEquals('Job has already been deleted', response.text)
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual('Job has already been deleted', response.text)
 
     def test_anonymous_cannot_update_status(self):
         response = post_json(get_server_base() + 'jobs/%s/status' % self.job.id,
                              data={'status': u'Cancelled'})
-        self.assertEquals(response.status_code, 401)
+        self.assertEqual(response.status_code, 401)
 
     def test_other_users_cannot_update_status(self):
         with session.begin():
@@ -1812,7 +1812,7 @@ class JobHTTPTest(DatabaseTestCase):
         requests_login(s, user=user, password=u'other')
         response = post_json(get_server_base() + 'jobs/%s/status' % self.job.id,
                              session=s, data={'status': u'Cancelled'})
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
 
     def test_submission_delegate_cannot_update_status(self):
         # N.B. submission delegate but *not* submitter
@@ -1823,7 +1823,7 @@ class JobHTTPTest(DatabaseTestCase):
         requests_login(s, user=submission_delegate, password=u'password')
         response = post_json(get_server_base() + 'jobs/%s/status' % self.job.id,
                              session=s, data={'status': u'Cancelled'})
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
 
     def test_cancel_job(self):
         s = requests.Session()
@@ -1834,10 +1834,10 @@ class JobHTTPTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             self.job.update_status()
-            self.assertEquals(self.job.status, TaskStatus.cancelled)
+            self.assertEqual(self.job.status, TaskStatus.cancelled)
             # https://bugzilla.redhat.com/show_bug.cgi?id=995012
-            self.assertEquals(self.job.activity[0].field_name, u'Status')
-            self.assertEquals(self.job.activity[0].action, u'Cancelled')
+            self.assertEqual(self.job.activity[0].field_name, u'Status')
+            self.assertEqual(self.job.activity[0].action, u'Cancelled')
 
     def test_submitter_can_cancel(self):
         with session.begin():
@@ -1888,12 +1888,12 @@ class JobHTTPTest(DatabaseTestCase):
                                 headers={'Accept': 'application/json'})
         response.raise_for_status()
         json = response.json()
-        self.assertEquals(len(json['entries']), 1, json['entries'])
-        self.assertEquals(json['entries'][0]['user']['user_name'],
+        self.assertEqual(len(json['entries']), 1, json['entries'])
+        self.assertEqual(json['entries'][0]['user']['user_name'],
                           self.job.owner.user_name)
-        self.assertEquals(json['entries'][0]['field_name'], u'green')
-        self.assertEquals(json['entries'][0]['action'], u'blorp')
-        self.assertEquals(json['entries'][0]['new_value'], u'something')
+        self.assertEqual(json['entries'][0]['field_name'], u'green')
+        self.assertEqual(json['entries'][0]['action'], u'blorp')
+        self.assertEqual(json['entries'][0]['new_value'], u'something')
 
 
 class RecipeSetHTTPTest(DatabaseTestCase):
@@ -1913,13 +1913,13 @@ class RecipeSetHTTPTest(DatabaseTestCase):
                                 headers={'Accept': 'application/json'})
         response.raise_for_status()
         json = response.json()
-        self.assertEquals(json['t_id'], self.job.recipesets[0].t_id)
+        self.assertEqual(json['t_id'], self.job.recipesets[0].t_id)
 
     def test_anonymous_cannot_change_recipeset(self):
         response = patch_json(get_server_base() +
                               'recipesets/%s' % self.job.recipesets[0].id,
                               data={'priority': u'Low'})
-        self.assertEquals(response.status_code, 401)
+        self.assertEqual(response.status_code, 401)
 
     def test_other_users_cannot_change_recipeset(self):
         with session.begin():
@@ -1929,7 +1929,7 @@ class RecipeSetHTTPTest(DatabaseTestCase):
         response = patch_json(get_server_base() +
                               'recipesets/%s' % self.job.recipesets[0].id,
                               session=s, data={'priority': u'Low'})
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
 
     def test_job_owner_can_reduce_priority(self):
         s = requests.Session()
@@ -1941,10 +1941,10 @@ class RecipeSetHTTPTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             recipeset = self.job.recipesets[0]
-            self.assertEquals(recipeset.priority, TaskPriority.low)
-            self.assertEquals(recipeset.activity[0].field_name, u'Priority')
-            self.assertEquals(recipeset.activity[0].action, u'Changed')
-            self.assertEquals(recipeset.activity[0].new_value, u'Low')
+            self.assertEqual(recipeset.priority, TaskPriority.low)
+            self.assertEqual(recipeset.activity[0].field_name, u'Priority')
+            self.assertEqual(recipeset.activity[0].action, u'Changed')
+            self.assertEqual(recipeset.activity[0].new_value, u'Low')
 
     def test_job_owner_cannot_increase_priority(self):
         s = requests.Session()
@@ -1952,16 +1952,16 @@ class RecipeSetHTTPTest(DatabaseTestCase):
         response = patch_json(get_server_base() +
                               'recipesets/%s' % self.job.recipesets[0].id,
                               session=s, data={'priority': u'Urgent'})
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
 
     def check_changed_recipeset(self):
         recipeset = self.job.recipesets[0]
-        self.assertEquals(recipeset.priority, TaskPriority.urgent)
-        self.assertEquals(recipeset.activity[0].user.user_name,
+        self.assertEqual(recipeset.priority, TaskPriority.urgent)
+        self.assertEqual(recipeset.activity[0].user.user_name,
                           data_setup.ADMIN_USER)
-        self.assertEquals(recipeset.activity[0].field_name, u'Priority')
-        self.assertEquals(recipeset.activity[0].action, u'Changed')
-        self.assertEquals(recipeset.activity[0].new_value, u'Urgent')
+        self.assertEqual(recipeset.activity[0].field_name, u'Priority')
+        self.assertEqual(recipeset.activity[0].action, u'Changed')
+        self.assertEqual(recipeset.activity[0].new_value, u'Urgent')
 
     def test_admin_can_increase_priority(self):
         s = requests.Session()
@@ -2032,7 +2032,7 @@ class RecipeSetHTTPTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             recipeset = self.job.recipesets[0]
-            self.assertEquals(recipeset.priority, TaskPriority.low)
+            self.assertEqual(recipeset.priority, TaskPriority.low)
 
     def test_update_containing_no_changes_should_silently_do_nothing(self):
         # PATCH request containing attributes with their existing values
@@ -2057,7 +2057,7 @@ class RecipeSetHTTPTest(DatabaseTestCase):
         response = post_json(get_server_base() +
                              'recipesets/%s/status' % self.job.recipesets[0].id,
                              data={'status': u'Cancelled'})
-        self.assertEquals(response.status_code, 401)
+        self.assertEqual(response.status_code, 401)
 
     def test_other_users_cannot_update_status(self):
         with session.begin():
@@ -2067,7 +2067,7 @@ class RecipeSetHTTPTest(DatabaseTestCase):
         response = post_json(get_server_base() +
                              'recipesets/%s/status' % self.job.recipesets[0].id,
                              session=s, data={'status': u'Cancelled'})
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
 
     def test_submission_delegate_cannot_update_status(self):
         # N.B. submission delegate but *not* submitter
@@ -2079,7 +2079,7 @@ class RecipeSetHTTPTest(DatabaseTestCase):
         response = post_json(get_server_base() +
                              'recipesets/%s/status' % self.job.recipesets[0].id,
                              session=s, data={'status': u'Cancelled'})
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
 
     def test_cancel_recipeset(self):
         s = requests.Session()
@@ -2092,10 +2092,10 @@ class RecipeSetHTTPTest(DatabaseTestCase):
             session.expire_all()
             self.job.update_status()
             recipeset = self.job.recipesets[0]
-            self.assertEquals(recipeset.status, TaskStatus.cancelled)
+            self.assertEqual(recipeset.status, TaskStatus.cancelled)
             # https://bugzilla.redhat.com/show_bug.cgi?id=995012
-            self.assertEquals(recipeset.activity[0].field_name, u'Status')
-            self.assertEquals(recipeset.activity[0].action, u'Cancelled')
+            self.assertEqual(recipeset.activity[0].field_name, u'Status')
+            self.assertEqual(recipeset.activity[0].action, u'Cancelled')
 
     def test_submitter_can_cancel(self):
         with session.begin():

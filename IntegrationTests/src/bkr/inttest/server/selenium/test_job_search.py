@@ -73,7 +73,7 @@ class SearchJobsWD(WebDriverTestCase):
         b.find_element_by_id('searchform').submit()
         job_search_result = \
             b.find_element_by_xpath('//table[@id="widget"]').text
-        self.assert_('J:%s' % my_job.id in job_search_result)
+        self.assertTrue('J:%s' % my_job.id in job_search_result)
 
 
     def test_search_product(self):
@@ -95,7 +95,7 @@ class SearchJobsWD(WebDriverTestCase):
         b.find_element_by_id('searchform').submit()
         job_search_result = \
             b.find_element_by_xpath('//table[@id="widget"]').text
-        self.assert_('J:%s' % my_job.id in job_search_result)
+        self.assertTrue('J:%s' % my_job.id in job_search_result)
 
         with session.begin():
             my_job.product = None
@@ -120,7 +120,7 @@ class SearchJobsWD(WebDriverTestCase):
         job_search_result = \
             b.find_element_by_xpath('//table[@id="widget"]').text
 
-        self.assert_('J:%s' % my_job.id in job_search_result)
+        self.assertTrue('J:%s' % my_job.id in job_search_result)
 
     def test_search_email(self):
         b = self.browser
@@ -136,7 +136,7 @@ class SearchJobsWD(WebDriverTestCase):
         b.find_element_by_id('searchform').submit()
         job_search_result = \
             b.find_element_by_xpath('//table[@id="widget"]').text
-        self.assert_('J:%s' % self.running_job.id in job_search_result)
+        self.assertTrue('J:%s' % self.running_job.id in job_search_result)
 
     def test_search_owner(self):
         b = self.browser
@@ -152,7 +152,7 @@ class SearchJobsWD(WebDriverTestCase):
         b.find_element_by_id('searchform').submit()
         job_search_result = \
             b.find_element_by_xpath('//table[@id="widget"]').text
-        self.assert_('J:%s' % self.running_job.id in job_search_result)
+        self.assertTrue('J:%s' % self.running_job.id in job_search_result)
 
     def test_quick_search(self):
         b = self.browser
@@ -160,22 +160,22 @@ class SearchJobsWD(WebDriverTestCase):
         b.find_element_by_xpath("//button[@value='Status-is-Queued']").click()
         b.find_element_by_xpath("//table[@id='widget']/tbody/tr/td/a[normalize-space(text())='J:%s']" % self.queued_job.id)
         queued_table_text = b.find_element_by_xpath("//table[@id='widget']").text
-        self.assert_('J:%s' % self.running_job.id not in queued_table_text)
-        self.assert_('J:%s' % self.completed_job.id not in queued_table_text)
+        self.assertTrue('J:%s' % self.running_job.id not in queued_table_text)
+        self.assertTrue('J:%s' % self.completed_job.id not in queued_table_text)
 
         b.get(get_server_base() + 'jobs')
         b.find_element_by_xpath("//button[@value='Status-is-Running']").click()
         b.find_element_by_xpath("//table[@id='widget']/tbody/tr/td/a[normalize-space(text())='J:%s']" % self.running_job.id)
         running_table_text = b.find_element_by_xpath("//table[@id='widget']").text
-        self.assert_('J:%s' % self.queued_job.id not in running_table_text)
-        self.assert_('J:%s' % self.completed_job.id not in running_table_text)
+        self.assertTrue('J:%s' % self.queued_job.id not in running_table_text)
+        self.assertTrue('J:%s' % self.completed_job.id not in running_table_text)
 
         b.get(get_server_base() + 'jobs')
         b.find_element_by_xpath("//button[@value='Status-is-Completed']").click()
         b.find_element_by_xpath("//table[@id='widget']/tbody/tr/td/a[normalize-space(text())='J:%s']" % self.completed_job.id)
         completed_table_text = b.find_element_by_xpath("//table[@id='widget']").text
-        self.assert_('J:%s' % self.queued_job.id not in completed_table_text)
-        self.assert_('J:%s' % self.running_job.id not in completed_table_text)
+        self.assertTrue('J:%s' % self.queued_job.id not in completed_table_text)
+        self.assertTrue('J:%s' % self.running_job.id not in completed_table_text)
 
     def test_simple_search(self):
         with session.begin():

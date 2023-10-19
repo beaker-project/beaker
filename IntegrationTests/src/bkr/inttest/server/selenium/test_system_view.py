@@ -122,7 +122,7 @@ class SystemViewTestWD(WebDriverTestCase):
         modal.find_element_by_tag_name('form').submit()
         modal.find_element_by_xpath('.//button[contains(text(), "Rename")]')
         errors = modal.find_elements_by_class_name('alert-error')
-        self.assertEquals(len(errors), 1, 'Multiple errors: %r' % errors)
+        self.assertEqual(len(errors), 1, 'Multiple errors: %r' % errors)
 
     def test_update_system(self):
         orig_date_modified = self.system.date_modified
@@ -148,7 +148,7 @@ class SystemViewTestWD(WebDriverTestCase):
         tab.find_element_by_xpath('.//tr[th/text()="MAC Address" and td/text()="aa:bb:cc:dd:ee:ff"]')
         with session.begin():
             session.refresh(self.system)
-            self.assert_(self.system.date_modified > orig_date_modified)
+            self.assertTrue(self.system.date_modified > orig_date_modified)
 
     def test_submit_inventory_job(self):
         b = self.browser
@@ -200,11 +200,11 @@ class SystemViewTestWD(WebDriverTestCase):
                     self.system.status_durations[0].start_time,
                     tolerance=datetime.timedelta(seconds=60),
                     reference=datetime.datetime.utcnow())
-            self.assert_(self.system.status_durations[0].finish_time is None)
-            self.assert_(self.system.status_durations[1].finish_time is not None)
+            self.assertTrue(self.system.status_durations[0].finish_time is None)
+            self.assertTrue(self.system.status_durations[1].finish_time is not None)
             assertions.assert_durations_not_overlapping(
                     self.system.status_durations)
-            self.assert_(self.system.date_modified > orig_date_modified)
+            self.assertTrue(self.system.date_modified > orig_date_modified)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=746774
     def test_change_status_with_same_timestamps(self):
@@ -273,8 +273,8 @@ class SystemViewTestWD(WebDriverTestCase):
         requests_login(s)
         response = patch_json(get_server_base() + 'systems/%s/' % self.system.fqdn,
                 session=s, data=dict(fqdn=u'lol...?'))
-        self.assertEquals(response.status_code, 400)
-        self.assertEquals(response.text, u'Invalid FQDN for system: lol...?')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text, u'Invalid FQDN for system: lol...?')
 
     def test_rejects_non_ascii_chars_in_fqdn(self):
         b = self.browser
@@ -294,8 +294,8 @@ class SystemViewTestWD(WebDriverTestCase):
         requests_login(s)
         response = patch_json(get_server_base() + 'systems/%s/' % self.system.fqdn,
                 session=s, data=dict(fqdn=u'löööööl'))
-        self.assertEquals(response.status_code, 400)
-        self.assertEquals(response.text, u'Invalid FQDN for system: löööööl')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text, u'Invalid FQDN for system: löööööl')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=683003
     def test_forces_fqdn_to_lowercase(self):
@@ -310,7 +310,7 @@ class SystemViewTestWD(WebDriverTestCase):
         b.find_element_by_xpath('//h1[contains(text(), "looooool")]')
         with session.begin():
             session.refresh(self.system)
-            self.assertEquals(self.system.fqdn, u'looooool')
+            self.assertEqual(self.system.fqdn, u'looooool')
 
     def test_add_arch(self):
         orig_date_modified = self.system.date_modified
@@ -324,7 +324,7 @@ class SystemViewTestWD(WebDriverTestCase):
         b.find_element_by_xpath('//div[@id="essentials"]//span[@class="sync-status" and not(text())]')
         with session.begin():
             session.refresh(self.system)
-            self.assert_(self.system.date_modified > orig_date_modified)
+            self.assertTrue(self.system.date_modified > orig_date_modified)
 
     def test_remove_arch(self):
         orig_date_modified = self.system.date_modified
@@ -338,7 +338,7 @@ class SystemViewTestWD(WebDriverTestCase):
         b.find_element_by_xpath('//div[@id="essentials"]//span[@class="sync-status" and not(text())]')
         with session.begin():
             session.refresh(self.system)
-            self.assert_(self.system.date_modified > orig_date_modified)
+            self.assertTrue(self.system.date_modified > orig_date_modified)
 
     def test_add_key_value(self):
         orig_date_modified = self.system.date_modified
@@ -354,7 +354,7 @@ class SystemViewTestWD(WebDriverTestCase):
                 'normalize-space(text())="100"]')
         with session.begin():
             session.refresh(self.system)
-            self.assert_(self.system.date_modified > orig_date_modified)
+            self.assertTrue(self.system.date_modified > orig_date_modified)
 
     def test_remove_key_value(self):
         with session.begin():
@@ -370,14 +370,14 @@ class SystemViewTestWD(WebDriverTestCase):
                 'normalize-space(text())="100"]')
         delete_and_confirm(b, '//tr[normalize-space(td[1]/text())="NR_DISKS" and '
                 'normalize-space(td[2]/text())="100"]')
-        self.assertEquals(b.find_element_by_class_name('flash').text,
+        self.assertEqual(b.find_element_by_class_name('flash').text,
                 'removed NR_DISKS/100')
         b.find_element_by_xpath('//div[@id="keys" and not(.//tr['
                 'normalize-space(td[1]/text())="NR_DISKS" and '
                 'normalize-space(td[2]/text())="100"])]')
         with session.begin():
             session.refresh(self.system)
-            self.assert_(self.system.date_modified > orig_date_modified)
+            self.assertTrue(self.system.date_modified > orig_date_modified)
 
     def test_add_pool(self):
         with session.begin():
@@ -390,12 +390,12 @@ class SystemViewTestWD(WebDriverTestCase):
         self.go_to_system_view(system=system, tab='Pools')
         b.find_element_by_name('pool').send_keys(pool.name)
         b.find_element_by_class_name('system-pool-add').submit()
-        self.assertEquals(b.find_element_by_xpath('//div[@id="list-system-pools"]'
+        self.assertEqual(b.find_element_by_xpath('//div[@id="list-system-pools"]'
                                                   '/ul[@class="list-group system-pools-list"]'
                                                   '/li/a').text, pool.name)
         with session.begin():
             session.refresh(system)
-            self.assert_(system.date_modified > orig_date_modified)
+            self.assertTrue(system.date_modified > orig_date_modified)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1364311
     def test_link_to_pools_works(self):
@@ -445,7 +445,7 @@ class SystemViewTestWD(WebDriverTestCase):
                                 'not(./ul/li)]')
         with session.begin():
             session.refresh(system)
-            self.assert_(system.date_modified > orig_date_modified)
+            self.assertTrue(system.date_modified > orig_date_modified)
 
         # A pool owner or an user with edit permissions on a system can remove a system from a pool
         with session.begin():
@@ -476,12 +476,12 @@ class SystemViewTestWD(WebDriverTestCase):
         self.go_to_system_view(system=system, tab='Pools')
         b.find_element_by_name('pool').send_keys(pool.name)
         b.find_element_by_class_name('system-pool-add').submit()
-        self.assertEquals(b.find_element_by_xpath('//div[@id="list-system-pools"]'
+        self.assertEqual(b.find_element_by_xpath('//div[@id="list-system-pools"]'
                                                   '/ul[@class="list-group system-pools-list"]'
                                                   '/li/a').text, pool.name)
         with session.begin():
             session.refresh(system)
-            self.assert_(system.date_modified > orig_date_modified)
+            self.assertTrue(system.date_modified > orig_date_modified)
 
         orig_date_modified = system.date_modified
         # add again
@@ -492,7 +492,7 @@ class SystemViewTestWD(WebDriverTestCase):
         self.assertFalse(b.find_element_by_name('pool').text)
         with session.begin():
             session.refresh(system)
-            self.assert_(system.date_modified == orig_date_modified)
+            self.assertTrue(system.date_modified == orig_date_modified)
 
     def test_remove_pool_updates_active_access_policy(self):
         with session.begin():
@@ -528,7 +528,7 @@ class SystemViewTestWD(WebDriverTestCase):
         login(b, self.unprivileged_user.user_name, 'password')
         self.go_to_system_view(tab='Power Settings')
         tab = b.find_element_by_id('power-settings')
-        self.assertEquals(tab.find_element_by_class_name('alert-info').text,
+        self.assertEqual(tab.find_element_by_class_name('alert-info').text,
                 'You do not have permission to view power configuration '
                 'for this system.')
         self.assertNotIn('midnight', tab.text)
@@ -607,7 +607,7 @@ class SystemViewTestWD(WebDriverTestCase):
         tab.find_element_by_xpath('.//button[text()="Save Changes"]')
         with session.begin():
             session.refresh(self.system)
-            self.assert_(self.system.date_modified > orig_date_modified)
+            self.assertTrue(self.system.date_modified > orig_date_modified)
             self.assertEqual(self.system.power.power_quiescent_period, 66)
             self.assertEqual(self.system.power.power_address,
                 'nowhere.example.com')
@@ -655,7 +655,7 @@ class SystemViewTestWD(WebDriverTestCase):
         # re-open the page and make sure it renders properly
         self.go_to_system_view(tab='Power Settings')
         tab = b.find_element_by_id('power-settings')
-        self.assertEquals(
+        self.assertEqual(
                 tab.find_element_by_name('power_password').get_attribute('value'),
                 bad_value)
 
@@ -688,9 +688,9 @@ class SystemViewTestWD(WebDriverTestCase):
                                 'power_quiescent_period': '5'}
         with session.begin():
             session.refresh(system)
-            self.assertEquals(len(system.activity), len(power_fields_changed.keys()))
+            self.assertEqual(len(system.activity), len(power_fields_changed.keys()))
             for activity in system.activity:
-                self.assertEquals(activity.new_value,
+                self.assertEqual(activity.new_value,
                                   power_fields_changed[activity.field_name])
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1386074
@@ -732,7 +732,7 @@ class SystemViewTestWD(WebDriverTestCase):
             self.system.power.power_passwd = None
             self.system.power.power_id = None
             PowerType.lazy_create(name=u'drac')
-            self.assertEquals(len(self.system.activity), 0)
+            self.assertEqual(len(self.system.activity), 0)
         b = self.browser
         login(b)
         self.go_to_system_view(tab='Power Settings')
@@ -744,10 +744,10 @@ class SystemViewTestWD(WebDriverTestCase):
         tab.find_element_by_xpath('.//button[text()="Save Changes"]')
         with session.begin():
             session.refresh(self.system)
-            self.assertEquals(len(self.system.activity), 1,
+            self.assertEqual(len(self.system.activity), 1,
                     'Expecting only one activity row for power_type but found: %r'
                     % self.system.activity)
-            self.assertEquals(self.system.activity[0].field_name, u'power_type')
+            self.assertEqual(self.system.activity[0].field_name, u'power_type')
 
     def test_add_install_options(self):
         orig_date_modified = self.system.date_modified
@@ -761,7 +761,7 @@ class SystemViewTestWD(WebDriverTestCase):
         b.find_element_by_xpath('//h1[text()="%s"]' % self.system.fqdn)
         with session.begin():
             session.refresh(self.system)
-            self.assert_(self.system.date_modified > orig_date_modified)
+            self.assertTrue(self.system.date_modified > orig_date_modified)
 
     def test_delete_install_options(self):
         with session.begin():
@@ -777,16 +777,16 @@ class SystemViewTestWD(WebDriverTestCase):
         b.find_element_by_xpath('//h1[text()="%s"]' % self.system.fqdn)
         with session.begin():
             session.refresh(self.system)
-            self.assert_(self.system.date_modified > orig_date_modified)
-            self.assert_(self.distro_tree.arch not in self.system.provisions)
-            self.assertEquals(self.system.activity[0].action, u'Removed')
-            self.assertEquals(self.system.activity[0].field_name,
+            self.assertTrue(self.system.date_modified > orig_date_modified)
+            self.assertTrue(self.distro_tree.arch not in self.system.provisions)
+            self.assertEqual(self.system.activity[0].action, u'Removed')
+            self.assertEqual(self.system.activity[0].field_name,
                     u'InstallOption:kernel_options_post:i386')
-            self.assertEquals(self.system.activity[1].action, u'Removed')
-            self.assertEquals(self.system.activity[1].field_name,
+            self.assertEqual(self.system.activity[1].action, u'Removed')
+            self.assertEqual(self.system.activity[1].field_name,
                     u'InstallOption:kernel_options:i386')
-            self.assertEquals(self.system.activity[2].action, u'Removed')
-            self.assertEquals(self.system.activity[2].field_name,
+            self.assertEqual(self.system.activity[2].action, u'Removed')
+            self.assertEqual(self.system.activity[2].field_name,
                     u'InstallOption:ks_meta:i386')
 
     def test_update_labinfo(self):
@@ -809,13 +809,13 @@ class SystemViewTestWD(WebDriverTestCase):
             b.find_element_by_name(k).clear()
             b.find_element_by_name(k).send_keys(v)
         b.find_element_by_xpath('//button[text()="Save Lab Info Changes"]').click()
-        self.assertEquals(b.find_element_by_class_name('flash').text,
+        self.assertEqual(b.find_element_by_class_name('flash').text,
                 'Saved Lab Info')
         for k, v in changes.iteritems():
-            self.assertEquals(b.find_element_by_name(k).get_attribute('value'), v)
+            self.assertEqual(b.find_element_by_name(k).get_attribute('value'), v)
         with session.begin():
             session.refresh(self.system)
-            self.assert_(self.system.date_modified > orig_date_modified)
+            self.assertTrue(self.system.date_modified > orig_date_modified)
 
     def test_change_owner(self):
         with session.begin():
@@ -831,7 +831,7 @@ class SystemViewTestWD(WebDriverTestCase):
         tab.find_element_by_xpath('p[1]/a[text()="%s"]' % new_owner.user_name)
         with session.begin():
             session.refresh(self.system)
-            self.assertEquals(self.system.owner, new_owner)
+            self.assertEqual(self.system.owner, new_owner)
 
     def test_cannot_set_owner_to_invalid_user(self):
         b = self.browser
@@ -851,7 +851,7 @@ class SystemViewTestWD(WebDriverTestCase):
         modal.find_element_by_tag_name('form').submit()
         modal.find_element_by_xpath('.//button[contains(text(), "Save changes")]')
         errors = modal.find_elements_by_class_name('alert-error')
-        self.assertEquals(len(errors), 1, 'Multiple errors: %r' % errors)
+        self.assertEqual(len(errors), 1, 'Multiple errors: %r' % errors)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=691796
     def test_cannot_set_owner_to_none(self):
@@ -868,7 +868,7 @@ class SystemViewTestWD(WebDriverTestCase):
         modal.find_element_by_css_selector('input[name=user_name]:required')
         with session.begin():
             session.refresh(self.system)
-            self.assertEquals(self.system.owner, self.system_owner)
+            self.assertEqual(self.system.owner, self.system_owner)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=664482
     def test_cannot_change_lab_controller_while_system_in_use(self):
@@ -1036,7 +1036,7 @@ class SystemViewTestWD(WebDriverTestCase):
         # by default the grid is sorted by id descending
         cell_values = [table.find_element_by_xpath('tbody/tr[%d]/td[%d]'
                 % (row, column)).text for row in [1, 2, 3]]
-        self.assertEquals(cell_values, ['ccc', 'bbb', 'aaa'])
+        self.assertEqual(cell_values, ['ccc', 'bbb', 'aaa'])
         # sort by New Value column
         table.find_element_by_xpath('thead/tr/th[%d]/a[text()="New Value"]' % column).click()
         # wait for the sort indicator in the column header to appear
@@ -1045,7 +1045,7 @@ class SystemViewTestWD(WebDriverTestCase):
         wait_for_ajax_loading(b, 'loading-overlay')
         cell_values = [table.find_element_by_xpath('tbody/tr[%d]/td[%d]'
                 % (row, column)).text for row in [1, 2, 3]]
-        self.assertEquals(cell_values, ['aaa', 'bbb', 'ccc'])
+        self.assertEqual(cell_values, ['aaa', 'bbb', 'ccc'])
 
     def test_can_filter_activity_grid(self):
         with session.begin():
@@ -1079,7 +1079,7 @@ class SystemViewTestWD(WebDriverTestCase):
         # by default the grid is sorted by id descending
         cell_values = [table.find_element_by_xpath('tbody/tr[%d]/td[%d]/a' %
                                                    (row, column)).text for row in [1, 2, 3]]
-        self.assertEquals(cell_values, [job3.recipesets[0].recipes[0].tasks[0].t_id,
+        self.assertEqual(cell_values, [job3.recipesets[0].recipes[0].tasks[0].t_id,
                                         job2.recipesets[0].recipes[0].tasks[0].t_id,
                                         job1.recipesets[0].recipes[0].tasks[0].t_id])
         # sort by Run ID column
@@ -1090,7 +1090,7 @@ class SystemViewTestWD(WebDriverTestCase):
         wait_for_ajax_loading(b, 'loading-overlay')
         cell_values = [table.find_element_by_xpath('tbody/tr[%d]/td[%d]/a' %
                                                    (row, column)).text for row in [1, 2, 3]]
-        self.assertEquals(cell_values, [job1.recipesets[0].recipes[0].tasks[0].t_id,
+        self.assertEqual(cell_values, [job1.recipesets[0].recipes[0].tasks[0].t_id,
                                         job2.recipesets[0].recipes[0].tasks[0].t_id,
                                         job3.recipesets[0].recipes[0].tasks[0].t_id])
 
@@ -1144,16 +1144,16 @@ class SystemViewTestWD(WebDriverTestCase):
         tab.find_element_by_xpath('.//li[contains(text(), "roy.baty@pkd.com")]')
         with session.begin():
             session.refresh(self.system)
-            self.assertEquals(set(self.system.cc),
+            self.assertEqual(set(self.system.cc),
                     set([u'roy.baty@pkd.com', u'deckard@police.gov']))
-            self.assertEquals(self.system.activity[0].field_name, u'Cc')
-            self.assertEquals(self.system.activity[0].service, u'HTTP')
-            self.assertEquals(self.system.activity[0].action, u'Added')
-            self.assertEquals(self.system.activity[0].new_value, u'deckard@police.gov')
-            self.assertEquals(self.system.activity[1].field_name, u'Cc')
-            self.assertEquals(self.system.activity[1].service, u'HTTP')
-            self.assertEquals(self.system.activity[1].action, u'Added')
-            self.assertEquals(self.system.activity[1].new_value, u'roy.baty@pkd.com')
+            self.assertEqual(self.system.activity[0].field_name, u'Cc')
+            self.assertEqual(self.system.activity[0].service, u'HTTP')
+            self.assertEqual(self.system.activity[0].action, u'Added')
+            self.assertEqual(self.system.activity[0].new_value, u'deckard@police.gov')
+            self.assertEqual(self.system.activity[1].field_name, u'Cc')
+            self.assertEqual(self.system.activity[1].service, u'HTTP')
+            self.assertEqual(self.system.activity[1].action, u'Added')
+            self.assertEqual(self.system.activity[1].new_value, u'roy.baty@pkd.com')
 
     def test_remove_cc(self):
         with session.begin():
@@ -1170,15 +1170,15 @@ class SystemViewTestWD(WebDriverTestCase):
         tab.find_element_by_xpath('.//ul[not(./li[contains(text(), "deckard@police.gov")])]')
         with session.begin():
             session.refresh(self.system)
-            self.assertEquals(self.system.cc, [])
-            self.assertEquals(self.system.activity[0].field_name, u'Cc')
-            self.assertEquals(self.system.activity[0].service, u'HTTP')
-            self.assertEquals(self.system.activity[0].action, u'Removed')
-            self.assertEquals(self.system.activity[0].old_value, u'deckard@police.gov')
-            self.assertEquals(self.system.activity[1].field_name, u'Cc')
-            self.assertEquals(self.system.activity[1].service, u'HTTP')
-            self.assertEquals(self.system.activity[1].action, u'Removed')
-            self.assertEquals(self.system.activity[1].old_value, u'roy.baty@pkd.com')
+            self.assertEqual(self.system.cc, [])
+            self.assertEqual(self.system.activity[0].field_name, u'Cc')
+            self.assertEqual(self.system.activity[0].service, u'HTTP')
+            self.assertEqual(self.system.activity[0].action, u'Removed')
+            self.assertEqual(self.system.activity[0].old_value, u'deckard@police.gov')
+            self.assertEqual(self.system.activity[1].field_name, u'Cc')
+            self.assertEqual(self.system.activity[1].service, u'HTTP')
+            self.assertEqual(self.system.activity[1].action, u'Removed')
+            self.assertEqual(self.system.activity[1].old_value, u'roy.baty@pkd.com')
 
 class TestSystemViewRDF(DatabaseTestCase):
 
@@ -1193,7 +1193,7 @@ class TestSystemViewRDF(DatabaseTestCase):
                     urlencode({'tg_format': 'turtle'})))
         graph = rdflib.graph.Graph()
         graph.parse(location=rdf_url, format='n3')
-        self.assert_(len(graph) >= 9)
+        self.assertTrue(len(graph) >= 9)
 
     def test_rdfxml(self):
         rdf_url = urljoin(get_server_base(),
@@ -1201,7 +1201,7 @@ class TestSystemViewRDF(DatabaseTestCase):
                     urlencode({'tg_format': 'rdfxml'})))
         graph = rdflib.graph.Graph()
         graph.parse(location=rdf_url, format='xml')
-        self.assert_(len(graph) >= 9)
+        self.assertTrue(len(graph) >= 9)
 
 class SystemStatusHTTPTest(DatabaseTestCase):
     """
@@ -1220,14 +1220,14 @@ class SystemStatusHTTPTest(DatabaseTestCase):
         response = requests.get(get_server_base() + 'systems/%s/status' % system.fqdn)
         response.raise_for_status()
         json = response.json()
-        self.assertEquals(json['condition'], 'Manual')
+        self.assertEqual(json['condition'], 'Manual')
         reservation_info = json['current_reservation']
-        self.assertEquals(reservation_info['user_name'], u'dracula') # Beaker 0.15.3
-        self.assertEquals(reservation_info['user']['user_name'], 'dracula') # Beaker 19
+        self.assertEqual(reservation_info['user_name'], u'dracula') # Beaker 0.15.3
+        self.assertEqual(reservation_info['user']['user_name'], 'dracula') # Beaker 19
         loan_info = json['current_loan']
-        self.assertEquals(loan_info['recipient'], u'wolfman') # Beaker 0.15.3
-        self.assertEquals(loan_info['recipient_user']['user_name'], 'wolfman') # Beaker 19
-        self.assertEquals(loan_info['comment'], u'For evil purposes')
+        self.assertEqual(loan_info['recipient'], u'wolfman') # Beaker 0.15.3
+        self.assertEqual(loan_info['recipient_user']['user_name'], 'wolfman') # Beaker 19
+        self.assertEqual(loan_info['comment'], u'For evil purposes')
 
 class SystemActivityHTTPTest(DatabaseTestCase):
     """
@@ -1248,8 +1248,8 @@ class SystemActivityHTTPTest(DatabaseTestCase):
                 'systems/%s/activity/?q=action:poke&page_size=20' % system.fqdn)
         response = requests.get(original_url, allow_redirects=False,
                 headers={'Accept': 'application/json'})
-        self.assertEquals(response.status_code, 302)
-        self.assertEquals(response.headers['Location'], expected_redirect)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers['Location'], expected_redirect)
         # For completeness, the same thing with no query params.
         original_url = (get_server_base() +
                 'systems/%s/activity/' % system.fqdn)
@@ -1257,8 +1257,8 @@ class SystemActivityHTTPTest(DatabaseTestCase):
                 'systems/%s/activity/?page_size=20' % system.fqdn)
         response = requests.get(original_url, allow_redirects=False,
                 headers={'Accept': 'application/json'})
-        self.assertEquals(response.status_code, 302)
-        self.assertEquals(response.headers['Location'], expected_redirect)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers['Location'], expected_redirect)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1401964
     def test_filter_by_activity_id_range(self):

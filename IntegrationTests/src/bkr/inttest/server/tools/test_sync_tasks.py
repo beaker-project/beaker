@@ -8,6 +8,7 @@ import sys
 import os
 import subprocess
 from bkr.inttest import Process
+from six import assertRegex
 from turbogears.database import session
 from bkr.common import __version__
 from bkr.server.tools.sync_tasks import TaskLibrarySync
@@ -49,14 +50,14 @@ class TestTaskLibrarySync(DatabaseTestCase):
         # sending 'y' is not required with --force, but
         # saves a new if..else block
         out, err = p.communicate('y')
-        self.assertEquals('', err)
+        self.assertEqual('', err)
 
         return out
 
     def assertRegexpMatchesIn(self, text, items):
         for item in items:
             try:
-                self.assertRegexpMatches(item, text)
+                assertRegex(self, item, text)
             except AssertionError:
                 continue
             else:
@@ -66,7 +67,7 @@ class TestTaskLibrarySync(DatabaseTestCase):
 
     def test_version(self):
         out = run_command('sync_tasks.py', 'beaker-sync-tasks', ['--version'])
-        self.assertEquals(out.strip(), __version__)
+        self.assertEqual(out.strip(), __version__)
 
     def test_sync_two_tasks(self):
         task_sync = TaskLibrarySync()

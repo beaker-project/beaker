@@ -249,7 +249,7 @@ class SystemLoanTest(WebDriverTestCase):
         modal.find_element_by_tag_name('form').submit()
         modal.find_element_by_xpath('.//button[text()="Save changes"]')
         errors = modal.find_elements_by_class_name('alert-error')
-        self.assertEquals(len(errors), 1, 'Multiple errors: %r' % errors)
+        self.assertEqual(len(errors), 1, 'Multiple errors: %r' % errors)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1121748
     def test_cannot_lend_to_ldap_user_with_extra_whitespace(self):
@@ -273,8 +273,8 @@ class SystemLoanHTTPTest(DatabaseTestCase):
         requests_login(s)
         response = post_json(get_server_base() + 'systems/%s/loans/' % system.fqdn,
                 session=s, data={'recipient': {'user_name': deleted_user.user_name}})
-        self.assertEquals(response.status_code, 400)
-        self.assertEquals(response.text,
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text,
                 'Cannot lend to deleted user %s' % deleted_user.user_name)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=996165
@@ -288,15 +288,15 @@ class SystemLoanHTTPTest(DatabaseTestCase):
         mail_capture_thread.start_capturing()
         response = post_json(get_server_base() + 'systems/%s/loans/' % system.fqdn,
                 session=s, data={'recipient': {'user_name': 'bshorten'}})
-        self.assertEquals(response.status_code, 200)
+        self.assertEqual(response.status_code, 200)
         captured_mails = mail_capture_thread.stop_capturing()
-        self.assertEquals(len(captured_mails), 1)
+        self.assertEqual(len(captured_mails), 1)
         sender, rcpts, raw_msg = captured_mails[0]
         msg = email.message_from_string(raw_msg)
-        self.assertEquals(['mturnbull@gov.au'], rcpts)
-        self.assertEquals('mturnbull@gov.au', msg['To'])
-        self.assertEquals('System lya3.aemo.com.au loaned to bshorten', msg['Subject'])
-        self.assertEquals(
+        self.assertEqual(['mturnbull@gov.au'], rcpts)
+        self.assertEqual('mturnbull@gov.au', msg['To'])
+        self.assertEqual('System lya3.aemo.com.au loaned to bshorten', msg['Subject'])
+        self.assertEqual(
                 'Beaker system lya3.aemo.com.au <%sview/lya3.aemo.com.au>\n'
                 'has been loaned to bshorten by admin.'
                 % get_server_base(),
@@ -314,15 +314,15 @@ class SystemLoanHTTPTest(DatabaseTestCase):
         mail_capture_thread.start_capturing()
         response = patch_json(get_server_base() + 'systems/%s/loans/+current' % system.fqdn,
                 session=s, data={'finish': 'now'})
-        self.assertEquals(response.status_code, 200)
+        self.assertEqual(response.status_code, 200)
         captured_mails = mail_capture_thread.stop_capturing()
-        self.assertEquals(len(captured_mails), 1)
+        self.assertEqual(len(captured_mails), 1)
         sender, rcpts, raw_msg = captured_mails[0]
         msg = email.message_from_string(raw_msg)
-        self.assertEquals(['mturnbull@gov.au'], rcpts)
-        self.assertEquals('mturnbull@gov.au', msg['To'])
-        self.assertEquals('System lya4.aemo.com.au loan returned', msg['Subject'])
-        self.assertEquals(
+        self.assertEqual(['mturnbull@gov.au'], rcpts)
+        self.assertEqual('mturnbull@gov.au', msg['To'])
+        self.assertEqual('System lya4.aemo.com.au loan returned', msg['Subject'])
+        self.assertEqual(
                 'Beaker system lya4.aemo.com.au <%sview/lya4.aemo.com.au>\n'
                 'loan has been returned by admin.'
                 % get_server_base(),

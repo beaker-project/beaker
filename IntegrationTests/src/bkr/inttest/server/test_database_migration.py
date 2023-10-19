@@ -61,7 +61,7 @@ class MigrationTest(unittest.TestCase):
         # deadlocks with other tests in case the leaked connection was holding
         # an open transaction, which is why we force it to be 0.
         # https://bugzilla.redhat.com/show_bug.cgi?id=1356852
-        self.assertEquals(self.migration_engine.pool.checkedout(), 0)
+        self.assertEqual(self.migration_engine.pool.checkedout(), 0)
 
     def test_check_db(self):
         with self.migration_engine.connect() as connection:
@@ -470,7 +470,7 @@ class MigrationTest(unittest.TestCase):
         return expected_indexes
 
     def assert_columns_equivalent(self, expected, actual):
-        self.assertEquals(actual.name, expected.name)
+        self.assertEqual(actual.name, expected.name)
         # actual.type is the dialect-specific type so it will not be identical
         # to expected.type
         if isinstance(actual.type, sqlalchemy.dialects.mysql.TINYINT):
@@ -483,22 +483,22 @@ class MigrationTest(unittest.TestCase):
                             % (actual.type, expected.type))
 
         if hasattr(expected.type, 'length') and not isinstance(expected.type, UnicodeText):
-            self.assertEquals(actual.type.length, expected.type.length,
+            self.assertEqual(actual.type.length, expected.type.length,
                               '%r has wrong length' % actual)
         if hasattr(expected.type, 'precision'):
-            self.assertEquals(actual.type.precision, expected.type.precision,
+            self.assertEqual(actual.type.precision, expected.type.precision,
                               '%r has wrong numeric precision' % actual)
         if hasattr(expected.type, 'scale'):
-            self.assertEquals(actual.type.scale, expected.type.scale,
+            self.assertEqual(actual.type.scale, expected.type.scale,
                               '%r has wrong numeric scale' % actual)
         if hasattr(expected.type, 'enums'):
             self.assertItemsEqual(actual.type.enums, expected.type.enums)
-        self.assertEquals(actual.nullable, expected.nullable,
+        self.assertEqual(actual.nullable, expected.nullable,
                           '%r should%s be nullable' % (actual,
                                                        '' if expected.nullable else ' not'))
-        self.assertEquals(actual.primary_key, expected.primary_key)
+        self.assertEqual(actual.primary_key, expected.primary_key)
         if expected.server_default:
-            self.assertEquals(actual.server_default, expected.server_default,
+            self.assertEqual(actual.server_default, expected.server_default,
                               '%r has incorrect database default' % actual)
         else:
             if not actual.nullable and actual.server_default:
@@ -517,10 +517,10 @@ class MigrationTest(unittest.TestCase):
                               '%r has incorrect FK targets' % actual)
 
     def assert_indexes_equivalent(self, expected, actual):
-        self.assertEquals(expected.name, actual.name)
-        self.assertEquals([col.name for col in expected.columns],
+        self.assertEqual(expected.name, actual.name)
+        self.assertEqual([col.name for col in expected.columns],
                           [col.name for col in actual.columns])
-        self.assertEquals(expected.unique, actual.unique)
+        self.assertEqual(expected.unique, actual.unique)
 
     def test_migrate_system_groups_to_pools(self):
         with self.migration_metadata.bind.connect() as connection:
@@ -559,7 +559,7 @@ class MigrationTest(unittest.TestCase):
         }
         for pool in expected_system_pool_owners.keys():
             p = self.migration_session.query(SystemPool).filter(SystemPool.name == pool).one()
-            self.assertEquals(p.owning_group,
+            self.assertEqual(p.owning_group,
                               self.migration_session.query(Group).filter(
                                   Group.group_name == pool).one())
 
@@ -575,11 +575,11 @@ class MigrationTest(unittest.TestCase):
 
         min_user_id = min([user.id for user in self.migration_session.query(User).all()])
         for pool in created_pools:
-            self.assertEquals(pool.activity[-1].action, u'Created')
-            self.assertEquals(pool.activity[-1].field_name, u'Pool')
-            self.assertEquals(pool.activity[-1].user.user_id, min_user_id)
-            self.assertEquals(pool.activity[-1].new_value, pool.name)
-            self.assertEquals(pool.activity[-1].service, u'Migration')
+            self.assertEqual(pool.activity[-1].action, u'Created')
+            self.assertEqual(pool.activity[-1].field_name, u'Pool')
+            self.assertEqual(pool.activity[-1].user.user_id, min_user_id)
+            self.assertEqual(pool.activity[-1].new_value, pool.name)
+            self.assertEqual(pool.activity[-1].service, u'Migration')
 
     def test_migrate_system_access_policies_to_custom_access_policies(self):
         with self.migration_metadata.bind.connect() as connection:
@@ -608,9 +608,9 @@ class MigrationTest(unittest.TestCase):
             'test2.fqdn.name': 3
         }
         for s in systems:
-            self.assertEquals(s.custom_access_policy_id,
+            self.assertEqual(s.custom_access_policy_id,
                               expected_system_policy_map[s.fqdn])
-            self.assertEquals(s.active_access_policy_id,
+            self.assertEqual(s.active_access_policy_id,
                               expected_system_policy_map[s.fqdn])
 
         # downgrade test
@@ -646,7 +646,7 @@ class MigrationTest(unittest.TestCase):
         # run migration
         upgrade_db(self.migration_metadata)
         # check that access policy 2 has been deleted
-        self.assertEquals(
+        self.assertEqual(
             self.migration_session.query(SystemAccessPolicy).filter_by(id=2).count(),
             0)
 
@@ -678,7 +678,7 @@ class MigrationTest(unittest.TestCase):
             .group_by(OSMajorInstallOptions.osmajor_id,
                       OSMajorInstallOptions.arch_id)
         for osmajor_id, arch_id, count in row_counts:
-            self.assertEquals(count, 1,
+            self.assertEqual(count, 1,
                               'Expected to find only one row in osmajor_install_options '
                               'for osmajor_id %s, arch_id %s' % (osmajor_id, arch_id))
         # check that the most recent install options are kept, older ones are deleted
@@ -687,7 +687,7 @@ class MigrationTest(unittest.TestCase):
             .filter(OSMajor.osmajor == u'RedHatEnterpriseLinux6',
                     OSMajorInstallOptions.arch == None) \
             .one()
-        self.assertEquals(installopts.ks_meta, u'testtwo')
+        self.assertEqual(installopts.ks_meta, u'testtwo')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1257020
     def test_clear_removed_users_from_groups(self):
@@ -797,7 +797,7 @@ class MigrationTest(unittest.TestCase):
         # run migration
         upgrade_db(self.migration_metadata)
         # check that systtem activity and activity have been deleted
-        self.assertEquals(
+        self.assertEqual(
             self.migration_session.query(SystemActivity).filter_by(id=1).count(),
             0)
 
@@ -933,20 +933,20 @@ class MigrationTest(unittest.TestCase):
         # run migration
         upgrade_db(self.migration_metadata)
         # Job one's recipe task results should not be deleted
-        self.assertEquals(
+        self.assertEqual(
             self.migration_session.query(RecipeTaskResult).filter_by(recipe_task_id=1).count(),
             1)
         # Job one's log recipe task results should not be deleted
-        self.assertEquals(
+        self.assertEqual(
             self.migration_session.query(LogRecipeTaskResult).filter_by(
                 recipe_task_result_id=1).count(),
             1)
         # Job two's recipe task results should be deleted
-        self.assertEquals(
+        self.assertEqual(
             self.migration_session.query(RecipeTaskResult).filter_by(recipe_task_id=2).count(),
             0)
         # Job two's log recipe task results should be deleted
-        self.assertEquals(
+        self.assertEqual(
             self.migration_session.query(LogRecipeTaskResult).filter_by(
                 recipe_task_result_id=2).count(),
             0)
@@ -972,13 +972,13 @@ class MigrationTest(unittest.TestCase):
         downgrade_db(self.migration_metadata, '22')
         # status should be Running so that it works with 22.x
         with self.migration_metadata.bind.connect() as connection:
-            self.assertEquals(
+            self.assertEqual(
                 connection.scalar('SELECT status FROM job WHERE id = 1'),
                 u'Running')
-            self.assertEquals(
+            self.assertEqual(
                 connection.scalar('SELECT status FROM recipe_set WHERE id = 1'),
                 u'Running')
-            self.assertEquals(
+            self.assertEqual(
                 connection.scalar('SELECT status FROM recipe WHERE id = 1'),
                 u'Running')
 
@@ -1013,15 +1013,15 @@ class MigrationTest(unittest.TestCase):
         upgrade_db(self.migration_metadata)
         # command should be correctly populated
         cmd = self.migration_session.query(Command).get(1)
-        self.assertEquals(cmd.user_id, 1)
-        self.assertEquals(cmd.service, u'Scheduler')
-        self.assertEquals(cmd.system_id, 1)
-        self.assertEquals(cmd.queue_time, datetime.datetime(2016, 8, 11, 16, 47, 56))
-        self.assertEquals(cmd.action, u'on')
-        self.assertEquals(cmd.quiescent_period, 5)
-        self.assertEquals(cmd.delay_until, None)
-        self.assertEquals(cmd.status, CommandStatus.failed)
-        self.assertEquals(cmd.error_message,
+        self.assertEqual(cmd.user_id, 1)
+        self.assertEqual(cmd.service, u'Scheduler')
+        self.assertEqual(cmd.system_id, 1)
+        self.assertEqual(cmd.queue_time, datetime.datetime(2016, 8, 11, 16, 47, 56))
+        self.assertEqual(cmd.action, u'on')
+        self.assertEqual(cmd.quiescent_period, 5)
+        self.assertEqual(cmd.delay_until, None)
+        self.assertEqual(cmd.status, CommandStatus.failed)
+        self.assertEqual(cmd.error_message,
                           u'ValueError: Power script /usr/lib/python2.7/site-packages/bk')
         # old activity row should be gone
         self.assertIsNone(self.migration_session.query(Activity).filter_by(id=1).first())
@@ -1036,52 +1036,52 @@ class MigrationTest(unittest.TestCase):
                                   start_time=datetime.datetime(2016, 9, 19, 11, 54, 27))
             self.migration_session.add(new_command)
             self.migration_session.flush()
-            self.assertEquals(new_command.id, 2)
+            self.assertEqual(new_command.id, 2)
         # downgrade back to 23
         downgrade_db(self.migration_metadata, '23')
         # old activity and command_queue should be correctly populated
         with self.migration_metadata.bind.connect() as connection:
             activity_rows = connection.execute('SELECT * FROM activity ORDER BY id').fetchall()
-            self.assertEquals(len(activity_rows), 3)
-            self.assertEquals(activity_rows[0].id, 1)
-            self.assertEquals(activity_rows[0].user_id, 1)
-            self.assertEquals(activity_rows[0].created,
+            self.assertEqual(len(activity_rows), 3)
+            self.assertEqual(activity_rows[0].id, 1)
+            self.assertEqual(activity_rows[0].user_id, 1)
+            self.assertEqual(activity_rows[0].created,
                               datetime.datetime(2016, 8, 11, 16, 47, 56))
-            self.assertEquals(activity_rows[0].type, u'command_activity')
-            self.assertEquals(activity_rows[0].field_name, u'Command')
-            self.assertEquals(activity_rows[0].service, u'Scheduler')
-            self.assertEquals(activity_rows[0].action, u'on')
-            self.assertEquals(activity_rows[0].old_value, u'')
-            self.assertEquals(activity_rows[0].new_value,
+            self.assertEqual(activity_rows[0].type, u'command_activity')
+            self.assertEqual(activity_rows[0].field_name, u'Command')
+            self.assertEqual(activity_rows[0].service, u'Scheduler')
+            self.assertEqual(activity_rows[0].action, u'on')
+            self.assertEqual(activity_rows[0].old_value, u'')
+            self.assertEqual(activity_rows[0].new_value,
                               u'ValueError: Power script /usr/lib/python2.7/site-packages/bk')
-            self.assertEquals(activity_rows[2].id, 3)
-            self.assertEquals(activity_rows[2].user_id, 1)
-            self.assertEquals(activity_rows[2].created,
+            self.assertEqual(activity_rows[2].id, 3)
+            self.assertEqual(activity_rows[2].user_id, 1)
+            self.assertEqual(activity_rows[2].created,
                               datetime.datetime(2016, 9, 19, 11, 54, 7))
-            self.assertEquals(activity_rows[2].type, u'command_activity')
-            self.assertEquals(activity_rows[2].field_name, u'Command')
-            self.assertEquals(activity_rows[2].service, u'testdata')
-            self.assertEquals(activity_rows[2].action, u'off')
-            self.assertEquals(activity_rows[2].old_value, u'')
-            self.assertEquals(activity_rows[2].new_value, u'')
+            self.assertEqual(activity_rows[2].type, u'command_activity')
+            self.assertEqual(activity_rows[2].field_name, u'Command')
+            self.assertEqual(activity_rows[2].service, u'testdata')
+            self.assertEqual(activity_rows[2].action, u'off')
+            self.assertEqual(activity_rows[2].old_value, u'')
+            self.assertEqual(activity_rows[2].new_value, u'')
             command_rows = connection.execute('SELECT * FROM command_queue ORDER BY id').fetchall()
-            self.assertEquals(len(command_rows), 2)
-            self.assertEquals(command_rows[0].id, 1)
-            self.assertEquals(command_rows[0].system_id, 1)
-            self.assertEquals(command_rows[0].status, u'Failed')
-            self.assertEquals(command_rows[0].delay_until, None)
-            self.assertEquals(command_rows[0].quiescent_period, 5)
-            self.assertEquals(command_rows[0].updated,
+            self.assertEqual(len(command_rows), 2)
+            self.assertEqual(command_rows[0].id, 1)
+            self.assertEqual(command_rows[0].system_id, 1)
+            self.assertEqual(command_rows[0].status, u'Failed')
+            self.assertEqual(command_rows[0].delay_until, None)
+            self.assertEqual(command_rows[0].quiescent_period, 5)
+            self.assertEqual(command_rows[0].updated,
                               datetime.datetime(2016, 8, 11, 16, 47, 56))
-            self.assertEquals(command_rows[0].installation_id, None)
-            self.assertEquals(command_rows[1].id, 3)  # not 2, due to renumbering
-            self.assertEquals(command_rows[1].system_id, 1)
-            self.assertEquals(command_rows[1].status, u'Running')
-            self.assertEquals(command_rows[1].delay_until, None)
-            self.assertEquals(command_rows[1].quiescent_period, 3)
-            self.assertEquals(command_rows[1].updated,
+            self.assertEqual(command_rows[0].installation_id, None)
+            self.assertEqual(command_rows[1].id, 3)  # not 2, due to renumbering
+            self.assertEqual(command_rows[1].system_id, 1)
+            self.assertEqual(command_rows[1].status, u'Running')
+            self.assertEqual(command_rows[1].delay_until, None)
+            self.assertEqual(command_rows[1].quiescent_period, 3)
+            self.assertEqual(command_rows[1].updated,
                               datetime.datetime(2016, 9, 19, 11, 54, 7))
-            self.assertEquals(command_rows[1].installation_id, None)
+            self.assertEqual(command_rows[1].installation_id, None)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1136748
     def test_email_prefs_set_for_current_users(self):
@@ -1100,12 +1100,12 @@ class MigrationTest(unittest.TestCase):
         # check notifications have been set for bob
         user = self.migration_session.query(User).all()
 
-        self.assertEquals(user[1].user_name, u'bob')
+        self.assertEqual(user[1].user_name, u'bob')
 
-        self.assertEquals(user[1].notify_job_completion, True)
-        self.assertEquals(user[1].notify_broken_system, True)
-        self.assertEquals(user[1].notify_group_membership, True)
-        self.assertEquals(user[1].notify_reservesys, True)
+        self.assertEqual(user[1].notify_job_completion, True)
+        self.assertEqual(user[1].notify_broken_system, True)
+        self.assertEqual(user[1].notify_group_membership, True)
+        self.assertEqual(user[1].notify_reservesys, True)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1100593
     def test_reserve_condition_is_set_to_always_for_existing_rows(self):
@@ -1130,7 +1130,7 @@ class MigrationTest(unittest.TestCase):
         upgrade_db(self.migration_metadata)
         # condition should be set to 'always' by default
         with self.migration_metadata.bind.connect() as connection:
-            self.assertEquals(
+            self.assertEqual(
                 connection.scalar('SELECT `when` FROM recipe_reservation WHERE id = 1'),
                 u'always')
 
@@ -1174,24 +1174,24 @@ class MigrationTest(unittest.TestCase):
 
         upgrade_db(self.migration_metadata)
 
-        self.assertEquals(
+        self.assertEqual(
             self.migration_session.query(Command).filter_by(system_id=1).count(),
             4)
 
         # Failed Command left in place
-        self.assertEquals(
+        self.assertEqual(
             self.migration_session.query(Command).filter_by(status=CommandStatus.aborted,
                                                             system_id=2).count(),
             4)
 
         # Failed Command left in place
-        self.assertEquals(
+        self.assertEqual(
             self.migration_session.query(Command).filter_by(status=CommandStatus.failed,
                                                             system_id=2).count(),
             1)
 
         cmd = self.migration_session.query(Command).get(9)
-        self.assertEquals(cmd.status, CommandStatus.failed)
+        self.assertEqual(cmd.status, CommandStatus.failed)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1404054
     def test_marks_all_migrations_as_finished_on_fresh_db(self):
@@ -1200,7 +1200,7 @@ class MigrationTest(unittest.TestCase):
             for name in DataMigration.all_names():
                 migration = self.migration_session.query(DataMigration) \
                     .filter(DataMigration.name == name).one()
-                self.assertEquals(migration.is_finished, True)
+                self.assertEqual(migration.is_finished, True)
 
     def test_values_are_preserved_after_migration(self):
         with self.migration_metadata.bind.connect() as connection:
@@ -1217,7 +1217,7 @@ class MigrationTest(unittest.TestCase):
 
         # check ipxe_image_id binary value after upgrade
         with self.migration_metadata.bind.connect() as connection:
-            self.assertEquals(connection.scalar('SELECT ipxe_image_id FROM openstack_region '
+            self.assertEqual(connection.scalar('SELECT ipxe_image_id FROM openstack_region '
                                                 'WHERE lab_controller_id = 1'),
                               '\xde\xad\xbe\xef\xde\xad\xbe\xef\xde\xad\xbe\xef\xde\xad\xbe\xef')
 
@@ -1225,7 +1225,7 @@ class MigrationTest(unittest.TestCase):
 
         # check ipxe_image_id varchar value after downgrade
         with self.migration_metadata.bind.connect() as connection:
-            self.assertEquals(connection.scalar('SELECT ipxe_image_id FROM openstack_region '
+            self.assertEqual(connection.scalar('SELECT ipxe_image_id FROM openstack_region '
                                                 'WHERE lab_controller_id = 1'),
                               u'deadbeef-dead-beef-dead-beefdeadbeef')
 
@@ -1242,8 +1242,8 @@ class MigrationTest(unittest.TestCase):
                 "VALUES (1, 1, '', '', '2017-07-27 14:28:20')")
         upgrade_db(self.migration_metadata)
         job = self.migration_session.query(Job).get(1)
-        self.assertEquals(job.purged, datetime.datetime(2017, 7, 27, 14, 28, 20))
-        self.assertEquals(job.deleted, datetime.datetime(2017, 7, 27, 14, 28, 20))
+        self.assertEqual(job.purged, datetime.datetime(2017, 7, 27, 14, 28, 20))
+        self.assertEqual(job.deleted, datetime.datetime(2017, 7, 27, 14, 28, 20))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1337789
     def test_deleted_jobs_with_logs_are_not_purged(self):
@@ -1275,8 +1275,8 @@ class MigrationTest(unittest.TestCase):
         self.assertTrue(finished)
         # Job should be deleted, but not purged, so that beaker-log-delete will purge it again
         job = self.migration_session.query(Job).get(1)
-        self.assertEquals(job.purged, None)
-        self.assertEquals(job.deleted, datetime.datetime(2017, 7, 27, 14, 28, 20))
+        self.assertEqual(job.purged, None)
+        self.assertEqual(job.deleted, datetime.datetime(2017, 7, 27, 14, 28, 20))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=800455
     def test_downgrading_task_exclusive_osmajors_converts_to_excluded_osmajors(self):
@@ -1364,15 +1364,15 @@ class MigrationTest(unittest.TestCase):
         # Job should be deleted, but not purged, so that beaker-log-delete will purge it again
         systems = self.migration_session.query(System).order_by(System.id).all()
         # Removed system should be 'idle', we don't want the scheduler to bother looking at it.
-        self.assertEquals(systems[0].scheduler_status, SystemSchedulerStatus.idle)
+        self.assertEqual(systems[0].scheduler_status, SystemSchedulerStatus.idle)
         # Idle systems should be 'pending', so that the scheduler will check if
         # there is a queued recipe for them to start. Note that this includes
         # Manual and Broken systems since they can be scheduled too!
-        self.assertEquals(systems[1].scheduler_status, SystemSchedulerStatus.pending)
-        self.assertEquals(systems[2].scheduler_status, SystemSchedulerStatus.pending)
-        self.assertEquals(systems[3].scheduler_status, SystemSchedulerStatus.pending)
+        self.assertEqual(systems[1].scheduler_status, SystemSchedulerStatus.pending)
+        self.assertEqual(systems[2].scheduler_status, SystemSchedulerStatus.pending)
+        self.assertEqual(systems[3].scheduler_status, SystemSchedulerStatus.pending)
         # Reserved systems should be 'reserved'.
-        self.assertEquals(systems[4].scheduler_status, SystemSchedulerStatus.reserved)
+        self.assertEqual(systems[4].scheduler_status, SystemSchedulerStatus.reserved)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=911515
     def test_queued_recipe_has_installation_column_after_upgrade(self):
@@ -1437,7 +1437,7 @@ class MigrationTest(unittest.TestCase):
         group = self.migration_session.query(Group).get(41)
         change_prio = self.migration_session.query(Permission) \
             .filter_by(permission_name=u'change_prio').one()
-        self.assertEquals(group.permissions, [change_prio])
+        self.assertEqual(group.permissions, [change_prio])
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1550361
     def test_downgrading_upgrading_distro_element_will_not_leave_NULL_columns(self):

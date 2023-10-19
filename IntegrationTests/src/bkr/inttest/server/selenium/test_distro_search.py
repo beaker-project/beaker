@@ -83,7 +83,7 @@ class Search(WebDriverTestCase):
         b.get(get_server_base() + 'distros')
         b.find_element_by_name('simplesearch').send_keys(distro.name)
         b.find_element_by_id('simpleform').submit()
-        self.assert_(is_text_present(b, 'Items found: 1'))
+        self.assertTrue(is_text_present(b, 'Items found: 1'))
 
     def test_simple_search(self):
         b = self.browser
@@ -190,12 +190,12 @@ class SearchOptionsTest(WebDriverTestCase):
         b.find_element_by_name('distrosearch-0.value').send_keys('RHEL-6.2')
         b.find_element_by_id('searchform').submit()
 
-        self.assertEquals(Select(b.find_element_by_name('distrosearch-0.table'))
+        self.assertEqual(Select(b.find_element_by_name('distrosearch-0.table'))
                 .first_selected_option.text,
                 'Name')
-        self.assertEquals(Select(b.find_element_by_name('distrosearch-0.operation'))
+        self.assertEqual(Select(b.find_element_by_name('distrosearch-0.operation'))
                 .first_selected_option.text,
                 'is not')
-        self.assertEquals(b.find_element_by_name('distrosearch-0.value')
+        self.assertEqual(b.find_element_by_name('distrosearch-0.value')
                 .get_attribute('value'),
                 'RHEL-6.2')

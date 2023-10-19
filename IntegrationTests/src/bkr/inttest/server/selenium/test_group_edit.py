@@ -10,6 +10,7 @@ import re
 
 import datetime
 import requests
+from six import assertRaisesRegex
 import xmlrpclib
 from turbogears.database import session
 
@@ -122,13 +123,13 @@ class TestGroupsWD(WebDriverTestCase):
         self.assertEqual(msg['X-Beaker-Group'], group.group_name)
         self.assertEqual(msg['X-Beaker-Group-Action'], action)
         for keyword in ['Group Membership', action, group.group_name]:
-            self.assert_(keyword in msg['Subject'], msg['Subject'])
+            self.assertTrue(keyword in msg['Subject'], msg['Subject'])
 
         # body
         msg_payload = msg.get_payload(decode=True)
         action = action.lower()
         for keyword in [action, group.group_name]:
-            self.assert_(keyword in msg_payload, (keyword, msg_payload))
+            self.assertTrue(keyword in msg_payload, (keyword, msg_payload))
 
     def test_too_short_password_rejected(self):
         b = self.browser
@@ -161,7 +162,7 @@ class TestGroupsWD(WebDriverTestCase):
         tab.find_element_by_name('root_password').send_keys(self.hashed_password)
         tab.find_element_by_tag_name('form').submit()
         new_hash = tab.find_element_by_xpath('p[1]/code').text
-        self.failUnless(crypt.crypt(self.clear_password, new_hash) == self.hashed_password)
+        self.assertTrue(crypt.crypt(self.clear_password, new_hash) == self.hashed_password)
 
     def test_set_plaintext_password(self):
         b = self.browser
@@ -171,15 +172,15 @@ class TestGroupsWD(WebDriverTestCase):
         tab.find_element_by_name('root_password').send_keys(self.clear_password)
         tab.find_element_by_tag_name('form').submit()
         clear_pass = tab.find_element_by_xpath('p[1]/code').text
-        self.assertEquals(clear_pass, self.clear_password)
+        self.assertEqual(clear_pass, self.clear_password)
 
         # check if the change has been recorded in the acitivity table
         with session.begin():
-            self.assertEquals(self.group.activity[-1].action, u'Changed')
-            self.assertEquals(self.group.activity[-1].field_name, u'Root Password')
-            self.assertEquals(self.group.activity[-1].old_value, '*****')
-            self.assertEquals(self.group.activity[-1].new_value, '*****')
-            self.assertEquals(self.group.activity[-1].service, u'HTTP')
+            self.assertEqual(self.group.activity[-1].action, u'Changed')
+            self.assertEqual(self.group.activity[-1].field_name, u'Root Password')
+            self.assertEqual(self.group.activity[-1].old_value, '*****')
+            self.assertEqual(self.group.activity[-1].new_value, '*****')
+            self.assertEqual(self.group.activity[-1].service, u'HTTP')
 
         # no change should be recorded if the same password is supplied
         group_activities = len([x for x in self.group.activity if
@@ -191,7 +192,7 @@ class TestGroupsWD(WebDriverTestCase):
         tab.find_element_by_xpath('p[contains(text(), "The group root password is")]')
         with session.begin():
             session.refresh(self.group)
-            self.assertEquals(group_activities, len([x for x in self.group.activity if
+            self.assertEqual(group_activities, len([x for x in self.group.activity if
                                                      x.field_name == 'Root Password']))
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=1020091
@@ -213,7 +214,7 @@ class TestGroupsWD(WebDriverTestCase):
         login(b, user=user.user_name, password='password')
         self.go_to_group_page(tab='Root Password')
         tab = b.find_element_by_id('rootpassword')
-        self.assertEquals(tab.find_element_by_xpath('p[1]/code').text,
+        self.assertEqual(tab.find_element_by_xpath('p[1]/code').text,
                 self.clear_password)
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=1020091
@@ -227,7 +228,7 @@ class TestGroupsWD(WebDriverTestCase):
         login(b, user=user.user_name, password='password')
         self.go_to_group_page(tab='Root Password')
         tab = b.find_element_by_id('rootpassword')
-        self.assertEquals(tab.find_element_by_xpath("p[1]").text,
+        self.assertEqual(tab.find_element_by_xpath("p[1]").text,
                           "No group root password set. "
                           "Group jobs will use the root password preferences of the submitting user.")
 
@@ -241,7 +242,7 @@ class TestGroupsWD(WebDriverTestCase):
         tab.find_element_by_xpath('p[contains(text(), "The group root password is")]')
         with session.begin():
             session.expire_all()
-            self.assertEquals('blapppy7', self.group.root_password)
+            self.assertEqual('blapppy7', self.group.root_password)
 
     def test_cannot_edit_unowned_group(self):
         with session.begin():
@@ -472,14 +473,14 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
         b.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
         modal = b.find_element_by_class_name('modal')
-        self.assertEquals(modal.find_element_by_id('group_name'). \
+        self.assertEqual(modal.find_element_by_id('group_name'). \
                               get_attribute('value'), new_group_name)
-        self.assertEquals(modal.find_element_by_id('display_name'). \
+        self.assertEqual(modal.find_element_by_id('display_name'). \
                               get_attribute('value'), new_display_name)
         with session.begin():
             session.refresh(group)
-            self.assertEquals(group.group_name, new_group_name)
-            self.assertEquals(group.display_name, new_display_name)
+            self.assertEqual(group.group_name, new_group_name)
+            self.assertEqual(group.display_name, new_display_name)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=967799
     def test_edit_group_name_duplicate(self):
@@ -533,11 +534,11 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_xpath('//body[not(.//div[contains(@class, "modal")])]')
         b.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
         modal = b.find_element_by_class_name('modal')
-        self.assertEquals(modal.find_element_by_id('description'). \
+        self.assertEqual(modal.find_element_by_id('description'). \
                               get_attribute('value'), new_description)
         with session.begin():
             session.refresh(group)
-            self.assertEquals(group.description, new_description)
+            self.assertEqual(group.description, new_description)
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=908174
     def test_add_remove_owner_group(self):
@@ -578,11 +579,11 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_xpath('.//button[contains(text(), "Edit")]')
         with session.begin():
             session.expire_all()
-            self.assert_(group.has_owner(user1))
-            self.assertEquals(group.activity[-1].action, u'Added')
-            self.assertEquals(group.activity[-1].field_name, u'Owner')
-            self.assertEquals(group.activity[-1].new_value, user1.user_name)
-            self.assertEquals(group.activity[-1].service, u'HTTP')
+            self.assertTrue(group.has_owner(user1))
+            self.assertEqual(group.activity[-1].action, u'Added')
+            self.assertEqual(group.activity[-1].field_name, u'Owner')
+            self.assertEqual(group.activity[-1].new_value, user1.user_name)
+            self.assertEqual(group.activity[-1].service, u'HTTP')
 
         # remove self as owner
         b.find_element_by_xpath('//ul[contains(@class, "group-nav")]'
@@ -593,14 +594,14 @@ class TestGroupsWD(WebDriverTestCase):
             'not(.//li/a[contains(text(), "%s")])]' % user1.user_name)
 
         with session.begin():
-            self.assertEquals(Activity.query.filter_by(service=u'HTTP',
+            self.assertEqual(Activity.query.filter_by(service=u'HTTP',
                                                        field_name=u'Owner', action=u'Removed',
                                                        old_value=user1.user_name).count(), 1)
             session.refresh(group)
-            self.assertEquals(group.activity[-1].action, u'Removed')
-            self.assertEquals(group.activity[-1].field_name, u'Owner')
-            self.assertEquals(group.activity[-1].old_value, user1.user_name)
-            self.assertEquals(group.activity[-1].service, u'HTTP')
+            self.assertEqual(group.activity[-1].action, u'Removed')
+            self.assertEqual(group.activity[-1].field_name, u'Owner')
+            self.assertEqual(group.activity[-1].old_value, user1.user_name)
+            self.assertEqual(group.activity[-1].service, u'HTTP')
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=990349
     #https://bugzilla.redhat.com/show_bug.cgi?id=990821
@@ -834,9 +835,9 @@ class GroupHTTPTest(DatabaseTestCase):
                 'groups/%s' % self.group.group_name, headers={'Accept': 'application/json'})
         response.raise_for_status()
         json = response.json()
-        self.assertEquals(json['id'], self.group.id)
-        self.assertEquals(json['group_name'], self.group.group_name)
-        self.assertEquals(json['display_name'], self.group.display_name)
+        self.assertEqual(json['id'], self.group.id)
+        self.assertEqual(json['group_name'], self.group.group_name)
+        self.assertEqual(json['display_name'], self.group.display_name)
 
     def test_create_new_group(self):
         s = requests.Session()
@@ -850,20 +851,20 @@ class GroupHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             group = Group.by_name(u'FBZ')
-            self.assertEquals(group.display_name, u'Group FBZ')
-            self.assertEquals(group.description, u'Group FBZ description')
-            self.assert_(group.has_owner(self.user))
-            self.assertEquals(group.activity[-1].action, u'Added')
-            self.assertEquals(group.activity[-1].field_name, u'Owner')
-            self.assertEquals(group.activity[-1].new_value, self.user.user_name)
-            self.assertEquals(group.activity[-1].service, u'HTTP')
-            self.assertEquals(group.activity[-2].action, u'Added')
-            self.assertEquals(group.activity[-2].field_name, u'User')
-            self.assertEquals(group.activity[-2].new_value, self.user.user_name)
-            self.assertEquals(group.activity[-2].service, u'HTTP')
-            self.assertEquals(group.activity[-3].action, u'Created')
-            self.assertEquals(group.activity[-3].service, u'HTTP')
-            self.assertEquals('blapppy7', group.root_password)
+            self.assertEqual(group.display_name, u'Group FBZ')
+            self.assertEqual(group.description, u'Group FBZ description')
+            self.assertTrue(group.has_owner(self.user))
+            self.assertEqual(group.activity[-1].action, u'Added')
+            self.assertEqual(group.activity[-1].field_name, u'Owner')
+            self.assertEqual(group.activity[-1].new_value, self.user.user_name)
+            self.assertEqual(group.activity[-1].service, u'HTTP')
+            self.assertEqual(group.activity[-2].action, u'Added')
+            self.assertEqual(group.activity[-2].field_name, u'User')
+            self.assertEqual(group.activity[-2].new_value, self.user.user_name)
+            self.assertEqual(group.activity[-2].service, u'HTTP')
+            self.assertEqual(group.activity[-3].action, u'Created')
+            self.assertEqual(group.activity[-3].service, u'HTTP')
+            self.assertEqual('blapppy7', group.root_password)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1469345
     def test_create_group_invalid_group_name_throws_error(self):
@@ -877,7 +878,7 @@ class GroupHTTPTest(DatabaseTestCase):
             'description': 'grouplongname description',
             'root_password': 'blapppy7',
         })
-        self.assertEquals(response.status_code, 400)
+        self.assertEqual(response.status_code, 400)
         self.assertIn('Group name must be not more than 255 characters long',
                       response.text)
 
@@ -888,7 +889,7 @@ class GroupHTTPTest(DatabaseTestCase):
             'description': 'grouplongname description',
             'root_password': 'blapppy7',
         })
-        self.assertEquals(response.status_code, 400)
+        self.assertEqual(response.status_code, 400)
         self.assertIn('Group name must not contain leading or trailing whitespace',
                       response.text)
 
@@ -899,7 +900,7 @@ class GroupHTTPTest(DatabaseTestCase):
             'description': 'grouplongname description',
             'root_password': 'blapppy7',
         })
-        self.assertEquals(response.status_code, 400)
+        self.assertEqual(response.status_code, 400)
         self.assertIn('Group name cannot contain \'/\'', response.text)
 
 
@@ -914,10 +915,10 @@ class GroupHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             group = Group.by_name(u'my_ldap_group')
-            self.assertEquals(group.membership_type, GroupMembershipType.ldap)
-            self.assertEquals(group.users, [User.by_user_name(u'my_ldap_user')])
+            self.assertEqual(group.membership_type, GroupMembershipType.ldap)
+            self.assertEqual(group.users, [User.by_user_name(u'my_ldap_user')])
             # The LDAP group should have no owner.
-            self.assertEquals(len(group.owners()), 0)
+            self.assertEqual(len(group.owners()), 0)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
     def test_create_ldap_group_with_new_format(self):
@@ -931,11 +932,11 @@ class GroupHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             group = Group.by_name(u'another_my_ldap_group')
-            self.assertEquals(group.membership_type, GroupMembershipType.ldap)
-            self.assertEquals(group.users,
+            self.assertEqual(group.membership_type, GroupMembershipType.ldap)
+            self.assertEqual(group.users,
                     [User.by_user_name(u'another_my_ldap_user')])
             # The LDAP group should have no owner.
-            self.assertEquals(len(group.owners()), 0)
+            self.assertEqual(len(group.owners()), 0)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
     def test_create_inverted_group(self):
@@ -949,7 +950,7 @@ class GroupHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             group = Group.by_name(u'my_inverse_group')
-            self.assertEquals(group.membership_type,
+            self.assertEqual(group.membership_type,
                               GroupMembershipType.inverted)
 
     def test_update_group(self):
@@ -964,9 +965,9 @@ class GroupHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.group.group_name, u'newname')
-            self.assertEquals(self.group.display_name, u'newdisplayname')
-            self.assertEquals(self.group.root_password, u'$1$NaCl$O34mAzBXtER6obhoIodu8.')
+            self.assertEqual(self.group.group_name, u'newname')
+            self.assertEqual(self.group.display_name, u'newdisplayname')
+            self.assertEqual(self.group.root_password, u'$1$NaCl$O34mAzBXtER6obhoIodu8.')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=960359
     def test_update_group_description(self):
@@ -979,10 +980,10 @@ class GroupHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.group.description, u'newdescription')
-            self.assertEquals(self.group.activity[-1].action, u'Changed')
-            self.assertEquals(self.group.activity[-1].field_name, u'Description')
-            self.assertEquals(self.group.activity[-1].new_value, u'newdescription')
+            self.assertEqual(self.group.description, u'newdescription')
+            self.assertEqual(self.group.activity[-1].action, u'Changed')
+            self.assertEqual(self.group.activity[-1].field_name, u'Description')
+            self.assertEqual(self.group.activity[-1].new_value, u'newdescription')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
     def test_update_a_group_to_LDAP_group_with_old_format(self):
@@ -994,7 +995,7 @@ class GroupHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.group.membership_type, GroupMembershipType.ldap)
+            self.assertEqual(self.group.membership_type, GroupMembershipType.ldap)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
     def test_update_a_group_to_LDAP_group_with_new_format(self):
@@ -1006,7 +1007,7 @@ class GroupHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.group.membership_type, GroupMembershipType.ldap)
+            self.assertEqual(self.group.membership_type, GroupMembershipType.ldap)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
     def test_can_update_a_group_to_inverted_group(self):
@@ -1018,7 +1019,7 @@ class GroupHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.group.membership_type,
+            self.assertEqual(self.group.membership_type,
                               GroupMembershipType.inverted)
 
     def test_cannot_update_group_with_empty_name_or_display_name(self):
@@ -1077,8 +1078,8 @@ class GroupHTTPTest(DatabaseTestCase):
         s = requests.Session()
         response = post_json(get_server_base() + 'groups/%s/permissions/' % self.group.group_name,
                 session=s, data={'permission_name': permission.permission_name})
-        self.assertEquals(response.status_code, 401)
-        self.assertEquals(response.text, 'Authenticated user required')
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.text, 'Authenticated user required')
 
     def test_non_admin_cannot_add_permission(self):
         with session.begin():
@@ -1088,7 +1089,7 @@ class GroupHTTPTest(DatabaseTestCase):
                 'password': u'password'}).raise_for_status()
         response = post_json(get_server_base() + 'groups/%s/permissions/' % self.group.group_name,
                 session=s, data={'permission_name': permission.permission_name})
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
         self.assertIn('You are not a member of the admin group', response.text)
 
     def test_admin_can_add_permssion(self):
@@ -1103,9 +1104,9 @@ class GroupHTTPTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             self.assertItemsEqual(self.group.permissions, [permission])
-            self.assertEquals(self.group.activity[-1].field_name, 'Permission')
-            self.assertEquals(self.group.activity[-1].action, 'Added')
-            self.assertEquals(self.group.activity[-1].new_value, unicode(permission))\
+            self.assertEqual(self.group.activity[-1].field_name, 'Permission')
+            self.assertEqual(self.group.activity[-1].action, 'Added')
+            self.assertEqual(self.group.activity[-1].new_value, unicode(permission))\
 
     def test_adding_permission_to_nonexistent_group_raises_an_error(self):
         with session.begin():
@@ -1115,8 +1116,8 @@ class GroupHTTPTest(DatabaseTestCase):
                'password': data_setup.ADMIN_PASSWORD}).raise_for_status()
         response = post_json(get_server_base() + 'groups/nosuchgroup/permissions/',
                 session=s, data={'permission_name': permission.permission_name})
-        self.assertEquals(response.status_code, 404)
-        self.assertEquals(response.text, 'Group nosuchgroup does not exist')
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.text, 'Group nosuchgroup does not exist')
 
     def test_adding_nonexistent_permission_raises_an_error(self):
         s = requests.Session()
@@ -1124,8 +1125,8 @@ class GroupHTTPTest(DatabaseTestCase):
                'password': data_setup.ADMIN_PASSWORD}).raise_for_status()
         response = post_json(get_server_base() + 'groups/%s/permissions/' % self.group.group_name,
                 session=s, data={'permission_name': 'nosuchpermission'})
-        self.assertEquals(response.status_code, 400)
-        self.assertEquals(response.text, "Permission 'nosuchpermission' does not exist")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text, "Permission 'nosuchpermission' does not exist")
 
     def test_unauthenticated_user_cannot_remove_permission(self):
         with session.begin():
@@ -1135,8 +1136,8 @@ class GroupHTTPTest(DatabaseTestCase):
         response = s.delete(get_server_base() +
             'groups/%s/permissions?permission_name=%s' % (self.group.group_name,
                                                   permission.permission_name))
-        self.assertEquals(response.status_code, 401)
-        self.assertEquals(response.text, 'Authenticated user required')
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.text, 'Authenticated user required')
 
     def test_can_remove_permission(self):
         with session.begin():
@@ -1152,9 +1153,9 @@ class GroupHTTPTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             self.assertNotIn(permission, self.group.permissions)
-            self.assertEquals(self.group.activity[-1].field_name, 'Permission')
-            self.assertEquals(self.group.activity[-1].action, 'Removed')
-            self.assertEquals(self.group.activity[-1].old_value, unicode(permission))
+            self.assertEqual(self.group.activity[-1].field_name, 'Permission')
+            self.assertEqual(self.group.activity[-1].action, 'Removed')
+            self.assertEqual(self.group.activity[-1].old_value, unicode(permission))
 
     def test_non_group_owner_cannot_modify_membership(self):
         with session.begin():
@@ -1164,7 +1165,7 @@ class GroupHTTPTest(DatabaseTestCase):
                                                   'password': u'password'}).raise_for_status()
         response = post_json(get_server_base() + 'groups/%s/members/' % self.group.group_name,
                 session=s, data={'user': user.user_name})
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
         self.assertIn('Cannot edit membership', response.text)
 
     def test_cannot_add_member_to_ldap_group(self):
@@ -1176,7 +1177,7 @@ class GroupHTTPTest(DatabaseTestCase):
                                                   'password': data_setup.ADMIN_PASSWORD}).raise_for_status()
         response = post_json(get_server_base() + 'groups/%s/members/' % ldap_group.group_name,
                 session=s, data={'user_name': user.user_name})
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
         self.assertIn("Cannot edit membership of group %s" %
                                 ldap_group.group_name, response.text)
 
@@ -1189,8 +1190,8 @@ class GroupHTTPTest(DatabaseTestCase):
         requests_login(s)
         response = post_json(get_server_base() + 'groups/%s/members/' % self.group.group_name,
                 session=s, data={'user_name': deleted_user.user_name})
-        self.assertEquals(response.status_code, 400)
-        self.assertEquals(response.text,
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text,
                 'Cannot add deleted user %s to group' % deleted_user.user_name)
 
     def test_can_add_member(self):
@@ -1206,14 +1207,14 @@ class GroupHTTPTest(DatabaseTestCase):
             session.expire_all()
             self.assertIn(user, self.group.users)
             self.assertTrue(self.group.has_owner(user))
-            self.assertEquals(self.group.activity[-1].user, self.user)
-            self.assertEquals(self.group.activity[-1].field_name, 'Owner')
-            self.assertEquals(self.group.activity[-1].action, 'Added')
-            self.assertEquals(self.group.activity[-1].new_value, unicode(user))
-            self.assertEquals(self.group.activity[-2].user, self.user)
-            self.assertEquals(self.group.activity[-2].field_name, 'User')
-            self.assertEquals(self.group.activity[-2].action, 'Added')
-            self.assertEquals(self.group.activity[-2].new_value, unicode(user))
+            self.assertEqual(self.group.activity[-1].user, self.user)
+            self.assertEqual(self.group.activity[-1].field_name, 'Owner')
+            self.assertEqual(self.group.activity[-1].action, 'Added')
+            self.assertEqual(self.group.activity[-1].new_value, unicode(user))
+            self.assertEqual(self.group.activity[-2].user, self.user)
+            self.assertEqual(self.group.activity[-2].field_name, 'User')
+            self.assertEqual(self.group.activity[-2].action, 'Added')
+            self.assertEqual(self.group.activity[-2].new_value, unicode(user))
 
     def test_can_remove_member(self):
         with session.begin():
@@ -1228,10 +1229,10 @@ class GroupHTTPTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             self.assertNotIn(user, self.group.users)
-            self.assertEquals(self.group.activity[-1].user, self.user)
-            self.assertEquals(self.group.activity[-1].field_name, 'User')
-            self.assertEquals(self.group.activity[-1].action, 'Removed')
-            self.assertEquals(self.group.activity[-1].old_value, unicode(user))
+            self.assertEqual(self.group.activity[-1].user, self.user)
+            self.assertEqual(self.group.activity[-1].field_name, 'User')
+            self.assertEqual(self.group.activity[-1].action, 'Removed')
+            self.assertEqual(self.group.activity[-1].old_value, unicode(user))
 
     def test_cannot_modify_ownership_on_unowned_group(self):
         with session.begin():
@@ -1241,7 +1242,7 @@ class GroupHTTPTest(DatabaseTestCase):
                                                   'password': u'password'}).raise_for_status()
         response = post_json(get_server_base() + 'groups/%s/owners/' % self.group.group_name,
                 session=s, data={'user_name': user.user_name})
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
         self.assertIn('Cannot edit ownership', response.text)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
@@ -1255,7 +1256,7 @@ class GroupHTTPTest(DatabaseTestCase):
                                                    raise_for_status()
         response = post_json(get_server_base() + 'groups/%s/owners/' % ldap_group.group_name,
                 session=s, data={'user_name': user.user_name})
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
         self.assertIn('Cannot edit ownership', response.text)
 
     def test_can_grant_ownership_to_group_member(self):
@@ -1271,10 +1272,10 @@ class GroupHTTPTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             self.assertTrue(self.group.has_owner(user))
-            self.assertEquals(self.group.activity[-1].user, self.user)
-            self.assertEquals(self.group.activity[-1].field_name, 'Owner')
-            self.assertEquals(self.group.activity[-1].action, 'Added')
-            self.assertEquals(self.group.activity[-1].new_value, unicode(user))
+            self.assertEqual(self.group.activity[-1].user, self.user)
+            self.assertEqual(self.group.activity[-1].field_name, 'Owner')
+            self.assertEqual(self.group.activity[-1].action, 'Added')
+            self.assertEqual(self.group.activity[-1].new_value, unicode(user))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1308625
     def test_can_grant_ownership_to_additional_users_on_inverted_groups(self):
@@ -1307,14 +1308,14 @@ class GroupHTTPTest(DatabaseTestCase):
             session.expire_all()
             self.assertIn(user, self.group.users)
             self.assertTrue(self.group.has_owner(user))
-            self.assertEquals(self.group.activity[-1].user, self.user)
-            self.assertEquals(self.group.activity[-1].field_name, 'Owner')
-            self.assertEquals(self.group.activity[-1].action, 'Added')
-            self.assertEquals(self.group.activity[-1].new_value, unicode(user))
-            self.assertEquals(self.group.activity[-2].user, self.user)
-            self.assertEquals(self.group.activity[-2].field_name, 'User')
-            self.assertEquals(self.group.activity[-2].action, 'Added')
-            self.assertEquals(self.group.activity[-2].new_value, unicode(user))
+            self.assertEqual(self.group.activity[-1].user, self.user)
+            self.assertEqual(self.group.activity[-1].field_name, 'Owner')
+            self.assertEqual(self.group.activity[-1].action, 'Added')
+            self.assertEqual(self.group.activity[-1].new_value, unicode(user))
+            self.assertEqual(self.group.activity[-2].user, self.user)
+            self.assertEqual(self.group.activity[-2].field_name, 'User')
+            self.assertEqual(self.group.activity[-2].action, 'Added')
+            self.assertEqual(self.group.activity[-2].new_value, unicode(user))
 
     def test_can_revoke_ownership(self):
         with session.begin():
@@ -1330,10 +1331,10 @@ class GroupHTTPTest(DatabaseTestCase):
             session.expire_all()
             self.assertFalse(self.group.has_owner(user))
             self.assertIn(user, self.group.users)
-            self.assertEquals(self.group.activity[-1].user, self.user)
-            self.assertEquals(self.group.activity[-1].field_name, 'Owner')
-            self.assertEquals(self.group.activity[-1].action, 'Removed')
-            self.assertEquals(self.group.activity[-1].old_value, unicode(user))
+            self.assertEqual(self.group.activity[-1].user, self.user)
+            self.assertEqual(self.group.activity[-1].field_name, 'Owner')
+            self.assertEqual(self.group.activity[-1].action, 'Removed')
+            self.assertEqual(self.group.activity[-1].old_value, unicode(user))
 
     def test_cannot_remove_the_only_owner(self):
         """
@@ -1347,7 +1348,7 @@ class GroupHTTPTest(DatabaseTestCase):
                                                   'password': u'password'}).raise_for_status()
         response = s.delete(get_server_base() +
             'groups/%s/owners/?user_name=%s' % (group.group_name, user.user_name))
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
         self.assertIn('Cannot remove the only owner', response.text)
 
     def test_can_remove_the_only_owner_by_admin(self):
@@ -1370,9 +1371,9 @@ class GroupHTTPTest(DatabaseTestCase):
         response = s.delete(get_server_base() + 'groups/%s' % self.group.group_name)
         response.raise_for_status()
         with session.begin():
-            self.assertEquals(0,
+            self.assertEqual(0,
                 Group.query.filter_by(group_id=self.group.group_id).count())
-            self.assertEquals(1, Activity.query
+            self.assertEqual(1, Activity.query
                 .filter(Activity.field_name == u'Group')
                 .filter(Activity.action == u'Removed')
                 .filter(Activity.old_value == self.group.display_name).count(),
@@ -1385,7 +1386,7 @@ class GroupHTTPTest(DatabaseTestCase):
         s = requests.Session()
         requests_login(s, user=member.user_name, password=u'unprivileged')
         response = s.delete(get_server_base() + 'groups/%s' % self.group.group_name)
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1102617
     def test_cannot_delete_protected_group(self):
@@ -1427,10 +1428,10 @@ class GroupHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(len(system.custom_access_policy.rules), 1)
-            self.assertEquals(system.activity[0].field_name, u'Access Policy Rule')
-            self.assertEquals(system.activity[0].action, u'Removed')
-            self.assertEquals(system.activity[0].old_value,
+            self.assertEqual(len(system.custom_access_policy.rules), 1)
+            self.assertEqual(system.activity[0].field_name, u'Access Policy Rule')
+            self.assertEqual(system.activity[0].action, u'Removed')
+            self.assertEqual(system.activity[0].old_value,
                     u'Group:LNP:edit_system')
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=1199368
@@ -1450,11 +1451,11 @@ class GroupHTTPTest(DatabaseTestCase):
         with session.begin():
             session.refresh(pool)
             self.assertIsNone(pool.owning_group)
-            self.assertEquals(pool.owning_user.user_name, data_setup.ADMIN_USER)
-            self.assertEquals(pool.activity[-1].action, u'Changed')
-            self.assertEquals(pool.activity[-1].field_name, u'Owner')
-            self.assertEquals(pool.activity[-1].old_value, group.group_name)
-            self.assertEquals(pool.activity[-1].new_value, data_setup.ADMIN_USER)
+            self.assertEqual(pool.owning_user.user_name, data_setup.ADMIN_USER)
+            self.assertEqual(pool.activity[-1].action, u'Changed')
+            self.assertEqual(pool.activity[-1].field_name, u'Owner')
+            self.assertEqual(pool.activity[-1].old_value, group.group_name)
+            self.assertEqual(pool.activity[-1].new_value, data_setup.ADMIN_USER)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
     def test_cannnot_exclude_user_from_a_normal_group(self):
@@ -1492,10 +1493,10 @@ class GroupHTTPTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             self.assertNotIn(user, self.inverted_group.users)
-            self.assertEquals(self.inverted_group.activity[-1].user, self.user)
-            self.assertEquals(self.inverted_group.activity[-1].field_name, u'User')
-            self.assertEquals(self.inverted_group.activity[-1].action, u'Excluded')
-            self.assertEquals(self.inverted_group.activity[-1].new_value, unicode(user))
+            self.assertEqual(self.inverted_group.activity[-1].user, self.user)
+            self.assertEqual(self.inverted_group.activity[-1].field_name, u'User')
+            self.assertEqual(self.inverted_group.activity[-1].action, u'Excluded')
+            self.assertEqual(self.inverted_group.activity[-1].new_value, unicode(user))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
     def test_can_readd_user(self):
@@ -1515,10 +1516,10 @@ class GroupHTTPTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             self.assertIn(user, self.inverted_group.users)
-            self.assertEquals(self.inverted_group.activity[-1].user, self.user)
-            self.assertEquals(self.inverted_group.activity[-1].field_name, 'User')
-            self.assertEquals(self.inverted_group.activity[-1].action, 'Re-added')
-            self.assertEquals(self.inverted_group.activity[-1].old_value, unicode(user))
+            self.assertEqual(self.inverted_group.activity[-1].user, self.user)
+            self.assertEqual(self.inverted_group.activity[-1].field_name, 'User')
+            self.assertEqual(self.inverted_group.activity[-1].action, 'Re-added')
+            self.assertEqual(self.inverted_group.activity[-1].old_value, unicode(user))
 
 # There are no callers of the group XMLRPC methods left in Beaker itself, but 
 # we still support the XMLRPC methods for older client versions and other 
@@ -1537,5 +1538,5 @@ class GroupXmlRpcTest(XmlRpcTestCase):
             deleted_user.removed = datetime.datetime.utcnow()
         server = self.get_server()
         server.auth.login_password(self.owner.user_name, u'owner')
-        with self.assertRaisesRegexp(xmlrpclib.Fault, 'Cannot add deleted user .* to group'):
+        with assertRaisesRegex(self, xmlrpclib.Fault, 'Cannot add deleted user .* to group'):
             server.groups.modify(self.group.group_name, {'add_member': deleted_user.user_name})

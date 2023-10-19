@@ -141,7 +141,7 @@ class TestSubmitTask(WebDriverTestCase):
             pkg_resources.resource_filename('bkr.inttest.server',
                                             'task-rpms/' + invalidtask))
         b.find_element_by_xpath('//button[text()="Upload"]').click()
-        self.assertEquals(b.find_element_by_class_name('flash').text,
+        self.assertEqual(b.find_element_by_class_name('flash').text,
                           'Failed to import task: error reading package header')
         rpms = tg.config.get('basepath.rpms')
         self.assertEqual(os.path.exists('%s/%s' % (rpms, invalidtask)), False)
@@ -154,7 +154,7 @@ class TestSubmitTask(WebDriverTestCase):
             pkg_resources.resource_filename('bkr.inttest.server',
                                             'task-rpms/tmp-distribution-beaker-dummy_for_bz617274-1.0-1.noarch.rpm'))
         b.find_element_by_xpath('//button[text()="Upload"]').click()
-        self.assertEquals(b.find_element_by_class_name('flash').text,
+        self.assertEqual(b.find_element_by_class_name('flash').text,
                           'Failed to import task: Owner field not defined')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=915549
@@ -165,7 +165,7 @@ class TestSubmitTask(WebDriverTestCase):
             pkg_resources.resource_filename('bkr.inttest.server',
                                             'task-rpms/tmp-distribution-beaker-long-task-RPM-1.0-1.noarch.rpm'))
         b.find_element_by_xpath('//button[text()="Upload"]').click()
-        self.assertEquals(b.find_element_by_class_name('flash').text,
+        self.assertEqual(b.find_element_by_class_name('flash').text,
                           'Failed to import task: Task name should be <= 255 characters')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=859796
@@ -176,7 +176,7 @@ class TestSubmitTask(WebDriverTestCase):
             pkg_resources.resource_filename('bkr.inttest.server',
                                             'task-rpms/tmp-distribution-beaker----redundant_slashes-1.0-0.noarch.rpm'))
         b.find_element_by_xpath('//button[text()="Upload"]').click()
-        self.assertEquals(b.find_element_by_class_name('flash').text,
+        self.assertEqual(b.find_element_by_class_name('flash').text,
                           "Failed to import task: Task name must not contain redundant slashes")
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=859796
@@ -187,7 +187,7 @@ class TestSubmitTask(WebDriverTestCase):
             pkg_resources.resource_filename('bkr.inttest.server',
                                             'task-rpms/tmp-distribution-beaker-trailing_slash--1.0-0.noarch.rpm'))
         b.find_element_by_xpath('//button[text()="Upload"]').click()
-        self.assertEquals(b.find_element_by_class_name('flash').text,
+        self.assertEqual(b.find_element_by_class_name('flash').text,
                           "Failed to import task: Task name must not end with slash")
 
     def test_upload_duplicate_task_version_is_rejected(self):
@@ -212,7 +212,7 @@ class TestSubmitTask(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'tasks/new')
         b.find_element_by_xpath('//button[text()="Upload"]').click()
-        self.assertEquals(b.find_element_by_class_name('flash').text,
+        self.assertEqual(b.find_element_by_class_name('flash').text,
                           "No task RPM specified")
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1092758
@@ -392,9 +392,9 @@ class TasksXmlRpcTest(XmlRpcTestCase):
             task = data_setup.create_task(runfor=[u'httpd'],
                                           exclusive_arches=[u's390', u's390x'])
         result = self.server.tasks.filter(dict(packages=['httpd']))
-        self.assertEquals(result[0]['name'], task.name)
+        self.assertEqual(result[0]['name'], task.name)
         # Note that the 'arches' key is actually the *excluded* arches.
-        self.assertEquals(result[0]['arches'],
+        self.assertEqual(result[0]['arches'],
                           ['aarch64', 'arm', 'armhfp', 'i386', 'ia64', 'ppc', 'ppc64', 'ppc64le',
                            'x86_64'])
 

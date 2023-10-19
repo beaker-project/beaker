@@ -75,7 +75,7 @@ class PxemenuTest(LabControllerTestCase):
                     urls=[u'http://localhost:19998/'])
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
         menu = open(os.path.join(self.tftp_dir, 'pxelinux.cfg', 'beaker_menu')).read()
-        self.assertEquals(menu, '''\
+        self.assertEqual(menu, '''\
 default menu
 prompt 0
 timeout 6000
@@ -113,7 +113,7 @@ menu end
                     urls=['http://localhost:19998/'])
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
         menu = open(os.path.join(self.tftp_dir, 'ipxe', 'beaker_menu')).read()
-        self.assertEquals(menu, '''\
+        self.assertEqual(menu, '''\
 #!ipxe
 
 chain /ipxe/${ip:hexraw} ||
@@ -178,7 +178,7 @@ boot || goto PinkUshankaLinux8.1
                         urls=['http://localhost:19998/'])
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
         menu = open(os.path.join(self.tftp_dir, 'grub', 'efidefault')).read()
-        self.assertEquals(menu, '''\
+        self.assertEqual(menu, '''\
 
 title PinkUshankaLinux8.1-20140620.1 Server x86_64
     root (nd)
@@ -197,7 +197,7 @@ title PinkUshankaLinux8.1-20140620.1 Server x86_64
                     urls=[u'http://localhost:19998/'])
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
         menu = open(os.path.join(self.tftp_dir, 'aarch64', 'beaker_menu.cfg')).read()
-        self.assertEquals(menu, '''\
+        self.assertEqual(menu, '''\
 set default="Exit PXE"
 set timeout=60
 menuentry "Exit PXE" {
@@ -231,7 +231,7 @@ menuentry "PinkUshankaLinux8.1-20140620.2 Server aarch64" {
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
         menu = open(os.path.join(self.tftp_dir, 'boot', 'grub2',
             'beaker_menu_x86.cfg')).read()
-        self.assertEquals(menu, '''\
+        self.assertEqual(menu, '''\
 set default="Exit PXE"
 set timeout=60
 menuentry "Exit PXE" {
@@ -267,7 +267,7 @@ menuentry "PinkUshankaLinux8.1-20140620.3 Server x86_64" {
         # Menu 1 of 3
         menu = open(os.path.join(self.tftp_dir, 'boot', 'grub2',
                     'beaker_menu_x86.cfg')).read()
-        self.assertEquals(menu, '''\
+        self.assertEqual(menu, '''\
 set default="Exit PXE"
 set timeout=60
 menuentry "Exit PXE" {
@@ -291,7 +291,7 @@ menuentry "RHEL-9.0.0-20211201.1 Server x86_64" {
         # Menu 2 of 3
         menu = open(os.path.join(self.tftp_dir, 'ipxe',
             'beaker_menu')).read()
-        self.assertEquals(menu, '''\
+        self.assertEqual(menu, '''\
 #!ipxe
 
 chain /ipxe/${ip:hexraw} ||
@@ -335,7 +335,7 @@ boot || goto RedHatEnterpriseLinux9.0
 
         # Menu 3 of 3
         menu = open(os.path.join(self.tftp_dir, 'pxelinux.cfg', 'beaker_menu')).read()
-        self.assertEquals(menu, '''\
+        self.assertEqual(menu, '''\
 default menu
 prompt 0
 timeout 6000
@@ -373,7 +373,7 @@ menu end
                     urls=[u'http://localhost:19998/'])
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
         menu = open(os.path.join(self.tftp_dir, 'aarch64', 'beaker_menu.cfg')).read()
-        self.assertEquals(menu, '''\
+        self.assertEqual(menu, '''\
 set default="Exit PXE"
 set timeout=60
 menuentry "Exit PXE" {
@@ -406,7 +406,7 @@ menuentry "RHEL-9.0.0-20211201.1-Server-aarch64 Server aarch64" {
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
         menu = open(os.path.join(self.tftp_dir, 'boot', 'grub2',
                     'beaker_menu_ppc64le.cfg')).read()
-        self.assertEquals(menu, '''\
+        self.assertEqual(menu, '''\
 set default="Exit PXE"
 set timeout=60
 menuentry "Exit PXE" {
@@ -439,7 +439,7 @@ menuentry "RHEL-9.0.0-20211201.1-Server-ppc64le Server ppc64le" {
         write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
         menu = open(os.path.join(self.tftp_dir, 'boot', 'grub2',
                     'beaker_menu_ppc64.cfg')).read()
-        self.assertEquals(menu, '''\
+        self.assertEqual(menu, '''\
 set default="Exit PXE"
 set timeout=60
 menuentry "Exit PXE" {

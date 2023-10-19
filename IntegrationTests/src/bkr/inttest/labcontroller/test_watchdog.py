@@ -25,10 +25,10 @@ from mock import patch
 class TestHelper(LabControllerTestCase):
     def assert_panic_detected(self, message):
         with session.begin():
-            self.assertEquals(len(self.recipe.tasks[0].results), 1)
-            self.assertEquals(self.recipe.tasks[0].results[0].result,
+            self.assertEqual(len(self.recipe.tasks[0].results), 1)
+            self.assertEqual(self.recipe.tasks[0].results[0].result,
                     TaskResult.panic)
-            self.assertEquals(self.recipe.tasks[0].results[0].log,
+            self.assertEqual(self.recipe.tasks[0].results[0].log,
                     message)
 
     def check_console_log_registered(self):
@@ -132,10 +132,10 @@ class WatchdogConsoleLogTest(TestHelper):
         session.expire_all()
         with session.begin():
             # Ensure that there are no new panic results
-            self.assertEquals(len(self.recipe.tasks[0].results), 1)
+            self.assertEqual(len(self.recipe.tasks[0].results), 1)
             # Ensure that our kill time has not been extended again!
             kill_time2 = self.recipe.watchdog.kill_time
-        self.assertEquals(kill_time1, kill_time2)
+        self.assertEqual(kill_time1, kill_time2)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=975486
     def test_panic_across_chunk_boundaries_is_detected(self):
@@ -195,14 +195,14 @@ class WatchdogConsoleLogTest(TestHelper):
         with session.begin():
             task = self.recipe.tasks[0]
             session.refresh(task)
-            self.assertEquals(task.status, TaskStatus.aborted)
-            self.assertEquals(len(task.results), 2)
+            self.assertEqual(task.status, TaskStatus.aborted)
+            self.assertEqual(len(task.results), 2)
             # first one is the install failure message
-            self.assertEquals(task.results[0].result, TaskResult.fail)
-            self.assertEquals(task.results[0].log, anaconda_failure.strip())
+            self.assertEqual(task.results[0].result, TaskResult.fail)
+            self.assertEqual(task.results[0].log, anaconda_failure.strip())
             # second one is the abort message which is added to all tasks
-            self.assertEquals(task.results[1].result, TaskResult.warn)
-            self.assertEquals(task.results[1].log, 'Installation failed')
+            self.assertEqual(task.results[1].result, TaskResult.warn)
+            self.assertEqual(task.results[1].log, 'Installation failed')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=952661
     def test_install_failure_is_not_reported_after_installation_is_finished(self):
@@ -220,7 +220,7 @@ class WatchdogConsoleLogTest(TestHelper):
         with session.begin():
             task = self.recipe.tasks[0]
             session.refresh(task)
-            self.assertEquals(task.status, TaskStatus.running)
+            self.assertEqual(task.status, TaskStatus.running)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=962901
     def test_console_log_not_recreated_after_removed(self):
@@ -257,9 +257,9 @@ class WatchdogConsoleLogTest(TestHelper):
         # Give beaker-watchdog a chance to notice
         time.sleep(get_conf().get('SLEEP_TIME') * 2)
 
-        self.assert_(not os.path.exists(self.cached_console_log))
+        self.assertTrue(not os.path.exists(self.cached_console_log))
         with session.begin():
-            self.assertEquals(LogRecipe.query.filter_by(parent=self.recipe,
+            self.assertEqual(LogRecipe.query.filter_by(parent=self.recipe,
                     filename=u'console.log').one().server,
                     u'http://elsewhere')
 
@@ -301,8 +301,8 @@ class WatchdogVirtConsoleLogTest(TestHelper):
         # set return value since we did not configure the OpenStack Identity APIs
         test_get_console_log.return_value = 'foo'
         self.monitor.run()
-        self.assert_(self.check_console_log_registered())
-        self.assert_(self.check_cached_log_contents('foo'))
+        self.assertTrue(self.check_console_log_registered())
+        self.assertTrue(self.check_cached_log_contents('foo'))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1504527
     @patch.object(ProxyHelper, 'get_console_log')
@@ -312,8 +312,8 @@ class WatchdogVirtConsoleLogTest(TestHelper):
         log_contents = u'Firmware for Intel\ufffd\ufffd Wireless 5150 A/G/N network adaptors\n'
         test_get_console_log.return_value = log_contents
         self.monitor.run()
-        self.assert_(self.check_console_log_registered())
-        self.assertEquals(open(self.cached_console_log).read().decode('utf8'), log_contents)
+        self.assertTrue(self.check_console_log_registered())
+        self.assertEqual(open(self.cached_console_log).read().decode('utf8'), log_contents)
 
 
 # Class WatchdogGuestConsoleLogTest tests console log handling for Guest Recipes
@@ -358,8 +358,8 @@ class WatchdogGuestConsoleLogTest(TestHelper):
 
         # Verify Guest recipe handled well and host logfile present.
 
-        self.assert_(self.monitor.console_watch.logfiles)
-        self.assert_(not self.monitor_guest.console_watch.logfiles)
+        self.assertTrue(self.monitor.console_watch.logfiles)
+        self.assertTrue(not self.monitor_guest.console_watch.logfiles)
 
         wait_for_condition(self.check_console_log_registered)
         wait_for_condition(lambda: self.check_cached_log_contents(self.first_line))
@@ -376,7 +376,7 @@ class ExternalWatchdogScriptTest(LabControllerTestCase):
     def check_watchdog_extended(self, recipe, by_seconds):
         with session.begin():
             session.refresh(recipe)
-            self.assertEquals(recipe.status, TaskStatus.running)
+            self.assertEqual(recipe.status, TaskStatus.running)
             # 5 seconds tolerance
             return (by_seconds - recipe.status_watchdog()) <= 5
 
@@ -386,8 +386,8 @@ class ExternalWatchdogScriptTest(LabControllerTestCase):
             session.refresh(task)
             if task.status != TaskStatus.aborted:
                 return False
-            self.assertEquals(task.results[0].result, TaskResult.warn)
-            self.assertEquals(task.results[0].log, 'External Watchdog Expired')
+            self.assertEqual(task.results[0].result, TaskResult.warn)
+            self.assertEqual(task.results[0].log, 'External Watchdog Expired')
             return True
 
     def test_recipe_is_extended(self):

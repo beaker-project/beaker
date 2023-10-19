@@ -71,7 +71,7 @@ class JobCommentTest(ClientTestCase):
                         '--message', comment_text], config=client_config)
             self.fail('should raise')
         except ClientError as e:
-            self.assertEquals(e.status, 1)
+            self.assertEqual(e.status, 1)
             self.assertIn('Invalid username or password', e.stderr_output)
 
     def test_empty_comment_is_rejected(self):

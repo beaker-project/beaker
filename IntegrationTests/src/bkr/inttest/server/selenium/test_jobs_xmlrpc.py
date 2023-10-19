@@ -42,7 +42,7 @@ class JobUploadTest(XmlRpcTestCase):
             ''',
             True # ignore_missing_tasks
         )
-        self.assert_(job_tid.startswith('J:'))
+        self.assertTrue(job_tid.startswith('J:'))
         with session.begin():
             job = Job.by_id(int(job_tid[2:]))
             self.assertEqual(job.ttasks, 2) # not 3
@@ -77,7 +77,7 @@ class JobUploadTest(XmlRpcTestCase):
             self.server.jobs.upload(job_xml)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('/asdf/notexist1, /asdf/notexist2, /asdf/notexist3'
+            self.assertTrue('/asdf/notexist1, /asdf/notexist2, /asdf/notexist3'
                     in e.faultString)
 
     def test_reject_expired_root_password(self):
@@ -106,7 +106,7 @@ class JobUploadTest(XmlRpcTestCase):
             self.server.jobs.upload(job_xml)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('root password has expired' in e.faultString)
+            self.assertTrue('root password has expired' in e.faultString)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=768167
     def test_doesnt_barf_on_xml_encoding_declaration(self):
@@ -124,7 +124,7 @@ class JobUploadTest(XmlRpcTestCase):
                 </recipeSet>
             </job>
             '''.encode('utf8'))
-        self.assert_(job_tid.startswith('J:'))
+        self.assertTrue(job_tid.startswith('J:'))
 
     def test_external_tasks(self):
         job_tid = self.server.jobs.upload('''
@@ -155,34 +155,34 @@ class JobUploadTest(XmlRpcTestCase):
                 </recipeSet>
             </job>
             ''')
-        self.assert_(job_tid.startswith('J:'))
+        self.assertTrue(job_tid.startswith('J:'))
         with session.begin():
             job = TaskBase.get_by_t_id(job_tid)
             recipe = job.recipesets[0].recipes[0]
-            self.assertEquals(len(recipe.tasks), 5)
-            self.assertEquals(recipe.tasks[0].name, u'/distribution/check-install')
-            self.assertEquals(recipe.tasks[0].task.name, u'/distribution/check-install')
-            self.assertEquals(recipe.tasks[0].fetch_url, None)
-            self.assertEquals(recipe.tasks[1].name, u'/distribution/example')
-            self.assertEquals(recipe.tasks[1].task, None)
-            self.assertEquals(recipe.tasks[1].fetch_url,
+            self.assertEqual(len(recipe.tasks), 5)
+            self.assertEqual(recipe.tasks[0].name, u'/distribution/check-install')
+            self.assertEqual(recipe.tasks[0].task.name, u'/distribution/check-install')
+            self.assertEqual(recipe.tasks[0].fetch_url, None)
+            self.assertEqual(recipe.tasks[1].name, u'/distribution/example')
+            self.assertEqual(recipe.tasks[1].task, None)
+            self.assertEqual(recipe.tasks[1].fetch_url,
                      'git://example.com/externaltasks/example#master')
-            self.assertEquals(recipe.tasks[2].name,
+            self.assertEqual(recipe.tasks[2].name,
                     u'git://example.com/externaltasks/example2#master')
-            self.assertEquals(recipe.tasks[2].task, None)
-            self.assertEquals(recipe.tasks[2].fetch_url,
+            self.assertEqual(recipe.tasks[2].task, None)
+            self.assertEqual(recipe.tasks[2].fetch_url,
                     u'git://example.com/externaltasks/example2#master')
-            self.assertEquals(recipe.tasks[3].name, u'/distribution/example3')
-            self.assertEquals(recipe.tasks[3].task, None)
-            self.assertEquals(recipe.tasks[3].fetch_url,
+            self.assertEqual(recipe.tasks[3].name, u'/distribution/example3')
+            self.assertEqual(recipe.tasks[3].task, None)
+            self.assertEqual(recipe.tasks[3].fetch_url,
                     u'git://example.com/externaltasks#master')
-            self.assertEquals(recipe.tasks[3].fetch_subdir, u'examples/3')
-            self.assertEquals(recipe.tasks[4].name,
+            self.assertEqual(recipe.tasks[3].fetch_subdir, u'examples/3')
+            self.assertEqual(recipe.tasks[4].name,
                     u'git://example.com/externaltasks#master examples/4')
-            self.assertEquals(recipe.tasks[4].task, None)
-            self.assertEquals(recipe.tasks[4].fetch_url,
+            self.assertEqual(recipe.tasks[4].task, None)
+            self.assertEqual(recipe.tasks[4].fetch_url,
                     u'git://example.com/externaltasks#master')
-            self.assertEquals(recipe.tasks[4].fetch_subdir, u'examples/4')
+            self.assertEqual(recipe.tasks[4].fetch_subdir, u'examples/4')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1140912
     def test_invalid_user(self):

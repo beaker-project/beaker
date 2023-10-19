@@ -43,7 +43,7 @@ class ReserveWorkflow(WebDriverTestCase):
             all_selected_options
         # There should only be one selected option
         self.assertTrue(len(selected_options), 1)
-        self.assertEquals(selected_options[0].text, 'None selected')
+        self.assertEqual(selected_options[0].text, 'None selected')
 
     def test_reserve_multiple_arch_got_distro(self):
         login(self.browser)
@@ -59,7 +59,7 @@ class ReserveWorkflow(WebDriverTestCase):
         # should end up on the job page
         b.find_element_by_xpath('//h1[contains(string(.), "J:")]')
         # two recipe sets, one for each distro tree
-        self.assertEquals(len(b.find_elements_by_class_name('recipeset')), 2)
+        self.assertEqual(len(b.find_elements_by_class_name('recipeset')), 2)
         b.find_element_by_xpath('//td[normalize-space(string(.))="%s Server i386"]'
                 % self.distro.name)
         b.find_element_by_xpath('//td[normalize-space(string(.))="%s Server x86_64"]'
@@ -79,7 +79,7 @@ class ReserveWorkflow(WebDriverTestCase):
         b.find_element_by_xpath('//select[@name="distro_tree_id"]'
                 '/option[normalize-space(.)="%s Server x86_64"]' % self.distro.name)
         options = b.find_elements_by_xpath('//select[@name="distro_tree_id"]/option')
-        self.assert_(not any('i386' in option.text for option in options), options)
+        self.assertTrue(not any('i386' in option.text for option in options), options)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=630902
     # Previously "lab" was a filter for distro trees, now it is a filter for 
@@ -164,7 +164,7 @@ class ReserveWorkflow(WebDriverTestCase):
         wboard = b.find_element_by_class_name('job-whiteboard')
         self.assertIn(wb_descr, wboard.text, msg="Fail to match default whiteboard")
         # one recipe set for the chosen distro tree
-        self.assertEquals(len(b.find_elements_by_class_name('recipeset')), 1)
+        self.assertEqual(len(b.find_elements_by_class_name('recipeset')), 1)
         b.find_element_by_xpath('//td[normalize-space(string(.))="%s Server i386"]'
                 % self.distro.name)
 
@@ -185,7 +185,7 @@ class ReserveWorkflow(WebDriverTestCase):
             job = TaskBase.get_by_t_id(jid)
             # first task in the recipe should be our new check-install task
             first_task = job.recipesets[0].recipes[0].tasks[0]
-            self.assertEquals(first_task.task.name, '/distribution/check-install')
+            self.assertEqual(first_task.task.name, '/distribution/check-install')
 
     def test_reserve_time(self):
         login(self.browser)
@@ -205,9 +205,9 @@ class ReserveWorkflow(WebDriverTestCase):
         with session.begin():
             job = TaskBase.get_by_t_id(jid)
             reserve_task = job.recipesets[0].recipes[0].tasks[1]
-            self.assertEquals(reserve_task.task.name, '/distribution/reservesys')
-            self.assertEquals(reserve_task.params[0].name, 'RESERVETIME')
-            self.assertEquals(reserve_task.params[0].value, '345600') # 4 days in seconds
+            self.assertEqual(reserve_task.task.name, '/distribution/reservesys')
+            self.assertEqual(reserve_task.params[0].name, 'RESERVETIME')
+            self.assertEqual(reserve_task.params[0].value, '345600') # 4 days in seconds
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1284368
     def test_html5_invalid_if_reserve_time_exceeds_maximum(self):
@@ -250,7 +250,7 @@ class ReserveWorkflow(WebDriverTestCase):
         with session.begin():
             job = TaskBase.get_by_t_id(job_id)
             recipe = job.recipesets[0].recipes[0]
-            self.assertEquals(recipe.host_requires,
+            self.assertEqual(recipe.host_requires,
                     u'<hostRequires><system_type value="Machine"/></hostRequires>')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1144205
@@ -364,7 +364,7 @@ class ReserveSystem(WebDriverTestCase):
         b.find_element_by_link_text('Select All').click()
         b.find_element_by_xpath("//form[@id='searchform']").submit()
         columns = b.find_elements_by_xpath("//table[@id='widget']//th")
-        self.assertEquals(len(columns), 34)
+        self.assertEqual(len(columns), 34)
 
     def test_all_systems_included_when_no_distro_tree_selected(self):
         login(self.browser)

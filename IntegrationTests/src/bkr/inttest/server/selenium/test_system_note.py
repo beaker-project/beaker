@@ -37,7 +37,7 @@ class SystemNoteTests(WebDriverTestCase):
 
     def test_no_notes(self):
         pane = self.go_to_notes_tab()
-        self.assertEquals(pane.find_element_by_xpath('p[1]').text,
+        self.assertEqual(pane.find_element_by_xpath('p[1]').text,
                 'No notes have been recorded for this system.')
 
     def add_note(self):
@@ -73,7 +73,7 @@ class SystemNoteTests(WebDriverTestCase):
         self.delete_note(note_text)
         # Test that we have acreated a new element to toggle the notes
         deleted_div = pane.find_element_by_xpath('div[@class="deleted-system-notes"]')
-        self.assertEquals(deleted_div.text, '1 deleted note is not shown Show')
+        self.assertEqual(deleted_div.text, '1 deleted note is not shown Show')
         deleted_div.find_element_by_xpath('button[text()="Show"]').click()
         # Test that it reappears when toggled
         pane.find_element_by_xpath('div[@class="system-note"]'
@@ -87,7 +87,7 @@ class SystemNoteTests(WebDriverTestCase):
         pane = self.go_to_notes_tab()
         # Test existing deleted notes are hidden
         deleted_div = pane.find_element_by_xpath('div[@class="deleted-system-notes"]')
-        self.assertEquals(deleted_div.text, '1 deleted note is not shown Show')
+        self.assertEqual(deleted_div.text, '1 deleted note is not shown Show')
         deleted_div.find_element_by_xpath('button[text()="Show"]').click()
         pane.find_element_by_xpath('div[@class="system-note"]'
                 '/div[@class="system-note-text"]/p[text()="%s"]' % note_text)
@@ -181,8 +181,8 @@ class SystemNoteHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.system.notes[0].user, self.owner)
-            self.assertEquals(self.system.notes[0].text, note_text)
+            self.assertEqual(self.system.notes[0].user, self.owner)
+            self.assertEqual(self.system.notes[0].text, note_text)
             assert_datetime_within(self.system.notes[0].created,
                     reference=datetime.datetime.utcnow(),
                     tolerance=datetime.timedelta(seconds=10))
@@ -192,8 +192,8 @@ class SystemNoteHTTPTest(DatabaseTestCase):
         requests_login(s, user=self.owner.user_name, password=u'owner')
         response = post_json(get_server_base() + 'systems/%s/notes/' % self.system.fqdn,
                 session=s, data={'text': ''})
-        self.assertEquals(response.status_code, 400)
-        self.assertEquals(response.content, 'Note text cannot be empty')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.content, 'Note text cannot be empty')
 
     def test_get_note(self):
         with session.begin():
@@ -204,9 +204,9 @@ class SystemNoteHTTPTest(DatabaseTestCase):
         response = requests.get(get_server_base() + 'systems/%s/notes/%s'
                 % (self.system.fqdn, note_id))
         response.raise_for_status()
-        self.assertEquals(response.json()['id'], note_id)
-        self.assertEquals(response.json()['text'], note_text)
-        self.assertEquals(response.json()['user']['user_name'], self.owner.user_name)
+        self.assertEqual(response.json()['id'], note_id)
+        self.assertEqual(response.json()['text'], note_text)
+        self.assertEqual(response.json()['user']['user_name'], self.owner.user_name)
 
     def test_mark_note_as_deleted(self):
         # Notes never get actually deleted, they just get marked as "deleted" 
@@ -222,7 +222,7 @@ class SystemNoteHTTPTest(DatabaseTestCase):
         response = patch_json(get_server_base() + 'systems/%s/notes/%s'
                 % (self.system.fqdn, note_id), session=s, data={'deleted': 'now'})
         response.raise_for_status()
-        self.assertEquals(response.json()['id'], note_id)
+        self.assertEqual(response.json()['id'], note_id)
         assert_datetime_within(
                 datetime.datetime.strptime(response.json()['deleted'], '%Y-%m-%d %H:%M:%S'),
                 reference=datetime.datetime.utcnow(),
@@ -265,7 +265,7 @@ class SystemNoteHTTPTest(DatabaseTestCase):
         requests_login(s, user=unprivileged.user_name, password=u'password')
         response = post_json(get_server_base() + 'systems/%s/notes/' % self.system.fqdn,
                 session=s, data={'text': 'asdf'})
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
 
     def test_unprivileged_user_cannot_delete_note(self):
         with session.begin():
@@ -277,12 +277,12 @@ class SystemNoteHTTPTest(DatabaseTestCase):
         requests_login(s, user=unprivileged.user_name, password=u'password')
         response = patch_json(get_server_base() + 'systems/%s/notes/%s'
                 % (self.system.fqdn, note_id), session=s, data={'deleted': 'now'})
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
 
     def test_anonymous_cannot_add_note(self):
         response = post_json(get_server_base() + 'systems/%s/notes/' % self.system.fqdn,
                 data={'text': 'asdf'})
-        self.assertEquals(response.status_code, 401)
+        self.assertEqual(response.status_code, 401)
 
     def test_anonymous_cannot_delete_note(self):
         with session.begin():
@@ -291,4 +291,4 @@ class SystemNoteHTTPTest(DatabaseTestCase):
             note_id = self.system.notes[0].id
         response = patch_json(get_server_base() + 'systems/%s/notes/%s'
                 % (self.system.fqdn, note_id), data={'deleted': 'now'})
-        self.assertEquals(response.status_code, 401)
+        self.assertEqual(response.status_code, 401)

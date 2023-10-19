@@ -42,17 +42,17 @@ class CSVImportTest(WebDriverTestCase):
         self.import_csv((u'csv_type,fqdn,location,arch\n'
                          u'system,%s,Under my desk,ia64' % self.system.fqdn)
                         .encode('utf8'))
-        self.failUnless(is_text_present(self.browser, "No Errors"))
+        self.assertTrue(is_text_present(self.browser, "No Errors"))
         with session.begin():
             session.refresh(self.system)
-            self.assertEquals(self.system.location, u'Under my desk')
-            self.assert_(Arch.by_name(u'ia64') in self.system.arch)
-            self.assert_(self.system.date_modified > orig_date_modified)
+            self.assertEqual(self.system.location, u'Under my desk')
+            self.assertTrue(Arch.by_name(u'ia64') in self.system.arch)
+            self.assertTrue(self.system.date_modified > orig_date_modified)
 
         # attempting to import a system with no FQDN should fail
         self.import_csv((u'csv_type,fqdn,location,arch\n'
                          u'system,'',Under my desk,ia64').encode('utf8'))
-        self.assertEquals(self.browser.find_element_by_xpath(
+        self.assertEqual(self.browser.find_element_by_xpath(
             '//table[@id="csv-import-log"]//td').text,
                           "Error importing line 2: "
                           "System must have an associated FQDN")
@@ -60,7 +60,7 @@ class CSVImportTest(WebDriverTestCase):
         # attempting to import a system with an invalid FQDN should fail
         self.import_csv((u'csv_type,fqdn,location,arch\n'
                          u'system,invalid--fqdn,Under my desk,ia64').encode('utf8'))
-        self.assertEquals(self.browser.find_element_by_xpath(
+        self.assertEqual(self.browser.find_element_by_xpath(
             '//table[@id="csv-import-log"]//td').text,
                           "Error importing line 2: "
                           "Invalid FQDN for system: invalid--fqdn")
@@ -80,8 +80,8 @@ class CSVImportTest(WebDriverTestCase):
                                                               self.system.arch[0])).encode('utf8'))
         with session.begin():
             session.refresh(self.system)
-        self.assertEquals(self.system.date_modified, orig_date_modified)
-        self.assertEquals(self.browser.find_element_by_xpath(
+        self.assertEqual(self.system.date_modified, orig_date_modified)
+        self.assertEqual(self.browser.find_element_by_xpath(
             '//table[@id="csv-import-log"]//td').text,
                           "Error importing line 2: "
                           "Invalid FQDN for system: new--fqdn.name")
@@ -95,8 +95,8 @@ class CSVImportTest(WebDriverTestCase):
                                                               self.system.arch[0])).encode('utf8'))
         with session.begin():
             session.refresh(self.system)
-        self.assertEquals(self.system.date_modified, orig_date_modified)
-        self.assertEquals(self.browser.find_element_by_xpath(
+        self.assertEqual(self.system.date_modified, orig_date_modified)
+        self.assertEqual(self.browser.find_element_by_xpath(
             '//table[@id="csv-import-log"]//td').text,
                           "Error importing line 2: "
                           "Non-existent system id")
@@ -110,7 +110,7 @@ class CSVImportTest(WebDriverTestCase):
             session.refresh(self.system)
 
         self.assertGreater(self.system.date_modified, orig_date_modified)
-        self.assertEquals(self.system.fqdn, 'new.fqdn.name')
+        self.assertEqual(self.system.fqdn, 'new.fqdn.name')
 
     def test_grants_view_permission_to_everybody_by_default(self):
         fqdn = data_setup.unique_name(u'test-csv-import%s.example.invalid')
@@ -118,7 +118,7 @@ class CSVImportTest(WebDriverTestCase):
         login(b)
         self.import_csv((u'csv_type,fqdn\n'
                          u'system,%s' % fqdn).encode('utf8'))
-        self.assertEquals(self.browser.find_element_by_xpath(
+        self.assertEqual(self.browser.find_element_by_xpath(
             '//table[@id="csv-import-log"]//td').text,
                           'No Errors')
         with session.begin():
@@ -131,7 +131,7 @@ class CSVImportTest(WebDriverTestCase):
         self.import_csv((u'csv_type,fqdn,secret\n'
                          u'system,%s,True' % self.system.fqdn)
                         .encode('utf8'))
-        self.assertEquals(self.browser.find_element_by_xpath(
+        self.assertEqual(self.browser.find_element_by_xpath(
             '//table[@id="csv-import-log"]//td').text,
                           'No Errors')
         with session.begin():
@@ -141,7 +141,7 @@ class CSVImportTest(WebDriverTestCase):
         self.import_csv((u'csv_type,fqdn,secret\n'
                          u'system,%s,False' % self.system.fqdn)
                         .encode('utf8'))
-        self.assertEquals(self.browser.find_element_by_xpath(
+        self.assertEqual(self.browser.find_element_by_xpath(
             '//table[@id="csv-import-log"]//td').text,
                           'No Errors')
         with session.begin():
@@ -155,11 +155,11 @@ class CSVImportTest(WebDriverTestCase):
         self.import_csv((u'csv_type,fqdn,key,key_value,deleted\n'
                          u'keyvalue,%s,COMMENT,UTF 8 –,False' % self.system.fqdn)
                         .encode('utf8'))
-        self.failUnless(is_text_present(self.browser, "No Errors"))
+        self.assertTrue(is_text_present(self.browser, "No Errors"))
         with session.begin():
             session.refresh(self.system)
             assert_has_key_with_value(self.system, 'COMMENT', u'UTF 8 –')
-            self.assert_(self.system.date_modified > orig_date_modified)
+            self.assertTrue(self.system.date_modified > orig_date_modified)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1058549
     def test_keyvalue_non_existent_system_valid(self):
@@ -169,7 +169,7 @@ class CSVImportTest(WebDriverTestCase):
                          u'keyvalue,%s,COMMENT,acomment,False' % fqdn)
                         .encode('utf8'))
 
-        self.assertEquals(self.browser.find_element_by_xpath(
+        self.assertEqual(self.browser.find_element_by_xpath(
             '//table[@id="csv-import-log"]//td').text,
                           "No Errors")
 
@@ -186,7 +186,7 @@ class CSVImportTest(WebDriverTestCase):
                          u'keyvalue,%s,COMMENT,acomment,False' % (fqdn, '--' + fqdn))
                         .encode('utf8'))
 
-        self.assertEquals(self.browser.find_element_by_xpath(
+        self.assertEqual(self.browser.find_element_by_xpath(
             '//table[@id="csv-import-log"]//td').text,
                           "Error importing line 3: "
                           "Invalid FQDN for system: --%s" % fqdn)
@@ -238,7 +238,7 @@ class CSVImportTest(WebDriverTestCase):
 
         with session.begin():
             system = System.query.filter(System.fqdn == fqdn).one()
-            self.assertEquals(system.excluded_osmajor[0].osmajor_id,
+            self.assertEqual(system.excluded_osmajor[0].osmajor_id,
                               osmajor.id)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1058549
@@ -259,8 +259,8 @@ class CSVImportTest(WebDriverTestCase):
             arch = Arch.by_name(u'x86_64')
             osmajor = OSMajor.by_name(u'MyEnterpriseLinux')
             p = system.provisions[arch].provision_families[osmajor]
-            self.assertEquals(p.ks_meta, u'mode=cmdline')
-            self.assertEquals(p.kernel_options_post, u'console=ttyS0')
+            self.assertEqual(p.ks_meta, u'mode=cmdline')
+            self.assertEqual(p.kernel_options_post, u'console=ttyS0')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=787519
     def test_no_quotes(self):
@@ -272,7 +272,7 @@ class CSVImportTest(WebDriverTestCase):
         b.find_element_by_name('csv_file').send_keys(
             pkg_resources.resource_filename(self.__module__, 'bz787519.csv'))
         b.find_element_by_name('csv_file').submit()
-        self.failUnless(is_text_present(self.browser, "No Errors"))
+        self.assertTrue(is_text_present(self.browser, "No Errors"))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=802842
     def test_doubled_quotes(self):
@@ -285,10 +285,10 @@ class CSVImportTest(WebDriverTestCase):
         b.find_element_by_name('csv_file').send_keys(
             pkg_resources.resource_filename(self.__module__, 'bz802842.csv'))
         b.find_element_by_name('csv_file').submit()
-        self.failUnless(is_text_present(self.browser, "No Errors"))
+        self.assertTrue(is_text_present(self.browser, "No Errors"))
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.provisions[Arch.by_name(u's390x')] \
+            self.assertEqual(system.provisions[Arch.by_name(u's390x')] \
                               .provision_families[OSMajor.by_name(u'RedHatEnterpriseLinux7')] \
                               .kernel_options,
                               'rd.znet="qeth,0.0.8000,0.0.8001,0.0.8002,layer2=1,portname=lol,portno=0" '
@@ -302,7 +302,7 @@ class CSVImportTest(WebDriverTestCase):
         self.import_csv((u'csv_type,fqdn,location,arch\n'
                          u'system,%s,Under my desk' % self.system.fqdn)
                         .encode('utf8'))
-        self.assert_(is_text_present(self.browser, 'Missing fields on line 2: arch'))
+        self.assertTrue(is_text_present(self.browser, 'Missing fields on line 2: arch'))
 
     def test_extraneous_field(self):
         login(self.browser)
@@ -310,13 +310,13 @@ class CSVImportTest(WebDriverTestCase):
         self.import_csv((u'csv_type,fqdn,location,arch\n'
                          u'system,%s,Under my desk,ppc64,what is this field doing here' % self.system.fqdn)
                         .encode('utf8'))
-        self.assert_(is_text_present(self.browser, 'Too many fields on line 2 (expecting 4)'))
+        self.assertTrue(is_text_present(self.browser, 'Too many fields on line 2 (expecting 4)'))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=972411
     def test_malformed(self):
         login(self.browser)
         self.import_csv('gar\x00bage')
-        self.assertEquals(self.browser.find_element_by_xpath(
+        self.assertEqual(self.browser.find_element_by_xpath(
             '//table[@id="csv-import-log"]//td').text,
                           'Error parsing CSV file: line contains NULL byte')
 
@@ -329,10 +329,10 @@ class CSVImportTest(WebDriverTestCase):
         # (thereby causing a row to be added to system_status_duration) but
         # then errors out on 'secret' which does not accept empty string.
         with session.begin():
-            self.assertEquals(len(self.system.status_durations), 1)
-            self.assertEquals(self.system.status_durations[0].status,
+            self.assertEqual(len(self.system.status_durations), 1)
+            self.assertEqual(self.system.status_durations[0].status,
                               SystemStatus.automated)
-            self.assertEquals(self.system.status_durations[0].finish_time, None)
+            self.assertEqual(self.system.status_durations[0].finish_time, None)
         login(self.browser)
         self.import_csv((u'csv_type,id,status,secret\n'
                          u'system,%s,Manual,\n' % self.system.id).encode('utf8'))
@@ -341,9 +341,9 @@ class CSVImportTest(WebDriverTestCase):
         self.assertIn('Invalid secret None', import_log)
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.system.status, SystemStatus.automated)
-            self.assertEquals(len(self.system.status_durations), 1)
-            self.assertEquals(self.system.status_durations[0].finish_time, None)
+            self.assertEqual(self.system.status, SystemStatus.automated)
+            self.assertEqual(len(self.system.status_durations), 1)
+            self.assertEqual(self.system.status_durations[0].finish_time, None)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1085238
     def test_error_on_empty_csv(self):
@@ -358,10 +358,10 @@ class CSVImportTest(WebDriverTestCase):
         self.import_csv((u'csv_type,fqdn,location,arch\n'
                          u'system,%s,在我的办公桌,ia64' % self.system.fqdn) \
                         .encode('utf8'))
-        self.failUnless(is_text_present(self.browser, "No Errors"))
+        self.assertTrue(is_text_present(self.browser, "No Errors"))
         with session.begin():
             session.refresh(self.system)
-            self.assertEquals(self.system.location, u'在我的办公桌')
+            self.assertEqual(self.system.location, u'在我的办公桌')
 
     def test_system_pools_import(self):
         with session.begin():
@@ -375,16 +375,16 @@ class CSVImportTest(WebDriverTestCase):
                          u'system_pool,%s,%s,False' % (system.fqdn, pool1.name,
                                                        system.fqdn, pool2.name)) \
                         .encode('utf8'))
-        self.failUnless(is_text_present(self.browser, 'No Errors'))
+        self.assertTrue(is_text_present(self.browser, 'No Errors'))
         with session.begin():
             session.refresh(system)
-            self.assertEquals([pool1.name, pool2.name],
+            self.assertEqual([pool1.name, pool2.name],
                               [pool.name for pool in system.pools])
         # test deletion
         self.import_csv((u'csv_type,fqdn,pool,deleted\n'
                          u'system_pool,%s,%s,True' % (system.fqdn, pool2.name)) \
                         .encode('utf8'))
-        self.failUnless(is_text_present(self.browser, 'No Errors'))
+        self.assertTrue(is_text_present(self.browser, 'No Errors'))
         with session.begin():
             session.refresh(system)
             self.assertNotIn(pool2.name, [pool.name for pool in system.pools])

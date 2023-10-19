@@ -47,8 +47,8 @@ class CSVRoundtripTest(WebDriverTestCase):
         login(self.browser)
         orig_date_modified = self.system.date_modified
         self.import_csv('\n'.join([row for row in self.get_csv('system')]))
-        self.assertEquals(self.browser.find_element_by_xpath(
+        self.assertEqual(self.browser.find_element_by_xpath(
             '//table[@id="csv-import-log"]//td').text,
                           "No Errors")
         session.refresh(self.system)
-        self.assert_(orig_date_modified != self.system.date_modified)
+        self.assertTrue(orig_date_modified != self.system.date_modified)

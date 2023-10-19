@@ -20,13 +20,13 @@ class JobCloneTest(ClientTestCase):
         with session.begin():
             job = data_setup.create_completed_job()
         out = run_client(['bkr', 'job-clone', job.t_id])
-        self.assert_(out.startswith('Submitted:'))
+        self.assertTrue(out.startswith('Submitted:'))
 
     def test_can_clone_recipeset(self):
         with session.begin():
             job = data_setup.create_completed_job()
         out = run_client(['bkr', 'job-clone', job.recipesets[0].t_id])
-        self.assert_(out.startswith('Submitted:'))
+        self.assertTrue(out.startswith('Submitted:'))
 
     def test_can_print_xml(self):
         with session.begin():
@@ -58,7 +58,7 @@ class JobCloneTest(ClientTestCase):
             '<task name="/distribution/reservesys" role="STANDALONE"/>'
             '</recipe></recipeSet></job>')
         out = run_client(['bkr', 'job-clone','--xml', job.t_id])
-        self.assert_('Submitted:' in out)
+        self.assertTrue('Submitted:' in out)
         actual_xml = out[:out.find('Submitted')]
         self.assertEqual(expected_xml.strip(), actual_xml.strip(),
                          character_diff_message(expected_xml.strip(), actual_xml.strip()))
@@ -95,7 +95,7 @@ class JobCloneTest(ClientTestCase):
   </recipeSet>
 </job>"""
         out = run_client(['bkr', 'job-clone','--prettyxml', job.t_id])
-        self.assert_('Submitted:' in out)
+        self.assertTrue('Submitted:' in out)
         actual_xml = out[:out.find('Submitted')]
         self.assertMultiLineEqual(expected_xml.strip(), actual_xml.strip())
 
@@ -103,7 +103,7 @@ class JobCloneTest(ClientTestCase):
         with session.begin():
             job = data_setup.create_completed_job()
         out = run_client(['bkr', 'job-clone','--dryrun', job.t_id])
-        self.assert_('Submitted:' not in out)
+        self.assertTrue('Submitted:' not in out)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=595512
     def test_invalid_taskspec(self):
@@ -111,7 +111,7 @@ class JobCloneTest(ClientTestCase):
             run_client(['bkr', 'job-clone', '12345'])
             self.fail('should raise')
         except ClientError as e:
-            self.assert_('Invalid taskspec' in e.stderr_output)
+            self.assertTrue('Invalid taskspec' in e.stderr_output)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1014623
     def test_nonascii_chars_in_job_xml(self):
@@ -140,7 +140,7 @@ class JobCloneTest(ClientTestCase):
         error = cm.exception
         msg = '%s is not a valid submission delegate for %s' \
             % (bot.user_name, user.user_name)
-        self.assert_(msg in str(error))
+        self.assertTrue(msg in str(error))
 
     def test_can_delegate_submission(self):
         with session.begin():
@@ -154,7 +154,7 @@ class JobCloneTest(ClientTestCase):
             '--password', 'bot',
             '--job-owner', user.user_name,
             job.t_id])
-        self.assert_('Submitted:' in out)
+        self.assertTrue('Submitted:' in out)
         last_job = Job.query.order_by(Job.id.desc()).first()
         self.assertEqual(user.user_name, last_job.owner.user_name)
 

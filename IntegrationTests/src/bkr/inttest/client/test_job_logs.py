@@ -47,48 +47,48 @@ class JobLogsTest(ClientTestCase):
     def test_by_job(self):
         out = run_client(['bkr', 'job-logs', self.job.t_id])
         logs = out.splitlines()
-        self.assertEquals(logs[0], get_server_base() + u'recipes/%s/logs/R/dummy.txt'
+        self.assertEqual(logs[0], get_server_base() + u'recipes/%s/logs/R/dummy.txt'
                % self.recipe.id)
-        self.assertEquals(logs[1], get_server_base() + u'recipes/%s/tasks/%s/logs/T/dummy.txt'
+        self.assertEqual(logs[1], get_server_base() + u'recipes/%s/tasks/%s/logs/T/dummy.txt'
                 % (self.recipe.id, self.recipe.tasks[0].id))
-        self.assertEquals(logs[2], get_server_base() + u'recipes/%s/tasks/%s/results/%s/logs/TR/dummy.txt'
+        self.assertEqual(logs[2], get_server_base() + u'recipes/%s/tasks/%s/results/%s/logs/TR/dummy.txt'
                 % (self.recipe.id, self.recipe.tasks[0].id, self.recipe.tasks[0].results[0].id))
 
     def test_by_recipeset(self):
         out = run_client(['bkr', 'job-logs', self.job.recipesets[0].t_id])
         logs = out.splitlines()
-        self.assertEquals(logs[0], get_server_base() + u'recipes/%s/logs/R/dummy.txt'
+        self.assertEqual(logs[0], get_server_base() + u'recipes/%s/logs/R/dummy.txt'
                % self.recipe.id)
-        self.assertEquals(logs[1], get_server_base() + u'recipes/%s/tasks/%s/logs/T/dummy.txt'
+        self.assertEqual(logs[1], get_server_base() + u'recipes/%s/tasks/%s/logs/T/dummy.txt'
                 % (self.recipe.id, self.recipe.tasks[0].id))
-        self.assertEquals(logs[2], get_server_base() + u'recipes/%s/tasks/%s/results/%s/logs/TR/dummy.txt'
+        self.assertEqual(logs[2], get_server_base() + u'recipes/%s/tasks/%s/results/%s/logs/TR/dummy.txt'
                 % (self.recipe.id, self.recipe.tasks[0].id, self.recipe.tasks[0].results[0].id))
 
     def test_by_recipe(self):
         out = run_client(['bkr', 'job-logs',
                 self.job.recipesets[0].recipes[0].t_id])
         logs = out.splitlines()
-        self.assertEquals(logs[0], get_server_base() + u'recipes/%s/logs/R/dummy.txt'
+        self.assertEqual(logs[0], get_server_base() + u'recipes/%s/logs/R/dummy.txt'
                % self.recipe.id)
-        self.assertEquals(logs[1], get_server_base() + u'recipes/%s/tasks/%s/logs/T/dummy.txt'
+        self.assertEqual(logs[1], get_server_base() + u'recipes/%s/tasks/%s/logs/T/dummy.txt'
                 % (self.recipe.id, self.recipe.tasks[0].id))
-        self.assertEquals(logs[2], get_server_base() + u'recipes/%s/tasks/%s/results/%s/logs/TR/dummy.txt'
+        self.assertEqual(logs[2], get_server_base() + u'recipes/%s/tasks/%s/results/%s/logs/TR/dummy.txt'
                 % (self.recipe.id, self.recipe.tasks[0].id, self.recipe.tasks[0].results[0].id))
 
     def test_by_task(self):
         out = run_client(['bkr', 'job-logs',
                 self.job.recipesets[0].recipes[0].tasks[0].t_id])
         logs = out.splitlines()
-        self.assertEquals(logs[0], get_server_base() + u'recipes/%s/tasks/%s/logs/T/dummy.txt'
+        self.assertEqual(logs[0], get_server_base() + u'recipes/%s/tasks/%s/logs/T/dummy.txt'
                 % (self.recipe.id, self.recipe.tasks[0].id))
-        self.assertEquals(logs[1], get_server_base() + u'recipes/%s/tasks/%s/results/%s/logs/TR/dummy.txt'
+        self.assertEqual(logs[1], get_server_base() + u'recipes/%s/tasks/%s/results/%s/logs/TR/dummy.txt'
                 % (self.recipe.id, self.recipe.tasks[0].id, self.recipe.tasks[0].results[0].id))
 
     def test_by_taskresult(self):
         out = run_client(['bkr', 'job-logs',
                 self.job.recipesets[0].recipes[0].tasks[0].results[0].t_id])
         logs = out.splitlines()
-        self.assertEquals(logs[0], get_server_base() + u'recipes/%s/tasks/%s/results/%s/logs/TR/dummy.txt'
+        self.assertEqual(logs[0], get_server_base() + u'recipes/%s/tasks/%s/results/%s/logs/TR/dummy.txt'
                 % (self.recipe.id, self.recipe.tasks[0].id, self.recipe.tasks[0].results[0].id))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=595512
@@ -97,16 +97,16 @@ class JobLogsTest(ClientTestCase):
             run_client(['bkr', 'job-logs', '12345'])
             self.fail('should raise')
         except ClientError as e:
-            self.assert_('Invalid taskspec' in e.stderr_output)
+            self.assertTrue('Invalid taskspec' in e.stderr_output)
 
     def test_prints_sizes(self):
         out = run_client(['bkr', 'job-logs', '--size', self.job.t_id])
         lines = out.splitlines()
-        self.assertEquals(lines[0], '     7 %srecipes/%s/logs/R/dummy.txt' %
+        self.assertEqual(lines[0], '     7 %srecipes/%s/logs/R/dummy.txt' %
                 (get_server_base(), self.recipe.id))
-        self.assertEquals(lines[1], '     5 %srecipes/%s/tasks/%s/logs/T/dummy.txt' %
+        self.assertEqual(lines[1], '     5 %srecipes/%s/tasks/%s/logs/T/dummy.txt' %
                 (get_server_base(), self.recipe.id, self.recipe.tasks[0].id))
-        self.assertEquals(lines[2], '     7 %srecipes/%s/tasks/%s/results/%s/logs/TR/dummy.txt' %
+        self.assertEqual(lines[2], '     7 %srecipes/%s/tasks/%s/results/%s/logs/TR/dummy.txt' %
                 (get_server_base(), self.recipe.id, self.recipe.tasks[0].id, self.recipe.tasks[0].results[0].id))
 
     def test_size_handles_404(self):
@@ -114,7 +114,7 @@ class JobLogsTest(ClientTestCase):
             self.job.recipesets[0].recipes[0].logs[0].filename = u'idontexist.txt'
         out = run_client(['bkr', 'job-logs', '--size', self.job.t_id])
         lines = out.splitlines()
-        self.assertEquals(lines[0], '<missing> %srecipes/%s/logs/R/idontexist.txt' %
+        self.assertEqual(lines[0], '<missing> %srecipes/%s/logs/R/idontexist.txt' %
                 (get_server_base(), self.recipe.id))
 
     def test_size_handles_http_errors(self):
@@ -124,5 +124,5 @@ class JobLogsTest(ClientTestCase):
             self.job.recipesets[0].recipes[0].logs[0].filename = u'500'
         out = run_client(['bkr', 'job-logs', '--size', self.job.t_id])
         lines = out.splitlines()
-        self.assertEquals(lines[0], '<error:500> %srecipes/%s/logs/error/500' %
+        self.assertEqual(lines[0], '<error:500> %srecipes/%s/logs/error/500' %
                 (get_server_base(), self.recipe.id))

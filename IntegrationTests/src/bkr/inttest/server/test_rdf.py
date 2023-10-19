@@ -30,7 +30,7 @@ class SystemRDFTest(DatabaseTestCase):
         system.lab_controller = None
         session.flush()
         graph = self.describe(system)
-        self.assert_((None, INV.controlledBy, None) not in graph)
+        self.assertTrue((None, INV.controlledBy, None) not in graph)
 
     def test_cpu_speed_is_decimal(self):
         system = data_setup.create_system(fqdn=u'cpu-speed-decimal.test-rdf.invalid')

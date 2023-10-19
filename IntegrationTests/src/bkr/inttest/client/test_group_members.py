@@ -25,10 +25,10 @@ class GroupMembersTest(ClientTestCase):
                           '--format','list',
                           group.group_name])
 
-        self.assert_('%s %s %s' %
+        self.assertTrue('%s %s %s' %
                      (user2.user_name, user2.email_address, 'Owner')
                      in out.splitlines(), out.splitlines())
-        self.assert_('%s %s %s' %
+        self.assertTrue('%s %s %s' %
                      (user1.user_name, user1.email_address, 'Member')
                      in out.splitlines(), out.splitlines())
 
@@ -36,10 +36,10 @@ class GroupMembersTest(ClientTestCase):
         out = run_client(['bkr', 'group-members',
                           group.group_name])
         out = json.loads(out)
-        self.assert_(dict(username=user2.user_name,
+        self.assertTrue(dict(username=user2.user_name,
                           email=user2.email_address,
                           owner=True) in out, out)
-        self.assert_(dict(username=user1.user_name,
+        self.assertTrue(dict(username=user1.user_name,
                           email=user1.email_address,
                           owner=False) in out, out)
 
@@ -59,4 +59,4 @@ class GroupMembersTest(ClientTestCase):
             group = data_setup.create_group(group_name=bad_group_name)
         out = run_client(['bkr', 'group-members', bad_group_name])
         out = json.loads(out)
-        self.assertEquals(len(out), 1)
+        self.assertEqual(len(out), 1)

@@ -18,5 +18,5 @@ class NonexistentXmlRpcMethodTest(XmlRpcTestCase):
             self.server.flimflam()
             self.fail('should raise')
         except xmlrpclib.Fault as e:
-            self.assertEquals(e.faultString,
+            self.assertEqual(e.faultString,
                     'XML-RPC method flimflam not implemented by this server')

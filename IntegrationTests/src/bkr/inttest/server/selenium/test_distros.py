@@ -30,39 +30,39 @@ class DistroViewTest(WebDriverTestCase):
         go_to_distro_view(b, self.distro)
         b.find_element_by_id('tags_tag_text').send_keys('HAPPY')
         b.find_element_by_link_text('Add').click()
-        self.assertEquals(b.find_element_by_class_name('flash').text,
+        self.assertEqual(b.find_element_by_class_name('flash').text,
                 'Added Tag HAPPY')
         b.find_element_by_xpath(
                 '//td[normalize-space(text())="HAPPY"]')
         with session.begin():
             session.refresh(self.distro)
             activity = self.distro.activity[0]
-            self.assertEquals(activity.field_name, u'Tag')
-            self.assertEquals(activity.service, u'WEBUI')
-            self.assertEquals(activity.action, u'Added')
-            self.assertEquals(activity.old_value, None)
-            self.assertEquals(activity.new_value, u'HAPPY')
+            self.assertEqual(activity.field_name, u'Tag')
+            self.assertEqual(activity.service, u'WEBUI')
+            self.assertEqual(activity.action, u'Added')
+            self.assertEqual(activity.old_value, None)
+            self.assertEqual(activity.new_value, u'HAPPY')
 
     def test_can_remove_tag_from_distro(self):
         b = self.browser
         login(b, data_setup.ADMIN_USER, data_setup.ADMIN_PASSWORD)
         go_to_distro_view(b, self.distro)
         delete_and_confirm(b, '//td[normalize-space(preceding-sibling::td[1]/text())="SAD"]')
-        self.assertEquals(b.find_element_by_class_name('flash').text,
+        self.assertEqual(b.find_element_by_class_name('flash').text,
                 'Removed Tag SAD')
         b.find_element_by_xpath('//div[@class="tags"]//table[not('
                 './/td[normalize-space(text())="SAD"])]')
         with session.begin():
             session.refresh(self.distro)
-            self.assert_(u'SAD' not in self.distro.tags)
+            self.assertTrue(u'SAD' not in self.distro.tags)
         with session.begin():
             session.refresh(self.distro)
             activity = self.distro.activity[0]
-            self.assertEquals(activity.field_name, u'Tag')
-            self.assertEquals(activity.service, u'WEBUI')
-            self.assertEquals(activity.action, u'Removed')
-            self.assertEquals(activity.old_value, u'SAD')
-            self.assertEquals(activity.new_value, None)
+            self.assertEqual(activity.field_name, u'Tag')
+            self.assertEqual(activity.service, u'WEBUI')
+            self.assertEqual(activity.action, u'Removed')
+            self.assertEqual(activity.old_value, u'SAD')
+            self.assertEqual(activity.new_value, None)
 
     def test_non_admin_user_cannot_add_tag(self):
         b = self.browser
@@ -72,7 +72,7 @@ class DistroViewTest(WebDriverTestCase):
 
         response = requests.get(get_server_base() +
                 'distros/save_tag?id=%s&tag.text=HAPPY' % self.distro.id)
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
 
     def test_non_admin_user_cannot_remove_tag(self):
         b = self.browser
@@ -82,7 +82,7 @@ class DistroViewTest(WebDriverTestCase):
 
         response = requests.get(get_server_base() +
                 'distros/tag_remove?id=%s&tag=SAD' % self.distro.id)
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=830940
     def test_provision_links_arent_shown_for_expired_trees(self):
@@ -96,11 +96,11 @@ class DistroViewTest(WebDriverTestCase):
         b = self.browser
         login(b, data_setup.ADMIN_USER, data_setup.ADMIN_PASSWORD)
         go_to_distro_view(b, self.distro)
-        self.assertEquals(b.find_element_by_xpath(
+        self.assertEqual(b.find_element_by_xpath(
                 '//table//tr[td[1]/a/text()="%s"]/td[4]'
                 % not_expired_tree.id).text,
                 'Provision')
-        self.assertEquals(b.find_element_by_xpath(
+        self.assertEqual(b.find_element_by_xpath(
                 '//table//tr[td[1]/a/text()="%s"]/td[4]'
                 % expired_tree.id).text,
                 '')
@@ -128,7 +128,7 @@ class DistroExpireXmlRpcTest(XmlRpcTestCase):
         session.expire_all()
         with session.begin():
             activity = self.distro_tree.activity[0]
-            self.assertEquals(activity.service, u'CUSTOMSERVICE')
+            self.assertEqual(activity.service, u'CUSTOMSERVICE')
 
 
 class DistroEditVersionXmlRpcTest(XmlRpcTestCase):
@@ -164,7 +164,7 @@ class DistroTaggingXmlRpcTest(XmlRpcTestCase):
         self.server.distros.tag(self.distro.name, 'HAPPY')
         with session.begin():
             session.refresh(self.distro)
-            self.assert_(u'HAPPY' in self.distro.tags)
+            self.assertTrue(u'HAPPY' in self.distro.tags)
 
     def test_can_remove_tag_from_distro(self):
         self.server.auth.login_password(
@@ -172,7 +172,7 @@ class DistroTaggingXmlRpcTest(XmlRpcTestCase):
         self.server.distros.untag(self.distro.name, 'SAD')
         with session.begin():
             session.refresh(self.distro)
-            self.assert_(u'SAD' not in self.distro.tags)
+            self.assertTrue(u'SAD' not in self.distro.tags)
 
     def test_non_admin_user_cannot_add_tag(self):
         self.server.auth.login_password(self.user.user_name, 'distro')
@@ -180,7 +180,7 @@ class DistroTaggingXmlRpcTest(XmlRpcTestCase):
             self.server.distros.tag(self.distro.name, 'HAPPY')
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('IdentityFailure' in e.faultString)
+            self.assertTrue('IdentityFailure' in e.faultString)
 
     def test_non_admin_user_cannot_remove_tag(self):
         self.server.auth.login_password(self.user.user_name, 'distro')
@@ -188,7 +188,7 @@ class DistroTaggingXmlRpcTest(XmlRpcTestCase):
             self.server.distros.untag(self.distro.name, 'SAD')
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('IdentityFailure' in e.faultString)
+            self.assertTrue('IdentityFailure' in e.faultString)
 
     def test_adding_tag_is_recorded_in_distro_activity(self):
         self.server.auth.login_password(
@@ -197,11 +197,11 @@ class DistroTaggingXmlRpcTest(XmlRpcTestCase):
         with session.begin():
             session.refresh(self.distro)
             activity = self.distro.activity[0]
-            self.assertEquals(activity.field_name, u'Tag')
-            self.assertEquals(activity.service, u'XMLRPC')
-            self.assertEquals(activity.action, u'Added')
-            self.assertEquals(activity.old_value, None)
-            self.assertEquals(activity.new_value, u'HAPPY')
+            self.assertEqual(activity.field_name, u'Tag')
+            self.assertEqual(activity.service, u'XMLRPC')
+            self.assertEqual(activity.action, u'Added')
+            self.assertEqual(activity.old_value, None)
+            self.assertEqual(activity.new_value, u'HAPPY')
 
     def test_removing_tag_is_recorded_in_distro_activity(self):
         self.server.auth.login_password(
@@ -210,8 +210,8 @@ class DistroTaggingXmlRpcTest(XmlRpcTestCase):
         with session.begin():
             session.refresh(self.distro)
             activity = self.distro.activity[0]
-            self.assertEquals(activity.field_name, u'Tag')
-            self.assertEquals(activity.service, u'XMLRPC')
-            self.assertEquals(activity.action, u'Removed')
-            self.assertEquals(activity.old_value, u'SAD')
-            self.assertEquals(activity.new_value, None)
+            self.assertEqual(activity.field_name, u'Tag')
+            self.assertEqual(activity.service, u'XMLRPC')
+            self.assertEqual(activity.action, u'Removed')
+            self.assertEqual(activity.old_value, u'SAD')
+            self.assertEqual(activity.new_value, None)

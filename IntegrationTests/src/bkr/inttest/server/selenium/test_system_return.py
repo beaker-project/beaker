@@ -36,8 +36,8 @@ class SystemReturnTestWD(WebDriverTestCase):
         response = put_json(get_server_base() +
                 'systems/%s/reservations/+current' % system.fqdn,
                 session=s, data=dict(finish_time='now'))
-        self.assertEquals(response.status_code, 400)
-        self.assertEquals(response.text, 'Cannot return system with running %s' % recipe.t_id)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text, 'Cannot return system with running %s' % recipe.t_id)
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=1007789
     def test_can_return_manual_reservation_when_automated(self):
@@ -84,7 +84,7 @@ class SystemReturnTestWD(WebDriverTestCase):
         response = put_json(get_server_base() +
                 'systems/%s/reservations/+current' % system.fqdn,
                 session=s, data=dict(finish_time='now'))
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
         self.assertIn('Cannot return system', response.text)
 
     def test_return_with_no_lc(self):
@@ -119,7 +119,7 @@ class SystemReturnTestWD(WebDriverTestCase):
             job = data_setup.create_job_for_recipes([recipe])
             data_setup.mark_recipe_tasks_finished(recipe, system=system)
             job.update_status()
-        self.assertEquals(recipe.status, TaskStatus.reserved)
+        self.assertEqual(recipe.status, TaskStatus.reserved)
         s = requests.Session()
         requests_login(s, user.user_name, 'password')
         response = put_json(get_server_base() +
@@ -129,5 +129,5 @@ class SystemReturnTestWD(WebDriverTestCase):
         with session.begin():
             session.expire_all()
             job.update_status()
-            self.assertEquals(job.status, TaskStatus.completed)
-            self.assertEquals(system.user, None)
+            self.assertEqual(job.status, TaskStatus.completed)
+            self.assertEqual(system.user, None)

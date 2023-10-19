@@ -33,19 +33,19 @@ class SystemDeleteTest(ClientTestCase):
             self.fail('should raise')
         except ClientError as e:
             self.assertEqual(e.status, 1)
-            self.assert_(e.stderr_output.find("you don't own") != -1)
+            self.assertTrue(e.stderr_output.find("you don't own") != -1)
 
     def test_user_can_delete_system(self):
         # user1 should be able to delete system
         out = run_client(['bkr', 'system-delete', self.system.fqdn],
                 config=self.client_config)
-        self.assert_(out.startswith('Deleted %s' % self.system.fqdn), out)
+        self.assertTrue(out.startswith('Deleted %s' % self.system.fqdn), out)
 
     def test_admin_can_delete_system(self):
         # admin should be able to delete system
         out = run_client(['bkr', 'system-delete', self.system.fqdn],
                 config=self.client_config3)
-        self.assert_(out.startswith('Deleted %s' % self.system.fqdn), out)
+        self.assertTrue(out.startswith('Deleted %s' % self.system.fqdn), out)
 
     def test_cannot_delete_system_which_has_been_used_for_recipes(self):
         with session.begin():
@@ -58,7 +58,7 @@ class SystemDeleteTest(ClientTestCase):
             self.fail('should raise')
         except ClientError as e:
             self.assertEqual(e.status, 1)
-            self.assert_(e.stderr_output.find('with reservations') != -1)
+            self.assertTrue(e.stderr_output.find('with reservations') != -1)
 
     def test_cannot_delete_nonexistent_system(self):
         fqdn = data_setup.unique_name(u'mysystem%s')

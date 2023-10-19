@@ -36,7 +36,7 @@ class OSVersionsTest(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'osversions')
         b.find_element_by_link_text('L').click()
-        self.assert_(b.find_elements_by_link_text('LinuxLinux1.1'))
+        self.assertTrue(b.find_elements_by_link_text('LinuxLinux1.1'))
 
     def test_edit_osmajor_install_options(self):
         with session.begin():
@@ -64,7 +64,7 @@ class OSVersionsTest(WebDriverTestCase):
                 '//div[normalize-space(label/text())="Kernel Options Post"]'
                 '//input').send_keys('six')
         b.find_element_by_xpath('//button[text()="Save Changes"]').click()
-        self.assertEquals(
+        self.assertEqual(
                 b.find_element_by_class_name('flash').text,
                 'Install options saved for LinuxLinux2.1')
         # check everything is saved
@@ -72,40 +72,40 @@ class OSVersionsTest(WebDriverTestCase):
             o = OSMajor.by_name(u'LinuxLinux2.1')
             ia64 = Arch.by_name(u'ia64')
             ppc64 = Arch.by_name(u'ppc64')
-            self.assertEquals(set(o.install_options_by_arch.keys()),
+            self.assertEqual(set(o.install_options_by_arch.keys()),
                     set([None, ia64, ppc64]),
                     o.install_options_by_arch)
-            self.assertEquals(o.install_options_by_arch[None].ks_meta, 'one')
-            self.assertEquals(o.install_options_by_arch[None].kernel_options, 'two')
-            self.assertEquals(o.install_options_by_arch[None].kernel_options_post, 'three')
-            self.assertEquals(o.install_options_by_arch[ia64].ks_meta, '')
-            self.assertEquals(o.install_options_by_arch[ia64].kernel_options, '')
-            self.assertEquals(o.install_options_by_arch[ia64].kernel_options_post, '')
-            self.assertEquals(o.install_options_by_arch[ppc64].ks_meta, 'four')
-            self.assertEquals(o.install_options_by_arch[ppc64].kernel_options, 'five')
-            self.assertEquals(o.install_options_by_arch[ppc64].kernel_options_post, 'six')
+            self.assertEqual(o.install_options_by_arch[None].ks_meta, 'one')
+            self.assertEqual(o.install_options_by_arch[None].kernel_options, 'two')
+            self.assertEqual(o.install_options_by_arch[None].kernel_options_post, 'three')
+            self.assertEqual(o.install_options_by_arch[ia64].ks_meta, '')
+            self.assertEqual(o.install_options_by_arch[ia64].kernel_options, '')
+            self.assertEqual(o.install_options_by_arch[ia64].kernel_options_post, '')
+            self.assertEqual(o.install_options_by_arch[ppc64].ks_meta, 'four')
+            self.assertEqual(o.install_options_by_arch[ppc64].kernel_options, 'five')
+            self.assertEqual(o.install_options_by_arch[ppc64].kernel_options_post, 'six')
         # now edit the existing options
         go_to_edit_osmajor(b, 'LinuxLinux2.1')
         input = b.find_element_by_xpath('//*[@id="install_options_ppc64"]'
                 '//div[normalize-space(label/text())="Kickstart Metadata"]'
                 '//input')
-        self.assertEquals(input.get_attribute('value'), 'four')
+        self.assertEqual(input.get_attribute('value'), 'four')
         input.clear()
         input.send_keys('something else')
         input = b.find_element_by_xpath('//*[@id="install_options_ppc64"]'
                 '//div[normalize-space(label/text())="Kernel Options"]'
                 '//input')
-        self.assertEquals(input.get_attribute('value'), 'five')
+        self.assertEqual(input.get_attribute('value'), 'five')
         input.clear()
         input.send_keys('something else')
         input = b.find_element_by_xpath('//*[@id="install_options_ppc64"]'
                 '//div[normalize-space(label/text())="Kernel Options Post"]'
                 '//input')
-        self.assertEquals(input.get_attribute('value'), 'six')
+        self.assertEqual(input.get_attribute('value'), 'six')
         input.clear()
         input.send_keys('something else')
         b.find_element_by_xpath('//button[text()="Save Changes"]').click()
-        self.assertEquals(
+        self.assertEqual(
                 b.find_element_by_class_name('flash').text,
                 'Install options saved for LinuxLinux2.1')
         # check they are updated
@@ -113,11 +113,11 @@ class OSVersionsTest(WebDriverTestCase):
             session.expunge_all()
             o = OSMajor.by_name(u'LinuxLinux2.1')
             ppc64 = Arch.by_name(u'ppc64')
-            self.assertEquals(o.install_options_by_arch[ppc64].ks_meta,
+            self.assertEqual(o.install_options_by_arch[ppc64].ks_meta,
                     'something else')
-            self.assertEquals(o.install_options_by_arch[ppc64].kernel_options,
+            self.assertEqual(o.install_options_by_arch[ppc64].kernel_options,
                     'something else')
-            self.assertEquals(o.install_options_by_arch[ppc64].kernel_options_post,
+            self.assertEqual(o.install_options_by_arch[ppc64].kernel_options_post,
                     'something else')
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=975644
@@ -129,7 +129,7 @@ class OSVersionsTest(WebDriverTestCase):
         go_to_edit_osmajor(b, 'LinuxLinux2.1')
         b.find_element_by_xpath('//input[@id="form_alias"]').send_keys('linux21')
         b.find_element_by_xpath('//button[text()="Edit OSMajor"]').submit()
-        self.assertEquals(
+        self.assertEqual(
             b.find_element_by_class_name('flash').text,
             'Changes saved for LinuxLinux2.1')
 
@@ -145,13 +145,13 @@ class OSVersionsTest(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="form_alias"]')\
                 .send_keys(existing_alias)
         b.find_element_by_xpath('//button[text()="Edit OSMajor"]').submit()
-        self.assertEquals(b.find_element_by_class_name('flash').text,
+        self.assertEqual(b.find_element_by_class_name('flash').text,
                 'Cannot save alias OBL7, it is already used by OrangeBucketLinux7')
         go_to_edit_osmajor(b, 'YellowSpaceshipLinux1')
         b.find_element_by_xpath('//input[@id="form_alias"]')\
                 .send_keys(existing)
         b.find_element_by_xpath('//button[text()="Edit OSMajor"]').submit()
-        self.assertEquals(b.find_element_by_class_name('flash').text,
+        self.assertEqual(b.find_element_by_class_name('flash').text,
                 'Cannot save alias OrangeBucketLinux7, '
                 'it is already used by OrangeBucketLinux7')
 
@@ -165,8 +165,8 @@ class OSVersionsTest(WebDriverTestCase):
         go_to_edit_osmajor(b, 'YellowSpaceshipLinux2')
         b.find_element_by_xpath('//input[@id="form_alias"]').clear()
         b.find_element_by_xpath('//button[text()="Edit OSMajor"]').submit()
-        self.assertEquals(b.find_element_by_class_name('flash').text,
+        self.assertEqual(b.find_element_by_class_name('flash').text,
                 'Changes saved for YellowSpaceshipLinux2')
         with session.begin():
             session.refresh(osmajor)
-            self.assertEquals(osmajor.alias, None) # not ''
+            self.assertEqual(osmajor.alias, None) # not ''

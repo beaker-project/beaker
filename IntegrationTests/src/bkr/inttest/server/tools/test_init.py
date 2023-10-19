@@ -23,7 +23,7 @@ class BeakerInitTest(DatabaseTestCase):
 
     def test_version(self):
         out = run_command('init.py', 'beaker-init', ['--version'])
-        self.assertEquals(out.strip(), __version__)
+        self.assertEqual(out.strip(), __version__)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=745560
     def test_adds_existing_user_to_admin_group(self):

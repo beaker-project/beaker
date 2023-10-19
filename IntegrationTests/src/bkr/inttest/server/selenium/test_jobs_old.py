@@ -101,7 +101,7 @@ class TestViewJob(WebDriverTestCase):
         b = self.browser
         login(b, user=user.user_name, password='asdf')
         b.get(get_server_base() + 'jobs/%s' % job.id)
-        self.assertEquals(
+        self.assertEqual(
             b.find_element_by_xpath('//table//td'
                                     '[preceding-sibling::th[1]/text() = "Finished"]').text,
             '')
@@ -131,7 +131,7 @@ class TestViewJob(WebDriverTestCase):
             '/tbody/tr[2]/td[3]' % recipe_id).text)
 
     def check_datetime_localised(self, dt):
-        self.assert_(re.match(r'\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d [-+]\d\d:\d\d$', dt),
+        self.assertTrue(re.match(r'\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d [-+]\d\d:\d\d$', dt),
                      '%r does not look like a localised datetime' % dt)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=881387
@@ -147,13 +147,13 @@ class TestViewJob(WebDriverTestCase):
             job.recipesets[0].recipes.append(host)
             host.guests.append(guest)
             session.flush()
-            self.assert_(guest.id < host.id)
+            self.assertTrue(guest.id < host.id)
         b = self.browser
         login(b, user=user.user_name, password='asdf')
         b.get(get_server_base() + 'jobs/%s' % job.id)
         recipe_order = [elem.text for elem in b.find_elements_by_xpath(
             '//a[@class="recipe-id"]')]
-        self.assertEquals(recipe_order, [host.t_id, guest.t_id])
+        self.assertEqual(recipe_order, [host.t_id, guest.t_id])
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=995012
     def test_job_activities_view(self):
@@ -296,11 +296,11 @@ class JobAttributeChangeTest(WebDriverTestCase):
         login(self.browser, user=job_owner.user_name, password=u'owner')
         self.check_can_change_retention_tag(job, '60days')
         with session.begin():
-            self.assertEquals(job.activity[0].service, u'WEBUI')
-            self.assertEquals(job.activity[0].field_name, 'Retention Tag')
-            self.assertEquals(job.activity[0].object_name(), 'Job: %s' % job.id)
-            self.assertEquals(job.activity[0].old_value, u'scratch')
-            self.assertEquals(job.activity[0].new_value, u'60days')
+            self.assertEqual(job.activity[0].service, u'WEBUI')
+            self.assertEqual(job.activity[0].field_name, 'Retention Tag')
+            self.assertEqual(job.activity[0].object_name(), 'Job: %s' % job.id)
+            self.assertEqual(job.activity[0].old_value, u'scratch')
+            self.assertEqual(job.activity[0].new_value, u'60days')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=995012
     def test_record_priority_change(self):
@@ -315,9 +315,9 @@ class JobAttributeChangeTest(WebDriverTestCase):
             .select_by_visible_text('Low')
         b.find_element_by_xpath('//msg[text()="Priority has been updated"]')
         with session.begin():
-            self.assertEquals(job.recipesets[0].activity[0].service, u'WEBUI')
-            self.assertEquals(job.recipesets[0].activity[0].field_name, 'Priority')
-            self.assertEquals(job.recipesets[0].activity[0].object_name(),
+            self.assertEqual(job.recipesets[0].activity[0].service, u'WEBUI')
+            self.assertEqual(job.recipesets[0].activity[0].field_name, 'Priority')
+            self.assertEqual(job.recipesets[0].activity[0].object_name(),
                               'RecipeSet: %s' % job.recipesets[0].id)
-            self.assertEquals(job.recipesets[0].activity[0].old_value, u'Normal')
-            self.assertEquals(job.recipesets[0].activity[0].new_value, u'Low')
+            self.assertEqual(job.recipesets[0].activity[0].old_value, u'Normal')
+            self.assertEqual(job.recipesets[0].activity[0].new_value, u'Low')
