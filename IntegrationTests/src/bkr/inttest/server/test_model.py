@@ -17,6 +17,7 @@ from decimal import Decimal
 from mock import patch
 import inspect
 import kid
+from six import assertRegex
 from turbogears.database import session
 from bkr.server.installopts import InstallOptions
 from bkr.server import model, identity
@@ -62,7 +63,7 @@ class SchemaSanityTest(DatabaseTestCase):
                     'SELECT engine FROM information_schema.tables '
                     'WHERE table_schema = DATABASE() AND table_name = %s',
                     table)
-            self.assertEquals(engine_used, 'InnoDB',
+            self.assertEqual(engine_used, 'InnoDB',
                     'MySQL storage engine for table %s should be InnoDB' % table)
 
 class ModelInitializationTest(DatabaseTestCase):
@@ -91,10 +92,10 @@ class ActivityMixinTest(DatabaseTestCase):
         entries = dict((v, k) for k, v in enumerate(ActivityMixin._fields))
         entries['kind'] = 'ActivityKind'
         text = ActivityMixin._log_fmt % entries
-        self.assert_(text.startswith('Tentative ActivityKind:'))
+        self.assertTrue(text.startswith('Tentative ActivityKind:'))
         entries.pop('kind')
         for name, value in entries.items():
-            self.assert_(('%s=%r' % (name, value)) in text, text)
+            self.assertTrue(('%s=%r' % (name, value)) in text, text)
 
 
 class TestSystem(DatabaseTestCase):
@@ -127,7 +128,7 @@ class TestSystem(DatabaseTestCase):
         system = data_setup.create_system()
         system.user = user
         session.flush()
-        self.assertEquals(system.user, user)
+        self.assertEqual(system.user, user)
 
     def test_remove_user_from_system(self):
         user = data_setup.create_user()
@@ -135,7 +136,7 @@ class TestSystem(DatabaseTestCase):
         system.user = user
         system.user = None
         session.flush()
-        self.assert_(system.user is None)
+        self.assertTrue(system.user is None)
 
     def test_install_options_override(self):
         distro_tree = data_setup.create_distro_tree()
@@ -300,7 +301,7 @@ class TestSystemPool(DatabaseTestCase):
                                       systems=[system1, system2])
         session.flush()
         pool = SystemPool.by_name(u'pool-1')
-        self.assertEquals(pool.name, u'pool-1')
+        self.assertEqual(pool.name, u'pool-1')
         self.assertIn(system1, pool.systems)
         self.assertIn(system2, pool.systems)
 
@@ -311,14 +312,14 @@ class TestSystemPool(DatabaseTestCase):
         user1 = data_setup.create_user()
         pool = data_setup.create_system_pool(owning_user=user1)
         session.flush()
-        self.assertEquals(pool.owner, user1)
+        self.assertEqual(pool.owner, user1)
 
         # change owner to group
         group = data_setup.create_group()
         pool.owning_user = None
         pool.owning_group = group
         session.flush()
-        self.assertEquals(pool.owner, group)
+        self.assertEqual(pool.owner, group)
         self.assertFalse(pool.has_owner(user1))
 
         # check ownership
@@ -334,7 +335,7 @@ class TestSystemPool(DatabaseTestCase):
         pool_policy.add_rule(SystemPermission.edit_policy, user=user1)
 
         session.flush()
-        self.assert_(SystemAccessPolicy.query
+        self.assertTrue(SystemAccessPolicy.query
                      .filter(SystemAccessPolicy.id == pool_policy.id)
                      .filter(SystemAccessPolicy.grants(user1, SystemPermission.edit_policy)).count())
         self.assertTrue(pool.can_edit_policy(user1))
@@ -349,7 +350,7 @@ class TestSystemPool(DatabaseTestCase):
         policy.add_rule(perm, user=user)
 
         session.flush()
-        self.assertEquals(len(policy.rules), 2)
+        self.assertEqual(len(policy.rules), 2)
         self.assertTrue(policy.grants(user, perm))
         # assign the pool policy to the system
         system1.active_access_policy = policy
@@ -860,7 +861,7 @@ class TestBrokenSystemDetection(DatabaseTestCase):
         self.abort_recipe()
         self.abort_recipe()
         self.assertEqual(self.system.status, SystemStatus.broken)
-        self.assert_(self.system.date_modified > orig_date_modified)
+        self.assertTrue(self.system.date_modified > orig_date_modified)
 
 class SystemAccessPolicyTest(DatabaseTestCase):
 
@@ -878,18 +879,18 @@ class SystemAccessPolicyTest(DatabaseTestCase):
         user = data_setup.create_user()
         self.policy.add_rule(perm, user=user)
 
-        self.assertEquals(len(self.policy.rules), 1)
-        self.assertEquals(self.policy.rules[0].permission, perm)
-        self.assertEquals(self.policy.rules[0].user, user)
-        self.assert_(self.policy.rules[0].group is None)
+        self.assertEqual(len(self.policy.rules), 1)
+        self.assertEqual(self.policy.rules[0].permission, perm)
+        self.assertEqual(self.policy.rules[0].user, user)
+        self.assertTrue(self.policy.rules[0].group is None)
 
         self.assertTrue(self.policy.grants(user, perm))
-        self.assert_(SystemAccessPolicy.query
+        self.assertTrue(SystemAccessPolicy.query
                 .filter(SystemAccessPolicy.id == self.policy.id)
                 .filter(SystemAccessPolicy.grants(user, perm)).count())
         other_user = data_setup.create_user()
         self.assertFalse(self.policy.grants(other_user, perm))
-        self.assert_(not SystemAccessPolicy.query
+        self.assertTrue(not SystemAccessPolicy.query
                 .filter(SystemAccessPolicy.id == self.policy.id)
                 .filter(SystemAccessPolicy.grants(other_user, perm)).count())
 
@@ -900,18 +901,18 @@ class SystemAccessPolicyTest(DatabaseTestCase):
         group.add_member(member)
         self.policy.add_rule(perm, group=group)
 
-        self.assertEquals(len(self.policy.rules), 1)
-        self.assertEquals(self.policy.rules[0].permission, perm)
-        self.assert_(self.policy.rules[0].user is None)
-        self.assertEquals(self.policy.rules[0].group, group)
+        self.assertEqual(len(self.policy.rules), 1)
+        self.assertEqual(self.policy.rules[0].permission, perm)
+        self.assertTrue(self.policy.rules[0].user is None)
+        self.assertEqual(self.policy.rules[0].group, group)
 
         self.assertTrue(self.policy.grants(member, perm))
-        self.assert_(SystemAccessPolicy.query
+        self.assertTrue(SystemAccessPolicy.query
                 .filter(SystemAccessPolicy.id == self.policy.id)
                 .filter(SystemAccessPolicy.grants(member, perm)).count())
         non_member = data_setup.create_user()
         self.assertFalse(self.policy.grants(non_member, perm))
-        self.assert_(not SystemAccessPolicy.query
+        self.assertTrue(not SystemAccessPolicy.query
                 .filter(SystemAccessPolicy.id == self.policy.id)
                 .filter(SystemAccessPolicy.grants(non_member, perm)).count())
 
@@ -919,19 +920,19 @@ class SystemAccessPolicyTest(DatabaseTestCase):
         perm = SystemPermission.reserve
         self.policy.add_rule(perm, everybody=True)
 
-        self.assertEquals(len(self.policy.rules), 1)
-        self.assertEquals(self.policy.rules[0].permission, perm)
-        self.assert_(self.policy.rules[0].user is None
+        self.assertEqual(len(self.policy.rules), 1)
+        self.assertEqual(self.policy.rules[0].permission, perm)
+        self.assertTrue(self.policy.rules[0].user is None
                 and self.policy.rules[0].group is None)
         self.assertTrue(self.policy.rules[0].everybody)
 
         self.assertTrue(self.policy.grants_everybody(perm))
-        self.assert_(SystemAccessPolicy.query
+        self.assertTrue(SystemAccessPolicy.query
                 .filter(SystemAccessPolicy.id == self.policy.id)
                 .filter(SystemAccessPolicy.grants_everybody(perm)).count())
         user = data_setup.create_user()
         self.assertTrue(self.policy.grants(user, perm))
-        self.assert_(SystemAccessPolicy.query
+        self.assertTrue(SystemAccessPolicy.query
                 .filter(SystemAccessPolicy.id == self.policy.id)
                 .filter(SystemAccessPolicy.grants(user, perm)).count())
 
@@ -995,11 +996,11 @@ class TestJob(DatabaseTestCase):
         session.execute(JobCc.__table__.insert(values={'job_id': job.id,
                 'email_address': u'person@nowhere.example.com'}))
         session.refresh(job)
-        self.assertEquals(job.cc, ['person@nowhere.example.com'])
+        self.assertEqual(job.cc, ['person@nowhere.example.com'])
 
         job.cc.append(u'korolev@nauk.su')
         session.flush()
-        self.assertEquals(JobCc.query.filter_by(job_id=job.id).count(), 2)
+        self.assertEqual(JobCc.query.filter_by(job_id=job.id).count(), 2)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=784237
     def test_mail_exception_doesnt_prevent_status_update(self):
@@ -1021,7 +1022,7 @@ class TestJob(DatabaseTestCase):
         job.update_status()
         # Test that the previous cancel did not end
         # the current reservation
-        self.assert_(system.open_reservation is not None)
+        self.assertTrue(system.open_reservation is not None)
 
     def test_cancel_waiting_job(self):
         job = data_setup.create_job()
@@ -1029,8 +1030,8 @@ class TestJob(DatabaseTestCase):
         job.cancel()
         self.assertTrue(job.is_dirty)
         job.update_status()
-        self.assertEquals(job.status, TaskStatus.cancelled)
-        self.assertEquals(job.result, TaskResult.warn)
+        self.assertEqual(job.status, TaskStatus.cancelled)
+        self.assertEqual(job.result, TaskResult.warn)
 
     # Check progress bar proportions are reasonable
     # https://bugzilla.redhat.com/show_bug.cgi?id=660633
@@ -1048,7 +1049,7 @@ class TestJob(DatabaseTestCase):
                                  for width in expected_widths]
         styles = [elem.get('style')
                       for elem in bar.getchildren()[0].getchildren()]
-        self.assertEquals(styles, expected_styles)
+        self.assertEqual(styles, expected_styles)
         widths = [float(re.match(r'width:(\d+\.\d{3})%', style).group(1))
                         for style in styles]
         # Check percentages add up to almost exactly 100%
@@ -1088,7 +1089,7 @@ class TestJob(DatabaseTestCase):
         recipe.tasks[1].pass_(u'/', 0, u'')
         # third task will be "New" due to no results recorded
         data_setup.mark_job_complete(job, result=None)
-        self.assertEquals(recipe.tasks[2].result, TaskResult.new)
+        self.assertEqual(recipe.tasks[2].result, TaskResult.new)
         self.check_progress_bar(job.progress_bar,
                                 33.333, 66.667, 0, 0, 0)
 
@@ -1187,8 +1188,8 @@ class DistroTreeByFilterTest(DatabaseTestCase):
                 <distro_arch op="==" value="i386" />
             </distroRequires>
             """).all()
-        self.assert_(excluded not in distro_trees)
-        self.assert_(included in distro_trees)
+        self.assertTrue(excluded not in distro_trees)
+        self.assertTrue(included in distro_trees)
 
     def test_distro_family(self):
         excluded = data_setup.create_distro_tree(osmajor=u'PinkFootLinux4')
@@ -1199,8 +1200,8 @@ class DistroTreeByFilterTest(DatabaseTestCase):
                 <distro_family op="==" value="OrangeArmLinux6" />
             </distroRequires>
             """).all()
-        self.assert_(excluded not in distro_trees)
-        self.assert_(included in distro_trees)
+        self.assertTrue(excluded not in distro_trees)
+        self.assertTrue(included in distro_trees)
 
     def test_distro_tag_equal(self):
         excluded = data_setup.create_distro_tree(
@@ -1213,8 +1214,8 @@ class DistroTreeByFilterTest(DatabaseTestCase):
                 <distro_tag op="==" value="RELEASED" />
             </distroRequires>
             """).all()
-        self.assert_(excluded not in distro_trees)
-        self.assert_(included in distro_trees)
+        self.assertTrue(excluded not in distro_trees)
+        self.assertTrue(included in distro_trees)
 
     def test_distro_tag_notequal(self):
         excluded = data_setup.create_distro_tree(
@@ -1227,8 +1228,8 @@ class DistroTreeByFilterTest(DatabaseTestCase):
                 <distro_tag op="!=" value="RELEASED" />
             </distroRequires>
             """).all()
-        self.assert_(excluded not in distro_trees)
-        self.assert_(included in distro_trees)
+        self.assertTrue(excluded not in distro_trees)
+        self.assertTrue(included in distro_trees)
 
     def test_distro_variant(self):
         excluded = data_setup.create_distro_tree(variant=u'Server')
@@ -1239,8 +1240,8 @@ class DistroTreeByFilterTest(DatabaseTestCase):
                 <distro_variant op="==" value="ComputeNode" />
             </distroRequires>
             """).all()
-        self.assert_(excluded not in distro_trees)
-        self.assert_(included in distro_trees)
+        self.assertTrue(excluded not in distro_trees)
+        self.assertTrue(included in distro_trees)
 
     def test_distro_name(self):
         excluded = data_setup.create_distro_tree()
@@ -1251,8 +1252,8 @@ class DistroTreeByFilterTest(DatabaseTestCase):
                 <distro_name op="==" value="%s" />
             </distroRequires>
             """ % included.distro.name).all()
-        self.assert_(excluded not in distro_trees)
-        self.assert_(included in distro_trees)
+        self.assertTrue(excluded not in distro_trees)
+        self.assertTrue(included in distro_trees)
 
     def test_distrolabcontroller(self):
         excluded = data_setup.create_distro_tree()
@@ -1266,8 +1267,8 @@ class DistroTreeByFilterTest(DatabaseTestCase):
                 <distrolabcontroller op="==" value="%s" />
             </distroRequires>
             """ % lc.fqdn).all()
-        self.assert_(excluded not in distro_trees)
-        self.assert_(included in distro_trees)
+        self.assertTrue(excluded not in distro_trees)
+        self.assertTrue(included in distro_trees)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=831448
     def test_distrolabcontroller_notequal(self):
@@ -1282,8 +1283,8 @@ class DistroTreeByFilterTest(DatabaseTestCase):
                 <distrolabcontroller op="!=" value="%s" />
             </distroRequires>
             """ % lc.fqdn).all()
-        self.assert_(excluded not in distro_trees)
-        self.assert_(included in distro_trees)
+        self.assertTrue(excluded not in distro_trees)
+        self.assertTrue(included in distro_trees)
 
 class WatchdogTest(DatabaseTestCase):
 
@@ -1306,8 +1307,8 @@ class WatchdogTest(DatabaseTestCase):
         session.flush()
 
         active_watchdogs = Watchdog.by_status()
-        self.assert_(r1.watchdog not in active_watchdogs)
-        self.assert_(r2.watchdog in active_watchdogs)
+        self.assertTrue(r1.watchdog not in active_watchdogs)
+        self.assertTrue(r2.watchdog in active_watchdogs)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1123249
     def test_watchdog_is_not_expired_until_recipeset_is_expired(self):
@@ -1360,22 +1361,22 @@ class DistroTreeTest(DatabaseTestCase):
         other_lc = data_setup.create_labcontroller()
         session.flush()
 
-        self.assertEquals(distro_tree.url_in_lab(self.lc),
+        self.assertEqual(distro_tree.url_in_lab(self.lc),
                 'ftp://unimportant')
-        self.assertEquals(distro_tree.url_in_lab(other_lc), None)
+        self.assertEqual(distro_tree.url_in_lab(other_lc), None)
         self.assertRaises(ValueError, lambda:
                 distro_tree.url_in_lab(other_lc, required=True))
 
-        self.assertEquals(distro_tree.url_in_lab(self.lc, scheme='ftp'),
+        self.assertEqual(distro_tree.url_in_lab(self.lc, scheme='ftp'),
                 'ftp://unimportant')
-        self.assertEquals(distro_tree.url_in_lab(self.lc, scheme='http'),
+        self.assertEqual(distro_tree.url_in_lab(self.lc, scheme='http'),
                 None)
         self.assertRaises(ValueError, lambda: distro_tree.url_in_lab(
                 self.lc, scheme='http', required=True))
 
-        self.assertEquals(distro_tree.url_in_lab(self.lc,
+        self.assertEqual(distro_tree.url_in_lab(self.lc,
                 scheme=['http', 'ftp']), 'ftp://unimportant')
-        self.assertEquals(distro_tree.url_in_lab(self.lc,
+        self.assertEqual(distro_tree.url_in_lab(self.lc,
                 scheme=['http', 'nfs']), None)
         self.assertRaises(ValueError, lambda: distro_tree.url_in_lab(
                 self.lc, scheme=['http', 'nfs'], required=True))
@@ -1503,7 +1504,7 @@ class OSMajorTest(DatabaseTestCase):
         data_setup.create_distro_tree(osmajor=u'TestingTheArches6', arch=u'ppc64')
         session.flush()
         arches = OSMajor.by_name(u'TestingTheArches6').arches()
-        self.assertEquals(set(['ia64', 'ppc64']),
+        self.assertEqual(set(['ia64', 'ppc64']),
                 set(arch.arch for arch in arches))
 
     def test_install_options(self):
@@ -1512,10 +1513,10 @@ class OSMajorTest(DatabaseTestCase):
         OSMajorInstallOptions(osmajor=o, arch=None, ks_meta=u'one=two')
         OSMajorInstallOptions(osmajor=o, arch=ia64, kernel_options=u'serial')
         session.flush()
-        self.assertEquals(set(o.install_options_by_arch.keys()),
+        self.assertEqual(set(o.install_options_by_arch.keys()),
                 set([None, ia64]), o.install_options_by_arch)
-        self.assertEquals(o.install_options_by_arch[None].ks_meta, u'one=two')
-        self.assertEquals(o.install_options_by_arch[ia64].kernel_options,
+        self.assertEqual(o.install_options_by_arch[None].ks_meta, u'one=two')
+        self.assertEqual(o.install_options_by_arch[ia64].kernel_options,
                 u'serial')
 
 class UserTest(DatabaseTestCase):
@@ -1539,7 +1540,7 @@ class UserTest(DatabaseTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1121748
     def test_ldap_lookups_are_exact(self):
         # ldap-data.ldif defines 'jgillard' but ' jgillard' should not exist.
-        self.assertEquals(User.by_user_name(u'jgillard').user_name, u'jgillard')
+        self.assertEqual(User.by_user_name(u'jgillard').user_name, u'jgillard')
         self.assertIsNone(User.by_user_name(u' jgillard'))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1121748
@@ -1561,9 +1562,9 @@ class UserTest(DatabaseTestCase):
         session.expire_all()
         activity = user.user_activity[0]
         self.assertIs(admin.activity[0], activity)
-        self.assertEquals(activity.field_name, u'Submission delegate')
-        self.assertEquals(activity.object, user)
-        self.assertEquals(activity.user, admin)
+        self.assertEqual(activity.field_name, u'Submission delegate')
+        self.assertEqual(activity.object, user)
+        self.assertEqual(activity.user, admin)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
     def test_check_user_groups(self):
@@ -1598,19 +1599,19 @@ class GroupTest(DatabaseTestCase):
         group.add_member(member)
         session.flush()
 
-        self.assert_(group.has_owner(owner))
-        self.assert_(owner in group.users)
-        self.assert_(not group.has_owner(member))
-        self.assert_(member in group.users)
+        self.assertTrue(group.has_owner(owner))
+        self.assertTrue(owner in group.users)
+        self.assertTrue(not group.has_owner(member))
+        self.assertTrue(member in group.users)
 
     def check_activity(self, activity, user, service, action,
                        field, old, new):
-        self.assertEquals(activity.user, user)
-        self.assertEquals(activity.service, service)
-        self.assertEquals(activity.action, action)
-        self.assertEquals(activity.field_name, field)
-        self.assertEquals(activity.old_value, old)
-        self.assertEquals(activity.new_value, new)
+        self.assertEqual(activity.user, user)
+        self.assertEqual(activity.service, service)
+        self.assertEqual(activity.action, action)
+        self.assertEqual(activity.field_name, field)
+        self.assertEqual(activity.old_value, old)
+        self.assertEqual(activity.new_value, new)
 
     def test_set_name(self):
         orig_name = u'beakerdevs'
@@ -1620,13 +1621,13 @@ class GroupTest(DatabaseTestCase):
         self.assertFalse(group.is_protected_group())
         # Setting the same name is a no-op
         group.set_name(None, u'TEST', orig_name)
-        self.assertEquals(len(group.activity), 0)
+        self.assertEqual(len(group.activity), 0)
         # Now check changing the name is properly recorded
         new_name = u'beakerteam'
         group.set_name(None, u'TEST', new_name)
-        self.assertEquals(group.group_name, new_name)
-        self.assertEquals(group.display_name, u'Beaker Developers')
-        self.assertEquals(len(group.activity), 1)
+        self.assertEqual(group.group_name, new_name)
+        self.assertEqual(group.display_name, u'Beaker Developers')
+        self.assertEqual(len(group.activity), 1)
         self.check_activity(group.activity[0], None, u'TEST', u'Changed',
                             u'Name', orig_name, new_name)
 
@@ -1637,13 +1638,13 @@ class GroupTest(DatabaseTestCase):
         session.flush()
         # Setting the same name is a no-op
         group.set_display_name(None, u'TEST', orig_display_name)
-        self.assertEquals(len(group.activity), 0)
+        self.assertEqual(len(group.activity), 0)
         # Now check changing the name is properly recorded
         new_display_name = u'Beaker Team'
         group.set_display_name(None, u'TEST', new_display_name)
-        self.assertEquals(group.group_name, u'beakerdevs')
-        self.assertEquals(group.display_name, new_display_name)
-        self.assertEquals(len(group.activity), 1)
+        self.assertEqual(group.group_name, u'beakerdevs')
+        self.assertEqual(group.display_name, new_display_name)
+        self.assertEqual(len(group.activity), 1)
         self.check_activity(group.activity[0], None, u'TEST', u'Changed',
                             u'Display Name',
                             orig_display_name, new_display_name)
@@ -1653,18 +1654,18 @@ class GroupTest(DatabaseTestCase):
         groups = [Group.by_name(u'admin')]
         groups.append(Group.by_name(u'lab_controller'))
         for group in groups:
-            self.assert_(group.is_protected_group())
+            self.assertTrue(group.is_protected_group())
             orig_name = group.group_name
             orig_display_name = group.display_name
             # Can't change the real name
             self.assertRaises(BeakerException, group.set_name,
                               None, u'TEST', u'bad_rename')
-            self.assertEquals(group.group_name, orig_name)
-            self.assertEquals(group.display_name, orig_display_name)
+            self.assertEqual(group.group_name, orig_name)
+            self.assertEqual(group.display_name, orig_display_name)
             # Can change just the display name
             group.set_display_name(None, u'TEST', u'New display name')
-            self.assertEquals(group.group_name, orig_name)
-            self.assertEquals(group.display_name, u'New display name')
+            self.assertEqual(group.group_name, orig_name)
+            self.assertEqual(group.display_name, u'New display name')
 
 
     def test_populate_ldap_group(self):
@@ -1676,12 +1677,12 @@ class GroupTest(DatabaseTestCase):
         group.refresh_ldap_members()
         session.flush()
         session.expire_all()
-        self.assertEquals(group.users, [User.by_user_name(u'dcallagh')])
-        self.assertEquals(group.activity[0].action, u'Added')
-        self.assertEquals(group.activity[0].field_name, u'User')
-        self.assertEquals(group.activity[0].old_value, None)
-        self.assertEquals(group.activity[0].new_value, u'dcallagh')
-        self.assertEquals(group.activity[0].service, u'LDAP')
+        self.assertEqual(group.users, [User.by_user_name(u'dcallagh')])
+        self.assertEqual(group.activity[0].action, u'Added')
+        self.assertEqual(group.activity[0].field_name, u'User')
+        self.assertEqual(group.activity[0].old_value, None)
+        self.assertEqual(group.activity[0].new_value, u'dcallagh')
+        self.assertEqual(group.activity[0].service, u'LDAP')
 
     def test_add_remove_ldap_members(self):
         # billybob will be removed, dcallagh will be added
@@ -1696,17 +1697,17 @@ class GroupTest(DatabaseTestCase):
         group.refresh_ldap_members()
         session.flush()
         session.expire_all()
-        self.assertEquals(group.users, [User.by_user_name(u'dcallagh')])
-        self.assertEquals(group.activity[1].action, u'Removed')
-        self.assertEquals(group.activity[1].field_name, u'User')
-        self.assertEquals(group.activity[1].old_value, u'billybob')
-        self.assertEquals(group.activity[1].new_value, None)
-        self.assertEquals(group.activity[1].service, u'LDAP')
-        self.assertEquals(group.activity[2].action, u'Added')
-        self.assertEquals(group.activity[2].field_name, u'User')
-        self.assertEquals(group.activity[2].old_value, None)
-        self.assertEquals(group.activity[2].new_value, u'dcallagh')
-        self.assertEquals(group.activity[2].service, u'LDAP')
+        self.assertEqual(group.users, [User.by_user_name(u'dcallagh')])
+        self.assertEqual(group.activity[1].action, u'Removed')
+        self.assertEqual(group.activity[1].field_name, u'User')
+        self.assertEqual(group.activity[1].old_value, u'billybob')
+        self.assertEqual(group.activity[1].new_value, None)
+        self.assertEqual(group.activity[1].service, u'LDAP')
+        self.assertEqual(group.activity[2].action, u'Added')
+        self.assertEqual(group.activity[2].field_name, u'User')
+        self.assertEqual(group.activity[2].old_value, None)
+        self.assertEqual(group.activity[2].new_value, u'dcallagh')
+        self.assertEqual(group.activity[2].service, u'LDAP')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1220610
     def test_add_or_remove_a_normal_group_members(self):
@@ -1764,8 +1765,8 @@ class TaskTypeTest(DatabaseTestCase):
     def test_lazy_create_does_not_cause_duplicates(self):
         first = TaskType.lazy_create(type=u'CookieMonster')
         second = TaskType.lazy_create(type=u'CookieMonster')
-        self.assert_(first is second)
-        self.assertEquals(TaskType.query.filter_by(type=u'CookieMonster').count(), 1)
+        self.assertTrue(first is second)
+        self.assertEqual(TaskType.query.filter_by(type=u'CookieMonster').count(), 1)
 
 
 class RecipeSetTest(DatabaseTestCase):
@@ -1815,7 +1816,7 @@ class RecipeTest(DatabaseTestCase):
         for i in range(3):
             data_setup.mark_recipe_running(job.recipesets[0].recipes[i], system=systems[i])
         xml = lxml.etree.tostring(job.recipesets[0].recipes[0].to_xml(clone=False), encoding=six.text_type)
-        self.assert_(u'<roles>'
+        self.assertTrue(u'<roles>'
                 u'<role value="CLIENTONE"><system value="clientone.roles-to-xml"/></role>'
                 u'<role value="CLIENTTWO"><system value="clienttwo.roles-to-xml"/></role>'
                 u'<role value="SERVER"><system value="server.roles-to-xml"/></role>'
@@ -1827,11 +1828,11 @@ class RecipeTest(DatabaseTestCase):
         data_setup.mark_recipe_complete(recipe)
         root = recipe.to_xml(clone=False)
         installation = root.find('recipeSet/recipe/installation')
-        self.assertRegexpMatches(installation.get('install_started'),
+        assertRegex(self, installation.get('install_started'),
                 r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$')
-        self.assertRegexpMatches(installation.get('install_finished'),
+        assertRegex(self, installation.get('install_finished'),
                 r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$')
-        self.assertRegexpMatches(installation.get('postinstall_finished'),
+        assertRegex(self, installation.get('postinstall_finished'),
                 r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=999056
@@ -1841,7 +1842,7 @@ class RecipeTest(DatabaseTestCase):
         recipe.tasks[0].params = []
         root = recipe.to_xml(clone=True)
         task = root.find('recipeSet/recipe/task')
-        self.assertEquals(len(task), 0, '<task/> should have no children')
+        self.assertEqual(len(task), 0, '<task/> should have no children')
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=851354
     def test_hostrequires_force_clone_success(self):
@@ -1881,13 +1882,13 @@ class RecipeTest(DatabaseTestCase):
     def test_systemtype_is_injected_into_hostrequires(self):
         # recipe with no <hostRequires/> at all
         recipe_empty_hr = data_setup.create_recipe()
-        self.assertEquals(recipe_empty_hr._host_requires, None)
-        self.assertEquals(recipe_empty_hr.host_requires,
+        self.assertEqual(recipe_empty_hr._host_requires, None)
+        self.assertEqual(recipe_empty_hr.host_requires,
                 u'<hostRequires><system_type value="Machine"/></hostRequires>')
         # recipe with <hostRequires/> but not containing <system_type/>
         recipe_other_hr = data_setup.create_recipe()
         recipe_other_hr.host_requires = u'<hostRequires><hostname value="blorp"/></hostRequires>'
-        self.assertEquals(recipe_other_hr.host_requires,
+        self.assertEqual(recipe_other_hr.host_requires,
                 u'<hostRequires>'
                     u'<hostname value="blorp"/>'
                     u'<system_type value="Machine"/>'
@@ -1899,7 +1900,7 @@ class RecipeTest(DatabaseTestCase):
                     u'<hostname value="blorp"/>'
                     u'<system_type value="Prototype"/>'
                 u'</hostRequires>')
-        self.assertEquals(recipe_systemtype_hr.host_requires,
+        self.assertEqual(recipe_systemtype_hr.host_requires,
                 u'<hostRequires>'
                     u'<hostname value="blorp"/>'
                     u'<system_type value="Prototype"/>'
@@ -1915,7 +1916,7 @@ class RecipeTest(DatabaseTestCase):
                         u'<system_type value="Prototype"/>'
                     u'</and>'
                 u'</hostRequires>')
-        self.assertEquals(recipe_systemtype_hr.host_requires,
+        self.assertEqual(recipe_systemtype_hr.host_requires,
                 u'<hostRequires>'
                     u'<and>'
                         u'<hostname value="blorp"/>'
@@ -1937,7 +1938,7 @@ class RecipeTest(DatabaseTestCase):
         )
         recipe_system_type.host_requires = recipe_st_host_requires
 
-        self.assertEquals(recipe_system_type.host_requires, recipe_st_host_requires)
+        self.assertEqual(recipe_system_type.host_requires, recipe_st_host_requires)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1240809
     def test_get_all_logs(self):
@@ -1968,7 +1969,7 @@ class RecipeTest(DatabaseTestCase):
         recipe.systems = [data_setup.create_system()]
         session.flush()
         recipe.clear_candidate_systems()
-        self.assertEquals(recipe.systems, [])
+        self.assertEqual(recipe.systems, [])
 
 class CheckDynamicVirtTest(DatabaseTestCase):
 
@@ -2284,46 +2285,46 @@ class MACAddressAllocationTest(DatabaseTestCase):
         session.rollback()
 
     def test_lowest_free_mac_none_in_use(self):
-        self.assertEquals(RecipeResource._lowest_free_mac(),
+        self.assertEqual(RecipeResource._lowest_free_mac(),
                 netaddr.EUI('52:54:00:00:00:00'))
 
     def test_lowest_free_mac_one_in_use(self):
         job = data_setup.create_job(num_guestrecipes=1)
         data_setup.mark_job_running(job)
-        self.assertEquals(job.recipesets[0].recipes[0].guests[0].resource.mac_address,
+        self.assertEqual(job.recipesets[0].recipes[0].guests[0].resource.mac_address,
                     netaddr.EUI('52:54:00:00:00:00'))
-        self.assertEquals(RecipeResource._lowest_free_mac(),
+        self.assertEqual(RecipeResource._lowest_free_mac(),
                     netaddr.EUI('52:54:00:00:00:01'))
 
     def test_lowest_free_mac_gap_at_start(self):
         first_job = data_setup.create_job(num_guestrecipes=1)
         data_setup.mark_job_running(first_job)
-        self.assertEquals(first_job.recipesets[0].recipes[0].guests[0].resource.mac_address,
+        self.assertEqual(first_job.recipesets[0].recipes[0].guests[0].resource.mac_address,
                     netaddr.EUI('52:54:00:00:00:00'))
         second_job = data_setup.create_job(num_guestrecipes=1)
         data_setup.mark_job_running(second_job)
-        self.assertEquals(second_job.recipesets[0].recipes[0].guests[0].resource.mac_address,
+        self.assertEqual(second_job.recipesets[0].recipes[0].guests[0].resource.mac_address,
                     netaddr.EUI('52:54:00:00:00:01'))
-        self.assertEquals(RecipeResource._lowest_free_mac(),
+        self.assertEqual(RecipeResource._lowest_free_mac(),
                     netaddr.EUI('52:54:00:00:00:02'))
         first_job.cancel()
         first_job.update_status()
-        self.assertEquals(RecipeResource._lowest_free_mac(),
+        self.assertEqual(RecipeResource._lowest_free_mac(),
                     netaddr.EUI('52:54:00:00:00:00'))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=903893#c12
     def test_guestrecipe_complete_but_recipeset_incomplete(self):
         job = data_setup.create_job(num_guestrecipes=1)
         data_setup.mark_job_running(job)
-        self.assertEquals(job.recipesets[0].recipes[0].guests[0].resource.mac_address,
+        self.assertEqual(job.recipesets[0].recipes[0].guests[0].resource.mac_address,
                     netaddr.EUI('52:54:00:00:00:00'))
         data_setup.mark_recipe_complete(job.recipesets[0].recipes[0].guests[0], only=True)
         # host recipe may still be running reservesys or some other task,
         # even after the guest recipe is finished...
-        self.assertEquals(job.recipesets[0].recipes[0].status, TaskStatus.running)
-        self.assertEquals(job.recipesets[0].status, TaskStatus.running)
+        self.assertEqual(job.recipesets[0].recipes[0].status, TaskStatus.running)
+        self.assertEqual(job.recipesets[0].status, TaskStatus.running)
         # ... so we mustn't re-use the MAC address yet
-        self.assertEquals(RecipeResource._lowest_free_mac(),
+        self.assertEqual(RecipeResource._lowest_free_mac(),
                     netaddr.EUI('52:54:00:00:00:01'))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=912159
@@ -2334,11 +2335,11 @@ class MACAddressAllocationTest(DatabaseTestCase):
         # value, and a guest recipe from then is still running.
         job.recipesets[0].recipes[0].guests[0].resource.mac_address = \
             netaddr.EUI('52:53:FF:00:00:00')
-        self.assertEquals(RecipeResource._lowest_free_mac(),
+        self.assertEqual(RecipeResource._lowest_free_mac(),
                 netaddr.EUI('52:54:00:00:00:00'))
         job.cancel()
         job.update_status()
-        self.assertEquals(RecipeResource._lowest_free_mac(),
+        self.assertEqual(RecipeResource._lowest_free_mac(),
                 netaddr.EUI('52:54:00:00:00:00'))
 
 class VirtResourceTest(DatabaseTestCase):
@@ -2355,17 +2356,17 @@ class VirtResourceTest(DatabaseTestCase):
         expected_hyperlink = ('<a href="http://openstack.example.invalid/'
                 'dashboard/project/instances/{0}/">{0}</a>'
                 .format(recipe.resource.instance_id))
-        self.assertEquals(serialize_kid_element(recipe.resource.link),
+        self.assertEqual(serialize_kid_element(recipe.resource.link),
                 '<span>(OpenStack instance {0})</span>'.format(expected_hyperlink))
         # when installation finishes, we have an fqdn
         data_setup.mark_recipe_installation_finished(recipe,
                 fqdn=u'my-openstack-instance')
-        self.assertEquals(serialize_kid_element(recipe.resource.link),
+        self.assertEqual(serialize_kid_element(recipe.resource.link),
                 '<span>my-openstack-instance (OpenStack instance {0})</span>'
                 .format(expected_hyperlink))
         # after the recipe completes, we don't link to the deleted instance
         data_setup.mark_recipe_complete(recipe, only=True)
-        self.assertEquals(serialize_kid_element(recipe.resource.link),
+        self.assertEqual(serialize_kid_element(recipe.resource.link),
                 '<span>my-openstack-instance (OpenStack instance {0})</span>'
                 .format(recipe.resource.instance_id))
 
@@ -2404,7 +2405,7 @@ class LogRecipeTest(DatabaseTestCase):
             model.base.ConditionalInsert = _raise_deadlock_exception(3)
             lr1 = LogRecipe.lazy_create(path=u'/', filename=u'dummy.log',
                     recipe_id=self.recipe.id)
-            self.assertEquals(_raise_counter, 3)
+            self.assertEqual(_raise_counter, 3)
             self.assertTrue(lr1.id)
 
             # We should have no deadlock exception now
@@ -2412,7 +2413,7 @@ class LogRecipeTest(DatabaseTestCase):
             model.base.ConditionalInsert = _raise_deadlock_exception(0)
             lr2 = LogRecipe.lazy_create(path=u'/', filename=u'dummy2.log',
                     recipe_id=self.recipe.id)
-            self.assertEquals(_raise_counter, 0)
+            self.assertEqual(_raise_counter, 0)
             self.assertTrue(lr2.id)
 
             # We should exhaust our max number of attempts.
@@ -2425,7 +2426,7 @@ class LogRecipeTest(DatabaseTestCase):
             except OperationalError as e:
                 if '(OperationalError) (1213, blahlbha' not in six.text_type(e):
                     raise
-            self.assertEquals(_raise_counter, _max_valid_attempts)
+            self.assertEqual(_raise_counter, _max_valid_attempts)
         finally:
             model.base.ConditionalInsert = orig_ConditionalInsert
 
@@ -2435,7 +2436,7 @@ class LogRecipeTest(DatabaseTestCase):
                 recipe_id=self.recipe.id)
         lr2 = LogRecipe.lazy_create(path=u'', filename=u'dummy.log',
                 recipe_id=self.recipe.id)
-        self.assert_(lr1 is lr2, (lr1, lr2))
+        self.assertTrue(lr1 is lr2, (lr1, lr2))
 
 
 class TaskPackageTest(DatabaseTestCase):
@@ -2450,8 +2451,8 @@ class TaskPackageTest(DatabaseTestCase):
     def test_lazy_create_does_not_cause_duplicates(self):
         first = TaskPackage.lazy_create(package=u'beaker')
         second = TaskPackage.lazy_create(package=u'beaker')
-        self.assert_(first is second)
-        self.assertEquals(TaskPackage.query.filter_by(package=u'beaker').count(), 1)
+        self.assertTrue(first is second)
+        self.assertEqual(TaskPackage.query.filter_by(package=u'beaker').count(), 1)
 
 class DeviceClassTest(DatabaseTestCase):
 
@@ -2465,8 +2466,8 @@ class DeviceClassTest(DatabaseTestCase):
     def test_lazy_create_does_not_cause_duplicates(self):
         first = DeviceClass.lazy_create(device_class=u'washing_machine')
         second = DeviceClass.lazy_create(device_class=u'washing_machine')
-        self.assert_(first is second)
-        self.assertEquals(DeviceClass.query.filter_by(device_class=u'washing_machine').count(), 1)
+        self.assertTrue(first is second)
+        self.assertEqual(DeviceClass.query.filter_by(device_class=u'washing_machine').count(), 1)
 
 class DeviceTest(DatabaseTestCase):
 
@@ -2486,8 +2487,8 @@ class DeviceTest(DatabaseTestCase):
                 description=u'lol')
         first = Device.lazy_create(**params)
         second = Device.lazy_create(**params)
-        self.assert_(first is second)
-        self.assertEquals(Device.query.filter_by(**params).count(), 1)
+        self.assertTrue(first is second)
+        self.assertEqual(Device.query.filter_by(**params).count(), 1)
 
 class TaskTest(DatabaseTestCase):
 
@@ -2511,7 +2512,7 @@ class TaskTest(DatabaseTestCase):
             session.flush()
 
             doc = lxml.etree.fromstring(task.to_xml())
-            self.assert_(schema.validate(doc) is True)
+            self.assertTrue(schema.validate(doc) is True)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=915549
     def test_duplicate_task(self):
@@ -2588,8 +2589,8 @@ class TaskLibraryTest(DatabaseTestCase):
 
         # query the task repo and check the version and release
         results = self.query_task_repo('tmp-distribution-beaker-task_test')
-        self.assertEquals(len(results), 1)
-        self.assertEquals(results[0], '1.1-0')
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0], '1.1-0')
 
     def test_upgrade_task(self):
 
@@ -2600,7 +2601,7 @@ class TaskLibraryTest(DatabaseTestCase):
 
         # query the task repo and check the version and release
         vr_list = self.query_task_repo('tmp-distribution-beaker-task_test')
-        self.assertEquals(len(vr_list), 2)
+        self.assertEqual(len(vr_list), 2)
         self.assertIn('1.1-0', vr_list)
         self.assertIn('2.1-0', vr_list)
 
@@ -2619,7 +2620,7 @@ class RecipeTaskTest(DatabaseTestCase):
     def test_version_in_xml(self):
         self.recipetask.version = u'1.2-3'
         root = self.recipetask.to_xml(clone=False)
-        self.assertEquals(root.get('version'), u'1.2-3')
+        self.assertEqual(root.get('version'), u'1.2-3')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1303023
     def test_results_in_xml(self):
@@ -2662,25 +2663,25 @@ class RecipeTaskResultTest(DatabaseTestCase):
         task = Task.by_name(u'/distribution/check-install')
         rt = RecipeTask.from_task(task)
         rtr = RecipeTaskResult(recipetask=rt, path=u'/distribution/check-install/Sysinfo')
-        self.assertEquals(rtr.display_label, u'Sysinfo')
+        self.assertEqual(rtr.display_label, u'Sysinfo')
         rtr = RecipeTaskResult(recipetask=rt, path=u'/start')
-        self.assertEquals(rtr.display_label, u'/start')
+        self.assertEqual(rtr.display_label, u'/start')
         rtr = RecipeTaskResult(recipetask=rt, path=u'/distribution/check-install')
-        self.assertEquals(rtr.display_label, u'./')
+        self.assertEqual(rtr.display_label, u'./')
         rtr = RecipeTaskResult(recipetask=rt, path=u'/distribution/check-install/')
-        self.assertEquals(rtr.display_label, u'./')
+        self.assertEqual(rtr.display_label, u'./')
         rtr = RecipeTaskResult(recipetask=rt, path=None)
-        self.assertEquals(rtr.display_label, u'./')
+        self.assertEqual(rtr.display_label, u'./')
         rtr = RecipeTaskResult(recipetask=rt, path=u'')
-        self.assertEquals(rtr.display_label, u'./')
+        self.assertEqual(rtr.display_label, u'./')
         rtr = RecipeTaskResult(recipetask=rt, path=u'/')
-        self.assertEquals(rtr.display_label, u'./')
+        self.assertEqual(rtr.display_label, u'./')
         rtr = RecipeTaskResult(recipetask=rt, path=None, log='Cancelled it')
-        self.assertEquals(rtr.display_label, u'Cancelled it')
+        self.assertEqual(rtr.display_label, u'Cancelled it')
         rtr = RecipeTaskResult(recipetask=rt, path=u'', log='Cancelled it')
-        self.assertEquals(rtr.display_label, u'Cancelled it')
+        self.assertEqual(rtr.display_label, u'Cancelled it')
         rtr = RecipeTaskResult(recipetask=rt, path=u'/', log='Cancelled it')
-        self.assertEquals(rtr.display_label, u'Cancelled it')
+        self.assertEqual(rtr.display_label, u'Cancelled it')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1586049
     def test_coerces_string_for_score(self):
@@ -2705,13 +2706,13 @@ class RecipeTaskResultTest(DatabaseTestCase):
                     (u'negative', Decimal(-1)),
                     (u'correct', Decimal(10)),
         ]
-        self.assertEquals(expected, [(x.log, x.score) for x in rt.results])
+        self.assertEqual(expected, [(x.log, x.score) for x in rt.results])
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1600281
     def test_caps_very_large_score(self):
         self.recipe_task.pass_(path=u'/distribution/kernelinstall/Sysinfo', score='12345678900', summary=None)
         session.refresh(self.recipe_task)
-        self.assertEquals(self.recipe_task.results[0].score, 9999999999)
+        self.assertEqual(self.recipe_task.results[0].score, 9999999999)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=915319
     def test_logs_appear_in_results_xml(self):
@@ -2793,38 +2794,38 @@ class TestSystemInventoryDistro(DatabaseTestCase):
     def test_select_inventory_distro_tree_released(self):
         # For system1, x86_64 tree should be preferred
         with session.begin():
-            self.assertEquals(self.system1.distro_tree_for_inventory(), self.distro_tree2)
+            self.assertEqual(self.system1.distro_tree_for_inventory(), self.distro_tree2)
         # For system2, i386 tree should be chosen
         with session.begin():
-            self.assertEquals(self.system2.distro_tree_for_inventory(), self.distro_tree1)
+            self.assertEqual(self.system2.distro_tree_for_inventory(), self.distro_tree1)
 
         # For system3, ppc64 tree should be preferred
         with session.begin():
-            self.assertEquals(self.system3.distro_tree_for_inventory(), self.distro_tree3)
+            self.assertEqual(self.system3.distro_tree_for_inventory(), self.distro_tree3)
         # For system4, ppc64le tree should be chosen
         with session.begin():
-            self.assertEquals(self.system4.distro_tree_for_inventory(), self.distro_tree4)
+            self.assertEqual(self.system4.distro_tree_for_inventory(), self.distro_tree4)
 
         # For system5, s390x tree should be preferred
         with session.begin():
-            self.assertEquals(self.system5.distro_tree_for_inventory(), self.distro_tree5)
+            self.assertEqual(self.system5.distro_tree_for_inventory(), self.distro_tree5)
         # For system6, s390 tree should be chosen
         with session.begin():
-            self.assertEquals(self.system6.distro_tree_for_inventory(), self.distro_tree6)
+            self.assertEqual(self.system6.distro_tree_for_inventory(), self.distro_tree6)
 
         # For system8, the Fedora22 tree should be found
         # tests that we keep looking for the recognized distros till
         # we find one.
         with session.begin():
-            self.assertEquals(self.system8.distro_tree_for_inventory(), self.distro_tree8)
+            self.assertEqual(self.system8.distro_tree_for_inventory(), self.distro_tree8)
 
     def test_distro_tree_for_inventory_no_released_tree(self):
         with session.begin():
-            self.assertEquals(self.system7.distro_tree_for_inventory(), self.distro_tree7)
+            self.assertEqual(self.system7.distro_tree_for_inventory(), self.distro_tree7)
 
     def test_distro_tree_for_inventory_no_preferred_tree(self):
         with session.begin():
-            self.assertEquals(self.system9.distro_tree_for_inventory(), self.distro_tree9)
+            self.assertEqual(self.system9.distro_tree_for_inventory(), self.distro_tree9)
 
 
 class TestLabController(DatabaseTestCase):

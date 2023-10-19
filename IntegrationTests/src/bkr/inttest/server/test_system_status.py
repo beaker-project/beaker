@@ -28,7 +28,7 @@ class SystemStatusTest(DatabaseTestCase):
     def check_status_durations(self, system):
         # The crucial invariant is that there is exactly one row with NULL
         # finish_time.
-        self.assert_(len([sd for sd in system.status_durations if sd.finish_time is None])
+        self.assertTrue(len([sd for sd in system.status_durations if sd.finish_time is None])
                 == 1, system.status_durations)
 
     def setup_system_with_queued_commands(self):
@@ -88,7 +88,7 @@ class SystemStatusTest(DatabaseTestCase):
 
         with session.begin():
             session.expire_all()
-            self.assertEquals(system.status, SystemStatus.broken)
+            self.assertEqual(system.status, SystemStatus.broken)
             self.check_status_durations(system)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1362371

@@ -15,6 +15,8 @@ import lxml.etree, lxml.html
 import requests
 import time
 from nose.plugins.skip import SkipTest
+from six import assertRaisesRegex
+from bkr.common.helpers import total_seconds
 from bkr.server.model import session, TaskResult, TaskStatus, LogRecipe, \
         LogRecipeTask, LogRecipeTaskResult, RecipeTask, RecipeTaskResult
 from bkr.labcontroller.proxy import ProxyHelper
@@ -45,11 +47,11 @@ class GetRecipeGuestXML(LabControllerTestCase):
         url = '%srecipes/%s/' % (self.get_proxy_url(), self.guest_recipe.id)
         response = requests.get(url, headers={'Accept': 'application/xml'})
         response.raise_for_status()
-        self.assertEquals(response.headers['Content-Type'], 'application/xml')
+        self.assertEqual(response.headers['Content-Type'], 'application/xml')
         # should work without the Accept header as well
         response = requests.get(url)
         response.raise_for_status()
-        self.assertEquals(response.headers['Content-Type'], 'application/xml')
+        self.assertEqual(response.headers['Content-Type'], 'application/xml')
         # Call through our API
         # Check the results are what we expect
         root = lxml.etree.fromstring(response.content)
@@ -67,8 +69,8 @@ class GetRecipeTest(LabControllerTestCase):
 
     def check_recipe_xml(self, xml):
         root = lxml.etree.fromstring(xml)
-        self.assertEquals(root.tag, 'job')
-        self.assertEquals(root.find('./recipeSet/recipe').get('id'),
+        self.assertEqual(root.tag, 'job')
+        self.assertEqual(root.find('./recipeSet/recipe').get('id'),
                 str(self.recipe.id))
         # add more assertions here...
 
@@ -118,12 +120,12 @@ class GetRecipeTest(LabControllerTestCase):
         url = '%srecipes/%s/' % (self.get_proxy_url(), self.recipe.id)
         response = requests.get(url, headers={'Accept': 'application/xml'})
         response.raise_for_status()
-        self.assertEquals(response.headers['Content-Type'], 'application/xml')
+        self.assertEqual(response.headers['Content-Type'], 'application/xml')
         self.check_recipe_xml(response.content)
         # should work without the Accept header as well
         response = requests.get(url)
         response.raise_for_status()
-        self.assertEquals(response.headers['Content-Type'], 'application/xml')
+        self.assertEqual(response.headers['Content-Type'], 'application/xml')
         self.check_recipe_xml(response.content)
 
 class TaskResultTest(LabControllerTestCase):
@@ -138,11 +140,11 @@ class TaskResultTest(LabControllerTestCase):
         with session.begin():
             session.expire_all()
             result = self.recipe.tasks[0].results[0]
-            self.assertEquals(result.id, result_id)
-            self.assertEquals(result.result, result_type)
-            self.assertEquals(result.path, path)
-            self.assertEquals(result.score, score)
-            self.assertEquals(result.log, log)
+            self.assertEqual(result.id, result_id)
+            self.assertEqual(result.result, result_type)
+            self.assertEqual(result.path, path)
+            self.assertEqual(result.score, score)
+            self.assertEqual(result.log, log)
 
     def test_xmlrpc_pass(self):
         s = xmlrpc_client.ServerProxy(self.get_proxy_url())
@@ -177,8 +179,8 @@ class TaskResultTest(LabControllerTestCase):
                 self.recipe.id, self.recipe.tasks[0].id)
         response = requests.post(results_url, data=dict(result='Pass',
                 path='/random/junk', score='123', message='The thing worked'))
-        self.assertEquals(response.status_code, 201)
-        self.assert_(response.headers['Location'].startswith(results_url),
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.headers['Location'].startswith(results_url),
                 response.headers['Location'])
         result_id = int(posixpath.basename(response.headers['Location']))
         self.check_result(result_id, TaskResult.pass_, u'/random/junk', 123,
@@ -189,8 +191,8 @@ class TaskResultTest(LabControllerTestCase):
                 self.recipe.id, self.recipe.tasks[0].id)
         response = requests.post(results_url, data=dict(result='Fail',
                 path='/random/junk', score='456', message='The thing failed'))
-        self.assertEquals(response.status_code, 201)
-        self.assert_(response.headers['Location'].startswith(results_url),
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.headers['Location'].startswith(results_url),
                 response.headers['Location'])
         result_id = int(posixpath.basename(response.headers['Location']))
         self.check_result(result_id, TaskResult.fail, u'/random/junk', 456,
@@ -201,8 +203,8 @@ class TaskResultTest(LabControllerTestCase):
                 self.recipe.id, self.recipe.tasks[0].id)
         response = requests.post(results_url, data=dict(result='Warn',
                 path='/random/junk', score='-1', message='The thing broke'))
-        self.assertEquals(response.status_code, 201)
-        self.assert_(response.headers['Location'].startswith(results_url),
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.headers['Location'].startswith(results_url),
                 response.headers['Location'])
         result_id = int(posixpath.basename(response.headers['Location']))
         self.check_result(result_id, TaskResult.warn, u'/random/junk', -1,
@@ -213,8 +215,8 @@ class TaskResultTest(LabControllerTestCase):
                 self.recipe.id, self.recipe.tasks[0].id)
         response = requests.post(results_url, data=dict(result='None',
                 path='/random/junk', message='See elsewhere for results'))
-        self.assertEquals(response.status_code, 201)
-        self.assert_(response.headers['Location'].startswith(results_url),
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.headers['Location'].startswith(results_url),
                 response.headers['Location'])
         result_id = int(posixpath.basename(response.headers['Location']))
         self.check_result(result_id, TaskResult.none, u'/random/junk', None,
@@ -225,8 +227,8 @@ class TaskResultTest(LabControllerTestCase):
                 self.recipe.id, self.recipe.tasks[0].id)
         response = requests.post(results_url, data=dict(result='Skip',
                 path='/', message='Did not run'))
-        self.assertEquals(response.status_code, 201)
-        self.assert_(response.headers['Location'].startswith(results_url),
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.headers['Location'].startswith(results_url),
                 response.headers['Location'])
         result_id = int(posixpath.basename(response.headers['Location']))
         self.check_result(result_id, TaskResult.skip, u'/', None,
@@ -237,14 +239,14 @@ class TaskResultTest(LabControllerTestCase):
                 self.recipe.id, self.recipe.tasks[0].id)
         response = requests.post(results_url, data=dict(asdf='lol'),
                 allow_redirects=False)
-        self.assertEquals(response.status_code, 400)
+        self.assertEqual(response.status_code, 400)
 
     def test_POST_unknown_result(self):
         results_url = '%srecipes/%s/tasks/%s/results/' % (self.get_proxy_url(),
                 self.recipe.id, self.recipe.tasks[0].id)
         response = requests.post(results_url, data=dict(result='Eggplant'),
                 allow_redirects=False)
-        self.assertEquals(response.status_code, 400)
+        self.assertEqual(response.status_code, 400)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=962254
     def test_result_for_finished_task(self):
@@ -254,7 +256,7 @@ class TaskResultTest(LabControllerTestCase):
                 self.recipe.id, self.recipe.tasks[0].id)
         response = requests.post(results_url, data=dict(result='Pass'),
                 allow_redirects=False)
-        self.assertEquals(response.status_code, 409)
+        self.assertEqual(response.status_code, 409)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1293007
     def test_max_results_per_recipe_limit_is_enforced(self):
@@ -267,8 +269,8 @@ class TaskResultTest(LabControllerTestCase):
             session.expire(self.recipe.tasks[0])
             self.assertEqual(len(self.recipe.tasks[0].results), 7500)
         # Test XMLRPC endpoint
-        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
-        with self.assertRaisesRegexp(xmlrpc_client.Fault, 'Too many results'):
+        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        with assertRaisesRegex(self, xmlrpclib.Fault, 'Too many results'):
             s.task_result(self.recipe.tasks[0].id, 'pass_', '/', 0, 'Should fail')
         # Test POST endpoint
         results_url = '%srecipes/%s/tasks/%s/results/' % (self.get_proxy_url(),
@@ -299,7 +301,7 @@ class TaskStatusTest(LabControllerTestCase):
         with session.begin():
             session.expire_all()
             task = self.recipe.tasks[0]
-            self.assertEquals(task.status, TaskStatus.running)
+            self.assertEqual(task.status, TaskStatus.running)
 
     def test_xmlrpc_task_stop(self):
         s = xmlrpc_client.ServerProxy(self.get_proxy_url())
@@ -307,7 +309,7 @@ class TaskStatusTest(LabControllerTestCase):
         with session.begin():
             session.expire_all()
             task = self.recipe.tasks[0]
-            self.assertEquals(task.status, TaskStatus.completed)
+            self.assertEqual(task.status, TaskStatus.completed)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1322219
     def test_cannot_complete_aborted_task(self):
@@ -327,7 +329,7 @@ class TaskStatusTest(LabControllerTestCase):
         with session.begin():
             session.expire_all()
             task = self.recipe.tasks[0]
-            self.assertEquals(task.status, TaskStatus.aborted)
+            self.assertEqual(task.status, TaskStatus.aborted)
 
     def test_xmlrpc_task_abort(self):
         s = xmlrpc_client.ServerProxy(self.get_proxy_url())
@@ -335,24 +337,24 @@ class TaskStatusTest(LabControllerTestCase):
         with session.begin():
             session.expire_all()
             task = self.recipe.tasks[0]
-            self.assertEquals(task.status, TaskStatus.aborted)
-            self.assertEquals(task.results[-1].log, u'fooed the bar up')
+            self.assertEqual(task.status, TaskStatus.aborted)
+            self.assertEqual(task.results[-1].log, u'fooed the bar up')
 
     def test_POST_task_status(self):
         status_url = '%srecipes/%s/tasks/%s/status' % (self.get_proxy_url(),
                 self.recipe.id, self.recipe.tasks[0].id)
         response = requests.post(status_url, data=dict(status='Running'))
-        self.assertEquals(response.status_code, 204)
+        self.assertEqual(response.status_code, 204)
         with session.begin():
             session.expire_all()
             task = self.recipe.tasks[0]
-            self.assertEquals(task.status, TaskStatus.running)
+            self.assertEqual(task.status, TaskStatus.running)
         response = requests.post(status_url, data=dict(status='Completed'))
-        self.assertEquals(response.status_code, 204)
+        self.assertEqual(response.status_code, 204)
         with session.begin():
             session.expire_all()
             task = self.recipe.tasks[0]
-            self.assertEquals(task.status, TaskStatus.completed)
+            self.assertEqual(task.status, TaskStatus.completed)
 
     def test_retry_POST_task_status(self):
         # It may happen that harness will try to update status to already completed tasks.
@@ -361,46 +363,46 @@ class TaskStatusTest(LabControllerTestCase):
         status_url = '%srecipes/%s/tasks/%s/status' % (self.get_proxy_url(),
                                                        self.recipe.id, self.recipe.tasks[0].id)
         response = requests.post(status_url, data=dict(status='Running'))
-        self.assertEquals(response.status_code, 204)
+        self.assertEqual(response.status_code, 204)
         response = requests.post(status_url, data=dict(status='Completed'))
-        self.assertEquals(response.status_code, 204)
+        self.assertEqual(response.status_code, 204)
         with session.begin():
             session.expire_all()
             task = self.recipe.tasks[0]
-            self.assertEquals(task.status, TaskStatus.completed)
+            self.assertEqual(task.status, TaskStatus.completed)
         response = requests.post(status_url, data=dict(status='Completed'))
-        self.assertEquals(response.status_code, 409)
+        self.assertEqual(response.status_code, 409)
         self.assertIn('Cannot change status for finished task', response.text)
         with session.begin():
             session.expire_all()
             task = self.recipe.tasks[0]
-            self.assertEquals(task.status, TaskStatus.completed)
+            self.assertEqual(task.status, TaskStatus.completed)
 
     def test_POST_task_abort(self):
         status_url = '%srecipes/%s/tasks/%s/status' % (self.get_proxy_url(),
                 self.recipe.id, self.recipe.tasks[0].id)
         response = requests.post(status_url, data=dict(status='Aborted',
                 message='fooed the bar up'))
-        self.assertEquals(response.status_code, 204)
+        self.assertEqual(response.status_code, 204)
         with session.begin():
             session.expire_all()
             task = self.recipe.tasks[0]
-            self.assertEquals(task.status, TaskStatus.aborted)
-            self.assertEquals(task.results[-1].log, u'fooed the bar up')
+            self.assertEqual(task.status, TaskStatus.aborted)
+            self.assertEqual(task.results[-1].log, u'fooed the bar up')
 
     def test_POST_missing_status(self):
         status_url = '%srecipes/%s/tasks/%s/status' % (self.get_proxy_url(),
                 self.recipe.id, self.recipe.tasks[0].id)
         response = requests.post(status_url, data=dict(asdf='lol'))
-        self.assertEquals(response.status_code, 400)
+        self.assertEqual(response.status_code, 400)
 
     def test_POST_invalid_transition(self):
         status_url = '%srecipes/%s/tasks/%s/status' % (self.get_proxy_url(),
                 self.recipe.id, self.recipe.tasks[0].id)
         response = requests.post(status_url, data=dict(status='Completed'))
-        self.assertEquals(response.status_code, 204)
+        self.assertEqual(response.status_code, 204)
         response = requests.post(status_url, data=dict(status='Running'))
-        self.assertEquals(response.status_code, 409)
+        self.assertEqual(response.status_code, 409)
 
 class UpdateTaskTest(LabControllerTestCase):
 
@@ -421,19 +423,19 @@ class UpdateTaskTest(LabControllerTestCase):
         task_url = '%srecipes/%s/tasks/%s/' % (self.get_proxy_url(),
                 self.recipe.id, self.recipe.tasks[1].id)
         response = requests.patch(task_url, data=dict(status='Running'))
-        self.assertEquals(response.status_code, 200)
-        self.assertEquals(response.json()['status'], 'Running')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['status'], 'Running')
         with session.begin():
             task = self.recipe.tasks[1]
             session.refresh(task)
-            self.assertEquals(task.status, TaskStatus.running)
+            self.assertEqual(task.status, TaskStatus.running)
         response = requests.patch(task_url, data=dict(status='Completed'))
-        self.assertEquals(response.status_code, 200)
-        self.assertEquals(response.json()['status'], 'Completed')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['status'], 'Completed')
         with session.begin():
             session.expire_all()
             task = self.recipe.tasks[1]
-            self.assertEquals(task.status, TaskStatus.completed)
+            self.assertEqual(task.status, TaskStatus.completed)
 
     def test_start_and_complete_external_task(self):
         # Alternative harnesses which support external tasks can report back
@@ -444,45 +446,45 @@ class UpdateTaskTest(LabControllerTestCase):
         version = '3.14-1'
         response = requests.patch(task_url, data=dict(status='Running',
                 name=name, version=version))
-        self.assertEquals(response.status_code, 200)
+        self.assertEqual(response.status_code, 200)
         json = response.json()
-        self.assertEquals(json['status'], 'Running')
-        self.assertEquals(json['name'], name)
-        self.assertEquals(json['version'], version)
+        self.assertEqual(json['status'], 'Running')
+        self.assertEqual(json['name'], name)
+        self.assertEqual(json['version'], version)
         with session.begin():
             session.expire_all()
             task = self.recipe.tasks[2]
-            self.assertEquals(task.status, TaskStatus.running)
-            self.assertEquals(task.name, name)
-            self.assertEquals(task.version, version)
+            self.assertEqual(task.status, TaskStatus.running)
+            self.assertEqual(task.name, name)
+            self.assertEqual(task.version, version)
         response = requests.patch(task_url, data=dict(status='Completed'))
-        self.assertEquals(response.status_code, 200)
-        self.assertEquals(response.json()['status'], 'Completed')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['status'], 'Completed')
         with session.begin():
             session.expire_all()
             task = self.recipe.tasks[2]
-            self.assertEquals(task.status, TaskStatus.completed)
+            self.assertEqual(task.status, TaskStatus.completed)
 
     def test_abort_task(self):
         task_url = '%srecipes/%s/tasks/%s/' % (self.get_proxy_url(),
                 self.recipe.id, self.recipe.tasks[0].id)
         response = requests.patch(task_url, data=dict(status='Aborted',
                 message='fooed the bar up'))
-        self.assertEquals(response.status_code, 200)
-        self.assertEquals(response.json()['status'], 'Aborted')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['status'], 'Aborted')
         with session.begin():
             session.expire_all()
             task = self.recipe.tasks[0]
-            self.assertEquals(task.status, TaskStatus.aborted)
-            self.assertEquals(task.results[-1].log, u'fooed the bar up')
+            self.assertEqual(task.status, TaskStatus.aborted)
+            self.assertEqual(task.results[-1].log, u'fooed the bar up')
 
     def test_invalid_status_transition(self):
         task_url = '%srecipes/%s/tasks/%s/' % (self.get_proxy_url(),
                 self.recipe.id, self.recipe.tasks[0].id)
         response = requests.patch(task_url, data=dict(status='Completed'))
-        self.assertEquals(response.status_code, 200)
+        self.assertEqual(response.status_code, 200)
         response = requests.patch(task_url, data=dict(status='Running'))
-        self.assertEquals(response.status_code, 409)
+        self.assertEqual(response.status_code, 409)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1072133
     def test_initial_watchdog_set_correctly(self):
@@ -493,7 +495,7 @@ class UpdateTaskTest(LabControllerTestCase):
         response = requests.patch(task_url, data=dict(status='Running'))
         response.raise_for_status()
         with session.begin():
-            self.assertEquals(self.recipe.tasks[1].task.avg_time, 1200)
+            self.assertEqual(self.recipe.tasks[1].task.avg_time, 1200)
             assert_datetime_within(self.recipe.watchdog.kill_time,
                     tolerance=datetime.timedelta(seconds=10),
                     reference=datetime.datetime.utcnow() + datetime.timedelta(seconds=3000))
@@ -512,11 +514,11 @@ class RecipeStatusTest(LabControllerTestCase):
         s.recipe_stop(self.recipe.id, 'abort', 'fooed the bar up')
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.recipe.tasks[0].status, TaskStatus.aborted)
-            self.assertEquals(self.recipe.tasks[0].results[-1].log,
+            self.assertEqual(self.recipe.tasks[0].status, TaskStatus.aborted)
+            self.assertEqual(self.recipe.tasks[0].results[-1].log,
                     u'fooed the bar up')
-            self.assertEquals(self.recipe.tasks[1].status, TaskStatus.aborted)
-            self.assertEquals(self.recipe.tasks[1].results[-1].log,
+            self.assertEqual(self.recipe.tasks[1].status, TaskStatus.aborted)
+            self.assertEqual(self.recipe.tasks[1].results[-1].log,
                     u'fooed the bar up')
 
     def test_POST_recipe_abort(self):
@@ -524,14 +526,14 @@ class RecipeStatusTest(LabControllerTestCase):
                 self.recipe.id)
         response = requests.post(status_url, data=dict(status='Aborted',
                 message='fooed the bar up'))
-        self.assertEquals(response.status_code, 204)
+        self.assertEqual(response.status_code, 204)
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.recipe.tasks[0].status, TaskStatus.aborted)
-            self.assertEquals(self.recipe.tasks[0].results[-1].log,
+            self.assertEqual(self.recipe.tasks[0].status, TaskStatus.aborted)
+            self.assertEqual(self.recipe.tasks[0].results[-1].log,
                     u'fooed the bar up')
-            self.assertEquals(self.recipe.tasks[1].status, TaskStatus.aborted)
-            self.assertEquals(self.recipe.tasks[1].results[-1].log,
+            self.assertEqual(self.recipe.tasks[1].status, TaskStatus.aborted)
+            self.assertEqual(self.recipe.tasks[1].results[-1].log,
                     u'fooed the bar up')
 
 
@@ -559,13 +561,13 @@ class WatchdogTest(LabControllerTestCase):
                 self.recipe.id)
         response = requests.get(watchdog_url)
         response.raise_for_status()
-        self.assertAlmostEquals(response.json()['seconds'], 100, delta=5)
+        self.assertAlmostEqual(response.json()['seconds'], 100, delta=5)
 
     def test_POST_watchdog(self):
         watchdog_url = '%srecipes/%s/watchdog' % (self.get_proxy_url(),
                 self.recipe.id)
         response = requests.post(watchdog_url, data=dict(seconds=600))
-        self.assertEquals(response.status_code, 204)
+        self.assertEqual(response.status_code, 204)
         with session.begin():
             session.expire_all()
             assert_datetime_within(self.recipe.watchdog.kill_time,
@@ -671,7 +673,7 @@ class InstallDoneTest(LabControllerTestCase):
         with session.begin():
             session.expire_all()
             self.assertIsNotNone(self.recipe.installation.install_finished)
-            self.assertEquals(self.recipe.resource.fqdn, 'somefqdn')
+            self.assertEqual(self.recipe.resource.fqdn, 'somefqdn')
 
     def test_install_done_GET(self):
         response = requests.get('%sinstall_done/%s/%s' %
@@ -680,7 +682,7 @@ class InstallDoneTest(LabControllerTestCase):
         with session.begin():
             session.expire_all()
             self.assertIsNotNone(self.recipe.installation.install_finished)
-            self.assertEquals(self.recipe.resource.fqdn, 'somefqdn')
+            self.assertEqual(self.recipe.resource.fqdn, 'somefqdn')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1412897
     def test_install_done_without_fqdn(self):
@@ -690,7 +692,7 @@ class InstallDoneTest(LabControllerTestCase):
         with session.begin():
             session.expire_all()
             self.assertIsNotNone(self.recipe.installation.install_finished)
-            self.assertEquals(self.recipe.resource.fqdn, None)
+            self.assertEqual(self.recipe.resource.fqdn, None)
 
 
 class InstallFailTest(LabControllerTestCase):
@@ -705,8 +707,8 @@ class InstallFailTest(LabControllerTestCase):
         s.install_fail(self.recipe.id)
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.recipe.tasks[0].status, TaskStatus.aborted)
-            self.assertEquals(self.recipe.tasks[1].status, TaskStatus.aborted)
+            self.assertEqual(self.recipe.tasks[0].status, TaskStatus.aborted)
+            self.assertEqual(self.recipe.tasks[1].status, TaskStatus.aborted)
 
     def test_install_fail_get(self):
         response = requests.get(
@@ -719,10 +721,10 @@ class InstallFailTest(LabControllerTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.recipe.tasks[0].status, TaskStatus.aborted)
-            self.assertEquals(self.recipe.tasks[0].results[-1].log, u'Installation failed')
-            self.assertEquals(self.recipe.tasks[1].status, TaskStatus.aborted)
-            self.assertEquals(self.recipe.tasks[1].results[-1].log, u'Installation failed')
+            self.assertEqual(self.recipe.tasks[0].status, TaskStatus.aborted)
+            self.assertEqual(self.recipe.tasks[0].results[-1].log, u'Installation failed')
+            self.assertEqual(self.recipe.tasks[1].status, TaskStatus.aborted)
+            self.assertEqual(self.recipe.tasks[1].results[-1].log, u'Installation failed')
 
 class PostrebootTest(LabControllerTestCase):
 
@@ -775,14 +777,14 @@ class PowerTest(LabControllerTestCase):
     def test_put_power(self):
         power_url = '%spower/%s/' % (self.get_proxy_url(), self.target_system.fqdn)
         response = requests.put(power_url, data=dict(action='reboot'))
-        self.assertEquals(response.status_code, 204)
+        self.assertEqual(response.status_code, 204)
         with session.begin():
             session.expire_all()
             self.assertEqual(self.target_system.command_queue[0].action, 'on')
             self.assertEqual(self.target_system.command_queue[1].action, 'off')
 
         response = requests.put(power_url, data=dict(action='on'))
-        self.assertEquals(response.status_code, 204)
+        self.assertEqual(response.status_code, 204)
         with session.begin():
             session.expire_all()
             self.assertEqual(self.target_system.command_queue[0].action, 'on')
@@ -792,12 +794,12 @@ class PowerTest(LabControllerTestCase):
     def test_put_power_error(self):
         power_url = '%spower/%s/' % (self.get_proxy_url(), self.target_system.fqdn)
         response = requests.put(power_url, data=dict(action='nonexistentcase'))
-        self.assertEquals(response.status_code, 400)
+        self.assertEqual(response.status_code, 400)
 
     def test_put_power_json(self):
         power_url = '%spower/%s/' % (self.get_proxy_url(), self.target_system.fqdn)
         response = requests.put(power_url, json=dict(action='off'))
-        self.assertEquals(response.status_code, 204, response.text)
+        self.assertEqual(response.status_code, 204, response.text)
         with session.begin():
             session.expire_all()
             self.assertEqual(self.target_system.command_queue[0].action, 'off')
@@ -805,12 +807,12 @@ class PowerTest(LabControllerTestCase):
     def test_put_power_missing_action(self):
         power_url = '%spower/%s/' % (self.get_proxy_url(), self.target_system.fqdn)
         response = requests.put(power_url, data=dict(status='off'))
-        self.assertEquals(response.status_code, 400, response.text)
+        self.assertEqual(response.status_code, 400, response.text)
 
     def test_put_power_unsupported(self):
         power_url = '%spower/%s/' % (self.get_proxy_url(), self.target_system.fqdn)
         response = requests.put(power_url)
-        self.assertEquals(response.status_code, 415, response.text)
+        self.assertEqual(response.status_code, 415, response.text)
 
 
 class LogUploadTestRestartProxy(LabControllerTestCase):
@@ -874,7 +876,7 @@ class LogUploadTestRestartProxy(LabControllerTestCase):
                 b64encode('a' * 10))
 
         with session.begin():
-            self.assertEquals(self.recipe.logs[0].server,
+            self.assertEqual(self.recipe.logs[0].server,
                     'https://testingme.com/beaker/logs/recipes/%s+/%s/'
                     % (self.recipe.id // 1000, self.recipe.id))
         beaker_proxy_process.stop()
@@ -892,7 +894,7 @@ class LogUploadTest(LabControllerTestCase):
 
     def test_log_storage_base_url(self):
         proxy = ProxyHelper(URL_SCHEME='https', URL_DOMAIN='testingme.com')
-        self.assertEquals(proxy.log_storage.base_url, 'https://testingme.com/beaker/logs/')
+        self.assertEqual(proxy.log_storage.base_url, 'https://testingme.com/beaker/logs/')
 
     def test_xmlrpc_recipe_log(self):
         s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
@@ -901,19 +903,19 @@ class LogUploadTest(LabControllerTestCase):
         local_log_dir = '%s/recipes/%s+/%s/' % (get_conf().get('CACHEPATH'),
                 self.recipe.id // 1000, self.recipe.id)
         with session.begin():
-            self.assertEquals(self.recipe.logs[0].path, '/')
-            self.assertEquals(self.recipe.logs[0].filename, 'recipe-log')
-            self.assertEquals(self.recipe.logs[0].server,
+            self.assertEqual(self.recipe.logs[0].path, '/')
+            self.assertEqual(self.recipe.logs[0].filename, 'recipe-log')
+            self.assertEqual(self.recipe.logs[0].server,
                     '%s/beaker/logs/recipes/%s+/%s/'
                     % (self.get_log_base_url(), self.recipe.id // 1000, self.recipe.id))
-            self.assertEquals(self.recipe.logs[0].basepath, local_log_dir)
-            self.assertEquals(
+            self.assertEqual(self.recipe.logs[0].basepath, local_log_dir)
+            self.assertEqual(
                     open(os.path.join(local_log_dir, 'recipe-log'), 'r').read(),
                     'aaaaaaaaaa')
         s.recipe_upload_file(self.recipe.id, '/', 'recipe-log', 10, None, 10,
                 b64encode('b' * 10))
         with session.begin():
-            self.assertEquals(
+            self.assertEqual(
                     open(os.path.join(local_log_dir, 'recipe-log'), 'r').read(),
                     'aaaaaaaaaabbbbbbbbbb')
 
@@ -927,37 +929,37 @@ class LogUploadTest(LabControllerTestCase):
             s.recipe_upload_file(self.recipe.id, '/', 'recipe-log', 10, None, 0,
                     b64encode('a' * 10))
             self.fail('should raise')
-        except xmlrpc_client.Fault as fault:
-            self.assert_('Cannot register file for finished recipe'
+        except xmlrpclib.Fault as fault:
+            self.assertTrue('Cannot register file for finished recipe'
                     in fault.faultString)
 
     def test_PUT_recipe_log(self):
         upload_url = '%srecipes/%s/logs/PUT-recipe-log' % (self.get_proxy_url(),
                 self.recipe.id)
         response = requests.put(upload_url, data='a' * 10)
-        self.assertEquals(response.status_code, 204)
+        self.assertEqual(response.status_code, 204)
         local_log_dir = '%s/recipes/%s+/%s/' % (get_conf().get('CACHEPATH'),
                 self.recipe.id // 1000, self.recipe.id)
         with session.begin():
-            self.assertEquals(self.recipe.logs[0].path, '/')
-            self.assertEquals(self.recipe.logs[0].filename, 'PUT-recipe-log')
-            self.assertEquals(self.recipe.logs[0].server,
+            self.assertEqual(self.recipe.logs[0].path, '/')
+            self.assertEqual(self.recipe.logs[0].filename, 'PUT-recipe-log')
+            self.assertEqual(self.recipe.logs[0].server,
                     '%s/beaker/logs/recipes/%s+/%s/'
                     % (self.get_log_base_url(), self.recipe.id // 1000, self.recipe.id))
-            self.assertEquals(self.recipe.logs[0].basepath, local_log_dir)
-            self.assertEquals(
+            self.assertEqual(self.recipe.logs[0].basepath, local_log_dir)
+            self.assertEqual(
                     open(os.path.join(local_log_dir, 'PUT-recipe-log'), 'r').read(),
                     'aaaaaaaaaa')
         response = requests.put(upload_url, data='b' * 10,
                 headers={'Content-Range': 'bytes 10-19/20'})
-        self.assertEquals(response.status_code, 204)
+        self.assertEqual(response.status_code, 204)
         with session.begin():
-            self.assertEquals(
+            self.assertEqual(
                     open(os.path.join(local_log_dir, 'PUT-recipe-log'), 'r').read(),
                     'aaaaaaaaaabbbbbbbbbb')
         response = requests.get(upload_url)
         response.raise_for_status()
-        self.assertEquals(response.content, 'aaaaaaaaaabbbbbbbbbb')
+        self.assertEqual(response.content, 'aaaaaaaaaabbbbbbbbbb')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=962253
     def test_PUT_recipe_log_after_finished(self):
@@ -967,7 +969,7 @@ class LogUploadTest(LabControllerTestCase):
         upload_url = '%srecipes/%s/logs/PUT-recipe-log' % (self.get_proxy_url(),
                 self.recipe.id)
         response = requests.put(upload_url, data='a' * 10)
-        self.assertEquals(response.status_code, 409)
+        self.assertEqual(response.status_code, 409)
 
     def test_xmlrpc_task_log(self):
         with session.begin():
@@ -978,19 +980,19 @@ class LogUploadTest(LabControllerTestCase):
         local_log_dir = '%s/tasks/%s+/%s/' % (get_conf().get('CACHEPATH'),
                 task.id // 1000, task.id)
         with session.begin():
-            self.assertEquals(task.logs[0].path, '/')
-            self.assertEquals(task.logs[0].filename, 'task-log')
-            self.assertEquals(task.logs[0].server,
+            self.assertEqual(task.logs[0].path, '/')
+            self.assertEqual(task.logs[0].filename, 'task-log')
+            self.assertEqual(task.logs[0].server,
                     '%s/beaker/logs/tasks/%s+/%s/'
                     % (self.get_log_base_url(), task.id // 1000, task.id))
-            self.assertEquals(task.logs[0].basepath, local_log_dir)
-            self.assertEquals(
+            self.assertEqual(task.logs[0].basepath, local_log_dir)
+            self.assertEqual(
                     open(os.path.join(local_log_dir, 'task-log'), 'r').read(),
                     'aaaaaaaaaa')
         s.task_upload_file(task.id, '/', 'task-log', 10, None, 10,
                 b64encode('b' * 10))
         with session.begin():
-            self.assertEquals(
+            self.assertEqual(
                     open(os.path.join(local_log_dir, 'task-log'), 'r').read(),
                     'aaaaaaaaaabbbbbbbbbb')
 
@@ -1005,8 +1007,8 @@ class LogUploadTest(LabControllerTestCase):
             s.task_upload_file(task.id, '/', 'task-log', 10, None, 0,
                     b64encode('a' * 10))
             self.fail('should raise')
-        except xmlrpc_client.Fault as fault:
-            self.assert_('Cannot register file for finished task'
+        except xmlrpclib.Fault as fault:
+            self.assertTrue('Cannot register file for finished task'
                     in fault.faultString)
 
     def test_PUT_task_log(self):
@@ -1015,29 +1017,29 @@ class LogUploadTest(LabControllerTestCase):
         upload_url = '%srecipes/%s/tasks/%s/logs/PUT-task-log' % (self.get_proxy_url(),
                 self.recipe.id, task.id)
         response = requests.put(upload_url, data='a' * 10)
-        self.assertEquals(response.status_code, 204)
+        self.assertEqual(response.status_code, 204)
         local_log_dir = '%s/tasks/%s+/%s/' % (get_conf().get('CACHEPATH'),
                 task.id // 1000, task.id)
         with session.begin():
-            self.assertEquals(task.logs[0].path, '/')
-            self.assertEquals(task.logs[0].filename, 'PUT-task-log')
-            self.assertEquals(task.logs[0].server,
+            self.assertEqual(task.logs[0].path, '/')
+            self.assertEqual(task.logs[0].filename, 'PUT-task-log')
+            self.assertEqual(task.logs[0].server,
                     '%s/beaker/logs/tasks/%s+/%s/'
                     % (self.get_log_base_url(), task.id // 1000, task.id))
-            self.assertEquals(task.logs[0].basepath, local_log_dir)
-            self.assertEquals(
+            self.assertEqual(task.logs[0].basepath, local_log_dir)
+            self.assertEqual(
                     open(os.path.join(local_log_dir, 'PUT-task-log'), 'r').read(),
                     'aaaaaaaaaa')
         response = requests.put(upload_url, data='b' * 10,
                 headers={'Content-Range': 'bytes 10-19/20'})
-        self.assertEquals(response.status_code, 204)
+        self.assertEqual(response.status_code, 204)
         with session.begin():
-            self.assertEquals(
+            self.assertEqual(
                     open(os.path.join(local_log_dir, 'PUT-task-log'), 'r').read(),
                     'aaaaaaaaaabbbbbbbbbb')
         response = requests.get(upload_url)
         response.raise_for_status()
-        self.assertEquals(response.content, 'aaaaaaaaaabbbbbbbbbb')
+        self.assertEqual(response.content, 'aaaaaaaaaabbbbbbbbbb')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=962253
     def test_PUT_task_log_after_finished(self):
@@ -1048,7 +1050,7 @@ class LogUploadTest(LabControllerTestCase):
         upload_url = '%srecipes/%s/tasks/%s/logs/after-finished' % (self.get_proxy_url(),
                 self.recipe.id, task.id)
         response = requests.put(upload_url, data='a' * 10)
-        self.assertEquals(response.status_code, 409)
+        self.assertEqual(response.status_code, 409)
 
     def test_xmlrpc_result_log(self):
         with session.begin():
@@ -1060,19 +1062,19 @@ class LogUploadTest(LabControllerTestCase):
         local_log_dir = '%s/results/%s+/%s/' % (get_conf().get('CACHEPATH'),
                 result.id // 1000, result.id)
         with session.begin():
-            self.assertEquals(result.logs[0].path, '/')
-            self.assertEquals(result.logs[0].filename, 'result-log')
-            self.assertEquals(result.logs[0].server,
+            self.assertEqual(result.logs[0].path, '/')
+            self.assertEqual(result.logs[0].filename, 'result-log')
+            self.assertEqual(result.logs[0].server,
                     '%s/beaker/logs/results/%s+/%s/'
                     % (self.get_log_base_url(), result.id // 1000, result.id))
-            self.assertEquals(result.logs[0].basepath, local_log_dir)
-            self.assertEquals(
+            self.assertEqual(result.logs[0].basepath, local_log_dir)
+            self.assertEqual(
                     open(os.path.join(local_log_dir, 'result-log'), 'r').read(),
                     'aaaaaaaaaa')
         s.result_upload_file(result.id, '/', 'result-log', 10, None, 10,
                 b64encode('b' * 10))
         with session.begin():
-            self.assertEquals(
+            self.assertEqual(
                     open(os.path.join(local_log_dir, 'result-log'), 'r').read(),
                     'aaaaaaaaaabbbbbbbbbb')
 
@@ -1088,8 +1090,8 @@ class LogUploadTest(LabControllerTestCase):
             s.result_upload_file(result.id, '/', 'result-log-after-finished',
                     10, None, 0, b64encode('a' * 10))
             self.fail('should raise')
-        except xmlrpc_client.Fault as fault:
-            self.assert_('Cannot register file for finished task'
+        except xmlrpclib.Fault as fault:
+            self.assertTrue('Cannot register file for finished task'
                     in fault.faultString)
 
     def test_PUT_result_log(self):
@@ -1100,29 +1102,29 @@ class LogUploadTest(LabControllerTestCase):
         upload_url = '%srecipes/%s/tasks/%s/results/%s/logs/PUT-result-log' % (
                 self.get_proxy_url(), self.recipe.id, task.id, result.id)
         response = requests.put(upload_url, data='a' * 10)
-        self.assertEquals(response.status_code, 204)
+        self.assertEqual(response.status_code, 204)
         local_log_dir = '%s/results/%s+/%s/' % (get_conf().get('CACHEPATH'),
                 result.id // 1000, result.id)
         with session.begin():
-            self.assertEquals(result.logs[0].path, '/')
-            self.assertEquals(result.logs[0].filename, 'PUT-result-log')
-            self.assertEquals(result.logs[0].server,
+            self.assertEqual(result.logs[0].path, '/')
+            self.assertEqual(result.logs[0].filename, 'PUT-result-log')
+            self.assertEqual(result.logs[0].server,
                     '%s/beaker/logs/results/%s+/%s/'
                     % (self.get_log_base_url(), result.id // 1000, result.id))
-            self.assertEquals(result.logs[0].basepath, local_log_dir)
-            self.assertEquals(
+            self.assertEqual(result.logs[0].basepath, local_log_dir)
+            self.assertEqual(
                     open(os.path.join(local_log_dir, 'PUT-result-log'), 'r').read(),
                     'aaaaaaaaaa')
         response = requests.put(upload_url, data='b' * 10,
                 headers={'Content-Range': 'bytes 10-19/20'})
-        self.assertEquals(response.status_code, 204)
+        self.assertEqual(response.status_code, 204)
         with session.begin():
-            self.assertEquals(
+            self.assertEqual(
                     open(os.path.join(local_log_dir, 'PUT-result-log'), 'r').read(),
                     'aaaaaaaaaabbbbbbbbbb')
         response = requests.get(upload_url)
         response.raise_for_status()
-        self.assertEquals(response.content, 'aaaaaaaaaabbbbbbbbbb')
+        self.assertEqual(response.content, 'aaaaaaaaaabbbbbbbbbb')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=962253
     def test_PUT_result_log_after_finished(self):
@@ -1135,13 +1137,13 @@ class LogUploadTest(LabControllerTestCase):
         upload_url = '%srecipes/%s/tasks/%s/results/%s/logs/after-finished' % (
                 self.get_proxy_url(), self.recipe.id, task.id, result.id)
         response = requests.put(upload_url, data='a' * 10)
-        self.assertEquals(response.status_code, 409)
+        self.assertEqual(response.status_code, 409)
 
     def test_GET_nonexistent_log(self):
         log_url = '%srecipes/%s/logs/notexist' % (
                 self.get_proxy_url(), self.recipe.id)
         response = requests.get(log_url)
-        self.assertEquals(response.status_code, 404)
+        self.assertEqual(response.status_code, 404)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=961300
     def test_PUT_empty_log(self):
@@ -1150,8 +1152,8 @@ class LogUploadTest(LabControllerTestCase):
         local_log_dir = '%s/recipes/%s+/%s/' % (get_conf().get('CACHEPATH'),
                 self.recipe.id // 1000, self.recipe.id)
         response = requests.put(upload_url, data='')
-        self.assertEquals(response.status_code, 204)
-        self.assertEquals(
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(
                 open(os.path.join(local_log_dir, 'empty-log'), 'r').read(),
                 '')
 
@@ -1162,8 +1164,8 @@ class LogUploadTest(LabControllerTestCase):
             s.task_upload_file(123, 'debug', '.task_beah_raw', 4096, '', 1024,
                     'a' * (1024 * 1024 * 10 + 1))
             self.fail('should raise')
-        except xmlrpc_client.ProtocolError as e:
-            self.assertEquals(e.errcode, 413)
+        except xmlrpclib.ProtocolError as e:
+            self.assertEqual(e.errcode, 413)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1003454
     def test_large_PUT_request_is_rejected(self):
@@ -1171,11 +1173,11 @@ class LogUploadTest(LabControllerTestCase):
                 self.recipe.id)
         # No specified data content-type
         response = requests.put(upload_url, data='a' * (1024 * 1024 * 10 + 1))
-        self.assertEquals(response.status_code, 413)
+        self.assertEqual(response.status_code, 413)
         # specify data content-type
         response = requests.put(upload_url, data='a' * (1024 * 1024 * 10 + 1),
                                 headers={'content-type': 'application/x-url-encoded'})
-        self.assertEquals(response.status_code, 413)
+        self.assertEqual(response.status_code, 413)
 
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1293007
@@ -1201,26 +1203,26 @@ class LogUploadTest(LabControllerTestCase):
             session.expire(result)
             self.assertEqual(len(result.logs), 3500)
         # Test XMLRPC endpoint for result logs
-        s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
-        with self.assertRaisesRegexp(xmlrpc_client.Fault, 'Too many logs'):
+        s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
+        with assertRaisesRegex(self, xmlrpclib.Fault, 'Too many logs'):
             s.result_upload_file(result.id, '/', 'result-log', 10, None, 0,
                     b64encode('a' * 10))
         # Test POST endpoint for result logs
         upload_url = '%srecipes/%s/tasks/%s/results/%s/logs/too-many' % (
                 self.get_proxy_url(), self.recipe.id, task.id, result.id)
         response = requests.put(upload_url, data='a' * 10)
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
         self.assertIn('Too many logs in recipe', response.text)
         # Test XMLRPC endpoint for task logs
-        s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
-        with self.assertRaisesRegexp(xmlrpc_client.Fault, 'Too many logs'):
+        s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
+        with assertRaisesRegex(self, xmlrpclib.Fault, 'Too many logs'):
             s.task_upload_file(task.id, '/', 'task-log', 10, None, 0,
                     b64encode('a' * 10))
         # Test POST endpoint for task logs
         upload_url = '%srecipes/%s/tasks/%s/logs/too-many' % (
                 self.get_proxy_url(), self.recipe.id, task.id)
         response = requests.put(upload_url, data='a' * 10)
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
         self.assertIn('Too many logs in recipe', response.text)
         # Warning result should have been recorded, but only once
         with session.begin():
@@ -1247,19 +1249,19 @@ class LogIndexTest(LabControllerTestCase):
                     LogRecipeTaskResult(path=u'some-dir', filename=u'some-file.txt')]
 
     def check_html_index(self, response, logs):
-        self.assertEquals(response.headers['Content-Type'], 'text/html')
+        self.assertEqual(response.headers['Content-Type'], 'text/html')
         tree = lxml.html.fromstring(response.content)
         links = tree.cssselect('ul li a')
         hrefs = [link.get('href') for link in links]
-        self.assertEquals(hrefs, logs)
+        self.assertEqual(hrefs, logs)
 
     def check_atom_index(self, response, logs):
-        self.assertEquals(response.headers['Content-Type'], 'application/atom+xml')
+        self.assertEqual(response.headers['Content-Type'], 'application/atom+xml')
         tree = lxml.etree.fromstring(response.content)
         entries = tree.findall('{http://www.w3.org/2005/Atom}entry')
         hrefs = [entry.find('{http://www.w3.org/2005/Atom}link').get('href')
                 for entry in entries]
-        self.assertEquals(hrefs, logs)
+        self.assertEqual(hrefs, logs)
 
     def test_recipe_log_index_html(self):
         url = '%srecipes/%s/logs/' % (self.get_proxy_url(), self.recipe.id)
@@ -1343,11 +1345,11 @@ class HealthTest(LabControllerTestCase):
     def test_get_healthz(self):
         response = requests.get(self.healthz_url)
 
-        self.assertEquals(response.status_code, 200)
-        self.assertEquals(response.text, 'We are healthy!')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.text, 'We are healthy!')
 
     def test_head_healthz(self):
         response = requests.head(self.healthz_url)
 
-        self.assertEquals(response.status_code, 200)
-        self.assertEquals(response.text, '')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.text, '')

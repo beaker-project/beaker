@@ -7,6 +7,7 @@
 
 import datetime
 import requests
+from six import assertRegex
 from bkr.server.model import session, RecipeTaskComment, RecipeTaskResultComment
 from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
 from bkr.inttest.server.requests_utils import post_json, login as requests_login
@@ -44,7 +45,7 @@ class RecipeTaskHTTPTest(DatabaseTestCase):
                 'recipes/%s/tasks/%s/logs/doesnotexist.log' % (recipe.id, task.id),
                 allow_redirects=False)
         self.assertEqual(response.status_code, 404)
-        self.assertRegexpMatches(response.text, 'Task log .* not found')
+        assertRegex(self, response.text, 'Task log .* not found')
 
     def test_get_recipetask_comments(self):
         with session.begin():
@@ -135,7 +136,7 @@ class RecipeTaskResultHTTPTest(DatabaseTestCase):
                 'recipes/%s/tasks/%s/results/%s/logs/doesnotexist.log'
                 % (recipe.id, task.id, result.id), allow_redirects=False)
         self.assertEqual(response.status_code, 404)
-        self.assertRegexpMatches(response.text, 'Result log .* not found')
+        assertRegex(self, response.text, 'Result log .* not found')
 
     def test_get_recipe_task_result_comments(self):
         with session.begin():

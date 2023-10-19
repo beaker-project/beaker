@@ -63,15 +63,15 @@ class LogDelete(DatabaseTestCase):
             self.assertIsNotNone(job.purged)
             for rs in job.recipesets:
                 for r in rs.recipes:
-                    self.assert_(r.logs == [])
+                    self.assertTrue(r.logs == [])
                     for rt in r.tasks:
-                        self.assert_(rt.logs == [])
+                        self.assertTrue(rt.logs == [])
                         for rtr in rt.results:
-                            self.assert_(rtr.logs == [])
+                            self.assertTrue(rtr.logs == [])
 
     def test_version(self):
         out = run_command('log_delete.py', 'beaker-log-delete', ['--version'])
-        self.assertEquals(out.strip(), __version__)
+        self.assertEqual(out.strip(), __version__)
 
     def test_limit(self):
         limit = 10
@@ -88,13 +88,13 @@ class LogDelete(DatabaseTestCase):
         _create_jobs()
         with_limit = run_command('log_delete.py', 'beaker-log-delete',
                                  ['--dry-run', '--verbose', '--limit=10'])
-        self.assert_(len(with_limit.splitlines()) == limit)
+        self.assertTrue(len(with_limit.splitlines()) == limit)
 
         # Test no limit set
         _create_jobs()
         no_limit = run_command('log_delete.py', 'beaker-log-delete',
                                ['--dry-run', '--verbose'])
-        self.assert_(len(no_limit.splitlines()) > limit)
+        self.assertTrue(len(no_limit.splitlines()) > limit)
 
     def test_log_not_delete(self):
         # Job that is not within it's expiry time
@@ -264,19 +264,19 @@ class RemoteLogDeletionTest(DatabaseTestCase):
         open(os.path.join(self.recipe_logs_dir, 'dummy.txt'), 'w').write('dummy')
         self.create_deleted_job_with_log(u'recipe/', u'dummy.txt')
         run_command('log_delete.py', 'beaker-log-delete')
-        self.assert_(not os.path.exists(os.path.join(self.logs_dir, 'recipe')))
+        self.assertTrue(not os.path.exists(os.path.join(self.logs_dir, 'recipe')))
 
     def test_301_redirect(self):
         open(os.path.join(self.recipe_logs_dir, 'dummy.txt'), 'w').write('dummy')
         self.create_deleted_job_with_log(u'redirect/301/recipe/', u'dummy.txt')
         run_command('log_delete.py', 'beaker-log-delete')
-        self.assert_(not os.path.exists(os.path.join(self.logs_dir, 'recipe')))
+        self.assertTrue(not os.path.exists(os.path.join(self.logs_dir, 'recipe')))
 
     def test_302_redirect(self):
         open(os.path.join(self.recipe_logs_dir, 'dummy.txt'), 'w').write('dummy')
         self.create_deleted_job_with_log(u'redirect/302/recipe/', u'dummy.txt')
         run_command('log_delete.py', 'beaker-log-delete')
-        self.assert_(not os.path.exists(os.path.join(self.logs_dir, 'recipe')))
+        self.assertTrue(not os.path.exists(os.path.join(self.logs_dir, 'recipe')))
 
     def test_404(self):
         self.create_deleted_job_with_log(u'notexist/', u'dummy.txt')
@@ -312,7 +312,7 @@ class RemoteLogDeletionTest(DatabaseTestCase):
 
         with mock.patch.object(RecipeTask, '__new__', side_effect=AssertionError):
             with mock.patch.object(RecipeTaskResult, '__new__', side_effect=AssertionError):
-                self.assertEquals(log_delete.log_delete(), 0)  # exit status
+                self.assertEqual(log_delete.log_delete(), 0)  # exit status
 
         # Check that we really deleted something, if not the test setup was faulty.
         with session.begin():

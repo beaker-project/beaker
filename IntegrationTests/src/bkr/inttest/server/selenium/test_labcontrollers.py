@@ -10,6 +10,7 @@ import datetime
 import xmlrpclib
 from threading import Thread, Event
 from turbogears.database import session
+from six import assertRegex
 from sqlalchemy.orm.exc import NoResultFound
 
 from bkr.inttest.server.selenium import XmlRpcTestCase, \
@@ -57,15 +58,15 @@ class LabControllerCreateTest(WebDriverTestCase):
         # check activity
         with session.begin():
             lc = LabController.by_name(lc_name)
-            self.assertEquals(lc.activity[0].field_name, u'Disabled')
-            self.assertEquals(lc.activity[0].action, u'Changed')
-            self.assertEquals(lc.activity[0].new_value, u'False')
-            self.assertEquals(lc.activity[1].field_name, u'User')
-            self.assertEquals(lc.activity[1].action, u'Changed')
-            self.assertEquals(lc.activity[1].new_value, lc_username)
-            self.assertEquals(lc.activity[2].field_name, u'FQDN')
-            self.assertEquals(lc.activity[2].action, u'Changed')
-            self.assertEquals(lc.activity[2].new_value, lc_name)
+            self.assertEqual(lc.activity[0].field_name, u'Disabled')
+            self.assertEqual(lc.activity[0].action, u'Changed')
+            self.assertEqual(lc.activity[0].new_value, u'False')
+            self.assertEqual(lc.activity[1].field_name, u'User')
+            self.assertEqual(lc.activity[1].action, u'Changed')
+            self.assertEqual(lc.activity[1].new_value, lc_username)
+            self.assertEqual(lc.activity[2].field_name, u'FQDN')
+            self.assertEqual(lc.activity[2].action, u'Changed')
+            self.assertEqual(lc.activity[2].new_value, lc_name)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=998374
     def test_cannot_add_duplicate_lc(self):
@@ -73,7 +74,7 @@ class LabControllerCreateTest(WebDriverTestCase):
             existing_lc = data_setup.create_labcontroller()
         self._add_lc(existing_lc.fqdn, existing_lc.user.email_address)
         b = self.browser
-        self.assertEquals(b.find_element_by_class_name('alert-error').text,
+        self.assertEqual(b.find_element_by_class_name('alert-error').text,
                           'CONFLICT: Lab Controller %s already exists' % existing_lc.fqdn)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1064710
@@ -84,7 +85,7 @@ class LabControllerCreateTest(WebDriverTestCase):
         b = self.browser
         expected = re.compile(r'User %s is already associated with lab controller %s' % (
             existing_lc.user.user_name, existing_lc.fqdn))
-        self.assertRegexpMatches(
+        assertRegex(self,
             b.find_element_by_class_name('alert-error').text, expected)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1290266
@@ -122,7 +123,7 @@ class LabControllerViewTest(WebDriverTestCase):
         b.find_element_by_name('fqdn').clear()
         b.find_element_by_name('fqdn').send_keys(other_lc.fqdn)
         b.find_element_by_class_name('edit-labcontroller').submit()
-        self.assertEquals(
+        self.assertEqual(
             b.find_element_by_class_name('alert-error').text,
                 'BAD REQUEST: FQDN %s already in use' % other_lc.fqdn)
 
@@ -141,7 +142,7 @@ class LabControllerViewTest(WebDriverTestCase):
         b.find_element_by_class_name('edit-labcontroller').submit()
         expected = re.compile(r'User %s is already associated with lab controller %s' % (
             other_lc.user.user_name, other_lc.fqdn))
-        self.assertRegexpMatches(
+        assertRegex(self,
             b.find_element_by_class_name('alert-error').text, expected)
 
     def test_lab_controller_remove(self):
@@ -167,59 +168,59 @@ class LabControllerViewTest(WebDriverTestCase):
         with session.begin():
             session.expire_all()
             # system set to broken?
-            self.assertEquals(sys.status, SystemStatus.broken)
+            self.assertEqual(sys.status, SystemStatus.broken)
 
             # check lc activity
-            self.assertEquals(self.lc.activity[0].field_name, u'Removed')
-            self.assertEquals(self.lc.activity[0].action, u'Changed')
-            self.assertEquals(self.lc.activity[0].new_value, u'True')
-            self.assertEquals(self.lc.activity[1].field_name, u'Disabled')
-            self.assertEquals(self.lc.activity[1].action, u'Changed')
-            self.assertEquals(self.lc.activity[1].new_value, u'True')
+            self.assertEqual(self.lc.activity[0].field_name, u'Removed')
+            self.assertEqual(self.lc.activity[0].action, u'Changed')
+            self.assertEqual(self.lc.activity[0].new_value, u'True')
+            self.assertEqual(self.lc.activity[1].field_name, u'Disabled')
+            self.assertEqual(self.lc.activity[1].action, u'Changed')
+            self.assertEqual(self.lc.activity[1].new_value, u'True')
 
             # check system activity
-            self.assertEquals(sys.activity[0].field_name, u'Lab Controller')
-            self.assertEquals(sys.activity[0].action, u'Changed')
-            self.assertEquals(sys.activity[0].new_value, None)
+            self.assertEqual(sys.activity[0].field_name, u'Lab Controller')
+            self.assertEqual(sys.activity[0].action, u'Changed')
+            self.assertEqual(sys.activity[0].new_value, None)
 
             # Check that queued commands are aborted when lab controller removed
             # https://bugzilla.redhat.com/show_bug.cgi?id=1362371
-            self.assertEquals(sys.activity[1].field_name, u'Power')
-            self.assertEquals(sys.activity[1].action, u'clear_logs')
-            self.assertEquals(sys.activity[1].new_value, u'Aborted: System disassociated from lab controller')
+            self.assertEqual(sys.activity[1].field_name, u'Power')
+            self.assertEqual(sys.activity[1].action, u'clear_logs')
+            self.assertEqual(sys.activity[1].new_value, u'Aborted: System disassociated from lab controller')
 
-            self.assertEquals(sys.activity[2].field_name, u'Power')
-            self.assertEquals(sys.activity[2].action, u'configure_netboot')
-            self.assertEquals(sys.activity[2].new_value, u'Aborted: System disassociated from lab controller')
+            self.assertEqual(sys.activity[2].field_name, u'Power')
+            self.assertEqual(sys.activity[2].action, u'configure_netboot')
+            self.assertEqual(sys.activity[2].new_value, u'Aborted: System disassociated from lab controller')
 
-            self.assertEquals(sys.activity[3].field_name, u'Power')
-            self.assertEquals(sys.activity[3].action, u'off')
-            self.assertEquals(sys.activity[3].new_value, u'Aborted: System disassociated from lab controller')
+            self.assertEqual(sys.activity[3].field_name, u'Power')
+            self.assertEqual(sys.activity[3].action, u'off')
+            self.assertEqual(sys.activity[3].new_value, u'Aborted: System disassociated from lab controller')
 
-            self.assertEquals(sys.activity[4].field_name, u'Power')
-            self.assertEquals(sys.activity[4].action, u'on')
-            self.assertEquals(sys.activity[4].new_value, u'Aborted: System disassociated from lab controller')
+            self.assertEqual(sys.activity[4].field_name, u'Power')
+            self.assertEqual(sys.activity[4].action, u'on')
+            self.assertEqual(sys.activity[4].new_value, u'Aborted: System disassociated from lab controller')
 
-            self.assertEquals(sys.activity[5].field_name, u'Status')
-            self.assertEquals(sys.activity[5].action, u'Changed')
-            self.assertEquals(sys.activity[5].new_value, 'Broken')
+            self.assertEqual(sys.activity[5].field_name, u'Status')
+            self.assertEqual(sys.activity[5].action, u'Changed')
+            self.assertEqual(sys.activity[5].new_value, 'Broken')
 
             # check that the status duration reflects the new system status
-            self.assertEquals(sys.status_durations[0].status, SystemStatus.broken)
+            self.assertEqual(sys.status_durations[0].status, SystemStatus.broken)
             # check job status
             job.update_status()
-            self.assertEquals(job.status, TaskStatus.cancelled)
+            self.assertEqual(job.status, TaskStatus.cancelled)
             # check distro tree activity
-            self.assertEquals(distro_tree.activity[0].field_name,
+            self.assertEqual(distro_tree.activity[0].field_name,
                               u'lab_controller_assocs')
-            self.assertEquals(distro_tree.activity[0].action, u'Removed')
+            self.assertEqual(distro_tree.activity[0].action, u'Removed')
 
     def test_remove_and_restore(self):
         with session.begin():
             system = data_setup.create_system()
             system.lab_controller = self.lc
             distro_tree = data_setup.create_distro_tree(lab_controllers=[self.lc])
-        self.assert_(any(lca.lab_controller == self.lc
+        self.assertTrue(any(lca.lab_controller == self.lc
                          for lca in distro_tree.lab_controller_assocs))
 
         # Remove and wait until the request has finished by waiting for the
@@ -235,9 +236,9 @@ class LabControllerViewTest(WebDriverTestCase):
             session.refresh(self.lc)
             self.assertTrue(self.lc.removed)
             session.refresh(system)
-            self.assert_(system.lab_controller is None)
+            self.assertTrue(system.lab_controller is None)
             session.refresh(distro_tree)
-            self.assert_(not any(lca.lab_controller == self.lc
+            self.assertTrue(not any(lca.lab_controller == self.lc
                                  for lca in distro_tree.lab_controller_assocs))
 
         # Restore
@@ -334,35 +335,35 @@ class AddDistroTreeXmlRpcTest(XmlRpcTestCase):
         self.server.labcontrollers.add_distro_tree(self.distro_data)
         with session.begin():
             distro = Distro.by_name(u'RHEL-6-U1')
-            self.assertEquals(distro.osversion.osmajor.osmajor, u'RedHatEnterpriseLinux6')
-            self.assertEquals(distro.osversion.osminor, u'1')
-            self.assertEquals(distro.osversion.arches,
+            self.assertEqual(distro.osversion.osmajor.osmajor, u'RedHatEnterpriseLinux6')
+            self.assertEqual(distro.osversion.osminor, u'1')
+            self.assertEqual(distro.osversion.arches,
                     [Arch.by_name(u'i386'), Arch.by_name(u'x86_64')])
-            self.assertEquals(distro.date_created,
+            self.assertEqual(distro.date_created,
                     datetime.datetime(2011, 5, 10, 22, 53, 18))
             distro_tree = DistroTree.query.filter_by(distro=distro,
                     variant=u'Workstation', arch=Arch.by_name('x86_64')).one()
-            self.assertEquals(distro_tree.date_created,
+            self.assertEqual(distro_tree.date_created,
                     datetime.datetime(2011, 5, 10, 22, 53, 18))
-            self.assertEquals(distro_tree.url_in_lab(self.lc, scheme='nfs'),
+            self.assertEqual(distro_tree.url_in_lab(self.lc, scheme='nfs'),
                               u'nfs://example.invalid:/RHEL-6-Workstation/U1/x86_64/os/')
-            self.assertEquals(distro_tree.repo_by_id('Workstation').path,
+            self.assertEqual(distro_tree.repo_by_id('Workstation').path,
                     '')
-            self.assertEquals(distro_tree.repo_by_id('ScalableFileSystem').path,
+            self.assertEqual(distro_tree.repo_by_id('ScalableFileSystem').path,
                     'ScalableFileSystem/')
-            self.assertEquals(distro_tree.repo_by_id('optional').path,
+            self.assertEqual(distro_tree.repo_by_id('optional').path,
                     '../../optional/x86_64/os/')
-            self.assertEquals(distro_tree.repo_by_id('debuginfo').path,
+            self.assertEqual(distro_tree.repo_by_id('debuginfo').path,
                     '../debug/')
-            self.assertEquals(distro_tree.image_by_type(ImageType.kernel,
+            self.assertEqual(distro_tree.image_by_type(ImageType.kernel,
                     KernelType.by_name(u'default')).path,
                     'images/pxeboot/vmlinuz')
-            self.assertEquals(distro_tree.image_by_type(ImageType.initrd,
+            self.assertEqual(distro_tree.image_by_type(ImageType.initrd,
                     KernelType.by_name(u'default')).path,
                     'images/pxeboot/initrd.img')
-            self.assertEquals(distro_tree.activity[0].field_name, u'lab_controller_assocs')
-            self.assertEquals(distro_tree.activity[0].action, u'Added')
-            self.assert_(self.lc.fqdn in distro_tree.activity[0].new_value,
+            self.assertEqual(distro_tree.activity[0].field_name, u'lab_controller_assocs')
+            self.assertEqual(distro_tree.activity[0].action, u'Added')
+            self.assertTrue(self.lc.fqdn in distro_tree.activity[0].new_value,
                     distro_tree.activity[0].new_value)
             del distro, distro_tree
 
@@ -373,11 +374,11 @@ class AddDistroTreeXmlRpcTest(XmlRpcTestCase):
             distro = Distro.by_name(u'RHEL-6-U1')
             distro_tree = DistroTree.query.filter_by(distro=distro,
                     variant=u'Workstation', arch=Arch.by_name('x86_64')).one()
-            self.assertEquals(distro_tree.url_in_lab(self.lc2, scheme='nfs'),
+            self.assertEqual(distro_tree.url_in_lab(self.lc2, scheme='nfs'),
                               u'nfs://example.invalid:/RHEL-6-Workstation/U1/x86_64/os/')
-            self.assertEquals(distro_tree.activity[0].field_name, u'lab_controller_assocs')
-            self.assertEquals(distro_tree.activity[0].action, u'Added')
-            self.assert_(self.lc2.fqdn in distro_tree.activity[0].new_value,
+            self.assertEqual(distro_tree.activity[0].field_name, u'lab_controller_assocs')
+            self.assertEqual(distro_tree.activity[0].action, u'Added')
+            self.assertTrue(self.lc2.fqdn in distro_tree.activity[0].new_value,
                     distro_tree.activity[0].new_value)
             del distro, distro_tree
 
@@ -397,11 +398,11 @@ class AddDistroTreeXmlRpcTest(XmlRpcTestCase):
             distro = Distro.by_name(u'RHEL-6-U1')
             distro_tree = DistroTree.query.filter_by(distro=distro,
                     variant=u'Workstation', arch=Arch.by_name('x86_64')).one()
-            self.assertEquals(distro_tree.url_in_lab(self.lc, scheme='nfs'),
+            self.assertEqual(distro_tree.url_in_lab(self.lc, scheme='nfs'),
                     u'nfs://example.invalid:/RHEL-6-Workstation/U1/x86_64/os/')
-            self.assertEquals(distro_tree.url_in_lab(self.lc, scheme='nfs+iso'),
+            self.assertEqual(distro_tree.url_in_lab(self.lc, scheme='nfs+iso'),
                     u'nfs+iso://example.invalid:/RHEL-6-Workstation/U1/x86_64/iso/')
-            self.assertEquals(distro_tree.url_in_lab(self.lc, scheme='http'),
+            self.assertEqual(distro_tree.url_in_lab(self.lc, scheme='http'),
                     u'http://moved/')
             del distro, distro_tree
 
@@ -424,9 +425,9 @@ class AddDistroTreeXmlRpcTest(XmlRpcTestCase):
         self.server.labcontrollers.add_distro_tree(distro_data)
         with session.begin():
             distro = Distro.by_name(name)
-            self.assertEquals(distro.osversion.osmajor.osmajor,
+            self.assertEqual(distro.osversion.osmajor.osmajor,
                     u'RedHatEnterpriseLinux6')
-            self.assertEquals(distro.osversion.osminor, u'1')
+            self.assertEqual(distro.osversion.osminor, u'1')
 
     def add_distro_trees_concurrently(self, distro_data1, distro_data2):
         # This doesn't actually call through XML-RPC, it calls the 
@@ -480,8 +481,8 @@ class AddDistroTreeXmlRpcTest(XmlRpcTestCase):
         thread2.commit_evt.set()
         thread1.join()
         thread2.join()
-        self.assert_(thread1.success)
-        self.assert_(thread2.success)
+        self.assertTrue(thread1.success)
+        self.assertTrue(thread2.success)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=874386
     def test_concurrent_different_trees(self):
@@ -584,10 +585,10 @@ class GetDistroTreesXmlRpcTest(XmlRpcTestCase):
                     lab_controllers=[self.other_lc])
         self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         result = self.server.labcontrollers.get_distro_trees()
-        self.assertEquals(len(result), 1)
-        self.assertEquals(result[0]['distro_tree_id'], dt_in.id)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]['distro_tree_id'], dt_in.id)
         for lc, url in result[0]['available']:
-            self.assertEquals(lc, self.lc.fqdn)
+            self.assertEqual(lc, self.lc.fqdn)
 
     def test_filter_by_arch(self):
         with session.begin():
@@ -600,8 +601,8 @@ class GetDistroTreesXmlRpcTest(XmlRpcTestCase):
         self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         result = self.server.labcontrollers.get_distro_trees(
                 {'arch': ['i386', 'x86_64']})
-        self.assertEquals(len(result), 1)
-        self.assertEquals(result[0]['distro_tree_id'], dt_in.id)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]['distro_tree_id'], dt_in.id)
 
 class CommandQueueXmlRpcTest(XmlRpcTestCase):
 
@@ -621,15 +622,15 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
                                         arch=Arch.by_name('i386'), system=system, kernel_options=u'anwesha')
             system.configure_netboot(installation=installation, service=u'testdata')
         queued_commands = self.server.labcontrollers.get_queued_command_details()
-        self.assertEquals(queued_commands[1]['action'], 'configure_netboot')
-        self.assertEquals(queued_commands[1]['fqdn'], system.fqdn)
-        self.assertEquals(queued_commands[1]['netboot']['arch'], 'i386')
-        self.assertEquals(queued_commands[1]['netboot']['distro_tree_id'], None)
-        self.assertEquals(queued_commands[1]['netboot']['kernel_url'],
+        self.assertEqual(queued_commands[1]['action'], 'configure_netboot')
+        self.assertEqual(queued_commands[1]['fqdn'], system.fqdn)
+        self.assertEqual(queued_commands[1]['netboot']['arch'], 'i386')
+        self.assertEqual(queued_commands[1]['netboot']['distro_tree_id'], None)
+        self.assertEqual(queued_commands[1]['netboot']['kernel_url'],
                           'ftp://dummylab.example.com/distros/MyAwesomeLinux1/pxeboot/vmlinuz')
-        self.assertEquals(queued_commands[1]['netboot']['initrd_url'],
+        self.assertEqual(queued_commands[1]['netboot']['initrd_url'],
                           'ftp://dummylab.example.com/distros/MyAwesomeLinux1/pxeboot/initrd')
-        self.assertEquals(queued_commands[1]['netboot']['kernel_options'], u'anwesha')
+        self.assertEqual(queued_commands[1]['netboot']['kernel_options'], u'anwesha')
 
     def setup_system_with_queued_commands(self):
         with session.begin():
@@ -652,7 +653,7 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
                 system.action_power(action=u'on', service=u'testdata')
         commands = self.server.labcontrollers.get_queued_command_details()
         # 10 is the configured limit in server-test.cfg
-        self.assertEquals(len(commands), 10, commands)
+        self.assertEqual(len(commands), 10, commands)
 
     def test_clear_running_commands(self):
         with session.begin():
@@ -669,10 +670,10 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
         self.server.labcontrollers.clear_running_commands(u'Staleness')
         with session.begin():
             session.refresh(command)
-            self.assertEquals(command.status, CommandStatus.aborted)
+            self.assertEqual(command.status, CommandStatus.aborted)
             self.assertIsNone(command.start_time)
             self.assertIsNone(command.finish_time)
-            self.assertEquals(other_command.status, CommandStatus.running)
+            self.assertEqual(other_command.status, CommandStatus.running)
 
     def test_purge_stale_running_commands(self):
         with session.begin():
@@ -703,28 +704,28 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
         with session.begin():
             session.expire_all()
             # Recent commands have their callback invoked
-            self.assertEquals(recent_command.status, CommandStatus.aborted)
-            self.assertEquals(recent_task.status, TaskStatus.aborted)
+            self.assertEqual(recent_command.status, CommandStatus.aborted)
+            self.assertEqual(recent_task.status, TaskStatus.aborted)
             # Stale commands just get dropped on the floor
-            self.assertEquals(old_command.status, CommandStatus.aborted)
-            self.assertEquals(old_task.status, TaskStatus.waiting)
+            self.assertEqual(old_command.status, CommandStatus.aborted)
+            self.assertEqual(old_task.status, TaskStatus.waiting)
 
     def test_add_completed_command(self):
         with session.begin():
             system = data_setup.create_system(lab_controller=self.lc)
             fqdn = system.fqdn
         queued = self.server.labcontrollers.get_queued_command_details()
-        self.assertEquals(len(queued), 0, queued)
+        self.assertEqual(len(queued), 0, queued)
         expected = u'Arbitrary command!'
         self.server.labcontrollers.add_completed_command(fqdn, expected)
         queued = self.server.labcontrollers.get_queued_command_details()
-        self.assertEquals(len(queued), 0, queued)
+        self.assertEqual(len(queued), 0, queued)
         with session.begin():
             completed = list(Command.query
                              .join(Command.system)
                              .filter(System.fqdn == fqdn))
-            self.assertEquals(len(completed), 1, completed)
-            self.assertEquals(completed[0].action, expected)
+            self.assertEqual(len(completed), 1, completed)
+            self.assertEqual(completed[0].action, expected)
             assert_datetime_within(completed[0].start_time,
                     tolerance=datetime.timedelta(seconds=10),
                     reference=datetime.datetime.utcnow())
@@ -795,7 +796,7 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
             recipe.waiting()
             system = recipe.resource.system
             command = system.command_queue[0]
-            self.assertEquals(command.action, 'on')
+            self.assertEqual(command.action, 'on')
 
         self.server.labcontrollers.mark_command_running(command.id)
         self.server.labcontrollers.mark_command_failed(command.id,
@@ -837,7 +838,7 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
             recipe.waiting()
             system = recipe.resource.system
             command = system.command_queue[2]
-            self.assertEquals(command.action, 'configure_netboot')
+            self.assertEqual(command.action, 'configure_netboot')
 
         self.server.labcontrollers.mark_command_running(command.id)
         self.server.labcontrollers.mark_command_failed(command.id,
@@ -858,10 +859,10 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
                                         kernel_options=u'')
             system.configure_netboot(installation=installation, service=u'testdata')
         queued_commands = self.server.labcontrollers.get_queued_command_details()
-        self.assertEquals(queued_commands[1]['action'], 'configure_netboot')
-        self.assertEquals(queued_commands[1]['fqdn'], system.fqdn)
-        self.assertEquals(queued_commands[1]['netboot']['arch'], 'i386')
-        self.assertEquals(queued_commands[1]['netboot']['distro_tree_id'],
+        self.assertEqual(queued_commands[1]['action'], 'configure_netboot')
+        self.assertEqual(queued_commands[1]['fqdn'], system.fqdn)
+        self.assertEqual(queued_commands[1]['netboot']['arch'], 'i386')
+        self.assertEqual(queued_commands[1]['netboot']['distro_tree_id'],
                           distro_tree.id)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1322235
@@ -878,12 +879,12 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
                     initrd_path='pxeboot/initrd', kernel_path='pxeboot/vmlinuz')
             system.configure_netboot(installation=installation, service=u'testdata')
         queued_commands = self.server.labcontrollers.get_queued_command_details()
-        self.assertEquals(queued_commands[1]['action'], 'configure_netboot')
-        self.assertEquals(queued_commands[1]['fqdn'], system.fqdn)
-        self.assertEquals(queued_commands[1]['netboot']['arch'], 's390x')
-        self.assertEquals(queued_commands[1]['netboot']['kernel_url'],
+        self.assertEqual(queued_commands[1]['action'], 'configure_netboot')
+        self.assertEqual(queued_commands[1]['fqdn'], system.fqdn)
+        self.assertEqual(queued_commands[1]['netboot']['arch'], 's390x')
+        self.assertEqual(queued_commands[1]['netboot']['kernel_url'],
                 u'ftp://mylabmirror.example.invalid/Fedora23/s390x/pxeboot/vmlinuz')
-        self.assertEquals(queued_commands[1]['netboot']['initrd_url'],
+        self.assertEqual(queued_commands[1]['netboot']['initrd_url'],
                 u'ftp://mylabmirror.example.invalid/Fedora23/s390x/pxeboot/initrd')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1568217
@@ -906,8 +907,8 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
             recipe.installation.variant = None
             recipe.installation.arch = None
         queued_commands = self.server.labcontrollers.get_queued_command_details()
-        self.assertEquals(queued_commands[1]['action'], 'configure_netboot')
-        self.assertEquals(queued_commands[1]['netboot']['arch'], 's390x')
+        self.assertEqual(queued_commands[1]['action'], 'configure_netboot')
+        self.assertEqual(queued_commands[1]['netboot']['arch'], 's390x')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1348018
     def test_after_reboot_watchdog_killtime_extended(self):
@@ -960,7 +961,7 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
             recipe.provision()
             recipe.waiting()
         cmd = system.command_queue[0]
-        self.assertEquals(cmd.action, u'on')
+        self.assertEqual(cmd.action, u'on')
         self.server.labcontrollers.mark_command_running(cmd.id)
         self.server.labcontrollers.mark_command_completed(cmd.id)
         with session.begin():
@@ -981,7 +982,7 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
         self.server.labcontrollers.mark_command_running(command.id)
         with session.begin():
             session.refresh(command)
-            self.assertEquals(command.status, CommandStatus.running)
+            self.assertEqual(command.status, CommandStatus.running)
             assert_datetime_within(command.start_time,
                     tolerance=datetime.timedelta(seconds=10),
                     reference=datetime.datetime.utcnow())
@@ -996,7 +997,7 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
         self.server.labcontrollers.mark_command_completed(command.id)
         with session.begin():
             session.refresh(command)
-            self.assertEquals(command.status, CommandStatus.completed)
+            self.assertEqual(command.status, CommandStatus.completed)
             assert_datetime_within(command.finish_time,
                     tolerance=datetime.timedelta(seconds=10),
                     reference=datetime.datetime.utcnow())
@@ -1011,7 +1012,7 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
         self.server.labcontrollers.mark_command_failed(command.id)
         with session.begin():
             session.refresh(command)
-            self.assertEquals(command.status, CommandStatus.failed)
+            self.assertEqual(command.status, CommandStatus.failed)
             assert_datetime_within(command.finish_time,
                     tolerance=datetime.timedelta(seconds=10),
                     reference=datetime.datetime.utcnow())
@@ -1197,7 +1198,7 @@ class LabControllerHTTPTest(DatabaseTestCase):
             get_server_base() + 'labcontrollers/' + self.lc.fqdn,
             session=s,
             data={'ignored': '_'})
-        self.assertEquals(response.status_code, 200)
+        self.assertEqual(response.status_code, 200)
 
     def test_no_permission(self):
         """Authorised users with improper permissions can not change the lab
@@ -1251,7 +1252,8 @@ class LabControllerHTTPTest(DatabaseTestCase):
                               data={'fqdn': lc.fqdn})
 
         self.assertEqual(response.status_code, 400)
-        self.assertRegexpMatches(
+        assertRegex(
+            self,
             response.text,
             re.compile(r'FQDN %s already in use' % lc.fqdn)
         )
@@ -1332,7 +1334,7 @@ class LabControllerHTTPTest(DatabaseTestCase):
 
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.lc.user.email_address, u'new_email_address@beaker-project.org')
+            self.assertEqual(self.lc.user.email_address, u'new_email_address@beaker-project.org')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1339034
     def test_changes_user_and_fqdn_successfully(self):
@@ -1382,7 +1384,7 @@ class LabControllerHTTPTest(DatabaseTestCase):
             session=s,
             data={'removed': False})
 
-        self.assertEquals(response.status_code, 200)
+        self.assertEqual(response.status_code, 200)
 
         with session.begin():
             session.expire_all()

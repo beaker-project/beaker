@@ -7,6 +7,7 @@
 import datetime
 import lxml.etree
 import pkg_resources
+from six import assertRaisesRegex
 from turbogears import testutil
 from turbogears.database import session
 from bkr.server.bexceptions import BX
@@ -398,7 +399,7 @@ class TestJobsController(DatabaseTestCase):
                 </recipeSet>
             </job>
         ''')
-        with self.assertRaisesRegexp(BX, 'No arch matches'):
+        with assertRaisesRegex(self, BX, 'No arch matches'):
             self.controller.process_xmljob(jobxml, self.user)
 
     def test_osminor_defaults_to_zero_when_not_provided_in_distro_metadata(self):
@@ -448,7 +449,7 @@ class TestJobsController(DatabaseTestCase):
                 </recipeSet>
             </job>
         ''')
-        with self.assertRaisesRegexp(BX, '<initrd/> element is required'):
+        with assertRaisesRegex(self, BX, '<initrd/> element is required'):
             self.controller.process_xmljob(jobxml, self.user)
         jobxml = lxml.etree.fromstring('''
             <job>
@@ -470,7 +471,7 @@ class TestJobsController(DatabaseTestCase):
                 </recipeSet>
             </job>
         ''')
-        with self.assertRaisesRegexp(BX, '<kernel/> element is required'):
+        with assertRaisesRegex(self, BX, '<kernel/> element is required'):
             self.controller.process_xmljob(jobxml, self.user)
         jobxml = lxml.etree.fromstring('''
             <job>
@@ -492,5 +493,5 @@ class TestJobsController(DatabaseTestCase):
                 </recipeSet>
             </job>
         ''')
-        with self.assertRaisesRegexp(BX, '<osmajor/> element is required'):
+        with assertRaisesRegex(self, BX, '<osmajor/> element is required'):
             self.controller.process_xmljob(jobxml, self.user)

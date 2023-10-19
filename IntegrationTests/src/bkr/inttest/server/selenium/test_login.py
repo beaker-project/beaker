@@ -8,6 +8,7 @@ from turbogears.database import session
 import xmlrpclib
 import urllib
 from hashlib import sha1
+from six import assertRaisesRegex
 from unittest import SkipTest
 
 try:
@@ -101,20 +102,20 @@ class LoginTest(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'jobs/mine')
         # XXX should check for 403 response code
-        self.assertEquals(b.find_element_by_css_selector('#message').text,
+        self.assertEqual(b.find_element_by_css_selector('#message').text,
                           'Please log in.')
 
     def test_message_when_explicitly_logging_in(self):
         b = self.browser
         b.get(get_server_base())
         b.find_element_by_link_text('Log in').click()
-        self.assertEquals(b.find_element_by_css_selector('#message').text,
+        self.assertEqual(b.find_element_by_css_selector('#message').text,
                           'Please log in.')
 
     def test_message_when_password_mistyped(self):
         b = self.browser
         login(b, self.user.user_name, 'not the right password')
-        self.assertEquals(b.find_element_by_css_selector('#message').text,
+        self.assertEqual(b.find_element_by_css_selector('#message').text,
                           'The credentials you supplied were not correct or '
                           'did not grant access to this resource.')
 
@@ -128,7 +129,7 @@ class LoginTest(WebDriverTestCase):
         b.find_element_by_xpath('//title[text()="Systems"]')
         with session.begin():
             session.refresh(self.user)
-            self.assert_(self.user._password.startswith('$pbkdf2-sha512$'),
+            self.assertTrue(self.user._password.startswith('$pbkdf2-sha512$'),
                          self.user._password)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1095010
@@ -147,7 +148,7 @@ class LoginTest(WebDriverTestCase):
         b.find_element_by_xpath('//title[text()="Systems"]')
         with session.begin():
             newly_created_user = User.by_user_name(u'bz1095010_user')
-            self.assert_(newly_created_user is not None,
+            self.assertTrue(newly_created_user is not None,
                          'bz1095010_user should have been created from LDAP')
 
     def test_disabled_accounts_cannot_log_in(self):
@@ -155,7 +156,7 @@ class LoginTest(WebDriverTestCase):
             self.user.disabled = True
         b = self.browser
         login(b, self.user.user_name, self.password)
-        self.assertEquals(b.find_element_by_css_selector('#message').text,
+        self.assertEqual(b.find_element_by_css_selector('#message').text,
                           'The credentials you supplied were not correct or '
                           'did not grant access to this resource.')
 
@@ -195,7 +196,7 @@ class XmlRpcLoginTest(XmlRpcTestCase):
         server = self.get_server()
         server.auth.login_password(user.user_name, u'lulz')
         who_am_i = server.auth.who_am_i()
-        self.assertEquals(who_am_i['username'], user.user_name)
+        self.assertEqual(who_am_i['username'], user.user_name)
 
     def test_password_proxy_login(self):
         with session.begin():
@@ -206,8 +207,8 @@ class XmlRpcLoginTest(XmlRpcTestCase):
         server = self.get_server()
         server.auth.login_password(user.user_name, u'lulz', proxied_user.user_name)
         who_am_i = server.auth.who_am_i()
-        self.assertEquals(who_am_i['username'], proxied_user.user_name)
-        self.assertEquals(who_am_i['proxied_by_username'], user.user_name)
+        self.assertEqual(who_am_i['username'], proxied_user.user_name)
+        self.assertEqual(who_am_i['proxied_by_username'], user.user_name)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=660529
     def test_login_required_message(self):
@@ -216,12 +217,12 @@ class XmlRpcLoginTest(XmlRpcTestCase):
             server.auth.who_am_i()
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('Anonymous access denied' in e.faultString, e.faultString)
+            self.assertTrue('Anonymous access denied' in e.faultString, e.faultString)
 
     def test_disabled_accounts_cannot_log_in(self):
         with session.begin():
             user = data_setup.create_user(password=u'lulz')
             user.disabled = True
         server = self.get_server()
-        with self.assertRaisesRegexp(xmlrpclib.Fault, 'Invalid username or password'):
+        with assertRaisesRegex(self, xmlrpclib.Fault, 'Invalid username or password'):
             server.auth.login_password(user.user_name, u'lulz')

@@ -21,5 +21,5 @@ class DistroTreesVerifyTest(ClientTestCase):
     def test_verify_distro(self):
         output = run_client(['bkr', 'distro-trees-verify', '--name', self.distro_tree.distro.name])
         lines = output.splitlines()
-        self.assert_(self.distro_tree.distro.name in lines[0])
-        self.assertEquals(lines[1], "missing from labs ['dodgylc.example.invalid']")
+        self.assertTrue(self.distro_tree.distro.name in lines[0])
+        self.assertEqual(lines[1], "missing from labs ['dodgylc.example.invalid']")

@@ -29,11 +29,11 @@ class RetentionTagTest(WebDriverTestCase):
         self.assertTrue(b.find_element_by_name('needs_product').is_selected())
         b.find_element_by_name('needs_product').click()
         b.find_element_by_id('Retention Tag').submit()
-        self.assertEquals(b.find_element_by_class_name('flash').text, 'OK')
+        self.assertEqual(b.find_element_by_class_name('flash').text, 'OK')
         with session.begin():
             session.refresh(tag)
-            self.assertEquals(tag.expire_in_days, 60)
-            self.assertEquals(tag.needs_product, False)
+            self.assertEqual(tag.expire_in_days, 60)
+            self.assertEqual(tag.needs_product, False)
 
     def test_rename(self):
         with session.begin():
@@ -45,10 +45,10 @@ class RetentionTagTest(WebDriverTestCase):
         b.find_element_by_name('tag').clear()
         b.find_element_by_name('tag').send_keys('pink-fluffy-unicorns')
         b.find_element_by_id('Retention Tag').submit()
-        self.assertEquals(b.find_element_by_class_name('flash').text, 'OK')
+        self.assertEqual(b.find_element_by_class_name('flash').text, 'OK')
         with session.begin():
             session.refresh(tag)
-            self.assertEquals(tag.tag, u'pink-fluffy-unicorns')
+            self.assertEqual(tag.tag, u'pink-fluffy-unicorns')
 
     def test_cannot_change_tag_name_to_an_existing_tag(self):
         with session.begin():
@@ -74,15 +74,15 @@ class RetentionTagTest(WebDriverTestCase):
         b = self.browser
         login(b)
         b.get(get_server_base() + 'retentiontag/delete/%s' % default_tag.id)
-        self.assertEquals(b.find_element_by_class_name('flash').text,
+        self.assertEqual(b.find_element_by_class_name('flash').text,
                 '%s is not applicable for deletion' % default_tag.tag)
 
         b.get(get_server_base() + 'retentiontag/delete/%s' % tag_with_job.id)
-        self.assertEquals(b.find_element_by_class_name('flash').text,
+        self.assertEqual(b.find_element_by_class_name('flash').text,
                 '%s is not applicable for deletion' % tag_with_job.tag)
 
         b.get(get_server_base() + 'retentiontag/delete/%s' % non_default_tag.id)
-        self.assertEquals(b.find_element_by_class_name('flash').text,
+        self.assertEqual(b.find_element_by_class_name('flash').text,
                 'Successfully deleted %s' % non_default_tag.tag)
 
     def test_tag_add(self):
@@ -95,7 +95,7 @@ class RetentionTagTest(WebDriverTestCase):
         Select(b.find_element_by_name('default')).select_by_visible_text('True')
         b.find_element_by_name('needs_product').click()
         b.find_element_by_id('Retention Tag').submit()
-        self.assertEquals(b.find_element_by_class_name('flash').text, 'OK')
+        self.assertEqual(b.find_element_by_class_name('flash').text, 'OK')
         b.find_element_by_xpath(
                 '//table/tbody/tr/td[1][normalize-space(string(.))="%s"]' % tag_to_add)
 
@@ -105,7 +105,7 @@ class RetentionTagTest(WebDriverTestCase):
         b.find_element_by_name('tag').send_keys(tag_to_add)
         Select(b.find_element_by_name('default')).select_by_visible_text('False')
         b.find_element_by_id('Retention Tag').submit()
-        self.assertEquals(b.find_element_by_class_name('flash').text, 'OK')
+        self.assertEqual(b.find_element_by_class_name('flash').text, 'OK')
         b.find_element_by_link_text(tag_to_add).click()
         self.assertFalse(b.find_element_by_name('needs_product').is_selected())
 

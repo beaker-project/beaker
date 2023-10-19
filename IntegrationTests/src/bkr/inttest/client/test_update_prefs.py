@@ -34,10 +34,10 @@ class UpdatePrefsTest(ClientTestCase):
         # This used to be forbidden, now it is allowed.
         with session.begin():
             session.refresh(self.user1)
-            self.assertEquals(self.user1.email_address, self.user2.email_address)
+            self.assertEqual(self.user1.email_address, self.user2.email_address)
 
         run_client(['bkr', 'update-prefs', '--email=foobar@example.com'],
                     config=self.client_config1)
         with session.begin():
             session.refresh(self.user1)
-            self.assertEquals(self.user1.email_address, "foobar@example.com")
+            self.assertEqual(self.user1.email_address, "foobar@example.com")

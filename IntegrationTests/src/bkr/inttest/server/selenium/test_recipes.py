@@ -10,6 +10,7 @@ import logging
 import re
 import urlparse
 import requests
+from six import assertRegex
 import lxml.etree
 from turbogears.database import session
 
@@ -52,7 +53,7 @@ class TestRecipesDataGrid(WebDriverTestCase):
         b.get(get_server_base() + 'recipes/mine')
         b.find_element_by_xpath('//table[@id="widget"]/thead//th[%d]//a[@href]' % column).click()
         row_count = len(b.find_elements_by_xpath('//table[@id="widget"]/tbody/tr/td[%d]' % column))
-        self.assertEquals(row_count, 24)
+        self.assertEqual(row_count, 24)
         cell_values = [b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[%d]' % (row, column)).text
                        for row in range(1, row_count + 1)]
         assert_sorted(cell_values, key=sort_key)
@@ -81,7 +82,7 @@ class TestRecipesDataGrid(WebDriverTestCase):
         b.get(get_server_base() + 'recipes/mine')
         b.find_element_by_xpath('//table[@id="widget"]/thead//th[%d]//a[@href]' % column).click()
         row_count = len(b.find_elements_by_xpath('//table[@id="widget"]/tbody/tr/td[%d]' % column))
-        self.assertEquals(row_count, 24)
+        self.assertEqual(row_count, 24)
         cell_values = []
         for row in range(1, row_count + 1):
             raw_value = b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[%d]' % (row, column)).text
@@ -370,7 +371,7 @@ class TestRecipeView(WebDriverTestCase):
         b.find_element_by_link_text(self.system.user.user_name)
         # Make sure the System count is correct
         system_rows = b.find_elements_by_xpath('//table[@id="widget"]/tbody/tr')
-        self.assert_(len(system_rows) == 1)
+        self.assertTrue(len(system_rows) == 1)
 
     def test_possible_systems_including_loans(self):
         with session.begin():
@@ -390,7 +391,7 @@ class TestRecipeView(WebDriverTestCase):
         b.find_element_by_xpath("//td[contains(text(), '%s')]" % self.system.loaned.user_name)
         # Make sure the System count is correct
         system_rows = b.find_elements_by_xpath('//table[@id="widget"]/tbody/tr')
-        self.assert_(len(system_rows) == 1)
+        self.assertTrue(len(system_rows) == 1)
 
     def test_clone_recipe(self):
         b = self.browser
@@ -405,7 +406,7 @@ class TestRecipeView(WebDriverTestCase):
         go_to_recipe_view(b, self.recipe, tab='Installation')
         tab = b.find_element_by_id('installation')
         log_link = tab.find_element_by_xpath('//span[@class="main-log"]/a')
-        self.assertEquals(log_link.get_attribute('href'),
+        self.assertEqual(log_link.get_attribute('href'),
             get_server_base() + 'recipes/%s/logs/recipe_path/dummy.txt' %
                     self.recipe.id)
 
@@ -420,13 +421,13 @@ class TestRecipeView(WebDriverTestCase):
                     datetime.timedelta(seconds=83 * 60 + 30))
         go_to_recipe_view(b, recipe)
         duration = b.find_element_by_class_name('recipe-watchdog-time-remaining')
-        self.assertRegexpMatches(duration.text, r'^Remaining watchdog time: 01:\d\d:\d\d')
+        assertRegex(self, duration.text, r'^Remaining watchdog time: 01:\d\d:\d\d')
         with session.begin():
             recipe.watchdog.kill_time = (datetime.datetime.utcnow() +
                     datetime.timedelta(days=2, seconds=83 * 60 + 30))
         go_to_recipe_view(b, recipe)
         duration = b.find_element_by_class_name('recipe-watchdog-time-remaining')
-        self.assertRegexpMatches(duration.text, r'^Remaining watchdog time: 49:\d\d:\d\d')
+        assertRegex(self, duration.text, r'^Remaining watchdog time: 49:\d\d:\d\d')
 
     def test_task_versions_are_shown(self):
         with session.begin():
@@ -508,7 +509,7 @@ class TestRecipeView(WebDriverTestCase):
         go_to_recipe_view(b, recipe)
         b.find_element_by_css_selector('#reservation.active')
         _, fragment = urlparse.urldefrag(b.current_url)
-        self.assertEquals(fragment, 'reservation')
+        self.assertEqual(fragment, 'reservation')
 
     def test_shows_installation_tab_while_installing(self):
         with session.begin():
@@ -519,7 +520,7 @@ class TestRecipeView(WebDriverTestCase):
         go_to_recipe_view(b, recipe)
         b.find_element_by_css_selector('#installation.active')
         _, fragment = urlparse.urldefrag(b.current_url)
-        self.assertEquals(fragment, 'installation')
+        self.assertEqual(fragment, 'installation')
 
     def test_first_failed_task_should_expand_when_first_loading(self):
         with session.begin():
@@ -536,7 +537,7 @@ class TestRecipeView(WebDriverTestCase):
         b.find_element_by_css_selector('#task%s .recipe-task-details.collapse.in'
                 % recipe.tasks[0].id)
         _, fragment = urlparse.urldefrag(b.current_url)
-        self.assertEquals(fragment, 'task%s' % recipe.tasks[0].id)
+        self.assertEqual(fragment, 'task%s' % recipe.tasks[0].id)
 
     def test_task_without_failed_results_should_not_expand(self):
         with session.begin():
@@ -553,7 +554,7 @@ class TestRecipeView(WebDriverTestCase):
             b.find_element_by_xpath('//div[@id="recipe-task-details-%s" and '
                     'not(contains(@class, "in"))]' % task.id)
         _, fragment = urlparse.urldefrag(b.current_url)
-        self.assertEquals(fragment, 'tasks')
+        self.assertEqual(fragment, 'tasks')
 
     def test_tasks_are_expanded_according_to_anchor(self):
         with session.begin():
@@ -584,7 +585,7 @@ class TestRecipeView(WebDriverTestCase):
         b.get(get_server_base() + 'recipes/%s#no-such-anchor-exists' % recipe.id)
         b.find_element_by_css_selector('#installation.active')
         _, fragment = urlparse.urldefrag(b.current_url)
-        self.assertEquals(fragment, 'installation')
+        self.assertEqual(fragment, 'installation')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=706435
     def test_task_start_time_is_localised(self):
@@ -600,7 +601,7 @@ class TestRecipeView(WebDriverTestCase):
         self.check_datetime_localised(start_time.get_attribute('title'))
 
     def check_datetime_localised(self, dt):
-        self.assert_(re.match(r'\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d [-+]\d\d:\d\d$', dt),
+        self.assertTrue(re.match(r'\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d [-+]\d\d:\d\d$', dt),
                 '%r does not look like a localised datetime' % dt)
 
     def test_opening_recipe_page_marks_it_as_reviewed(self):
@@ -786,8 +787,8 @@ class TestRecipeViewInstallationTab(WebDriverTestCase):
                     lab_controller=data_setup.create_labcontroller())
             recipe.provision()
             configure_netboot_cmd = recipe.installation.commands[1]
-            self.assertEquals(configure_netboot_cmd.action, u'configure_netboot')
-            self.assertEquals(configure_netboot_cmd.status, CommandStatus.queued)
+            self.assertEqual(configure_netboot_cmd.action, u'configure_netboot')
+            self.assertEqual(configure_netboot_cmd.status, CommandStatus.queued)
         b = self.browser
         go_to_recipe_view(b, recipe, tab='Installation')
         tab = b.find_element_by_id('installation')
@@ -806,7 +807,7 @@ class TestRecipeViewInstallationTab(WebDriverTestCase):
             data_setup.mark_recipe_installing(recipe,
                     start_time=datetime.datetime(2016, 9, 7, 15, 5, 59))
             configure_netboot_cmd = recipe.installation.commands[1]
-            self.assertEquals(configure_netboot_cmd.action, u'configure_netboot')
+            self.assertEqual(configure_netboot_cmd.action, u'configure_netboot')
             configure_netboot_cmd.finish_time = datetime.datetime(2016, 9, 7, 15, 5, 0)
         b = self.browser
         go_to_recipe_view(b, recipe, tab='Installation')
@@ -994,7 +995,7 @@ class TestRecipeViewReservationTab(WebDriverTestCase):
 
         # check watchdog timer has been updated
         new_duration = b.find_element_by_class_name('recipe-watchdog-time-remaining').text
-        self.assertRegexpMatches(new_duration, r'00:09:\d\d')
+        assertRegex(self, new_duration, r'00:09:\d\d')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1358619
     def test_extend_reservation_modal_shows_accurate_time_remaining(self):
@@ -1024,7 +1025,7 @@ class TestRecipeViewReservationTab(WebDriverTestCase):
         tab.find_element_by_xpath('.//button[contains(text(), "Extend the reservation")]')\
                 .click()
         modal = b.find_element_by_class_name('modal')
-        self.assertNotEquals(modal.find_element_by_id('reserve_duration').get_attribute('value'), '600')
+        self.assertNotEqual(modal.find_element_by_id('reserve_duration').get_attribute('value'), '600')
 
     def test_authenticated_user_can_return_reservation(self):
         with session.begin():
@@ -1097,7 +1098,7 @@ class RecipeHTTPTest(DatabaseTestCase):
                 headers={'Accept': 'application/json'})
         response.raise_for_status()
         json = response.json()
-        self.assertEquals(json['t_id'], self.recipe.t_id)
+        self.assertEqual(json['t_id'], self.recipe.t_id)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1361002
     def test_get_virt_recipe(self):
@@ -1110,7 +1111,7 @@ class RecipeHTTPTest(DatabaseTestCase):
                 headers={'Accept': 'application/json'})
         response.raise_for_status()
         json = response.json()
-        self.assertEquals(json['resource']['instance_id'],
+        self.assertEqual(json['resource']['instance_id'],
                 unicode(recipe.resource.instance_id))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1324305
@@ -1124,7 +1125,7 @@ class RecipeHTTPTest(DatabaseTestCase):
                 'recipes/%s' % recipe.id,
                 headers={'Accept': 'application/json'})
         json = response.json()
-        self.assertEquals(json['t_id'], recipe.t_id)
+        self.assertEqual(json['t_id'], recipe.t_id)
         # time_remaining_seconds should be None as the recipe sits in Scheduled
         # with no watchdog kill time.
         self.assertIsNone(json['time_remaining_seconds'])
@@ -1140,8 +1141,8 @@ class RecipeHTTPTest(DatabaseTestCase):
     def test_get_recipe_xml(self):
         response = requests.get(get_server_base() + 'recipes/%s.xml' % self.recipe.id)
         response.raise_for_status()
-        self.assertEquals(response.status_code, 200)
-        self.assertEquals(
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
                 lxml.etree.tostring(self.recipe.to_xml(), pretty_print=True, encoding='utf8'),
                 response.content)
 
@@ -1156,7 +1157,7 @@ class RecipeHTTPTest(DatabaseTestCase):
             data_setup.mark_job_complete(self.job)
         response = requests.get(get_server_base() + 'recipes/%s.junit.xml' % self.recipe.id)
         response.raise_for_status()
-        self.assertEquals(response.status_code, 200)
+        self.assertEqual(response.status_code, 200)
         junitxml = lxml.etree.fromstring(response.content)
         self.assertEqual(junitxml.tag, 'testsuites')
 
@@ -1184,7 +1185,7 @@ class RecipeHTTPTest(DatabaseTestCase):
                 'recipes/%s/logs/doesnotexist.log' % recipe.id,
                 allow_redirects=False)
         self.assertEqual(response.status_code, 404)
-        self.assertRegexpMatches(response.text, 'Recipe log .* not found')
+        assertRegex(self, response.text, 'Recipe log .* not found')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1622805
     def test_redirects_beah_log_to_restraint(self):
@@ -1208,7 +1209,7 @@ class RecipeHTTPTest(DatabaseTestCase):
         response = patch_json(get_server_base() +
                 'recipes/%s' % self.recipe.id,
                 data={'whiteboard': u'testwhiteboard'})
-        self.assertEquals(response.status_code, 401)
+        self.assertEqual(response.status_code, 401)
 
     def test_can_update_recipe_whiteboard(self):
         s = requests.Session()
@@ -1219,16 +1220,16 @@ class RecipeHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.recipe.whiteboard, 'newwhiteboard')
-            self.assertEquals(self.recipe.activity[0].field_name, u'Whiteboard')
-            self.assertEquals(self.recipe.activity[0].action, u'Changed')
-            self.assertEquals(self.recipe.activity[0].new_value, u'newwhiteboard')
+            self.assertEqual(self.recipe.whiteboard, 'newwhiteboard')
+            self.assertEqual(self.recipe.activity[0].field_name, u'Whiteboard')
+            self.assertEqual(self.recipe.activity[0].action, u'Changed')
+            self.assertEqual(self.recipe.activity[0].new_value, u'newwhiteboard')
 
     def test_anonymous_cannot_update_reservation_request(self):
         response = patch_json(get_server_base() +
                 'recipes/%s/reservation-request' % self.recipe_with_reservation_request.id,
                 data={'reserve': True, 'duration': 300})
-        self.assertEquals(response.status_code, 401)
+        self.assertEqual(response.status_code, 401)
 
     def test_cannot_update_reservation_request_on_completed_recipe(self):
         with session.begin():
@@ -1238,7 +1239,7 @@ class RecipeHTTPTest(DatabaseTestCase):
         response = patch_json(get_server_base() +
                 'recipes/%s/reservation-request' % self.recipe_with_reservation_request.id,
                 session=s, data={'reserve': True, 'duration': False})
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
 
     def test_cannot_update_reservation_request_if_duration_too_long(self):
         with session.begin():
@@ -1248,7 +1249,7 @@ class RecipeHTTPTest(DatabaseTestCase):
         response = patch_json(get_server_base() +
                 'recipes/%s/reservation-request' % self.recipe_with_reservation_request.id,
                 session=s, data={'reserve': True, 'duration': 605000})
-        self.assertEquals(response.status_code, 400)
+        self.assertEqual(response.status_code, 400)
 
     def test_can_update_reservation_request_to_reserve_system(self):
         with session.begin():
@@ -1262,21 +1263,21 @@ class RecipeHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.recipe_with_reservation_request.reservation_request.when,
+            self.assertEqual(self.recipe_with_reservation_request.reservation_request.when,
                     RecipeReservationCondition.onfail)
-            self.assertEquals(self.recipe_with_reservation_request.activity[0].field_name,
+            self.assertEqual(self.recipe_with_reservation_request.activity[0].field_name,
                     u'Reservation Condition')
-            self.assertEquals(self.recipe_with_reservation_request.activity[0].action,
+            self.assertEqual(self.recipe_with_reservation_request.activity[0].action,
                     u'Changed')
-            self.assertEquals(self.recipe_with_reservation_request.activity[0].new_value,
+            self.assertEqual(self.recipe_with_reservation_request.activity[0].new_value,
                     u'onfail')
-            self.assertEquals(self.recipe_with_reservation_request.reservation_request.duration,
+            self.assertEqual(self.recipe_with_reservation_request.reservation_request.duration,
                     300)
-            self.assertEquals(self.recipe_with_reservation_request.activity[1].field_name,
+            self.assertEqual(self.recipe_with_reservation_request.activity[1].field_name,
                     u'Reservation Request')
-            self.assertEquals(self.recipe_with_reservation_request.activity[1].action,
+            self.assertEqual(self.recipe_with_reservation_request.activity[1].action,
                     u'Changed')
-            self.assertEquals(self.recipe_with_reservation_request.activity[1].new_value,
+            self.assertEqual(self.recipe_with_reservation_request.activity[1].new_value,
                     u'300')
         # On a recipe without reservation request
         s = requests.Session()
@@ -1288,21 +1289,21 @@ class RecipeHTTPTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             self.assertTrue(self.recipe_without_reservation_request.reservation_request)
-            self.assertEquals(self.recipe_without_reservation_request.reservation_request.when,
+            self.assertEqual(self.recipe_without_reservation_request.reservation_request.when,
                     RecipeReservationCondition.onfail)
-            self.assertEquals(self.recipe_without_reservation_request.activity[0].field_name,
+            self.assertEqual(self.recipe_without_reservation_request.activity[0].field_name,
                     u'Reservation Condition')
-            self.assertEquals(self.recipe_without_reservation_request.activity[0].action,
+            self.assertEqual(self.recipe_without_reservation_request.activity[0].action,
                     u'Changed')
-            self.assertEquals(self.recipe_without_reservation_request.activity[0].new_value,
+            self.assertEqual(self.recipe_without_reservation_request.activity[0].new_value,
                     u'onfail')
-            self.assertEquals(self.recipe_without_reservation_request.reservation_request.duration,
+            self.assertEqual(self.recipe_without_reservation_request.reservation_request.duration,
                     300)
-            self.assertEquals(self.recipe_without_reservation_request.activity[1].field_name,
+            self.assertEqual(self.recipe_without_reservation_request.activity[1].field_name,
                     u'Reservation Request')
-            self.assertEquals(self.recipe_without_reservation_request.activity[1].action,
+            self.assertEqual(self.recipe_without_reservation_request.activity[1].action,
                     u'Changed')
-            self.assertEquals(self.recipe_without_reservation_request.activity[1].new_value,
+            self.assertEqual(self.recipe_without_reservation_request.activity[1].new_value,
                     u'300')
 
     def test_can_update_reservation_request_to_not_reserve_the_system(self):
@@ -1318,11 +1319,11 @@ class RecipeHTTPTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             self.assertFalse(self.recipe_with_reservation_request.reservation_request)
-            self.assertEquals(self.recipe_with_reservation_request.activity[0].field_name,
+            self.assertEqual(self.recipe_with_reservation_request.activity[0].field_name,
                     u'Reservation Request')
-            self.assertEquals(self.recipe_with_reservation_request.activity[0].action,
+            self.assertEqual(self.recipe_with_reservation_request.activity[0].action,
                     u'Changed')
-            self.assertEquals(self.recipe_with_reservation_request.activity[0].new_value,
+            self.assertEqual(self.recipe_with_reservation_request.activity[0].new_value,
                     None)
 
     def test_rejects_unrecognised_reserve_conditions(self):
@@ -1331,8 +1332,8 @@ class RecipeHTTPTest(DatabaseTestCase):
         response = patch_json(get_server_base() +
                 'recipes/%s/reservation-request' % self.recipe_with_reservation_request.id,
                 session=s, data={'reserve': True, 'when': 'slartibartfast'})
-        self.assertEquals(response.status_code, 400)
-        self.assertEquals(response.text,
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text,
                 "Invalid value for RecipeReservationCondition: "
                 "u'slartibartfast' is not one of onabort, onfail, onwarn, always")
 

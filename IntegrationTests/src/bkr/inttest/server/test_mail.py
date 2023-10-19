@@ -249,7 +249,7 @@ class JobCompletionNotificationTest(DatabaseTestCase):
         self.assertEqual(len(captured_mails), 1)
         sender, rcpts, raw_msg = captured_mails[0]
         msg = email.message_from_string(raw_msg)
-        self.assert_('[Beaker Job Completion] [Completed/Pass]' in msg['Subject'])
+        self.assertTrue('[Beaker Job Completion] [Completed/Pass]' in msg['Subject'])
 
     def test_job_owner_is_notified(self):
         mail_capture_thread.start_capturing()
@@ -265,7 +265,7 @@ class JobCompletionNotificationTest(DatabaseTestCase):
         msg = email.message_from_string(raw_msg)
         self.assertEqual([job_owner.email_address], rcpts)
         self.assertEqual(job_owner.email_address, msg['To'])
-        self.assert_('[Beaker Job Completion]' in msg['Subject'])
+        self.assertTrue('[Beaker Job Completion]' in msg['Subject'])
 
     def test_job_cc_list_is_notified(self):
         mail_capture_thread.start_capturing()
@@ -284,7 +284,7 @@ class JobCompletionNotificationTest(DatabaseTestCase):
                 'ray@example.com'], rcpts)
         self.assertEqual(job_owner.email_address, msg['To'])
         self.assertEqual('dan@example.com, ray@example.com', msg['Cc'])
-        self.assert_('[Beaker Job Completion]' in msg['Subject'])
+        self.assertTrue('[Beaker Job Completion]' in msg['Subject'])
 
     def test_contains_job_hyperlink(self):
         mail_capture_thread.start_capturing()
@@ -299,7 +299,7 @@ class JobCompletionNotificationTest(DatabaseTestCase):
         msg = email.message_from_string(raw_msg)
         job_link = u'<%sjobs/%d>' % (get_server_base(), job.id)
         first_line = msg.get_payload(decode=True).splitlines()[0]
-        self.assert_(job_link in first_line,
+        self.assertTrue(job_link in first_line,
                 'Job link %r should appear in first line %r'
                     % (job_link, first_line))
 
@@ -334,7 +334,7 @@ class JobCompletionNotificationTest(DatabaseTestCase):
         msg = email.message_from_string(raw_msg)
         # Subject header might be split across multiple lines
         subject = re.sub(r'\s+', ' ', msg['Subject'])
-        self.assert_(whiteboard in subject, subject)
+        self.assertTrue(whiteboard in subject, subject)
 
     def test_distro_name(self):
         mail_capture_thread.start_capturing()
@@ -369,8 +369,8 @@ class JobCompletionNotificationTest(DatabaseTestCase):
         self.assertEqual(len(captured_mails), 1)
         sender, rcpts, raw_msg = captured_mails[0]
         msg = email.message_from_string(raw_msg)
-        self.assertEquals(msg['Auto-Submitted'], 'auto-generated')
-        self.assertEquals(msg['Precedence'], 'bulk')
+        self.assertEqual(msg['Auto-Submitted'], 'auto-generated')
+        self.assertEqual(msg['Precedence'], 'bulk')
 
 
 class GroupMembershipNotificationTest(DatabaseTestCase):
@@ -401,7 +401,7 @@ class GroupMembershipNotificationTest(DatabaseTestCase):
             bkr.server.mail.group_membership_notify(member, group, owner, 'Unchanged')
             self.fail('Must fail or die')
         except ValueError as e:
-            self.assert_('Unknown action' in str(e))
+            self.assertTrue('Unknown action' in str(e))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1136748
     def test_group_membership_notification_off(self):

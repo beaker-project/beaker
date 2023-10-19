@@ -172,7 +172,7 @@ class TestBeakerd(DatabaseTestCase):
         j1_id = j1.id
         with session.begin():
             j1 = Job.by_id(j1_id)
-            self.assertEquals(j1.status, TaskStatus.scheduled, j1.status)
+            self.assertEqual(j1.status, TaskStatus.scheduled, j1.status)
             host_recipe = j1.recipesets[0].recipes[0]
             self.assertEqual(host_recipe.resource.system.lab_controller.id,
                 host_lab_controller2.id, host_recipe.resource.system.lab_controller)
@@ -216,7 +216,7 @@ class TestBeakerd(DatabaseTestCase):
         j1_id = j1.id
         with session.begin():
             j1 = Job.by_id(j1_id)
-            self.assertEquals(j1.status, TaskStatus.queued, j1.status)
+            self.assertEqual(j1.status, TaskStatus.queued, j1.status)
 
     def test_host_and_guest_no_common_lab_controllers_stay_queued(self):
         # This tests that a host recipe where the guest distro is not availble
@@ -241,7 +241,7 @@ class TestBeakerd(DatabaseTestCase):
         dt_for_guest_id = dt_for_guest.id
         with session.begin():
             j1 = Job.by_id(j1_id)
-            self.assertEquals(j1.status, TaskStatus.queued, j1.status)
+            self.assertEqual(j1.status, TaskStatus.queued, j1.status)
             dt_for_guest = DistroTree.by_id(dt_for_guest_id)
             dt_for_guest.lab_controller_assocs.append(
                 LabControllerDistroTree(lab_controller=host_lab_controller,
@@ -250,7 +250,7 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.update_dirty_jobs()
         with session.begin():
             j1 = Job.by_id(j1_id)
-            self.assertEquals(j1.status, TaskStatus.scheduled, j1.status)
+            self.assertEqual(j1.status, TaskStatus.scheduled, j1.status)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1033032
     def test_multihost_no_common_lab_controller_stays_queued(self):
@@ -354,7 +354,7 @@ class TestBeakerd(DatabaseTestCase):
         with session.begin():
             j1 = Job.by_id(j1.id)
             self.assertTrue(j1.status is TaskStatus.queued, j1.status)
-            self.assertEquals(j1.recipesets[0].recipes[0].systems, [])
+            self.assertEqual(j1.recipesets[0].recipes[0].systems, [])
         beakerd.abort_dead_recipes()
         beakerd.update_dirty_jobs()
         session.expunge_all()
@@ -523,7 +523,7 @@ class TestBeakerd(DatabaseTestCase):
             assert_datetime_within(system.reservations[0].start_time,
                     tolerance=datetime.timedelta(seconds=60),
                     reference=datetime.datetime.utcnow())
-            self.assert_(system.reservations[0].finish_time is None)
+            self.assertTrue(system.reservations[0].finish_time is None)
             assert_durations_not_overlapping(system.reservations)
 
     def test_empty_and_element(self):
@@ -578,9 +578,9 @@ class TestBeakerd(DatabaseTestCase):
             self.assertEqual(job.status, TaskStatus.processed)
             candidate_systems = job.recipesets[0].recipes[0].systems
             self.assertEqual(len(candidate_systems), 2)
-            self.assert_(system1 in candidate_systems)
-            self.assert_(system2 in candidate_systems)
-            self.assert_(system3 not in candidate_systems)
+            self.assertTrue(system1 in candidate_systems)
+            self.assertTrue(system2 in candidate_systems)
+            self.assertTrue(system3 not in candidate_systems)
 
     def check_user_cannot_run_job_on_system(self, user, system):
         """
@@ -816,7 +816,7 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.update_dirty_jobs()
         with session.begin():
             recipeset = RecipeSet.by_id(job.recipesets[0].id)
-            self.assertEquals(recipeset.status, TaskStatus.queued)
+            self.assertEqual(recipeset.status, TaskStatus.queued)
         # now re-enable it
         with session.begin():
             LabController.query.get(self.lab_controller.id).disabled = False
@@ -824,7 +824,7 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.update_dirty_jobs()
         with session.begin():
             recipeset = RecipeSet.by_id(job.recipesets[0].id)
-            self.assertEquals(recipeset.status, TaskStatus.scheduled)
+            self.assertEqual(recipeset.status, TaskStatus.scheduled)
 
     def test_fail_harness_repo(self):
         with session.begin():
@@ -958,9 +958,9 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.update_dirty_jobs()
         with session.begin():
             recipe1 = Recipe.by_id(recipe1_id)
-            self.assertEquals(recipe1.status, TaskStatus.scheduled)
+            self.assertEqual(recipe1.status, TaskStatus.scheduled)
             # 2-processor machine beloning to the job owner should be preferred
-            self.assertEquals(recipe1.resource.system.fqdn, system_two_proc_owner.fqdn)
+            self.assertEqual(recipe1.resource.system.fqdn, system_two_proc_owner.fqdn)
 
         # Test that non group, non owner single processor sorting works
         # and that only bare metal machines are considered in the single
@@ -976,8 +976,8 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.update_dirty_jobs()
         with session.begin():
             recipe2 = Recipe.by_id(recipe2_id)
-            self.assertEquals(recipe2.status, TaskStatus.scheduled)
-            self.assertEquals(recipe2.resource.system.fqdn, system_one_proc_kvm.fqdn)
+            self.assertEqual(recipe2.status, TaskStatus.scheduled)
+            self.assertEqual(recipe2.resource.system.fqdn, system_one_proc_kvm.fqdn)
 
         # Test that group owner priority higher than dual processor
         with session.begin():
@@ -993,8 +993,8 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.update_dirty_jobs()
         with session.begin():
             recipe3 = Recipe.by_id(recipe3_id)
-            self.assertEquals(recipe3.status, TaskStatus.scheduled)
-            self.assertEquals(recipe3.resource.system.fqdn, system_one_proc_owner.fqdn)
+            self.assertEqual(recipe3.status, TaskStatus.scheduled)
+            self.assertEqual(recipe3.resource.system.fqdn, system_one_proc_owner.fqdn)
 
     def test_successful_recipe_start(self):
         with session.begin():
@@ -1011,7 +1011,7 @@ class TestBeakerd(DatabaseTestCase):
 
         # Sanity check the test setup
         rpm_name = self.rpm_name
-        self.assert_(os.path.exists(Task.get_rpm_path(rpm_name)))
+        self.assertTrue(os.path.exists(Task.get_rpm_path(rpm_name)))
 
         # Start the recipe processing
         beakerd.process_new_recipes()
@@ -1022,9 +1022,9 @@ class TestBeakerd(DatabaseTestCase):
         # Scheduled recipe sets should have a recipe specific task repo
         recipe_repo = os.path.join(recipe.repopath, str(recipe.id))
         recipe_metadata = os.path.join(recipe_repo, 'repodata')
-        self.assert_(os.path.exists(recipe_metadata))
+        self.assertTrue(os.path.exists(recipe_metadata))
         recipe_task_rpm = os.path.join(recipe_repo, rpm_name)
-        self.assert_(os.path.exists(recipe_task_rpm))
+        self.assertTrue(os.path.exists(recipe_task_rpm))
 
         # And then continue on to provision the system
         beakerd.provision_scheduled_recipesets()
@@ -1061,7 +1061,7 @@ class TestBeakerd(DatabaseTestCase):
 
         with session.begin():
             job = Job.query.get(job.id)
-            self.assertEquals(job.recipesets[0].recipes[0].tasks[0].version,
+            self.assertEqual(job.recipesets[0].recipes[0].tasks[0].version,
                     task.version)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=880852
@@ -1465,7 +1465,7 @@ class TestBeakerd(DatabaseTestCase):
                              TaskStatus.aborted)
             result = RecipeTaskResult.query.filter(
                 RecipeTaskResult.recipe_task_id == recipetask_id).one()
-            self.assertEquals(result.log,
+            self.assertEqual(result.log,
                               'Recipe ID %s does not match any systems' %
                               job.recipesets[0].recipes[0].id)
 
@@ -1624,8 +1624,8 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job.id)
-            self.assertEquals(job.recipesets[0].recipes[0].status, TaskStatus.queued)
-            self.assertEquals(job.recipesets[0].recipes[1].status, TaskStatus.queued)
+            self.assertEqual(job.recipesets[0].recipes[0].status, TaskStatus.queued)
+            self.assertEqual(job.recipesets[0].recipes[1].status, TaskStatus.queued)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1120052
     def test_bz1120052(self):
@@ -1661,11 +1661,11 @@ class TestBeakerd(DatabaseTestCase):
         beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job.id)
-            self.assertEquals(job.recipesets[0].status, TaskStatus.aborted)
+            self.assertEqual(job.recipesets[0].status, TaskStatus.aborted)
             expected_msg = ('Recipe ID %s does not match any systems'
                     % job.recipesets[0].recipes[2].id)
             for recipe in job.all_recipes:
-                self.assertEquals(recipe.tasks[0].results[-1].log, expected_msg)
+                self.assertEqual(recipe.tasks[0].results[-1].log, expected_msg)
 
     def test_priority_is_bumped_when_recipe_matches_one_system(self):
         with session.begin():
@@ -1683,14 +1683,14 @@ class TestBeakerd(DatabaseTestCase):
             self.assertEqual(job.status, TaskStatus.processed)
             self.assertEqual(job.recipesets[0].priority, TaskPriority.medium)
             # https://bugzilla.redhat.com/show_bug.cgi?id=1369599
-            self.assertEquals(len(job.recipesets[0].activity), 1)
+            self.assertEqual(len(job.recipesets[0].activity), 1)
             activity_entry = job.recipesets[0].activity[0]
-            self.assertEquals(activity_entry.user, None)
-            self.assertEquals(activity_entry.service, u'Scheduler')
-            self.assertEquals(activity_entry.action, u'Changed')
-            self.assertEquals(activity_entry.field_name, u'Priority')
-            self.assertEquals(activity_entry.old_value, u'Low')
-            self.assertEquals(activity_entry.new_value, u'Medium')
+            self.assertEqual(activity_entry.user, None)
+            self.assertEqual(activity_entry.service, u'Scheduler')
+            self.assertEqual(activity_entry.action, u'Changed')
+            self.assertEqual(activity_entry.field_name, u'Priority')
+            self.assertEqual(activity_entry.old_value, u'Low')
+            self.assertEqual(activity_entry.new_value, u'Medium')
 
     def test_installation_table_parameters_filled_out_at_provisioning_time(self):
         with session.begin():
@@ -1985,7 +1985,7 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
                                  "Failed to get recipe ID %s" % self.recipe.id)
             self.assertIsNotNone(recipe.resource,
                                  "Recipe ID %s does not have a resource" % self.recipe.id)
-            self.assertEquals(recipe.status, TaskStatus.installing)
+            self.assertEqual(recipe.status, TaskStatus.installing)
             self.assertIsNotNone(
                 recipe.resource.instance_created,
                 "Recipe ID %s resource does not have instance_created" % self.recipe.id)
@@ -2002,7 +2002,7 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
         self._run_beakerd_once()
         with session.begin():
             recipe = Recipe.query.get(self.recipe.id)
-            self.assertEquals(recipe.status, TaskStatus.installing)
+            self.assertEqual(recipe.status, TaskStatus.installing)
             self.assertIsNotNone(recipe.installation.rebooted)
             self.assertIsNotNone(recipe.watchdog.kill_time)
             assert_datetime_within(
@@ -2030,8 +2030,8 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
             # id guarantees consistency of our results
             cheapest_flavor = min(available_flavors, key=lambda flavor: (flavor.ram, flavor.disk, flavor.id))
             instance_flavor = self.virt_manager.novaclient.flavors.get(instance.flavor['id'])
-            self.assertEquals(instance_flavor.ram, cheapest_flavor.ram)
-            self.assertEquals(instance_flavor.id, cheapest_flavor.id)
+            self.assertEqual(instance_flavor.ram, cheapest_flavor.ram)
+            self.assertEqual(instance_flavor.id, cheapest_flavor.id)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1396851
     def test_floating_ip_is_assigned(self):
@@ -2048,8 +2048,8 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
             port = self.virt_manager._get_instance_port(resource_instance_id)
             fips = self.virt_manager.neutronclient.list_floatingips(port_id=port['id'])
             # the port of the instance should be associated with a floating ip
-            self.assertEquals(len(fips['floatingips']), 1)
-            self.assertEquals(fips['floatingips'][0]['floating_ip_address'],
+            self.assertEqual(len(fips['floatingips']), 1)
+            self.assertEqual(fips['floatingips'][0]['floating_ip_address'],
                               str(recipe.resource.floating_ip))
 
     def test_cleanup_openstack(self):
@@ -2080,27 +2080,27 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
             except Exception as e:
                 # neutronclient on RHEL7+ raise NetworkNotFoundClient for missing nets
                 if hasattr(e, 'status_code'):
-                    self.assertEquals(e.status_code, 404)
+                    self.assertEqual(e.status_code, 404)
                 else:
-                    self.assertEquals(e.response.status_code, 404)
+                    self.assertEqual(e.response.status_code, 404)
             # the subnet should be deleted
             try:
                 self.virt_manager.neutronclient.show_subnet(recipe.resource.subnet_id)
                 self.fail('should raise')
             except Exception as e:
                 if hasattr(e, 'status_code'):
-                    self.assertEquals(e.status_code, 404)
+                    self.assertEqual(e.status_code, 404)
                 else:
-                    self.assertEquals(e.response.status_code, 404)
+                    self.assertEqual(e.response.status_code, 404)
             # the router should be deleted
             try:
                 self.virt_manager.neutronclient.show_router(recipe.resource.router_id)
                 self.fail('should raise')
             except Exception as e:
                 if hasattr(e, 'status_code'):
-                    self.assertEquals(e.status_code, 404)
+                    self.assertEqual(e.status_code, 404)
                 else:
-                    self.assertEquals(e.response.status_code, 404)
+                    self.assertEqual(e.response.status_code, 404)
             # the floating IP address should be deleted
             self.assertFalse(self.virt_manager.neutronclient.list_floatingips(
                 floating_ip_address=recipe.resource.floating_ip)['floatingips'])

@@ -140,7 +140,7 @@ class SystemAction(WebDriverTestCase):
                 '/h4[text()="Report sent"]')
         # Check the email was sent
         captured_mails = mail_capture_thread.stop_capturing()
-        self.assertEquals(len(captured_mails), 1)
+        self.assertEqual(len(captured_mails), 1)
         sender, rcpts, raw_msg = captured_mails[0]
         payload = 'A Beaker user has reported a problem with system \n' \
             '%s <%sview/%s>.\n\n' \
@@ -167,7 +167,7 @@ class SystemAction(WebDriverTestCase):
                 '/h4[text()="Request sent"]')
         # Check the email was sent
         captured_mails = mail_capture_thread.stop_capturing()
-        self.assertEquals(len(captured_mails), 1)
+        self.assertEqual(len(captured_mails), 1)
         sender, rcpts, raw_msg = captured_mails[0]
         payload = 'A Beaker user has requested you loan them the system\n' \
             '%s <%sview/%s>.\n' \

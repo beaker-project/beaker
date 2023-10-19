@@ -129,11 +129,11 @@ class SystemProvisionWebUITest(WebDriverTestCase):
         b.find_element_by_xpath('//div[contains(@class, "alert-success")]'
                                 '/h4[text()="Provisioning successful"]')
         with session.begin():
-            self.assertEquals(system.installations[0].distro_tree, self.distro_tree)
-            self.assertEquals(system.command_queue[0].action, 'on')
-            self.assertEquals(system.command_queue[1].action, 'off')
-            self.assertEquals(system.command_queue[2].action, 'configure_netboot')
-            self.assertEquals(system.command_queue[3].action, 'clear_logs')
+            self.assertEqual(system.installations[0].distro_tree, self.distro_tree)
+            self.assertEqual(system.command_queue[0].action, 'on')
+            self.assertEqual(system.command_queue[1].action, 'off')
+            self.assertEqual(system.command_queue[2].action, 'configure_netboot')
+            self.assertEqual(system.command_queue[3].action, 'clear_logs')
 
     def test_provision_with_ssh_key(self):
         with session.begin():
@@ -195,7 +195,7 @@ class SystemProvisionWebUITest(WebDriverTestCase):
             './/div[contains(@class, "modal")]//button[text()="OK"]').click()
         b.find_element_by_xpath('//div[contains(@class, "alert-success")]'
                                 '/h4[text()="Provisioning successful"]')
-        self.assert_(u'key1=value1 key1=value2 key2=value key3' in \
+        self.assertTrue(u'key1=value1 key1=value2 key2=value key3' in \
                      system.installations[0].kernel_options)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1144195
@@ -257,6 +257,6 @@ class SystemProvisionHTTPTest(unittest.TestCase):
         response = post_json(get_server_base() +
                              'systems/%s/installations/' % self.system.fqdn,
                              session=s, data={'distro_tree': {'id': -1}})
-        self.assertEquals(response.status_code, 403)
-        self.assertEquals(response.text,
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.text,
                           'Insufficient permissions: Cannot provision system')

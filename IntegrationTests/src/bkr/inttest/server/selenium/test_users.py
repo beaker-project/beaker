@@ -548,7 +548,7 @@ class UserHTTPTest(DatabaseTestCase):
             self.assertIsNotNone(user.removed)
             # running jobs should be cancelled
             job.update_status()
-            self.assertEquals(job.status, TaskStatus.cancelled)
+            self.assertEqual(job.status, TaskStatus.cancelled)
             self.assertIn('User %s removed' % user.user_name,
                           job.recipesets[0].recipes[0].tasks[0].results[0].log)
             # reservations should be released
@@ -598,11 +598,11 @@ class UserHTTPTest(DatabaseTestCase):
         response = s.get(get_server_base() + 'users/%s' % user.user_name,
                          headers={'Accept': 'application/json'})
         response.raise_for_status()
-        self.assertEquals(response.json()['job_count'], 1)
-        self.assertEquals(response.json()['reservation_count'], 1)
-        self.assertEquals(response.json()['loan_count'], 1)
-        self.assertEquals(response.json()['owned_system_count'], 1)
-        self.assertEquals(response.json()['owned_pool_count'], 1)
+        self.assertEqual(response.json()['job_count'], 1)
+        self.assertEqual(response.json()['reservation_count'], 1)
+        self.assertEqual(response.json()['loan_count'], 1)
+        self.assertEqual(response.json()['owned_system_count'], 1)
+        self.assertEqual(response.json()['owned_pool_count'], 1)
         response = patch_json(get_server_base() + 'users/%s' % user.user_name,
                               data={'removed': 'now'}, session=s)
         response.raise_for_status()
@@ -612,11 +612,11 @@ class UserHTTPTest(DatabaseTestCase):
         # Note that job_count stays as 1, because the job has been cancelled
         # but it will still be running until the next iteration of beakerd's
         # update_dirty_jobs.
-        self.assertEquals(response.json()['job_count'], 1)
-        self.assertEquals(response.json()['reservation_count'], 0)
-        self.assertEquals(response.json()['loan_count'], 0)
-        self.assertEquals(response.json()['owned_system_count'], 0)
-        self.assertEquals(response.json()['owned_pool_count'], 0)
+        self.assertEqual(response.json()['job_count'], 1)
+        self.assertEqual(response.json()['reservation_count'], 0)
+        self.assertEqual(response.json()['loan_count'], 0)
+        self.assertEqual(response.json()['owned_system_count'], 0)
+        self.assertEqual(response.json()['owned_pool_count'], 0)
 
     def test_unremove_account(self):
         with session.begin():

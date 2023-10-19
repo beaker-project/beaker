@@ -146,7 +146,7 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
         pane = b.find_element_by_id('access-policy')
         # type the group name before it exists
         with session.begin():
-            self.assertEquals(Group.query.filter_by(group_name=u'beatles').first(), None)
+            self.assertEqual(Group.query.filter_by(group_name=u'beatles').first(), None)
         group_input = pane.find_element_by_xpath('.//input[@placeholder="Group name"]')
         group_input.send_keys('beatles')
         # group is created
@@ -259,7 +259,7 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
         selected_options = Select(b.find_element_by_name('pool_name')).\
                            all_selected_options
         self.assertTrue(len(selected_options), 1)
-        self.assertEquals(selected_options[0].text, pool2.name)
+        self.assertEqual(selected_options[0].text, pool2.name)
         self.assertFalse(b.find_element_by_xpath(
                                          '//label[contains(string(.), "Use custom access policy")]'
                                          '/input[@type="radio"]').is_selected())
@@ -276,7 +276,7 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
                                          '/input[@type="radio"]').is_enabled())
         selected_options = Select(b.find_element_by_name('pool_name')). \
                            all_selected_options
-        self.assertEquals(selected_options[0].text, pool2.name)
+        self.assertEqual(selected_options[0].text, pool2.name)
         self.assertFalse(b.find_element_by_xpath(
             '//label[contains(string(.), "Use custom access policy")]'
             '/input[@type="radio"]').is_enabled())
@@ -336,8 +336,8 @@ class SystemAccessPolicyHTTPTest(DatabaseTestCase):
                 'systems/%s/access-policy' % self.system.fqdn)
         response.raise_for_status()
         json = response.json()
-        self.assertEquals(json['id'], self.policy.id)
-        self.assertEquals([p['value'] for p in json['possible_permissions']],
+        self.assertEqual(json['id'], self.policy.id)
+        self.assertEqual([p['value'] for p in json['possible_permissions']],
                 ['view', 'view_power', 'edit_policy', 'edit_system',
                  'loan_any', 'loan_self', 'control_system', 'reserve'])
         self.assertItemsEqual(json['rules'], [
@@ -352,20 +352,20 @@ class SystemAccessPolicyHTTPTest(DatabaseTestCase):
 
     def test_get_access_policy_for_nonexistent_system(self):
         response = requests.get(get_server_base() + 'systems/notexist/access-policy')
-        self.assertEquals(response.status_code, 404)
+        self.assertEqual(response.status_code, 404)
 
     def test_mine_filter_needs_authentication(self):
         response = requests.get(get_server_base() +
                 'systems/%s/access-policy?mine=1' % self.system.fqdn)
-        self.assertEquals(response.status_code, 401)
-        self.assertEquals(response.text,
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.text,
                 "The 'mine' access policy filter requires authentication")
 
     def test_anonymous_cannot_save_policy(self):
         response = put_json(get_server_base() +
                 'systems/%s/access-policy' % self.system.fqdn,
                 data={'rules': []})
-        self.assertEquals(response.status_code, 401)
+        self.assertEqual(response.status_code, 401)
 
     def test_unprivileged_user_cannot_save_policy(self):
         with session.begin():
@@ -376,7 +376,7 @@ class SystemAccessPolicyHTTPTest(DatabaseTestCase):
         response = put_json(get_server_base() +
                 'systems/%s/access-policy' % self.system.fqdn,
                 session=s, data={'rules': []})
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
 
     def test_save_policy(self):
         with session.begin():
@@ -402,30 +402,30 @@ class SystemAccessPolicyHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(len(self.policy.rules), 4)
-            self.assertEquals(self.policy.rules[0].permission,
+            self.assertEqual(len(self.policy.rules), 4)
+            self.assertEqual(self.policy.rules[0].permission,
                     SystemPermission.view)
-            self.assertEquals(self.policy.rules[0].everybody, True)
-            self.assertEquals(self.policy.rules[1].permission,
+            self.assertEqual(self.policy.rules[0].everybody, True)
+            self.assertEqual(self.policy.rules[1].permission,
                     SystemPermission.edit_system)
-            self.assertEquals(self.policy.rules[1].group, self.privileged_group)
-            self.assertEquals(self.policy.rules[2].permission,
+            self.assertEqual(self.policy.rules[1].group, self.privileged_group)
+            self.assertEqual(self.policy.rules[2].permission,
                     SystemPermission.control_system)
-            self.assertEquals(self.policy.rules[2].group, other_group)
-            self.assertEquals(self.policy.rules[3].permission,
+            self.assertEqual(self.policy.rules[2].group, other_group)
+            self.assertEqual(self.policy.rules[3].permission,
                     SystemPermission.reserve)
-            self.assertEquals(self.policy.rules[3].user, other_user)
-            self.assertEquals(self.system.activity[0].action, u'Added')
-            self.assertEquals(self.system.activity[0].field_name, u'Access Policy Rule')
-            self.assertEquals(self.system.activity[0].new_value,
+            self.assertEqual(self.policy.rules[3].user, other_user)
+            self.assertEqual(self.system.activity[0].action, u'Added')
+            self.assertEqual(self.system.activity[0].field_name, u'Access Policy Rule')
+            self.assertEqual(self.system.activity[0].new_value,
                     u'User:%s:reserve' % other_user.user_name)
-            self.assertEquals(self.system.activity[1].action, u'Added')
-            self.assertEquals(self.system.activity[1].field_name, u'Access Policy Rule')
-            self.assertEquals(self.system.activity[1].new_value,
+            self.assertEqual(self.system.activity[1].action, u'Added')
+            self.assertEqual(self.system.activity[1].field_name, u'Access Policy Rule')
+            self.assertEqual(self.system.activity[1].new_value,
                     u'Group:%s:control_system' % other_group.group_name)
-            self.assertEquals(self.system.activity[2].action, u'Removed')
-            self.assertEquals(self.system.activity[2].field_name, u'Access Policy Rule')
-            self.assertEquals(self.system.activity[2].old_value, u'Everybody::reserve')
+            self.assertEqual(self.system.activity[2].action, u'Removed')
+            self.assertEqual(self.system.activity[2].field_name, u'Access Policy Rule')
+            self.assertEqual(self.system.activity[2].old_value, u'Everybody::reserve')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1497881
     def test_cannot_add_deleted_user_to_access_policy(self):
@@ -455,8 +455,8 @@ class SystemAccessPolicyHTTPTest(DatabaseTestCase):
                 'systems/%s/active-access-policy/' % self.system.fqdn)
         response.raise_for_status()
         json = response.json()
-        self.assertEquals(json['id'], self.policy.id)
-        self.assertEquals([p['value'] for p in json['possible_permissions']],
+        self.assertEqual(json['id'], self.policy.id)
+        self.assertEqual([p['value'] for p in json['possible_permissions']],
                 ['view', 'view_power', 'edit_policy', 'edit_system',
                  'loan_any', 'loan_self', 'control_system', 'reserve'])
         self.assertItemsEqual(json['rules'], [

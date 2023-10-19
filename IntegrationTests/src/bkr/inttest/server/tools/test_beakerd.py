@@ -12,4 +12,4 @@ class BeakerdTest(DatabaseTestCase):
 
     def test_version(self):
         out = run_command('beakerd.py', 'beakerd', ['--version'])
-        self.assertEquals(out.strip(), __version__)
+        self.assertEqual(out.strip(), __version__)

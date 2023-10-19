@@ -17,7 +17,7 @@ class WorkflowTest(unittest.TestCase):
         recipe = BeakerRecipe()
         recipe.addPartition(name='/mnt/block1', type='part', fs='ext3', size=1024)
         xml = recipe.toxml()
-        self.assertEquals(xml, '<recipe whiteboard="">'
+        self.assertEqual(xml, '<recipe whiteboard="">'
                                '<distroRequires>'
                                '<and/>'
                                '</distroRequires>'
@@ -34,7 +34,7 @@ class WorkflowTest(unittest.TestCase):
                                               requestedTasks=[{'name': '/example', 'arches': []}],
                                               family='RedHatEnterpriseLinux6')
         xml = recipe.toxml()
-        self.assertEquals(xml, '<recipe whiteboard="">'
+        self.assertEqual(xml, '<recipe whiteboard="">'
                                '<distroRequires>'
                                '<and/>'
                                '</distroRequires>'
@@ -59,7 +59,7 @@ class WorkflowTest(unittest.TestCase):
                                               distroRequires='<distroRequires><distro_name op="=" value="RHEL99-U1" /></distroRequires>',
                                               family='RedHatEnterpriseLinux99')
         xml = recipe.toxml(prettyxml=True)
-        self.assertEquals(len(re.findall('<distro_name', xml)), 1, xml)
+        self.assertEqual(len(re.findall('<distro_name', xml)), 1, xml)
 
         # with passed-in hostRequires XML
         recipe = self.command.processTemplate(recipeTemplate,
@@ -67,7 +67,7 @@ class WorkflowTest(unittest.TestCase):
                                               hostRequires='<hostRequires><hostname op="=" value="lolcat.example.invalid" /></hostRequires>',
                                               family='RedHatEnterpriseLinux99')
         xml = recipe.toxml(prettyxml=True)
-        self.assertEquals(len(re.findall('<hostname', xml)), 1, xml)
+        self.assertEqual(len(re.findall('<hostname', xml)), 1, xml)
 
         # with distroRequires and hostRequires in the template
         recipeTemplate.addBaseRequires(distro='RHEL99-U1', machine='lolcat.example.invalid')
@@ -75,8 +75,8 @@ class WorkflowTest(unittest.TestCase):
                                               requestedTasks=[{'name': '/example', 'arches': []}],
                                               family='RedHatEnterpriseLinux99')
         xml = recipe.toxml(prettyxml=True)
-        self.assertEquals(len(re.findall('<distro_name', xml)), 1, xml)
-        self.assertEquals(len(re.findall('<hostname', xml)), 1, xml)
+        self.assertEqual(len(re.findall('<distro_name', xml)), 1, xml)
+        self.assertEqual(len(re.findall('<hostname', xml)), 1, xml)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1200427
     def test_distro_wildcard(self):

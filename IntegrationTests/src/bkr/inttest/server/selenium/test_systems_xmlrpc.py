@@ -12,6 +12,7 @@ import time
 import datetime
 import xmlrpclib
 import crypt
+from six import assertRaisesRegex
 from turbogears.database import session
 
 from bkr.inttest.server.selenium import XmlRpcTestCase
@@ -32,7 +33,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
             server.systems.reserve(system.fqdn)
             self.fail('should raise')
         except Exception, e:
-            self.assert_('Anonymous access denied' in e.faultString, e.faultString)
+            self.assertTrue('Anonymous access denied' in e.faultString, e.faultString)
 
     def test_cannot_reserve_automated_system(self):
         with session.begin():
@@ -65,7 +66,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
             system = data_setup.create_system(
                     owner=User.by_user_name(data_setup.ADMIN_USER),
                     status=SystemStatus.manual, shared=True)
-            self.assert_(system.user is None)
+            self.assertTrue(system.user is None)
         server = self.get_server()
         server.auth.login_password(user.user_name, 'password')
         server.systems.reserve(system.fqdn)
@@ -74,7 +75,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
             self.assertEqual(system.user, user)
             self.assertEqual(system.reservations[0].type, u'manual')
             self.assertEqual(system.reservations[0].user, user)
-            self.assert_(system.reservations[0].finish_time is None)
+            self.assertTrue(system.reservations[0].finish_time is None)
             assert_durations_not_overlapping(system.reservations)
             reserved_activity = system.activity[-1]
             self.assertEqual(reserved_activity.action, 'Reserved')
@@ -89,7 +90,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
             system = data_setup.create_system(
                     owner=User.by_user_name(data_setup.ADMIN_USER),
                     status=SystemStatus.manual, shared=True)
-            self.assert_(system.user is None)
+            self.assertTrue(system.user is None)
         server = self.get_server()
         server.auth.login_password(user.user_name, 'password')
         server.systems.reserve(system.fqdn)
@@ -97,7 +98,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
             server.systems.reserve(system.fqdn)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('has already reserved system' in e.faultString)
+            self.assertTrue('has already reserved system' in e.faultString)
 
     def test_reserve_via_external_service(self):
         with session.begin():
@@ -108,7 +109,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
             system = data_setup.create_system(
                     owner=User.by_user_name(data_setup.ADMIN_USER),
                     status=SystemStatus.manual, shared=True)
-            self.assert_(system.user is None)
+            self.assertTrue(system.user is None)
         server = self.get_server()
         server.auth.login_password(service_user.user_name, 'password',
                 user.user_name)
@@ -118,7 +119,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
             self.assertEqual(system.user, user)
             self.assertEqual(system.reservations[0].type, u'manual')
             self.assertEqual(system.reservations[0].user, user)
-            self.assert_(system.reservations[0].finish_time is None)
+            self.assertTrue(system.reservations[0].finish_time is None)
             assert_durations_not_overlapping(system.reservations)
             reserved_activity = system.activity[0]
             self.assertEqual(reserved_activity.action, 'Reserved')
@@ -138,7 +139,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
             server.systems.release(system.fqdn)
             self.fail('should raise')
         except Exception, e:
-            self.assert_('Anonymous access denied' in e.faultString, e.faultString)
+            self.assertTrue('Anonymous access denied' in e.faultString, e.faultString)
 
     def test_cannot_release_when_not_current_user(self):
         with session.begin():
@@ -169,8 +170,8 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
         with session.begin():
             session.refresh(system)
             session.refresh(system.reservations[0])
-            self.assert_(system.user is None)
-            self.assertEquals(system.reservations[0].user, user)
+            self.assertTrue(system.user is None)
+            self.assertEqual(system.reservations[0].user, user)
             assert_datetime_within(system.reservations[0].finish_time,
                     tolerance=datetime.timedelta(seconds=10),
                     reference=datetime.datetime.utcnow())
@@ -197,7 +198,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
             server.systems.release(system.fqdn)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('System %s is not currently reserved' % system.fqdn in e.faultString)
+            self.assertTrue('System %s is not currently reserved' % system.fqdn in e.faultString)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=820779
     def test_release_action_leaveon(self):
@@ -212,8 +213,8 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
         server.systems.release(system.fqdn)
         with session.begin():
             session.expire(system)
-            self.assertEquals(system.command_queue[0].action, 'on')
-            self.assertEquals(system.command_queue[1].action, 'clear_netboot')
+            self.assertEqual(system.command_queue[0].action, 'on')
+            self.assertEqual(system.command_queue[1].action, 'clear_netboot')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=820779
     def test_release_action_reprovision(self):
@@ -230,11 +231,11 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
         server.systems.release(system.fqdn)
         with session.begin():
             session.expire(system)
-            self.assertEquals(system.command_queue[0].action, 'on')
-            self.assertEquals(system.command_queue[1].action, 'off')
-            self.assertEquals(system.command_queue[2].action, 'configure_netboot')
-            self.assertEquals(system.command_queue[3].action, 'clear_logs')
-            self.assertEquals(system.command_queue[4].action, 'clear_netboot')
+            self.assertEqual(system.command_queue[0].action, 'on')
+            self.assertEqual(system.command_queue[1].action, 'off')
+            self.assertEqual(system.command_queue[2].action, 'configure_netboot')
+            self.assertEqual(system.command_queue[3].action, 'clear_logs')
+            self.assertEqual(system.command_queue[4].action, 'clear_netboot')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=837710
     def test_reprovision_failure(self):
@@ -253,8 +254,8 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
         server.systems.release(system.fqdn)
         with session.begin():
             session.expire(system)
-            self.assertEquals(system.command_queue[0].action, 'clear_netboot')
-            self.assert_(system.user is None, system.user)
+            self.assertEqual(system.command_queue[0].action, 'clear_netboot')
+            self.assertTrue(system.user is None, system.user)
 
 
 class SystemPowerXmlRpcTest(XmlRpcTestCase):
@@ -295,7 +296,7 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
         except xmlrpclib.Fault, e:
             self.assertIn('System is in use', e.faultString)
         with session.begin():
-            self.assertEquals(system.command_queue, [])
+            self.assertEqual(system.command_queue, [])
 
     def check_power_action(self, action, command_actions):
         with session.begin():
@@ -371,7 +372,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
             self.server.systems.provision('fqdn', 'distro')
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('Anonymous access denied' in e.faultString, e.faultString)
+            self.assertTrue('Anonymous access denied' in e.faultString, e.faultString)
 
     def test_cannot_provision_automated_system(self):
         with session.begin():
@@ -385,7 +386,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         except xmlrpclib.Fault, e:
             self.assertIn('Reserve a system before provisioning', e.faultString)
         with session.begin():
-            self.assertEquals(system.command_queue, [])
+            self.assertEqual(system.command_queue, [])
 
     def test_cannot_provision_system_in_use(self):
         with session.begin():
@@ -399,10 +400,10 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         try:
             self.server.systems.provision(system.fqdn, 'distro')
         except xmlrpclib.Fault, e:
-            self.assert_('Reserve a system before provisioning'
+            self.assertTrue('Reserve a system before provisioning'
                     in e.faultString)
         with session.begin():
-            self.assertEquals(system.command_queue, [])
+            self.assertEqual(system.command_queue, [])
 
     def test_provision(self):
         kickstart = '''
@@ -419,14 +420,14 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                 kickstart)
         with session.begin():
             rendered_kickstart = system.installations[0].rendered_kickstart
-            self.assert_(kickstart in rendered_kickstart.kickstart)
-            self.assertEquals(system.installations[0].distro_tree, self.distro_tree)
-            self.assertEquals(system.installations[0].kernel_options,
+            self.assertTrue(kickstart in rendered_kickstart.kickstart)
+            self.assertEqual(system.installations[0].distro_tree, self.distro_tree)
+            self.assertEqual(system.installations[0].kernel_options,
                     'console=ttyS0 ks=%s ksdevice=eth0 netbootloader=pxelinux.0 noapic noverifyssl' % rendered_kickstart.link)
-            self.assertEquals(system.command_queue[0].action, 'on')
-            self.assertEquals(system.command_queue[1].action, 'off')
-            self.assertEquals(system.command_queue[2].action, 'configure_netboot')
-            self.assertEquals(system.command_queue[3].action, 'clear_logs')
+            self.assertEqual(system.command_queue[0].action, 'on')
+            self.assertEqual(system.command_queue[1].action, 'off')
+            self.assertEqual(system.command_queue[2].action, 'configure_netboot')
+            self.assertEqual(system.command_queue[3].action, 'clear_logs')
 
     def test_provision_without_reboot(self):
         system = self.usable_system
@@ -436,9 +437,9 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                 self.distro_tree.id, None, None, None, None,
                 False) # this last one is reboot=False
         with session.begin():
-            self.assertEquals(system.command_queue[0].action, 'configure_netboot')
-            self.assertEquals(system.command_queue[1].action, 'clear_logs')
-            self.assertEquals(len(system.command_queue), 2, system.command_queue)
+            self.assertEqual(system.command_queue[0].action, 'configure_netboot')
+            self.assertEqual(system.command_queue[1].action, 'clear_logs')
+            self.assertEqual(len(system.command_queue), 2, system.command_queue)
 
     def test_refuses_to_provision_distro_with_mismatched_arch(self):
         with session.begin():
@@ -449,9 +450,9 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
             self.server.systems.provision(self.usable_system.fqdn, distro_tree.id)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('cannot be provisioned on system' in e.faultString)
+            self.assertTrue('cannot be provisioned on system' in e.faultString)
         with session.begin():
-            self.assertEquals(self.usable_system.command_queue, [])
+            self.assertEqual(self.usable_system.command_queue, [])
 
     def test_refuses_to_provision_distro_not_in_lc(self):
         with session.begin():
@@ -464,7 +465,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         except xmlrpclib.Fault, e:
             self.assertIn('is not available in lab', e.faultString)
         with session.begin():
-            self.assertEquals(self.usable_system.command_queue, [])
+            self.assertEqual(self.usable_system.command_queue, [])
 
     def test_kernel_options_inherited_from_defaults(self):
         system = self.usable_system
@@ -490,9 +491,9 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
             self.server.systems.provision(system.fqdn, self.distro_tree.id)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('root password has expired' in e.faultString, e.faultString)
+            self.assertTrue('root password has expired' in e.faultString, e.faultString)
         with session.begin():
-            self.assertEquals(system.command_queue, [])
+            self.assertEqual(system.command_queue, [])
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1067924
     def test_kernel_options_are_not_quoted(self):
@@ -503,7 +504,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         self.server.systems.provision(system.fqdn, self.distro_tree.id,
                 'method=nfs', bad_arg)
         with session.begin():
-            self.assertEquals(system.installations[0].kernel_options,
+            self.assertEqual(system.installations[0].kernel_options,
                     'console=ttyS0 %s ksdevice=eth0 netbootloader=pxelinux.0 noverifyssl' % bad_arg)
 
 class LegacyPushXmlRpcTest(XmlRpcTestCase):
@@ -523,16 +524,16 @@ class LegacyPushXmlRpcTest(XmlRpcTestCase):
                 {'PCIID': ['80ee:cafe', '80ee:beef']})
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.activity[0].field_name, u'Key/Value')
-            self.assertEquals(system.activity[0].service, u'XMLRPC')
-            self.assertEquals(system.activity[0].action, u'Added')
-            self.assertEquals(system.activity[0].old_value, None)
-            self.assertEquals(system.activity[0].new_value, u'PCIID/80ee:cafe')
-            self.assertEquals(system.activity[1].field_name, u'Key/Value')
-            self.assertEquals(system.activity[1].service, u'XMLRPC')
-            self.assertEquals(system.activity[1].action, u'Removed')
-            self.assertEquals(system.activity[1].old_value, u'PCIID/1022:2000')
-            self.assertEquals(system.activity[1].new_value, None)
+            self.assertEqual(system.activity[0].field_name, u'Key/Value')
+            self.assertEqual(system.activity[0].service, u'XMLRPC')
+            self.assertEqual(system.activity[0].action, u'Added')
+            self.assertEqual(system.activity[0].old_value, None)
+            self.assertEqual(system.activity[0].new_value, u'PCIID/80ee:cafe')
+            self.assertEqual(system.activity[1].field_name, u'Key/Value')
+            self.assertEqual(system.activity[1].service, u'XMLRPC')
+            self.assertEqual(system.activity[1].action, u'Removed')
+            self.assertEqual(system.activity[1].old_value, u'PCIID/1022:2000')
+            self.assertEqual(system.activity[1].new_value, None)
 
     def test_bools_are_coerced_to_ints(self):
         with session.begin():
@@ -543,16 +544,16 @@ class LegacyPushXmlRpcTest(XmlRpcTestCase):
         self.server.legacypush(system.fqdn, {'HVM': False})
         with session.begin():
             session.refresh(system)
-            self.assertEquals(len(system.activity), 0) # nothing has changed, yet
+            self.assertEqual(len(system.activity), 0) # nothing has changed, yet
 
         self.server.legacypush(system.fqdn, {'HVM': True})
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.activity[0].field_name, u'Key/Value')
-            self.assertEquals(system.activity[0].service, u'XMLRPC')
-            self.assertEquals(system.activity[0].action, u'Added')
-            self.assertEquals(system.activity[0].old_value, None)
-            self.assertEquals(system.activity[0].new_value, u'HVM/1')
+            self.assertEqual(system.activity[0].field_name, u'Key/Value')
+            self.assertEqual(system.activity[0].service, u'XMLRPC')
+            self.assertEqual(system.activity[0].action, u'Added')
+            self.assertEqual(system.activity[0].old_value, None)
+            self.assertEqual(system.activity[0].new_value, u'HVM/1')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=665441
     def test_existing_keys_are_untouched(self):
@@ -567,11 +568,11 @@ class LegacyPushXmlRpcTest(XmlRpcTestCase):
         self.server.legacypush(system.fqdn, {'PCIID': [], 'HVM': True})
         with session.begin():
             session.refresh(system)
-            self.assertEquals(len(system.key_values_string), 2, system.key_values_string)
-            self.assertEquals(system.key_values_string[0].key.key_name, u'VENDOR')
-            self.assertEquals(system.key_values_string[0].key_value, u'Bob')
-            self.assertEquals(system.key_values_string[1].key.key_name, u'HVM')
-            self.assertEquals(system.key_values_string[1].key_value, u'1')
+            self.assertEqual(len(system.key_values_string), 2, system.key_values_string)
+            self.assertEqual(system.key_values_string[0].key.key_name, u'VENDOR')
+            self.assertEqual(system.key_values_string[0].key_value, u'Bob')
+            self.assertEqual(system.key_values_string[1].key.key_name, u'HVM')
+            self.assertEqual(system.key_values_string[1].key_value, u'1')
 
 class PushXmlRpcTest(XmlRpcTestCase):
 
@@ -593,10 +594,10 @@ class PushXmlRpcTest(XmlRpcTestCase):
             # no way to know in which order the changes will be recorded :-(
             changes = system.activity[:4]
             for change in changes:
-                self.assertEquals(change.service, u'XMLRPC')
-                self.assertEquals(change.action, u'Changed')
+                self.assertEqual(change.service, u'XMLRPC')
+                self.assertEqual(change.action, u'Changed')
             changed_fields = set(change.field_name for change in changes)
-            self.assertEquals(changed_fields,
+            self.assertEqual(changed_fields,
                     set(['checksum', 'vendor', 'model', 'memory']))
 
     def test_system_activity_shows_changes_for_arches(self):
@@ -605,14 +606,14 @@ class PushXmlRpcTest(XmlRpcTestCase):
         self.server.push(system.fqdn, {'Arch': ['ppc64']})
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.activity[0].service, u'XMLRPC')
-            self.assertEquals(system.activity[0].action, u'Added')
-            self.assertEquals(system.activity[0].field_name, u'Arch')
-            self.assertEquals(system.activity[0].old_value, None)
-            self.assertEquals(system.activity[0].new_value, u'ppc64')
-            self.assertEquals(system.activity[1].service, u'XMLRPC')
-            self.assertEquals(system.activity[1].action, u'Changed')
-            self.assertEquals(system.activity[1].field_name, u'checksum')
+            self.assertEqual(system.activity[0].service, u'XMLRPC')
+            self.assertEqual(system.activity[0].action, u'Added')
+            self.assertEqual(system.activity[0].field_name, u'Arch')
+            self.assertEqual(system.activity[0].old_value, None)
+            self.assertEqual(system.activity[0].new_value, u'ppc64')
+            self.assertEqual(system.activity[1].service, u'XMLRPC')
+            self.assertEqual(system.activity[1].action, u'Changed')
+            self.assertEqual(system.activity[1].field_name, u'checksum')
 
     def test_system_activity_shows_changes_for_devices(self):
         with session.begin():
@@ -625,14 +626,14 @@ class PushXmlRpcTest(XmlRpcTestCase):
         }]})
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.activity[0].service, u'XMLRPC')
-            self.assertEquals(system.activity[0].action, u'Added')
-            self.assertEquals(system.activity[0].field_name, u'Device')
-            self.assertEquals(system.activity[0].old_value, None)
+            self.assertEqual(system.activity[0].service, u'XMLRPC')
+            self.assertEqual(system.activity[0].action, u'Added')
+            self.assertEqual(system.activity[0].field_name, u'Device')
+            self.assertEqual(system.activity[0].old_value, None)
             # the new value will just be some random device id
-            self.assertEquals(system.activity[1].service, u'XMLRPC')
-            self.assertEquals(system.activity[1].action, u'Changed')
-            self.assertEquals(system.activity[1].field_name, u'checksum')
+            self.assertEqual(system.activity[1].service, u'XMLRPC')
+            self.assertEqual(system.activity[1].action, u'Changed')
+            self.assertEqual(system.activity[1].field_name, u'checksum')
 
     def test_system_activity_shows_changes_for_cpu(self):
         with session.begin():
@@ -645,12 +646,12 @@ class PushXmlRpcTest(XmlRpcTestCase):
         }})
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.activity[0].service, u'XMLRPC')
-            self.assertEquals(system.activity[0].action, u'Changed')
-            self.assertEquals(system.activity[0].field_name, u'CPU')
-            self.assertEquals(system.activity[1].service, u'XMLRPC')
-            self.assertEquals(system.activity[1].action, u'Changed')
-            self.assertEquals(system.activity[1].field_name, u'checksum')
+            self.assertEqual(system.activity[0].service, u'XMLRPC')
+            self.assertEqual(system.activity[0].action, u'Changed')
+            self.assertEqual(system.activity[0].field_name, u'CPU')
+            self.assertEqual(system.activity[1].service, u'XMLRPC')
+            self.assertEqual(system.activity[1].action, u'Changed')
+            self.assertEqual(system.activity[1].field_name, u'checksum')
 
     def test_system_activity_shows_changes_for_numa(self):
         with session.begin():
@@ -658,12 +659,12 @@ class PushXmlRpcTest(XmlRpcTestCase):
         self.server.push(system.fqdn, {'Numa': {'nodes': 321}})
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.activity[0].service, u'XMLRPC')
-            self.assertEquals(system.activity[0].action, u'Changed')
-            self.assertEquals(system.activity[0].field_name, u'NUMA')
-            self.assertEquals(system.activity[1].service, u'XMLRPC')
-            self.assertEquals(system.activity[1].action, u'Changed')
-            self.assertEquals(system.activity[1].field_name, u'checksum')
+            self.assertEqual(system.activity[0].service, u'XMLRPC')
+            self.assertEqual(system.activity[0].action, u'Changed')
+            self.assertEqual(system.activity[0].field_name, u'NUMA')
+            self.assertEqual(system.activity[1].service, u'XMLRPC')
+            self.assertEqual(system.activity[1].action, u'Changed')
+            self.assertEqual(system.activity[1].field_name, u'checksum')
 
     def test_system_activity_shows_changes_for_disk(self):
         with session.begin():
@@ -674,22 +675,22 @@ class PushXmlRpcTest(XmlRpcTestCase):
                                                            'size': str(8589934592)}]}})
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.activity[0].service, u'XMLRPC')
-            self.assertEquals(system.activity[0].action, u'Added')
-            self.assertEquals(system.activity[0].field_name, u'Disk:model')
-            self.assertEquals(system.activity[0].new_value, u'Virtio Block Device')
-            self.assertEquals(system.activity[1].service, u'XMLRPC')
-            self.assertEquals(system.activity[1].action, u'Added')
-            self.assertEquals(system.activity[1].field_name, u'Disk:phys_sector_size')
-            self.assertEquals(system.activity[1].new_value, u'512')
-            self.assertEquals(system.activity[2].service, u'XMLRPC')
-            self.assertEquals(system.activity[2].action, u'Added')
-            self.assertEquals(system.activity[2].field_name, u'Disk:sector_size')
-            self.assertEquals(system.activity[2].new_value, u'512')
-            self.assertEquals(system.activity[3].service, u'XMLRPC')
-            self.assertEquals(system.activity[3].action, u'Added')
-            self.assertEquals(system.activity[3].field_name, u'Disk:size')
-            self.assertEquals(system.activity[3].new_value, u'8589934592')
+            self.assertEqual(system.activity[0].service, u'XMLRPC')
+            self.assertEqual(system.activity[0].action, u'Added')
+            self.assertEqual(system.activity[0].field_name, u'Disk:model')
+            self.assertEqual(system.activity[0].new_value, u'Virtio Block Device')
+            self.assertEqual(system.activity[1].service, u'XMLRPC')
+            self.assertEqual(system.activity[1].action, u'Added')
+            self.assertEqual(system.activity[1].field_name, u'Disk:phys_sector_size')
+            self.assertEqual(system.activity[1].new_value, u'512')
+            self.assertEqual(system.activity[2].service, u'XMLRPC')
+            self.assertEqual(system.activity[2].action, u'Added')
+            self.assertEqual(system.activity[2].field_name, u'Disk:sector_size')
+            self.assertEqual(system.activity[2].new_value, u'512')
+            self.assertEqual(system.activity[3].service, u'XMLRPC')
+            self.assertEqual(system.activity[3].action, u'Added')
+            self.assertEqual(system.activity[3].field_name, u'Disk:size')
+            self.assertEqual(system.activity[3].new_value, u'8589934592')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=708172
     def test_memory_is_updated(self):
@@ -699,7 +700,7 @@ class PushXmlRpcTest(XmlRpcTestCase):
         self.server.push(system.fqdn, {'memory': '1024'})
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.memory, 1024)
+            self.assertEqual(system.memory, 1024)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1253103
     def test_disks_are_updated(self):
@@ -715,30 +716,30 @@ class PushXmlRpcTest(XmlRpcTestCase):
         self.server.push(system.fqdn, dict(Disk=dict(Disks=[testdict, testdict])))
         with session.begin():
             session.refresh(system)
-            self.assertEquals(len(system.disks), 2)
-            self.assertEquals(system.disks[0].model, u'foo')
-            self.assertEquals(system.disks[0].size, 500107837440)
-            self.assertEquals(system.disks[0].sector_size, 4096)
-            self.assertEquals(system.disks[0].phys_sector_size, 4096)
-            self.assertEquals(system.disks[1].model, u'foo')
-            self.assertEquals(system.disks[1].size, 500107837440)
-            self.assertEquals(system.disks[1].sector_size, 4096)
-            self.assertEquals(system.disks[1].phys_sector_size, 4096)
+            self.assertEqual(len(system.disks), 2)
+            self.assertEqual(system.disks[0].model, u'foo')
+            self.assertEqual(system.disks[0].size, 500107837440)
+            self.assertEqual(system.disks[0].sector_size, 4096)
+            self.assertEqual(system.disks[0].phys_sector_size, 4096)
+            self.assertEqual(system.disks[1].model, u'foo')
+            self.assertEqual(system.disks[1].size, 500107837440)
+            self.assertEqual(system.disks[1].sector_size, 4096)
+            self.assertEqual(system.disks[1].phys_sector_size, 4096)
 
         # make sure we can update a system with existing disks
         testdict['model'] = 'newer'
         self.server.push(system.fqdn, dict(Disk=dict(Disks=[testdict, testdict])))
         with session.begin():
             session.refresh(system)
-            self.assertEquals(len(system.disks), 2)
-            self.assertEquals(system.disks[0].model, u'newer')
-            self.assertEquals(system.disks[0].size, 500107837440)
-            self.assertEquals(system.disks[0].sector_size, 4096)
-            self.assertEquals(system.disks[0].phys_sector_size, 4096)
-            self.assertEquals(system.disks[1].model, u'newer')
-            self.assertEquals(system.disks[1].size, 500107837440)
-            self.assertEquals(system.disks[1].sector_size, 4096)
-            self.assertEquals(system.disks[1].phys_sector_size, 4096)
+            self.assertEqual(len(system.disks), 2)
+            self.assertEqual(system.disks[0].model, u'newer')
+            self.assertEqual(system.disks[0].size, 500107837440)
+            self.assertEqual(system.disks[0].sector_size, 4096)
+            self.assertEqual(system.disks[0].phys_sector_size, 4096)
+            self.assertEqual(system.disks[1].model, u'newer')
+            self.assertEqual(system.disks[1].size, 500107837440)
+            self.assertEqual(system.disks[1].sector_size, 4096)
+            self.assertEqual(system.disks[1].phys_sector_size, 4096)
 
     def test_hypervisor_none(self):
         with session.begin():
@@ -747,15 +748,15 @@ class PushXmlRpcTest(XmlRpcTestCase):
         self.server.push(system.fqdn, {'Hypervisor': None})
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.hypervisor, None)
-            self.assertEquals(system.activity[0].service, u'XMLRPC')
-            self.assertEquals(system.activity[0].action, u'Changed')
-            self.assertEquals(system.activity[0].field_name, u'Hypervisor')
-            self.assertEquals(system.activity[0].old_value, u'KVM')
-            self.assertEquals(system.activity[0].new_value, None)
-            self.assertEquals(system.activity[1].service, u'XMLRPC')
-            self.assertEquals(system.activity[1].action, u'Changed')
-            self.assertEquals(system.activity[1].field_name, u'checksum')
+            self.assertEqual(system.hypervisor, None)
+            self.assertEqual(system.activity[0].service, u'XMLRPC')
+            self.assertEqual(system.activity[0].action, u'Changed')
+            self.assertEqual(system.activity[0].field_name, u'Hypervisor')
+            self.assertEqual(system.activity[0].old_value, u'KVM')
+            self.assertEqual(system.activity[0].new_value, None)
+            self.assertEqual(system.activity[1].service, u'XMLRPC')
+            self.assertEqual(system.activity[1].action, u'Changed')
+            self.assertEqual(system.activity[1].field_name, u'checksum')
 
     def test_hypervisor_kvm(self):
         with session.begin():
@@ -764,7 +765,7 @@ class PushXmlRpcTest(XmlRpcTestCase):
         self.server.push(system.fqdn, {'Hypervisor': u'KVM'})
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.hypervisor.hypervisor, u'KVM')
+            self.assertEqual(system.hypervisor.hypervisor, u'KVM')
 
     # just check we don't raise an exception
     def test_set_bogus_property(self):
@@ -800,7 +801,7 @@ class PushXmlRpcTest(XmlRpcTestCase):
         }]})
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.devices[0].fw_version, None)
+            self.assertEqual(system.devices[0].fw_version, None)
 
     # verify devices are saved properly.
     def test_device_saved_properly(self):
@@ -815,14 +816,14 @@ class PushXmlRpcTest(XmlRpcTestCase):
         }]})
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.devices[0].bus, u'pci' )
-            self.assertEquals(system.devices[0].driver, u'noclass')
-            self.assertEquals(system.devices[0].description, u'Oh so very tacky')
-            self.assertEquals(system.devices[0].vendor_id, '1234')
-            self.assertEquals(system.devices[0].device_id, '5678')
-            self.assertEquals(system.devices[0].subsys_vendor_id, '6543')
-            self.assertEquals(system.devices[0].subsys_device_id, '1478')
-            self.assertEquals(system.devices[0].fw_version, 'ABCD')
+            self.assertEqual(system.devices[0].bus, u'pci' )
+            self.assertEqual(system.devices[0].driver, u'noclass')
+            self.assertEqual(system.devices[0].description, u'Oh so very tacky')
+            self.assertEqual(system.devices[0].vendor_id, '1234')
+            self.assertEqual(system.devices[0].device_id, '5678')
+            self.assertEqual(system.devices[0].subsys_vendor_id, '6543')
+            self.assertEqual(system.devices[0].subsys_device_id, '1478')
+            self.assertEqual(system.devices[0].fw_version, 'ABCD')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1630884
     def test_long_bios_version(self):
@@ -836,16 +837,16 @@ class PushXmlRpcTest(XmlRpcTestCase):
         }]})
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.devices[0].fw_version, 'Hisilicon D06 UEFI RC0 - B051 (V0.51)')
+            self.assertEqual(system.devices[0].fw_version, 'Hisilicon D06 UEFI RC0 - B051 (V0.51)')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1253111
     def test_unrecognised_arches_are_not_automatically_created(self):
         with session.begin():
             system = data_setup.create_system(arch=u'x86_64')
-        with self.assertRaisesRegexp(xmlrpclib.Fault, 'No such arch'):
+        with assertRaisesRegex(self, xmlrpclib.Fault, 'No such arch'):
             self.server.push(system.fqdn, {'Arch': ['x86-64']})
         with session.begin():
-            self.assertEquals(Arch.query.filter_by(arch=u'x86-64').count(), 0)
+            self.assertEqual(Arch.query.filter_by(arch=u'x86-64').count(), 0)
 
 class SystemHistoryXmlRpcTest(XmlRpcTestCase):
 
@@ -860,16 +861,16 @@ class SystemHistoryXmlRpcTest(XmlRpcTestCase):
                     action=u'Changed', field_name=u'fqdn',
                     old_value=u'oldname.example.com', new_value=system.fqdn))
         result = self.server.systems.history(system.fqdn)
-        self.assertEquals(len(result), 1)
+        self.assertEqual(len(result), 1)
         assert_datetime_within(result[0]['created'],
                 datetime.timedelta(seconds=5),
                 reference=datetime.datetime.utcnow())
-        self.assertEquals(result[0]['user'], owner.user_name)
-        self.assertEquals(result[0]['service'], u'WEBUI')
-        self.assertEquals(result[0]['action'], u'Changed')
-        self.assertEquals(result[0]['field_name'], u'fqdn')
-        self.assertEquals(result[0]['old_value'], u'oldname.example.com')
-        self.assertEquals(result[0]['new_value'], system.fqdn)
+        self.assertEqual(result[0]['user'], owner.user_name)
+        self.assertEqual(result[0]['service'], u'WEBUI')
+        self.assertEqual(result[0]['action'], u'Changed')
+        self.assertEqual(result[0]['field_name'], u'fqdn')
+        self.assertEqual(result[0]['old_value'], u'oldname.example.com')
+        self.assertEqual(result[0]['new_value'], system.fqdn)
 
     def test_fetches_history_since_timestamp(self):
         with session.begin():
@@ -887,5 +888,5 @@ class SystemHistoryXmlRpcTest(XmlRpcTestCase):
             system.activity[-1].created = datetime.datetime(2005, 8, 16, 12, 23, 34)
         result = self.server.systems.history(system.fqdn,
                 xmlrpclib.DateTime('20060101T00:00:00'))
-        self.assertEquals(len(result), 1)
-        self.assertEquals(result[0]['old_value'], u'oldname.example.com')
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]['old_value'], u'oldname.example.com')

@@ -119,8 +119,8 @@ class RecipesXmlRpcTest(XmlRpcTestCase):
             # and database IDs, so let's just check that it starts with the new 
             # expected location.
             for log in [recipe.logs[0], recipe.tasks[0].logs[0], recipe.tasks[0].results[0].logs[0]]:
-                self.assert_(log.server.startswith('http://archive.example.com/beaker-logs/'), log.server)
-                self.assert_(log.basepath.startswith('/var/www/html/beaker-logs/'), log.basepath)
+                self.assertTrue(log.server.startswith('http://archive.example.com/beaker-logs/'), log.server)
+                self.assertTrue(log.basepath.startswith('/var/www/html/beaker-logs/'), log.basepath)
 
     def test_gets_logs(self):
         with session.begin():

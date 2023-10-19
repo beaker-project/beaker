@@ -49,7 +49,7 @@ class RecipeTasksXmlRpcTest(XmlRpcTestCase):
             'CLIENTTWO': ['clienttwo.peer-roles.invalid'],
         }
         for i in range(3):
-            self.assertEquals(self.server.recipes.tasks.peer_roles(
+            self.assertEqual(self.server.recipes.tasks.peer_roles(
                     job.recipesets[0].recipes[i].tasks[0].id),
                     expected)
 
@@ -77,7 +77,7 @@ class RecipeTasksXmlRpcTest(XmlRpcTestCase):
             'CLIENTS': ['client.bz951283'],
         }
         for i in range(2):
-            self.assertEquals(self.server.recipes.tasks.peer_roles(
+            self.assertEqual(self.server.recipes.tasks.peer_roles(
                     job.recipesets[0].recipes[i].tasks[0].id),
                     expected)
 
@@ -95,14 +95,14 @@ class RecipeTasksXmlRpcTest(XmlRpcTestCase):
                     lab_controller=self.lc)
             data_setup.mark_recipe_running(hostrecipe, system=system)
             data_setup.mark_recipe_waiting(guestrecipe)
-            self.assertEquals(guestrecipe.resource.fqdn, None)
+            self.assertEqual(guestrecipe.resource.fqdn, None)
         self.server.auth.login_password(self.lc.user.user_name, u'logmein')
-        self.assertEquals(self.server.recipes.tasks.peer_roles(
+        self.assertEqual(self.server.recipes.tasks.peer_roles(
                 hostrecipe.tasks[0].id),
                 {'SERVERS': ['host.bz952948'],
                  'STANDALONE': ['host.bz952948'],
                  'CLIENTS': []})
-        self.assertEquals(self.server.recipes.tasks.peer_roles(
+        self.assertEqual(self.server.recipes.tasks.peer_roles(
                 guestrecipe.tasks[0].id),
                 {'SERVERS': ['host.bz952948'],
                  'STANDALONE': ['host.bz952948'],
@@ -133,6 +133,6 @@ class RecipeTasksXmlRpcTest(XmlRpcTestCase):
             'STANDALONE': ['host.bz960434', 'guestserver.bz960434', 'guestclient.bz960434'],
         }
         for recipe in [hostrecipe, guestrecipe_server, guestrecipe_client]:
-            self.assertEquals(
+            self.assertEqual(
                     self.server.recipes.tasks.peer_roles(recipe.tasks[0].id),
                     expected_peer_roles)

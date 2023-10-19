@@ -22,6 +22,6 @@ class TestMOTD(WebDriverTestCase):
         f.close()
         b = self.browser
         b.get(get_server_base())
-        self.assertEquals(
+        self.assertEqual(
                 b.find_element_by_css_selector('.motd span').text,
                 the_motd)

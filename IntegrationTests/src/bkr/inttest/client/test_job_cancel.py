@@ -35,7 +35,7 @@ class JobCancelTest(ClientTestCase):
                     self.job.recipesets[0].recipes[0].t_id])
             self.fail('should raise')
         except ClientError as e:
-            self.assert_('Taskspec type must be one of'
+            self.assertTrue('Taskspec type must be one of'
                     in e.stderr_output, e.stderr_output)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=595512
@@ -44,7 +44,7 @@ class JobCancelTest(ClientTestCase):
             run_client(['bkr', 'job-cancel', '12345'])
             self.fail('should raise')
         except ClientError as e:
-            self.assert_('Invalid taskspec' in e.stderr_output)
+            self.assertTrue('Invalid taskspec' in e.stderr_output)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=649608
     def test_cannot_cancel_other_peoples_job(self):
@@ -57,8 +57,8 @@ class JobCancelTest(ClientTestCase):
             run_client(['bkr', 'job-cancel', '--username', user1.user_name, '--password', 'abc', job.t_id])
             self.fail('should raise')
         except ClientError as e:
-            self.assertEquals(e.status, 1)
-            self.assert_('You don\'t have permission to cancel'
+            self.assertEqual(e.status, 1)
+            self.assertTrue('You don\'t have permission to cancel'
                     in e.stderr_output, e.stderr_output)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=995012
@@ -68,14 +68,14 @@ class JobCancelTest(ClientTestCase):
             job = data_setup.create_job(owner=job_owner)
 
         run_client(['bkr', 'job-cancel', '--username', job_owner.user_name, '--password', 'owner', job.t_id])
-        self.assertEquals(job.activity[0].action, u'Cancelled')
-        self.assertEquals(job.activity[0].user, job_owner)
+        self.assertEqual(job.activity[0].action, u'Cancelled')
+        self.assertEqual(job.activity[0].user, job_owner)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1124756
     def test_can_cancel_recipe_task(self):
         t_id = self.job.recipesets[0].recipes[0].tasks[0].t_id
         out = run_client(['bkr', 'job-cancel', t_id])
-        self.assertEquals('Cancelled %s\n' % t_id, out)
+        self.assertEqual('Cancelled %s\n' % t_id, out)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1173376
     def test_clear_rows_in_system_recipe_map(self):
@@ -85,9 +85,9 @@ class JobCancelTest(ClientTestCase):
             job = data_setup.create_job(owner=job_owner)
             job.recipesets[0].recipes[0].systems[:] = [system]
         # check if rows in system_recipe_map
-        self.assertNotEquals(len(job.recipesets[0].recipes[0].systems), 0)
+        self.assertNotEqual(len(job.recipesets[0].recipes[0].systems), 0)
         out = run_client(['bkr', 'job-cancel', '--username', job_owner.user_name, '--password', 'owner', job.t_id])
-        self.assertEquals('Cancelled %s\n' % job.t_id, out)
+        self.assertEqual('Cancelled %s\n' % job.t_id, out)
         with session.begin():
             session.expire_all()
             # check if no rows in system_recipe_map
@@ -104,8 +104,8 @@ class JobCancelTest(ClientTestCase):
                     '--msg=test adding cancel message'])
         with session.begin():
             session.refresh(job)
-            self.assertEquals(job.activity[0].action, u'Cancelled')
-            self.assertEquals(job.recipesets[0].recipes[0].tasks[0].results[0].log,
+            self.assertEqual(job.activity[0].action, u'Cancelled')
+            self.assertEqual(job.recipesets[0].recipes[0].tasks[0].results[0].log,
                     'test adding cancel message')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1174615

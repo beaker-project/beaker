@@ -36,7 +36,7 @@ class JobSubmitTest(ClientTestCase):
         out = run_client(['bkr', 'job-submit',
                 pkg_resources.resource_filename('bkr.inttest', 'complete-job.xml')],
                          config=config)
-        self.assert_(out.startswith('Submitted:'), out)
+        self.assertTrue(out.startswith('Submitted:'), out)
 
     def test_missing_distro_and_distroRequires_element(self):
         faulty_xml = '''<job>
@@ -73,15 +73,15 @@ class JobSubmitTest(ClientTestCase):
     def test_doesnt_barf_on_xml_encoding_declaration(self):
         out = run_client(['bkr', 'job-submit', '-'],
                 input=self.job_xml_with_encoding('UTF-8', u'яяя'))
-        self.assert_(out.startswith('Submitted:'), out)
+        self.assertTrue(out.startswith('Submitted:'), out)
         out = run_client(['bkr', 'job-submit', '-'],
                 input=self.job_xml_with_encoding('ISO-8859-1', u'äóß'))
-        self.assert_(out.startswith('Submitted:'), out)
+        self.assertTrue(out.startswith('Submitted:'), out)
         # This should work, but it seems to be a bug in xml.dom.minidom:
         # http://bugs.python.org/issue15877
         #out = run_client(['bkr', 'job-submit', '-'],
         #        input=self.job_xml_with_encoding('ISO-2022-JP', u'日本語'))
-        #self.assert_(out.startswith('Submitted:'), out)
+        #self.assertTrue(out.startswith('Submitted:'), out)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1142714
     def test_no_args_reads_from_stdin(self):
@@ -115,7 +115,7 @@ class JobSubmitTest(ClientTestCase):
         error = cm.exception
         msg = '%s is not a valid submission delegate for %s' \
             % (bot_name, user_bar_name)
-        self.assert_(msg in str(error))
+        self.assertTrue(msg in str(error))
 
     def test_can_delegate_submission(self):
         user_foo_name = self.user_foo.user_name
@@ -125,6 +125,6 @@ class JobSubmitTest(ClientTestCase):
             '--password', 'bot',
             '--job-owner', user_foo_name],
             input=self.job_xml_with_encoding('UTF-8', u'яяя'))
-        self.assert_('Submitted:' in out)
+        self.assertTrue('Submitted:' in out)
         last_job = Job.query.order_by(Job.id.desc()).first()
         self.assertEqual(user_foo_name, last_job.owner.user_name)

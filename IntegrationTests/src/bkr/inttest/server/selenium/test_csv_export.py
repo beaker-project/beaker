@@ -58,24 +58,24 @@ class CSVExportTest(WebDriverTestCase):
         login(self.browser)
         csv_request = self.get_csv('install')
         csv_rows = [row for row in csv.DictReader(csv_request) if row['fqdn'] == system.fqdn]
-        self.assertEquals(csv_rows[0]['arch'], 'i386')
-        self.assertEquals(csv_rows[0]['family'], '')
-        self.assertEquals(csv_rows[0]['update'], '')
-        self.assertEquals(csv_rows[0]['ks_meta'], 'some_ks_meta_var=1')
-        self.assertEquals(csv_rows[0]['kernel_options'], 'some_kernel_option=1')
-        self.assertEquals(csv_rows[0]['kernel_options_post'], 'some_kernel_option=2')
-        self.assertEquals(csv_rows[1]['arch'], 'i386')
-        self.assertEquals(csv_rows[1]['family'], unicode(distro_tree.distro.osversion.osmajor))
-        self.assertEquals(csv_rows[1]['update'], '')
-        self.assertEquals(csv_rows[1]['ks_meta'], 'some_ks_meta_var=2')
-        self.assertEquals(csv_rows[1]['kernel_options'], 'some_kernel_option=3')
-        self.assertEquals(csv_rows[1]['kernel_options_post'], 'some_kernel_option=4')
-        self.assertEquals(csv_rows[2]['arch'], 'i386')
-        self.assertEquals(csv_rows[2]['family'], unicode(distro_tree.distro.osversion.osmajor))
-        self.assertEquals(csv_rows[2]['update'], unicode(distro_tree.distro.osversion.osminor))
-        self.assertEquals(csv_rows[2]['ks_meta'], 'some_ks_meta_var=3')
-        self.assertEquals(csv_rows[2]['kernel_options'], 'some_kernel_option=5')
-        self.assertEquals(csv_rows[2]['kernel_options_post'], 'some_kernel_option=6')
+        self.assertEqual(csv_rows[0]['arch'], 'i386')
+        self.assertEqual(csv_rows[0]['family'], '')
+        self.assertEqual(csv_rows[0]['update'], '')
+        self.assertEqual(csv_rows[0]['ks_meta'], 'some_ks_meta_var=1')
+        self.assertEqual(csv_rows[0]['kernel_options'], 'some_kernel_option=1')
+        self.assertEqual(csv_rows[0]['kernel_options_post'], 'some_kernel_option=2')
+        self.assertEqual(csv_rows[1]['arch'], 'i386')
+        self.assertEqual(csv_rows[1]['family'], unicode(distro_tree.distro.osversion.osmajor))
+        self.assertEqual(csv_rows[1]['update'], '')
+        self.assertEqual(csv_rows[1]['ks_meta'], 'some_ks_meta_var=2')
+        self.assertEqual(csv_rows[1]['kernel_options'], 'some_kernel_option=3')
+        self.assertEqual(csv_rows[1]['kernel_options_post'], 'some_kernel_option=4')
+        self.assertEqual(csv_rows[2]['arch'], 'i386')
+        self.assertEqual(csv_rows[2]['family'], unicode(distro_tree.distro.osversion.osmajor))
+        self.assertEqual(csv_rows[2]['update'], unicode(distro_tree.distro.osversion.osminor))
+        self.assertEqual(csv_rows[2]['ks_meta'], 'some_ks_meta_var=3')
+        self.assertEqual(csv_rows[2]['kernel_options'], 'some_kernel_option=5')
+        self.assertEqual(csv_rows[2]['kernel_options_post'], 'some_kernel_option=6')
 
     def test_export_install_options_with_null_options(self):
         with session.begin():
@@ -99,24 +99,24 @@ class CSVExportTest(WebDriverTestCase):
         login(self.browser)
         csv_request = self.get_csv('install')
         csv_rows = [row for row in csv.DictReader(csv_request) if row['fqdn'] == system.fqdn]
-        self.assertEquals(csv_rows[0]['arch'], 'i386')
-        self.assertEquals(csv_rows[0]['family'], '')
-        self.assertEquals(csv_rows[0]['update'], '')
-        self.assertEquals(csv_rows[0]['ks_meta'], 'some_ks_meta_var=3')
-        self.assertEquals(csv_rows[0]['kernel_options'], '')
-        self.assertEquals(csv_rows[0]['kernel_options_post'], '')
-        self.assertEquals(csv_rows[1]['arch'], 'i386')
-        self.assertEquals(csv_rows[1]['family'], unicode(distro_tree.distro.osversion.osmajor))
-        self.assertEquals(csv_rows[1]['update'], '')
-        self.assertEquals(csv_rows[1]['ks_meta'], '')
-        self.assertEquals(csv_rows[1]['kernel_options'], 'some_kernel_option=7')
-        self.assertEquals(csv_rows[1]['kernel_options_post'], '')
-        self.assertEquals(csv_rows[2]['arch'], 'i386')
-        self.assertEquals(csv_rows[2]['family'], unicode(distro_tree.distro.osversion.osmajor))
-        self.assertEquals(csv_rows[2]['update'], unicode(distro_tree.distro.osversion.osminor))
-        self.assertEquals(csv_rows[2]['ks_meta'], '')
-        self.assertEquals(csv_rows[2]['kernel_options'], '')
-        self.assertEquals(csv_rows[2]['kernel_options_post'], 'some_kernel_option=8')
+        self.assertEqual(csv_rows[0]['arch'], 'i386')
+        self.assertEqual(csv_rows[0]['family'], '')
+        self.assertEqual(csv_rows[0]['update'], '')
+        self.assertEqual(csv_rows[0]['ks_meta'], 'some_ks_meta_var=3')
+        self.assertEqual(csv_rows[0]['kernel_options'], '')
+        self.assertEqual(csv_rows[0]['kernel_options_post'], '')
+        self.assertEqual(csv_rows[1]['arch'], 'i386')
+        self.assertEqual(csv_rows[1]['family'], unicode(distro_tree.distro.osversion.osmajor))
+        self.assertEqual(csv_rows[1]['update'], '')
+        self.assertEqual(csv_rows[1]['ks_meta'], '')
+        self.assertEqual(csv_rows[1]['kernel_options'], 'some_kernel_option=7')
+        self.assertEqual(csv_rows[1]['kernel_options_post'], '')
+        self.assertEqual(csv_rows[2]['arch'], 'i386')
+        self.assertEqual(csv_rows[2]['family'], unicode(distro_tree.distro.osversion.osmajor))
+        self.assertEqual(csv_rows[2]['update'], unicode(distro_tree.distro.osversion.osminor))
+        self.assertEqual(csv_rows[2]['ks_meta'], '')
+        self.assertEqual(csv_rows[2]['kernel_options'], '')
+        self.assertEqual(csv_rows[2]['kernel_options_post'], 'some_kernel_option=8')
 
     def test_export_systems_unicode(self):
         with session.begin():
@@ -124,7 +124,7 @@ class CSVExportTest(WebDriverTestCase):
         login(self.browser)
         csv_request = self.get_csv('system')
         csv_rows = [row for row in csv.DictReader(csv_request) if row['fqdn'] == system.fqdn]
-        self.assertEquals(csv_rows[0]['lender'].decode('utf8'), u'Möbius')
+        self.assertEqual(csv_rows[0]['lender'].decode('utf8'), u'Möbius')
 
     def test_export_systems_obeys_secrecy(self):
         with session.begin():
@@ -132,7 +132,7 @@ class CSVExportTest(WebDriverTestCase):
             secret_system = data_setup.create_system(shared=False, private=True)
         login(self.browser, user=unprivileged_user.user_name, password=u'asdf')
         csv_request = self.get_csv('system')
-        self.assert_(not any(row['fqdn'] == secret_system.fqdn
+        self.assertTrue(not any(row['fqdn'] == secret_system.fqdn
                 for row in csv.DictReader(csv_request)))
 
     def test_export_power(self):
@@ -145,7 +145,7 @@ class CSVExportTest(WebDriverTestCase):
         csv_request = self.get_csv('power')
         row, = [row for row in csv.DictReader(csv_request)
                 if row['fqdn'] == system.fqdn]
-        self.assertEquals(row, {
+        self.assertEqual(row, {
             'csv_type': 'power',
             'fqdn': system.fqdn,
             'power_type': 'drac',
@@ -184,9 +184,9 @@ class CSVExportTest(WebDriverTestCase):
         login(self.browser)
         csv_request = self.get_csv('exclude')
         csv_rows = [row for row in csv.DictReader(csv_request) if row['fqdn'] == system.fqdn]
-        self.assertEquals(csv_rows[0]['update'], '')
+        self.assertEqual(csv_rows[0]['update'], '')
         vals = csv_rows[0].values()
-        self.assert_(vals.count('None') == 0)
+        self.assertTrue(vals.count('None') == 0)
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=987157
     # Export systems with id should export the system id
@@ -197,7 +197,7 @@ class CSVExportTest(WebDriverTestCase):
         csv_request = self.get_csv('system_id')
         csv_rows = [row for row in csv.DictReader(csv_request)
                     if row['fqdn'] == system.fqdn]
-        self.assertEquals(csv_rows[0]['id'], str(system.id))
+        self.assertEqual(csv_rows[0]['id'], str(system.id))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=987157
     # Export systems with no id should not export the system id
@@ -231,5 +231,5 @@ class CSVExportTest(WebDriverTestCase):
         csv_request = self.get_csv('system_pool')
         csv_rows = [row for row in csv.DictReader(csv_request)
                     if row['pool'] == pool.name]
-        self.assertEquals([csv_row['fqdn'] for csv_row in csv_rows],
+        self.assertEqual([csv_row['fqdn'] for csv_row in csv_rows],
                           [s.fqdn for s in pool.systems])

@@ -131,12 +131,12 @@ class DistroTreeViewTest(WebDriverTestCase):
         go_to_distro_tree_view(b, self.distro_tree)
         b.find_element_by_link_text('Repos').click()
         repo_link = b.find_element_by_css_selector('table.yum_config a')
-        self.assert_(repo_link.text.endswith('.repo'))
+        self.assertTrue(repo_link.text.endswith('.repo'))
         response = requests.get(
                 urlparse.urljoin(b.current_url, repo_link.get_attribute('href')))
         response.raise_for_status()
-        self.assert_('text/plain' in response.headers['Content-Type'])
-        self.assert_('baseurl=' in response.text, response.text)
+        self.assertTrue('text/plain' in response.headers['Content-Type'])
+        self.assertTrue('baseurl=' in response.text, response.text)
 
     # Test images tab
     def test_images(self):
@@ -171,8 +171,8 @@ class DistroTreesFilterXmlRpcTest(XmlRpcTestCase):
             distro_tree_out.lab_controller_assocs[:] = [LabControllerDistroTree(
                     lab_controller=bad_lc, url=u'http://notimportant')]
         distro_trees = self.server.distrotrees.filter({'labcontroller': good_lc.fqdn})
-        self.assert_(distro_tree_in.id in [d['distro_tree_id'] for d in distro_trees], distro_trees)
-        self.assert_(distro_tree_out.id not in [d['distro_tree_id'] for d in distro_trees], distro_trees)
+        self.assertTrue(distro_tree_in.id in [d['distro_tree_id'] for d in distro_trees], distro_trees)
+        self.assertTrue(distro_tree_out.id not in [d['distro_tree_id'] for d in distro_trees], distro_trees)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=839820
     def test_xml_filter(self):
@@ -189,7 +189,7 @@ class DistroTreesFilterXmlRpcTest(XmlRpcTestCase):
             </or>
             '''})
         returned_ids = set(dt['distro_tree_id'] for dt in distro_trees)
-        self.assertEquals(returned_ids, set(dt.id for dt in distro_trees_in))
+        self.assertEqual(returned_ids, set(dt.id for dt in distro_trees_in))
 
 class DistroTreeSearch(WebDriverTestCase):
 

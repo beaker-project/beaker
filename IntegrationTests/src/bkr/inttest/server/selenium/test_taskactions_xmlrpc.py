@@ -20,15 +20,15 @@ class TaskactionsTest(XmlRpcTestCase):
         with session.begin():
             job = data_setup.create_job(owner=self.user)
             data_setup.mark_job_running(job)
-        self.assertEquals(self.server.taskactions.task_info(job.t_id)['state'],
+        self.assertEqual(self.server.taskactions.task_info(job.t_id)['state'],
                 'Running')
-        self.assertEquals(self.server.taskactions.task_info(
+        self.assertEqual(self.server.taskactions.task_info(
                 job.recipesets[0].t_id)['state'],
                 'Running')
-        self.assertEquals(self.server.taskactions.task_info(
+        self.assertEqual(self.server.taskactions.task_info(
                 job.recipesets[0].recipes[0].t_id)['state'],
                 'Running')
-        self.assertEquals(self.server.taskactions.task_info(
+        self.assertEqual(self.server.taskactions.task_info(
                 job.recipesets[0].recipes[0].tasks[0].t_id)['state'],
                 'Running')
 
@@ -38,10 +38,10 @@ class TaskactionsTest(XmlRpcTestCase):
             data_setup.mark_job_running(job)
             recipe = job.recipesets[0].recipes[0]
             system = recipe.resource.system
-        self.assertEquals(self.server.taskactions.task_info(
+        self.assertEqual(self.server.taskactions.task_info(
                 recipe.t_id)['worker'],
                 {'name': system.fqdn})
-        self.assertEquals(self.server.taskactions.task_info(
+        self.assertEqual(self.server.taskactions.task_info(
                 recipe.tasks[0].t_id)['worker'],
                 {'name': system.fqdn})
 
@@ -51,8 +51,8 @@ class TaskactionsTest(XmlRpcTestCase):
             job = data_setup.create_job(owner=self.user)
             job.cancel()
             recipe = job.recipesets[0].recipes[0]
-            self.assertEquals(recipe.resource, None)
-        self.assertEquals(self.server.taskactions.task_info(
+            self.assertEqual(recipe.resource, None)
+        self.assertEqual(self.server.taskactions.task_info(
                 recipe.t_id)['worker'], None)
-        self.assertEquals(self.server.taskactions.task_info(
+        self.assertEqual(self.server.taskactions.task_info(
                 recipe.tasks[0].t_id)['worker'], None)

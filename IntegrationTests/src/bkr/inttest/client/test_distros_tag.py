@@ -17,7 +17,7 @@ class DistrosTagTest(ClientTestCase):
         run_client(['bkr', 'distros-tag', '--name', self.distro.name, 'LOL'])
         with session.begin():
             session.refresh(self.distro)
-            self.assert_(u'LOL' in self.distro.tags)
+            self.assertTrue(u'LOL' in self.distro.tags)
 
     def test_cannot_add_empty_tag(self):
         try:

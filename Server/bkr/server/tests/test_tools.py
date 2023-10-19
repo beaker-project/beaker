@@ -26,7 +26,7 @@ class LogDelete(unittest.TestCase):
             'http://server/b/',
             'http://server/c/',
         ]
-        self.assertEquals(list(log_delete.remove_descendants(input)), expected)
+        self.assertEqual(list(log_delete.remove_descendants(input)), expected)
 
 
 def list_msdos_filesystem(image_filename):

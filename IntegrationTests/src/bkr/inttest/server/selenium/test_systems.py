@@ -66,7 +66,7 @@ class TestSystemsGrid(WebDriverTestCase):
         b = self.browser
         # check number of columns in the table
         ths = b.find_elements_by_xpath('//table[@id="widget"]//th')
-        self.assertEquals(len(ths), 33)
+        self.assertEqual(len(ths), 33)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1321740
     def test_grid_columns_order_is_preserved(self):
@@ -275,7 +275,7 @@ class TestSystemsAtomFeed(DatabaseTestCase):
                 'tg_format': 'atom', 'list_tgp_order': '-date_modified',
                 'list_tgp_limit': '0'}))
         feed = lxml.etree.parse(urlopen(feed_url)).getroot()
-        self.assert_(self.system_count(feed) >= 25, self.system_count(feed))
+        self.assertTrue(self.system_count(feed) >= 25, self.system_count(feed))
         for system in systems:
             self.assertTrue(self.feed_contains_system(feed, system.fqdn))
         self.assertFalse(self.feed_contains_system(feed, removed_system.fqdn))
@@ -289,7 +289,7 @@ class TestSystemsAtomFeed(DatabaseTestCase):
             'tg_format': 'atom', 'list_tgp_order': '-date_modified',
             'list_tgp_limit': '0'}))
         feed = lxml.etree.parse(urlopen(feed_url)).getroot()
-        self.assertEquals(self.system_count(feed), 
+        self.assertEqual(self.system_count(feed), 
                           System.query.filter(System.status==SystemStatus.removed).count())
         self.assertTrue(self.feed_contains_system(feed, system1.fqdn))
         self.assertFalse(self.feed_contains_system(feed, system2.fqdn))
@@ -386,8 +386,8 @@ class TestSystemsAtomFeed(DatabaseTestCase):
                 'tg_format': 'atom', 'list_tgp_order': '-date_modified',
                 'xmlsearch': '<key_value key="MODULE" />'}))
         feed = lxml.etree.parse(urlopen(feed_url)).getroot()
-        self.assert_(self.feed_contains_system(feed, with_module.fqdn))
-        self.assert_(not self.feed_contains_system(feed, without_module.fqdn))
+        self.assertTrue(self.feed_contains_system(feed, with_module.fqdn))
+        self.assertTrue(not self.feed_contains_system(feed, without_module.fqdn))
 
 
 class IpxeScriptHTTPTest(DatabaseTestCase):
@@ -399,12 +399,12 @@ class IpxeScriptHTTPTest(DatabaseTestCase):
     def test_unknown_uuid(self):
         response = requests.get(get_server_base() +
                 'systems/by-uuid/%s/ipxe-script' % uuid.uuid4())
-        self.assertEquals(response.status_code, 404)
+        self.assertEqual(response.status_code, 404)
 
     def test_invalid_uuid(self):
         response = requests.get(get_server_base() +
                 'systems/by-uuid/blerg/ipxe-script')
-        self.assertEquals(response.status_code, 404)
+        self.assertEqual(response.status_code, 404)
 
     def test_recipe_not_provisioned_yet(self):
         with session.begin():
@@ -414,7 +414,7 @@ class IpxeScriptHTTPTest(DatabaseTestCase):
             # VM is created but recipe.provision() hasn't been called yet
         response = requests.get(get_server_base() +
                 'systems/by-uuid/%s/ipxe-script' % recipe.resource.instance_id)
-        self.assertEquals(response.status_code, 503)
+        self.assertEqual(response.status_code, 503)
 
     def test_lab_incompatible_URLs(self):
         with session.begin():
@@ -480,7 +480,7 @@ boot
         response = requests.get(get_server_base() +
                 'systems/by-uuid/%s/ipxe-script' % recipe.resource.instance_id)
         response.raise_for_status()
-        self.assertEquals(response.text, """#!ipxe
+        self.assertEqual(response.text, """#!ipxe
 kernel http://example.com/ipxe-test/F20/x86_64/os/pxeboot/vmlinuz console=tty0 console=ttyS0,115200n8 ks=%s ksdevice=bootif noverifyssl netboot_method=ipxe
 initrd http://example.com/ipxe-test/F20/x86_64/os/pxeboot/initrd
 boot
@@ -511,7 +511,7 @@ class SystemHTTPTest(DatabaseTestCase):
         response = requests.get(get_server_base() + '/systems/%s/' % self.system.fqdn,
                 headers={'Accept': 'application/json'})
         response.raise_for_status()
-        self.assertEquals(response.json()['fqdn'], self.system.fqdn)
+        self.assertEqual(response.json()['fqdn'], self.system.fqdn)
 
     def test_get_system_with_running_hardware_scan_recipe(self):
         # The bug was a circular reference from system -> recipe -> system
@@ -525,9 +525,9 @@ class SystemHTTPTest(DatabaseTestCase):
                 headers={'Accept': 'application/json'})
         response.raise_for_status()
         in_progress_scan = response.json()['in_progress_scan']
-        self.assertEquals(in_progress_scan['recipe_id'], recipe.id)
-        self.assertEquals(in_progress_scan['status'], u'Running')
-        self.assertEquals(in_progress_scan['job_id'], recipe.recipeset.job.t_id)
+        self.assertEqual(in_progress_scan['recipe_id'], recipe.id)
+        self.assertEqual(in_progress_scan['status'], u'Running')
+        self.assertEqual(in_progress_scan['job_id'], recipe.recipeset.job.t_id)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1386074
     def test_get_system_returns_correct_id(self):
@@ -616,8 +616,8 @@ class SystemHTTPTest(DatabaseTestCase):
                               'systems/%s/' % self.system.fqdn, session=s,
                               data={'active_access_policy': {'pool_name': pool.name}},
                         )
-        self.assertEquals(response.status_code, 400)
-        self.assertEquals(response.text,
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text,
                           'To use a pool policy, the system must be in the pool first')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1206034
@@ -709,7 +709,7 @@ class SystemHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(system.active_access_policy, pool.access_policy)
+            self.assertEqual(system.active_access_policy, pool.access_policy)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1290273
     def test_cannot_update_active_access_policy_with_edit_system_permission(self):
@@ -726,7 +726,7 @@ class SystemHTTPTest(DatabaseTestCase):
                               'systems/%s/' % system.fqdn, session=s,
                               data={'active_access_policy': {'pool_name': pool.name}},
         )
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
         self.assertIn('Cannot edit system access policy', response.text)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1290273
@@ -743,7 +743,7 @@ class SystemHTTPTest(DatabaseTestCase):
                               'systems/%s/' % system.fqdn, session=s,
                               data={'fqdn': u'newfqdn'},
         )
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
         self.assertIn('Cannot edit system', response.text)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1290273
@@ -764,10 +764,10 @@ class SystemHTTPTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             self.assertTrue(system.active_access_policy, pool.access_policy)
-            self.assertEquals(system.activity[-1].field_name, 'Active Access Policy')
-            self.assertEquals(system.activity[-1].action, 'Changed')
-            self.assertEquals(system.activity[-1].old_value, 'Custom access policy')
-            self.assertEquals(system.activity[-1].new_value, 'Pool policy: %s' % unicode(pool))
+            self.assertEqual(system.activity[-1].field_name, 'Active Access Policy')
+            self.assertEqual(system.activity[-1].action, 'Changed')
+            self.assertEqual(system.activity[-1].old_value, 'Custom access policy')
+            self.assertEqual(system.activity[-1].new_value, 'Pool policy: %s' % unicode(pool))
         # change the system active access policy back to custom access policy
         s = requests.Session()
         s.post(get_server_base() + 'login', data={'user_name': data_setup.ADMIN_USER,
@@ -780,10 +780,10 @@ class SystemHTTPTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             self.assertTrue(system.active_access_policy, system.custom_access_policy)
-            self.assertEquals(system.activity[-2].field_name, 'Active Access Policy')
-            self.assertEquals(system.activity[-2].action, 'Changed')
-            self.assertEquals(system.activity[-2].old_value, 'Pool policy: %s' % unicode(pool))
-            self.assertEquals(system.activity[-2].new_value, 'Custom access policy')
+            self.assertEqual(system.activity[-2].field_name, 'Active Access Policy')
+            self.assertEqual(system.activity[-2].action, 'Changed')
+            self.assertEqual(system.activity[-2].old_value, 'Pool policy: %s' % unicode(pool))
+            self.assertEqual(system.activity[-2].new_value, 'Custom access policy')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1290273
     def test_updating_access_policy_with_no_change_should_not_record_activity(self):
@@ -800,7 +800,7 @@ class SystemHTTPTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             self.assertTrue(system.active_access_policy, system.custom_access_policy)
-            self.assertEquals(system.activity, [])
+            self.assertEqual(system.activity, [])
 
     #  https://bugzilla.redhat.com/show_bug.cgi?id=1323885
     def test_update_lab_controller_with_lab_controller_object(self):
@@ -818,10 +818,10 @@ class SystemHTTPTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             self.assertTrue(system.lab_controller, lc)
-            self.assertEquals(system.activity[-1].field_name, 'Lab Controller')
-            self.assertEquals(system.activity[-1].action, 'Changed')
-            self.assertEquals(system.activity[-1].old_value, None)
-            self.assertEquals(system.activity[-1].new_value, lc.fqdn)
+            self.assertEqual(system.activity[-1].field_name, 'Lab Controller')
+            self.assertEqual(system.activity[-1].action, 'Changed')
+            self.assertEqual(system.activity[-1].old_value, None)
+            self.assertEqual(system.activity[-1].new_value, lc.fqdn)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1387109
     def test_can_set_zero_quiescent_period(self):
@@ -835,7 +835,7 @@ class SystemHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(system.power.power_quiescent_period, 0)
+            self.assertEqual(system.power.power_quiescent_period, 0)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1497881
     def test_cannot_give_to_deleted_user(self):
@@ -847,8 +847,8 @@ class SystemHTTPTest(DatabaseTestCase):
         requests_login(s)
         response = patch_json(get_server_base() + 'systems/%s/' % system.fqdn,
                 session=s, data={'owner': {'user_name': deleted_user.user_name}})
-        self.assertEquals(response.status_code, 400)
-        self.assertEquals(response.text,
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text,
                 'Cannot change owner to deleted user %s' % deleted_user.user_name)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1591391
@@ -862,8 +862,8 @@ class SystemHTTPTest(DatabaseTestCase):
         requests_login(s)
         response = patch_json(get_server_base() + 'systems/%s/' % system.fqdn,
                 session=s, data={'owner': {'user_name': user_with_long_username.user_name}})
-        self.assertEquals(response.status_code, 200)
+        self.assertEqual(response.status_code, 200)
         with session.begin():
-            self.assertEquals(system.activity[0].field_name, u'Owner')
-            self.assertEquals(system.activity[0].action, u'Changed')
-            self.assertEquals(system.activity[0].new_value, u'z' * max_new_value_length)
+            self.assertEqual(system.activity[0].field_name, u'Owner')
+            self.assertEqual(system.activity[0].action, u'Changed')
+            self.assertEqual(system.activity[0].new_value, u'z' * max_new_value_length)

@@ -64,8 +64,8 @@ class ExecutedTasksTest(WebDriverTestCase):
         b.get(get_server_base() + 'tasks/%d' % task.id)
         options = [element.text for element in
                 b.find_elements_by_xpath("//select[@name='osmajor_id']/option")]
-        self.assert_(options.index('BlueShoe9') < options.index('BlueShoe10'), options)
-        self.assert_('neverused666' not in options, options)
+        self.assertTrue(options.index('BlueShoe9') < options.index('BlueShoe10'), options)
+        self.assertTrue('neverused666' not in options, options)
 
     def test_executed_tasks_system_filter(self):
         with session.begin():

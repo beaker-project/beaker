@@ -20,7 +20,7 @@ class WatchdogsTest(WebDriverTestCase):
             data_setup.mark_job_running(data_setup.create_job())
         b = self.browser
         b.get(get_server_base() + 'watchdogs/')
-        self.assertEquals(b.title, 'Watchdogs')
+        self.assertEqual(b.title, 'Watchdogs')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=849818
     def test_handles_null_recipe_task_id(self):
@@ -32,7 +32,7 @@ class WatchdogsTest(WebDriverTestCase):
                     [running_recipe, waiting_recipe])
             data_setup.mark_recipe_running(running_recipe)
             data_setup.mark_recipe_waiting(waiting_recipe)
-            self.assertEquals(waiting_recipe.watchdog.recipetask, None)
+            self.assertEqual(waiting_recipe.watchdog.recipetask, None)
         b = self.browser
         b.get(get_server_base() + 'watchdogs/')
-        self.assertEquals(b.title, 'Watchdogs')
+        self.assertEqual(b.title, 'Watchdogs')

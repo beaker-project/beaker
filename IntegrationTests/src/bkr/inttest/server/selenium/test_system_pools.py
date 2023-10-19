@@ -53,7 +53,7 @@ class SystemPoolsGridTest(WebDriverTestCase):
         b.find_element_by_xpath('//title[text()="inflatable"]')
         with session.begin():
             pool = SystemPool.by_name(u'inflatable')
-            self.assertEquals(pool.owner, User.by_user_name(data_setup.ADMIN_USER))
+            self.assertEqual(pool.owner, User.by_user_name(data_setup.ADMIN_USER))
 
     def test_empty_pool_name_triggers_validation(self):
         """Adding a pool with an empty name triggers a validation error."""
@@ -139,7 +139,7 @@ class SystemPoolEditTest(WebDriverTestCase):
         # once it's deleted we are returned to the pools grid
         b.find_element_by_xpath('.//title[text()="Pools"]')
         with session.begin():
-            self.assertEquals(SystemPool.query.filter(
+            self.assertEqual(SystemPool.query.filter(
                     SystemPool.name == pool.name).count(), 0)
 
     def test_delete_pool(self):
@@ -251,7 +251,7 @@ class SystemPoolEditTest(WebDriverTestCase):
         self.go_to_pool_edit(system_pool=pool, tab='Systems')
         b.find_element_by_name('system').send_keys(system.fqdn)
         b.find_element_by_class_name('pool-add-system-form').submit()
-        self.assertEquals(b.find_element_by_xpath('//div[@id="systems"]'
+        self.assertEqual(b.find_element_by_xpath('//div[@id="systems"]'
                                                   '/div/ul[@class="list-group pool-systems-list"]'
                                                   '/li/a').text, system.fqdn)
         with session.begin():
@@ -457,7 +457,7 @@ class SystemPoolAccessPolicyWebUITest(WebDriverTestCase):
         pane = b.find_element_by_id('access-policy')
         # type the group name before it exists
         with session.begin():
-            self.assertEquals(Group.query.filter_by(group_name=u'anotherbeatles').first(), None)
+            self.assertEqual(Group.query.filter_by(group_name=u'anotherbeatles').first(), None)
         group_input = pane.find_element_by_xpath('.//input[@placeholder="Group name"]')
         group_input.send_keys('anotherbeatles')
         # group is created
@@ -556,17 +556,17 @@ class SystemPoolHTTPTest(DatabaseTestCase):
             'description': 'newtestdesciprtion',
         }
         response = post_json(get_server_base() + 'pools/', session=s, data=data)
-        self.assertEquals(response.status_code, 201)
-        self.assertEquals(response.json()['name'], data['name'])
-        self.assertEquals(response.json()['description'], data['description'])
-        self.assertEquals(response.headers['Location'],
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()['name'], data['name'])
+        self.assertEqual(response.json()['description'], data['description'])
+        self.assertEqual(response.headers['Location'],
                 get_server_base() + 'pools/newtest/')
         with session.begin():
             pool = SystemPool.by_name('newtest')
-            self.assertEquals(pool.name, 'newtest')
-            self.assertEquals(pool.description, 'newtestdesciprtion')
-            self.assertEquals(pool.owner.user_name, self.owner.user_name)
-            self.assertEquals(pool.access_policy.rules[0].everybody, True)
+            self.assertEqual(pool.name, 'newtest')
+            self.assertEqual(pool.description, 'newtestdesciprtion')
+            self.assertEqual(pool.owner.user_name, self.owner.user_name)
+            self.assertEqual(pool.access_policy.rules[0].everybody, True)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1498374
     def test_cannot_create_system_pool_owned_by_deleted_user(self):
@@ -576,8 +576,8 @@ class SystemPoolHTTPTest(DatabaseTestCase):
         send_login(s)
         response = post_json(get_server_base() + 'pools/', session=s,
                 data={'name': 'asdf', 'owner': {'user_name': self.owner.user_name}})
-        self.assertEquals(response.status_code, 400)
-        self.assertEquals(response.text,
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text,
                 'System pool cannot be owned by deleted user %s' % self.owner.user_name)
 
     def test_get_system_pool(self):
@@ -585,9 +585,9 @@ class SystemPoolHTTPTest(DatabaseTestCase):
                 'pools/%s/' % self.pool.name, headers={'Accept': 'application/json'})
         response.raise_for_status()
         json = response.json()
-        self.assertEquals(json['id'], self.pool.id)
-        self.assertEquals(json['name'], self.pool.name)
-        self.assertEquals(json['description'], self.pool.description)
+        self.assertEqual(json['id'], self.pool.id)
+        self.assertEqual(json['name'], self.pool.name)
+        self.assertEqual(json['description'], self.pool.description)
 
     def test_update_system_pool(self):
         s = requests.Session()
@@ -601,9 +601,9 @@ class SystemPoolHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.pool.name, 'newname')
-            self.assertEquals(self.pool.description, 'newdescription')
-            self.assertEquals(self.pool.owner.user_name, self.user.user_name)
+            self.assertEqual(self.pool.name, 'newname')
+            self.assertEqual(self.pool.description, 'newdescription')
+            self.assertEqual(self.pool.owner.user_name, self.user.user_name)
 
         s = requests.Session()
         s.post(get_server_base() + 'login', data={'user_name': self.user.user_name,
@@ -616,7 +616,7 @@ class SystemPoolHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.pool.owner, self.group)
+            self.assertEqual(self.pool.owner, self.group)
             self.assertFalse(self.pool.owning_user)
 
     def test_cannot_update_system_pool_with_empty_name(self):
@@ -642,8 +642,8 @@ class SystemPoolHTTPTest(DatabaseTestCase):
         send_login(s, user=self.owner, password=u'theowner')
         response = patch_json(get_server_base() + 'pools/%s/' % self.pool.name,
                 session=s, data={'owner': {'user_name': self.user.user_name}})
-        self.assertEquals(response.status_code, 400)
-        self.assertEquals(response.text,
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text,
                 'System pool cannot be owned by deleted user %s' % self.user.user_name)
 
     def test_add_system_to_pool(self):
@@ -658,24 +658,24 @@ class SystemPoolHTTPTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             self.assertItemsEqual(self.pool.systems, [self.system, other_system])
-            self.assertEquals(self.pool.activity[-1].field_name, 'System')
-            self.assertEquals(self.pool.activity[-1].action, 'Added')
-            self.assertEquals(self.pool.activity[-1].new_value, unicode(other_system))
-            self.assertEquals(other_system.activity[-1].field_name, 'Pool')
-            self.assertEquals(other_system.activity[-1].action, 'Added')
-            self.assertEquals(other_system.activity[-1].new_value, unicode(self.pool))
+            self.assertEqual(self.pool.activity[-1].field_name, 'System')
+            self.assertEqual(self.pool.activity[-1].action, 'Added')
+            self.assertEqual(self.pool.activity[-1].new_value, unicode(other_system))
+            self.assertEqual(other_system.activity[-1].field_name, 'Pool')
+            self.assertEqual(other_system.activity[-1].action, 'Added')
+            self.assertEqual(other_system.activity[-1].new_value, unicode(self.pool))
 
         # adding to a pool that doesn't exist is a 404
         response = post_json(get_server_base() + 'pools/nosuchpool/systems/',
                 session=s, data={'fqdn': other_system.fqdn})
-        self.assertEquals(response.status_code, 404)
-        self.assertEquals(response.text, 'System pool nosuchpool does not exist')
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.text, 'System pool nosuchpool does not exist')
 
         # adding a system that doesn't exist is a 400
         response = post_json(get_server_base() + 'pools/%s/systems/' % self.pool.name,
                 session=s, data={'fqdn': 'nosuchsystem'})
-        self.assertEquals(response.status_code, 400)
-        self.assertEquals(response.text, "System 'nosuchsystem' does not exist")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text, "System 'nosuchsystem' does not exist")
 
 
     def test_remove_system_from_pool(self):
@@ -701,16 +701,16 @@ class SystemPoolHTTPTest(DatabaseTestCase):
         with session.begin():
             session.expire_all()
             self.assertNotIn(system, pool.systems)
-            self.assertEquals(pool.activity[-1].field_name, 'System')
-            self.assertEquals(pool.activity[-1].action, 'Removed')
-            self.assertEquals(pool.activity[-1].old_value, unicode(system))
-            self.assertEquals(system.activity[-2].field_name, 'Pool')
-            self.assertEquals(system.activity[-2].action, 'Removed')
-            self.assertEquals(system.activity[-2].old_value, unicode(pool))
-            self.assertEquals(system.activity[-1].field_name, 'Active Access Policy')
-            self.assertEquals(system.activity[-1].action, 'Changed')
-            self.assertEquals(system.activity[-1].old_value, 'Pool policy: %s' % unicode(pool))
-            self.assertEquals(system.activity[-1].new_value, 'Custom access policy')
+            self.assertEqual(pool.activity[-1].field_name, 'System')
+            self.assertEqual(pool.activity[-1].action, 'Removed')
+            self.assertEqual(pool.activity[-1].old_value, unicode(system))
+            self.assertEqual(system.activity[-2].field_name, 'Pool')
+            self.assertEqual(system.activity[-2].action, 'Removed')
+            self.assertEqual(system.activity[-2].old_value, unicode(pool))
+            self.assertEqual(system.activity[-1].field_name, 'Active Access Policy')
+            self.assertEqual(system.activity[-1].action, 'Changed')
+            self.assertEqual(system.activity[-1].old_value, 'Pool policy: %s' % unicode(pool))
+            self.assertEqual(system.activity[-1].new_value, 'Custom access policy')
 
         self.assertFalse(system.active_access_policy.grants
                          (self.user, SystemPermission.edit_system))
@@ -737,7 +737,7 @@ class SystemPoolHTTPTest(DatabaseTestCase):
         s.post(get_server_base() + 'login', data={'user_name': random_user.user_name,
                                                   'password': 'password'}).raise_for_status()
         response = s.delete(get_server_base() + 'pools/%s/' % pool_name)
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
 
         # now as the pool owner
         s = requests.Session()
@@ -754,15 +754,15 @@ class SystemPoolHTTPTest(DatabaseTestCase):
             self.assertFalse(system.active_access_policy.grants
                              (self.user, SystemPermission.edit_system))
 
-            self.assertEquals(system.activity[-1].field_name, 'Pool')
-            self.assertEquals(system.activity[-1].action, 'Removed')
-            self.assertEquals(system.activity[-1].old_value, unicode_pool)
+            self.assertEqual(system.activity[-1].field_name, 'Pool')
+            self.assertEqual(system.activity[-1].action, 'Removed')
+            self.assertEqual(system.activity[-1].old_value, unicode_pool)
 
-            self.assertEquals(system.activity[-2].field_name, 'Active Access Policy')
-            self.assertEquals(system.activity[-2].old_value, 'Pool policy: %s' % pool_name)
-            self.assertEquals(system.activity[-2].new_value, 'Custom access policy')
+            self.assertEqual(system.activity[-2].field_name, 'Active Access Policy')
+            self.assertEqual(system.activity[-2].old_value, 'Pool policy: %s' % pool_name)
+            self.assertEqual(system.activity[-2].new_value, 'Custom access policy')
 
-            self.assertEquals(1, Activity.query
+            self.assertEqual(1, Activity.query
                               .filter(Activity.field_name == u'Pool')
                               .filter(Activity.action == u'Deleted')
                               .filter(Activity.old_value == pool_name).count(),
@@ -787,8 +787,8 @@ class SystemPoolAccessPolicyHTTPTest(DatabaseTestCase):
                 'pools/%s/access-policy' % self.pool.name)
         response.raise_for_status()
         json = response.json()
-        self.assertEquals(json['id'], self.pool.access_policy.id)
-        self.assertEquals([p['value'] for p in json['possible_permissions']],
+        self.assertEqual(json['id'], self.pool.access_policy.id)
+        self.assertEqual([p['value'] for p in json['possible_permissions']],
                 ['view', 'view_power', 'edit_policy', 'edit_system',
                  'loan_any', 'loan_self', 'control_system', 'reserve'])
         self.assertItemsEqual(json['rules'], [
@@ -800,7 +800,7 @@ class SystemPoolAccessPolicyHTTPTest(DatabaseTestCase):
 
     def test_get_access_policy_for_nonexistent_pool(self):
         response = requests.get(get_server_base() + 'pools/notexist/access-policy')
-        self.assertEquals(response.status_code, 404)
+        self.assertEqual(response.status_code, 404)
 
     def test_save_access_policy(self):
         s = requests.Session()
@@ -819,22 +819,22 @@ class SystemPoolAccessPolicyHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(len(self.pool.access_policy.rules), 2)
-            self.assertEquals(self.pool.access_policy.rules[0].permission,
+            self.assertEqual(len(self.pool.access_policy.rules), 2)
+            self.assertEqual(self.pool.access_policy.rules[0].permission,
                     SystemPermission.view)
-            self.assertEquals(self.pool.access_policy.rules[1].permission,
+            self.assertEqual(self.pool.access_policy.rules[1].permission,
                     SystemPermission.control_system)
-            self.assertEquals(self.pool.access_policy.rules[1].everybody, True)
+            self.assertEqual(self.pool.access_policy.rules[1].everybody, True)
 
     def test_anonymous_cannot_add_delete_policy_rule(self):
         # attempt to add
         response = post_json(get_server_base() +
                             'pools/%s/access-policy/rules/' % self.pool.name,
                             data={'rule': []})
-        self.assertEquals(response.status_code, 401)
+        self.assertEqual(response.status_code, 401)
         # attempt to remove
         response = requests.delete(get_server_base() + 'systems/%s/access-policy/rules/' % self.pool.name)
-        self.assertEquals(response.status_code, 401)
+        self.assertEqual(response.status_code, 401)
 
     def test_unprivileged_user_cannot_add_remove_policy_rule(self):
         with session.begin():
@@ -847,11 +847,11 @@ class SystemPoolAccessPolicyHTTPTest(DatabaseTestCase):
                              'pools/%s/access-policy/rules/' % self.pool.name,
                              session=s,
                              data={'rule': {} })
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
         # attempt to remove
         response = s.delete(get_server_base() +
                             'pools/%s/access-policy/rules/' % self.pool.name)
-        self.assertEquals(response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
 
     def test_add_policy_rule(self):
         s = requests.Session()
@@ -867,9 +867,9 @@ class SystemPoolAccessPolicyHTTPTest(DatabaseTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.pool.access_policy.rules[-1].permission,
+            self.assertEqual(self.pool.access_policy.rules[-1].permission,
                               SystemPermission.control_system)
-            self.assertEquals(self.pool.access_policy.rules[-1].everybody, True)
+            self.assertEqual(self.pool.access_policy.rules[-1].everybody, True)
 
     def test_delete_policy_rule(self):
         with session.begin():

@@ -3,10 +3,9 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+from six import assertRegex
 import unittest
 from datetime import date
-
-import six
 from six.moves import StringIO
 
 from bkr.client import wizard
@@ -165,6 +164,6 @@ class TypeTest(unittest.TestCase):
         type.heading()
         cpt_stdout.seek(0)
         printout = cpt_stdout.read()
-        six.assertRegex(self, printout, r'\bWhat is the type of test?\b')
-        six.assertRegex(self, printout, r'\bRecommended values\b')
-        six.assertRegex(self, printout, r'\bPossible values\b')
+        assertRegex(self, printout, r'\bWhat is the type of test?\b')
+        assertRegex(self, printout, r'\bRecommended values\b')
+        assertRegex(self, printout, r'\bPossible values\b')

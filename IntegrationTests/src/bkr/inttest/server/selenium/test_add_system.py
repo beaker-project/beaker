@@ -93,13 +93,13 @@ class CreateSystemHTTPTest(DatabaseTestCase):
         response = post_json(get_server_base() + 'systems/', session=s, data=data)
         with session.begin():
             system = System.by_fqdn(fqdn, self.user)
-            self.assertEquals(system.fqdn, fqdn)
-            self.assertEquals(system.lab_controller_id, self.lc.id)
+            self.assertEqual(system.fqdn, fqdn)
+            self.assertEqual(system.lab_controller_id, self.lc.id)
             self.assertTrue(Arch.by_name(u'i386') in system.arch)
             self.assertTrue(Arch.by_name(u'x86_64') in system.arch)
-            self.assertEquals(system.location, u'dummylocation')
-            self.assertEquals(system.lender, u'dummylender')
-            self.assertEquals(system.kernel_type,  KernelType.by_name(u'highbank'))
+            self.assertEqual(system.location, u'dummylocation')
+            self.assertEqual(system.lender, u'dummylender')
+            self.assertEqual(system.kernel_type,  KernelType.by_name(u'highbank'))
 
     def test_creating_a_system_with_hardware_details(self):
         s = requests.Session()
@@ -120,13 +120,13 @@ class CreateSystemHTTPTest(DatabaseTestCase):
         response = post_json(get_server_base() + 'systems/', session=s, data=data)
         with session.begin():
             system = System.by_fqdn(fqdn, self.user)
-            self.assertEquals(system.fqdn, fqdn)
-            self.assertEquals(system.hypervisor, Hypervisor.by_name(u'KVM'))
-            self.assertEquals(system.location, u'dummylocation')
-            self.assertEquals(system.serial, u'dummynumber')
-            self.assertEquals(system.mac_address, u'dummymacaddress')
-            self.assertEquals(system.memory, 111111)
-            self.assertEquals(system.numa.nodes, 5)
+            self.assertEqual(system.fqdn, fqdn)
+            self.assertEqual(system.hypervisor, Hypervisor.by_name(u'KVM'))
+            self.assertEqual(system.location, u'dummylocation')
+            self.assertEqual(system.serial, u'dummynumber')
+            self.assertEqual(system.mac_address, u'dummymacaddress')
+            self.assertEqual(system.memory, 111111)
+            self.assertEqual(system.numa.nodes, 5)
 
     def test_creating_a_system_with_power_settings(self):
         s = requests.Session()
@@ -148,14 +148,14 @@ class CreateSystemHTTPTest(DatabaseTestCase):
         response = post_json(get_server_base() + 'systems/', session=s, data=data)
         with session.begin():
             system = System.by_fqdn(fqdn, self.user)
-            self.assertEquals(system.power.power_type, PowerType.by_name(u'apc_snmp_then_etherwake'))
-            self.assertEquals(system.power.power_address, u'dummyaddress')
-            self.assertEquals(system.power.power_user, u'dummyuser')
-            self.assertEquals(system.power.power_passwd, u'dummypassword')
-            self.assertEquals(system.power.power_id, u'dummyvm')
-            self.assertEquals(system.power.power_quiescent_period, 5)
-            self.assertEquals(system.release_action, ReleaseAction.leave_on)
-            self.assertEquals(system.reprovision_distro_tree, self.distro_tree)
+            self.assertEqual(system.power.power_type, PowerType.by_name(u'apc_snmp_then_etherwake'))
+            self.assertEqual(system.power.power_address, u'dummyaddress')
+            self.assertEqual(system.power.power_user, u'dummyuser')
+            self.assertEqual(system.power.power_passwd, u'dummypassword')
+            self.assertEqual(system.power.power_id, u'dummyvm')
+            self.assertEqual(system.power.power_quiescent_period, 5)
+            self.assertEqual(system.release_action, ReleaseAction.leave_on)
+            self.assertEqual(system.reprovision_distro_tree, self.distro_tree)
 
     def test_creating_a_system_with_scheduler_settings(self):
         s = requests.Session()
@@ -171,6 +171,6 @@ class CreateSystemHTTPTest(DatabaseTestCase):
         response = post_json(get_server_base() + 'systems/', session=s, data=data)
         with session.begin():
             system = System.by_fqdn(fqdn, self.user)
-            self.assertEquals(system.status, SystemStatus.broken)
-            self.assertEquals(system.status_reason, u'Currently is broken')
-            self.assertEquals(system.type, SystemType.laptop)
+            self.assertEqual(system.status, SystemStatus.broken)
+            self.assertEqual(system.status_reason, u'Currently is broken')
+            self.assertEqual(system.type, SystemType.laptop)

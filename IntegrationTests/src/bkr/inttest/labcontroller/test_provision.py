@@ -224,12 +224,12 @@ class PowerTest(LabControllerTestCase):
         wait_for_commands_to_finish(system, timeout=5 * power_sleep)
         with session.begin():
             session.expire_all()
-            self.assertEquals(system.command_queue[0].status, CommandStatus.completed)
-            self.assertEquals(system.command_queue[1].status, CommandStatus.completed)
-            self.assertEquals(system.command_queue[2].status, CommandStatus.completed)
+            self.assertEqual(system.command_queue[0].status, CommandStatus.completed)
+            self.assertEqual(system.command_queue[1].status, CommandStatus.completed)
+            self.assertEqual(system.command_queue[2].status, CommandStatus.completed)
             # The bug manifests as two "Completed" records for the power
             # command which ran twice
-            self.assertEquals(system.dyn_activity
+            self.assertEqual(system.dyn_activity
                               .filter_by(field_name=u'Power', new_value=u'Completed')
                               .count(), 3)
 
@@ -271,9 +271,9 @@ class PowerTest(LabControllerTestCase):
             wait_for_commands_to_finish(system, timeout=2 * get_conf().get('SLEEP_TIME'))
         finally:
             provision_output = provision_process.finish_output_capture()
-        self.assert_('Handling command' in provision_output, provision_output)
-        self.assert_('Launching power script' in provision_output, provision_output)
-        self.assert_(system.power.power_passwd not in provision_output, provision_output)
+        self.assertTrue('Handling command' in provision_output, provision_output)
+        self.assertTrue('Launching power script' in provision_output, provision_output)
+        self.assertTrue(system.power.power_passwd not in provision_output, provision_output)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1358063
     def test_power_passwords_are_not_reported_in_failure_message(self):
@@ -323,8 +323,8 @@ class ConfigureNetbootTest(LabControllerTestCase):
             system.configure_netboot(installation=installation, service=u'testdata')
         wait_for_commands_to_finish(system, timeout=(2 * get_conf().get('SLEEP_TIME')
                                                      + get_conf().get('IMAGE_FETCH_TIMEOUT')))
-        self.assertEquals(system.command_queue[0].action, u'configure_netboot')
-        self.assertEquals(system.command_queue[0].status, CommandStatus.failed)
+        self.assertEqual(system.command_queue[0].action, u'configure_netboot')
+        self.assertEqual(system.command_queue[0].status, CommandStatus.failed)
         self.assertIn(u'timed out', system.command_queue[0].error_message)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=874387
@@ -342,9 +342,9 @@ class ConfigureNetbootTest(LabControllerTestCase):
             installation.kernel_options = u''
             system.configure_netboot(installation=installation, service=u'testdata')
         wait_for_commands_to_finish(system, timeout=(2 * get_conf().get('SLEEP_TIME')))
-        self.assertEquals(system.command_queue[0].action, u'configure_netboot')
-        self.assertEquals(system.command_queue[0].status, CommandStatus.failed)
-        self.assertEquals(system.status, SystemStatus.automated)
+        self.assertEqual(system.command_queue[0].action, u'configure_netboot')
+        self.assertEqual(system.command_queue[0].status, CommandStatus.failed)
+        self.assertEqual(system.status, SystemStatus.automated)
 
 
 class FakeHub(object):

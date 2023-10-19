@@ -82,13 +82,13 @@ class PolicyGrantTest(ClientTestCase):
             user = data_setup.create_user()
             group = data_setup.create_group()
             # there is always the rule granting everybody view
-            self.assertEquals(len(self.system.custom_access_policy.rules), 1)
+            self.assertEqual(len(self.system.custom_access_policy.rules), 1)
         run_client(['bkr', 'policy-grant', '--system', self.system.fqdn,
                 '--permission=reserve', '--permission=view_power',
                 '--user', user.user_name, '--group', group.group_name])
         with session.begin():
             session.expire_all()
-            self.assertEquals(len(self.system.custom_access_policy.rules), 5)
+            self.assertEqual(len(self.system.custom_access_policy.rules), 5)
 
     def test_grant_policy_pool(self):
         with session.begin():

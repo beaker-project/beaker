@@ -81,7 +81,7 @@ class SystemCommandsTest(WebDriverTestCase):
         pane.find_element_by_xpath('.//table/tbody/tr[1]/td[6][text()="on"]')
         with session.begin():
             session.expire_all()
-            self.assertEquals(system.command_queue[0].action, 'on')
+            self.assertEqual(system.command_queue[0].action, 'on')
 
     def check_clear_netboot(self, system):
         b = self.browser
@@ -98,7 +98,7 @@ class SystemCommandsTest(WebDriverTestCase):
         pane.find_element_by_xpath('.//table/tbody/tr[1]/td[6][text()="clear_netboot"]')
         with session.begin():
             session.expire_all()
-            self.assertEquals(system.command_queue[0].action, 'clear_netboot')
+            self.assertEqual(system.command_queue[0].action, 'clear_netboot')
 
     def test_cannot_power_when_not_logged_in(self):
         b = self.browser
@@ -110,8 +110,8 @@ class SystemCommandsTest(WebDriverTestCase):
         response = post_json(get_server_base() +
                 'systems/%s/commands/' % self.system.fqdn,
                 data=dict(action='on'))
-        self.assertEquals(response.status_code, 401)
-        self.assertEquals(response.text, 'Authenticated user required')
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.text, 'Authenticated user required')
 
     def test_cannot_power_without_permission(self):
         self.check_cannot_power(self.unprivileged, 'unprivileged',

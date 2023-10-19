@@ -20,7 +20,7 @@ class TaskAddTest(ClientTestCase):
             self.fail('should raise')
         except ClientError as e:
             self.assertEqual(e.status, 1)
-            self.assert_('error reading package header' in e.stderr_output,
+            self.assertTrue('error reading package header' in e.stderr_output,
                     e.stderr_output)
 
     def test_add_new_task_successfully(self):

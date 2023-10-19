@@ -70,15 +70,15 @@ class ReportingQueryTest(DatabaseTestCase):
         virt_rows = [row for row in all_rows if row.fqdn == 'All OpenStack']
         system_rows = [row for row in all_rows if row.fqdn in (system_recipe.resource.fqdn, system_recipe2.resource.fqdn)]
 
-        self.assertEquals(len(virt_rows), 1, virt_rows)
-        self.assertEquals(virt_rows[0].min_wait_hours, 1)
-        self.assertEquals(virt_rows[0].max_wait_hours, 2)
-        self.assertEquals(virt_rows[0].avg_wait_hours, Decimal('1.5'))
+        self.assertEqual(len(virt_rows), 1, virt_rows)
+        self.assertEqual(virt_rows[0].min_wait_hours, 1)
+        self.assertEqual(virt_rows[0].max_wait_hours, 2)
+        self.assertEqual(virt_rows[0].avg_wait_hours, Decimal('1.5'))
 
-        self.assertEquals(len(system_rows), 1, system_rows)
-        self.assertEquals(system_rows[0].min_wait_hours, 1)
-        self.assertEquals(system_rows[0].max_wait_hours, 3)
-        self.assertEquals(system_rows[0].avg_wait_hours, 2)
+        self.assertEqual(len(system_rows), 1, system_rows)
+        self.assertEqual(system_rows[0].min_wait_hours, 1)
+        self.assertEqual(system_rows[0].max_wait_hours, 3)
+        self.assertEqual(system_rows[0].avg_wait_hours, 2)
 
     def test_install_duration_by_resource(self):
         system_recipe = data_setup.create_recipe()
@@ -117,20 +117,20 @@ class ReportingQueryTest(DatabaseTestCase):
         virt_rows = [row for row in all_rows if row.fqdn == 'All OpenStack']
         system_rows = [row for row in all_rows if row.fqdn == system_recipe.resource.fqdn]
 
-        self.assertEquals(len(virt_rows), 1, virt_rows)
-        self.assertEquals(virt_rows[0].min_install_hours, 1)
-        self.assertEquals(virt_rows[0].max_install_hours, 2)
-        self.assertEquals(virt_rows[0].avg_install_hours, Decimal('1.5'))
+        self.assertEqual(len(virt_rows), 1, virt_rows)
+        self.assertEqual(virt_rows[0].min_install_hours, 1)
+        self.assertEqual(virt_rows[0].max_install_hours, 2)
+        self.assertEqual(virt_rows[0].avg_install_hours, Decimal('1.5'))
 
-        self.assertEquals(len(guest_rows), 1, guest_rows)
-        self.assertEquals(guest_rows[0].min_install_hours, 2)
-        self.assertEquals(guest_rows[0].max_install_hours, 3)
-        self.assertEquals(guest_rows[0].avg_install_hours, Decimal('2.5'))
+        self.assertEqual(len(guest_rows), 1, guest_rows)
+        self.assertEqual(guest_rows[0].min_install_hours, 2)
+        self.assertEqual(guest_rows[0].max_install_hours, 3)
+        self.assertEqual(guest_rows[0].avg_install_hours, Decimal('2.5'))
 
-        self.assertEquals(len(system_rows), 1, system_rows)
-        self.assertEquals(system_rows[0].min_install_hours, 1)
-        self.assertEquals(system_rows[0].max_install_hours, 3)
-        self.assertEquals(system_rows[0].avg_install_hours, Decimal('2.0'))
+        self.assertEqual(len(system_rows), 1, system_rows)
+        self.assertEqual(system_rows[0].min_install_hours, 1)
+        self.assertEqual(system_rows[0].max_install_hours, 3)
+        self.assertEqual(system_rows[0].avg_install_hours, Decimal('2.0'))
 
     def test_resource_install_failures(self):
 
@@ -157,14 +157,14 @@ class ReportingQueryTest(DatabaseTestCase):
         all_rows = [row for row in rows]
         system_rows = [row for row in all_rows if row.fqdn == system_recipe.resource.fqdn]
 
-        self.assertEquals(len(virt_rows), 1, virt_rows)
-        self.assertEquals(existing_failed_virt, virt_rows[0].failed_recipes)
+        self.assertEqual(len(virt_rows), 1, virt_rows)
+        self.assertEqual(existing_failed_virt, virt_rows[0].failed_recipes)
 
-        self.assertEquals(len(guest_rows), 1, guest_rows)
-        self.assertEquals(existing_failed_guests, guest_rows[0].failed_recipes)
+        self.assertEqual(len(guest_rows), 1, guest_rows)
+        self.assertEqual(existing_failed_guests, guest_rows[0].failed_recipes)
 
-        self.assertEquals(len(system_rows), 1, system_rows)
-        self.assertEquals(system_rows[0].failed_recipes, 0)
+        self.assertEqual(len(system_rows), 1, system_rows)
+        self.assertEqual(system_rows[0].failed_recipes, 0)
 
         # Test completed recipes
         job.abort()
@@ -176,14 +176,14 @@ class ReportingQueryTest(DatabaseTestCase):
         virt_rows = [row for row in all_rows if row.fqdn == 'All OpenStack']
         system_rows = [row for row in all_rows if row.fqdn == system_recipe.resource.fqdn]
 
-        self.assertEquals(len(virt_rows), 1, virt_rows)
-        self.assertEquals(virt_rows[0].failed_recipes, existing_failed_virt + 1)
+        self.assertEqual(len(virt_rows), 1, virt_rows)
+        self.assertEqual(virt_rows[0].failed_recipes, existing_failed_virt + 1)
 
-        self.assertEquals(len(guest_rows), 1, guest_rows)
-        self.assertEquals(guest_rows[0].failed_recipes, existing_failed_guests + 1)
+        self.assertEqual(len(guest_rows), 1, guest_rows)
+        self.assertEqual(guest_rows[0].failed_recipes, existing_failed_guests + 1)
 
-        self.assertEquals(len(system_rows), 1, system_rows)
-        self.assertEquals(system_rows[0].failed_recipes, 1)
+        self.assertEqual(len(system_rows), 1, system_rows)
+        self.assertEqual(system_rows[0].failed_recipes, 1)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=877264
     def test_recipe_hours(self):
@@ -201,11 +201,11 @@ class ReportingQueryTest(DatabaseTestCase):
         session.flush()
         rows = self.execute_reporting_query('recipe-hours-by-user-arch')
         user_rows = [row for row in rows if row.username == user.user_name]
-        self.assertEquals(len(user_rows), 2, user_rows)
-        self.assertEquals(user_rows[0].arch, 'ia64')
-        self.assertEquals(user_rows[0].recipe_hours, Decimal('1.5'))
-        self.assertEquals(user_rows[1].arch, 'ppc64')
-        self.assertEquals(user_rows[1].recipe_hours, Decimal('2.0'))
+        self.assertEqual(len(user_rows), 2, user_rows)
+        self.assertEqual(user_rows[0].arch, 'ia64')
+        self.assertEqual(user_rows[0].recipe_hours, Decimal('1.5'))
+        self.assertEqual(user_rows[1].arch, 'ppc64')
+        self.assertEqual(user_rows[1].recipe_hours, Decimal('2.0'))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=877264
     def test_machine_hours(self):
@@ -231,11 +231,11 @@ class ReportingQueryTest(DatabaseTestCase):
         session.flush()
         rows = self.execute_reporting_query('machine-hours-by-user-arch')
         user_rows = [row for row in rows if row.username == user.user_name]
-        self.assertEquals(len(user_rows), 2, user_rows)
-        self.assertEquals(user_rows[0].arch, 'ia64')
-        self.assertEquals(user_rows[0].machine_hours, Decimal('2.5'))
-        self.assertEquals(user_rows[1].arch, 'ppc64')
-        self.assertEquals(user_rows[1].machine_hours, Decimal('3.0'))
+        self.assertEqual(len(user_rows), 2, user_rows)
+        self.assertEqual(user_rows[0].arch, 'ia64')
+        self.assertEqual(user_rows[0].machine_hours, Decimal('2.5'))
+        self.assertEqual(user_rows[1].arch, 'ppc64')
+        self.assertEqual(user_rows[1].machine_hours, Decimal('3.0'))
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=1117681
     def test_machine_utilization(self):
@@ -256,7 +256,7 @@ class ReportingQueryTest(DatabaseTestCase):
                                              finish=datetime.datetime(2002, 5, 3, 22, 30, 0))
         session.flush()
         rows = [row for row in self.execute_reporting_query('machine-utilization')]
-        self.assertEquals(len(rows), 2, rows)
+        self.assertEqual(len(rows), 2, rows)
         self.assertIn((system1.fqdn, Decimal('0.0333')), rows)
         self.assertIn((system2.fqdn, Decimal('1.0000')), rows)
         # system3 should not appear
@@ -276,11 +276,11 @@ class ReportingQueryTest(DatabaseTestCase):
         session.flush()
         rows = list(self.execute_reporting_query('task-durations-by-arch'))
         short_task_row, = [row for row in rows if row.task == short_task.name]
-        self.assertEquals(short_task_row.executions, 1)
-        self.assertEquals(short_task_row.avg_duration, Decimal('0.1'))
+        self.assertEqual(short_task_row.executions, 1)
+        self.assertEqual(short_task_row.avg_duration, Decimal('0.1'))
         long_task_row, = [row for row in rows if row.task == long_task.name]
-        self.assertEquals(long_task_row.executions, 1)
-        self.assertEquals(long_task_row.avg_duration, Decimal('10.0'))
+        self.assertEqual(long_task_row.executions, 1)
+        self.assertEqual(long_task_row.avg_duration, Decimal('10.0'))
 
     def test_job_priority_changes(self):
         user1 = data_setup.create_user()
@@ -332,22 +332,22 @@ class ReportingQueryTest(DatabaseTestCase):
         session.flush()
         rows = list(self.execute_reporting_query('system-count-by-cpu'))
         # un-inventoried systems should show up at the top
-        self.assertEquals(rows[0].cpu_vendor, None)
-        self.assertEquals(rows[0].cpu_model, None)
-        self.assertEquals(rows[0].cpu_family, None)
-        self.assertEquals(rows[0].cpu_stepping, None)
-        self.assert_(rows[0].system_count >= 1, rows[0])
+        self.assertEqual(rows[0].cpu_vendor, None)
+        self.assertEqual(rows[0].cpu_model, None)
+        self.assertEqual(rows[0].cpu_family, None)
+        self.assertEqual(rows[0].cpu_stepping, None)
+        self.assertTrue(rows[0].system_count >= 1, rows[0])
         # check for fake CPUs created above
         vendor_rows = [row for row in rows if row.cpu_vendor == vendor]
-        self.assertEquals(len(vendor_rows), 2, vendor_rows)
-        self.assertEquals(vendor_rows[0].cpu_model, 1)
-        self.assertEquals(vendor_rows[0].cpu_family, common_cpu_family)
-        self.assertEquals(vendor_rows[0].cpu_stepping, common_cpu_stepping)
-        self.assertEquals(vendor_rows[0].system_count, 20)
-        self.assertEquals(vendor_rows[1].cpu_model, 1)
-        self.assertEquals(vendor_rows[1].cpu_family, rare_cpu_family)
-        self.assertEquals(vendor_rows[1].cpu_stepping, rare_cpu_stepping)
-        self.assertEquals(vendor_rows[1].system_count, 2)
+        self.assertEqual(len(vendor_rows), 2, vendor_rows)
+        self.assertEqual(vendor_rows[0].cpu_model, 1)
+        self.assertEqual(vendor_rows[0].cpu_family, common_cpu_family)
+        self.assertEqual(vendor_rows[0].cpu_stepping, common_cpu_stepping)
+        self.assertEqual(vendor_rows[0].system_count, 20)
+        self.assertEqual(vendor_rows[1].cpu_model, 1)
+        self.assertEqual(vendor_rows[1].cpu_family, rare_cpu_family)
+        self.assertEqual(vendor_rows[1].cpu_stepping, rare_cpu_stepping)
+        self.assertEqual(vendor_rows[1].system_count, 2)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=193142
     def test_systems_by_cpu_core_count(self):
@@ -359,9 +359,9 @@ class ReportingQueryTest(DatabaseTestCase):
         session.flush()
         system_counts = dict(((arch, cpu_cores), count) for arch, cpu_cores, count in
                 self.execute_reporting_query('system-count-by-arch-cpu-cores'))
-        self.assert_(system_counts[('i386', None)] >= 1, system_counts)
-        self.assert_(system_counts[('i386', 39)] >= 3, system_counts)
-        self.assert_(system_counts[('i386', 41)] >= 3, system_counts)
+        self.assertTrue(system_counts[('i386', None)] >= 1, system_counts)
+        self.assertTrue(system_counts[('i386', 39)] >= 3, system_counts)
+        self.assertTrue(system_counts[('i386', 41)] >= 3, system_counts)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=193142
     def test_systems_by_vendor(self):
@@ -377,9 +377,9 @@ class ReportingQueryTest(DatabaseTestCase):
         session.flush()
         system_counts = dict((vendor, count) for vendor, count in
                 self.execute_reporting_query('system-count-by-vendor'))
-        self.assert_(system_counts[None] >= 1, system_counts[None])
-        self.assertEquals(system_counts[rare_vendor], 2)
-        self.assertEquals(system_counts[common_vendor], 20)
+        self.assertTrue(system_counts[None] >= 1, system_counts[None])
+        self.assertEqual(system_counts[rare_vendor], 2)
+        self.assertEqual(system_counts[common_vendor], 20)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=193142
     def test_systems_by_memory(self):
@@ -392,9 +392,9 @@ class ReportingQueryTest(DatabaseTestCase):
         session.flush()
         system_counts = dict(((arch, memory_gb), count) for arch, memory_gb, count in
                 self.execute_reporting_query('system-count-by-arch-memory-gb'))
-        self.assert_(system_counts[('i386', None)] >= 1, system_counts)
-        self.assert_(system_counts[('i386', 39)] >= 3, system_counts)
-        self.assert_(system_counts[('i386', 41)] >= 3, system_counts)
+        self.assertTrue(system_counts[('i386', None)] >= 1, system_counts)
+        self.assertTrue(system_counts[('i386', 39)] >= 3, system_counts)
+        self.assertTrue(system_counts[('i386', 41)] >= 3, system_counts)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=193142
     def test_system_age(self):
@@ -406,8 +406,8 @@ class ReportingQueryTest(DatabaseTestCase):
         session.flush()
         row, = [row for row in self.execute_reporting_query('system-age')
                 if row.fqdn == system.fqdn]
-        self.assertEquals(row.age_days, 100)
-        self.assertEquals(row.recipe_count, 5)
+        self.assertEqual(row.age_days, 100)
+        self.assertEqual(row.recipe_count, 5)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=741960
     def test_system_breakages(self):
@@ -427,8 +427,8 @@ class ReportingQueryTest(DatabaseTestCase):
         session.flush()
         row, = [row for row in self.execute_reporting_query('system-breakages')
                 if row.fqdn == system.fqdn]
-        self.assertEquals(row.breakage_count, 2)
-        self.assertEquals(row.problem_report_count, 3)
+        self.assertEqual(row.breakage_count, 2)
+        self.assertEqual(row.problem_report_count, 3)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1281587
     def test_cee_ops_provided_queries(self):

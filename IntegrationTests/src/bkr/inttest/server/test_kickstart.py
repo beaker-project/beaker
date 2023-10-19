@@ -656,13 +656,13 @@ class KickstartTest(unittest.TestCase):
             </job>
             ''', self.system)
 
-        self.assert_(r'''repo --name=custom --baseurl=http://repos.fedorapeople.org/repos/beaker/server/RedHatEnterpriseLinuxServer5/'''
+        self.assertTrue(r'''repo --name=custom --baseurl=http://repos.fedorapeople.org/repos/beaker/server/RedHatEnterpriseLinuxServer5/'''
                      in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                      recipe.installation.rendered_kickstart.kickstart)
 
         for line in recipe.installation.rendered_kickstart.kickstart.splitlines():
             if line.startswith('repo'):
-                self.assert_(r'''--cost'''
+                self.assertTrue(r'''--cost'''
                              not in line,
                              line)
 
@@ -727,7 +727,7 @@ class KickstartTest(unittest.TestCase):
             </job>
             ''', self.system)
 
-        self.assert_(r'''url --url=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/'''
+        self.assertTrue(r'''url --url=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/'''
                      in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                      recipe.installation.rendered_kickstart.kickstart)
 
@@ -756,7 +756,7 @@ class KickstartTest(unittest.TestCase):
                        r'''part swap --recommended --ondisk=/dev/sda''']
 
         for line in ondisk_lines:
-            self.assert_(line in recipe.installation.rendered_kickstart.kickstart.splitlines(),
+            self.assertTrue(line in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                          recipe.installation.rendered_kickstart.kickstart)
 
     def test_rhel6_partitions(self):
@@ -787,7 +787,7 @@ class KickstartTest(unittest.TestCase):
                       r'''part /home --size=5120 --fstype ext4''']
 
         for line in part_lines:
-            self.assert_(line in recipe.installation.rendered_kickstart.kickstart.splitlines(),
+            self.assertTrue(line in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                          recipe.installation.rendered_kickstart.kickstart)
 
     def test_rhel6_repos(self):
@@ -813,7 +813,7 @@ class KickstartTest(unittest.TestCase):
             </job>
             ''', self.system)
 
-        self.assert_(r'''repo --name=custom --cost=100 --baseurl=http://repos.fedorapeople.org/repos/beaker/server/RedHatEnterpriseLinux6/'''
+        self.assertTrue(r'''repo --name=custom --cost=100 --baseurl=http://repos.fedorapeople.org/repos/beaker/server/RedHatEnterpriseLinux6/'''
                      in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                      recipe.installation.rendered_kickstart.kickstart)
 
@@ -837,14 +837,14 @@ class KickstartTest(unittest.TestCase):
             </job>
             ''', self.system_s390x)
 
-        self.assert_(r'''nfs --server lab.test-kickstart.invalid --dir /distros/RHEL-6.2/Server/s390x/os/'''
+        self.assertTrue(r'''nfs --server lab.test-kickstart.invalid --dir /distros/RHEL-6.2/Server/s390x/os/'''
                      in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                      recipe.installation.rendered_kickstart.kickstart)
 
-        self.assert_(r'''xconfig''' not in recipe.installation.rendered_kickstart.kickstart.splitlines(),
+        self.assertTrue(r'''xconfig''' not in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                      recipe.installation.rendered_kickstart.kickstart)
 
-        self.assert_(r'''vmcp ipl''' in recipe.installation.rendered_kickstart.kickstart,
+        self.assertTrue(r'''vmcp ipl''' in recipe.installation.rendered_kickstart.kickstart,
                      recipe.installation.rendered_kickstart.kickstart)
 
 
@@ -873,7 +873,7 @@ class KickstartTest(unittest.TestCase):
             </job>
             ''', system)
 
-        self.assert_(r'''unsupported_hardware''' in recipe.installation.rendered_kickstart.kickstart.splitlines(),
+        self.assertTrue(r'''unsupported_hardware''' in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                      recipe.installation.rendered_kickstart.kickstart)
 
     def test_rhel6_guest_console(self):
@@ -968,7 +968,7 @@ class KickstartTest(unittest.TestCase):
                 </recipeSet>
             </job>
             ''', self.system)
-        self.assert_(r'''nfs --server lab.test-kickstart.invalid --dir /distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/iso/'''
+        self.assertTrue(r'''nfs --server lab.test-kickstart.invalid --dir /distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/iso/'''
                      in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                      recipe.installation.rendered_kickstart.kickstart)
 
@@ -1044,7 +1044,7 @@ class KickstartTest(unittest.TestCase):
             </job>
             ''', self.system)
 
-        self.assert_(r'''repo --name=custom --cost=100 --baseurl=http://repos.fedorapeople.org/repos/beaker/server/RedHatEnterpriseLinux7/'''
+        self.assertTrue(r'''repo --name=custom --cost=100 --baseurl=http://repos.fedorapeople.org/repos/beaker/server/RedHatEnterpriseLinux7/'''
                      in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                      recipe.installation.rendered_kickstart.kickstart)
 
@@ -1067,17 +1067,17 @@ class KickstartTest(unittest.TestCase):
             </job>
             ''', self.system_s390x)
 
-        self.assert_(r'''url --url=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/os/'''
+        self.assertTrue(r'''url --url=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/os/'''
                      in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                      recipe.installation.rendered_kickstart.kickstart)
 
-        self.assert_(r'''xconfig''' not in recipe.installation.rendered_kickstart.kickstart.splitlines(),
+        self.assertTrue(r'''xconfig''' not in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                      recipe.installation.rendered_kickstart.kickstart)
 
-        self.assert_(r'''vmcp ipl''' not in recipe.installation.rendered_kickstart.kickstart,
+        self.assertTrue(r'''vmcp ipl''' not in recipe.installation.rendered_kickstart.kickstart,
                      recipe.installation.rendered_kickstart.kickstart)
 
-        self.assert_(r'''clearpart --all --initlabel --cdl''' not in recipe.installation.rendered_kickstart.kickstart,
+        self.assertTrue(r'''clearpart --all --initlabel --cdl''' not in recipe.installation.rendered_kickstart.kickstart,
                      recipe.installation.rendered_kickstart.kickstart)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1636550
@@ -1100,7 +1100,7 @@ class KickstartTest(unittest.TestCase):
             </job>
             ''', self.system_s390x)
 
-        self.assert_(r'''clearpart --all --initlabel --cdl''' in recipe.installation.rendered_kickstart.kickstart,
+        self.assertTrue(r'''clearpart --all --initlabel --cdl''' in recipe.installation.rendered_kickstart.kickstart,
                      recipe.installation.rendered_kickstart.kickstart)
 
     def test_rhel7_autopart_type(self):
@@ -1170,10 +1170,10 @@ class KickstartTest(unittest.TestCase):
             </job>
             ''', system)
 
-        self.assert_(r'''ignoredisk --interactive''' not in recipe.installation.rendered_kickstart.kickstart,
+        self.assertTrue(r'''ignoredisk --interactive''' not in recipe.installation.rendered_kickstart.kickstart,
                      recipe.installation.rendered_kickstart.kickstart)
 
-        self.assert_(r'''ignoredisk''' not in recipe.installation.rendered_kickstart.kickstart,
+        self.assertTrue(r'''ignoredisk''' not in recipe.installation.rendered_kickstart.kickstart,
                      recipe.installation.rendered_kickstart.kickstart)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1676571
@@ -1201,13 +1201,13 @@ class KickstartTest(unittest.TestCase):
             </job>
             ''', system)
 
-        self.assert_(r'''ignoredisk --interactive''' not in recipe.installation.rendered_kickstart.kickstart,
+        self.assertTrue(r'''ignoredisk --interactive''' not in recipe.installation.rendered_kickstart.kickstart,
                      recipe.installation.rendered_kickstart.kickstart)
 
-        self.assert_(r'''ignoredisk''' not in recipe.installation.rendered_kickstart.kickstart,
+        self.assertTrue(r'''ignoredisk''' not in recipe.installation.rendered_kickstart.kickstart,
                      recipe.installation.rendered_kickstart.kickstart)
 
-        self.assert_(r'''vnc''' in recipe.installation.rendered_kickstart.kickstart,
+        self.assertTrue(r'''vnc''' in recipe.installation.rendered_kickstart.kickstart,
                      recipe.installation.rendered_kickstart.kickstart)
 
     def test_fedora18_defaults(self):
@@ -1272,7 +1272,7 @@ class KickstartTest(unittest.TestCase):
             </job>
             ''', self.system)
 
-        self.assert_(r'''repo --name=custom --cost=100 --baseurl=http://repos.fedorapeople.org/repos/beaker/server/Fedora18/'''
+        self.assertTrue(r'''repo --name=custom --cost=100 --baseurl=http://repos.fedorapeople.org/repos/beaker/server/Fedora18/'''
                      in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                      recipe.installation.rendered_kickstart.kickstart)
 
@@ -1294,7 +1294,7 @@ class KickstartTest(unittest.TestCase):
                 </recipeSet>
             </job>
             ''', self.system)
-        self.assert_(r'''sed -i '/^#PermitRootLogin /s/^#//' /etc/ssh/sshd_config'''
+        self.assertTrue(r'''sed -i '/^#PermitRootLogin /s/^#//' /etc/ssh/sshd_config'''
                      not in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                      recipe.installation.rendered_kickstart.kickstart)
 
@@ -1315,13 +1315,13 @@ class KickstartTest(unittest.TestCase):
                 </recipeSet>
             </job>
             ''', self.system)
-        self.assert_(r'''sed -i '/^#PermitRootLogin /s/^#//' /etc/ssh/sshd_config'''
+        self.assertTrue(r'''sed -i '/^#PermitRootLogin /s/^#//' /etc/ssh/sshd_config'''
                      in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                      recipe.installation.rendered_kickstart.kickstart)
-        self.assert_(r'''sed -i 's|PermitRootLogin .*|PermitRootLogin yes|' /etc/ssh/sshd_config'''
+        self.assertTrue(r'''sed -i 's|PermitRootLogin .*|PermitRootLogin yes|' /etc/ssh/sshd_config'''
                      in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                      recipe.installation.rendered_kickstart.kickstart)
-        self.assert_(r'''systemctl restart sshd'''
+        self.assertTrue(r'''systemctl restart sshd'''
                      in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                      recipe.installation.rendered_kickstart.kickstart)
 
@@ -1342,7 +1342,7 @@ class KickstartTest(unittest.TestCase):
                 </recipeSet>
             </job>
             ''', self.system)
-        self.assert_(r'''sed -i '/^#PermitRootLogin /s/^#//' /etc/ssh/sshd_config'''
+        self.assertTrue(r'''sed -i '/^#PermitRootLogin /s/^#//' /etc/ssh/sshd_config'''
                      not in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                      recipe.installation.rendered_kickstart.kickstart)
 
@@ -1363,13 +1363,13 @@ class KickstartTest(unittest.TestCase):
                 </recipeSet>
             </job>
             ''', self.system)
-        self.assert_(r'''sed -i '/^#PermitRootLogin /s/^#//' /etc/ssh/sshd_config'''
+        self.assertTrue(r'''sed -i '/^#PermitRootLogin /s/^#//' /etc/ssh/sshd_config'''
                      in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                      recipe.installation.rendered_kickstart.kickstart)
-        self.assert_(r'''sed -i 's|PermitRootLogin .*|PermitRootLogin yes|' /etc/ssh/sshd_config'''
+        self.assertTrue(r'''sed -i 's|PermitRootLogin .*|PermitRootLogin yes|' /etc/ssh/sshd_config'''
                      in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                      recipe.installation.rendered_kickstart.kickstart)
-        self.assert_(r'''systemctl restart sshd'''
+        self.assertTrue(r'''systemctl restart sshd'''
                      in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                      recipe.installation.rendered_kickstart.kickstart)
 
@@ -1521,7 +1521,7 @@ python-glanceclient
         for line in recipe.installation.rendered_kickstart.kickstart.splitlines():
             if line.startswith('rootpw'):
                 crypted_root_password = line.split()[2]
-                self.assertEquals(crypt.crypt(root_password, crypted_root_password),
+                self.assertEqual(crypt.crypt(root_password, crypted_root_password),
                                   crypted_root_password)
                 break
 
@@ -1554,7 +1554,7 @@ python-glanceclient
             </job>
             ''', system)
 
-        self.assert_(
+        self.assertTrue(
             'rootpw --iscrypted %s' % crypted_root_password
             in recipe.installation.rendered_kickstart.kickstart.splitlines(),
             recipe.installation.rendered_kickstart.kickstart)
@@ -1581,7 +1581,7 @@ python-glanceclient
                 </recipeSet>
             </job>
             ''', system)
-        self.assert_(
+        self.assertTrue(
                 r'''ignoredisk --only-use=sda'''
                 in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                 recipe.installation.rendered_kickstart.kickstart)
@@ -1608,7 +1608,7 @@ python-glanceclient
                 </recipeSet>
             </job>
             ''', system)
-        self.assert_(
+        self.assertTrue(
                 r'''skipx'''
                 in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                 recipe.installation.rendered_kickstart.kickstart)
@@ -1662,7 +1662,7 @@ python-glanceclient
                 </recipeSet>
             </job>
             ''', system)
-        self.assert_(
+        self.assertTrue(
                 r'''bootloader --location=mbr --leavebootorder'''
                 in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                 recipe.installation.rendered_kickstart.kickstart)
@@ -1685,7 +1685,7 @@ python-glanceclient
                 </recipeSet>
             </job>
             ''', system)
-        self.assert_(
+        self.assertTrue(
                 r'''bootloader --location=mbr --leavebootorder'''
                 in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                 recipe.installation.rendered_kickstart.kickstart)
@@ -1780,7 +1780,7 @@ python-glanceclient
                 </recipeSet>
             </job>
             ''', system)
-        self.assert_('device scsi cciss' in recipe.installation.rendered_kickstart.kickstart.splitlines(),
+        self.assertTrue('device scsi cciss' in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                 recipe.installation.rendered_kickstart.kickstart)
 
     def test_rhel6_devices(self):
@@ -1805,7 +1805,7 @@ python-glanceclient
                 </recipeSet>
             </job>
             ''', system)
-        self.assert_('device cciss' in recipe.installation.rendered_kickstart.kickstart.splitlines(),
+        self.assertTrue('device cciss' in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                 recipe.installation.rendered_kickstart.kickstart)
 
     def test_kopts_post(self):
@@ -1830,7 +1830,7 @@ python-glanceclient
                 </recipeSet>
             </job>
             ''', system)
-        self.assert_('bootloader --location=mbr --append="console=ttyS0,9600n8 pci=nomsi"'
+        self.assertTrue('bootloader --location=mbr --append="console=ttyS0,9600n8 pci=nomsi"'
                 in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                 recipe.installation.rendered_kickstart.kickstart)
 
@@ -1855,7 +1855,7 @@ python-glanceclient
                 </recipeSet>
             </job>
             ''', self.system)
-        self.assert_('''
+        self.assertTrue('''
 part /boot --size 250 --recommended --asprimary
 part / --size 1024 --grow
 part swap --recommended
@@ -1893,7 +1893,7 @@ logvol /butter --name=butter --vgname=TestVolume001 --size=25600 --fstype btrfs
             </job>
             ''' % group.group_name, system)
 
-        self.assert_('''
+        self.assertTrue('''
 mkdir -p /root/.ssh
 cat >>/root/.ssh/authorized_keys <<"__EOF__"
 ssh-rsa neveroddoreven description
@@ -1927,7 +1927,7 @@ chmod go-w /root /root/.ssh /root/.ssh/authorized_keys
                 </recipeSet>
             </job>
             ''', system)
-        self.assert_('''
+        self.assertTrue('''
 mkdir -p /root/.ssh
 cat >>/root/.ssh/authorized_keys <<"__EOF__"
 ssh-rsa lolthisismykey description
@@ -1961,7 +1961,7 @@ chmod go-w /root /root/.ssh /root/.ssh/authorized_keys
             </job>
             ''', system)
         # check the reboot snippet is after the ssh key
-        self.assert_('Force a reboot'
+        self.assertTrue('Force a reboot'
                      in recipe.installation.rendered_kickstart.kickstart.split('cat >>/root/.ssh/authorized_keys')[1],
                      recipe.installation.rendered_kickstart.kickstart)
 
@@ -1989,7 +1989,7 @@ echo Hello World
                 </recipeSet>
             </job>
             ''', self.system)
-        self.assert_('''
+        self.assertTrue('''
 %post
 echo Hello World
 %end'''
@@ -2028,9 +2028,9 @@ mysillypackage
             </job>
             ''', self.system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_(k.startswith('nfs --server lab.test-kickstart.invalid '
+        self.assertTrue(k.startswith('nfs --server lab.test-kickstart.invalid '
                                   '--dir /distros/RHEL-6.2/Server/x86_64/os/'), k)
-        self.assert_('''
+        self.assertTrue('''
 install
 lang en_AU.UTF-8
 timezone --utc Australia/Brisbane
@@ -2049,13 +2049,13 @@ END
 %end''', k)
 
         klines = k.splitlines()
-        self.assert_('mysillypackage' in klines, k)
+        self.assertTrue('mysillypackage' in klines, k)
         # should also contain the various Beaker bits
-        self.assert_('%pre --log=/dev/console' in klines, k)
-        self.assert_('# Check in with Beaker Server' in klines, k)
-        self.assert_('%post --log=/dev/console' in klines, k)
-        self.assert_('# Add Harness Repo' in klines, k)
-        self.assert_('$package_command -y install restraint-rhts' in klines, k)
+        self.assertTrue('%pre --log=/dev/console' in klines, k)
+        self.assertTrue('# Check in with Beaker Server' in klines, k)
+        self.assertTrue('%post --log=/dev/console' in klines, k)
+        self.assertTrue('# Add Harness Repo' in klines, k)
+        self.assertTrue('$package_command -y install restraint-rhts' in klines, k)
 
     def test_custom_kickstart_rhel7(self):
         recipe = self.provision_recipe('''
@@ -2089,9 +2089,9 @@ mysillypackage
             </job>
             ''', self.system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_(k.startswith('url --url=http://lab.test-kickstart.invalid'
+        self.assertTrue(k.startswith('url --url=http://lab.test-kickstart.invalid'
                 '/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/\n'), k)
-        self.assert_('''
+        self.assertTrue('''
 install
 lang en_AU.UTF-8
 timezone --utc Australia/Brisbane
@@ -2110,13 +2110,13 @@ END
 %end''', k)
 
         klines = k.splitlines()
-        self.assert_('mysillypackage' in klines, k)
+        self.assertTrue('mysillypackage' in klines, k)
         # should also contain the various Beaker bits
-        self.assert_('%pre --log=/dev/console' in klines, k)
-        self.assert_('# Check in with Beaker Server' in klines, k)
-        self.assert_('%post --log=/dev/console' in klines, k)
-        self.assert_('# Add Harness Repo' in klines, k)
-        self.assert_('$package_command -y install restraint-rhts' in klines, k)
+        self.assertTrue('%pre --log=/dev/console' in klines, k)
+        self.assertTrue('# Check in with Beaker Server' in klines, k)
+        self.assertTrue('%post --log=/dev/console' in klines, k)
+        self.assertTrue('# Add Harness Repo' in klines, k)
+        self.assertTrue('$package_command -y install restraint-rhts' in klines, k)
 
     def test_custom_kickstart_fedora_rawhide(self):
         recipe = self.provision_recipe('''
@@ -2149,9 +2149,9 @@ mysillypackage
             </job>
             ''', self.system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_(k.startswith('nfs --server lab.test-kickstart.invalid '
+        self.assertTrue(k.startswith('nfs --server lab.test-kickstart.invalid '
                                   '--dir /distros/development/rawhide/x86_64/os/'), k)
-        self.assert_('''
+        self.assertTrue('''
 install
 lang en_AU.UTF-8
 timezone --utc Australia/Brisbane
@@ -2170,13 +2170,13 @@ END
 %end''', k)
 
         klines = k.splitlines()
-        self.assert_('mysillypackage' in klines, k)
+        self.assertTrue('mysillypackage' in klines, k)
         # should also contain the various Beaker bits
-        self.assert_('%pre --log=/dev/console' in klines, k)
-        self.assert_('# Check in with Beaker Server' in klines, k)
-        self.assert_('%post --log=/dev/console' in klines, k)
-        self.assert_('# Add Harness Repo' in klines, k)
-        self.assert_('$package_command -y install restraint-rhts' in klines, k)
+        self.assertTrue('%pre --log=/dev/console' in klines, k)
+        self.assertTrue('# Check in with Beaker Server' in klines, k)
+        self.assertTrue('%post --log=/dev/console' in klines, k)
+        self.assertTrue('# Add Harness Repo' in klines, k)
+        self.assertTrue('$package_command -y install restraint-rhts' in klines, k)
 
     def test_custom_kickstart_fedora(self):
         recipe = self.provision_recipe('''
@@ -2209,9 +2209,9 @@ mysillypackage
             </job>
             ''', self.system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_(k.startswith('nfs --server lab.test-kickstart.invalid ' 
+        self.assertTrue(k.startswith('nfs --server lab.test-kickstart.invalid ' 
                                   '--dir /distros/F-18/GOLD/Fedora/x86_64/os/'), k)
-        self.assert_('''
+        self.assertTrue('''
 install
 lang en_AU.UTF-8
 timezone --utc Australia/Brisbane
@@ -2230,13 +2230,13 @@ END
 %end''', k)
 
         klines = k.splitlines()
-        self.assert_('mysillypackage' in klines, k)
+        self.assertTrue('mysillypackage' in klines, k)
         # should also contain the various Beaker bits
-        self.assert_('%pre --log=/dev/console' in klines, k)
-        self.assert_('# Check in with Beaker Server' in klines, k)
-        self.assert_('%post --log=/dev/console' in klines, k)
-        self.assert_('# Add Harness Repo' in klines, k)
-        self.assert_('$package_command -y install restraint-rhts' in klines, k)
+        self.assertTrue('%pre --log=/dev/console' in klines, k)
+        self.assertTrue('# Check in with Beaker Server' in klines, k)
+        self.assertTrue('%post --log=/dev/console' in klines, k)
+        self.assertTrue('# Add Harness Repo' in klines, k)
+        self.assertTrue('$package_command -y install restraint-rhts' in klines, k)
 
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=801676
@@ -2268,7 +2268,7 @@ mysillypackage
             </job>
             ''', system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_('ssh-rsa lolthisismykey description' in k.splitlines(), k)
+        self.assertTrue('ssh-rsa lolthisismykey description' in k.splitlines(), k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1077251
     def test_custom_kickstart_can_access_model_objects(self):
@@ -2481,10 +2481,10 @@ install
             </job>
             ''', self.system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_('repo --name=beaker-debug' not in k, k)
-        self.assert_('repo --name=beaker-optional-x86_64-debug' not in k, k)
-        self.assert_('/etc/yum.repos.d/beaker-debug.repo' not in k, k)
-        self.assert_('/etc/yum.repos.d/beaker-optional-x86_64-debug.repo' not in k, k)
+        self.assertTrue('repo --name=beaker-debug' not in k, k)
+        self.assertTrue('repo --name=beaker-optional-x86_64-debug' not in k, k)
+        self.assertTrue('/etc/yum.repos.d/beaker-debug.repo' not in k, k)
+        self.assertTrue('/etc/yum.repos.d/beaker-optional-x86_64-debug.repo' not in k, k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1664750
     def test_no_repo_CRB(self):
@@ -2506,10 +2506,10 @@ install
             </job>
             ''', self.system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_('repo --name=beaker-CRB --cost' not in k, k)
-        self.assert_('repo --name=beaker-CRB-debuginfo' in k, k)
-        self.assert_('/etc/yum.repos.d/beaker-CRB.repo' not in k, k)
-        self.assert_('/etc/yum.repos.d/beaker-CRB-debuginfo.repo' in k, k)
+        self.assertTrue('repo --name=beaker-CRB --cost' not in k, k)
+        self.assertTrue('repo --name=beaker-CRB-debuginfo' in k, k)
+        self.assertTrue('/etc/yum.repos.d/beaker-CRB.repo' not in k, k)
+        self.assertTrue('/etc/yum.repos.d/beaker-CRB-debuginfo.repo' in k, k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1664750
     def test_no_repo_CRB_disable_repo_CRB(self):
@@ -2531,10 +2531,10 @@ install
             </job>
             ''', self.system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_('repo --name=beaker-CRB --cost' not in k, k)
-        self.assert_('repo --name=beaker-CRB-debuginfo' in k, k)
-        self.assert_('/etc/yum.repos.d/beaker-CRB.repo' not in k, k)
-        self.assert_('/etc/yum.repos.d/beaker-CRB-debuginfo.repo' in k, k)
+        self.assertTrue('repo --name=beaker-CRB --cost' not in k, k)
+        self.assertTrue('repo --name=beaker-CRB-debuginfo' in k, k)
+        self.assertTrue('/etc/yum.repos.d/beaker-CRB.repo' not in k, k)
+        self.assertTrue('/etc/yum.repos.d/beaker-CRB-debuginfo.repo' in k, k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1664750
     def test_disable_repo_CRB(self):
@@ -2556,12 +2556,12 @@ install
             </job>
             ''', self.system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_('repo --name=beaker-CRB --cost' not in k, k)
-        self.assert_('repo --name=beaker-CRB-debuginfo' in k, k)
-        self.assert_('/etc/yum.repos.d/beaker-CRB.repo' in k, k)
-        self.assert_('/etc/yum.repos.d/beaker-CRB-debuginfo.repo' in k, k)
-        self.assert_('CRB/x86_64/os\nenabled=0\n' in k, k)
-        self.assert_('CRB/x86_64/debug/tree\nenabled=1\n' in k, k)
+        self.assertTrue('repo --name=beaker-CRB --cost' not in k, k)
+        self.assertTrue('repo --name=beaker-CRB-debuginfo' in k, k)
+        self.assertTrue('/etc/yum.repos.d/beaker-CRB.repo' in k, k)
+        self.assertTrue('/etc/yum.repos.d/beaker-CRB-debuginfo.repo' in k, k)
+        self.assertTrue('CRB/x86_64/os\nenabled=0\n' in k, k)
+        self.assertTrue('CRB/x86_64/debug/tree\nenabled=1\n' in k, k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1664750
     def test_disable_debug_repos(self):
@@ -2583,18 +2583,18 @@ install
             </job>
             ''', self.system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_('repo --name=beaker-CRB --cost' in k, k)
-        self.assert_('repo --name=beaker-CRB-debuginfo' not in k, k)
-        self.assert_('repo --name=beaker-AppStream-debuginfo' not in k, k)
-        self.assert_('repo --name=beaker-BaseOS-debuginfo' not in k, k)
-        self.assert_('/etc/yum.repos.d/beaker-CRB.repo' in k, k)
-        self.assert_('/etc/yum.repos.d/beaker-CRB-debuginfo.repo' in k, k)
-        self.assert_('/etc/yum.repos.d/beaker-AppStream-debuginfo.repo' in k, k)
-        self.assert_('/etc/yum.repos.d/beaker-BaseOS-debuginfo.repo' in k, k)
-        self.assert_('CRB/x86_64/os\nenabled=1\n' in k, k)
-        self.assert_('CRB/x86_64/debug/tree\nenabled=0\n' in k, k)
-        self.assert_('AppStream/x86_64/debug/tree\nenabled=0\n' in k, k)
-        self.assert_('BaseOS/x86_64/debug/tree\nenabled=0\n' in k, k)
+        self.assertTrue('repo --name=beaker-CRB --cost' in k, k)
+        self.assertTrue('repo --name=beaker-CRB-debuginfo' not in k, k)
+        self.assertTrue('repo --name=beaker-AppStream-debuginfo' not in k, k)
+        self.assertTrue('repo --name=beaker-BaseOS-debuginfo' not in k, k)
+        self.assertTrue('/etc/yum.repos.d/beaker-CRB.repo' in k, k)
+        self.assertTrue('/etc/yum.repos.d/beaker-CRB-debuginfo.repo' in k, k)
+        self.assertTrue('/etc/yum.repos.d/beaker-AppStream-debuginfo.repo' in k, k)
+        self.assertTrue('/etc/yum.repos.d/beaker-BaseOS-debuginfo.repo' in k, k)
+        self.assertTrue('CRB/x86_64/os\nenabled=1\n' in k, k)
+        self.assertTrue('CRB/x86_64/debug/tree\nenabled=0\n' in k, k)
+        self.assertTrue('AppStream/x86_64/debug/tree\nenabled=0\n' in k, k)
+        self.assertTrue('BaseOS/x86_64/debug/tree\nenabled=0\n' in k, k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1664750
     def test_disable_repo_CRB_and_debuginfo(self):
@@ -2616,12 +2616,12 @@ install
             </job>
             ''', self.system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_('repo --name=beaker-CRB --cost' not in k, k)
-        self.assert_('repo --name=beaker-CRB-debuginfo' not in k, k)
-        self.assert_('/etc/yum.repos.d/beaker-CRB.repo' in k, k)
-        self.assert_('/etc/yum.repos.d/beaker-CRB-debuginfo.repo' in k, k)
-        self.assert_('CRB/x86_64/os\nenabled=0\n' in k, k)
-        self.assert_('CRB/x86_64/debug/tree\nenabled=0\n' in k, k)
+        self.assertTrue('repo --name=beaker-CRB --cost' not in k, k)
+        self.assertTrue('repo --name=beaker-CRB-debuginfo' not in k, k)
+        self.assertTrue('/etc/yum.repos.d/beaker-CRB.repo' in k, k)
+        self.assertTrue('/etc/yum.repos.d/beaker-CRB-debuginfo.repo' in k, k)
+        self.assertTrue('CRB/x86_64/os\nenabled=0\n' in k, k)
+        self.assertTrue('CRB/x86_64/debug/tree\nenabled=0\n' in k, k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1664750
     def test_no_debug_repos_disable_repo_CRB(self):
@@ -2643,13 +2643,13 @@ install
             </job>
             ''', self.system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_('repo --name=beaker-CRB --cost' not in k, k)
-        self.assert_('repo --name=beaker-CRB-debuginfo' not in k, k)
-        self.assert_('repo --name=beaker-AppStream-debuginfo' not in k, k)
-        self.assert_('/etc/yum.repos.d/beaker-CRB.repo' in k, k)
-        self.assert_('/etc/yum.repos.d/beaker-CRB-debuginfo.repo' not in k, k)
-        self.assert_('/etc/yum.repos.d/beaker-AppSteam-debuginfo.repo' not in k, k)
-        self.assert_('CRB/x86_64/os\nenabled=0\n' in k, k)
+        self.assertTrue('repo --name=beaker-CRB --cost' not in k, k)
+        self.assertTrue('repo --name=beaker-CRB-debuginfo' not in k, k)
+        self.assertTrue('repo --name=beaker-AppStream-debuginfo' not in k, k)
+        self.assertTrue('/etc/yum.repos.d/beaker-CRB.repo' in k, k)
+        self.assertTrue('/etc/yum.repos.d/beaker-CRB-debuginfo.repo' not in k, k)
+        self.assertTrue('/etc/yum.repos.d/beaker-AppSteam-debuginfo.repo' not in k, k)
+        self.assertTrue('CRB/x86_64/os\nenabled=0\n' in k, k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=874191
     def test_no_updates_repos_fedora(self):
@@ -2669,7 +2669,7 @@ install
             </job>
             ''', self.system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_('repo --name=fedora-updates' not in k, k)
+        self.assertTrue('repo --name=fedora-updates' not in k, k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1202075
     def test_disable_repos_configured_by_fedora_release(self):
@@ -2689,11 +2689,11 @@ install
             </job>
             ''', self.system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_('''
+        self.assertTrue('''
 sed -i -e '/\[fedora\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora.repo
 '''
     in k, k)
-        self.assert_('''
+        self.assertTrue('''
 sed -i -e '/\[updates\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora-updates.repo
 '''
     in k, k)
@@ -2722,8 +2722,8 @@ sed -i -e '/\[updates\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora-up
             </job>
             ''', self.system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_('repo --name=custom' not in k, k)
-        self.assert_('# skipping custom' in k, k)
+        self.assertTrue('repo --name=custom' not in k, k)
+        self.assertTrue('# skipping custom' in k, k)
 
     def test_beaker_url(self):
         recipe = self.provision_recipe('''
@@ -2744,7 +2744,7 @@ sed -i -e '/\[updates\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora-up
             </job>
             ''', self.system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_('export BEAKER="%s"' % get_server_base() in k, k)
+        self.assertTrue('export BEAKER="%s"' % get_server_base() in k, k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=691442
     def test_whiteboards(self):
@@ -2808,10 +2808,10 @@ sed -i -e '/\[updates\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora-up
         self.assertEqual(recipe.whiteboard, None)
         self.assertEqual(recipe.recipeset.job.whiteboard, "")
         ks = recipe.installation.rendered_kickstart.kickstart
-        self.assert_("export BEAKER_JOB_WHITEBOARD=''" in ks, ks)
-        self.assert_("export BEAKER_RECIPE_WHITEBOARD=''" in ks, ks)
-        self.assert_("setenv BEAKER_JOB_WHITEBOARD ''" in ks, ks)
-        self.assert_("setenv BEAKER_RECIPE_WHITEBOARD ''" in ks, ks)
+        self.assertTrue("export BEAKER_JOB_WHITEBOARD=''" in ks, ks)
+        self.assertTrue("export BEAKER_RECIPE_WHITEBOARD=''" in ks, ks)
+        self.assertTrue("setenv BEAKER_JOB_WHITEBOARD ''" in ks, ks)
+        self.assertTrue("setenv BEAKER_RECIPE_WHITEBOARD ''" in ks, ks)
 
     def test_no_recipe(self):
         # This test checks that everything works as expected with no
@@ -2856,8 +2856,8 @@ sed -i -e '/\[updates\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora-up
             </job>
             ''', system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_('repo --name=beaker-Server --cost=100 --baseurl=ftp://something/Server' in k, k)
-        self.assert_('name=beaker-Server\nbaseurl=ftp://something/Server' in k, k)
+        self.assertTrue('repo --name=beaker-Server --cost=100 --baseurl=ftp://something/Server' in k, k)
+        self.assertTrue('name=beaker-Server\nbaseurl=ftp://something/Server' in k, k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=838671
     def test_root_password(self):
@@ -2882,7 +2882,7 @@ sed -i -e '/\[updates\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora-up
         for line in recipe.installation.rendered_kickstart.kickstart.split('\n'):
             match = re.match("rootpw --iscrypted (.*)", line)
             if match:
-                self.assert_(crypt.crypt('beaker', match.group(1)) == match.group(1))
+                self.assertTrue(crypt.crypt('beaker', match.group(1)) == match.group(1))
                 break
         else:
            self.fail("Password missing from kickstart")
@@ -2905,7 +2905,7 @@ sed -i -e '/\[updates\]/,/^\[/s/enabled=1/enabled=0/' /etc/yum.repos.d/fedora-up
                 </recipeSet>
             </job>
             ''', self.system)
-        self.assert_('''
+        self.assertTrue('''
 part /boot --size 250 --recommended --asprimary
 part / --size 1024 --grow --fstype btrfs
 part swap --recommended
@@ -2932,7 +2932,7 @@ part swap --recommended
                 </recipeSet>
             </job>
             ''', self.system)
-        self.assert_('''
+        self.assertTrue('''
 part /boot --size 250 --recommended --asprimary --fstype ext4
 part / --size 1024 --grow --fstype ext4
 part swap --recommended
@@ -3033,8 +3033,8 @@ network --bootproto=dhcp --device=66:77:88:99:aa:bb
             </job>
             ''', system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_('# Install U-Boot boot.scr' in k.splitlines(), k)
-        self.assert_('Highbank Fedora' in k, k)
+        self.assertTrue('# Install U-Boot boot.scr' in k.splitlines(), k)
+        self.assertTrue('Highbank Fedora' in k, k)
 
     def test_mvebu(self):
         system = data_setup.create_system(arch=u'armhfp', status=u'Automated',
@@ -3056,8 +3056,8 @@ network --bootproto=dhcp --device=66:77:88:99:aa:bb
             </job>
             ''', system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_('# Install U-Boot boot.scr' in k.splitlines(), k)
-        self.assert_('Yosemite Fedora' in k, k)
+        self.assertTrue('# Install U-Boot boot.scr' in k.splitlines(), k)
+        self.assertTrue('Yosemite Fedora' in k, k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=728410
     def test_per_system_packages(self):
@@ -3082,7 +3082,7 @@ network --bootproto=dhcp --device=66:77:88:99:aa:bb
             </job>
             ''', system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_('special-weird-driver-package' in k.splitlines(), k)
+        self.assertTrue('special-weird-driver-package' in k.splitlines(), k)
 
     def test_packages_arent_duplicated(self):
         system = data_setup.create_system(fqdn=u'testForPackageDuplication',
@@ -3109,7 +3109,7 @@ network --bootproto=dhcp --device=66:77:88:99:aa:bb
             ''' % (task1.name, task2.name), system)
         k = recipe.installation.rendered_kickstart.kickstart
         kickstart_lines = k.splitlines()
-        self.assert_(kickstart_lines.count('requires1') == 1)
+        self.assertTrue(kickstart_lines.count('requires1') == 1)
 
     def test_packages_ksmeta_replaces_recipe_packages(self):
         # Users can pass a colon-separated list of packages in ksmeta and it
@@ -3191,7 +3191,7 @@ httpd
             </job>
             ''', self.system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_('''
+        self.assertTrue('''
 for cfg in /etc/sysconfig/network-scripts/ifcfg-* ; do
     if [ "$(basename "$cfg")" != "ifcfg-lo" ] ; then
         echo "LINKDELAY=20" >>$cfg
@@ -3218,13 +3218,13 @@ done
             </job>
             ''', self.system)
         k = recipe.installation.rendered_kickstart.kickstart
-        self.assert_('beah' not in k, k)
-        self.assert_('export BEAKER_LAB_CONTROLLER_URL="http://%s:8000/"'
+        self.assertTrue('beah' not in k, k)
+        self.assertTrue('export BEAKER_LAB_CONTROLLER_URL="http://%s:8000/"'
                 % self.lab_controller.fqdn in k, k)
-        self.assert_('export BEAKER_LAB_CONTROLLER=%s' % self.lab_controller.fqdn in k, k)
-        self.assert_('export BEAKER_RECIPE_ID=%s' % recipe.id in k, k)
-        self.assert_('export BEAKER_HUB_URL="%s"' % get_server_base() in k, k)
-        self.assert_('$package_command -y install my-alternative-harness' in k, k)
+        self.assertTrue('export BEAKER_LAB_CONTROLLER=%s' % self.lab_controller.fqdn in k, k)
+        self.assertTrue('export BEAKER_RECIPE_ID=%s' % recipe.id in k, k)
+        self.assertTrue('export BEAKER_HUB_URL="%s"' % get_server_base() in k, k)
+        self.assertTrue('$package_command -y install my-alternative-harness' in k, k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1328153
     def test_harness_is_installed_with_multilib_policy_best_on_ia64(self):
@@ -3799,7 +3799,7 @@ part /boot --recommended --asprimary --fstype ext4 --ondisk=vdb
                 </recipeSet>
             </job>''')
         ks = recipe.installation.rendered_kickstart.kickstart
-        self.assertEquals(ks.count('IPV6_DISABLED=True\n'), 2)
+        self.assertEqual(ks.count('IPV6_DISABLED=True\n'), 2)
 
     def test_firstboot_opt(self):
         recipe = self.provision_recipe('''
@@ -4180,7 +4180,7 @@ volgroup bootvg --pesize=32768 pv.01
                       r'''part raid.03 --size=20480 --ondisk=sdc''',
                       r'''volgroup bootvg --pesize=32768 pv.01''']
         for line in part_lines:
-            self.assert_(line in recipe.installation.rendered_kickstart.kickstart.splitlines(),
+            self.assertTrue(line in recipe.installation.rendered_kickstart.kickstart.splitlines(),
                          recipe.installation.rendered_kickstart.kickstart)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1255210
@@ -4308,7 +4308,7 @@ volgroup bootvg --pesize=32768 pv.01
             ''', self.system)
         ks = recipe.installation.rendered_kickstart.kickstart
         ks_lines = ks.splitlines()
-        self.assert_('$package_command -y install great-restraint dead-beah' in ks_lines, ks)
+        self.assertTrue('$package_command -y install great-restraint dead-beah' in ks_lines, ks)
 
     def test_user_defined_kickstart(self):
         payload = ['install', 'This-is-going-to-be-really-invalid']
@@ -4331,5 +4331,5 @@ volgroup bootvg --pesize=32768 pv.01
             ''' % '\n'.join(payload), self.system)
         ks = recipe.installation.rendered_kickstart.kickstart
         ks_lines = ks.splitlines()
-        for actual, expected in six.moves.zip_longest(payload, ks_lines):
-            self.assert_(actual == expected, ks)
+        for actual, expected in izip_longest(payload, ks_lines):
+            self.assertTrue(actual == expected, ks)

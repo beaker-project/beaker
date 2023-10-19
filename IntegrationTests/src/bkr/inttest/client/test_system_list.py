@@ -15,10 +15,10 @@ class SystemListTest(ClientTestCase):
 
     def check_systems(self, present=None, absent=None):
         for system in present:
-            self.assert_(system.fqdn in self.returned_systems)
+            self.assertTrue(system.fqdn in self.returned_systems)
 
         for system in absent:
-            self.assert_(system.fqdn not in self.returned_systems)
+            self.assertTrue(system.fqdn not in self.returned_systems)
 
     def test_list_all_systems(self):
         with session.begin():
@@ -78,8 +78,8 @@ class SystemListTest(ClientTestCase):
         out = run_client(['bkr', 'system-list',
                           '--xml-filter', '<key_value key="MODULE" />'])
         returned_systems = out.splitlines()
-        self.assert_(with_module.fqdn in returned_systems, returned_systems)
-        self.assert_(without_module.fqdn not in returned_systems,
+        self.assertTrue(with_module.fqdn in returned_systems, returned_systems)
+        self.assertTrue(without_module.fqdn not in returned_systems,
                 returned_systems)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1167164
@@ -213,7 +213,7 @@ class SystemListTest(ClientTestCase):
             self.fail('Must Fail or Die')
         except ClientError as e:
             self.assertEqual(e.status, 1)
-            self.assert_('Invalid date format' in e.stderr_output,
+            self.assertTrue('Invalid date format' in e.stderr_output,
                     e.stderr_output)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=955868
@@ -246,9 +246,9 @@ class SystemListTest(ClientTestCase):
                           '</system>' % date_today])
 
         returned_systems = out.splitlines()
-        self.assert_(sys_today1.fqdn in returned_systems)
-        self.assert_(sys_today2.fqdn in returned_systems)
-        self.assert_(sys_tomorrow.fqdn not in returned_systems)
+        self.assertTrue(sys_today1.fqdn in returned_systems)
+        self.assertTrue(sys_today2.fqdn in returned_systems)
+        self.assertTrue(sys_tomorrow.fqdn not in returned_systems)
 
         # on a datetime
         try:
@@ -259,8 +259,8 @@ class SystemListTest(ClientTestCase):
                         '</system>' % time_now])
             self.fail('Must Fail or Die')
         except ClientError as e:
-            self.assertEquals(e.status, 1)
-            self.assert_('Invalid date format' in e.stderr_output, e.stderr_output)
+            self.assertEqual(e.status, 1)
+            self.assertTrue('Invalid date format' in e.stderr_output, e.stderr_output)
 
         # date as  " "
         try:
@@ -271,8 +271,8 @@ class SystemListTest(ClientTestCase):
                         '</system>'])
             self.fail('Must Fail or die')
         except ClientError as e:
-            self.assertEquals(e.status, 1)
-            self.assert_('Invalid date format' in e.stderr_output, e.stderr_output)
+            self.assertEqual(e.status, 1)
+            self.assertTrue('Invalid date format' in e.stderr_output, e.stderr_output)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1217158
     def test_filter_by_pool(self):
@@ -282,11 +282,11 @@ class SystemListTest(ClientTestCase):
             pool.systems.append(inpool)
             data_setup.create_system()
         out = run_client(['bkr', 'system-list', '--pool', pool.name])
-        self.assertEquals([inpool.fqdn], out.splitlines())
+        self.assertEqual([inpool.fqdn], out.splitlines())
 
         # --group is a hidden compatibility alias for --pool
         out = run_client(['bkr', 'system-list', '--group', pool.name])
-        self.assertEquals([inpool.fqdn], out.splitlines())
+        self.assertEqual([inpool.fqdn], out.splitlines())
 
     def test_old_command_list_systems_still_works(self):
         with session.begin():

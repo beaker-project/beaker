@@ -59,7 +59,7 @@ class UserPrefs(WebDriverTestCase):
         # Check that it hasn't changed our list of submission delegates
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.user.submission_delegates, [submission_delegate])
+            self.assertEqual(self.user.submission_delegates, [submission_delegate])
 
     def test_removing_submission_delegate(self):
         with session.begin():
@@ -74,7 +74,7 @@ class UserPrefs(WebDriverTestCase):
         # Check they have been removed in DB
         session.expire(self.user)
         with session.begin():
-            self.assertEquals(self.user.submission_delegates, [])
+            self.assertEqual(self.user.submission_delegates, [])
             activity = self.user.user_activity[-1]
             self.assertEqual(activity.action, u'Removed')
             self.assertEqual(activity.field_name, u'Submission delegate')
@@ -113,8 +113,8 @@ class UserPrefs(WebDriverTestCase):
         pane.find_element_by_xpath('p[contains(text(), "Your root password was set")'
                                    ' and normalize-space(string(time))="a few seconds ago"]')
         new_hash = pane.find_element_by_xpath('p[1]/code').text
-        self.failUnless(new_hash)
-        self.failUnless(crypt.crypt(self.clear_password, new_hash) == new_hash)
+        self.assertTrue(new_hash)
+        self.assertTrue(crypt.crypt(self.clear_password, new_hash) == new_hash)
 
     def test_set_hashed_password(self):
         b = self.browser
@@ -125,7 +125,7 @@ class UserPrefs(WebDriverTestCase):
         pane.find_element_by_xpath('p[contains(text(), "Your root password was set")'
                                    ' and normalize-space(string(time))="a few seconds ago"]')
         new_hash = pane.find_element_by_xpath('p[1]/code').text
-        self.failUnless(crypt.crypt(self.clear_password, new_hash) == self.hashed_password)
+        self.assertTrue(crypt.crypt(self.clear_password, new_hash) == self.hashed_password)
 
     def test_too_short_password_is_rejected(self):
         b = self.browser
@@ -165,7 +165,7 @@ class UserPrefs(WebDriverTestCase):
         pane.find_element_by_xpath(
             '//li/span[@class="ident" and text()="me@example.com"]')
         with session.begin():
-            self.assertEquals(self.user.sshpubkeys[-1].ident, 'me@example.com')
+            self.assertEqual(self.user.sshpubkeys[-1].ident, 'me@example.com')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=830475
     def test_multiple_ssh_keys_not_accepted(self):

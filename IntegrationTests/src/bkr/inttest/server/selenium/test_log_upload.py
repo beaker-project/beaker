@@ -28,16 +28,16 @@ class LogUploadXmlRpcTest(XmlRpcTestCase):
                 self.recipe.id, '/', 'log.txt', '')
         with session.begin():
             session.refresh(self.recipe)
-            self.assertEquals(len(self.recipe.logs), 1, self.recipe.logs)
-            self.assertEquals(self.recipe.logs[0].path, u'/')
-            self.assertEquals(self.recipe.logs[0].filename, u'log.txt')
-            self.assertEquals(self.recipe.logs[0].server, u'http://myserver/log.txt')
+            self.assertEqual(len(self.recipe.logs), 1, self.recipe.logs)
+            self.assertEqual(self.recipe.logs[0].path, u'/')
+            self.assertEqual(self.recipe.logs[0].filename, u'log.txt')
+            self.assertEqual(self.recipe.logs[0].server, u'http://myserver/log.txt')
         # Register it again with a different URL
         self.server.recipes.register_file('http://elsewhere/log.txt',
                 self.recipe.id, '/', 'log.txt', '')
         with session.begin():
             session.refresh(self.recipe)
-            self.assertEquals(len(self.recipe.logs), 1, self.recipe.logs)
-            self.assertEquals(self.recipe.logs[0].path, u'/')
-            self.assertEquals(self.recipe.logs[0].filename, u'log.txt')
-            self.assertEquals(self.recipe.logs[0].server, u'http://elsewhere/log.txt')
+            self.assertEqual(len(self.recipe.logs), 1, self.recipe.logs)
+            self.assertEqual(self.recipe.logs[0].path, u'/')
+            self.assertEqual(self.recipe.logs[0].filename, u'log.txt')
+            self.assertEqual(self.recipe.logs[0].server, u'http://elsewhere/log.txt')

@@ -37,10 +37,10 @@ class ModifySystemTest(ClientTestCase):
             session.expire_all()
             systems = [system1, system2]
             for system in systems:
-                self.assertEquals(system.owner.user_name, new_owner.user_name)
-                self.assertEquals(system.activity[-1].field_name, u'Owner')
-                self.assertEquals(system.activity[-1].action, u'Changed')
-                self.assertEquals(system.activity[-1].new_value,
+                self.assertEqual(system.owner.user_name, new_owner.user_name)
+                self.assertEqual(system.activity[-1].field_name, u'Owner')
+                self.assertEqual(system.activity[-1].action, u'Changed')
+                self.assertEqual(system.activity[-1].new_value,
                                   new_owner.user_name)
 
         # invalid user
@@ -72,9 +72,9 @@ class ModifySystemTest(ClientTestCase):
         run_client(['bkr', 'system-modify', '--condition=Manual', system.fqdn])
         with session.begin():
             session.expire_all()
-            self.assertEquals(system.status, SystemStatus.manual)
-            self.assertEquals(system.activity[0].field_name, u'Status')
-            self.assertEquals(system.activity[0].new_value, u'Manual')
+            self.assertEqual(system.status, SystemStatus.manual)
+            self.assertEqual(system.activity[0].field_name, u'Status')
+            self.assertEqual(system.activity[0].new_value, u'Manual')
 
     def test_invalid_condition(self):
         with session.begin():
@@ -94,12 +94,12 @@ class ModifySystemTest(ClientTestCase):
         run_client(['bkr', 'system-modify', '--host-hypervisor=KVM', system.fqdn])
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.hypervisor, Hypervisor.by_name(u'KVM'))
+            self.assertEqual(system.hypervisor, Hypervisor.by_name(u'KVM'))
         # set back to none (bare metal)
         run_client(['bkr', 'system-modify', '--host-hypervisor=', system.fqdn])
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.hypervisor, None)
+            self.assertEqual(system.hypervisor, None)
 
     def test_modify_active_access_policy(self):
         with session.begin():
@@ -123,10 +123,10 @@ class ModifySystemTest(ClientTestCase):
             for s in [system1, system2]:
                 self.assertFalse(s.active_access_policy.grants(user1, perm))
                 self.assertTrue(s.active_access_policy.grants(user2, perm))
-                self.assertEquals(s.activity[-1].field_name, u'Active Access Policy')
-                self.assertEquals(s.activity[-1].action, u'Changed')
-                self.assertEquals(s.activity[-1].old_value, 'Custom access policy' )
-                self.assertEquals(s.activity[-1].new_value,'Pool policy: %s' % pool.name)
+                self.assertEqual(s.activity[-1].field_name, u'Active Access Policy')
+                self.assertEqual(s.activity[-1].action, u'Changed')
+                self.assertEqual(s.activity[-1].old_value, 'Custom access policy' )
+                self.assertEqual(s.activity[-1].new_value,'Pool policy: %s' % pool.name)
 
         # system not in a pool
         try:
@@ -187,8 +187,8 @@ class ModifySystemTest(ClientTestCase):
         with session.begin():
             session.expire_all()
             for s in [system1, system2]:
-                self.assertEquals(s.owner.user_name, new_owner.user_name)
-                self.assertEquals(s.status, SystemStatus.manual)
+                self.assertEqual(s.owner.user_name, new_owner.user_name)
+                self.assertEqual(s.status, SystemStatus.manual)
                 self.assertFalse(s.active_access_policy.grants(user1, perm))
                 self.assertTrue(s.active_access_policy.grants(user2, perm))
 
@@ -208,13 +208,13 @@ class ModifySystemTest(ClientTestCase):
                     '--power-type=apc_snmp_then_etherwake', system.fqdn])
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.power.power_type,
+            self.assertEqual(system.power.power_type,
                               PowerType.by_name(u'apc_snmp_then_etherwake'))
         # set back to ilo
         run_client(['bkr', 'system-modify', '--power-type=ilo', system.fqdn])
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.power.power_type, PowerType.by_name(u'ilo'))
+            self.assertEqual(system.power.power_type, PowerType.by_name(u'ilo'))
 
     def test_change_power_address(self):
         with session.begin():
@@ -224,14 +224,14 @@ class ModifySystemTest(ClientTestCase):
                     system.fqdn])
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.power.power_address, u'dummyaddress')
+            self.assertEqual(system.power.power_address, u'dummyaddress')
         # set back to default value
         address = u'%s_power_address' % system.fqdn
         run_client(['bkr', 'system-modify', '--power-address=%s' % address,
                     system.fqdn])
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.power.power_address, address)
+            self.assertEqual(system.power.power_address, address)
 
     def test_change_power_user(self):
         with session.begin():
@@ -240,13 +240,13 @@ class ModifySystemTest(ClientTestCase):
         run_client(['bkr', 'system-modify', '--power-user=dummyuser', system.fqdn])
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.power.power_user, u'dummyuser')
+            self.assertEqual(system.power.power_user, u'dummyuser')
         # set back to default value
         user = u'%s_power_user' % system.fqdn
         run_client(['bkr', 'system-modify', '--power-user=%s' % user, system.fqdn])
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.power.power_user, user)
+            self.assertEqual(system.power.power_user, user)
 
     def test_change_power_password(self):
         with session.begin():
@@ -256,14 +256,14 @@ class ModifySystemTest(ClientTestCase):
                     system.fqdn])
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.power.power_passwd, u'dummypassword')
+            self.assertEqual(system.power.power_passwd, u'dummypassword')
         # set back to default value
         password = u'%s_power_password' % system.fqdn
         run_client(['bkr', 'system-modify', '--power-password=%s' % password,
                     system.fqdn])
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.power.power_passwd, password)
+            self.assertEqual(system.power.power_passwd, password)
 
     def test_change_power_id(self):
         with session.begin():
@@ -272,12 +272,12 @@ class ModifySystemTest(ClientTestCase):
         run_client(['bkr', 'system-modify', '--power-id=dummyvm', system.fqdn])
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.power.power_id, u'dummyvm')
+            self.assertEqual(system.power.power_id, u'dummyvm')
         # set to 'vm-dummy'
         run_client(['bkr', 'system-modify', '--power-id=vm-dummy', system.fqdn])
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.power.power_id, u'vm-dummy')
+            self.assertEqual(system.power.power_id, u'vm-dummy')
 
     def test_change_power_quiescent(self):
         with session.begin():
@@ -286,12 +286,12 @@ class ModifySystemTest(ClientTestCase):
         run_client(['bkr', 'system-modify', '--power-quiescent-period=10', system.fqdn])
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.power.power_quiescent_period, 10)
+            self.assertEqual(system.power.power_quiescent_period, 10)
         # set to 5
         run_client(['bkr', 'system-modify', '--power-quiescent-period=5', system.fqdn])
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.power.power_quiescent_period, 5)
+            self.assertEqual(system.power.power_quiescent_period, 5)
 
     def test_change_release_action(self):
         with session.begin():
@@ -300,9 +300,9 @@ class ModifySystemTest(ClientTestCase):
         run_client(['bkr', 'system-modify', '--release-action=LeaveOn', system.fqdn])
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.release_action, ReleaseAction.leave_on)
+            self.assertEqual(system.release_action, ReleaseAction.leave_on)
         # set to 'PowerOff'
         run_client(['bkr', 'system-modify', '--release-action=PowerOff', system.fqdn])
         with session.begin():
             session.refresh(system)
-            self.assertEquals(system.release_action, ReleaseAction.power_off)
+            self.assertEqual(system.release_action, ReleaseAction.power_off)

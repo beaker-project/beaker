@@ -93,7 +93,7 @@ class Cancel(WebDriverTestCase):
             "a[normalize-space(text())='%s']]/div//"
             "a[normalize-space(text())='Cancel']" % self.job.t_id).click()
         b.find_element_by_xpath("//input[@class='submitbutton' and @value='Yes']").click()
-        self.assertEquals(b.find_element_by_class_name('flash').text,
+        self.assertEqual(b.find_element_by_class_name('flash').text,
             'Successfully cancelled job %s' % self.job.id)
 
     def test_owner_cancel_job(self):
@@ -124,10 +124,10 @@ class Cancel(WebDriverTestCase):
         self.assertTrue(is_text_present(b, "Successfully cancelled job %s"
                         % self.job.id))
         with session.begin():
-            self.assertEquals(self.job.activity[0].service, u'WEBUI')
-            self.assertEquals(self.job.activity[0].field_name, 'Status')
-            self.assertEquals(self.job.activity[0].object_name(), 'Job: %s' % self.job.id)
-            self.assertEquals(self.job.activity[0].action, u'Cancelled')
+            self.assertEqual(self.job.activity[0].service, u'WEBUI')
+            self.assertEqual(self.job.activity[0].field_name, 'Status')
+            self.assertEqual(self.job.activity[0].object_name(), 'Job: %s' % self.job.id)
+            self.assertEqual(self.job.activity[0].action, u'Cancelled')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=995012
     def test_record_recipeset_cancel(self):
@@ -139,11 +139,11 @@ class Cancel(WebDriverTestCase):
         self.assertTrue(is_text_present(b, "Successfully cancelled recipeset %s"
                         % self.job.recipesets[0].id))
         with session.begin():
-            self.assertEquals(self.job.recipesets[0].activity[0].service, u'WEBUI')
-            self.assertEquals(self.job.recipesets[0].activity[0].field_name, 'Status')
-            self.assertEquals(self.job.recipesets[0].activity[0].object_name(), 'RecipeSet: %s'
+            self.assertEqual(self.job.recipesets[0].activity[0].service, u'WEBUI')
+            self.assertEqual(self.job.recipesets[0].activity[0].field_name, 'Status')
+            self.assertEqual(self.job.recipesets[0].activity[0].object_name(), 'RecipeSet: %s'
                               % self.job.recipesets[0].id)
-            self.assertEquals(self.job.recipesets[0].activity[0].action, u'Cancelled')
+            self.assertEqual(self.job.recipesets[0].activity[0].action, u'Cancelled')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1173376
     def test_clear_rows_in_system_recipe_map(self):

@@ -22,7 +22,7 @@ class TestUsageReminder(DatabaseTestCase):
 
     def test_version(self):
         out = run_command('usage_reminder.py', 'beaker-usage-reminder', ['--version'])
-        self.assertEquals(out.strip(), __version__)
+        self.assertEqual(out.strip(), __version__)
 
     def test_expiring_reservation(self):
         with session.begin():

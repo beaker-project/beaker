@@ -107,7 +107,7 @@ class JobAckTest(WebDriverTestCase):
             owner.use_old_job_page = True
             job = data_setup.create_job(owner=owner)
             data_setup.mark_job_complete(job, result=TaskResult.pass_)
-            self.assertEquals(job.result, TaskResult.pass_)
+            self.assertEqual(job.result, TaskResult.pass_)
         b = self.browser
         login(b, user=owner.user_name, password='owner')
         b.get(get_server_base() + 'jobs/%s' % job.id)
@@ -115,9 +115,9 @@ class JobAckTest(WebDriverTestCase):
         rs.find_element_by_xpath('.//label[normalize-space(string(.))="Nak"]/input').click()
         rs.find_element_by_xpath('.//span[text()="Success"]')
         with session.begin():
-            self.assertEquals(job.recipesets[0].activity[0].service, u'WEBUI')
-            self.assertEquals(job.recipesets[0].activity[0].field_name, 'Ack/Nak')
-            self.assertEquals(job.recipesets[0].activity[0].object_name(),
+            self.assertEqual(job.recipesets[0].activity[0].service, u'WEBUI')
+            self.assertEqual(job.recipesets[0].activity[0].field_name, 'Ack/Nak')
+            self.assertEqual(job.recipesets[0].activity[0].object_name(),
                               'RecipeSet: %s' % job.recipesets[0].id)
-            self.assertEquals(job.recipesets[0].activity[0].old_value, u'ack')
-            self.assertEquals(job.recipesets[0].activity[0].new_value, u'nak')
+            self.assertEqual(job.recipesets[0].activity[0].old_value, u'ack')
+            self.assertEqual(job.recipesets[0].activity[0].new_value, u'nak')
