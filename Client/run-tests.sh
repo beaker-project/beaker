@@ -1,15 +1,12 @@
-#/bin/bash
+#!/bin/bash
 
 set -x
 
-# Use Python 2 version if BKR_PY3 is not defined
-if [[ -z ${BKR_PY3} ]]; then
-    pytest_command="py.test-2";
-elif [[ ${BKR_PY3} == 1 ]]; then
-    pytest_command="pytest-3";
+# Use nosetests with python2 interpreter
+if [[ -z ${BKR_PY3} ]] || [[ ${BKR_PY3} != 1 ]]; then
+    command="nosetests ${*:--v --traverse-namespace bkr.client.tests}";
 else
-    pytest_command="py.test-2";
+    command="pytest-3";
 fi
 
-env PYTHONPATH=../Client/src:../Common${PYTHONPATH:+:$PYTHONPATH} \
-    $pytest_command
+env PYTHONPATH=../Client/src:../Common${PYTHONPATH:+:$PYTHONPATH} $command
