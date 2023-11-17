@@ -116,7 +116,10 @@ class TimeoutHTTPSProxyConnection(TimeoutHTTPProxyConnection):
             self.close()
             raise socket.error(1001, response.status, response.msg)
 
-        self.sock = ssl.wrap_socket(self.sock, keyfile=self.key_file, certfile=self.cert_file)
+        context = ssl.create_default_context()
+        if self.cert_file:
+            context.load_cert_chain(self.cert_file, self.key_file)
+        self.sock = context.wrap_socket(self.sock, server_hostname=self.real_host)
 
     def putrequest(self, method, url, skip_host=0, skip_accept_encoding=0):
         return TimeoutHTTPConnection.putrequest(self, method, url)
