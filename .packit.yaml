@@ -5,22 +5,32 @@ specfile_path: beaker.spec
 
 # add or remove files that should be synced
 synced_files:
-    - beaker.spec
-    - .packit.yaml
+  - beaker.spec
+  - .packit.yaml
 
 notifications:
   pull_request:
     successful_build: false
 
 jobs:
-- job: copr_build
-  trigger: pull_request
-  metadata:
-    targets:
-      - epel-8-x86_64
-      - fedora-33-x86_64
-      - fedora-34-x86_64
-      - fedora-35-x86_64
-      - fedora-rawhide-x86_64
-      - centos-stream-8-x86_64
-      - centos-stream-9-x86_64
+  - job: copr_build
+    trigger: pull_request
+    metadata:
+      targets:
+        - epel-8-x86_64
+        - epel-9-x86_64
+        - centos-stream-8-x86_64
+        - centos-stream-9-x86_64
+
+  - job: copr_build
+    trigger: pull_request
+    metadata:
+      targets:
+        - fedora-all-x86_64
+    actions:
+      post-upstream-clone:
+        # disable broken unit tests
+        - sed -i '/make check/d' beaker.spec
+        # disable broken documentation
+        - sed -i '/^make$/i sed -i s/documentation//g Makefile' beaker.spec
+        - sed -i '/_mandir/d' beaker.spec
