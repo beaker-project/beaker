@@ -32,3 +32,13 @@ jobs:
         # disable broken unit tests
         - sed -i '/make check/d' beaker.spec
 
+  - job: copr_build
+    trigger: pull_request
+    metadata:
+      targets:
+        - epel-7-x86_64
+    actions:
+      post-upstream-clone:
+        # Use gevent from base repositories during packit builds
+        # gevent112 is our custom build with some backports to improve socket management
+        - sed -i 's/python2-gevent112/python-gevent/g' beaker.spec
