@@ -53,6 +53,7 @@ BuildRequires:  python3-pytest
 BuildRequires:  python3-devel
 BuildRequires:  python3-docutils
 BuildRequires:  python3-sphinx
+BuildRequires:  python3-six
 %else
 BuildRequires:  python-setuptools
 BuildRequires:  python-nose >= 0.10
