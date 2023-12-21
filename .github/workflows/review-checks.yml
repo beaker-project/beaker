@@ -27,7 +27,7 @@ jobs:
     - uses: actions/checkout@v1
     - name: Install utils
       run: |
-        yum install -y git wget
+        yum install -y git wget ca-certificates
     - name: Fetch Beaker repository
       run: |
         wget https://beaker-project.org/yum/beaker-server-RedHatEnterpriseLinux.repo -P /etc/yum.repos.d/
