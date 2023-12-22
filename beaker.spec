@@ -133,7 +133,7 @@ Requires:       crontabs
 Requires:       mod_wsgi
 Requires:       httpd
 Requires:       dnf
-Requires:       nodejs-less >= 1.7
+Requires:       nodejs-less >= 1.7, nodejs-less <= 2.0
 Requires:       /usr/bin/cssmin
 Requires:       /usr/bin/uglifyjs
 BuildRequires:  python-requests
