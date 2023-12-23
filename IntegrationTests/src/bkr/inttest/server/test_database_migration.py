@@ -1560,7 +1560,10 @@ class MigrationTest(unittest.TestCase):
                 "VALUES ('machine_recipe', 1, 1, 'Scheduled', FALSE)")
         recipe = self.migration_session.query(Recipe).get(1)
         # Recipe has been missed by past migration and has no installation row
-        self.assertIsNone(recipe.installation)
+        row_count = self.migration_session.execute(
+            "SELECT COUNT(*) FROM installation WHERE recipe_id = :recipe_id", {"recipe_id": recipe.id}
+        ).scalar()
+        self.assertEqual(0, row_count)
         self.migration_session.close()
 
         # This migration has become a NOOP
@@ -1574,13 +1577,27 @@ class MigrationTest(unittest.TestCase):
         self.assertTrue(finished)
 
         recipe = self.migration_session.query(Recipe).get(1)
-        self.assertIsNotNone(recipe.installation)
-        self.assertEqual(recipe.installation.distro_tree_id, 1)
-        self.assertEqual(recipe.installation.arch.arch, u'i386')
-        self.assertEqual(recipe.installation.variant, u'Server')
-        self.assertEqual(recipe.installation.distro_name, u'RHEL6')
-        self.assertEqual(recipe.installation.osmajor, u'RedHatEnterpriseLinux6')
-        self.assertEqual(recipe.installation.osminor, u'9')
+        row = self.migration_session.execute(
+            """SELECT
+            i.distro_tree_id,
+            i.variant,
+            i.distro_name,
+            i.osmajor,
+            i.osminor,
+            a.arch
+            FROM installation i
+            JOIN arch a ON i.arch_id = a.id
+            WHERE i.recipe_id = :recipe_id
+            """, {"recipe_id": recipe.id}
+        ).fetchone()
+
+        self.assertIsNotNone(row)
+        self.assertEqual(row['distro_tree_id'], 1)
+        self.assertEqual(row['arch'], u'i386')
+        self.assertEqual(row['variant'], u'Server')
+        self.assertEqual(row['distro_name'], u'RHEL6')
+        self.assertEqual(row['osmajor'], u'RedHatEnterpriseLinux6')
+        self.assertEqual(row['osminor'], u'9')
         with self.migration_metadata.bind.connect() as connection:
             self.assertEqual(1,
                              connection.scalar('SELECT count(*) FROM installation;'))
@@ -1632,8 +1649,15 @@ class MigrationTest(unittest.TestCase):
                 "VALUES (6, 'machine_recipe', 1, 1, 'Scheduled', FALSE)")
         r1, r2, r3, r4, r5, r6 = self.migration_session.query(Recipe).all()
         for recipe in [r1, r2, r4, r5, r6]:
-            self.assertIsNone(recipe.installation)
-        self.assertIsNotNone(r3.installation)
+            row_count = self.migration_session.execute(
+                "SELECT COUNT(*) FROM installation WHERE recipe_id = :recipe_id", {"recipe_id": recipe.id}
+            ).scalar()
+            self.assertEqual(0, row_count)
+
+        row_count = self.migration_session.execute(
+            "SELECT COUNT(*) FROM installation WHERE recipe_id = :recipe_id", {"recipe_id": r3.id}
+        ).scalar()
+        self.assertEqual(1, row_count)
         self.migration_session.close()
 
         migration = DataMigration(name=u'insert-installation-row-for-recipes-before-25-take-2')
@@ -1641,15 +1665,28 @@ class MigrationTest(unittest.TestCase):
         self.assertTrue(finished)
 
         for recipe in self.migration_session.query(Recipe).all():
-            self.assertIsNotNone(recipe.installation,
+            row = self.migration_session.execute(
+                """SELECT
+                i.distro_tree_id,
+                i.variant,
+                i.distro_name,
+                i.osmajor,
+                i.osminor,
+                a.arch
+                FROM installation i
+                JOIN arch a ON i.arch_id = a.id
+                WHERE i.recipe_id = :recipe_id
+                """, {"recipe_id": recipe.id}
+            ).fetchone()
+            self.assertIsNotNone(row,
                                  'Installation row for recipeid %s (%s) should exist' % (
                                  recipe.id, recipe.status))
-            self.assertEqual(recipe.installation.distro_tree_id, 1)
-            self.assertEqual(recipe.installation.arch.arch, u'i386')
-            self.assertEqual(recipe.installation.variant, u'Server')
-            self.assertEqual(recipe.installation.distro_name, u'RHEL6')
-            self.assertEqual(recipe.installation.osmajor, u'RedHatEnterpriseLinux6')
-            self.assertEqual(recipe.installation.osminor, u'9')
+            self.assertEqual(row['distro_tree_id'], 1)
+            self.assertEqual(row['arch'], u'i386')
+            self.assertEqual(row['variant'], u'Server')
+            self.assertEqual(row['distro_name'], u'RHEL6')
+            self.assertEqual(row['osmajor'], u'RedHatEnterpriseLinux6')
+            self.assertEqual(row['osminor'], u'9')
         with self.migration_metadata.bind.connect() as connection:
             self.assertEqual(6,
                              connection.scalar('SELECT count(*) FROM installation;'))
