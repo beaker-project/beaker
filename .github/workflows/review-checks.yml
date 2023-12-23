@@ -105,6 +105,8 @@ jobs:
           CREATE DATABASE beaker_migration_test;
           GRANT ALL PRIVILEGES ON beaker_test.* TO 'beaker'@'%';
           GRANT ALL PRIVILEGES ON beaker_migration_test.* TO 'beaker'@'%';
+          SET GLOBAL max_allowed_packet=1073741824;
+          SET GLOBAL character_set_server=utf8;
           EOT
 
           mysql -uroot -p${{ env.MYSQL_ROOT_PASSWORD }} -h database < init.sql
