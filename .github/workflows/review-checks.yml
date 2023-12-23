@@ -43,3 +43,71 @@ jobs:
         name: beaker-docs
         path: /home/runner/work/html
 
+  integration-tests:
+    runs-on: ubuntu-latest
+    env:
+      MYSQL_USER: beaker
+      MYSQL_PASSWORD: beaker
+      MYSQL_ROOT_PASSWORD: toor
+    strategy:
+      fail-fast: false
+      matrix:
+        test-target: ["bkr.inttest.client"]
+    container:
+      image: centos:7
+    services:
+      database:
+        image: mariadb:latest
+        env:
+          MYSQL_USER: ${{ env.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ env.MYSQL_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ env.MYSQL_ROOT_PASSWORD }}
+        ports:
+          - 3306
+    steps:
+      - name: Install git to allow checkout
+        run: |
+          yum install https://repo.ius.io/ius-release-el7.rpm epel-release -y
+          yum install git236-core -y
+          yum remove ius-release epel-release -y
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Remove git
+        run: yum remove git236-core -y
+
+      - name: Add Beaker Server YUM repository
+        run: |
+          curl -o /etc/yum.repos.d/beaker-server.repo https://beaker-project.org/yum/beaker-server-RedHatEnterpriseLinux.repo
+
+      - name: Install Beaker dependencies
+        run: |
+          yum install epel-release mariadb beaker-integration-tests -y
+          yum-builddep beaker.spec -y
+          yum remove beaker-common \
+              beaker-client \
+              beaker-lab-controller \
+              beaker-server \
+              beaker-integration-tests -y
+
+      - name: Checkout submodules
+        run: |
+          git submodule update --init --recursive
+
+      - name: Configure database for testing
+        run: |
+          cat <<EOT > init.sql
+          CREATE DATABASE beaker_test;
+          CREATE DATABASE beaker_migration_test;
+          GRANT ALL PRIVILEGES ON beaker_test.* TO 'beaker'@'%';
+          GRANT ALL PRIVILEGES ON beaker_migration_test.* TO 'beaker'@'%';
+          EOT
+
+          mysql -uroot -p${{ env.MYSQL_ROOT_PASSWORD }} -h database < init.sql
+          sed -i 's/@localhost/@database/g' IntegrationTests/server-test.cfg
+
+      - name: Run integration tests for ${{ matrix.test-target }}
+        run: |
+          pushd IntegrationTests
+          ./run-tests.sh ${{ matrix.test-target }}
