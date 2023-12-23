@@ -52,7 +52,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test-target: ["bkr.inttest.client"]
+        test-target: ["bkr.inttest.client", "bkr.inttest.labcontroller"]
     container:
       image: centos:7
     services:
