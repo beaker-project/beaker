@@ -65,17 +65,20 @@ jobs:
         ports:
           - 3306
     steps:
+      # We have to install git 2.18+ to perform checkout via git
+      # This is possible only via IUS repositories
       - name: Install git to allow checkout
         run: |
           yum install https://repo.ius.io/ius-release-el7.rpm epel-release -y
           yum install git236-core -y
-          yum remove ius-release epel-release -y
 
+      # Do not upgrade to @v4 as node 20 is incompatible with CentOS 7
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Remove git
-        run: yum remove git236-core -y
+      # Remove custom git from the IUS repository - git will be reinstalled later as it is needed by beaker itself.
+      - name: Remove git236 and YUM repositories
+        run: yum remove git236-core ius-release epel-release -y
 
       - name: Add Beaker Server YUM repository
         run: |
