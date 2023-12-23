@@ -52,7 +52,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test-target: ["bkr.inttest.client", "bkr.inttest.labcontroller"]
+        test-target: ["bkr.inttest.client", "bkr.inttest.labcontroller", "bkr.inttest.server"]
     container:
       image: centos:7
     services:
@@ -113,4 +113,6 @@ jobs:
       - name: Run integration tests for ${{ matrix.test-target }}
         run: |
           pushd IntegrationTests
+          # Disable Selenium tests until we have plan for selenium driver + firefox
+          rm -rf src/bkr/inttest/server/selenium
           ./run-tests.sh -v ${{ matrix.test-target }}
