@@ -227,10 +227,13 @@ gpgcheck=0
         Adds supplied URLs to specific distro tree under specific lab controller.
         Old URL will be replaced if new URL uses the same scheme
         """
+        unrecognized_scheme = ''
         new_urls_by_scheme = dict(
-            (urlparse.urlparse(url, scheme=None).scheme, url) for url in urls)
-        if None in new_urls_by_scheme:
-            raise ValueError('URL %r is not absolute' % new_urls_by_scheme[None])
+            (urlparse.urlparse(url, scheme=unrecognized_scheme).scheme, url) for url in urls)
+
+        if unrecognized_scheme in new_urls_by_scheme:
+            raise ValueError('URL %s is not absolute' % new_urls_by_scheme[unrecognized_scheme])
+
         for lca in distro_tree.lab_controller_assocs:
             if lca.lab_controller == lab_controller:
                 scheme = urlparse.urlparse(lca.url).scheme
