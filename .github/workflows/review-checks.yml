@@ -112,6 +112,13 @@ jobs:
           mysql -uroot -p${{ env.MYSQL_ROOT_PASSWORD }} -h database < init.sql
           sed -i 's/@localhost/@database/g' IntegrationTests/server-test.cfg
 
+      - name: Update version
+        run: |
+          # Update the version in common/__init__.py, as this file is used in the application and tests to determine the version
+          current_version=$(grep -oE "__version__ = '[^']+'" Common/bkr/common/__init__.py | cut -d "'" -f 2)
+          new_version="$current_version.git.$(git rev-parse --short HEAD)"
+          sed -i "s/__version__ = '$current_version'/__version__ = '$new_version'/" Common/bkr/common/__init__.py
+
       - name: Run integration tests for ${{ matrix.test-target }}
         run: |
           pushd IntegrationTests
