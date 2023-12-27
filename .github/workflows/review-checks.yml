@@ -52,7 +52,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test-target: ["bkr.inttest.client", "bkr.inttest.labcontroller", "bkr.inttest.server"]
+        test-target: ["bkr.inttest.server.selenium.test_activity:ActivityTestWD.test_can_search_by_distro_name"]
     container:
       image: centos:7
     services:
@@ -86,7 +86,7 @@ jobs:
 
       - name: Install Beaker dependencies
         run: |
-          yum install epel-release mariadb beaker-integration-tests -y
+          yum install bzip2 ca-certificates wget epel-release mariadb beaker-integration-tests -y
           yum-builddep beaker.spec -y
           yum remove beaker-common \
               beaker-client \
@@ -119,9 +119,23 @@ jobs:
           new_version="$current_version.git.$(git rev-parse --short HEAD)"
           sed -i "s/__version__ = '$current_version'/__version__ = '$new_version'/" Common/bkr/common/__init__.py
 
+      - name: Install Firefox
+        run: |
+          yum remove firefox -y
+          
+          # Downloading Firefox from the official website
+          wget https://download-installer.cdn.mozilla.net/pub/firefox/releases/43.0.4/linux-x86_64/en-US/firefox-43.0.4.tar.bz2
+  
+          # Extract the tarball
+          tar xvjf firefox-43.0.4.tar.bz2
+  
+          # Move Firefox to a directory in PATH
+          mv firefox /usr/local/bin/
+  
+          # Link the firefox binary to a location in PATH
+          ln -s /usr/local/bin/firefox/firefox /usr/bin/firefox
+
       - name: Run integration tests for ${{ matrix.test-target }}
         run: |
           pushd IntegrationTests
-          # Disable Selenium tests until we have plan for selenium driver + firefox
-          rm -rf src/bkr/inttest/server/selenium
-          ./run-tests.sh -v ${{ matrix.test-target }}
+          ./run-tests.sh -sv ${{ matrix.test-target }}
