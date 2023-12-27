@@ -240,7 +240,7 @@ class KickstartTest(unittest.TestCase):
             ]
 
             cls.rhel7_alt_nightly = data_setup.create_distro(name=u'RHEL-ALT-7.6-20181023.n.0',
-                osmajor=u'RedHatEnterpriseLinuxAlternateArchitectures7', osminor=u'0')
+                osmajor=u'RedHatEnterpriseLinuxAlternateArchitectures7', osminor=u'6')
             cls.rhel7_alt_workstation_x86_64 = data_setup.create_distro_tree(
                 distro=cls.rhel7_alt_nightly, variant=u'Workstation', arch=u'x86_64',
                 lab_controllers=[cls.lab_controller],

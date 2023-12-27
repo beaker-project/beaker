@@ -104,6 +104,42 @@ class TestJobsController(DatabaseTestCase):
         self.assertIn('<arch value="i386"/>', roundtripped_xml)
         self.assertIn('<osversion major="RedHatEnterpriseLinux7" minor="0"/>', roundtripped_xml)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=911515
+    def test_job_with_custom_distro_with_image_url_can_be_roundtripped(self):
+        complete_job_xml = '''
+                    <job>
+                        <whiteboard>
+                            so pretty
+                        </whiteboard>
+                        <recipeSet>
+                            <recipe>
+                                <distro>
+                                    <tree url="ftp://dummylab.example.com/distros/MyCustomLinux1.0/Server/aarch64/os/"/>
+                                    <initrd url="pxeboot/initrd"/>
+                                    <kernel url="pxeboot/vmlinuz"/>
+                                    <image  url="EFI/BOOT/grubaa64.efi"/>
+                                    <arch value="aarch64"/>
+                                    <osversion major="RedHatEnterpriseLinux8"/>
+                                </distro>
+                                <hostRequires/>
+                                <task name="/distribution/check-install"/>
+                            </recipe>
+                        </recipeSet>
+                    </job>
+                '''
+        xmljob = lxml.etree.fromstring(complete_job_xml)
+        job = testutil.call(self.controller.process_xmljob, xmljob, self.user)
+        roundtripped_xml = lxml.etree.tostring(job.to_xml(clone=True), pretty_print=True, encoding='utf8')
+        self.assertIn(
+                '<tree url="ftp://dummylab.example.com/distros/MyCustomLinux1.0/Server/aarch64/os/"/>',
+                roundtripped_xml
+        )
+        self.assertIn('<initrd url="pxeboot/initrd"/>', roundtripped_xml)
+        self.assertIn('<kernel url="pxeboot/vmlinuz"/>', roundtripped_xml)
+        self.assertIn('<image url="EFI/BOOT/grubaa64.efi"/>', roundtripped_xml)
+        self.assertIn('<arch value="aarch64"/>', roundtripped_xml)
+        self.assertIn('<osversion major="RedHatEnterpriseLinux8" minor="0"/>', roundtripped_xml)
+
     def test_complete_job_results(self):
         complete_job_xml = pkg_resources.resource_string('bkr.inttest', 'complete-job.xml')
         xmljob = lxml.etree.fromstring(complete_job_xml)
@@ -334,6 +370,7 @@ class TestJobsController(DatabaseTestCase):
         self.assertIsNone(recipe.installation.tree_url)
         self.assertIsNone(recipe.installation.initrd_path)
         self.assertIsNone(recipe.installation.kernel_path)
+        self.assertIsNone(recipe.installation.image_path)
         self.assertEqual(recipe.installation.arch.arch, u'i386')
         self.assertEqual(recipe.installation.distro_name, u'BlueShoeLinux5-5')
         self.assertEqual(recipe.installation.osmajor, u'BlueShoeLinux5')

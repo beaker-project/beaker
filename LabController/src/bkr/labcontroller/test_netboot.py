@@ -146,6 +146,10 @@ class ImagesBaseTestCase(NetBootTestCase):
         for _ in xrange(8 * 1024):
             self.initrd.write(chr(random.randrange(0, 256)) * 1024)
         self.initrd.flush()
+        self.image = tempfile.NamedTemporaryFile(prefix='test_netboot', suffix='image')
+        for _ in xrange(4 * 1024):
+            self.image.write(chr(random.randrange(0, 256)) * 1024)
+        self.image.flush()
 
 
 class ImagesTest(ImagesBaseTestCase):
@@ -185,7 +189,8 @@ class ArchBasedConfigTest(ImagesBaseTestCase):
     def configure(self, arch):
         netboot.configure_all(TEST_FQDN, arch, 1234,
                               'file://%s' % self.kernel.name,
-                              'file://%s' % self.initrd.name, "", self.tftp_root)
+                              'file://%s' % self.initrd.name, "",
+                              'file://%s' % self.image.name, self.tftp_root)
 
     def get_categories(self, arch):
         this = self.common_categories
@@ -636,7 +641,8 @@ class NetbootloaderTest(ImagesBaseTestCase):
         netboot.configure_all(TEST_FQDN, 'ppc64', 1234,
                               'file://%s' % self.kernel.name,
                               'file://%s' % self.initrd.name,
-                              'netbootloader=myawesome/netbootloader'
+                              'netbootloader=myawesome/netbootloader',
+                              None
                               )
         bootloader_config_symlink = os.path.join(self.tftp_root, 'bootloader', TEST_FQDN, 'image')
         self.assertTrue(os.path.lexists(bootloader_config_symlink))

@@ -15,11 +15,11 @@
 # not representable in RPM. For example, a release candidate might be 0.15.0rc1
 # but that is not usable for the RPM Version because it sorts higher than
 # 0.15.0, so the RPM will have Version 0.15.0 and Release 0.rc1 in that case.
-%global upstream_version 28.3
+%global upstream_version 29.0rc1
 
 Name:           beaker
-Version:        28.3
-Release:        1%{?dist}
+Version:        29.0
+Release:        0.rc1%{?dist}
 Summary:        Full-stack software and hardware integration testing system
 Group:          Applications/Internet
 License:        GPLv2+ and BSD
@@ -53,6 +53,7 @@ BuildRequires:  python3-pytest
 BuildRequires:  python3-devel
 BuildRequires:  python3-docutils
 BuildRequires:  python3-sphinx
+BuildRequires:  python3-six
 %else
 BuildRequires:  python-setuptools
 BuildRequires:  python-nose >= 0.10
@@ -132,7 +133,7 @@ Requires:       crontabs
 Requires:       mod_wsgi
 Requires:       httpd
 Requires:       dnf
-Requires:       nodejs-less >= 1.7
+Requires:       nodejs-less >= 1.7, nodejs-less <= 2.0
 Requires:       /usr/bin/cssmin
 Requires:       /usr/bin/uglifyjs
 BuildRequires:  python-requests
