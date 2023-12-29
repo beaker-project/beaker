@@ -87,7 +87,6 @@ See also
 
 from __future__ import print_function
 
-import cgi
 import sys
 from xml.dom.minidom import parseString
 
@@ -95,6 +94,7 @@ from requests.exceptions import HTTPError
 
 from bkr.client import BeakerCommand
 from bkr.client.task_watcher import watch_tasks
+from bkr.common.helpers_six import parse_content_type
 
 
 class Update_Inventory(BeakerCommand):
@@ -152,7 +152,7 @@ class Update_Inventory(BeakerCommand):
                 res.raise_for_status()
             except HTTPError as e:
                 sys.stderr.write('HTTP error: %s, %s\n' % (fqdn, e))
-                content_type, _ = cgi.parse_header(e.response.headers.get(
+                content_type = parse_content_type(e.response.headers.get(
                     'Content-Type', ''))
                 if content_type == 'text/plain':
                     sys.stderr.write('\t' +
