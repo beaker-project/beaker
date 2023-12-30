@@ -1,0 +1,57 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - 'beaker-*'
+
+jobs:
+  build-python-package:
+    strategy:
+      matrix:
+        component:
+          - "Common"
+          - "Client"
+    name: Build python package
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.x"
+    - name: Install python dependencies
+      run: pip install --upgrade pip && pip install build
+    - name: Build python package
+      run: cd ${{ matrix.component }} && python -m build
+    - name: Upload python artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        path: ${{ matrix.component }}/dist
+        name: artifact-${{ matrix.component }}
+
+  publish-python-package:
+    needs:
+      - "build-python-package"
+    environment: production
+    permissions:
+      id-token: write
+    strategy:
+      matrix:
+        component:
+          - "Common"
+          - "Client"
+    name: Upload package to PyPI
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: artifact-${{ matrix.component }}
+    - name: Display structure of downloaded files
+      run: ls -R
+    - name: Publish package distributions to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        print-hash: true
