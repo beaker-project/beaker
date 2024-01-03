@@ -31,6 +31,17 @@ version, see :doc:`../admin-guide/upgrading`.
 
        next/*
 
+Beaker 29
+---------
+
+Beaker 29 is the new beginning after a 3 year hiatus.
+This release was mainly focused on maintenance, no groundbreaking features.
+
+.. toctree::
+   :maxdepth: 2
+
+   release-29
+
 Beaker 28
 ---------
 
