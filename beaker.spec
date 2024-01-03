@@ -317,7 +317,7 @@ newly imported distros.
 %endif
 
 %prep
-%setup -q -n %{name}-%{upstream_version}
+%setup -q -n %{name}-%{name}-%{upstream_version}
 tar -C Server/assets/bootstrap --strip-components=1 -xzf %{SOURCE1}
 tar -C Server/assets/font-awesome --strip-components=1 -xzf %{SOURCE2}
 tar -C Server/assets/typeahead.js --strip-components=1 -xzf %{SOURCE3}
