@@ -5,7 +5,6 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import cgi
 import errno
 import logging
 import signal
@@ -22,6 +21,7 @@ from bkr.client.command import BeakerClientConfigurationError
 from bkr.client.command import ClientCommandContainer
 from bkr.client.command import CommandOptionParser
 from bkr.common import __version__
+from bkr.common.helpers_six import parse_content_type
 from bkr.log import log_to_stream
 
 __all__ = (
@@ -129,7 +129,7 @@ def main():
     except maybe_http_error as e:
         warn_on_version_mismatch(e.response)
         sys.stderr.write('HTTP error: %s\n' % e)
-        content_type, _ = cgi.parse_header(e.response.headers.get('Content-Type', ''))
+        content_type = parse_content_type(e.response.headers.get('Content-Type', ''))
         if content_type == 'text/plain':
             sys.stderr.write(e.response.content.decode('utf-8').rstrip('\n') + '\n')
         return 1

@@ -15,17 +15,17 @@
 # not representable in RPM. For example, a release candidate might be 0.15.0rc1
 # but that is not usable for the RPM Version because it sorts higher than
 # 0.15.0, so the RPM will have Version 0.15.0 and Release 0.rc1 in that case.
-%global upstream_version 29.0rc1
+%global upstream_version 29.0rc2
 
 Name:           beaker
 Version:        29.0
-Release:        0.rc1%{?dist}
+Release:        0.rc2%{?dist}
 Summary:        Full-stack software and hardware integration testing system
 Group:          Applications/Internet
 License:        GPLv2+ and BSD
 URL:            https://beaker-project.org/
 
-Source0:        https://beaker-project.org/releases/%{name}-%{upstream_version}.tar.xz
+Source0:        https://github.com/beaker-project/beaker/archive/%{name}-%{upstream_version}.tar.gz
 # Third-party JS/CSS libraries which are built into Beaker's generated JS/CSS
 # (these are submodules in Beaker's git tree, the commit hashes here should
 # correspond to the submodule commits)
