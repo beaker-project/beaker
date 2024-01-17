@@ -55,6 +55,7 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         print-hash: true
+        packages-dir: "./"
 
   release-rpm:
     runs-on: ubuntu-latest
