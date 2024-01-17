@@ -55,3 +55,25 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         print-hash: true
+
+  release-rpm:
+    runs-on: ubuntu-latest
+    environment: production
+    container:
+      image: fedora:39
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install release toolbox
+        run: |
+          dnf install git rpkg copr-cli /usr/bin/spectool -y
+      - name: Setup Copr config file
+        env:
+          # https://copr.fedorainfracloud.org/api/.
+          COPR_CONFIG_FILE: ${{ secrets.COPR_CONFIG }}
+        run: |
+          mkdir -p ~/.config
+          printf "$COPR_CONFIG_FILE" > ~/.config/copr
+      - name: Build new packages
+        run: |
+          spectool -g beaker.spec
+          rpkg copr-build @beaker-project/beaker
