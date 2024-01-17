@@ -14,7 +14,7 @@ DESCRIPTION = 'Common components for Beaker packages'
 
 setup(
     name='beaker-common',
-    version='29.0rc4',
+    version='29.0rc5',
     description=DESCRIPTION,
     # XXX: Create proper README for this package and use it for long description
     long_description=DESCRIPTION,
