@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -10,6 +9,8 @@ try:
     from commands import getstatusoutput
 except ImportError:
     from subprocess import getstatusoutput
+
+DESCRIPTION = 'Command-line client for interacting with Beaker'
 
 
 def bash_completion_dir():
@@ -23,8 +24,11 @@ def bash_completion_dir():
 setup(
     name='beaker-client',
     version='29.0rc4',
-    description='Command-line client for interacting with Beaker',
-    author='Red Hat, Inc.',
+    description=DESCRIPTION,
+    # XXX: Create proper README for this package and use it for long description
+    long_description=DESCRIPTION,
+    long_description_content_type="text/plain",
+    author='Beaker developers',
     author_email='beaker-devel@lists.fedorahosted.org',
     url='https://beaker-project.org/',
 

@@ -10,11 +10,16 @@ from setuptools import setup, find_packages
 # Thus, there is a post-adjustment in "make install" which adds the relevant
 # metadata to the installed .egg-info directory for the main beaker package.
 
+DESCRIPTION = 'Common components for Beaker packages'
+
 setup(
     name='beaker-common',
     version='29.0rc4',
-    description='Common components for Beaker packages',
-    author='Red Hat, Inc.',
+    description=DESCRIPTION,
+    # XXX: Create proper README for this package and use it for long description
+    long_description=DESCRIPTION,
+    long_description_content_type="text/plain",
+    author='Beaker developers',
     author_email='beaker-devel@lists.fedorahosted.org',
     url='https://beaker-project.org/',
 
