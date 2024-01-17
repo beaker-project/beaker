@@ -59,6 +59,7 @@ jobs:
   release-rpm:
     runs-on: ubuntu-latest
     environment: production
+    name: Build RPM packages in COPR
     container:
       image: fedora:39
     steps:
