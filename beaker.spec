@@ -15,11 +15,11 @@
 # not representable in RPM. For example, a release candidate might be 0.15.0rc1
 # but that is not usable for the RPM Version because it sorts higher than
 # 0.15.0, so the RPM will have Version 0.15.0 and Release 0.rc1 in that case.
-%global upstream_version 29.0rc2
+%global upstream_version 29.0
 
 Name:           beaker
 Version:        29.0
-Release:        0.rc2%{?dist}
+Release:        1%{?dist}
 Summary:        Full-stack software and hardware integration testing system
 Group:          Applications/Internet
 License:        GPLv2+ and BSD
@@ -317,7 +317,7 @@ newly imported distros.
 %endif
 
 %prep
-%setup -q -n %{name}-%{upstream_version}
+%setup -q -n %{name}-%{name}-%{upstream_version}
 tar -C Server/assets/bootstrap --strip-components=1 -xzf %{SOURCE1}
 tar -C Server/assets/font-awesome --strip-components=1 -xzf %{SOURCE2}
 tar -C Server/assets/typeahead.js --strip-components=1 -xzf %{SOURCE3}
