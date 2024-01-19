@@ -216,58 +216,71 @@ Requires:       python-mock
 Requires:       python-cssselect
 %endif
 
-%if %{without python3}
 %package lab-controller
-Summary:        Daemons for controlling a Beaker lab
-Group:          Applications/Internet
-Requires:       %{name}-common = %{version}-%{release}
-Requires:       python
-Requires:       crontabs
-Requires:       httpd
-Requires:       syslinux
-Requires:       fence-agents
-Requires:       ipmitool
-Requires:       wsmancli
-Requires:       /usr/bin/virsh
-Requires:       telnet
-Requires:       dnf
-Requires:       sudo
-# old style Python package names
-# These LC dependencies are needed in build due to tests
-BuildRequires:  python-lxml
-%if 0%{?rhel} == 7
-BuildRequires:  python2-gevent112
+Summary:           Daemons for controlling a Beaker lab
+Group:             Applications/Internet
+
+BuildRequires:     systemd
+BuildRequires:     pkgconfig(systemd)
+
+# The build dependencies listed below are not directly required for building the component.
+# However, they are included to ensure that all unit tests can be executed during the check macro.
+%if %{with python3}
+BuildRequires:     python3-gevent
+BuildRequires:     python3-lxml
 %else
-BuildRequires:  python-gevent >= 1.0
-%endif
-Requires:       python-cpio
-Requires:       python-setuptools
-Requires:       python-lxml
-Requires:       python-gssapi
-%if 0%{?rhel} == 7
-Requires:       python2-gevent112
-%else
-Requires:       python-gevent >= 1.0
-%endif
-Requires:       python-daemon
-Requires:       python-werkzeug
-Requires:       python-flask
-BuildRequires:  systemd
-BuildRequires:  pkgconfig(systemd)
-Requires:       systemd-units
-Requires(post): systemd
-Requires(pre):  systemd
-Requires(postun):  systemd
+# python2-gevent112 is a special build created for labcontroller. It includes backports to ensure compatibility with py2.7.9 SSL backport.
+BuildRequires:     python2-gevent112
+BuildRequires:     python-lxml
 %endif
 
-%if %{without python3}
+# Syslinux is only available on x86_64. This package is used to provide pxelinux.0, which is then copied to the TFTP directory.
+# Removing this package will result in no default boot loader, but conversely will allow multi-arch support.
+Requires:          syslinux
+Requires:          %{name}-common = %{version}-%{release}
+Requires:          crontabs
+Requires:          httpd
+Requires:          ipmitool
+Requires:          wsmancli
+Requires:          /usr/bin/virsh
+Requires:          telnet
+Requires:          dnf
+Requires:          sudo
+Requires:          systemd-units
+Requires(post):    systemd
+Requires(pre):     systemd
+Requires(postun):  systemd
+
+%if %{with python3}
+Requires:          fence-agents-all
+Requires:          python3
+Requires:          python3-cpio
+Requires:          python3-daemon
+Requires:          python3-flask
+Requires:          python3-gssapi
+Requires:          python3-lxml
+Requires:          python3-setuptools
+Requires:          python3-werkzeug
+Requires:          python3-gevent
+%else
+Requires:          fence-agents
+Requires:          python
+Requires:          python-cpio
+Requires:          python-daemon
+Requires:          python-flask
+Requires:          python-gssapi
+Requires:          python-lxml
+Requires:          python-setuptools
+Requires:          python-werkzeug
+Requires:          python2-gevent112
+%endif
+
 %package lab-controller-addDistro
 Summary:        Optional hooks for distro import on Beaker lab controllers
 Group:          Applications/Internet
 Requires:       %{name}-common = %{version}-%{release}
 Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
-%endif
 
 
 %description
@@ -297,7 +310,6 @@ This package contains integration tests for Beaker, which require a running
 database and Beaker server.
 %endif
 
-%if %{without python3}
 %description lab-controller
 The lab controller daemons connect to a central Beaker server in order to
 manage a local lab of test systems.
@@ -307,14 +319,11 @@ The daemons and associated lab controller tools:
 * control power for test systems
 * collect logs and results from test runs
 * track distros available from the lab's local mirror
-%endif
 
-%if %{without python3}
 %description lab-controller-addDistro
 addDistro.sh can be called after distros have been imported into Beaker. You
 can install this on your lab controller to automatically launch jobs against
 newly imported distros.
-%endif
 
 %prep
 %setup -q -n %{name}-%{name}-%{upstream_version}
@@ -379,7 +388,6 @@ if [ ! -f %{_datadir}/bkr/server/assets/site.less ] ; then
 fi
 %endif
 
-%if %{without python3}
 %post lab-controller
 %systemd_post %{_lc_services}
 
@@ -389,27 +397,22 @@ chown root:root %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 chmod go-w %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 # Restart rsyslog so that it notices the config which we ship
 /sbin/service rsyslog condrestart >/dev/null 2>&1 || :
-%endif
 
 %if %{without python3}
 %postun server
 %systemd_postun_with_restart beakerd.service
 %endif
 
-%if %{without python3}
 %postun lab-controller
 %systemd_postun_with_restart %{_lc_services}
-%endif
 
 %if %{without python3}
 %preun server
 %systemd_preun beakerd.service
 %endif
 
-%if %{without python3}
 %preun lab-controller
 %systemd_preun %{_lc_services}
-%endif
 
 %files common
 %if %{with python3}
@@ -504,15 +507,11 @@ chmod go-w %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 %{_sysconfdir}/bash_completion.d
 %endif
 
-%if %{without python3}
 %files lab-controller
 %dir %{_sysconfdir}/%{name}
 %config(noreplace) %{_sysconfdir}/%{name}/labcontroller.conf
 %{_sysconfdir}/%{name}/power-scripts/
 %{_sysconfdir}/%{name}/install-failure-patterns/
-%{python2_sitelib}/bkr/labcontroller/
-%{python2_sitelib}/beaker_lab_controller-*-nspkg.pth
-%{python2_sitelib}/beaker_lab_controller-*.egg-info/
 %{_bindir}/beaker-proxy
 %{_bindir}/beaker-watchdog
 %{_bindir}/beaker-transfer
@@ -540,12 +539,19 @@ chmod go-w %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 %attr(0440,root,root) %config(noreplace) %{_sysconfdir}/sudoers.d/beaker_proxy_clear_netboot
 %config(noreplace) %{_sysconfdir}/rsyslog.d/beaker-lab-controller.conf
 %config(noreplace) %{_sysconfdir}/logrotate.d/beaker
+
+%if %{with python3}
+%{python3_sitelib}/bkr/labcontroller/
+%{python3_sitelib}/beaker_lab_controller-*-nspkg.pth
+%{python3_sitelib}/beaker_lab_controller-*.egg-info/
+%else
+%{python2_sitelib}/bkr/labcontroller/
+%{python2_sitelib}/beaker_lab_controller-*-nspkg.pth
+%{python2_sitelib}/beaker_lab_controller-*.egg-info/
 %endif
 
-%if %{without python3}
 %files lab-controller-addDistro
 %{_var}/lib/%{name}/addDistro.sh
 %{_var}/lib/%{name}/addDistro.d/*
-%endif
 
 %changelog

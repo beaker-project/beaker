@@ -1,16 +1,21 @@
 from setuptools import setup, find_packages
-import commands
 from glob import glob
 
+try:
+    from subprocess import getstatusoutput
+except ImportError:
+    from commands import getstatusoutput
+
+
 def systemd_unit_dir():
-    status, output = commands.getstatusoutput('pkg-config --variable systemdsystemunitdir systemd')
+    status, output = getstatusoutput('pkg-config --variable systemdsystemunitdir systemd')
     if status or not output:
         return None # systemd not found
     return output.strip()
 
 def systemd_tmpfiles_dir():
     # There doesn't seem to be a specific pkg-config variable for this
-    status, output = commands.getstatusoutput('pkg-config --variable prefix systemd')
+    status, output = getstatusoutput('pkg-config --variable prefix systemd')
     if status or not output:
         return None # systemd not found
     return output.strip() + '/lib/tmpfiles.d'
