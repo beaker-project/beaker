@@ -134,7 +134,7 @@ class SubprocessTest(unittest.TestCase):
     def test_reaper_race(self):
         def _test():
             procs = [MonitoredSubprocess(['true'], timeout=10)
-                     for _ in xrange(600)]
+                     for _ in range(600)]
             for p in procs:
                 p.dead.wait()
 
