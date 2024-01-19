@@ -10,7 +10,6 @@ import signal
 import logging
 import time
 import socket
-import xmlrpclib
 import subprocess
 import lxml.etree
 import daemon
@@ -20,6 +19,9 @@ import gevent, gevent.hub, gevent.event, gevent.monkey
 from bkr.labcontroller.proxy import ProxyHelper, Monitor
 from bkr.labcontroller.config import load_conf, get_conf
 from bkr.log import log_to_stream, log_to_syslog
+
+from six.moves import xmlrpc_client
+
 
 # Like beaker-provision and beaker-transfer, this daemon is structured as
 # a polling loop. Each iteration of the loop, it asks Beaker for the list of
@@ -64,7 +66,7 @@ class Watchdog(ProxyHelper):
         logger.debug('Polling for active watchdogs')
         try:
             return self.hub.recipes.tasks.watchdogs('active')
-        except xmlrpclib.Fault as fault:
+        except xmlrpc_client.Fault as fault:
             if 'not currently logged in' in fault.faultString:
                 logger.debug('Session expired, re-authenticating')
                 self.hub._login()
@@ -76,7 +78,7 @@ class Watchdog(ProxyHelper):
         logger.debug('Polling for expired watchdogs')
         try:
             return self.hub.recipes.tasks.watchdogs('expired')
-        except xmlrpclib.Fault as fault:
+        except xmlrpc_client.Fault as fault:
             if 'not currently logged in' in fault.faultString:
                 logger.debug('Session expired, re-authenticating')
                 self.hub._login()
