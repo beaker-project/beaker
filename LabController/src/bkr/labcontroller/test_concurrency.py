@@ -48,8 +48,8 @@ class SubprocessTest(unittest.TestCase):
             )
             p.dead.wait()
             out = p.stdout_reader.get()
-            self.assert_(len(out) <= 4096013, len(out))
-            self.assert_(out.endswith("+++ DISCARDED"), out[:-10240])
+            self.assertTrue(len(out) <= 4096013, len(out))
+            self.assertTrue(out.endswith("+++ DISCARDED"), out[:-10240])
 
         greenlet = gevent.spawn(_test)
         gevent_wait()
@@ -59,7 +59,7 @@ class SubprocessTest(unittest.TestCase):
         def _test():
             p = MonitoredSubprocess(["sleep", "10"], timeout=1)
             p.dead.wait()
-            self.assertEquals(p.returncode, -signal.SIGTERM)
+            self.assertEqual(p.returncode, -signal.SIGTERM)
 
         greenlet = gevent.spawn(_test)
         gevent_wait()
@@ -130,7 +130,7 @@ class SubprocessTest(unittest.TestCase):
             # The rest of this test hinges on this assertion
             self._assert_child_is_process_group_leader(p)
             p.dead.wait()
-            self.assertEquals(p.returncode, 0)
+            self.assertEqual(p.returncode, 0)
             self._assert_process_group_is_removed(p.pid)
 
         greenlet = gevent.spawn(_test)
