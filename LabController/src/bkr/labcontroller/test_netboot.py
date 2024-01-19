@@ -127,17 +127,17 @@ class ImagesBaseTestCase(NetBootTestCase):
             prefix="test_netboot", suffix="kernel"
         )
         for _ in range(4 * 1024):
-            self.kernel.write(chr(random.randrange(0, 256)) * 1024)
+            self.kernel.write(bytes(str(chr(random.randrange(0, 128))).encode()) * 1024)
         self.kernel.flush()
         self.initrd = tempfile.NamedTemporaryFile(
             prefix="test_netboot", suffix="initrd"
         )
         for _ in range(8 * 1024):
-            self.initrd.write(chr(random.randrange(0, 256)) * 1024)
+            self.initrd.write(bytes(str(chr(random.randrange(0, 128))).encode()) * 1024)
         self.initrd.flush()
         self.image = tempfile.NamedTemporaryFile(prefix="test_netboot", suffix="image")
         for _ in range(4 * 1024):
-            self.image.write(chr(random.randrange(0, 256)) * 1024)
+            self.image.write(bytes(str(chr(random.randrange(0, 128))).encode()) * 1024)
         self.image.flush()
 
 
@@ -152,8 +152,8 @@ class ImagesTest(ImagesBaseTestCase):
         self.check_netboot_configured("images")
         kernel_path = os.path.join(self.tftp_root, "images", TEST_FQDN, "kernel")
         initrd_path = os.path.join(self.tftp_root, "images", TEST_FQDN, "initrd")
-        self.assertEquals(os.path.getsize(kernel_path), 4 * 1024 * 1024)
-        self.assertEquals(os.path.getsize(initrd_path), 8 * 1024 * 1024)
+        self.assertEquals(4 * 1024 * 1024, os.path.getsize(kernel_path))
+        self.assertEquals(8 * 1024 * 1024, os.path.getsize(initrd_path))
 
         netboot.clear_images(TEST_FQDN)
         self.check_netboot_cleared("images")
