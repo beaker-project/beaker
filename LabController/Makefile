@@ -4,17 +4,25 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+BKR_PY3 ?= 0
+COMMAND := python2
+
+ifeq ($(BKR_PY3),1)
+	COMMAND := python3
+endif
+
+
 .PHONY: build
 build:
-	python2 setup.py build
+	$(COMMAND) setup.py build
 
 .PHONY: install
 install: build
-	python2 setup.py install -O1 --skip-build --root $(DESTDIR)
+	$(COMMAND) setup.py install -O1 --skip-build --root $(DESTDIR)
 
 .PHONY: clean
 clean:
-	python2 setup.py clean
+	$(COMMAND) setup.py clean
 	rm -rf build
 
 .PHONY: check

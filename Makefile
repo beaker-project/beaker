@@ -5,12 +5,14 @@
 # (at your option) any later version.
 
 # Python 2 default
-ifeq ($(BKR_PY3),)
-	BKR_PY3 :=0
-endif
+BKR_PY3 ?= 0
+DEPCMD := yum-builddep
+SUBDIRS := Common Client documentation Server LabController IntegrationTests
 
-DEPCMD  :=  $(shell if [ -f /usr/bin/dnf ]; then echo "dnf builddep"; else echo "yum-builddep"; fi)
-SUBDIRS :=  $(shell if [[ $(BKR_PY3) == 0 ]]; then echo "Common Client documentation Server LabController IntegrationTests"; else echo "Common Client documentation"; fi)
+ifeq ($(BKR_PY3),1)
+	DEPCMD := dnf builddep
+	SUBDIRS := Common Client documentation LabController
+endif
 
 
 .PHONY: build
