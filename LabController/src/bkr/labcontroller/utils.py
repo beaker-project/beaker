@@ -1,15 +1,14 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import logging
 import os
 import subprocess
-import logging
-from bkr.labcontroller.config import get_conf
 
 logger = logging.getLogger(__name__)
+
 
 class CalledProcessError(Exception):
     """This exception is raised when a process run by check_call() or
@@ -17,12 +16,18 @@ class CalledProcessError(Exception):
     The exit status will be stored in the returncode attribute;
     check_output() will also store the output in the output attribute.
     """
+
     def __init__(self, returncode, cmd, output=None):
         self.returncode = returncode
         self.cmd = cmd
         self.output = output
+
     def __str__(self):
-        return "Command '%s' returned non-zero exit status %d" % (self.cmd, self.returncode)
+        return "Command '%s' returned non-zero exit status %d" % (
+            self.cmd,
+            self.returncode,
+        )
+
 
 def check_output(*popenargs, **kwargs):
     r"""Run command with arguments and return its output as a byte string.
@@ -44,8 +49,9 @@ def check_output(*popenargs, **kwargs):
     ...              stderr=STDOUT)
     'ls: non_existent_file: No such file or directory\n'
     """
-    if 'stdout' in kwargs:
-        raise ValueError('stdout argument not allowed, it will be overridden.')
+    if "stdout" in kwargs:
+        raise ValueError("stdout argument not allowed, it will be overridden.")
+
     process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
     output, unused_err = process.communicate()
     retcode = process.poll()
@@ -70,8 +76,9 @@ def get_console_files(console_logs_directory, system_name):
     :return: List[Tuple[absolute path to log file, name to use for log file]]
     """
     if not os.path.isdir(console_logs_directory):
-        logger.info("Console files directory does not exist: %s",
-                    console_logs_directory)
+        logger.info(
+            "Console files directory does not exist: %s", console_logs_directory
+        )
         return []
 
     if not system_name:
@@ -87,7 +94,7 @@ def get_console_files(console_logs_directory, system_name):
             else:
                 description = filename[len(system_name):]
                 # Remove leading hyphens
-                description = description.lstrip('-')
+                description = description.lstrip("-")
                 logfile_name = "console-{}.log".format(description)
             output.append((full_path, logfile_name))
     return output
