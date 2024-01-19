@@ -12,12 +12,11 @@ import tempfile
 import shutil
 from contextlib import contextmanager
 import collections
-import urllib
-import urllib2
 from bkr.labcontroller.config import get_conf
 from bkr.common.helpers import (atomically_replaced_file, makedirs_ignore,
                                 siphon, unlink_ignore, atomic_link, atomic_symlink)
 from bkr.labcontroller.config import get_conf
+from six.moves import urllib
 
 from six.moves import cStringIO as StringIO
 
@@ -109,7 +108,7 @@ def fetch_bootloader_image(fqdn, fqdn_dir, distro_tree_id, image_url):
     logger.debug('Fetching bootloader image %s for %s', image_url, fqdn)
     with atomically_replaced_file(os.path.join(fqdn_dir, 'image')) as dest:
         try:
-            siphon(urllib2.urlopen(image_url, timeout=timeout), dest)
+            siphon(urllib.request.urlopen(image_url, timeout=timeout), dest)
         except Exception as e:
             raise ImageFetchingError(image_url, distro_tree_id, e)
 
@@ -145,13 +144,13 @@ def fetch_images(distro_tree_id, kernel_url, initrd_url, fqdn):
     logger.debug('Fetching kernel %s for %s', kernel_url, fqdn)
     with atomically_replaced_file(os.path.join(images_dir, 'kernel')) as dest:
         try:
-            siphon(urllib2.urlopen(kernel_url, timeout=timeout), dest)
+            siphon(urllib.request.urlopen(kernel_url, timeout=timeout), dest)
         except Exception as e:
             raise ImageFetchingError(kernel_url, distro_tree_id, e)
     logger.debug('Fetching initrd %s for %s', initrd_url, fqdn)
     with atomically_replaced_file(os.path.join(images_dir, 'initrd')) as dest:
         try:
-            siphon(urllib2.urlopen(initrd_url, timeout=timeout), dest)
+            siphon(urllib.request.urlopen(initrd_url, timeout=timeout), dest)
         except Exception as e:
             raise ImageFetchingError(initrd_url, distro_tree_id, e)
 
