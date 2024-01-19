@@ -27,13 +27,13 @@ class LogFile(object):
         return open(self.path, 'r')
 
     def __enter__(self):
-        makedirs_ignore(os.path.dirname(self.path), 0755)
+        makedirs_ignore(os.path.dirname(self.path), 0o755)
         created = False
         if self.create:
             try:
                 # stdio does not have any mode string which corresponds to this 
                 # combination of flags, so we have to use raw os.open :-(
-                fd = os.open(self.path, os.O_RDWR | os.O_CREAT | os.O_EXCL, 0644)
+                fd = os.open(self.path, os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o644)
                 created = True
             except (OSError, IOError) as e:
                 if e.errno != errno.EEXIST:
