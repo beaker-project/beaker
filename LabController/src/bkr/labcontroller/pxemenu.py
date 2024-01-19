@@ -9,12 +9,11 @@ import os.path
 import re
 import shutil
 import sys
-import urllib2
-import urlparse
-import xmlrpclib
 from optparse import OptionParser
 
 from jinja2 import Environment, PackageLoader
+from six.moves import urllib
+from six.moves import xmlrpc_client
 
 from bkr.common.helpers import atomically_replaced_file, siphon, makedirs_ignore, atomic_symlink
 from bkr.labcontroller.config import get_conf
@@ -50,10 +49,10 @@ def _get_images(tftp_root, distro_tree_id, url, images):
             if os.path.isfile(dest_path):
                 print('Skipping existing %s for distro tree %s' % (image_type, distro_tree_id))
             else:
-                image_url = urlparse.urljoin(url, path)
+                image_url = urllib.parse.urljoin(url, path)
                 print('Fetching %s %s for distro tree %s' % (image_type, image_url, distro_tree_id))
                 with atomically_replaced_file(dest_path) as dest:
-                    siphon(urllib2.urlopen(image_url), dest)
+                    siphon(urllib.request.urlopen(image_url), dest)
 
 
 def _get_all_images(tftp_root, distro_trees):
@@ -102,7 +101,7 @@ def write_menus(tftp_root, tags, xml_filter):
             raise
         existing_tree_ids = []
 
-    proxy = xmlrpclib.ServerProxy('http://localhost:8000', allow_none=True)
+    proxy = xmlrpc_client.ServerProxy('http://localhost:8000', allow_none=True)
     distro_trees = proxy.get_distro_trees({
         'arch': ['x86_64', 'i386', 'aarch64', 'ppc64', 'ppc64le'],
         'tags': tags,
