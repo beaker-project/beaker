@@ -39,7 +39,7 @@ def _read_from_pipe(f):
                             'child process is running amok?!', f.fileno())
                     chunks.append('+++ DISCARDED')
                     discarding = True
-        except IOError, e:
+        except IOError as e:
             if e.errno != errno.EAGAIN:
                 raise
             sys.exc_clear()
@@ -54,14 +54,14 @@ def _kill_process_group(pgid):
     # Try SIGTERM first, then SIGKILL just to be safe
     try:
         os.killpg(pgid, signal.SIGTERM)
-    except OSError, e:
+    except OSError as e:
         if e.errno != errno.ESRCH:
             raise
     else:
         gevent.sleep(1)
         try:
             os.killpg(pgid, signal.SIGKILL)
-        except OSError, e:
+        except OSError as e:
             if e.errno != errno.ESRCH:
                 raise
 
