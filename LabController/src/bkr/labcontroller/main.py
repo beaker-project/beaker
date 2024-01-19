@@ -152,7 +152,7 @@ class WSGIApplication(object):
                     return Response(response=repr(result), content_type='text/plain')
                 else:
                     return getattr(obj, attr)(req, **args)
-        except HTTPException, e:
+        except HTTPException as e:
             return e
 
 # Temporary hack to disable keepalive in gevent.wsgi.WSGIServer. This should be easier.
@@ -167,7 +167,7 @@ def log_failed_requests(func):
     def _log_failed_requests(environ, start_response):
         try:
             return func(environ, start_response)
-        except Exception, e:
+        except Exception as e:
             logger.exception('Error handling request %s %s',
                     environ.get('REQUEST_METHOD'), environ.get('PATH_INFO'))
             raise
@@ -229,7 +229,7 @@ def main():
     log_to_stream(sys.stderr, level=logging.WARNING)
     try:
         proxy = Proxy(conf=conf)
-    except Exception, ex:
+    except Exception as ex:
         sys.stderr.write("Error starting beaker-proxy: %s\n" % ex)
         sys.exit(1)
 
