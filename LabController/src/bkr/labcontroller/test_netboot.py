@@ -340,7 +340,7 @@ label linux
 
     def test_doesnt_overwrite_existing_default_config(self):
         pxelinux_dir = os.path.join(self.tftp_root, 'pxelinux.cfg')
-        makedirs_ignore(pxelinux_dir, mode=0755)
+        makedirs_ignore(pxelinux_dir, mode=0o755)
         pxelinux_default_path = os.path.join(pxelinux_dir, 'default')
         # in reality it will probably be a menu
         custom = """
@@ -418,7 +418,7 @@ boot || exit 1
 
     def test_doesnt_overwrite_existing_default_config(self):
         ipxe_dir = os.path.join(self.tftp_root, 'ipxe')
-        makedirs_ignore(ipxe_dir, mode=0755)
+        makedirs_ignore(ipxe_dir, mode=0o755)
         ipxe_default_path = os.path.join(ipxe_dir, 'default')
         # in reality it will probably be a menu
         custom = """#!ipxe
