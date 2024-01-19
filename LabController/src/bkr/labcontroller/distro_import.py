@@ -2237,7 +2237,7 @@ def main():
         sys.exit(1)
 
     primary_url = _get_primary_url(urls)
-    if primary_url == None:
+    if primary_url is None:
         logging.critical(
             "missing a valid primary installer! %s, are valid install methods"
             % " and ".join(_primary_methods)
