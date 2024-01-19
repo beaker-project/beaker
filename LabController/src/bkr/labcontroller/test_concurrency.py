@@ -18,7 +18,7 @@ except ImportError:
     # gevent.wait was gevent.run in 1.0 beta
     # pylint: disable=E0611
     from gevent import run as gevent_wait
-from bkr.labcontroller.async import MonitoredSubprocess
+from bkr.labcontroller.concurrency import MonitoredSubprocess
 
 
 class SubprocessTest(unittest.TestCase):

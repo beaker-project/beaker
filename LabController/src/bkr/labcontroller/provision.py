@@ -235,7 +235,7 @@ def handle_clear_netboot(command):
     netboot.clear_all(command['fqdn'])
 
 def handle_power(conf, command):
-    from bkr.labcontroller.async import MonitoredSubprocess
+    from bkr.labcontroller.concurrency import MonitoredSubprocess
     script = find_power_script(command['power']['type'])
     env = build_power_env(command)
     # We try the command up to 5 times, because some power commands
