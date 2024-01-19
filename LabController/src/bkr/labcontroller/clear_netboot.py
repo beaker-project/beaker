@@ -20,7 +20,9 @@
 
 import sys
 from optparse import OptionParser
+
 from bkr.labcontroller import netboot
+
 
 def main():
     usage = "usage: %prog FQDN"
