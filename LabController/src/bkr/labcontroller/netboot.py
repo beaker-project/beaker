@@ -18,6 +18,7 @@ from bkr.common.helpers import (atomically_replaced_file, makedirs_ignore,
 from bkr.labcontroller.config import get_conf
 from six.moves import urllib
 
+import six
 from six.moves import cStringIO as StringIO
 
 
@@ -43,13 +44,15 @@ def copy_ignore(path, source_file):
     Creates and populates a file by copying from a source file object.
     The destination file will remain untouched if it already exists.
     """
+    mode = "x" if six.PY3 else "wx"
     try:
-        f = open(path, 'wx') # not sure this is portable to Python 3!
+        f = open(path, mode)
     except IOError as e:
         if e.errno == errno.EEXIST:
             return
         else:
             raise
+
     try:
         logger.debug("%s didn't exist, writing it", path)
         siphon(source_file, f)
