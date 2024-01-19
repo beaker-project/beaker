@@ -11,6 +11,8 @@ import socket
 import tempfile
 import unittest
 
+import six
+
 from bkr.common.helpers import makedirs_ignore
 from bkr.labcontroller import netboot
 
@@ -339,9 +341,10 @@ label linux
         )
 
     def test_doesnt_overwrite_existing_default_config(self):
-        pxelinux_dir = os.path.join(self.tftp_root, 'pxelinux.cfg')
+        mode = "x" if six.PY3 else "wx"
+        pxelinux_dir = os.path.join(self.tftp_root, "pxelinux.cfg")
         makedirs_ignore(pxelinux_dir, mode=0o755)
-        pxelinux_default_path = os.path.join(pxelinux_dir, 'default')
+        pxelinux_default_path = os.path.join(pxelinux_dir, "default")
         # in reality it will probably be a menu
         custom = """
 default local
@@ -351,7 +354,7 @@ label local
     localboot 0
 label jabberwocky
     boot the thing"""
-        open(pxelinux_default_path, "wx").write(custom)
+        open(pxelinux_default_path, mode).write(custom)
         netboot.configure_pxelinux(
             TEST_FQDN, "console=ttyS0,115200 ks=http://lol/", self.tftp_root
         )
@@ -417,15 +420,16 @@ boot || exit 1
         )
 
     def test_doesnt_overwrite_existing_default_config(self):
-        ipxe_dir = os.path.join(self.tftp_root, 'ipxe')
+        mode = "x" if six.PY3 else "wx"
+        ipxe_dir = os.path.join(self.tftp_root, "ipxe")
         makedirs_ignore(ipxe_dir, mode=0o755)
-        ipxe_default_path = os.path.join(ipxe_dir, 'default')
+        ipxe_default_path = os.path.join(ipxe_dir, "default")
         # in reality it will probably be a menu
         custom = """#!ipxe
 chain /ipxe/beaker_menu
 exit 1
 """
-        open(ipxe_default_path, "wx").write(custom)
+        open(ipxe_default_path, mode).write(custom)
         netboot.configure_ipxe(
             TEST_FQDN, "console=ttyS0,115200 ks=http://lol/", self.tftp_root
         )
