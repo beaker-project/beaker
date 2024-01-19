@@ -12,6 +12,8 @@ import tempfile
 import os
 import fcntl
 import errno
+
+import six
 from six.moves import queue
 
 log = getLogger(__name__)
@@ -100,12 +102,20 @@ class RepeatTimer(Thread):
             self.finished.clear()
 
 
-class SensitiveUnicode(unicode):
+class SensitiveUnicode(six.text_type):
+    """The intent of this class is to standardize the behavior of Unicode strings across Python 2 and 3,
+    while treating the contents of the string as sensitive.
+
+    In Python 2, it encodes the unicode string to bytes (str), wrapped in SensitiveStr.
+    In Python 3, it preserves the unicode representation (str) by overriding the default 'encode' behavior.
+    """
     def __repr__(self):
         return '<repr blocked>'
 
     def encode(self, *args, **kwargs):
-        return SensitiveStr(super(SensitiveUnicode, self).encode(*args, **kwargs))
+        if six.PY2:
+            return SensitiveStr(super(SensitiveUnicode, self).encode(*args, **kwargs))
+        return self
 
 
 class SensitiveStr(str):
