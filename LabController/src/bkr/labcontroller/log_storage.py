@@ -35,7 +35,7 @@ class LogFile(object):
                 # combination of flags, so we have to use raw os.open :-(
                 fd = os.open(self.path, os.O_RDWR | os.O_CREAT | os.O_EXCL, 0644)
                 created = True
-            except (OSError, IOError), e:
+            except (OSError, IOError) as e:
                 if e.errno != errno.EEXIST:
                     raise
                 fd = os.open(self.path, os.O_RDWR)
