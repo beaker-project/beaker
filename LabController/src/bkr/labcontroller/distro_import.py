@@ -6,13 +6,9 @@
 
 import sys, os
 import glob
-import xmlrpclib
 import string
-import ConfigParser
 import getopt
-import urlparse
 from optparse import OptionParser, OptionGroup
-import urllib2
 import logging
 import socket
 import copy
@@ -24,10 +20,15 @@ import json
 import dnf
 import uuid
 
+from six.moves import configparser
+from six.moves import urllib
+from six.moves import xmlrpc_client
+
+
 def url_exists(url):
     try:
-        urllib2.urlopen(url)
-    except urllib2.URLError:
+        urllib.request.urlopen(url)
+    except urllib.error.URLError:
         return False
     except IOError as e:
         # errno 21 is you tried to retrieve a directory.  Thats ok. We just
@@ -53,7 +54,7 @@ def is_rhel8_alpha(parser):
                   # distinguishes the ordinary partner sync from a non-adjusted
                   # composeinfo.
                   not parser.has_option('variant-BaseOS', 'variants'))
-    except ConfigParser.Error:
+    except configparser.Error:
         pass
     return result
 
@@ -69,8 +70,8 @@ class IncompleteTree(BX):
 class _DummyProxy:
 
 
-    """A class that enables RPCs to be accessed as attributes ala xmlrpclib.ServerProxy
-       Inspired/ripped from xmlrpclib.ServerProxy
+    """A class that enables RPCs to be accessed as attributes ala xmlrpc_client.ServerProxy
+       Inspired/ripped from xmlrpc_client.ServerProxy
     """
 
     def __init__(self, name):
@@ -100,7 +101,7 @@ class SchedulerProxy(object):
 
             self.proxy = _Dummy()
         else:
-            self.proxy = xmlrpclib.ServerProxy(options.lab_controller,
+            self.proxy = xmlrpc_client.ServerProxy(options.lab_controller,
                                            allow_none=True)
 
     def add_distro(self, profile):
@@ -150,23 +151,23 @@ class Parser(object):
     def parse(self, url):
         self.url = url
         try:
-            f = urllib2.urlopen('%s/%s' % (self.url, self.infofile))
-            self.parser = ConfigParser.ConfigParser()
+            f = urllib.request.urlopen('%s/%s' % (self.url, self.infofile))
+            self.parser = configparser.ConfigParser()
             self.parser.readfp(f)
             f.close()
-        except urllib2.URLError:
+        except urllib.error.URLError:
             return False
-        except ConfigParser.MissingSectionHeaderError as e:
+        except configparser.MissingSectionHeaderError as e:
             raise BX('%s/%s is not parsable: %s' % (self.url,
                                                       self.infofile,
                                                       e))
 
         if self.discinfo:
             try:
-                f = urllib2.urlopen('%s/%s' % (self.url, self.discinfo))
+                f = urllib.request.urlopen('%s/%s' % (self.url, self.discinfo))
                 self.last_modified = f.read().split("\n")[0]
                 f.close()
-            except urllib2.URLError:
+            except urllib.error.URLError:
                 pass
         return True
 
@@ -174,7 +175,7 @@ class Parser(object):
         if self.parser:
             try:
                 default = self.parser.get(section, key)
-            except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+            except (configparser.NoSectionError, configparser.NoOptionError):
                 if default is None:
                     raise
         return default
@@ -762,7 +763,7 @@ sources = Workstation/source/SRPMS
                     try:
                         isos_path = self.parser.get('variant-%s.%s' % (variant, arch), 'isos')
                         isos_path = os.path.join(rpath, isos_path)
-                    except ConfigParser.NoOptionError:
+                    except configparser.NoOptionError:
                         isos_path = None
                     build.process(urls_variant_arch, options, repos=repos,
                             tags=tags, isos_path=isos_path)
@@ -816,13 +817,13 @@ class TreeInfoMixin(object):
             # Let's just guess! These are based on
             # well known locations for each family
             isos_path = self.isos_path
-        http_url_components = list(urlparse.urlparse(self.parser.url))
+        http_url_components = list(urllib.parse.urlparse(self.parser.url))
         http_url_path = http_url_components[2]
         normalized_isos_path = os.path.normpath(os.path.join(http_url_path, isos_path))
         if not normalized_isos_path.endswith('/'):
             normalized_isos_path += '/'
         http_url_components[2] = normalized_isos_path
-        http_isos_url = urlparse.urlunparse(http_url_components)
+        http_isos_url = urllib.parse.urlunparse(http_url_components)
         reachable_iso_dir = url_exists(http_isos_url)
         if isos_path_from_compose and not reachable_iso_dir:
             # If .composeinfo says the isos path is there but it isn't, we
@@ -835,7 +836,7 @@ class TreeInfoMixin(object):
         elif reachable_iso_dir:
             # We've found the isos path via http, convert it back to
             # nfs+iso URL.
-            nfs_url_components = list(urlparse.urlparse(nfs_url))
+            nfs_url_components = list(urllib.parse.urlparse(nfs_url))
             nfs_url_path = nfs_url_components[2]
             normalized_isos_path = os.path.normpath(os.path.join(nfs_url_path,
                 isos_path))
@@ -844,7 +845,7 @@ class TreeInfoMixin(object):
             nfs_isos_url_components = list(nfs_url_components)
             nfs_isos_url_components[2] = normalized_isos_path
             nfs_isos_url_components[0] = 'nfs+iso'
-            return urlparse.urlunparse(nfs_isos_url_components)
+            return urllib.parse.urlunparse(nfs_isos_url_components)
 
     def process(self, urls, options, repos=None, tags=None, isos_path=None):
         '''
@@ -937,7 +938,7 @@ class TreeInfoMixin(object):
         try:
             self.add_to_beaker()
             logging.info('%s %s %s added to beaker.' % (self.tree['name'], self.tree['variant'], self.tree['arch']))
-        except (xmlrpclib.Fault, socket.error) as e:
+        except (xmlrpc_client.Fault, socket.error) as e:
             raise BX('failed to add %s %s %s to beaker: %s' % (self.tree['name'], self.tree['variant'], self.tree['arch'], e))
 
     def extend_tree(self):
@@ -1508,7 +1509,7 @@ repository = LoadBalancer
                               path=repopath,
                              )
                         )
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError) as e:
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
             logging.debug('.treeinfo has no repository for variant %s, %s' % (self.parser.url,e))
         try:
             addons = self.parser.get('variant-%s' % self.tree['variant'],
@@ -1523,7 +1524,7 @@ repository = LoadBalancer
                                       path=repopath,
                                      )
                                 )
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError) as e:
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
             logging.debug('.treeinfo has no addon repos for %s, %s' % (self.parser.url,e))
         return repos
 
@@ -1606,7 +1607,7 @@ class TreeInfoRhel7(TreeInfoMixin, Importer):
                                 type='addon',
                                 path=repopath,)
                                 )
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError) as e:
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
                 logging.debug('no addon repos for %s, %s' % (self.parser.url, e))
         return repos
 
@@ -1708,7 +1709,7 @@ kernel = images/pxeboot/vmlinuz
                                       path=repopath,
                                      )
                                 )
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError) as e:
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
             logging.debug('no addon repos for %s, %s' % (self.parser.url,e))
         return repos
 
@@ -1939,7 +1940,7 @@ class NakedTree(Importer):
         try:
             self.add_to_beaker()
             logging.info('%s added to beaker.' % self.tree['name'])
-        except (xmlrpclib.Fault, socket.error) as e:
+        except (xmlrpc_client.Fault, socket.error) as e:
             raise BX('failed to add %s to beaker: %s' % (self.tree['name'],e))
 
     def add_to_beaker(self):
@@ -2102,10 +2103,10 @@ def main():
         try:
             build.check_input(opts)
             exit_status.append(build.process(urls, opts))
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError) as e:
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
             logging.critical(str(e))
             sys.exit(3)
-    except (xmlrpclib.Fault,BX) as err:
+    except (xmlrpc_client.Fault,BX) as err:
         logging.critical(err)
         sys.exit(127)
     if opts.run_jobs:
