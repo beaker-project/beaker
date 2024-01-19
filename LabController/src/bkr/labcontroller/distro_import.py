@@ -2061,7 +2061,7 @@ def Build(url, options=None):
     # Try all other importers before trying NakedTree
     for cls in Importer.__subclasses__() + [NakedTree]:
         parser = cls.is_importer_for(url, options)
-        if parser != False:
+        if parser:
             logging.debug("\tImporter %s Matches", cls.__name__)
             logging.info("Attempting to import: %s", url)
             return cls(parser)
