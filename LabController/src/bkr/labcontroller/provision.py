@@ -27,7 +27,7 @@ import utils
 from daemon import pidfile
 from six.moves import xmlrpc_client
 
-from bkr.common.helpers import SensitiveUnicode, total_seconds
+from bkr.common.helpers import SensitiveUnicode
 from bkr.labcontroller import netboot
 from bkr.labcontroller.config import get_conf, load_conf
 from bkr.labcontroller.proxy import ProxyHelper
@@ -162,13 +162,13 @@ class CommandQueuePoller(ProxyHelper):
             if last_command_finished_at:
                 # Get the difference between the time now and the number of
                 # seconds until we can run another command
-                seconds_to_wait = total_seconds(
+                seconds_to_wait = (
                     (
                         last_command_finished_at
                         + datetime.timedelta(seconds=quiescent_period)
                     )
                     - datetime.datetime.utcnow()
-                )
+                ).total_seconds()
             else:
                 # Play it safe, wait for the whole period.
                 seconds_to_wait = quiescent_period
