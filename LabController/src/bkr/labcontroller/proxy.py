@@ -20,7 +20,6 @@ from xml.sax.saxutils import quoteattr as xml_quoteattr
 
 import lxml.etree
 import pkg_resources
-import utils
 from six.moves import xmlrpc_client
 from werkzeug.exceptions import (
     BadRequest,
@@ -38,6 +37,7 @@ from werkzeug.wsgi import wrap_file
 from bkr.common.hub import HubProxy
 from bkr.labcontroller.config import get_conf
 from bkr.labcontroller.log_storage import LogStorage
+from bkr.labcontroller.utils import get_console_files
 
 try:
     # pylint: disable=E0611
@@ -260,7 +260,7 @@ class ConsoleWatchLogFiles(object):
         self.panic = panic
 
         self.logfiles = {}
-        for filename, logfile_name in utils.get_console_files(
+        for filename, logfile_name in get_console_files(
             console_logs_directory=self.logdir, system_name=self.system_name
         ):
             logger.info(
@@ -278,7 +278,7 @@ class ConsoleWatchLogFiles(object):
 
     def update(self):
         # Check for any new log files
-        for filename, logfile_name in utils.get_console_files(
+        for filename, logfile_name in get_console_files(
             console_logs_directory=self.logdir, system_name=self.system_name
         ):
             if filename not in self.logfiles:
