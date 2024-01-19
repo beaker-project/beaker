@@ -6,7 +6,6 @@
 
 import sys, os
 import glob
-import string
 import getopt
 from optparse import OptionParser, OptionGroup
 import logging
@@ -897,7 +896,7 @@ class TreeInfoMixin(object):
         common_tags = tags or [] # passed in from .composeinfo
         labels = self.parser.get('general', 'label','')
         self.tree['tags'] = list(set(self.options.tags) | set(common_tags) |
-                set(map(string.strip, labels and labels.split(',') or [])))
+                set(map(lambda label: label.strip(), labels and labels.split(',') or [])))
         self.tree['osmajor'] = "%s%s" % (family, version.split('.')[0])
         if version.find('.') != -1:
             self.tree['osminor'] = version.split('.')[1]
@@ -905,8 +904,7 @@ class TreeInfoMixin(object):
             self.tree['osminor'] = '0'
 
         arches = self.parser.get('general', 'arches','')
-        self.tree['arches'] = map(string.strip,
-                                     arches and arches.split(',') or [])
+        self.tree['arches'] = map(lambda arch: arch.strip(), arches and arches.split(',') or [])
         full_os_dir = self.get_os_dir()
         # These would have been passed from the Compose*.process()
         common_repos = repos
@@ -1367,7 +1365,7 @@ class TreeInfoFedoraArm(TreeInfoFedora, Importer):
                                path=uinitrd))
         kernel_type_string = self.parser.get(self.tree['arch'],
                                              'platforms', '')
-        kernel_types = map(string.strip,
+        kernel_types = map(lambda item: item.strip(),
                            kernel_type_string and
                            kernel_type_string.split(',') or [])
         for kernel_type in kernel_types:
@@ -1836,7 +1834,7 @@ kernel = images/pxeboot/vmlinuz
                                path=uinitrd))
         kernel_type_string = self.parser.get(self.tree['arch'],
                                              'platforms', '')
-        kernel_types = map(string.strip,
+        kernel_types = map(lambda item: item.strip(),
                            kernel_type_string and
                            kernel_type_string.split(',') or [])
         for kernel_type in kernel_types:
