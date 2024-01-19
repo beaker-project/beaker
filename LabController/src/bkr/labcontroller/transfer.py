@@ -5,7 +5,6 @@
 
 import logging
 import signal
-import socket
 import sys
 from optparse import OptionParser
 
@@ -16,6 +15,11 @@ from bkr.labcontroller.config import get_conf, load_conf
 from bkr.labcontroller.exceptions import ShutdownException
 from bkr.labcontroller.proxy import LogArchiver
 from bkr.log import log_to_stream, log_to_syslog
+
+try:
+    from ssl import SSLError
+except (ImportError, AttributeError):
+    from socket import sslerror as SSLError
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +36,7 @@ def main_loop(logarchiver, conf=None):
 
     while True:
         try:
-            # Look for logs to transfer if none transfered then sleep
+            # Look for logs to transfer if none transferred then sleep
             if not logarchiver.transfer_logs():
                 logarchiver.sleep()
 
@@ -40,7 +44,7 @@ def main_loop(logarchiver, conf=None):
             sys.stdout.flush()
             sys.stderr.flush()
 
-        except socket.sslerror:
+        except SSLError:
             pass  # will try again..
 
         except (ShutdownException, KeyboardInterrupt):
