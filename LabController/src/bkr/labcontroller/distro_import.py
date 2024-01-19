@@ -932,7 +932,7 @@ class TreeInfoMixin(object):
 
         self.extend_tree()
         if options.json:
-            print json.dumps(self.tree)
+            print(json.dumps(self.tree))
         logging.debug('\n%s' % pprint.pformat(self.tree))
         try:
             self.add_to_beaker()
@@ -1934,7 +1934,7 @@ class NakedTree(Importer):
                                         path=options.initrd))
 
         if options.json:
-            print json.dumps(self.tree)
+            print(json.dumps(self.tree))
         logging.debug('\n%s' % pprint.pformat(self.tree))
         try:
             self.add_to_beaker()
