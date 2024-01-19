@@ -87,7 +87,7 @@ class Watchdog(ProxyHelper):
     def abort(self, recipe_id, system):
         # Don't import this at global scope. It triggers gevent to create its default hub,
         # but we need to ensure the gevent hub is not created until *after* we have daemonized.
-        from bkr.labcontroller.async import MonitoredSubprocess
+        from bkr.labcontroller.concurrency import MonitoredSubprocess
         logger.info('External Watchdog Expired for recipe %s on system %s', recipe_id, system)
         if self.conf.get("WATCHDOG_SCRIPT"):
             job = lxml.etree.fromstring(self.get_my_recipe(dict(recipe_id=recipe_id)))
