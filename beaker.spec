@@ -228,6 +228,7 @@ BuildRequires:     pkgconfig(systemd)
 %if %{with python3}
 BuildRequires:     python3-gevent
 BuildRequires:     python3-lxml
+BuildRequires:     python3-werkzeug
 %else
 # python2-gevent112 is a special build created for labcontroller. It includes backports to ensure compatibility with py2.7.9 SSL backport.
 BuildRequires:     python2-gevent112
