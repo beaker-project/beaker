@@ -190,7 +190,7 @@ class ConsoleLogHelper(object):
         self.watchdog = watchdog
         self.proxy = proxy
         self.logfile_name = logfile_name if logfile_name is not None else "console.log"
-        self.strip_ansi = re.compile("(\033\[[0-9;\?]*[ABCDHfsnuJKmhr])")
+        self.strip_ansi = re.compile(r"(\033\[[0-9;\?]*[ABCDHfsnuJKmhr])")
         ascii_control_chars = list(map(chr, list(range(0, 32)) + [127]))
         keep_chars = "\t\n"
         strip_control_chars = [c for c in ascii_control_chars if c not in keep_chars]
