@@ -12,15 +12,54 @@ from time import sleep
 
 import gevent
 
-try:
-    # pylint: disable=E0611
-    from gevent import wait as gevent_wait
-except ImportError:
-    # gevent.wait was gevent.run in 1.0 beta
-    # pylint: disable=E0611
-    from gevent import run as gevent_wait
+from bkr.labcontroller.concurrency import (
+    MonitoredSubprocess,
+    _kill_process_group,
+    _read_from_pipe,
+)
 
-from bkr.labcontroller.concurrency import MonitoredSubprocess
+try:
+    from unittest.mock import MagicMock, patch
+except ImportError:
+    from mock import MagicMock, patch
+
+
+class TestReadFromPipe(unittest.TestCase):
+    @patch("fcntl.fcntl", MagicMock())
+    @patch("gevent.socket.wait_read", MagicMock())
+    def test_read_normal(self):
+        mock_file = MagicMock()
+        mock_file.read.side_effect = [b"foo", b"bar", b""]
+
+        result = _read_from_pipe(mock_file)
+        expected_result = "foobar"
+        self.assertEqual(result, expected_result)
+
+    @patch("fcntl.fcntl", MagicMock())
+    @patch("gevent.socket.wait_read", MagicMock())
+    def test_read_discarding(self):
+        mock_file = MagicMock()
+        mock_file.read.side_effect = (
+            [b"a" * 4096] * 1001 + [b"This line shouldn't be in output"] + [b""]  # EOT
+        )
+
+        result = _read_from_pipe(mock_file)
+
+        expected_result = "a" * 4096 * 1000 + "+++ DISCARDED"
+        self.assertEqual(result, expected_result)
+
+
+class TestKillProcessGroup(unittest.TestCase):
+    @patch("os.killpg")
+    @patch("gevent.sleep", MagicMock())
+    def test_kill_process_group(self, mock_killpg):
+        t_pgid = 12345
+
+        _kill_process_group(t_pgid)
+
+        # Verify that SIGTERM and SIGKILL are both called
+        expected_calls = [((t_pgid, signal.SIGTERM),), ((t_pgid, signal.SIGKILL),)]
+        self.assertEqual(mock_killpg.call_args_list, expected_calls)
 
 
 class SubprocessTest(unittest.TestCase):
@@ -42,17 +81,18 @@ class SubprocessTest(unittest.TestCase):
     def test_runaway_output_is_discarded(self):
         def _test():
             p = MonitoredSubprocess(
-                ["seq", "--format=%0.0f cans of spam on the wall", str(1024 * 1024)],
+                ["seq", "--format=%0.0f cans of spam on the wall", str(8096 * 8096)],
                 stdout=subprocess.PIPE,
                 timeout=5,
             )
             p.dead.wait()
             out = p.stdout_reader.get()
+            self.assertEqual(p.returncode, -signal.SIGTERM)
             self.assertTrue(len(out) <= 4096013, len(out))
             self.assertTrue(out.endswith("+++ DISCARDED"), out[:-10240])
 
         greenlet = gevent.spawn(_test)
-        gevent_wait()
+        gevent.wait()
         greenlet.get(block=False)
 
     def test_timeout_is_enforced(self):
@@ -62,7 +102,7 @@ class SubprocessTest(unittest.TestCase):
             self.assertEqual(p.returncode, -signal.SIGTERM)
 
         greenlet = gevent.spawn(_test)
-        gevent_wait()
+        gevent.wait()
         greenlet.get(block=False)
 
     def test_child_is_process_group_leader(self):
@@ -72,7 +112,7 @@ class SubprocessTest(unittest.TestCase):
             p.dead.wait()
 
         greenlet = gevent.spawn(_test)
-        gevent_wait()
+        gevent.wait()
         greenlet.get(block=False)
 
     def test_process_group_is_killed_on_leader_timeout(self):
@@ -103,7 +143,7 @@ class SubprocessTest(unittest.TestCase):
             self._assert_process_group_is_removed(p.pid)
 
         greenlet = gevent.spawn(_test)
-        gevent_wait()
+        gevent.wait()
         greenlet.get(block=False)
 
     def test_orphan_child_is_killed_when_parent_exits(self):
@@ -134,7 +174,7 @@ class SubprocessTest(unittest.TestCase):
             self._assert_process_group_is_removed(p.pid)
 
         greenlet = gevent.spawn(_test)
-        gevent_wait()
+        gevent.wait()
         greenlet.get(block=False)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=832250
@@ -145,5 +185,5 @@ class SubprocessTest(unittest.TestCase):
                 p.dead.wait()
 
         greenlet = gevent.spawn(_test)
-        gevent_wait()
+        gevent.wait()
         greenlet.get(block=False)
