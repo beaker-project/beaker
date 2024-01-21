@@ -492,7 +492,7 @@ class LogArchiver(ProxyHelper):
                         logger.exception("Error hard-linking %s to %s", mysrc, mydst)
                         return
                 else:
-                    logger.warn(
+                    logger.warning(
                         "Recipe %s file %s missing on disk, ignoring", recipe_id, mysrc
                     )
             # rsync the logs to their new home

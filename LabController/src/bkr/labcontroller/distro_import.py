@@ -358,7 +358,7 @@ class ComposeInfoLegacy(ComposeInfoMixin, Importer):
             except BX as err:
                 if not options.ignore_missing:
                     exit_status = 1
-                    logging.warn(err)
+                    logging.warning(err)
 
         return exit_status
 
@@ -696,7 +696,7 @@ class ComposeInfo(ComposeInfoMixin, Importer):
                     )
                 )
             else:
-                logging.warn(
+                logging.warning(
                     "%s repo found in .composeinfo but does not exist", variant
                 )
 
@@ -713,7 +713,7 @@ class ComposeInfo(ComposeInfoMixin, Importer):
                     )
                 )
             else:
-                logging.warn(
+                logging.warning(
                     "%s-debuginfo repo found in .composeinfo but does not exist",
                     variant,
                 )
@@ -856,7 +856,7 @@ class ComposeInfo(ComposeInfoMixin, Importer):
                 except BX as err:
                     if not options.ignore_missing:
                         exit_status = 1
-                        logging.warn(err)
+                        logging.warning(err)
         return exit_status
 
 
@@ -1019,7 +1019,7 @@ class TreeInfoMixin(object):
             try:
                 nfs_isos_url = self._installable_isos_url(nfs_url, isos_path)
             except IncompleteTree as e:
-                logging.warn(str(e))
+                logging.warning(str(e))
             else:
                 if nfs_isos_url:
                     self.tree["urls"].append(nfs_isos_url)
