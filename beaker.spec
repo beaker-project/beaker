@@ -363,6 +363,10 @@ DESTDIR=%{buildroot} make install
 # Newer RPM fails if site.less doesn't exist, even though it's marked %%ghost
 # and therefore is not included in the RPM. Seems like an RPM bug...
 ln -s /dev/null %{buildroot}%{_datadir}/bkr/server/assets/site.less
+%else
+install -m0755 -d %{buildroot}/%{_localstatedir}/log/%{name}
+install -m0755 -d %{buildroot}/%{_sysconfdir}/logrotate.d
+install -m0644 Server/logrotate.d/beaker %{buildroot}/%{_sysconfdir}/logrotate.d/beaker
 %endif
 
 %check
