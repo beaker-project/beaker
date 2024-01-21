@@ -230,13 +230,27 @@ def find_power_script(power_type):
     raise ValueError("Invalid power type %r" % power_type)
 
 
+def _decode(value):
+    # Decode if we are running python2 and value is unicode
+    if six.PY2 and isinstance(value, six.text_type):
+        return value.encode("utf8")
+    return value
+
+
 def build_power_env(command):
     env = dict(os.environ)
-    env["power_address"] = (command["power"].get("address") or "").encode("utf8")
-    env["power_id"] = (command["power"].get("id") or "").encode("utf8")
-    env["power_user"] = (command["power"].get("user") or "").encode("utf8")
-    env["power_pass"] = (command["power"].get("passwd") or "").encode("utf8")
-    env["power_mode"] = command["action"].encode("utf8")
+    power_mapping = {
+        "address": "power_address",
+        "id": "power_id",
+        "user": "power_user",
+        "passwd": "power_pass",
+    }
+
+    for k, v in six.iteritems(power_mapping):
+        env[v] = _decode(command["power"].get(k, ""))
+
+    env["power_mode"] = _decode(command["action"])
+
     return env
 
 
