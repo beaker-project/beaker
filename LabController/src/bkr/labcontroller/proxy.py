@@ -12,7 +12,6 @@ import re
 import shlex
 import shutil
 import subprocess
-import sys
 import tempfile
 import time
 from xml.sax.saxutils import escape as xml_escape
@@ -78,8 +77,7 @@ class ProxyHelper(object):
         )
 
     def close(self):
-        if sys.version_info >= (2, 7):
-            self.hub._hub("close")()
+        self.hub._hub("close")()
 
     def recipe_upload_file(self, recipe_id, path, name, size, md5sum, offset, data):
         """Upload a file in chunks
