@@ -144,6 +144,8 @@ jobs:
           - name: centos:7
           - name: quay.io/centos/centos:stream8
             additional_repo: "powertools"
+          - name: quay.io/centos/centos:stream9
+            additional_repo: "crb"
     steps:
       - name: Set BKR_PY3 environment variable
         run: echo "BKR_PY3=1" >> $GITHUB_ENV
@@ -167,6 +169,11 @@ jobs:
         if: matrix.os-target.name == 'centos:7'
         run: |
           curl -o /etc/yum.repos.d/beaker-server.repo https://beaker-project.org/yum/beaker-server-RedHatEnterpriseLinux.repo
+
+      - name: Use EPEL
+        if: matrix.os-target.name != 'centos:7'
+        run: |
+          dnf install -y epel-release
 
       # Build dependencies must be sufficient, the same is done during RPM build
       - name: Install Beaker dependency from specfile
