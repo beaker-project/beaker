@@ -55,6 +55,7 @@ jobs:
         test-target: ["bkr.inttest.client", "bkr.inttest.labcontroller", "bkr.inttest.server"]
     container:
       image: centos:7
+      options: --init
     services:
       database:
         image: mariadb:latest
