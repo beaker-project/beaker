@@ -116,6 +116,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ${{ matrix.os-target.name }}
+      options: --init
     strategy:
       fail-fast: false
       matrix:
