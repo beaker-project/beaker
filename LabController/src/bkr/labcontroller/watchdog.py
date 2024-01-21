@@ -102,9 +102,15 @@ class Watchdog(ProxyHelper):
             recipe = job.find("recipeSet/guestrecipe")
             if recipe is None:
                 recipe = job.find("recipeSet/recipe")
+            task = None
             for task in recipe.iterfind("task"):
                 if task.get("status") == "Running":
                     break
+
+            if task is None:
+                logger.error("Unable to find task for recipe %s\n", recipe_id)
+                return
+
             task_id = task.get("id")
             args = [
                 self.conf.get("WATCHDOG_SCRIPT"),
