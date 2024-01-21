@@ -23,7 +23,6 @@ import gevent.monkey
 import gevent.socket
 import pkg_resources
 import six
-import utils
 from daemon import pidfile
 from six.moves import xmlrpc_client
 
@@ -31,6 +30,7 @@ from bkr.common.helpers import SensitiveUnicode
 from bkr.labcontroller import netboot
 from bkr.labcontroller.config import get_conf, load_conf
 from bkr.labcontroller.proxy import ProxyHelper
+from bkr.labcontroller.utils import get_console_files
 from bkr.log import log_to_stream, log_to_syslog
 
 logger = logging.getLogger(__name__)
@@ -241,7 +241,7 @@ def build_power_env(command):
 
 
 def handle_clear_logs(conf, command):
-    for filename, _ in utils.get_console_files(
+    for filename, _ in get_console_files(
         console_logs_directory=conf["CONSOLE_LOGS"], system_name=command["fqdn"]
     ):
         truncate_logfile(filename)
