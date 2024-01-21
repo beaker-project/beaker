@@ -13,11 +13,11 @@ import logging
 import os
 import signal
 import subprocess
-import sys
 
 import gevent.event
 import gevent.hub
 import gevent.socket
+import six
 
 logger = logging.getLogger(__name__)
 
@@ -44,11 +44,14 @@ def _read_from_pipe(f):
                         "child process is running amok?!",
                         f.fileno(),
                     )
-                    chunks.append("+++ DISCARDED")
+                    chunks.append(b"+++ DISCARDED")
                     discarding = True
         except IOError as e:
             if e.errno != errno.EAGAIN:
                 raise
+    if six.PY3:
+        # Keep data in bytes until the end to reduce memory footprint
+        return b"".join(chunks).decode("utf-8")
     return "".join(chunks)
 
 
