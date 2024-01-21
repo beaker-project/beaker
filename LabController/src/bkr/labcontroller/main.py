@@ -14,7 +14,7 @@ import gevent
 import gevent.event
 import gevent.monkey
 import gevent.pool
-import gevent.wsgi
+import gevent.pywsgi
 from daemon import pidfile
 from flask.wrappers import Request, Response
 from six.moves.xmlrpc_server import SimpleXMLRPCDispatcher
@@ -217,7 +217,7 @@ class WSGIApplication(object):
 
 
 # Temporary hack to disable keepalive in gevent.wsgi.WSGIServer. This should be easier.
-class WSGIHandler(gevent.wsgi.WSGIHandler):
+class WSGIHandler(gevent.pywsgi.WSGIHandler):
     def read_request(self, raw_requestline):
         result = super(WSGIHandler, self).read_request(raw_requestline)
         self.close_connection = True
@@ -261,7 +261,7 @@ def main_loop(proxy=None, conf=None):
     login.daemon = True
     login.start()
 
-    server = gevent.wsgi.WSGIServer(
+    server = gevent.pywsgi.WSGIServer(
         ("::", 8000),
         log_failed_requests(WSGIApplication(proxy)),
         handler_class=WSGIHandler,
