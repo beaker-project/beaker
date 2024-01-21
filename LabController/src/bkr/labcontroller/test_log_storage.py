@@ -26,6 +26,6 @@ def test_log_storage_paths():
         ("result", "1", "debug/beah_raw", "/dummy/results/0+/1/debug/beah_raw"),
         ("result", "1001", "TESTOUT.log", "/dummy/results/1+/1001/TESTOUT.log"),
     ]
-    for log_type, id, path, expected in cases:
-        actual = getattr(log_storage, log_type)(id, path).path
+    for log_type, entity_id, path, expected in cases:
+        actual = getattr(log_storage, log_type)(entity_id, path).path
         assert actual == expected, actual
