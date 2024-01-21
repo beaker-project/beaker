@@ -163,7 +163,7 @@ class Watchdog(ProxyHelper):
                 recipe_id = expired_watchdog["recipe_id"]
                 system = expired_watchdog["system"]
                 self.abort(recipe_id, system)
-            except Exception:
+            except Exception:  # noqa
                 # catch and ignore here, so that we keep going through the loop
                 logger.exception("Failed to abort expired watchdog")
             if shutting_down.is_set():
@@ -197,7 +197,7 @@ def main_loop(watchdog, conf):
     while True:
         try:
             watchdog.poll()
-        except:
+        except Exception:  # noqa
             logger.exception("Failed to poll for watchdogs")
         if shutting_down.wait(timeout=conf.get("SLEEP_TIME", 20)):
             gevent.hub.get_hub().join()  # let running greenlets terminate

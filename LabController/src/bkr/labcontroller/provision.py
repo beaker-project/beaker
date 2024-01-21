@@ -347,7 +347,7 @@ def main_loop(poller=None, conf=None):
     while True:
         try:
             poller.poll()
-        except:
+        except:  # noqa
             logger.exception("Failed to poll for queued commands")
         if shutting_down.wait(timeout=conf.get("SLEEP_TIME", 20)):
             gevent.hub.get_hub().join()  # let running greenlets terminate

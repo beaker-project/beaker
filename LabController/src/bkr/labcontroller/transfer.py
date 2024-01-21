@@ -55,7 +55,7 @@ def main_loop(logarchiver, conf=None):
             logger.info("Exiting...")
             break
 
-        except:
+        except:  # noqa
             # this is a little extreme: log the exception and continue
             logger.exception("Error in main loop")
             logarchiver.sleep()
