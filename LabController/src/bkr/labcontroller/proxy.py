@@ -39,11 +39,6 @@ from bkr.labcontroller.config import get_conf
 from bkr.labcontroller.log_storage import LogStorage
 from bkr.labcontroller.utils import get_console_files
 
-try:
-    # pylint: disable=E0611
-    from subprocess import check_output
-except ImportError:
-    from utils import check_output
 
 logger = logging.getLogger(__name__)
 
