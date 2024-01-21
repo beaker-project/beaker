@@ -62,9 +62,7 @@ build: man text
 install: man
 	install -m0755 -d $(DESTDIR)/usr/share/man/man{1,8}
 	install -m0644 _build/man/*.1 $(DESTDIR)/usr/share/man/man1
-	if [[ ${BKR_PY3} == 0 ]]; then \
-		install -m0644 _build/man/*.8 $(DESTDIR)/usr/share/man/man8; \
-	fi
+	install -m0644 _build/man/*.8 $(DESTDIR)/usr/share/man/man8
 	ln -s bkr-distro-trees-verify.1.gz $(DESTDIR)/usr/share/man/man1/bkr-distros-verify.1.gz
 	ln -s bkr-system-list.1.gz $(DESTDIR)/usr/share/man/man1/bkr-list-systems.1.gz
 	ln -s bkr-labcontroller-list $(DESTDIR)/usr/share/man/man1/bkr-list-labcontrollers.1.gz
