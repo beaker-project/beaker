@@ -32,6 +32,7 @@ def _read_from_pipe(f):
     discarding = False
     while True:
         try:
+            gevent.socket.wait_read(f.fileno())
             chunk = f.read(4096)
             if not chunk:
                 break
@@ -48,8 +49,6 @@ def _read_from_pipe(f):
         except IOError as e:
             if e.errno != errno.EAGAIN:
                 raise
-            sys.exc_clear()
-        gevent.socket.wait_read(f.fileno())
     return "".join(chunks)
 
 
