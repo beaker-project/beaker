@@ -143,8 +143,8 @@ class Watchdog(ProxyHelper):
 
     def spawn_monitor(self, watchdog):
         monitor = Monitor(watchdog, self)
-        greenlet = gevent.spawn(run_monitor, monitor)
-        self.monitor_greenlets[watchdog["recipe_id"]] = greenlet
+        monitor_greenlet = gevent.spawn(run_monitor, monitor)
+        self.monitor_greenlets[watchdog["recipe_id"]] = monitor_greenlet
 
         def completion_callback(greenlet):
             if greenlet.exception:
@@ -155,7 +155,7 @@ class Watchdog(ProxyHelper):
                 )
             del self.monitor_greenlets[watchdog["recipe_id"]]
 
-        greenlet.link(completion_callback)
+        monitor_greenlet.link(completion_callback)
 
     def poll(self):
         for expired_watchdog in self.get_expired_watchdogs():
