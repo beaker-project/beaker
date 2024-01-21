@@ -166,6 +166,11 @@ jobs:
         run: |
           dnf builddep -y *.spec
 
+      - name: Show Python Environment
+        if: matrix.os-target.name != 'centos:7'
+        run: |
+          python3 -m pip freeze
+
       - name: Run unit tests
         run: |
           pushd ${{ matrix.test-target }}
