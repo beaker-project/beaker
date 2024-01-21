@@ -3,14 +3,14 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import errno
 import os
 import signal
 import subprocess
+import time
 import unittest
-from time import sleep
 
 import gevent
+import psutil
 
 from bkr.labcontroller.concurrency import (
     MonitoredSubprocess,
@@ -67,16 +67,18 @@ class SubprocessTest(unittest.TestCase):
         self.assertEqual(os.getpgid(p.pid), p.pid)
 
     def _assert_process_group_is_removed(self, pgid):
-        try:
-            # There's seems to sometimes be a delay from when the process is killed
-            # and when os.killpg believes it is killed
-            for _ in range(1, 6):
-                os.killpg(pgid, signal.SIGKILL)
-                sleep(0.5)
-            self.fail("The process group should've already been removed")
-        except OSError as e:
-            if e.errno != errno.ESRCH:
-                self.fail("The process group should've already been removed")
+        processes_in_group = []
+
+        for proc in psutil.process_iter(["pid", "name"]):
+            try:
+                if os.getpgid(proc.pid) == pgid:
+                    processes_in_group.append(proc)
+            except (psutil.NoSuchProcess, psutil.AccessDenied, OSError):
+                pass
+
+        gone, alive = psutil.wait_procs(processes_in_group, timeout=10)
+
+        self.assertEqual([], alive)
 
     def test_runaway_output_is_discarded(self):
         def _test():
