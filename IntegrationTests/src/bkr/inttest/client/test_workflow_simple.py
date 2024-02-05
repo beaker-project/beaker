@@ -120,7 +120,7 @@ class WorkflowSimpleTest(ClientTestCase):
         proc = start_client(args)
         out = proc.stdout.readline().rstrip()
         self.assertTrue(out.startswith('Submitted:'), out)
-        m = re.search('J:(\d+)', out)
+        m = re.search(r'J:(\d+)', out)
         job_id = m.group(1)
 
         out = proc.stdout.readline().rstrip()
