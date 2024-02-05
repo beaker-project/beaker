@@ -125,7 +125,7 @@ class DescTest(unittest.TestCase):
         desc = wizard.Desc(options, suggest="Test for BZ#1234567 "
                                             "(I ran `rm -rf ~` and everything's gone suddenly)")
         self.assertEqual(
-            """\n            \t@echo "Description:     Test for BZ#1234567 (I ran \`rm -rf ~\` and everything's gone suddenly)" >> $(METADATA)""",
+            """\n            \t@echo "Description:     Test for BZ#1234567 (I ran \\`rm -rf ~\\` and everything's gone suddenly)" >> $(METADATA)""",
             desc.formatMakefileLine())
 
 

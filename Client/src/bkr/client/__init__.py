@@ -61,7 +61,7 @@ def host_filter_presets():
     for f in config_files:
         with open(f) as fobj:
             for line in fobj:
-                matched = re.match('^(\w+)\s+(\S+.*)$', line)
+                matched = re.match(r'^(\w+)\s+(\S+.*)$', line)
                 if matched:
                     preset, xml = matched.groups()
                     _host_filter_presets[preset] = xml

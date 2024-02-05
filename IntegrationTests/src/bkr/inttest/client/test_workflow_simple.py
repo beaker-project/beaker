@@ -65,7 +65,7 @@ class WorkflowSimpleTest(ClientTestCase):
                           '--job-group', group.group_name,
                           '--task', self.task.name], config=config1)
         self.assertTrue(out.startswith('Submitted:'), out)
-        m = re.search('J:(\d+)', out)
+        m = re.search(r'J:(\d+)', out)
         job_id = m.group(1)
         with session.begin():
             job = Job.by_id(job_id)
@@ -98,7 +98,7 @@ class WorkflowSimpleTest(ClientTestCase):
                           '--family', self.distro.osversion.osmajor.osmajor,
                           '--task', self.task.name], config=config)
         self.assertTrue(out.startswith('Submitted:'), out)
-        m = re.search('J:(\d+)', out)
+        m = re.search(r'J:(\d+)', out)
         job_id = m.group(1)
         with session.begin():
             job = Job.by_id(job_id)
@@ -120,7 +120,7 @@ class WorkflowSimpleTest(ClientTestCase):
         proc = start_client(args)
         out = proc.stdout.readline().rstrip()
         self.assert_(out.startswith('Submitted:'), out)
-        m = re.search('J:(\d+)', out)
+        m = re.search(r'J:(\d+)', out)
         job_id = m.group(1)
 
         out = proc.stdout.readline().rstrip()
@@ -334,7 +334,7 @@ class WorkflowSimpleTest(ClientTestCase):
                           '--task', '/distribution/reservesys',
                           '--clients', '2'])
         self.assertTrue(out.startswith('Submitted:'), out)
-        m = re.search('J:(\d+)', out)
+        m = re.search(r'J:(\d+)', out)
         job_id = m.group(1)
         with session.begin():
             job = Job.by_id(job_id)
@@ -349,7 +349,7 @@ class WorkflowSimpleTest(ClientTestCase):
                           '--task', '/distribution/reservesys',
                           '--servers', '2'])
         self.assertTrue(out.startswith('Submitted:'), out)
-        m = re.search('J:(\d+)', out)
+        m = re.search(r'J:(\d+)', out)
         job_id = m.group(1)
         with session.begin():
             job = Job.by_id(job_id)
@@ -362,7 +362,7 @@ class WorkflowSimpleTest(ClientTestCase):
         out = run_client(['bkr', 'workflow-simple', '--task', self.task.name]
                          + workflow_options)
         self.assertTrue(out.startswith('Submitted:'), out)
-        m = re.search('J:(\d+)', out)
+        m = re.search(r'J:(\d+)', out)
         job_id = m.group(1)
         with session.begin():
             job = Job.by_id(job_id)
@@ -435,7 +435,7 @@ class WorkflowSimpleTest(ClientTestCase):
                           '--task', self.task.name,
                           '--kickstart', template_file.name])
         self.assertTrue(out.startswith('Submitted:'), out)
-        m = re.search('J:(\d+)', out)
+        m = re.search(r'J:(\d+)', out)
         job_id = m.group(1)
         with session.begin():
             job = Job.by_id(job_id)
@@ -456,7 +456,7 @@ install
                           '--task', self.task.name,
                           '--kickstart', template_file.name])
         self.assertTrue(out.startswith('Submitted:'), out)
-        m = re.search('J:(\d+)', out)
+        m = re.search(r'J:(\d+)', out)
         job_id = m.group(1)
         with session.begin():
             job = Job.by_id(job_id)
@@ -484,7 +484,7 @@ install
         out = run_client(['bkr', 'workflow-simple', '--distro', self.distro.name,
                           '--task', self.task.name])
         self.assertTrue(out.startswith('Submitted:'), out)
-        m = re.search('J:(\d+)', out)
+        m = re.search(r'J:(\d+)', out)
         job_id = m.group(1)
         with session.begin():
             job = Job.by_id(job_id)
@@ -557,7 +557,7 @@ install
                           '--distro', distro.name,
                           '--task', self.task.name])
         self.assertIn('Submitted:', out)
-        m = re.search('J:(\d+)', out)
+        m = re.search(r'J:(\d+)', out)
         job_id = m.group(1)
         with session.begin():
             job = Job.by_id(job_id)
