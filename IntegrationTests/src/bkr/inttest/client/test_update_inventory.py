@@ -69,7 +69,7 @@ class UpdateInventoryTest(ClientTestCase):
         proc = start_client(args)
         out = proc.stdout.readline().rstrip()
         self.assert_(out.startswith('Submitted:'), out)
-        m = re.search('J:(\d+)', out)
+        m = re.search(r'J:(\d+)', out)
         job_id = m.group(1)
         out = proc.stdout.readline().rstrip()
         self.assert_('Watching tasks (this may be safely interrupted)...' == out)

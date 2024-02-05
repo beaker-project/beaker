@@ -24,7 +24,7 @@ class WatchdogShowTest(ClientTestCase):
                 datetime.timedelta(seconds=99)
         out = run_client(['bkr', 'watchdog-show', str(t1.id)])
         # Let's just check it is somewhere between 10-99
-        self.assertTrue(re.match('%s: \d\d\\n' % t1.id, out))
+        self.assertTrue(re.match(r'%s: \d\d\n' % t1.id, out))
 
     def test_watchdog_show_non_running_task(self):
         with session.begin():
