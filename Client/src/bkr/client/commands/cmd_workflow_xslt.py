@@ -35,7 +35,7 @@ class JobArguments(object):
         self.arguments = {}
         self.current = None
         self.current_node = None
-        self.re_tag = re.compile('(.*)(\[@(.*)=(.*)\])')
+        self.re_tag = re.compile(r'(.*)(\[@(.*)=(.*)\])')
 
     def add_argument(self, name, argtype, tagname, tagvaltype, tagvalname,
                      tagnamelmnt, value, optional):

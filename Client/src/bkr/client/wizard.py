@@ -364,24 +364,24 @@ if sys.version_info.major == 2:
 WizardVersion = "2.3.2"
 
 # Regular expressions
-RegExpPackage    = re.compile("^(?![._+-])[.a-zA-Z0-9_+-]+(?<![._-])$")
-RegExpRhtsRequires = re.compile("^(?![._+-])[.a-zA-Z0-9_+-/()]+(?<![._-])$")
-RegExpPath       = re.compile("^(?![/-])[a-zA-Z0-9/_-]+(?<![/-])$")
-RegExpTestName   = re.compile("^(?!-)[a-zA-Z0-9-_]+(?<!-)$")
-RegExpReleases   = re.compile("^(?!-)[a-zA-Z0-9-_]+(?<!-)$")
-RegExpBug        = re.compile("^\d+$")
-RegExpBugLong    = re.compile("^bz\d+$")
-RegExpBugPrefix  = re.compile("^bz")
-RegExpCVE        = re.compile("^\d{4}-\d{4,}$")
-RegExpCVELong    = re.compile("^CVE-\d{4}-\d{4}$")
-RegExpCVEPrefix  = re.compile("^CVE-")
-RegExpEmail      = re.compile("^[a-z._-]+@[a-z.-]+$")
-RegExpYes        = re.compile("Everything OK|y|ye|jo|ju|ja|ano|da", re.I)
-RegExpReproducer = re.compile("repr|test|expl|poc|demo", re.I)
-RegExpScript     = re.compile("\.(sh|py|pl)$")
-RegExpMetadata   = re.compile("(\$\(METADATA\):\s+Makefile.*)$", re.S)
-RegExpTest       = re.compile("TEST=(\S+)", re.S)
-RegExpVersion    = re.compile("TESTVERSION=([\d.]+)", re.S)
+RegExpPackage    = re.compile(r"^(?![._+-])[.a-zA-Z0-9_+-]+(?<![._-])$")
+RegExpRhtsRequires = re.compile(r"^(?![._+-])[.a-zA-Z0-9_+-/()]+(?<![._-])$")
+RegExpPath       = re.compile(r"^(?![/-])[a-zA-Z0-9/_-]+(?<![/-])$")
+RegExpTestName   = re.compile(r"^(?!-)[a-zA-Z0-9-_]+(?<!-)$")
+RegExpReleases   = re.compile(r"^(?!-)[a-zA-Z0-9-_]+(?<!-)$")
+RegExpBug        = re.compile(r"^\d+$")
+RegExpBugLong    = re.compile(r"^bz\d+$")
+RegExpBugPrefix  = re.compile(r"^bz")
+RegExpCVE        = re.compile(r"^\d{4}-\d{4,}$")
+RegExpCVELong    = re.compile(r"^CVE-\d{4}-\d{4}$")
+RegExpCVEPrefix  = re.compile(r"^CVE-")
+RegExpEmail      = re.compile(r"^[a-z._-]+@[a-z.-]+$")
+RegExpYes        = re.compile(r"Everything OK|y|ye|jo|ju|ja|ano|da", re.I)
+RegExpReproducer = re.compile(r"repr|test|expl|poc|demo", re.I)
+RegExpScript     = re.compile(r"\.(sh|py|pl)$")
+RegExpMetadata   = re.compile(r"(\$\(METADATA\):\s+Makefile.*)$", re.S)
+RegExpTest       = re.compile(r"TEST=(\S+)", re.S)
+RegExpVersion    = re.compile(r"TESTVERSION=([\d.]+)", re.S)
 
 # Suggested test types (these used to be enforced)
 SuggestedTestTypes = """Regression Performance Stress Certification
@@ -401,7 +401,7 @@ try:
 except AttributeError:
     GuessAuthorName = pwd_uinfo.pw_gecos
 
-GuessAuthorDomain = re.sub("^.*\.([^.]+\.[^.]+)$", "\\1", os.uname()[1])
+GuessAuthorDomain = re.sub(r"^.*\.([^.]+\.[^.]+)$", "\\1", os.uname()[1])
 GuessAuthorEmail = "%s@%s" % (GuessAuthorLogin, GuessAuthorDomain)
 
 # Make sure guesses are valid values
@@ -468,7 +468,7 @@ PreferencesTemplate = """<?xml version="1.0" ?>
 
 def wrapText(text):
     """ Wrapt text to fit default width """
-    text = re.compile("\s+").sub(" ", text)
+    text = re.compile(r"\s+").sub(" ", text)
     return "\n".join(textwrap.wrap(text))
 
 def dedentText(text, count = 12):
@@ -533,7 +533,7 @@ def comment(text, width=70, comment="#", top=True, bottom=True, padding=3):
         result += "\n" + hr(width)
 
     # remove any trailing spaces
-    result = re.compile("\s+$", re.M).sub("", result)
+    result = re.compile(r"\s+$", re.M).sub("", result)
     return result
 
 def dashifyText(text, allowExtraChars = ""):
@@ -744,7 +744,7 @@ class Preferences:
     def getLicenseContent(self, license):
         content = findNode(self.licenses, "license", license)
         if content:
-            return re.sub("\n\s+$", "", content.firstChild.nodeValue)
+            return re.sub(r"\n\s+$", "", content.firstChild.nodeValue)
         else:
             return None
 
@@ -808,8 +808,8 @@ class Makefile:
 
             # substitute the old style $TEST sub-variables if present
             for var in "TOPLEVEL_NAMESPACE PACKAGE_NAME RELATIVE_PATH".split():
-                m = re.search("%s=(\S+)" % var, self.text)
-                if m: self.text = re.sub("\$\(%s\)" % var, m.group(1), self.text)
+                m = re.search(r"%s=(\S+)" % var, self.text)
+                if m: self.text = re.sub(r"\$\(%s\)" % var, m.group(1), self.text)
 
             # locate the metadata section
             print("Inspecting the metadata section...")
@@ -845,7 +845,7 @@ class Makefile:
         # parse info from metadata line by line
         print("Parsing the individual metadata...")
         for line in self.metadata.split("\n"):
-            m = re.search("echo\s+[\"'](\w+):\s*(.*)[\"']", line)
+            m = re.search(r"echo\s+[\"'](\w+):\s*(.*)[\"']", line)
             # skip non-@echo lines
             if not m: continue
             # read the key & value pair
@@ -872,7 +872,7 @@ class Makefile:
                 self.unknown += "\n" + line
 
         # parse name & email
-        m = re.search("(.*)\s+<(.*)>", options.opt.owner)
+        m = re.search(r"(.*)\s+<(.*)>", options.opt.owner)
         if m:
             options.opt.author = m.group(1)
             options.opt.email = m.group(2)
@@ -1237,9 +1237,9 @@ class Inquisitor:
     def normalize(self):
         """ Remove trailing and double spaces """
         if not self.data: return
-        self.data = re.sub("^\s*", "", self.data)
-        self.data = re.sub("\s*$", "", self.data)
-        self.data = re.sub("\s+", " ", self.data)
+        self.data = re.sub(r"^\s*", "", self.data)
+        self.data = re.sub(r"\s*$", "", self.data)
+        self.data = re.sub(r"\s+", " ", self.data)
 
     def read(self):
         """
@@ -1259,7 +1259,7 @@ class Inquisitor:
         if answer != "":
             # append the data if the answer starts with a "+",
             # but ignore if only "+" is present
-            m = re.search("^\+\S+(.*)", answer)
+            m = re.search(r"^\+\S+(.*)", answer)
             if m and isinstance(self.data, list):
                 self.data.append(m.group(1))
             else:
@@ -1289,7 +1289,7 @@ class Inquisitor:
     def matchName(self, text):
         """ Return true if the text matches inquisitor's name """
         # remove any special characters from the search string
-        text = re.sub("[^\w\s]", "", text)
+        text = re.sub(r"[^\w\s]", "", text)
         return re.search(text, self.name, re.I)
 
     def describe(self):
@@ -1649,7 +1649,7 @@ class Time(Inquisitor):
         self.default(self.options.time())
 
     def valid(self):
-        m = re.match("^(\d{1,2})[mhd]$", self.data)
+        m = re.match(r"^(\d{1,2})[mhd]$", self.data)
         return m is not None and int(m.group(1)) > 0
 
 
@@ -1664,7 +1664,7 @@ class Version(Inquisitor):
         self.default(self.options.version())
 
     def valid(self):
-        return re.match("^\d+\.\d+$", self.data)
+        return re.match(r"^\d+\.\d+$", self.data)
 
 
 class Priority(SingleChoice):
@@ -1965,7 +1965,7 @@ class Bugs(MultipleChoice):
     def getSummary(self):
         """ Return short summary fetched from bugzilla """
         if self.bug:
-            return re.sub("CVE-\d{4}-\d{4}\s*", "", removeEmbargo(self.bug.summary))
+            return re.sub(r"CVE-\d{4}-\d{4}\s*", "", removeEmbargo(self.bug.summary))
 
     def getComponent(self):
         """ Return bug component fetched from bugzilla """
@@ -2256,7 +2256,7 @@ class Skeleton(SingleChoice):
             rlJournalStart
                 rlPhaseStartSetup
                     rlAssertRpm $PACKAGE
-                    rlRun "TmpDir=\$(mktemp -d)" 0 "Creating tmp directory"
+                    rlRun "TmpDir=\\$(mktemp -d)" 0 "Creating tmp directory"
                     rlRun "pushd $TmpDir"
                 rlPhaseEnd
 
@@ -2283,7 +2283,7 @@ class Skeleton(SingleChoice):
             rlJournalStart
                 rlPhaseStartSetup
                     rlAssertRpm $PACKAGE || rlDie "$PACKAGE not installed"
-                    rlRun "TmpDir=\$(mktemp -d)" 0 "Creating tmp directory"
+                    rlRun "TmpDir=\\$(mktemp -d)" 0 "Creating tmp directory"
                     rlRun "pushd $TmpDir"
                 rlPhaseEnd
 
@@ -2373,7 +2373,7 @@ class Skeleton(SingleChoice):
                     rlAssertRpm $PACKAGE
                     rlLog "Server: $SERVERS"
                     rlLog "Client: $CLIENTS"
-                    rlRun "TmpDir=\$(mktemp -d)" 0 "Creating tmp directory"
+                    rlRun "TmpDir=\\$(mktemp -d)" 0 "Creating tmp directory"
                     rlRun "pushd $TmpDir"
                 rlPhaseEnd
 
@@ -2409,7 +2409,7 @@ class Skeleton(SingleChoice):
             rlJournalStart
                 rlPhaseStartSetup
                     rlRun "rlImport <package/>/<testname/>"
-                    rlRun "TmpDir=\$(mktemp -d)" 0 "Creating tmp directory"
+                    rlRun "TmpDir=\\$(mktemp -d)" 0 "Creating tmp directory"
                     rlRun "pushd $TmpDir"
                 rlPhaseEnd
 
@@ -2456,7 +2456,7 @@ class Skeleton(SingleChoice):
             rlJournalStart
                 rlPhaseStartSetup
                     rlAssertRpm --all
-                    rlRun "TmpDir=\$(mktemp -d)" 0 "Creating tmp directory"
+                    rlRun "TmpDir=\\$(mktemp -d)" 0 "Creating tmp directory"
                     rlRun "pushd $TmpDir"
                 rlPhaseEnd
 
@@ -2716,7 +2716,7 @@ class Skeleton(SingleChoice):
         # substitute variables, convert to plain text
         skeleton = self.replaceVariables(skeleton, test)
         # return dedented skeleton without trailing whitespace
-        skeleton = re.sub("\n\s+$", "\n", skeleton)
+        skeleton = re.sub(r"\n\s+$", "\n", skeleton)
         return dedentText(skeleton)
 
     def getRhtsRequires(self):
