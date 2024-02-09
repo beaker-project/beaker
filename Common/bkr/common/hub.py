@@ -200,8 +200,9 @@ class HubProxy(object):
             )
         except gssapi.raw.GSSError as ex:
             if ex.min_code == krb5kdc_err_s_principal_unknown:  # pylint: disable=no-member
-                ex.message += ". Make sure you correctly set KRB_REALM (current value: %s)." % realm
-                ex.args = (ex.message, )
+                message = str(ex)
+                message += ". Make sure you correctly set KRB_REALM (current value: %s)." % realm
+                ex.args = (message,)
             raise ex
         if six.PY2:
             req_enc = base64.encodestring(res.token)
