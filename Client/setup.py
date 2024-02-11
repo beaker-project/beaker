@@ -23,7 +23,7 @@ def bash_completion_dir():
 
 setup(
     name='beaker-client',
-    version='29.0',
+    version='29.1',
     description=DESCRIPTION,
     # XXX: Create proper README for this package and use it for long description
     long_description=DESCRIPTION,
