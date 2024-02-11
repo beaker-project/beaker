@@ -37,3 +37,13 @@ A number of bug fixes are also included in this release:
 * | `GH#177 <https://github.com/beaker-project/beaker/issues/177>`_:
     Fixed issue where JUnit result wasn't properly decoded in Beaker client.
   | (Contributed by `Bill Peck  <https://github.com/p3ck>`_)
+
+Beaker 29.1
+~~~~~~~~~~~
+* | `GH#210 <https://github.com/beaker-project/beaker/issues/210>`_:
+    Refactored error message handling when dealing with Kerberos realm settings.
+  | (Contributed by `Martin Styk <https://github.com/StykMartin>`_)
+* | `GH#211 <https://github.com/beaker-project/beaker/issues/211>`_:
+    Fixed invalid escape sequences in Python 3.12 across various client code.
+  | (Contributed by `Michael Hofmann <https://github.com/mh21>`_)
+
