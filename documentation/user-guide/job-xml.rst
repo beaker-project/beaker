@@ -163,8 +163,12 @@ using the ``<watchdog/>`` element. If you want to disable panic detection, for
 example because your tests are expecting to trigger a kernel panic, add an 
 attribute ``panic="ignore"`` to the ``<watchdog/>`` element.
 
-To actually determine what distro will be installed, the
-``<distroRequires/>`` needs to be populated. Within, we can specify such
+There are two ways to determine which distro will be installed.  You can
+use ``<distroRequires/>`` node to let the scheduler pick a distro that has been
+imported into Beaker.  Or, you can specify your own distro via the 
+``<distro/>`` node.  You have to specify one of them.
+
+Within the ``<distroRequires/>``, we can specify such
 things as as ``<distro_arch/>``, ``<distro_name/>`` and
 ``<distro_method/>``. This relates to the Distro architecture, the name
 of the Distro, and it's install method (i.e nfs,ftp etc) respectively.
@@ -201,6 +205,78 @@ we do want that value, ``!=`` means we do not want that value.
           </recipe>
         </recipeSet>
     </job>
+
+Within the ``<distro/>``, you must specify the full url in ``<tree/>``.
+``<kernel/>``, ``<initrd/>`` and ``<image/>`` should all be a relative
+url attribute based on ``<tree/>`` url attribute. ``<arch/>`` and ``<osversion/>``
+must be present as well.  ``<image/>`` referenced above is optional but allows you
+to use a custom bootloader for network installs. This option requires the dhcp
+server to be configured correctly.
+
+::
+
+    <job group='product-QA'>
+      <whiteboard>
+        Apache 2.2 test
+      </whiteboard>
+        <recipeSet>
+          <recipe kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="Lab Controller">
+            <packages>
+              <package name="emacs"/>
+              <package name="vim-enhanced"/>
+              <package name="unifdef"/>
+              <package name="mysql-server"/>
+              <package name="MySQL-python"/>
+              <package name="python-twill"/>
+            </packages>
+
+            <repos>
+              <repo name="myrepo_1" url="http://my-repo.com/tools/beaker/devel/"/>
+            </repos>
+            <distro>
+              <tree url="http://my-server.example.com/distros/MyCustomLinux1.0/Server/aarch64/os/"/>
+              <kernel url="pxeboot/vmlinuz"/>
+              <initrd url="pxeboot/initrd"/>
+              <image url="EFI/BOOT/grubaa64.efi"/>
+              <arch value="aarch64"/>
+              <osversion major="RedHatEnterpriseLinux8"/>
+            </distro>
+          </recipe>
+        </recipeSet>
+    </job>
+
+In order for the optional image loader to work the dhcp server must be configured
+properly.  Here is an example dnsmasq.conf which specifies the image in the correct
+path for the Systems under test.
+
+::
+
+    except-interface=lo
+    bind-dynamic
+    listen-address=10.60.0.190
+
+    resolv-file=/etc/resolv.conf
+    dhcp-range=10.60.0.20,10.60.0.100
+    dhcp-ignore=tag:!known
+    dhcp-option=option:router,10.60.0.190
+
+    # Use this server as a time and name server for machines in the lab
+    dhcp-option=option:dns-server,10.60.0.190
+    dhcp-option=option:ntp-server,192.168.1.3
+    domain=example.local
+    tftp-root=/var/lib/tftpboot
+    dhcp-boot=pxelinux.0
+
+    # Use a combination of /etc/ethers & /etc/hosts instead of this ?
+    dhcp-boot=tag:sut1_boot,bootloader/sut1.example.local/image,10.60.0.190
+    dhcp-boot=tag:sut2_boot,bootloader/sut2.example.local/image,10.60.0.190
+
+    dhcp-host=52:54:00:EF:C0:2C,sut1,10.60.0.51,set:sut1_boot
+    address=/sut1.example.local/10.60.0.51
+    dhcp-host=52:54:00:EF:C0:2D,sut2,10.60.0.52,set:sut2_boot
+    address=/sut2.example.local/10.60.0.52
+
+    # vim: set ft=dnsmasq:
 
 .. _host-requires:
 
