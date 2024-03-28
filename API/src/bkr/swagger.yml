@@ -1,0 +1,1210 @@
+openapi: 3.0.0
+servers:
+  - description: Beaker API
+    url: /api
+info:
+  version: "1.0.0"
+  title: Sample Application Project
+  description: >-
+    Sample Beaker API.
+paths:
+  /health:
+    get:
+      tags: [Health]
+      description: Health Check
+      responses:
+        '200':
+          description: Status message from server describing current health
+  /systems:
+    get:
+      tags:
+        - Systems
+      description: >-
+        All the systems registered in Inventory
+      parameters:
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageOffset'
+      responses:
+        "200":
+          description: "Successfully read systems list"
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/System"
+            application/xml:
+              schema:
+                type: "array"
+                xml:
+                  name: systems
+                items:
+                  $ref: "#/components/schemas/System"
+    post:
+      tags:
+        - Systems
+      description: "Create a System"
+      requestBody:
+          x-body-name: "system"
+          description: "System to create"
+          required: True
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/System"
+              examples:
+                SystemExample:
+                  $ref: '#/components/examples/System'
+      responses:
+        "201":
+          description: "Successfully created System"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}:
+    get:
+      tags:
+        - Systems
+      description: Obtain information about a system
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        '200':
+          description: "Successfully returned a system"
+        '400':
+          $ref: '#/components/responses/400Error'
+    put:
+      tags:
+        - Systems
+      description: "Update a System"
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        '200':
+          description: "Successfully updated System"
+        '201':
+          description: "Successfully created System"
+        '204':
+          description: "No changes for System"
+        '400':
+          $ref: '#/components/responses/400Error'
+      requestBody:
+          x-body-name: "system"
+          description: "System to update"
+          required: True
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/System"
+              examples:
+                SystemExample:
+                  $ref: '#/components/examples/System'
+    delete:
+      tags:
+        - Systems
+      description: "Delete a System"
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        "204":
+          description: "Successfully deleted System"  
+  /systems/{fqdn}/cc:
+    get:
+      tags:
+        - Systems
+      description: Obtain information about a system CC entries
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        '200':
+          description: "Successfully returned a system CC entries"
+        '400':
+          $ref: '#/components/responses/400Error'
+    post:
+      tags:
+        - Systems
+      description: "Add cc email to system"
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      requestBody:
+          x-body-name: "email"
+          description: "System to create"
+          required: True
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EMAIL"
+              examples:
+                SystemExample:
+                  $ref: '#/components/examples/EMAIL'
+      responses:
+        "201":
+          description: "Successfully created CC entry for System"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/cc/{email}:
+    delete:
+      tags:
+        - Systems
+      description: Delete a system CC entry
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+        - $ref: '#/components/parameters/EMAIL'
+      responses:
+        '204':
+          description: "Successfully deleted system CC entry"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/problem-reports:
+    get:
+      tags:
+        - Systems
+      description: Obtain information about a system problem reports
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        '200':
+          description: "Successfully returned a system problem reports"
+        '400':
+          $ref: '#/components/responses/400Error'
+    post:
+      tags:
+        - Systems
+      description: Add problem report to system
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      requestBody:
+          x-body-name: "problem_report"
+          description: "Problem report to create"
+          required: True
+          content:
+            application/json:
+              schema:
+                type: "object"
+                required:
+                  - message
+                properties:
+                  message:
+                    type: "string"
+              examples:
+                reportProblemExample:
+                  value:
+                    message: >-
+                      This system is not powering on and is failing to netboot.
+      responses:
+        "201":
+          description: "Successfully created problem report entry for System"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/problem-reports/{id}:
+    delete:
+      tags:
+        - Systems
+      description: Delete a system problem report entry
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '204':
+          description: "Successfully deleted system problem report entry"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/problem-reports/{id}:
+    get:
+      tags:
+        - Systems
+      description: Obtain information about a system problem report
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: "Successfully returned a system problem report"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/reservation:
+    put:
+      tags:
+        - Systems
+      description: "Reserve system"
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      requestBody:
+          x-body-name: "reserve"
+          description: "Reserve a system"
+          required: True
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EMAIL"
+              examples:
+                SystemExample:
+                  $ref: '#/components/examples/EMAIL'
+      responses:
+        "201":
+          description: "Successfully Reserved System"
+        '400':
+          $ref: '#/components/responses/400Error'
+    get:
+      tags:
+        - Systems
+      description: Obtain information about a system reservation
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        '200':
+          description: "Successfully returned a system reservation"
+        '400':
+          $ref: '#/components/responses/400Error'
+    delete:
+      tags:
+        - Systems
+      description: Delete a system reservation
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        '204':
+          description: "Successfully deleted system reservation"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/loan:
+    put:
+      tags:
+        - Systems
+      description: "A loan gives exclusive access to a system"
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      requestBody:
+          x-body-name: "loan"
+          description: "Loan a system"
+          required: True
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EMAIL"
+              examples:
+                SystemExample:
+                  $ref: '#/components/examples/EMAIL'
+      responses:
+        "201":
+          description: "Successfully Reserved System"
+        '400':
+          $ref: '#/components/responses/400Error'
+    get:
+      tags:
+        - Systems
+      description: Obtain information about a system loan
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        '200':
+          description: "Successfully returned a system loan"
+        '400':
+          $ref: '#/components/responses/400Error'
+    delete:
+      tags:
+        - Systems
+      description: Delete a system loan
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        '204':
+          description: "Successfully deleted system loan"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/access_policies:
+    post:
+      tags:
+        - Systems
+      description: Add an access policy to a system
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      requestBody:
+          x-body-name: "access_policy"
+          description: "Access policy to create"
+          required: True
+          content:
+            application/json:
+              schema:
+                type: "object"
+                required:
+                  - message
+                properties:
+                  message:
+                    type: "string"
+              examples:
+                reportProblemExample:
+                  value:
+                    message: >-
+                      This system is not powering on and is failing to netboot.
+      responses:
+        "201":
+          description: "Successfully created access policy entry for System"
+        '400':
+          $ref: '#/components/responses/400Error'
+    get:
+      tags:
+        - Systems
+      description: Obtain information about a system access policies
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        '200':
+          description: "Successfully returned a system access policies"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/access_policies/{id}:
+    get:
+      tags:
+        - Systems
+      description: Obtain information about a system access policy
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: "Successfully returned a system access policy"
+        '400':
+          $ref: '#/components/responses/400Error'
+    delete:
+      tags:
+        - Systems
+      description: Delete a system access policy
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '204':
+          description: "Successfully deleted system access policy"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/status:
+    get:
+      tags:
+        - Systems
+      description: Obtain information about a system status
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        '200':
+          description: "Successfully returned a system status"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/actions/on:
+    put:
+      tags:
+        - Systems
+      description: Power on system
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        '200':
+          description: "Action Power On was Successful"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/actions/off:
+    put:
+      tags:
+        - Systems
+      description: Power off system
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        '200':
+          description: "Action Power Off was Successful"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/actions/reset:
+    put:
+      tags:
+        - Systems
+      description: Power reset system
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        '200':
+          description: "Action Power Reset was Successful"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/actions/request-loan:
+    put:
+      tags:
+        - Systems
+      description: Request loan for system
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        '200':
+          description: "Loan request was successful"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/notes:
+    get:
+      tags:
+        - Systems
+      description: Obtain information about a system notes
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        '200':
+          description: "Successfully returned a system notes"
+        '400':
+          $ref: '#/components/responses/400Error'
+    post:
+      tags:
+        - Systems
+      description: Add note to a system
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      requestBody:
+          x-body-name: "note"
+          description: "Note to add"
+          required: True
+          content:
+            application/json:
+              schema:
+                type: "object"
+                required:
+                  - note
+                properties:
+                  note:
+                    type: "string"
+              examples:
+                addSystemNoteExample:
+                  value:
+                    message: >-
+                      Some additional info about this system.
+      responses:
+        "201":
+          description: "Successfully created note entry for System"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/notes/{id}:
+    get:
+      tags:
+        - Systems
+      description: Obtain information about a system note
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: "Successfully returned a system note"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/activity:
+    get:
+      tags:
+        - Systems
+      description: Obtain information about a system activity
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        '200':
+          description: "Successfully returned a system activity"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/executed-recipes:
+    get:
+      tags:
+        - Systems
+      description: Obtain information about a system executed recipes
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        '200':
+          description: "Successfully returned a system executed recipes"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/install-options:
+    get:
+      tags:
+        - Systems
+      description: Obtain information about a system install options
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        '200':
+          description: "Successfully returned a system install options"
+        '400':
+          $ref: '#/components/responses/400Error'
+    post:
+      tags:
+        - Systems
+      description: Add install option to a system
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      requestBody:
+          x-body-name: "install_option"
+          description: "Install option to add"
+          required: True
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/InstallOptions'
+                  - $ref: '#/components/schemas/InstallOptionsOSMajor'
+                  - $ref: '#/components/schemas/InstallOptionsOSVersion'
+              examples:
+                addInstallOptionExample:
+                  value:
+                    osMajor: "RedHatEnterpriseLinux8"
+                    ks_meta: "--ignore-disk=sda"
+                    kernel_options: "console=ttyS1"
+                    kernel_options_post: ""
+      responses:
+        "201":
+          description: "Successfully created install_option for System"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/install-options/{id}:
+    get:
+      tags:
+        - Systems
+      description: Obtain information about a system install option
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: "Successfully returned a system install option"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/excluded-families:
+    get:
+      tags:
+        - Systems
+      description: Obtain information about a system excluded families
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        '200':
+          description: "Successfully returned a system excluded families"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/excluded-families/{id}:
+    get:
+      tags:
+        - Systems
+      description: Obtain information about a system excluded family
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: "Successfully returned a system excluded family"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/system-keys:
+    get:
+      tags:
+        - Systems
+      description: Obtain information about a system keys
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        '200':
+          description: "Successfully returned a system keys"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /systems/{fqdn}/system-keys/{id}:
+    get:
+      tags:
+        - Systems
+      description: Obtain information about a system key
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: "Successfully returned a system key"
+  /arches:
+    get:
+      tags:
+        - Arches
+      description: >-
+        All the arches registered in Inventory
+      responses:
+        '200':
+          description: "Successfully read arch list"
+  /osmajors:
+    get:
+      tags:
+        - OSMajor
+      description: >-
+        All the OS Major versions registered in Inventory
+      responses:
+        '200':
+          description: "Successfully read osmajor list"
+  /osversions:
+    get:
+      tags:
+        - OSVersions
+      description: >-
+        All the OS Versions registered in Inventory
+      responses:
+        '200':
+          description: "Successfully read osmajor list"
+  /distros:
+    get:
+      tags:
+        - Distros
+      description: >-
+        All the Distros registered in Inventory
+      responses:
+        '200':
+          description: "Successfully read distro list"
+  /distros/{id}:
+    get:
+      tags:
+        - Distros
+      description: Obtain information about a Distro
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: "Successfully returned a Distro"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /distros/{id}/tags:
+    get:
+      tags:
+        - Distros
+      description: >-
+        All the tags for this distro
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: "Successfully read tag list for this distro"
+  /lab_controllers:
+    get:
+      tags:
+        - Lab-Controllers
+      description: >-
+        All the Lab Controllers registered in Inventory
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageOffset'
+      responses:
+        '200':
+          description: "Successfully read lab controller list"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fqdn:
+                    type: string
+    post:
+      tags:
+        - Lab-Controllers
+      description: "Create a Lab Controller"
+      requestBody:
+          x-body-name: "lab_controller"
+          description: "Lab Controller to create"
+          required: True
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabController"
+              examples:
+                SystemExample:
+                  $ref: '#/components/examples/LabController'
+      responses:
+        "201":
+          description: "Successfully created Lab Controller"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /lab_controllers/{fqdn}:
+    get:
+      tags:
+        - Lab-Controllers
+      description: Obtain information about a lab controller
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        '200':
+          description: "Successfully returned a lab controller"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /lab_controllers/{fqdn}/distro_trees:
+    get:
+      tags:
+        - Lab-Controllers
+      description: Obtain information about a lab controller distro trees
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+      responses:
+        '200':
+          description: "Successfully returned a lab controller distro trees"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /lab_controllers/{fqdn}/distro_trees/{id}/repos:
+    get:
+      tags:
+        - Lab-Controllers
+      description: Obtain information about a distro tree repos
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: "Successfully returned distro tree repos"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /lab_controllers/{fqdn}/distro_trees/{id}/images:
+    get:
+      tags:
+        - Lab-Controllers
+      description: Obtain information about a distro tree images
+      parameters:
+        - $ref: '#/components/parameters/FQDN'
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: "Successfully returned distro tree images"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /jobs:
+    get:
+      tags:
+        - Jobs
+      description: >-
+        All the Jobs
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageOffset'
+      responses:
+        '200':
+          description: "Successfully read jobs list"
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/Job"
+            application/xml:
+              schema:
+                type: "array"
+                xml:
+                  name: jobs
+                items:
+                  $ref: "#/components/schemas/Job"
+    post:
+      tags:
+        - Jobs
+      description: "Create a Job"
+      requestBody:
+          x-body-name: "job"
+          description: "Job to create"
+          required: True
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+              examples:
+                SystemExample:
+                  $ref: '#/components/examples/Job'
+            application/xml:
+              schema:
+                $ref: "#/components/schemas/Job"
+              examples:
+                SystemExample:
+                  $ref: '#/components/examples/Job'
+      responses:
+        "201":
+          description: "Successfully created a Job"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /jobs/{jID}:
+    get:
+      tags:
+        - Jobs
+      description: Obtain information about a specific job
+      parameters:
+        - $ref: '#/components/parameters/JID'
+      responses:
+        '200':
+          description: "Successfully returned Job details"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /jobs/{jID}/actions/cancel:
+    put:
+      tags:
+        - Jobs
+      description: Cancel a specific job
+      parameters:
+        - $ref: '#/components/parameters/JID'
+      responses:
+        '200':
+          description: "Successfully cancelled Job"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /jobs/{jID}/sets:
+    get:
+      tags:
+        - Jobs
+      description: Obtain information about a specific job's sets
+      parameters:
+        - $ref: '#/components/parameters/JID'
+      responses:
+        '200':
+          description: "Successfully returned Job set's details"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /jobs/{jID}/sets/{sID}/actions/cancel:
+    put:
+      tags:
+        - Jobs
+      description: Cancel a specific set of Recipes
+      parameters:
+        - $ref: '#/components/parameters/JID'
+        - $ref: '#/components/parameters/SID'
+      responses:
+        '200':
+          description: "Successfully cancelled set of Recipes"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /jobs/{jID}/sets/{sID}/recipes:
+    get:
+      tags:
+        - Jobs
+      description: Obtain information about a specific job's sets recipes
+      parameters:
+        - $ref: '#/components/parameters/JID'
+        - $ref: '#/components/parameters/SID'
+      responses:
+        '200':
+          description: "Successfully returned Job set's details"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /jobs/{jID}/sets/{sID}/recipes/{rID}:
+    get:
+      tags:
+        - Jobs
+      description: Obtain information about a specific recipe
+      parameters:
+        - $ref: '#/components/parameters/JID'
+        - $ref: '#/components/parameters/SID'
+        - $ref: '#/components/parameters/RID'
+      responses:
+        '200':
+          description: "Successfully returned recipe details"
+        '400':
+          $ref: '#/components/responses/400Error'
+  /jobs/{jID}/sets/{sID}/recipes/{rID}:
+    patch:
+      tags:
+        - Jobs
+      description: Update the status / result of a specific recipe
+      parameters:
+        - $ref: '#/components/parameters/JID'
+        - $ref: '#/components/parameters/SID'
+        - $ref: '#/components/parameters/RID'
+      responses:
+        '200':
+          description: "Successfully updated recipe details"
+        '400':
+          $ref: '#/components/responses/400Error'
+
+components:
+  parameters:
+    PageLimit:
+      name: limit
+      in: query
+      description: Limits the number of items on a page
+      schema:
+        type: integer
+      examples:
+        limit-example:
+          value: 100
+    PageOffset:
+      name: offset
+      in: query
+      description: Specifies the page number of the items to be displayed
+      schema:
+        type: integer
+      examples:
+        offset-example:
+          value: 0
+    FQDN:
+      name: "fqdn"
+      description: "Fully qualified domain name of system to get"
+      in: path
+      required: True
+      schema:
+        type: "string"
+      examples:
+        fqdn-example:
+          value: "host.example.com"
+    ID:
+      name: "id"
+      description: "id of the record to get"
+      in: path
+      required: True
+      schema:
+        type: "string"
+      examples:
+        id-example:
+          value: "1262"
+    JID:
+      name: "jID"
+      description: "id of the job to get"
+      in: path
+      required: True
+      schema:
+        type: "string"
+      examples:
+        id-example:
+          value: "1262"
+    SID:
+      name: "sID"
+      description: "id of the set to get"
+      in: path
+      required: True
+      schema:
+        type: "string"
+      examples:
+        id-example:
+          value: "1262"
+    RID:
+      name: "rID"
+      description: "id of the recipe to get"
+      in: path
+      required: True
+      schema:
+        type: "string"
+      examples:
+        id-example:
+          value: "1262"
+    EMAIL:
+      name: "email"
+      description: "Email address to include in Carbon Copy (CC)"
+      in: path
+      required: True
+      schema:
+        type: "string"
+      examples:
+        email-example:
+          value: "user@example.com"
+  schemas:
+    EMAIL:
+      type: "object"
+      required:
+        - email
+      properties:
+        email:
+          type: "string"
+    LabController:
+      type: "object"
+      required:
+        - fqdn
+      properties:
+        fqdn:
+          type: "string"
+        user_name:
+          type: "string"
+        email_address:
+          type: "string"
+        password:
+          type: "string"
+        removed:
+          type: "boolean"
+        disabled:
+          type: "boolean"
+    Job:
+      type: "object"
+      required:
+        - sets
+      properties:
+        status:
+          type: "string"
+        whiteboard:
+          type: "string"
+        sets:
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              status:
+                type: "string"
+              recipes:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/Recipe"
+    Recipe:
+      type: "object"
+      required:
+        - distro_requires
+      properties:
+        status:
+          type: "string"
+        whiteboard:
+          type: "string"
+        host_requires:
+          type: "string"
+        distro_requires:
+          type: "string"
+        ks_meta:
+          type: "string"
+        kernel_options:
+          type: "string"
+        kernel_options_post:
+          type: "string"
+    System:
+      type: "object"
+      required:
+        - fqdn
+      properties:
+        fqdn:
+          type: "string"
+        owner:
+          type: "string"
+        status:
+          type: "string"
+        status_reason:
+          type: "string"
+        arches:
+          type: "array"
+          items:
+            type: "string"
+        power:
+          type: "object"
+          properties:
+            power_type:
+              type: "string"
+            power_address:
+              type: "string"
+            power_user:
+              type: "string"
+            power_password:
+              type: "string"
+            power_id:
+              type: "string"
+            power_quiescent_period:
+              type: "integer"
+            release_action:
+              type: "string"
+            reprovision_distro_tree:
+              type: "string"
+        location:
+          type: "string"
+        lender:
+          type: "string"
+        vender:
+          type: "string"
+        model:
+          type: "string"
+        serial:
+          type: "string"
+        lab_controller:
+          type: "string"
+    InstallOptions:
+      type: "object"
+      properties:
+        ks_meta:
+          type: "string"
+        kernel_options:
+          type: "string"
+        kernel_options_post:
+          type: "string"
+    InstallOptionsOSMajor:
+      type: "object"
+      properties:
+        osMajor:
+          type: "string"
+        ks_meta:
+          type: "string"
+        kernel_options:
+          type: "string"
+        kernel_options_post:
+          type: "string"
+    InstallOptionsOSVersion:
+      type: "object"
+      properties:
+        osVersion:
+          type: "string"
+        ks_meta:
+          type: "string"
+        kernel_options:
+          type: "string"
+        kernel_options_post:
+          type: "string"
+  responses:
+    400Error:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            type: object 
+            properties:
+              message:
+                type: string
+  examples:
+    EMAIL:
+      value:
+        email: "user@example.com"
+    LabController:
+      value:
+        fqdn: "lab1.example.com"
+        user_name: "host/labctrl" 
+        email_address: "labctrl@beaker-server.localdomain"
+        password: "labctrl"
+        removed: "false"
+        disabled: "false"
+    System:
+      value:
+        fqdn: "host.example.com"
+        owner: "user@fedora.com"
+        status: "available"
+        status_reason: ""
+        arches:
+          - "x86_64"
+        power:
+          power_type: "ipmi"
+          power_address: "127.0.0.1"
+          power_user: "admin"
+          power_password: "admin"
+          power_id: "6231"
+          power_quiescent_period: 60
+          release_action: "PowerOff"
+          reprovision_distro_tree: ""
+        location: "Westford, MA"
+        lender: "IBM"
+        vender: "IBM"
+        model: "Z230"
+        serial: "A12345678"
+        lab_controller: "lab1.example.com"
+    Job:
+      value:
+        whiteboard: "This is an example Job"
+        sets:
+          - recipes:
+            - whiteboard: This is first set recipe 1 of 2
+              ks_meta: ""
+              kernel_options: "console=ttys1"
+              kernel_options_post: "selinux=0"
+              distro_requires: "<xml><arch value='x86_64'/><osversion value='RedHatEnterpriseLinux9'/>"
+              host_requires: ""
+            - whiteboard: This is first set recipe 2 of 2
+              ks_meta: ""
+              kernel_options: "console=ttys1"
+              kernel_options_post: ""
+              distro_requires: "<xml><arch value='x86_64'/><osversion value='RedHatEnterpriseLinux9'/>"
+              host_requires: ""
+          - recipes:
+            - whiteboard: This is second set recipe 1 of 2
+              ks_meta: "--ignore-disk=sda"
+              kernel_options: "console=ttys1"
+              kernel_options_post: ""
+              distro_requires: "<xml><arch value='x86_64'/><osversion value='RedHatEnterpriseLinux9'/>"
+              host_requires:
+            - whiteboard: This is second set recipe 2 of 2
+              ks_meta: ""
+              kernel_options: "console=ttys1"
+              kernel_options_post: ""
+              distro_requires: "<xml><arch value='x86_64'/><osversion value='RedHatEnterpriseLinux9'/>"
+              host_requires: ""
+
