@@ -792,7 +792,7 @@ class DistroTree(DeclarativeMappedObject, ActivityMixin):
                 if s in urls:
                     return urls[s]
         else:
-            for s in ['nfs', 'http', 'ftp']:
+            for s in ['nfs', 'https', 'http', 'ftp']:
                 if s in urls:
                     return urls[s]
             # caller didn't specify any schemes, so pick anything if we have it

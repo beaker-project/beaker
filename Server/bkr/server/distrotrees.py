@@ -129,7 +129,7 @@ class DistroTrees(RPCRoot):
             except NoResultFound:
                 raise cherrypy.HTTPError(status=400,
                         message='No such lab controller %r' % kwargs['lab'])
-        base = distro_tree.url_in_lab(lc, scheme='http')
+        base = distro_tree.url_in_lab(lc, scheme=['https', 'http'])
         if not base:
             raise cherrypy.HTTPError(status=404,
                     message='%s is not present in lab %s' % (distro_tree, lc))
