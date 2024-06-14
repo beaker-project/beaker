@@ -43,7 +43,7 @@ jobs:
       options: --init
     services:
       database:
-        image: mariadb:latest
+        image: mariadb:10-ubi
         env:
           MYSQL_USER: ${{ env.MYSQL_USER }}
           MYSQL_PASSWORD: ${{ env.MYSQL_PASSWORD }}
