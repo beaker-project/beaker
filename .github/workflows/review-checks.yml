@@ -1,22 +1,32 @@
 name: Review-checks
 
+# If a pull-request is pushed then cancel all previously running jobs related
+# to that pull-request
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 on: [pull_request]
 
 jobs:
-  check-pylint:
-    runs-on: ubuntu-latest
-    container:
-      image: quay.io/beaker/beaker-lint
-
-    steps:
-    - uses: actions/checkout@v1
-    - name: Run Pylint
-      run: |
-        set -o pipefail
-        Misc/run-pylint.sh --reports=n --disable=W \
-        --extension-pkg-whitelist=lxml \
-        bkr.server bkr.labcontroller bkr.client bkr.common \
-        | tee pylint.out
+  # The `check-pylint` job isn't working at the moment due to:
+  #   [DEPRECATION NOTICE] Docker Image Format v1 and Docker Image manifest version 2, schema 1 support is disabled by default and will be removed in an upcoming release. Suggest the author of quay.io/beaker/beaker-lint:latest to upgrade the image to the OCI Format or Docker Image manifest v2, schema 2. More information at https://docs.docker.com/go/deprecated-image-specs/
+  # Comment it out so hopefully we will remember to redo the `pylint` check some different way.
+  #
+  # check-pylint:
+  #   runs-on: ubuntu-latest
+  #   container:
+  #     image: quay.io/beaker/beaker-lint
+  #
+  #   steps:
+  #   - uses: actions/checkout@v1
+  #   - name: Run Pylint
+  #     run: |
+  #       set -o pipefail
+  #       Misc/run-pylint.sh --reports=n --disable=W \
+  #       --extension-pkg-whitelist=lxml \
+  #       bkr.server bkr.labcontroller bkr.client bkr.common \
+  #       | tee pylint.out
 
   check-docs:
     runs-on: ubuntu-latest
