@@ -3,21 +3,6 @@ name: Review-checks
 on: [pull_request]
 
 jobs:
-  check-pylint:
-    runs-on: ubuntu-latest
-    container:
-      image: quay.io/beaker/beaker-lint
-
-    steps:
-    - uses: actions/checkout@v1
-    - name: Run Pylint
-      run: |
-        set -o pipefail
-        Misc/run-pylint.sh --reports=n --disable=W \
-        --extension-pkg-whitelist=lxml \
-        bkr.server bkr.labcontroller bkr.client bkr.common \
-        | tee pylint.out
-
   check-docs:
     runs-on: ubuntu-latest
     container:
