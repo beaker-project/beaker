@@ -6,6 +6,14 @@ documentation and information about the Beaker project.
 The [Developer guide](https://beaker-project.org/dev/guide/) in particular 
 might be useful if you are working on Beaker.
 
+Community Chat Channel
+----------------------
+
+[Matrix](https://matrix.org/) community chat channel located at any of the below locations:
+
+* <https://chat.fedoraproject.org/#/room/#beaker:fedora.im>  Fedora Project's web client
+* <https://app.element.io/#/room/#beaker:fedora.im>  Element web client
+* <https://matrix.to/#/#beaker:fedora.im>
 
 Repo Layout
 -----------
