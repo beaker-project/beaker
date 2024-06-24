@@ -15,18 +15,18 @@ notifications:
 jobs:
   - job: copr_build
     trigger: pull_request
-    metadata:
-      targets:
-        - epel-8-x86_64
-        - epel-9-x86_64
-        - centos-stream-8-x86_64
-        - centos-stream-9-x86_64
+    targets:
+      - epel-8-x86_64
+      - epel-9-x86_64
+      - centos-stream-8-x86_64
+      - centos-stream-9-x86_64
+    identifier: rhel_8_9
 
   - job: copr_build
     trigger: pull_request
-    metadata:
-      targets:
-        - fedora-all-x86_64
+    targets:
+      - fedora-all-x86_64
+    identifier: fedora
     actions:
       post-upstream-clone:
         # disable broken unit tests
@@ -34,9 +34,9 @@ jobs:
 
   - job: copr_build
     trigger: pull_request
-    metadata:
-      targets:
-        - epel-7-x86_64
+    targets:
+      - epel-7-x86_64
+    identifier: rhel_7
     actions:
       post-upstream-clone:
         # Use gevent from base repositories during packit builds
