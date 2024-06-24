@@ -31,3 +31,12 @@ selenium.log
 /IntegrationTests/test-rpms/
 /IntegrationTests/test-server-joblogs/
 venv/
+
+
+# By explicity not ignoring these, search tools such as ripgrep (rg) will search them.
+!.github/
+!.gitattributes
+!.gitignore
+!.gitmodules
+!.packit.yaml
+!.stickler.yml
