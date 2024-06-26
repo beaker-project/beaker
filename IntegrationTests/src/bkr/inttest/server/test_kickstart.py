@@ -374,6 +374,49 @@ class KickstartTest(unittest.TestCase):
                 ),
             ]
 
+            cls.rhel10_0423 = data_setup.create_distro(
+                name=u'RHEL-10.0-20240423.83',
+                osmajor=u'RedHatEnterpriseLinux10', osminor=u'0')
+
+            cls.rhel10_0423_baseos = data_setup.create_distro_tree(
+                distro=cls.rhel10_0423, variant=u'BaseOS', arch=u'x86_64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/'
+                      u'RHEL-10.0-20240423.83/compose/BaseOS/x86_64/os/'])
+
+            cls.rhel10_0423_baseos.repos[:] = [
+                DistroTreeRepo(
+                    repo_id=u'BaseOS-debuginfo',
+                    repo_type=u'debug',
+                    path=u'../../../BaseOS/x86_64/debug/tree'
+                ),
+                DistroTreeRepo(
+                    repo_id=u'AppStream-debuginfo',
+                    repo_type=u'debug',
+                    path=u'../../../AppStream/x86_64/debug/tree'
+                ),
+                DistroTreeRepo(
+                    repo_id=u'CRB-debuginfo',
+                    repo_type=u'debug',
+                    path=u'../../../CRB/x86_64/debug/tree'
+                ),
+                DistroTreeRepo(
+                    repo_id=u'CRB',
+                    repo_type=u'variant',
+                    path=u'../../../CRB/x86_64/os'
+                ),
+                DistroTreeRepo(
+                    repo_id=u'BaseOS',
+                    repo_type=u'variant',
+                    path=u'../../../BaseOS/x86_64/os'
+                ),
+                DistroTreeRepo(
+                    repo_id=u'AppStream',
+                    repo_type=u'variant',
+                    path=u'../../../AppStream/x86_64/os'
+                ),
+            ]
+
             cls.centos7 = data_setup.create_distro(name=u'CentOS-7',
                 osmajor=u'CentOS7', osminor=u'0')
             cls.centos7_x86_64 = data_setup.create_distro_tree(
@@ -2962,6 +3005,29 @@ part swap --recommended
         self.assertNotIn('''
         network --bootproto=dhcp --hostname=test01.test-kickstart.invalid
         ''', k)
+
+    def test_rhel10_networks(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-10.0-20240423.83" />
+                            <osversion major="RedHatEnterpriseLinux10" minor="0" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/check-install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.installation.rendered_kickstart.kickstart
+        self.assertIn('''
+network  --hostname=test01.test-kickstart.invalid
+''', k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=578812
     def test_static_networks(self):

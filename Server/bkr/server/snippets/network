@@ -1,5 +1,10 @@
 {% if no_networks is undefined %}
-network --bootproto=dhcp{% if system is defined and system.fqdn %} --hostname={{ system.fqdn }}{% endif %}
+{% if distro.osversion.osmajor.name == 'RedHatEnterpriseLinux' and distro.osversion.osmajor.number | int >= 10 %}
+{% set bootproto = '' %}
+{% else %}
+{% set bootproto = '--bootproto=dhcp' %}
+{% endif %}
+network {{ bootproto }}{% if system is defined and system.fqdn %} --hostname={{ system.fqdn }}{% endif %}
 
 {% if dhcp_networks %}
 {% for device in dhcp_networks|split(';') %}
