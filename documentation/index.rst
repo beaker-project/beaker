@@ -59,10 +59,19 @@ Guide <admin-guide.pdf>`_ in PDF format in order to read it offline.
 Getting further help
 ====================
 
-The best way to interact with Beaker developers and users is in the `#beaker 
-<irc://irc.libera.chat/beaker>`_ IRC channel on irc.libera.chat. The Beaker 
-developers monitor this channel, and development discussions often happen 
-there.
+Community Chat Channel
+----------------------
+
+The best way to interact with Beaker developers and users is in the #beaker
+Matrix channel. The Beaker developers monitor this channel, and development
+discussions often happen there.
+
+The `Matrix <https://matrix.org/>`_ community chat channel is located at any of
+the below locations:
+
+* `<https://chat.fedoraproject.org/#/room/#beaker:fedora.im>`_  Fedora Project's web client
+* `<https://app.element.io/#/room/#beaker:fedora.im>`_  Element web client
+* `<https://matrix.to/#/#beaker:fedora.im>`_
 
 You can also ask your question by posting it to our `beaker-devel
 <https://lists.fedorahosted.org/archives/list/beaker-devel@lists.fedorahosted.org/>`_
