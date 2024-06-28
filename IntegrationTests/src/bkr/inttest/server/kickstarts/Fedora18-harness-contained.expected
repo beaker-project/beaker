@@ -51,7 +51,8 @@ set -x
 # so that the rest of the script can use that for making HTTP requests.
 if command -v curl >/dev/null ; then
     # Older curl versions lack --retry
-    if curl --help 2>&1 | grep -q .*--retry ; then
+    if curl --help all 2>&1 | grep -q .*--retry || \
+       curl --help 2>&1 | grep -q .*--retry ; then
         function fetch() {
             curl -L --retry 20 --remote-time -o "$1" "$2"
         }
@@ -108,7 +109,8 @@ set -x
 # so that the rest of the script can use that for making HTTP requests.
 if command -v curl >/dev/null ; then
     # Older curl versions lack --retry
-    if curl --help 2>&1 | grep -q .*--retry ; then
+    if curl --help all 2>&1 | grep -q .*--retry || \
+       curl --help 2>&1 | grep -q .*--retry ; then
         function fetch() {
             curl -L --retry 20 --remote-time -o "$1" "$2"
         }
@@ -426,7 +428,8 @@ set -x
 # so that the rest of the script can use that for making HTTP requests.
 if command -v curl >/dev/null ; then
     # Older curl versions lack --retry
-    if curl --help 2>&1 | grep -q .*--retry ; then
+    if curl --help all 2>&1 | grep -q .*--retry || \
+       curl --help 2>&1 | grep -q .*--retry ; then
         function fetch() {
             curl -L --retry 20 --remote-time -o "$1" "$2"
         }
@@ -463,7 +466,8 @@ set -x
 # so that the rest of the script can use that for making HTTP requests.
 if command -v curl >/dev/null ; then
     # Older curl versions lack --retry
-    if curl --help 2>&1 | grep -q .*--retry ; then
+    if curl --help all 2>&1 | grep -q .*--retry || \
+       curl --help 2>&1 | grep -q .*--retry ; then
         function fetch() {
             curl -L --retry 20 --remote-time -o "$1" "$2"
         }
