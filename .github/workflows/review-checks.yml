@@ -1,5 +1,11 @@
 name: Review-checks
 
+# If a pull-request is pushed then cancel all previously running jobs related
+# to that pull-request
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 on: [pull_request]
 
 jobs:
@@ -10,6 +16,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
+    - name: Fixup CentOS repo files
+      run: |
+        sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo
+        sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo
+        sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo
+
     - name: Install utils
       run: |
         yum install -y git wget ca-certificates
@@ -35,6 +47,9 @@ jobs:
       MYSQL_USER: beaker
       MYSQL_PASSWORD: beaker
       MYSQL_ROOT_PASSWORD: toor
+      # https://github.blog/changelog/2024-03-07-github-actions-all-actions-will-run-on-node20-instead-of-node16-by-default/
+      ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node16
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
     strategy:
       fail-fast: false
       matrix:
@@ -52,6 +67,12 @@ jobs:
         ports:
           - 3306
     steps:
+      - name: Fixup CentOS repo files
+        run: |
+          sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo
+          sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo
+          sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo
+
       # We have to install git 2.18+ to perform checkout via git
       # This is possible only via IUS repositories
       - name: Install git to allow checkout
@@ -134,7 +155,18 @@ jobs:
             additional_repo: "crb"
             # After fixing the names of unit test functions, migrate to the latest
           - name: fedora:38
+    env:
+      # https://github.blog/changelog/2024-03-07-github-actions-all-actions-will-run-on-node20-instead-of-node16-by-default/
+      ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node16
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
     steps:
+      - name: Fixup CentOS repo files
+        run: |
+          sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo
+          sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo
+          sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo
+        if: matrix.os-target.name == 'centos:7' || matrix.os-target.name == 'quay.io/centos/centos:stream8'
+
       - name: Set BKR_PY3 environment variable
         run: echo "BKR_PY3=1" >> $GITHUB_ENV
         if: matrix.os-target.name != 'centos:7'
@@ -149,9 +181,22 @@ jobs:
             dnf config-manager --set-enabled $repo
           done
 
+      # We have to install git 2.18+ to perform checkout via git
+      # This is possible only via IUS repositories
+      - name: Install git to allow checkout
+        run: |
+          yum install https://repo.ius.io/ius-release-el7.rpm epel-release -y
+          yum install git236-core -y
+        if: matrix.os-target.name == 'centos:7'
+
       # Do not upgrade to @v4 as node 20 is incompatible with CentOS 7
       - name: Checkout
         uses: actions/checkout@v3
+
+      # Remove custom git from the IUS repository - git will be reinstalled later as it is needed by beaker itself.
+      - name: Remove git236 and YUM repositories
+        run: yum remove git236-core ius-release epel-release -y
+        if: matrix.os-target.name == 'centos:7'
 
       - name: Add Beaker Server YUM repository
         if: matrix.os-target.name == 'centos:7'
