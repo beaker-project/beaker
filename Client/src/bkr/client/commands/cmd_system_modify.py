@@ -60,6 +60,10 @@ Options
 
    Physical location of the system.
 
+.. option:: --mac-address <mac-address>
+
+   MAC address of the system.
+
 .. option:: --power-type <power-type>
 
    Remote power control type. This value must be a valid power type configured
@@ -146,6 +150,8 @@ class System_Modify(BeakerCommand):
                                     "system's custom access policy")
         self.parser.add_option('--location',
                                help='Physical location of the system')
+        self.parser.add_option('--mac-address',
+                               help='MAC address of the system')
         self.parser.add_option('--power-type', metavar='TYPE',
                                help='Remote power control type')
         self.parser.add_option('--power-address', metavar='ADDRESS',
@@ -190,9 +196,9 @@ class System_Modify(BeakerCommand):
         if custom_policy:
             system_attr['active_access_policy'] = {'custom': True}
 
-        attrs = ['location', 'power_type', 'power_address', 'power_user',
-                 'power_password', 'power_id', 'power_quiescent_period',
-                 'release_action']
+        attrs = ['location', 'mac_address', 'power_type', 'power_address',
+                 'power_user', 'power_password', 'power_id',
+                 'power_quiescent_period', 'release_action']
         for attr in attrs:
             value = kwargs.pop(attr, None)
             if value is not None:
