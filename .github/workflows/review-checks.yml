@@ -1,15 +1,31 @@
 name: Review-checks
 
+# If a pull-request is pushed then cancel all previously running jobs related
+# to that pull-request
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 on: [pull_request]
 
 jobs:
   check-docs:
+    env:
+      # https://github.blog/changelog/2024-03-07-github-actions-all-actions-will-run-on-node20-instead-of-node16-by-default/
+      ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node16
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
     runs-on: ubuntu-latest
     container:
       image: centos:7
 
     steps:
     - uses: actions/checkout@v1
+    - name: Fixup CentOS repo files
+      run: |
+        sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo
+        sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo
+        sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo
+
     - name: Install utils
       run: |
         yum install -y git wget ca-certificates
@@ -23,7 +39,7 @@ jobs:
       run: |
         make -C documentation html SPHINXOPTS="-W"
         mv documentation/_build/html /__w
-    - uses: actions/upload-artifact@v1
+    - uses: actions/upload-artifact@v3
       with:
         name: beaker-docs
         path: /home/runner/work/html
@@ -34,6 +50,9 @@ jobs:
       MYSQL_USER: beaker
       MYSQL_PASSWORD: beaker
       MYSQL_ROOT_PASSWORD: toor
+      # https://github.blog/changelog/2024-03-07-github-actions-all-actions-will-run-on-node20-instead-of-node16-by-default/
+      ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node16
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
     strategy:
       fail-fast: false
       matrix:
@@ -51,6 +70,12 @@ jobs:
         ports:
           - 3306
     steps:
+      - name: Fixup CentOS repo files
+        run: |
+          sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo
+          sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo
+          sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo
+
       # We have to install git 2.18+ to perform checkout via git
       # This is possible only via IUS repositories
       - name: Install git to allow checkout
