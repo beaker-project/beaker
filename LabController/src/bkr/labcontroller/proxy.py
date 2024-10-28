@@ -99,7 +99,7 @@ class ProxyHelper(object):
         logger.debug("recipe_upload_file recipe_id:%s name:%s offset:%s size:%s",
                 recipe_id, name, offset, size)
         with self.log_storage.recipe(str(recipe_id), os.path.join(path, name)) as log_file:
-            log_file.update_chunk(base64.decodestring(data), int(offset or 0))
+            log_file.update_chunk(base64.b64decode(data), int(offset or 0))
         return True
 
     def task_result(self,
@@ -622,7 +622,7 @@ class Proxy(ProxyHelper):
         logger.debug("task_upload_file task_id:%s name:%s offset:%s size:%s",
                 task_id, name, offset, size)
         with self.log_storage.task(str(task_id), os.path.join(path, name)) as log_file:
-            log_file.update_chunk(base64.decodestring(data), int(offset or 0))
+            log_file.update_chunk(base64.b64decode(data), int(offset or 0))
         return True
 
     def task_start(self,
@@ -719,7 +719,7 @@ class Proxy(ProxyHelper):
         logger.debug("result_upload_file result_id:%s name:%s offset:%s size:%s",
                 result_id, name, offset, size)
         with self.log_storage.result(str(result_id), os.path.join(path, name)) as log_file:
-            log_file.update_chunk(base64.decodestring(data), int(offset or 0))
+            log_file.update_chunk(base64.b64decode(data), int(offset or 0))
         return True
 
     def push(self, fqdn, inventory):
