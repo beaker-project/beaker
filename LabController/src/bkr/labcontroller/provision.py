@@ -18,13 +18,12 @@ import subprocess
 from daemon import pidfile
 from optparse import OptionParser
 import gevent, gevent.hub, gevent.socket, gevent.event, gevent.monkey
-from bkr.labcontroller.exceptions import ShutdownException
+from bkr.labcontroller import utils
 from bkr.log import log_to_stream, log_to_syslog
 from bkr.common.helpers import SensitiveUnicode, total_seconds
 from bkr.labcontroller.config import load_conf, get_conf
 from bkr.labcontroller.proxy import ProxyHelper
 from bkr.labcontroller import netboot
-import utils
 
 import six
 from six.moves import xmlrpc_client
@@ -199,13 +198,28 @@ def find_power_script(power_type):
         return pkg_resources.resource_filename('bkr.labcontroller', resource)
     raise ValueError('Invalid power type %r' % power_type)
 
+
+def _decode(value):
+    # Decode if we are running python2 and value is unicode
+    if six.PY2 and isinstance(value, six.text_type):
+        return value.encode("utf8")
+    return value
+
+
 def build_power_env(command):
     env = dict(os.environ)
-    env['power_address'] = (command['power'].get('address') or u'').encode('utf8')
-    env['power_id'] = (command['power'].get('id') or u'').encode('utf8')
-    env['power_user'] = (command['power'].get('user') or u'').encode('utf8')
-    env['power_pass'] = (command['power'].get('passwd') or u'').encode('utf8')
-    env['power_mode'] = command['action'].encode('utf8')
+    power_mapping = {
+        "address": "power_address",
+        "id": "power_id",
+        "user": "power_user",
+        "passwd": "power_pass",
+    }
+
+    for k, v in six.iteritems(power_mapping):
+        env[v] = _decode(command["power"].get(k, ""))
+
+    env["power_mode"] = _decode(command["action"])
+
     return env
 
 def handle_clear_logs(conf, command):
