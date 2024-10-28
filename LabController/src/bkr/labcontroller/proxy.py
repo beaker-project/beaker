@@ -26,9 +26,9 @@ from werkzeug.utils import redirect
 from werkzeug.http import parse_content_range_header
 from werkzeug.wsgi import wrap_file
 from bkr.common.hub import HubProxy
+from bkr.labcontroller import utils
 from bkr.labcontroller.config import get_conf
 from bkr.labcontroller.log_storage import LogStorage
-import utils
 
 from six.moves import xmlrpc_client
 
