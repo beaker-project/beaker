@@ -34,7 +34,7 @@ class SubprocessTest(unittest.TestCase):
                 os.killpg(pgid, signal.SIGKILL)
                 sleep(0.5)
             self.fail("The process group should've already been removed")
-        except OSError, e:
+        except OSError as e:
             if e.errno != errno.ESRCH:
                 self.fail("The process group should've already been removed")
 

@@ -176,7 +176,7 @@ class CommandQueuePoller(ProxyHelper):
             logger.exception('Error processing command %s', command['id'])
             # It's not the system's fault so don't mark it as broken
             self.mark_command_failed(command['id'], unicode(e), False)
-        except Exception, e:
+        except Exception as e:
             logger.exception('Error processing command %s', command['id'])
             self.mark_command_failed(command['id'],
                     '%s: %s' % (e.__class__.__name__, e), True)
@@ -215,7 +215,7 @@ def truncate_logfile(console_log):
     logger.debug('Truncating console log %s', console_log)
     try:
         f = open(console_log, 'r+')
-    except IOError, e:
+    except IOError as e:
         if e.errno != errno.ENOENT:
             raise
     else:
@@ -326,7 +326,7 @@ def main():
     log_to_stream(sys.stderr, level=logging.WARNING)
     try:
         poller = CommandQueuePoller(conf=conf)
-    except Exception, ex:
+    except Exception as ex:
         sys.stderr.write('Error starting beaker-provision: %s\n' % ex)
         sys.exit(1)
 

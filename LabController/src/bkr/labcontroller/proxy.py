@@ -237,7 +237,7 @@ class ConsoleLogHelper(object):
                     self.logfile_name, create=(self.where == 0))
             with log_file:
                 log_file.update_chunk(block, self.where)
-        except (OSError, IOError), e:
+        except (OSError, IOError) as e:
             if e.errno == errno.ENOENT:
                 pass # someone has removed our log, discard the update
             else:
@@ -293,7 +293,7 @@ class ConsoleWatchFile(ConsoleLogHelper):
         """
         try:
             file = open(self.log, "r")
-        except (OSError, IOError), e:
+        except (OSError, IOError) as e:
             if e.errno == errno.ENOENT:
                 return False # doesn't exist
             else:
@@ -313,7 +313,7 @@ class ConsoleWatchFile(ConsoleLogHelper):
     def truncate(self):
         try:
             f = open(self.log, 'r+')
-        except IOError, e:
+        except IOError as e:
             if e.errno != errno.ENOENT:
                 raise
         else:
@@ -386,7 +386,7 @@ class InstallFailureDetector(object):
         site_dir = '/etc/beaker/install-failure-patterns'
         try:
             site_patterns = os.listdir(site_dir)
-        except OSError, e:
+        except OSError as e:
             if e.errno == errno.ENOENT:
                 site_patterns = []
             else:
@@ -401,7 +401,7 @@ class InstallFailureDetector(object):
         for p in site_patterns:
             try:
                 patterns.append(open(os.path.join(site_dir, p), 'r').read().strip())
-            except OSError, e:
+            except OSError as e:
                 if e.errno == errno.ENOENT:
                     pass # readdir race
                 else:
@@ -461,7 +461,7 @@ class LogArchiver(ProxyHelper):
                     try:
                         os.link(mysrc,mydst)
                         trlogs.append(mylog)
-                    except OSError, e:
+                    except OSError as e:
                         logger.exception('Error hard-linking %s to %s', mysrc, mydst)
                         return
                 else:
@@ -796,7 +796,7 @@ class ProxyHTTP(object):
                     self._result_types[result],
                     req.form.get('path'), req.form.get('score'),
                     req.form.get('message'))
-        except xmlrpclib.Fault, fault:
+        except xmlrpclib.Fault as fault:
             # XXX need to find a less fragile way to do this
             if 'Cannot record result for finished task' in fault.faultString:
                 return Response(status=409, response=fault.faultString,
@@ -904,7 +904,7 @@ class ProxyHTTP(object):
                     log_file.truncate(req.content_length)
                     log_file.update_chunk(req.data, 0)
         # XXX need to find a less fragile way to do this
-        except xmlrpclib.Fault, fault:
+        except xmlrpclib.Fault as fault:
             if 'Cannot register file for finished ' in fault.faultString:
                 return Response(status=409, response=fault.faultString,
                         content_type='text/plain')
@@ -918,7 +918,7 @@ class ProxyHTTP(object):
     def _get_log(self, log_file, req):
         try:
             f = log_file.open_ro()
-        except IOError, e:
+        except IOError as e:
             if e.errno == errno.ENOENT:
                 raise NotFound()
             else:
@@ -980,7 +980,7 @@ class ProxyHTTP(object):
     def list_recipe_logs(self, req, recipe_id):
         try:
             logs = self.hub.taskactions.files('R:%s' % recipe_id)
-        except xmlrpclib.Fault, fault:
+        except xmlrpclib.Fault as fault:
             # XXX need to find a less fragile way to do this
             if 'is not a valid Recipe id' in fault.faultString:
                 raise NotFound()
@@ -993,7 +993,7 @@ class ProxyHTTP(object):
     def list_task_logs(self, req, recipe_id, task_id):
         try:
             logs = self.hub.taskactions.files('T:%s' % task_id)
-        except xmlrpclib.Fault, fault:
+        except xmlrpclib.Fault as fault:
             # XXX need to find a less fragile way to do this
             if 'is not a valid RecipeTask id' in fault.faultString:
                 raise NotFound()
@@ -1006,7 +1006,7 @@ class ProxyHTTP(object):
     def list_result_logs(self, req, recipe_id, task_id, result_id):
         try:
             logs = self.hub.taskactions.files('TR:%s' % result_id)
-        except xmlrpclib.Fault, fault:
+        except xmlrpclib.Fault as fault:
             # XXX need to find a less fragile way to do this
             if 'is not a valid RecipeTaskResult id' in fault.faultString:
                 raise NotFound()
