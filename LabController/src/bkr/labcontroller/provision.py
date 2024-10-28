@@ -27,6 +27,9 @@ from bkr.labcontroller.proxy import ProxyHelper
 from bkr.labcontroller import netboot
 import utils
 
+import six
+
+
 logger = logging.getLogger(__name__)
 
 class CommandQueuePoller(ProxyHelper):
@@ -175,7 +178,7 @@ class CommandQueuePoller(ProxyHelper):
         except netboot.ImageFetchingError as e:
             logger.exception('Error processing command %s', command['id'])
             # It's not the system's fault so don't mark it as broken
-            self.mark_command_failed(command['id'], unicode(e), False)
+            self.mark_command_failed(command['id'], six.text_type(e), False)
         except Exception as e:
             logger.exception('Error processing command %s', command['id'])
             self.mark_command_failed(command['id'],
