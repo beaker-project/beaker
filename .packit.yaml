@@ -33,7 +33,10 @@ jobs:
   - job: copr_build
     trigger: pull_request
     targets:
-      - epel-7-x86_64
+      epel-7-x86_64:
+        additional_repos:
+          - https://beaker-project.org/yum/server/RedHatEnterpriseLinux7/
+          - https://vault.centos.org/centos/7/extras/x86_64/
     identifier: rhel_7
     actions:
       post-upstream-clone:
