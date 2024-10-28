@@ -16,6 +16,7 @@ import fcntl
 import errno
 import logging
 import gevent.event, gevent.socket, gevent.hub
+import six
 
 logger = logging.getLogger(__name__)
 
@@ -29,22 +30,27 @@ def _read_from_pipe(f):
     discarding = False
     while True:
         try:
+            gevent.socket.wait_read(f.fileno())
             chunk = f.read(4096)
             if not chunk:
                 break
             if not discarding:
                 chunks.append(chunk)
                 if len(chunks) >= 1000:
-                    logger.error('Too many chunks read from fd %s, '
-                            'child process is running amok?!', f.fileno())
-                    chunks.append('+++ DISCARDED')
+                    logger.error(
+                        "Too many chunks read from fd %s, "
+                        "child process is running amok?!",
+                        f.fileno(),
+                    )
+                    chunks.append(b"+++ DISCARDED")
                     discarding = True
         except IOError as e:
             if e.errno != errno.EAGAIN:
                 raise
-            sys.exc_clear()
-        gevent.socket.wait_read(f.fileno())
-    return ''.join(chunks)
+    if six.PY3:
+        # Keep data in bytes until the end to reduce memory footprint
+        return b"".join(chunks).decode("utf-8")
+    return "".join(chunks)
 
 def _timeout_kill(p, timeout):
     gevent.sleep(timeout)
