@@ -12,7 +12,6 @@ import daemon
 from daemon import pidfile
 from optparse import OptionParser
 from datetime import datetime
-from DocXMLRPCServer import XMLRPCDocGenerator
 from flask.wrappers import Request, Response
 from werkzeug.routing import Map as RoutingMap, Rule
 from werkzeug.exceptions import HTTPException, NotFound, MethodNotAllowed, \
@@ -25,6 +24,10 @@ from bkr.log import log_to_stream, log_to_syslog
 import logging
 
 from six.moves.xmlrpc_server import SimpleXMLRPCDispatcher
+try:
+    from xmlrpc.server import XMLRPCDocGenerator
+except ImportError:
+    from DocXMLRPCServer import XMLRPCDocGenerator
 
 
 logger = logging.getLogger(__name__)
