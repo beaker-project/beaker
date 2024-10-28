@@ -12,13 +12,15 @@ import tempfile
 import shutil
 from contextlib import contextmanager
 import collections
-from cStringIO import StringIO
 import urllib
 import urllib2
 from bkr.labcontroller.config import get_conf
 from bkr.common.helpers import (atomically_replaced_file, makedirs_ignore,
                                 siphon, unlink_ignore, atomic_link, atomic_symlink)
 from bkr.labcontroller.config import get_conf
+
+from six.moves import cStringIO as StringIO
+
 
 logger = logging.getLogger(__name__)
 
