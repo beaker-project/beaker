@@ -302,8 +302,8 @@ class ComposeInfoLegacy(ComposeInfoMixin, Importer):
         """
         base_path = os.path.join(self.parser.url, arch)
         try:
-            os_dir = filter(lambda x: url_exists(os.path.join(base_path, x)) \
-                            and x, self.os_dirs)[0]
+            os_dir = list(filter(lambda x: url_exists(os.path.join(base_path, x)) and x,
+                                 self.os_dirs))[0]
         except IndexError as e:
             raise BX('%s no os_dir found: %s' % (base_path, e))
         return os.path.join(arch, os_dir)
@@ -1035,15 +1035,15 @@ class TreeInfoLegacy(TreeInfoMixin, Importer):
 
     def get_kernel_path(self):
         try:
-            return filter(lambda x: url_exists(os.path.join(self.parser.url,x)) \
-                          and x, [kernel for kernel in self.kernels])[0]
+            return list(filter(lambda x: url_exists(os.path.join(self.parser.url,x)) and x,
+                               [kernel for kernel in self.kernels]))[0]
         except IndexError as e:
             raise BX('%s no kernel found: %s' % (self.parser.url, e))
 
     def get_initrd_path(self):
         try:
-            return filter(lambda x: url_exists(os.path.join(self.parser.url,x)) \
-                          and x, [initrd for initrd in self.initrds])[0]
+            return list(filter(lambda x: url_exists(os.path.join(self.parser.url,x)) and x,
+                               [initrd for initrd in self.initrds]))[0]
         except IndexError as e:
             raise BX('%s no kernel found: %s' % (self.parser.url, e))
 
