@@ -85,7 +85,7 @@ def main():
     log_to_stream(sys.stderr, level=logging.WARNING)
     try:
         logarchiver = LogArchiver(conf=conf)
-    except Exception, ex:
+    except Exception as ex:
         sys.stderr.write("Error starting beaker-transfer: %s\n" % ex)
         sys.exit(1)
 

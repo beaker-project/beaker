@@ -29,7 +29,7 @@ def url_exists(url):
         urllib2.urlopen(url)
     except urllib2.URLError:
         return False
-    except IOError, e:
+    except IOError as e:
         # errno 21 is you tried to retrieve a directory.  Thats ok. We just
         # want to ensure the path is valid so far.
         if e.errno == 21:
@@ -156,7 +156,7 @@ class Parser(object):
             f.close()
         except urllib2.URLError:
             return False
-        except ConfigParser.MissingSectionHeaderError, e:
+        except ConfigParser.MissingSectionHeaderError as e:
             raise BX('%s/%s is not parsable: %s' % (self.url,
                                                       self.infofile,
                                                       e))
@@ -174,7 +174,7 @@ class Parser(object):
         if self.parser:
             try:
                 default = self.parser.get(section, key)
-            except (ConfigParser.NoSectionError, ConfigParser.NoOptionError), e:
+            except (ConfigParser.NoSectionError, ConfigParser.NoOptionError) as e:
                 if default is None:
                     raise
         return default
@@ -304,7 +304,7 @@ class ComposeInfoLegacy(ComposeInfoMixin, Importer):
         try:
             os_dir = filter(lambda x: url_exists(os.path.join(base_path, x)) \
                             and x, self.os_dirs)[0]
-        except IndexError, e:
+        except IndexError as e:
             raise BX('%s no os_dir found: %s' % (base_path, e))
         return os.path.join(arch, os_dir)
 
@@ -330,7 +330,7 @@ class ComposeInfoLegacy(ComposeInfoMixin, Importer):
                 build = Build(full_os_dir)
                 build.process(urls_arch, options)
                 self.distro_trees.append(build.tree)
-            except BX, err:
+            except BX as err:
                 if not options.ignore_missing:
                     exit_status = 1
                     logging.warn(err)
@@ -767,7 +767,7 @@ sources = Workstation/source/SRPMS
                     build.process(urls_variant_arch, options, repos=repos,
                             tags=tags, isos_path=isos_path)
                     self.distro_trees.append(build.tree)
-                except BX, err:
+                except BX as err:
                     if not options.ignore_missing:
                         exit_status = 1
                         logging.warn(err)
@@ -800,7 +800,7 @@ class TreeInfoMixin(object):
         try:
             os_dir = filter(lambda x: url_exists(x) \
                             and x, [self.parser.url])[0]
-        except IndexError, e:
+        except IndexError as e:
             raise BX('%s no os_dir found: %s' % (self.parser.url, e))
         return os_dir
 
@@ -924,7 +924,7 @@ class TreeInfoMixin(object):
         if nfs_url:
             try:
                 nfs_isos_url = self._installable_isos_url(nfs_url, isos_path)
-            except IncompleteTree, e:
+            except IncompleteTree as e:
                 logging.warn(str(e))
             else:
                 if nfs_isos_url:
@@ -937,7 +937,7 @@ class TreeInfoMixin(object):
         try:
             self.add_to_beaker()
             logging.info('%s %s %s added to beaker.' % (self.tree['name'], self.tree['variant'], self.tree['arch']))
-        except (xmlrpclib.Fault, socket.error), e:
+        except (xmlrpclib.Fault, socket.error) as e:
             raise BX('failed to add %s %s %s to beaker: %s' % (self.tree['name'], self.tree['variant'], self.tree['arch'], e))
 
     def extend_tree(self):
@@ -1038,14 +1038,14 @@ class TreeInfoLegacy(TreeInfoMixin, Importer):
         try:
             return filter(lambda x: url_exists(os.path.join(self.parser.url,x)) \
                           and x, [kernel for kernel in self.kernels])[0]
-        except IndexError, e:
+        except IndexError as e:
             raise BX('%s no kernel found: %s' % (self.parser.url, e))
 
     def get_initrd_path(self):
         try:
             return filter(lambda x: url_exists(os.path.join(self.parser.url,x)) \
                           and x, [initrd for initrd in self.initrds])[0]
-        except IndexError, e:
+        except IndexError as e:
             raise BX('%s no kernel found: %s' % (self.parser.url, e))
 
     def find_repos(self, *args, **kw):
@@ -1508,7 +1508,7 @@ repository = LoadBalancer
                               path=repopath,
                              )
                         )
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError), e:
+        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError) as e:
             logging.debug('.treeinfo has no repository for variant %s, %s' % (self.parser.url,e))
         try:
             addons = self.parser.get('variant-%s' % self.tree['variant'],
@@ -1523,7 +1523,7 @@ repository = LoadBalancer
                                       path=repopath,
                                      )
                                 )
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError), e:
+        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError) as e:
             logging.debug('.treeinfo has no addon repos for %s, %s' % (self.parser.url,e))
         return repos
 
@@ -1606,7 +1606,7 @@ class TreeInfoRhel7(TreeInfoMixin, Importer):
                                 type='addon',
                                 path=repopath,)
                                 )
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError), e:
+        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError) as e:
                 logging.debug('no addon repos for %s, %s' % (self.parser.url, e))
         return repos
 
@@ -1708,7 +1708,7 @@ kernel = images/pxeboot/vmlinuz
                                       path=repopath,
                                      )
                                 )
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError), e:
+        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError) as e:
             logging.debug('no addon repos for %s, %s' % (self.parser.url,e))
         return repos
 
@@ -1939,7 +1939,7 @@ class NakedTree(Importer):
         try:
             self.add_to_beaker()
             logging.info('%s added to beaker.' % self.tree['name'])
-        except (xmlrpclib.Fault, socket.error), e:
+        except (xmlrpclib.Fault, socket.error) as e:
             raise BX('failed to add %s to beaker: %s' % (self.tree['name'],e))
 
     def add_to_beaker(self):
@@ -2102,10 +2102,10 @@ def main():
         try:
             build.check_input(opts)
             exit_status.append(build.process(urls, opts))
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError), e:
+        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError) as e:
             logging.critical(str(e))
             sys.exit(3)
-    except (xmlrpclib.Fault,BX), err:
+    except (xmlrpclib.Fault,BX) as err:
         logging.critical(err)
         sys.exit(127)
     if opts.run_jobs:

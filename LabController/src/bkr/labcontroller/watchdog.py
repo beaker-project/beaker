@@ -203,7 +203,7 @@ def main():
     log_to_stream(sys.stderr, level=logging.WARNING)
     try:
         watchdog = Watchdog(conf=conf)
-    except Exception, ex:
+    except Exception as ex:
         sys.stderr.write("Error starting beaker-watchdog: %s\n" % ex)
         sys.exit(1)
 
