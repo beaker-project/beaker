@@ -12,6 +12,9 @@ import tempfile
 import shutil
 from contextlib import contextmanager
 import collections
+
+import six
+
 from bkr.labcontroller.config import get_conf
 from bkr.common.helpers import (atomically_replaced_file, makedirs_ignore,
                                 siphon, unlink_ignore, atomic_link, atomic_symlink)
@@ -43,8 +46,9 @@ def copy_ignore(path, source_file):
     Creates and populates a file by copying from a source file object.
     The destination file will remain untouched if it already exists.
     """
+    mode = "x" if six.PY3 else "wx"
     try:
-        f = open(path, 'wx') # not sure this is portable to Python 3!
+        f = open(path, mode)
     except IOError as e:
         if e.errno == errno.EEXIST:
             return
