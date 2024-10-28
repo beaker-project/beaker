@@ -103,12 +103,12 @@ class CommandQueuePoller(ProxyHelper):
             # This command has to wait for any other existing commands against the
             # same system, to prevent collisions
             predecessors = [self.greenlets[c['id']]
-                    for c in self.commands.itervalues()
+                    for c in six.itervalues(self.commands)
                     if c['fqdn'] == command['fqdn']]
             if 'power' in command and command['power'].get('address'):
                 # Also wait for other commands running against the same power address
                 predecessors.extend(self.greenlets[c['id']]
-                        for c in self.commands.itervalues()
+                        for c in six.itervalues(self.commands)
                         if 'power' in c and c['power'].get('address')
                             == command['power']['address'])
             self.spawn_handler(command, predecessors)
@@ -163,9 +163,9 @@ class CommandQueuePoller(ProxyHelper):
             elif command['action'] == u'reboot':
                 # For backwards compatibility only. The server now splits 
                 # reboots into 'off' followed by 'on'.
-                handle_power(self.conf, dict(command.items() + [('action', u'off')]))
+                handle_power(self.conf, dict(list(command.items()) + [('action', u'off')]))
                 time.sleep(5)
-                handle_power(self.conf, dict(command.items() + [('action', u'on')]))
+                handle_power(self.conf, dict(list(command.items()) + [('action', u'on')]))
             elif command['action'] == u'clear_logs':
                 handle_clear_logs(self.conf, command)
             elif command['action'] == u'configure_netboot':
