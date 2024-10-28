@@ -15,7 +15,6 @@ import daemon
 import datetime
 import pkg_resources
 import subprocess
-import xmlrpclib
 from daemon import pidfile
 from optparse import OptionParser
 import gevent, gevent.hub, gevent.socket, gevent.event, gevent.monkey
@@ -28,6 +27,7 @@ from bkr.labcontroller import netboot
 import utils
 
 import six
+from six.moves import xmlrpc_client
 
 
 logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ class CommandQueuePoller(ProxyHelper):
     def get_queued_commands(self):
         try:
             commands = self.hub.labcontrollers.get_queued_command_details()
-        except xmlrpclib.Fault as fault:
+        except xmlrpc_client.Fault as fault:
             if 'Anonymous access denied' in fault.faultString:
                 logger.debug('Session expired, re-authenticating')
                 self.hub._login()
@@ -61,7 +61,7 @@ class CommandQueuePoller(ProxyHelper):
     def get_running_command_ids(self):
         try:
             ids = self.hub.labcontrollers.get_running_command_ids()
-        except xmlrpclib.Fault as fault:
+        except xmlrpc_client.Fault as fault:
             if 'Anonymous access denied' in fault.faultString:
                 logger.debug('Session expired, re-authenticating')
                 self.hub._login()

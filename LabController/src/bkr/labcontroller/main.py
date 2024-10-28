@@ -12,7 +12,6 @@ import daemon
 from daemon import pidfile
 from optparse import OptionParser
 from datetime import datetime
-from SimpleXMLRPCServer import SimpleXMLRPCDispatcher
 from DocXMLRPCServer import XMLRPCDocGenerator
 from flask.wrappers import Request, Response
 from werkzeug.routing import Map as RoutingMap, Rule
@@ -24,6 +23,10 @@ from bkr.labcontroller.proxy import Proxy, ProxyHTTP
 from bkr.labcontroller.config import get_conf, load_conf
 from bkr.log import log_to_stream, log_to_syslog
 import logging
+
+from six.moves.xmlrpc_server import SimpleXMLRPCDispatcher
+
+
 logger = logging.getLogger(__name__)
 
 class XMLRPCDispatcher(SimpleXMLRPCDispatcher, XMLRPCDocGenerator):

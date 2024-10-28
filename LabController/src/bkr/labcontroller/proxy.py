@@ -15,7 +15,6 @@ import re
 import json
 import shutil
 import tempfile
-import xmlrpclib
 import subprocess
 import pkg_resources
 import shlex
@@ -30,6 +29,10 @@ from bkr.common.hub import HubProxy
 from bkr.labcontroller.config import get_conf
 from bkr.labcontroller.log_storage import LogStorage
 import utils
+
+from six.moves import xmlrpc_client
+
+
 try:
     #pylint: disable=E0611
     from subprocess import check_output
@@ -429,7 +432,7 @@ class LogArchiver(ProxyHelper):
         logger.debug('Polling for recipes to be transferred')
         try:
             recipe_ids = self.hub.recipes.by_log_server(server)
-        except xmlrpclib.Fault as fault:
+        except xmlrpc_client.Fault as fault:
             if 'Anonymous access denied' in fault.faultString:
                 logger.debug('Session expired, re-authenticating')
                 self.hub._login()
@@ -796,7 +799,7 @@ class ProxyHTTP(object):
                     self._result_types[result],
                     req.form.get('path'), req.form.get('score'),
                     req.form.get('message'))
-        except xmlrpclib.Fault as fault:
+        except xmlrpc_client.Fault as fault:
             # XXX need to find a less fragile way to do this
             if 'Cannot record result for finished task' in fault.faultString:
                 return Response(status=409, response=fault.faultString,
@@ -836,7 +839,7 @@ class ProxyHTTP(object):
                 self.hub.recipes.tasks.stop(task_id, 'stop')
             elif status == 'aborted':
                 self.hub.recipes.tasks.stop(task_id, 'abort', message)
-        except xmlrpclib.Fault as fault:
+        except xmlrpc_client.Fault as fault:
             # XXX This has to be completely replaced with JSON response in next major release
             # We don't want to blindly return 500 because of opposite side
             # will try to retry request - which is almost in all situation wrong
@@ -904,7 +907,7 @@ class ProxyHTTP(object):
                     log_file.truncate(req.content_length)
                     log_file.update_chunk(req.data, 0)
         # XXX need to find a less fragile way to do this
-        except xmlrpclib.Fault as fault:
+        except xmlrpc_client.Fault as fault:
             if 'Cannot register file for finished ' in fault.faultString:
                 return Response(status=409, response=fault.faultString,
                         content_type='text/plain')
@@ -980,7 +983,7 @@ class ProxyHTTP(object):
     def list_recipe_logs(self, req, recipe_id):
         try:
             logs = self.hub.taskactions.files('R:%s' % recipe_id)
-        except xmlrpclib.Fault as fault:
+        except xmlrpc_client.Fault as fault:
             # XXX need to find a less fragile way to do this
             if 'is not a valid Recipe id' in fault.faultString:
                 raise NotFound()
@@ -993,7 +996,7 @@ class ProxyHTTP(object):
     def list_task_logs(self, req, recipe_id, task_id):
         try:
             logs = self.hub.taskactions.files('T:%s' % task_id)
-        except xmlrpclib.Fault as fault:
+        except xmlrpc_client.Fault as fault:
             # XXX need to find a less fragile way to do this
             if 'is not a valid RecipeTask id' in fault.faultString:
                 raise NotFound()
@@ -1006,7 +1009,7 @@ class ProxyHTTP(object):
     def list_result_logs(self, req, recipe_id, task_id, result_id):
         try:
             logs = self.hub.taskactions.files('TR:%s' % result_id)
-        except xmlrpclib.Fault as fault:
+        except xmlrpc_client.Fault as fault:
             # XXX need to find a less fragile way to do this
             if 'is not a valid RecipeTaskResult id' in fault.faultString:
                 raise NotFound()
