@@ -16,7 +16,7 @@ from flask.wrappers import Request, Response
 from werkzeug.routing import Map as RoutingMap, Rule
 from werkzeug.exceptions import HTTPException, NotFound, MethodNotAllowed, \
 BadRequest, RequestEntityTooLarge
-import gevent, gevent.pool, gevent.wsgi, gevent.event, gevent.monkey
+import gevent, gevent.pool, gevent.pywsgi, gevent.event, gevent.monkey
 from bkr.common.helpers import RepeatTimer
 from bkr.labcontroller.proxy import Proxy, ProxyHTTP
 from bkr.labcontroller.config import get_conf, load_conf
@@ -162,7 +162,7 @@ class WSGIApplication(object):
             return e
 
 # Temporary hack to disable keepalive in gevent.wsgi.WSGIServer. This should be easier.
-class WSGIHandler(gevent.wsgi.WSGIHandler):
+class WSGIHandler(gevent.pywsgi.WSGIHandler):
     def read_request(self, raw_requestline):
         result = super(WSGIHandler, self).read_request(raw_requestline)
         self.close_connection = True
@@ -198,7 +198,7 @@ def main_loop(proxy=None, conf=None):
     login.daemon = True
     login.start()
 
-    server = gevent.wsgi.WSGIServer(('::', 8000),
+    server = gevent.pywsgi.WSGIServer(('::', 8000),
             log_failed_requests(WSGIApplication(proxy)),
             handler_class=WSGIHandler, spawn=gevent.pool.Pool())
     server.stop_timeout = None
