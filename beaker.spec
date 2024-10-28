@@ -229,10 +229,12 @@ BuildRequires:     pkgconfig(systemd)
 BuildRequires:     python3-gevent
 BuildRequires:     python3-lxml
 BuildRequires:     python3-werkzeug
+BuildRequires:     python3-daemon
 %else
 # python2-gevent112 is a special build created for labcontroller. It includes backports to ensure compatibility with py2.7.9 SSL backport.
 BuildRequires:     python2-gevent112
 BuildRequires:     python-lxml
+BuildRequires:     python-daemon
 %endif
 
 # Syslinux is only available on x86_64. This package is used to provide pxelinux.0, which is then copied to the TFTP directory.
