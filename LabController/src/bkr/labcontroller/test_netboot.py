@@ -143,15 +143,15 @@ class ImagesBaseTestCase(NetBootTestCase):
         # make some dummy images
         self.kernel = tempfile.NamedTemporaryFile(prefix='test_netboot', suffix='kernel')
         for _ in range(4 * 1024):
-            self.kernel.write(chr(random.randrange(0, 256)) * 1024)
+            self.kernel.write(bytes(str(chr(random.randrange(0, 128))).encode()) * 1024)
         self.kernel.flush()
         self.initrd = tempfile.NamedTemporaryFile(prefix='test_netboot', suffix='initrd')
         for _ in range(8 * 1024):
-            self.initrd.write(chr(random.randrange(0, 256)) * 1024)
+            self.initrd.write(bytes(str(chr(random.randrange(0, 128))).encode()) * 1024)
         self.initrd.flush()
         self.image = tempfile.NamedTemporaryFile(prefix='test_netboot', suffix='image')
         for _ in range(4 * 1024):
-            self.image.write(chr(random.randrange(0, 256)) * 1024)
+            self.image.write(bytes(str(chr(random.randrange(0, 128))).encode()) * 1024)
         self.image.flush()
 
 

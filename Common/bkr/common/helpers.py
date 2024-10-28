@@ -245,6 +245,10 @@ def siphon(src, dest):
         chunk = src.read(4096)
         if not chunk:
             break
+
+        if six.PY3 and isinstance(chunk, bytes):
+            chunk = chunk.decode('utf-8')
+
         dest.write(chunk)
 
 
