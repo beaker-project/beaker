@@ -5,16 +5,16 @@
 # (at your option) any later version.
 
 import sys, os
-import xmlrpclib
-import urllib2
-import urlparse
+
+from six.moves import urllib
+from six.moves import xmlrpc_client
 
 
 def check_http(url):
     try:
-        urllib2.urlopen(url, timeout=120)
+        urllib.request.urlopen(url, timeout=120)
         return True
-    except urllib2.HTTPError as e:
+    except urllib.error.HTTPError as e:
         if e.code in (404, 410):
             return False
         else:
@@ -23,9 +23,9 @@ def check_http(url):
 
 def check_ftp(url):
     try:
-        urllib2.urlopen(url, timeout=120)
+        urllib.request.urlopen(url, timeout=120)
         return True
-    except urllib2.URLError as e:
+    except urllib.error.URLError as e:
         if '550' in e.reason:
             return False
         else:
@@ -41,7 +41,7 @@ def check_nfs(tree):
     Make sure the tree is accessible, check that the server is up first.
     """
 
-    _, nfs_server, nfs_path, _, _, _ = urlparse.urlparse(tree)
+    _, nfs_server, nfs_path, _, _, _ = urllib.parse.urlparse(tree)
     # Beaker uses a non-standard syntax for NFS URLs, inherited from Cobbler:
     # nfs://server:/path
     # so we need to strip a trailing colon from the hostname portion.
@@ -64,7 +64,7 @@ def check_url(url):
     Returns True if the given URL exists.
     """
 
-    scheme = urlparse.urlparse(url).scheme
+    scheme = urllib.parse.urlparse(url).scheme
     if scheme == 'nfs' or scheme.startswith('nfs+'):
         return check_nfs(url)
     elif scheme == 'http' or scheme == 'https':
@@ -79,7 +79,7 @@ def check_all_trees(ignore_errors=False,
                     dry_run=False,
                     lab_controller='http://localhost:8000',
                     remove_all=False):
-    proxy = xmlrpclib.ServerProxy(lab_controller, allow_none=True)
+    proxy = xmlrpc_client.ServerProxy(lab_controller, allow_none=True)
     rdistro_trees = []
     distro_trees = proxy.get_distro_trees()
     if not remove_all:
@@ -93,7 +93,7 @@ def check_all_trees(ignore_errors=False,
                         print('{0} is missing [Distro Tree ID {1}]'.format(
                             url,
                             distro_tree['distro_tree_id']))
-                except (urllib2.URLError, urllib2.HTTPError, NFSServerInaccessible) as e:
+                except (urllib.error.URLError, urllib.error.HTTPError, NFSServerInaccessible) as e:
                     if ignore_errors:
                         # suppress exception, assume the tree still exists
                         accessible = True
