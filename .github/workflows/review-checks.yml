@@ -1,4 +1,4 @@
-name: Review-checks
+name: Validation
 
 # If a pull-request is pushed then cancel all previously running jobs related
 # to that pull-request
@@ -6,10 +6,14 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
-on: [pull_request]
+on:
+  push:
+    branches:
+      - python-3
+  pull_request:
 
 jobs:
-  check-docs:
+  validate-docs:
     env:
       # https://github.blog/changelog/2024-03-07-github-actions-all-actions-will-run-on-node20-instead-of-node16-by-default/
       ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node16
