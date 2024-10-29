@@ -8,13 +8,13 @@ import logging
 import os
 import shutil
 import signal
-from socket import gethostname
-from urlparse import urlparse, urlunparse
 from bkr.labcontroller.config import load_conf, get_conf
 from turbogears.database import session
 from bkr.server.model import LabController, Watchdog, Recipe, RecipeSet, \
         System, SystemStatus
 from bkr.inttest import data_setup, Process, DatabaseTestCase
+
+
 log = logging.getLogger(__name__)
 
 # XXX this should be inside setup_package, but lots of code in
