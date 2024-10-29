@@ -9,13 +9,15 @@ import logging
 import pkg_resources
 from turbogears.database import session
 from unittest import SkipTest, TestCase
-from xmlrpclib import _Method
 from bkr.server.model import PowerType, CommandStatus, System, User, SystemStatus
 from bkr.labcontroller.config import get_conf
 from bkr.labcontroller.provision import CommandQueuePoller
 from bkr.inttest import data_setup, Process
 from bkr.inttest.assertions import wait_for_condition
 from bkr.inttest.labcontroller import LabControllerTestCase, processes, daemons_running_externally
+
+from six.moves.xmlrpc_client import _Method
+
 
 log = logging.getLogger(__name__)
 

@@ -9,12 +9,14 @@ import os
 import subprocess
 import json
 import pkg_resources
-import urlparse
-from copy import copy, deepcopy
+from copy import deepcopy
 from bkr.inttest import Process
 from bkr.inttest.labcontroller import LabControllerTestCase
 from bkr.server.model import OSMajor
 from turbogears.database import session
+
+from six.moves import urllib
+
 
 _current_dir = os.path.dirname(__file__)
 _compose_test_dir = pkg_resources.resource_filename('bkr.inttest.labcontroller', 'compose_layout')
@@ -1175,7 +1177,7 @@ class DistroImportTest(LabControllerTestCase):
                     u"type": u"initrd"
                 }
             ],
-            u"kernel_options": u" inst.stage2={}".format(urlparse.urljoin(
+            u"kernel_options": u" inst.stage2={}".format(urllib.parse.urljoin(
                 self.distro_url, u'RHVH4/RHVH-4.3-20200323.0/compose/RHVH/x86_64/os')),
             u"kernel_options_post": None,
             u"ks_meta": u" autopart_type=thinp liveimg=Packages/redhat-virtualization-host-image-update-1.0.0-1.noarch.rpm ks_keyword=inst.ks",
@@ -1199,7 +1201,7 @@ class DistroImportTest(LabControllerTestCase):
             ],
             u"tree_build_time": u"1584961599",
             u"urls": [
-                u"{}".format(urlparse.urljoin(self.distro_url, u'RHVH4/RHVH-4.3-20200323.0/compose/RHVH/x86_64/os/'))
+                u"{}".format(urllib.parse.urljoin(self.distro_url, u'RHVH4/RHVH-4.3-20200323.0/compose/RHVH/x86_64/os/'))
             ],
             u"variant": u"RHVH"
         }
@@ -1208,7 +1210,7 @@ class DistroImportTest(LabControllerTestCase):
         p = subprocess.Popen(import_args,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE,
-                             env=dict(os.environ.items() + [('PYTHONUNBUFFERED', '1')]))
+                             env=dict(list(os.environ.items()) + [('PYTHONUNBUFFERED', '1')]))
         stdout, stderr = p.communicate()
         if p.returncode:
             raise TreeImportError(import_args, p.returncode, stderr)
@@ -1220,7 +1222,7 @@ class DistroImportTest(LabControllerTestCase):
         trees, stderr = self._run_import(
                 ['python', _command, '--debug', '--json', '--dry-run']
                 + additional_import_args)
-        print stderr
+        print(stderr)
         # check logging is working correctly
         self.assertIn('Dry Run only', stderr)
         self.assertIn('Attempting to import: ', stderr)
@@ -1559,6 +1561,6 @@ class DistroImportTest(LabControllerTestCase):
         self.assertItemsEqual(trees, [self.x86_64_rhel8_partner])
 
     def test_rhvh43_import(self):
-        trees = self.dry_run_import_trees(['{}'.format(urlparse.urljoin(self.distro_url,
+        trees = self.dry_run_import_trees(['{}'.format(urllib.parse.urljoin(self.distro_url,
                                                                         'RHVH4/RHVH-4.3-20200323.0/compose'))])
         self.assertItemsEqual(trees, [self.x86_64_rhvh43])

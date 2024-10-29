@@ -11,13 +11,10 @@ import datetime
 import tempfile
 import copy
 from base64 import b64encode
-import xmlrpclib
 import lxml.etree, lxml.html
-from urlparse import urljoin
 import requests
 import time
 from nose.plugins.skip import SkipTest
-from bkr.common.helpers import total_seconds
 from bkr.server.model import session, TaskResult, TaskStatus, LogRecipe, \
         LogRecipeTask, LogRecipeTaskResult, RecipeTask, RecipeTaskResult
 from bkr.labcontroller.proxy import ProxyHelper
@@ -26,6 +23,12 @@ from bkr.inttest import data_setup
 from bkr.inttest.assertions import assert_datetime_within
 from bkr.inttest.labcontroller import LabControllerTestCase, processes, \
     config_file, daemons_running_externally
+
+from six.moves import reduce
+from six.moves import xmlrpc_client
+from six.moves.urllib.parse import urljoin
+
+
 
 class GetRecipeGuestXML(LabControllerTestCase):
 
@@ -70,7 +73,7 @@ class GetRecipeTest(LabControllerTestCase):
         # add more assertions here...
 
     def test_xmlrpc_get_my_recipe(self):
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
         recipe_xml = s.get_my_recipe({'recipe_id': self.recipe.id})
         self.check_recipe_xml(recipe_xml)
 
@@ -82,7 +85,7 @@ class GetRecipeTest(LabControllerTestCase):
             # These are optional attributes
             self.recipe.installation.distro_name = None
             self.recipe.installation.variant = None
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
         recipe_xml = s.get_my_recipe({'recipe_id': self.recipe.id})
         self.check_recipe_xml(recipe_xml)
 
@@ -142,28 +145,28 @@ class TaskResultTest(LabControllerTestCase):
             self.assertEquals(result.log, log)
 
     def test_xmlrpc_pass(self):
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
         result_id = s.task_result(self.recipe.tasks[0].id, u'pass_',
                 u'/random/junk', 123, u'The thing worked')
         self.check_result(result_id, TaskResult.pass_, u'/random/junk', 123,
                 u'The thing worked')
 
     def test_xmlrpc_fail(self):
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
         result_id = s.task_result(self.recipe.tasks[0].id, u'fail',
                 u'/random/junk', 456, u'The thing failed')
         self.check_result(result_id, TaskResult.fail, u'/random/junk', 456,
                 u'The thing failed')
 
     def test_xmlrpc_warn(self):
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
         result_id = s.task_result(self.recipe.tasks[0].id, u'warn',
                 u'/random/junk', -1, u'The thing broke')
         self.check_result(result_id, TaskResult.warn, u'/random/junk', -1,
                 u'The thing broke')
 
     def test_xmlrpc_panic(self):
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
         result_id = s.task_result(self.recipe.tasks[0].id, u'panic',
                 u'/random/junk', 0, u'The thing really broke')
         self.check_result(result_id, TaskResult.panic, u'/random/junk', 0,
@@ -264,8 +267,8 @@ class TaskResultTest(LabControllerTestCase):
             session.expire(self.recipe.tasks[0])
             self.assertEqual(len(self.recipe.tasks[0].results), 7500)
         # Test XMLRPC endpoint
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
-        with self.assertRaisesRegexp(xmlrpclib.Fault, 'Too many results'):
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
+        with self.assertRaisesRegexp(xmlrpc_client.Fault, 'Too many results'):
             s.task_result(self.recipe.tasks[0].id, 'pass_', '/', 0, 'Should fail')
         # Test POST endpoint
         results_url = '%srecipes/%s/tasks/%s/results/' % (self.get_proxy_url(),
@@ -291,7 +294,7 @@ class TaskStatusTest(LabControllerTestCase):
             data_setup.mark_recipe_running(self.recipe)
 
     def test_xmlrpc_task_start(self):
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
         s.task_start(self.recipe.tasks[0].id)
         with session.begin():
             session.expire_all()
@@ -299,7 +302,7 @@ class TaskStatusTest(LabControllerTestCase):
             self.assertEquals(task.status, TaskStatus.running)
 
     def test_xmlrpc_task_stop(self):
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
         s.task_stop(self.recipe.tasks[0].id, 'stop')
         with session.begin():
             session.expire_all()
@@ -314,11 +317,11 @@ class TaskStatusTest(LabControllerTestCase):
         # request should fail.
         with session.begin():
             self.recipe.abort(u'someone ran rhts-abort -t recipe')
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
         try:
             s.task_stop(self.recipe.tasks[0].id, 'stop')
             self.fail('should raise')
-        except xmlrpclib.Fault as fault:
+        except xmlrpc_client.Fault as fault:
             self.assertIn('Cannot change status for finished task',
                     fault.faultString)
         with session.begin():
@@ -327,7 +330,7 @@ class TaskStatusTest(LabControllerTestCase):
             self.assertEquals(task.status, TaskStatus.aborted)
 
     def test_xmlrpc_task_abort(self):
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
         s.task_stop(self.recipe.tasks[0].id, 'abort', 'fooed the bar up')
         with session.begin():
             session.expire_all()
@@ -505,7 +508,7 @@ class RecipeStatusTest(LabControllerTestCase):
             data_setup.mark_recipe_running(self.recipe)
 
     def test_xmlrpc_recipe_abort(self):
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
         s.recipe_stop(self.recipe.id, 'abort', 'fooed the bar up')
         with session.begin():
             session.expire_all()
@@ -541,7 +544,7 @@ class WatchdogTest(LabControllerTestCase):
             data_setup.mark_recipe_running(self.recipe)
 
     def test_xmlrpc_extend_watchdog(self):
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
         result_id = s.extend_watchdog(self.recipe.tasks[0].id, 600)
         with session.begin():
             session.expire_all()
@@ -579,7 +582,7 @@ class ClearNetbootTest(LabControllerTestCase):
     def test_clear_netboot(self):
         with session.begin():
             system = data_setup.create_system()
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
         s.clear_netboot(system.fqdn)
         with session.begin():
             self.assertEqual(system.command_queue[0].action, 'clear_netboot')
@@ -601,7 +604,7 @@ class InstallStartTest(LabControllerTestCase):
             data_setup.mark_recipe_waiting(self.recipe)
 
     def test_install_start(self):
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
         s.install_start(self.recipe.id)
         with session.begin():
             session.expire_all()
@@ -627,7 +630,7 @@ class InstallStartTest(LabControllerTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=954219
     def test_install_start_faulty(self):
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
 
         with session.begin():
             recipe = data_setup.create_recipe()
@@ -663,7 +666,7 @@ class InstallDoneTest(LabControllerTestCase):
             self.assertIsNone(self.recipe.resource.fqdn)
 
     def test_install_done(self):
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
         s.install_done(self.recipe.id, 'somefqdn')
         with session.begin():
             session.expire_all()
@@ -698,7 +701,7 @@ class InstallFailTest(LabControllerTestCase):
             data_setup.mark_recipe_installing(self.recipe)
 
     def test_install_fail(self):
-        s = xmlrpclib.Server(self.get_proxy_url())
+        s = xmlrpc_client.Server(self.get_proxy_url())
         s.install_fail(self.recipe.id)
         with session.begin():
             session.expire_all()
@@ -732,7 +735,7 @@ class PostrebootTest(LabControllerTestCase):
             data_setup.mark_recipe_running(self.recipe, system=self.system)
 
     def test_postreboot(self):
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
         s.postreboot(self.recipe.id)
         with session.begin():
             session.expire_all()
@@ -763,7 +766,7 @@ class PowerTest(LabControllerTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1501671
     def test_power(self):
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
         s.power(self.target_system.fqdn, 'off')
         with session.begin():
             session.expire_all()
@@ -866,7 +869,7 @@ class LogUploadTestRestartProxy(LabControllerTestCase):
                 new_args.append(tmp_config.name)
         beaker_proxy_process.args = new_args
         beaker_proxy_process.start()
-        s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
         s.recipe_upload_file(self.recipe.id, '/', 'recipe-log', 10, None, 0,
                 b64encode('a' * 10))
 
@@ -892,7 +895,7 @@ class LogUploadTest(LabControllerTestCase):
         self.assertEquals(proxy.log_storage.base_url, 'https://testingme.com/beaker/logs/')
 
     def test_xmlrpc_recipe_log(self):
-        s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
         s.recipe_upload_file(self.recipe.id, '/', 'recipe-log', 10, None, 0,
                 b64encode('a' * 10))
         local_log_dir = '%s/recipes/%s+/%s/' % (get_conf().get('CACHEPATH'),
@@ -919,12 +922,12 @@ class LogUploadTest(LabControllerTestCase):
         with session.begin():
             data_setup.mark_recipe_complete(self.recipe, only=True)
             assert self.recipe.is_finished()
-        s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
         try:
             s.recipe_upload_file(self.recipe.id, '/', 'recipe-log', 10, None, 0,
                     b64encode('a' * 10))
             self.fail('should raise')
-        except xmlrpclib.Fault, fault:
+        except xmlrpc_client.Fault as fault:
             self.assert_('Cannot register file for finished recipe'
                     in fault.faultString)
 
@@ -969,7 +972,7 @@ class LogUploadTest(LabControllerTestCase):
     def test_xmlrpc_task_log(self):
         with session.begin():
             task = self.recipe.tasks[0]
-        s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
         s.task_upload_file(task.id, '/', 'task-log', 10, None, 0,
                 b64encode('a' * 10))
         local_log_dir = '%s/tasks/%s+/%s/' % (get_conf().get('CACHEPATH'),
@@ -997,12 +1000,12 @@ class LogUploadTest(LabControllerTestCase):
             task = self.recipe.tasks[0]
             task.stop()
             assert task.is_finished()
-        s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
         try:
             s.task_upload_file(task.id, '/', 'task-log', 10, None, 0,
                     b64encode('a' * 10))
             self.fail('should raise')
-        except xmlrpclib.Fault, fault:
+        except xmlrpc_client.Fault as fault:
             self.assert_('Cannot register file for finished task'
                     in fault.faultString)
 
@@ -1051,7 +1054,7 @@ class LogUploadTest(LabControllerTestCase):
         with session.begin():
             self.recipe.tasks[0].pass_(u'', 0, u'Pass')
             result = self.recipe.tasks[0].results[0]
-        s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
         s.result_upload_file(result.id, '/', 'result-log', 10, None, 0,
                 b64encode('a' * 10))
         local_log_dir = '%s/results/%s+/%s/' % (get_conf().get('CACHEPATH'),
@@ -1080,12 +1083,12 @@ class LogUploadTest(LabControllerTestCase):
             result = self.recipe.tasks[0].results[0]
             self.recipe.tasks[0].stop()
             assert self.recipe.tasks[0].is_finished()
-        s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
         try:
             s.result_upload_file(result.id, '/', 'result-log-after-finished',
                     10, None, 0, b64encode('a' * 10))
             self.fail('should raise')
-        except xmlrpclib.Fault, fault:
+        except xmlrpc_client.Fault as fault:
             self.assert_('Cannot register file for finished task'
                     in fault.faultString)
 
@@ -1154,12 +1157,12 @@ class LogUploadTest(LabControllerTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1003454
     def test_large_xmlrpc_request_is_rejected(self):
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
         try:
             s.task_upload_file(123, 'debug', '.task_beah_raw', 4096, '', 1024,
                     'a' * (1024 * 1024 * 10 + 1))
             self.fail('should raise')
-        except xmlrpclib.ProtocolError as e:
+        except xmlrpc_client.ProtocolError as e:
             self.assertEquals(e.errcode, 413)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1003454
@@ -1198,8 +1201,8 @@ class LogUploadTest(LabControllerTestCase):
             session.expire(result)
             self.assertEqual(len(result.logs), 3500)
         # Test XMLRPC endpoint for result logs
-        s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
-        with self.assertRaisesRegexp(xmlrpclib.Fault, 'Too many logs'):
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
+        with self.assertRaisesRegexp(xmlrpc_client.Fault, 'Too many logs'):
             s.result_upload_file(result.id, '/', 'result-log', 10, None, 0,
                     b64encode('a' * 10))
         # Test POST endpoint for result logs
@@ -1209,8 +1212,8 @@ class LogUploadTest(LabControllerTestCase):
         self.assertEquals(response.status_code, 403)
         self.assertIn('Too many logs in recipe', response.text)
         # Test XMLRPC endpoint for task logs
-        s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
-        with self.assertRaisesRegexp(xmlrpclib.Fault, 'Too many logs'):
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
+        with self.assertRaisesRegexp(xmlrpc_client.Fault, 'Too many logs'):
             s.task_upload_file(task.id, '/', 'task-log', 10, None, 0,
                     b64encode('a' * 10))
         # Test POST endpoint for task logs
@@ -1320,7 +1323,7 @@ class GetInstallationForSystemTest(LabControllerTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=978640
     def test_can_get_last_installation_info(self):
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
         installinfo = s.get_installation_for_system(self.recipe.resource.fqdn)
         self.assertItemsEqual(installinfo['distro_tree_urls'], self.tree_urls)
         self.assertEqual(installinfo['kernel_url'],
