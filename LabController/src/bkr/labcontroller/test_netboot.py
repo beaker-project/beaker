@@ -164,8 +164,8 @@ class ImagesTest(ImagesBaseTestCase):
         self.check_netboot_configured("images")
         kernel_path = os.path.join(self.tftp_root, 'images', TEST_FQDN, 'kernel')
         initrd_path = os.path.join(self.tftp_root, 'images', TEST_FQDN, 'initrd')
-        self.assertEquals(os.path.getsize(kernel_path), 4 * 1024 * 1024)
-        self.assertEquals(os.path.getsize(initrd_path), 8 * 1024 * 1024)
+        self.assertEqual(os.path.getsize(kernel_path), 4 * 1024 * 1024)
+        self.assertEqual(os.path.getsize(initrd_path), 8 * 1024 * 1024)
 
         netboot.clear_images(TEST_FQDN)
         self.check_netboot_cleared("images")
@@ -181,8 +181,8 @@ class ImagesTest(ImagesBaseTestCase):
         self.check_netboot_configured("images")
         kernel_path = os.path.join(self.tftp_root, 'images', TEST_FQDN, 'kernel')
         initrd_path = os.path.join(self.tftp_root, 'images', TEST_FQDN, 'initrd')
-        self.assertEquals(os.path.getsize(kernel_path), 4 * 1024 * 1024)
-        self.assertEquals(os.path.getsize(initrd_path), 8 * 1024 * 1024)
+        self.assertEqual(os.path.getsize(kernel_path), 4 * 1024 * 1024)
+        self.assertEqual(os.path.getsize(initrd_path), 8 * 1024 * 1024)
 
 
 class ArchBasedConfigTest(ImagesBaseTestCase):
@@ -243,7 +243,7 @@ class PxelinuxTest(NetBootTestCase):
         pxelinux_config_path = os.path.join(pxelinux_bootloader_path, '7F0000FF')
         pxelinux_default_path = os.path.join(pxelinux_bootloader_path, 'default')
         open(pxelinux_config_path).readlines()
-        self.assertEquals(open(pxelinux_config_path).read(),
+        self.assertEqual(open(pxelinux_config_path).read(),
                           '''default linux
 prompt 0
 timeout 100
@@ -252,7 +252,7 @@ label linux
     ipappend 2
     append initrd=../../images/fqdn.example.invalid/initrd console=ttyS0,115200 ks=http://lol/ netboot_method=pxe
 ''')
-        self.assertEquals(open(pxelinux_default_path).read(),
+        self.assertEqual(open(pxelinux_default_path).read(),
                           '''default local
 prompt 0
 timeout 0
@@ -262,14 +262,14 @@ label local
 
         self.check_netbootloader_leak(pxelinux_config_path)
         netboot.clear_pxelinux(TEST_FQDN, bootloader_confs)
-        self.assert_(not os.path.exists(pxelinux_config_path))
+        self.assertTrue(not os.path.exists(pxelinux_config_path))
 
     def test_configure_then_clear(self):
         netboot.configure_pxelinux(TEST_FQDN,
                                    'console=ttyS0,115200 ks=http://lol/', self.tftp_root)
         pxelinux_config_path = os.path.join(self.tftp_root, 'pxelinux.cfg', '7F0000FF')
         pxelinux_default_path = os.path.join(self.tftp_root, 'pxelinux.cfg', 'default')
-        self.assertEquals(open(pxelinux_config_path).read(),
+        self.assertEqual(open(pxelinux_config_path).read(),
                           '''default linux
 prompt 0
 timeout 100
@@ -278,7 +278,7 @@ label linux
     ipappend 2
     append initrd=/images/fqdn.example.invalid/initrd console=ttyS0,115200 ks=http://lol/ netboot_method=pxe
 ''')
-        self.assertEquals(open(pxelinux_default_path).read(),
+        self.assertEqual(open(pxelinux_default_path).read(),
                           '''default local
 prompt 0
 timeout 0
@@ -287,13 +287,13 @@ label local
 ''')
         self.check_netbootloader_leak(pxelinux_config_path)
         netboot.clear_pxelinux(TEST_FQDN, self.tftp_root)
-        self.assert_(not os.path.exists(pxelinux_config_path))
+        self.assertTrue(not os.path.exists(pxelinux_config_path))
 
     def test_multiple_initrds(self):
         netboot.configure_pxelinux(TEST_FQDN,
                                    'initrd=/mydriverdisk.img ks=http://lol/', self.tftp_root)
         pxelinux_config_path = os.path.join(self.tftp_root, 'pxelinux.cfg', '7F0000FF')
-        self.assertEquals(open(pxelinux_config_path).read(),
+        self.assertEqual(open(pxelinux_config_path).read(),
                           '''default linux
 prompt 0
 timeout 100
@@ -332,7 +332,7 @@ label jabberwocky
         open(pxelinux_default_path, mode).write(custom)
         netboot.configure_pxelinux(TEST_FQDN,
                                    'console=ttyS0,115200 ks=http://lol/', self.tftp_root)
-        self.assertEquals(open(pxelinux_default_path).read(), custom)
+        self.assertEqual(open(pxelinux_default_path).read(), custom)
 
 class IpxeTest(NetBootTestCase):
 
@@ -341,27 +341,27 @@ class IpxeTest(NetBootTestCase):
                 'console=ttyS0,115200 ks=http://lol/', self.tftp_root)
         ipxe_config_path = os.path.join(self.tftp_root, 'ipxe', '7f0000ff')
         ipxe_default_path = os.path.join(self.tftp_root, 'ipxe', 'default')
-        self.assertEquals(open(ipxe_config_path).read(),
+        self.assertEqual(open(ipxe_config_path).read(),
                 '''#!ipxe
 kernel /images/fqdn.example.invalid/kernel
 initrd /images/fqdn.example.invalid/initrd
 imgargs kernel initrd=initrd console=ttyS0,115200 ks=http://lol/ netboot_method=ipxe BOOTIF=01-${netX/mac:hexhyp}
 boot || exit 1
 ''')
-        self.assertEquals(open(ipxe_default_path).read(),
+        self.assertEqual(open(ipxe_default_path).read(),
                 '''#!ipxe
 iseq ${builtin/platform} pcbios && sanboot --no-describe --drive 0x80 ||
 exit 1
 ''')
         self.check_netbootloader_leak(ipxe_config_path)
         netboot.clear_ipxe(TEST_FQDN, self.tftp_root)
-        self.assert_(not os.path.exists(ipxe_config_path))
+        self.assertTrue(not os.path.exists(ipxe_config_path))
 
     def test_multiple_initrds(self):
         netboot.configure_ipxe(TEST_FQDN,
                'initrd=/mydriverdisk.img ks=http://lol/', self.tftp_root)
         ipxe_config_path = os.path.join(self.tftp_root, 'ipxe', '7f0000ff')
-        self.assertEquals(open(ipxe_config_path).read(),
+        self.assertEqual(open(ipxe_config_path).read(),
                 '''#!ipxe
 kernel /images/fqdn.example.invalid/kernel
 initrd /images/fqdn.example.invalid/initrd
@@ -393,7 +393,7 @@ exit 1
         open(ipxe_default_path, mode).write(custom)
         netboot.configure_ipxe(TEST_FQDN,
                'console=ttyS0,115200 ks=http://lol/', self.tftp_root)
-        self.assertEquals(open(ipxe_default_path).read(), custom)
+        self.assertEqual(open(ipxe_default_path).read(), custom)
 
 
 class EfigrubTest(NetBootTestCase):
@@ -402,7 +402,7 @@ class EfigrubTest(NetBootTestCase):
         netboot.configure_efigrub(TEST_FQDN,
                                   'console=ttyS0,115200 ks=http://lol/', self.tftp_root)
         grub_config_path = os.path.join(self.tftp_root, 'grub', '7F0000FF')
-        self.assertEquals(open(grub_config_path).read(),
+        self.assertEqual(open(grub_config_path).read(),
                           '''default 0
 timeout 10
 title Beaker scheduled job for fqdn.example.invalid
@@ -412,13 +412,13 @@ title Beaker scheduled job for fqdn.example.invalid
 ''')
         self.check_netbootloader_leak(grub_config_path)
         netboot.clear_efigrub(TEST_FQDN, self.tftp_root)
-        self.assert_(not os.path.exists(grub_config_path))
+        self.assertTrue(not os.path.exists(grub_config_path))
 
     def test_multiple_initrds(self):
         netboot.configure_efigrub(TEST_FQDN,
                                   'initrd=/mydriverdisk.img ks=http://lol/', self.tftp_root)
         grub_config_path = os.path.join(self.tftp_root, 'grub', '7F0000FF')
-        self.assertEquals(open(grub_config_path).read(),
+        self.assertEqual(open(grub_config_path).read(),
                           '''default 0
 timeout 10
 title Beaker scheduled job for fqdn.example.invalid
@@ -452,29 +452,29 @@ class ZpxeTest(NetBootTestCase):
                                'DNS=10.16.255.2 PORTNAME=z10-01 DASD=208C,218C,228C,238C '
                                'GATEWAY=10.16.71.254 NETWORK=10.16.64.0 '
                                'MACADDR=02:DE:AD:BE:EF:01 ks=http://lol/', self.tftp_root)
-        self.assertEquals(open(os.path.join(self.tftp_root, 's390x',
+        self.assertEqual(open(os.path.join(self.tftp_root, 's390x',
                                             's_fqdn.example.invalid')).read(),
                           '''ftp://lab.example.invalid/kernel.img
 ftp://lab.example.invalid/initrd.img
 
 ''')
-        self.assertEquals(open(os.path.join(self.tftp_root, 's390x',
+        self.assertEqual(open(os.path.join(self.tftp_root, 's390x',
                                             's_fqdn.example.invalid_parm')).read(),
                           '''LAYER2=1 NETTYPE=qeth PORTNO=0 IPADDR=10.16.66.192 SUBCHANNELS=0.0.8000,0.0.8001
 ,0.0.8002 MTU=1500 BROADCAST=10.16.71.255 SEARCHDNS= NETMASK=255.255.248.0 DNS=1
 0.16.255.2 PORTNAME=z10-01 DASD=208C,218C,228C,238C GATEWAY=10.16.71.254 NETWORK
 =10.16.64.0 MACADDR=02:DE:AD:BE:EF:01 ks=http://lol/ netboot_method=zpxe
 ''')
-        self.assertEquals(open(os.path.join(self.tftp_root, 's390x',
+        self.assertEqual(open(os.path.join(self.tftp_root, 's390x',
                                             's_fqdn.example.invalid_conf')).read(),
                           '')
         netboot.clear_zpxe(TEST_FQDN, self.tftp_root)
-        self.assertEquals(open(os.path.join(self.tftp_root, 's390x',
+        self.assertEqual(open(os.path.join(self.tftp_root, 's390x',
                                             's_fqdn.example.invalid')).read(),
                           'local\n')
-        self.assert_(not os.path.exists(os.path.join(self.tftp_root, 's390x',
+        self.assertTrue(not os.path.exists(os.path.join(self.tftp_root, 's390x',
                                                      's_fqdn.example.invalid_parm')))
-        self.assert_(not os.path.exists(os.path.join(self.tftp_root, 's390x',
+        self.assertTrue(not os.path.exists(os.path.join(self.tftp_root, 's390x',
                                                      's_fqdn.example.invalid_conf')))
 
 
@@ -484,7 +484,7 @@ class EliloTest(NetBootTestCase):
         netboot.configure_elilo(TEST_FQDN,
                                 'console=ttyS0,115200 ks=http://lol/', self.tftp_root)
         elilo_config_path = os.path.join(self.tftp_root, '7F0000FF.conf')
-        self.assertEquals(open(elilo_config_path).read(),
+        self.assertEqual(open(elilo_config_path).read(),
                           '''relocatable
 
 image=/images/fqdn.example.invalid/kernel
@@ -496,7 +496,7 @@ image=/images/fqdn.example.invalid/kernel
 ''')
         self.check_netbootloader_leak(elilo_config_path)
         netboot.clear_elilo(TEST_FQDN, self.tftp_root)
-        self.assert_(not os.path.exists(elilo_config_path))
+        self.assertTrue(not os.path.exists(elilo_config_path))
 
 
 class YabootTest(NetBootTestCase):
@@ -505,7 +505,7 @@ class YabootTest(NetBootTestCase):
         netboot.configure_yaboot(TEST_FQDN,
                                  'console=ttyS0,115200 ks=http://lol/', self.tftp_root)
         yaboot_config_path = os.path.join(self.tftp_root, 'etc', '7f0000ff')
-        self.assertEquals(open(yaboot_config_path).read(),
+        self.assertEqual(open(yaboot_config_path).read(),
                           '''init-message="Beaker scheduled job for fqdn.example.invalid"
 timeout=80
 delay=10
@@ -517,11 +517,11 @@ image=/images/fqdn.example.invalid/kernel
     append="console=ttyS0,115200 ks=http://lol/ netboot_method=yaboot"
 ''')
         yaboot_symlink_path = os.path.join(self.tftp_root, 'ppc', '7f0000ff')
-        self.assertEquals(os.readlink(yaboot_symlink_path), '../yaboot')
+        self.assertEqual(os.readlink(yaboot_symlink_path), '../yaboot')
         self.check_netbootloader_leak(yaboot_config_path)
         netboot.clear_yaboot(TEST_FQDN, self.tftp_root)
-        self.assert_(not os.path.exists(yaboot_config_path))
-        self.assert_(not os.path.exists(yaboot_symlink_path))
+        self.assertTrue(not os.path.exists(yaboot_config_path))
+        self.assertTrue(not os.path.exists(yaboot_symlink_path))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=829984
     def test_configure_twice(self):
@@ -530,7 +530,7 @@ image=/images/fqdn.example.invalid/kernel
         netboot.configure_yaboot(TEST_FQDN,
                                  'console=ttyS0,115200 ks=http://lol/', self.tftp_root)
         yaboot_symlink_path = os.path.join(self.tftp_root, 'ppc', '7f0000ff')
-        self.assertEquals(os.readlink(yaboot_symlink_path), '../yaboot')
+        self.assertEqual(os.readlink(yaboot_symlink_path), '../yaboot')
 
 
 class Grub2PPC64Test(NetBootTestCase):
@@ -542,7 +542,7 @@ class Grub2PPC64Test(NetBootTestCase):
                               os.path.join(self.tftp_root, 'boot', 'grub2', 'grub.cfg-7F0000FF'),
                               os.path.join(self.tftp_root, 'grub.cfg-7F0000FF')]
         for path in grub2_configs_path:
-            self.assertEquals(open(path).read(), """\
+            self.assertEqual(open(path).read(), """\
 linux  /images/fqdn.example.invalid/kernel console=ttyS0,115200 ks=http://lol/ netboot_method=grub2
 initrd /images/fqdn.example.invalid/initrd
 
@@ -550,13 +550,13 @@ boot
 """)
             self.check_netbootloader_leak(path)
         grub2_symlink_path = os.path.join(self.tftp_root, 'ppc', '7f0000ff-grub2')
-        self.assertEquals(os.readlink(grub2_symlink_path),
+        self.assertEqual(os.readlink(grub2_symlink_path),
                           '../boot/grub2/powerpc-ieee1275/core.elf')
 
         netboot.clear_ppc64(TEST_FQDN, self.tftp_root)
         for path in grub2_configs_path:
-            self.assert_(not os.path.exists(path))
-        self.assert_(not os.path.exists(grub2_symlink_path))
+            self.assertTrue(not os.path.exists(path))
+        self.assertTrue(not os.path.exists(grub2_symlink_path))
 
 
 class Grub2TestX8664(NetBootTestCase):
@@ -570,7 +570,7 @@ class Grub2TestX8664(NetBootTestCase):
                               os.path.join(self.tftp_root, 'x86_64', 'grub.cfg')]
 
         for path in grub2_configs_path:
-            self.assertEquals(open(path).read(), """\
+            self.assertEqual(open(path).read(), """\
 linux  /images/fqdn.example.invalid/kernel console=ttyS0,115200 ks=http://lol/ netboot_method=grub2
 initrd /images/fqdn.example.invalid/initrd
 
@@ -579,15 +579,15 @@ boot
             self.check_netbootloader_leak(path)
 
         for path in grub2_default_path:
-            self.assertEquals(open(path).read(), 'exit\n')
+            self.assertEqual(open(path).read(), 'exit\n')
 
         netboot.clear_x86_64(TEST_FQDN, self.tftp_root)
         for path in grub2_configs_path:
-            self.assert_(not os.path.exists(path))
+            self.assertTrue(not os.path.exists(path))
 
         # Keep default
         for path in grub2_default_path:
-            self.assert_(os.path.exists(path))
+            self.assertTrue(os.path.exists(path))
 
 
 class Aarch64Test(NetBootTestCase):
@@ -597,13 +597,13 @@ class Aarch64Test(NetBootTestCase):
                                   'console=ttyS0,115200 ks=http://lol/', self.tftp_root)
         grub_config_path = os.path.join(self.tftp_root, 'aarch64', 'grub.cfg-7F0000FF')
         grub_default_path = os.path.join(self.tftp_root, 'aarch64', 'grub.cfg')
-        self.assertEquals(open(grub_config_path).read(), """\
+        self.assertEqual(open(grub_config_path).read(), """\
 linux  /images/fqdn.example.invalid/kernel console=ttyS0,115200 ks=http://lol/ netboot_method=grub2
 initrd /images/fqdn.example.invalid/initrd
 
 boot
 """)
-        self.assertEquals(open(grub_default_path).read(), 'exit\n')
+        self.assertEqual(open(grub_default_path).read(), 'exit\n')
         self.check_netbootloader_leak(grub_config_path)
         netboot.clear_aarch64(TEST_FQDN, self.tftp_root)
         self.assertFalse(os.path.exists(grub_config_path))
@@ -613,7 +613,7 @@ boot
         netboot.configure_aarch64(TEST_FQDN,
                                   'devicetree=custom.dtb ks=http://lol/', self.tftp_root)
         grub_config_path = os.path.join(self.tftp_root, 'aarch64', 'grub.cfg-7F0000FF')
-        self.assertEquals(open(grub_config_path).read(), """\
+        self.assertEqual(open(grub_config_path).read(), """\
 linux  /images/fqdn.example.invalid/kernel ks=http://lol/ netboot_method=grub2
 initrd /images/fqdn.example.invalid/initrd
 devicetree custom.dtb
@@ -628,7 +628,7 @@ class PetitbootTest(NetBootTestCase):
                                     'ks=http://lol/ ksdevice=bootif', self.tftp_root)
         petitboot_config_path = os.path.join(self.tftp_root, 'bootloader',
                                              TEST_FQDN, 'petitboot.cfg')
-        self.assertEquals(open(petitboot_config_path).read(), """\
+        self.assertEqual(open(petitboot_config_path).read(), """\
 default Beaker scheduled job for fqdn.example.invalid
 label Beaker scheduled job for fqdn.example.invalid
 kernel ::/images/fqdn.example.invalid/kernel
@@ -651,7 +651,7 @@ class NetbootloaderTest(ImagesBaseTestCase):
                               )
         bootloader_config_symlink = os.path.join(self.tftp_root, 'bootloader', TEST_FQDN, 'image')
         self.assertTrue(os.path.lexists(bootloader_config_symlink))
-        self.assertEquals(os.path.realpath(bootloader_config_symlink),
+        self.assertEqual(os.path.realpath(bootloader_config_symlink),
                           os.path.join(self.tftp_root, 'myawesome/netbootloader'))
         # this tests ppc64 netboot creation
         grub2_config_file = os.path.join(self.tftp_root, 'bootloader', TEST_FQDN,
