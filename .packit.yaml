@@ -25,10 +25,6 @@ jobs:
     targets:
       - fedora-all-x86_64
     identifier: fedora
-    actions:
-      post-upstream-clone:
-        # disable broken unit tests
-        - sed -i '/make check/d' beaker.spec
 
   - job: copr_build
     trigger: pull_request
