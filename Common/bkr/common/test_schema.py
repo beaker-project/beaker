@@ -18,9 +18,9 @@ class SchemaTestBase(unittest.TestCase):
 
     def assert_not_valid(self, xml, error_message):
         schema = lxml.etree.RelaxNG(self.schema_doc)
-        self.assert_(not schema.validate(lxml.etree.fromstring(xml)))
+        self.assertTrue(not schema.validate(lxml.etree.fromstring(xml)))
         messages = [str(e.message) for e in schema.error_log]
-        self.assert_(error_message in messages, messages)
+        self.assertTrue(error_message in messages, messages)
 
 class TaskSchemaTest(SchemaTestBase):
 

@@ -5,6 +5,8 @@
 
 import unittest
 from datetime import date
+
+import six
 from six.moves import StringIO
 
 from bkr.client import wizard
@@ -163,6 +165,6 @@ class TypeTest(unittest.TestCase):
         type.heading()
         cpt_stdout.seek(0)
         printout = cpt_stdout.read()
-        self.assertRegexpMatches(printout, r'\bWhat is the type of test?\b')
-        self.assertRegexpMatches(printout, r'\bRecommended values\b')
-        self.assertRegexpMatches(printout, r'\bPossible values\b')
+        six.assertRegex(self, printout, r'\bWhat is the type of test?\b')
+        six.assertRegex(self, printout, r'\bRecommended values\b')
+        six.assertRegex(self, printout, r'\bPossible values\b')
