@@ -78,10 +78,12 @@ def check_url(url):
 def check_all_trees(ignore_errors=False,
                     dry_run=False,
                     lab_controller='http://localhost:8000',
-                    remove_all=False):
+                    remove_all=False,
+                    filter=None):
+    filter_on_arch = True if (filter is not None and filter and 'arch' in filter.keys()) else False
     proxy = xmlrpc_client.ServerProxy(lab_controller, allow_none=True)
     rdistro_trees = []
-    distro_trees = proxy.get_distro_trees()
+    distro_trees = proxy.get_distro_trees(filter)
     if not remove_all:
         for distro_tree in distro_trees:
             accessible = False
@@ -108,21 +110,29 @@ def check_all_trees(ignore_errors=False,
     else:
         rdistro_trees = distro_trees
 
+    print('INFO: expire_distros to remove %d entries for arch %s' % (len(rdistro_trees),
+          filter['arch'] if (filter_on_arch) else 'unset'))
+
     # If all distro_trees are expired then something is wrong
     # Unless there is intention to remove all distro_trees
-    if len(distro_trees) != len(rdistro_trees) or remove_all:
+    if (len(distro_trees) != len(rdistro_trees)) or remove_all:
         for distro_tree in rdistro_trees:
             if dry_run:
                 print('Distro marked for remove %s:%d' % (distro_tree['distro_name'],
-                                                             distro_tree['distro_tree_id']))
+                                                          distro_tree['distro_tree_id']))
             else:
                 print('Removing distro %s:%d' % (distro_tree['distro_name'],
                                                  distro_tree['distro_tree_id']))
                 proxy.remove_distro_trees([distro_tree['distro_tree_id']])
     else:
-        sys.stderr.write('All distros are missing! Please check your server!\n')
-        sys.exit(1)
-
+        if (len(distro_trees) == 0):
+            if (filter is None):
+                sys.stderr.write('All distros are missing! Please check your server!\n')
+                sys.exit(1)
+        else:
+            sys.stderr.write('Stopped removal of all distros for arch %s!! Please check your '
+                             'server.\nYou can manually force removal using --remove-all.\n' %
+                             (filter['arch'] if (filter_on_arch) else 'unset'))
 
 def main():
     from optparse import OptionParser
@@ -137,14 +147,49 @@ def main():
                            'Defaults to http://localhost:8000.')
     parser.add_option('--remove-all', default=False, action='store_true',
                       help='Remove all distros from lab controller.')
+    parser.add_option('--name', default=None,
+                      help='Remove all distros with given name. Use "%" for wildcard.')
+    parser.add_option('--family', default=None,
+                      help='Remove all distros for a given family.')
+    parser.add_option('--arch', default=None,
+                      help='Remove all distros for a given architecture. When set to "all", '
+                           'steps thru each available arch to reduce memory usage.')
     options, args = parser.parse_args()
-    try:
-        check_all_trees(options.ignore_errors,
-                        options.dry_run,
-                        options.lab_controller,
-                        options.remove_all)
-    except KeyboardInterrupt:
-        pass
+    startmsg = str("INFO: expire_distros running with --lab-controller=" + options.lab_controller)
+    for i in range(1,len(sys.argv)):
+        startmsg += ' ' + sys.argv[i]
+    print('%s' % (startmsg))
+    filter = {}
+    if options.name:
+        filter['name'] = options.name
+    if options.family:
+        filter['family'] = options.family
+
+    arch_list = []
+    if options.arch:
+        if options.arch == "all":
+            arch_list = [ "x86_64", "ppc", "ppc64le", "ppc64", "i386", "s390", "s390x", "aarch64", "ia64", "arm", "armhfp" ]
+        else:
+            arch_list = [ options.arch ]
+        for arch in arch_list:
+            filter['arch'] = arch
+            try:
+                check_all_trees(options.ignore_errors,
+                                options.dry_run,
+                                options.lab_controller,
+                                options.remove_all,
+                                filter)
+            except KeyboardInterrupt:
+                pass
+    else:
+        try:
+            check_all_trees(options.ignore_errors,
+                            options.dry_run,
+                            options.lab_controller,
+                            options.remove_all,
+                            filter)
+        except KeyboardInterrupt:
+            pass
 
 
 if __name__ == '__main__':
