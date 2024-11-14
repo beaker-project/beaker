@@ -12,7 +12,7 @@ submenu "{{ osversion }}" {
 
 {% for distro_tree in distro_trees %}
 menuentry "{{ distro_tree.distro_name }} {{ distro_tree.variant }} {{ distro_tree.arch }}" {
-    linux /distrotrees/{{ distro_tree.distro_tree_id }}/kernel method={{ distro_tree.available|get_url }} repo={{
+    linux /distrotrees/{{ distro_tree.distro_tree_id }}/kernel {{ osmajor|get_method(distro_tree.available) }} {{ osmajor|get_repo_prefix }}repo={{
     distro_tree.available| get_url }}
     initrd /distrotrees/{{ distro_tree.distro_tree_id }}/initrd
 }

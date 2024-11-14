@@ -20,9 +20,9 @@ menu title {{ osversion }}
 label {{ distro_tree.distro_name }}-{{ distro_tree.variant }}-{{ distro_tree.arch }}
     menu title {{ distro_tree.distro_name }} {{ distro_tree.variant }} {{ distro_tree.arch }}
     kernel /distrotrees/{{ distro_tree.distro_tree_id }}/kernel
-    append initrd=/distrotrees/{{ distro_tree.distro_tree_id }}/initrd method={{ distro_tree.available|get_url }} repo={{ distro_tree.available|get_url }} {{ distro_tree.kernel_options }}
-
+    append initrd=/distrotrees/{{ distro_tree.distro_tree_id }}/initrd {{ osmajor|get_method(distro_tree.available) }} {{ osmajor|get_repo_prefix }}repo={{ distro_tree.available|get_url }} {{ distro_tree.kernel_options }}
 {% endfor %}
+
 menu end
 
 {% endfor %}
