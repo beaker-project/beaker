@@ -251,3 +251,211 @@ menuentry "PinkUshankaLinux8.1-20140620.3 Server x86_64" {
 
 }
 ''' % (distro_tree.id, distro_tree.id))
+
+# Below test changes for latest distros
+
+    def test_x86_menus_for_latest_distros(self):
+        with session.begin():
+            lc = self.get_lc()
+            tag = u'test_grub2_menu_for_efi_and_latest_distros'
+            distro_tree = data_setup.create_distro_tree(
+                    osmajor=u'RedHatEnterpriseLinux9', osminor=u'0',
+                    distro_name=u'RHEL-9.0.0-20211201.1', distro_tags=[tag],
+                    arch=u'x86_64', lab_controllers=[lc],
+                    urls=[u'http://localhost:19998/'])
+        write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
+        # Menu 1 of 3
+        menu = open(os.path.join(self.tftp_dir, 'boot', 'grub2',
+                    'beaker_menu_x86.cfg')).read()
+        self.assertEquals(menu, '''\
+set default="Exit PXE"
+set timeout=60
+menuentry "Exit PXE" {
+    exit
+}
+
+submenu "RedHatEnterpriseLinux9" {
+
+submenu "RedHatEnterpriseLinux9.0" {
+
+menuentry "RHEL-9.0.0-20211201.1 Server x86_64" {
+    linux /distrotrees/%s/kernel  inst.repo=http://localhost:19998/
+    initrd /distrotrees/%s/initrd
+}
+
+}
+
+}
+''' % (distro_tree.id, distro_tree.id))
+
+        # Menu 2 of 3
+        menu = open(os.path.join(self.tftp_dir, 'ipxe',
+            'beaker_menu')).read()
+        self.assertEquals(menu, '''\
+#!ipxe
+
+chain /ipxe/${ip:hexraw} ||
+
+:main_menu
+menu Beaker
+item local (local)
+item RedHatEnterpriseLinux9 RedHatEnterpriseLinux9 ->
+choose --default local --timeout 600000 target && goto ${target} || goto local
+
+:local
+echo Booting local disk...
+iseq ${builtin/platform} pcbios && sanboot --no-describe --drive 0x80 ||
+# exit 1 generates an error message but req'd for some systems to fall through
+exit 1 || goto main_menu
+
+:RedHatEnterpriseLinux9
+menu RedHatEnterpriseLinux9
+item RedHatEnterpriseLinux9.0 RedHatEnterpriseLinux9.0 ->
+item main_menu back <-
+choose target && goto ${target} || goto main_menu
+
+:RedHatEnterpriseLinux9.0
+menu RedHatEnterpriseLinux9.0
+item RHEL-9.0.0-20211201.1-Server-x86_64 RHEL-9.0.0-20211201.1 Server x86_64
+item RedHatEnterpriseLinux9 back <-
+choose target && goto ${target} || goto RedHatEnterpriseLinux9
+
+:RHEL-9.0.0-20211201.1-Server-x86_64
+set options kernel initrd=initrd  inst.repo=http://localhost:19998/ 
+echo Kernel command line: ${options}
+prompt --timeout 5000 Press any key for additional options... && set opts 1 || clear opts
+isset ${opts} && echo -n Additional options: ${} ||
+isset ${opts} && read useropts ||
+kernel /distrotrees/%s/kernel || goto RedHatEnterpriseLinux9.0
+initrd /distrotrees/%s/initrd || goto RedHatEnterpriseLinux9.0
+imgargs ${options} ${useropts}
+boot || goto RedHatEnterpriseLinux9.0
+
+''' % (distro_tree.id, distro_tree.id))  # noqa: W291
+
+        # Menu 3 of 3
+        menu = open(os.path.join(self.tftp_dir, 'pxelinux.cfg', 'beaker_menu')).read()
+        self.assertEquals(menu, '''\
+default menu
+prompt 0
+timeout 6000
+ontimeout local
+menu title Beaker
+label local
+    menu label (local)
+    menu default
+    localboot 0
+
+menu begin
+menu title RedHatEnterpriseLinux9
+
+menu begin
+menu title RedHatEnterpriseLinux9.0
+
+label RHEL-9.0.0-20211201.1-Server-x86_64
+    menu title RHEL-9.0.0-20211201.1 Server x86_64
+    kernel /distrotrees/{0}/kernel
+    append initrd=/distrotrees/{0}/initrd  inst.repo=http://localhost:19998/ 
+
+menu end
+
+menu end
+'''.format(distro_tree.id))        # noqa: W291
+
+    def test_aarch64_menu_and_latest_distros(self):
+        with session.begin():
+            lc = self.get_lc()
+            tag = u'test_aarch64_menu_and_latest_distros'
+            distro_tree = data_setup.create_distro_tree(
+                    osmajor=u'RedHatEnterpriseLinux9', osminor=u'0',
+                    distro_name=u'RHEL-9.0.0-20211201.1-Server-aarch64', distro_tags=[tag],
+                    arch=u'aarch64', lab_controllers=[lc],
+                    urls=[u'http://localhost:19998/'])
+        write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
+        menu = open(os.path.join(self.tftp_dir, 'aarch64', 'beaker_menu.cfg')).read()
+        self.assertEquals(menu, '''\
+set default="Exit PXE"
+set timeout=60
+menuentry "Exit PXE" {
+    exit
+}
+
+submenu "RedHatEnterpriseLinux9" {
+
+submenu "RedHatEnterpriseLinux9.0" {
+
+menuentry "RHEL-9.0.0-20211201.1-Server-aarch64 Server aarch64" {
+    linux /distrotrees/%s/kernel  inst.repo=http://localhost:19998/
+    initrd /distrotrees/%s/initrd
+}
+
+}
+
+}
+''' % (distro_tree.id, distro_tree.id))
+
+    def test_ppc64le_menu_and_latest_distros(self):
+        with session.begin():
+            lc = self.get_lc()
+            tag = u'test_ppc64le_menu_and_latest_distros'
+            distro_tree = data_setup.create_distro_tree(
+                    osmajor=u'RedHatEnterpriseLinux9', osminor=u'0',
+                    distro_name=u'RHEL-9.0.0-20211201.1-Server-ppc64le', distro_tags=[tag],
+                    arch=u'ppc64le', lab_controllers=[lc],
+                    urls=[u'http://localhost:19998/'])
+        write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
+        menu = open(os.path.join(self.tftp_dir, 'boot', 'grub2',
+                    'beaker_menu_ppc64le.cfg')).read()
+        self.assertEquals(menu, '''\
+set default="Exit PXE"
+set timeout=60
+menuentry "Exit PXE" {
+    exit
+}
+
+submenu "RedHatEnterpriseLinux9" {
+
+submenu "RedHatEnterpriseLinux9.0" {
+
+menuentry "RHEL-9.0.0-20211201.1-Server-ppc64le Server ppc64le" {
+    linux /distrotrees/%s/kernel  inst.repo=http://localhost:19998/
+    initrd /distrotrees/%s/initrd
+}
+
+}
+
+}
+''' % (distro_tree.id, distro_tree.id))
+
+    def test_ppc64_menu_and_latest_distros(self):
+        with session.begin():
+            lc = self.get_lc()
+            tag = u'test_ppc64_menu_and_latest_distros'
+            distro_tree = data_setup.create_distro_tree(
+                    osmajor=u'RedHatEnterpriseLinux9', osminor=u'0',
+                    distro_name=u'RHEL-9.0.0-20211201.1-Server-ppc64', distro_tags=[tag],
+                    arch=u'ppc64', lab_controllers=[lc],
+                    urls=[u'http://localhost:19998/'])
+        write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
+        menu = open(os.path.join(self.tftp_dir, 'boot', 'grub2',
+                    'beaker_menu_ppc64.cfg')).read()
+        self.assertEquals(menu, '''\
+set default="Exit PXE"
+set timeout=60
+menuentry "Exit PXE" {
+    exit
+}
+
+submenu "RedHatEnterpriseLinux9" {
+
+submenu "RedHatEnterpriseLinux9.0" {
+
+menuentry "RHEL-9.0.0-20211201.1-Server-ppc64 Server ppc64" {
+    linux /distrotrees/%s/kernel  inst.repo=http://localhost:19998/
+    initrd /distrotrees/%s/initrd
+}
+
+}
+
+}
+''' % (distro_tree.id, distro_tree.id))

@@ -4,7 +4,7 @@
 
 title {{ distro_tree.distro_name }} {{ distro_tree.variant }} {{ distro_tree.arch }}
     root (nd)
-    kernel /distrotrees/{{ distro_tree.distro_tree_id }}/kernel method={{ distro_tree.available|get_url }} repo={{ distro_tree.available|get_url }}
+    kernel /distrotrees/{{ distro_tree.distro_tree_id }}/kernel {{ osmajor|get_method(distro_tree.available) }} {{ osmajor|get_repo_prefix }}repo={{ distro_tree.available|get_url }}
     initrd /distrotrees/{{ distro_tree.distro_tree_id }}/initrd
 {% endfor %}
 {% endfor %}
