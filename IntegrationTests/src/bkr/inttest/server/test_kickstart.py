@@ -1732,6 +1732,32 @@ python-glanceclient
             </job>
             ''', system)
         self.assertIn('--port=0x02f8', recipe.installation.rendered_kickstart.kickstart)
+        self.assertIn('for file in /boot/grub2/grub.cfg /boot/efi/EFI/redhat/grub.cfg ; do', recipe.installation.rendered_kickstart.kickstart)
+
+    def test_grubport_rhel9(self):
+        system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
+                lab_controller=self.lab_controller)
+        system.provisions[system.arch[0]] = Provision(arch=system.arch[0],
+                ks_meta=u'grubport=0x02f8')
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-9.0.0-20201122.0" />
+                            <distro_variant op="=" value="BaseOS" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/check-install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        self.assertIn('--port=0x02f8', recipe.installation.rendered_kickstart.kickstart)
+        self.assertIn('for file in /boot/grub2/grub.cfg ; do', recipe.installation.rendered_kickstart.kickstart)
 
     def test_rhel5_devices(self):
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',

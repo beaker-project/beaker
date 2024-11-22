@@ -8,7 +8,11 @@ done
 # set --port for GRUB2
 if [ -e "/etc/default/grub" ] ; then
     sed --in-place=.orig -e '/^GRUB_SERIAL_COMMAND="serial/ {s/--unit=[0-9]\+//; s/"$/ --port={{ grubport }}"/}' /etc/default/grub
+{% if distro.osversion.osmajor.name == 'RedHatEnterpriseLinux' and distro.osversion.osmajor.number | int >= 9 %}
+    for file in /boot/grub2/grub.cfg ; do
+{% else %}
     for file in /boot/grub2/grub.cfg /boot/efi/EFI/redhat/grub.cfg ; do
+{% endif %}
         if [ -f "$file" ] && [ ! -L "$file" ] ; then
             grub2-mkconfig -o "$file"
         fi
