@@ -25,6 +25,11 @@ class RefreshLdapTest(DatabaseTestCase):
         self.assertEquals(out.strip(), __version__)
 
     def test_refresh_ldap_group_membership(self):
+        """
+        Testing two things with this test.  That jgillard is
+        learned AND user 'nomailattr' is NOT learned since it is
+        missing the 'mail' attribute.
+        """
         with session.begin():
             group = Group(group_name=u'alp',
                     display_name=u'Australian Labor Party',

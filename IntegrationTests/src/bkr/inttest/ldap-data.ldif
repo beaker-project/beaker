@@ -104,6 +104,20 @@ gidNumber: 15554
 homeDirectory: /home/lol
 mail: another_my_ldap_user@example.invalid
 
+dn: uid=nomailattr,ou=users,dc=example,dc=invalid
+objectClass: top
+objectClass: person
+objectClass: organizationalperson
+objectClass: inetorgperson
+objectClass: posixAccount
+cn: NoMail Attribute
+givenName: NoMail
+sn: nomailattr
+uid: nomailattr
+uidNumber: 15555
+gidNumber: 15555
+homeDirectory: /home/nomailattr
+
 dn: cn=my_ldap_group,ou=groups,dc=example,dc=invalid
 objectClass: top
 objectClass: posixGroup
@@ -124,6 +138,7 @@ objectClass: posixGroup
 gidNumber: 5519
 cn: alp
 memberUid: jgillard
+memberUid: nomailattr
 
 dn: cn=wyfp,ou=groups,dc=example,dc=invalid
 objectClass: top
