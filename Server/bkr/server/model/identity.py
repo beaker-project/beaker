@@ -291,9 +291,15 @@ class User(DeclarativeMappedObject, ActivityMixin):
             elif(len(objects) > 1):
                 return None
             attrs = objects[0][1]
+            if ('uid' not in attrs.keys() or 'cn' not in attrs.keys() or
+                'mail' not in attrs.keys()):
+                log.debug('Missing attribute for this LDAP user %s ', user_name)
+                return None
             # LDAP normalization rules means that we might have found a user
             # who doesn't actually match the username we were given.
             if attrs['uid'][0].decode('utf8') != user_name:
+                log.debug('UserID attribute does not match this LDAP user %s ',
+                          user_name)
                 return None
             user = User()
             user.user_name = attrs['uid'][0].decode('utf8')
