@@ -13,10 +13,10 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from itertools import izip_longest
 
 import lxml.etree
 import pkg_resources
+import six
 
 from bkr.inttest import data_setup, get_server_base, Process
 from bkr.inttest.kickstart_helpers import (
@@ -4331,5 +4331,5 @@ volgroup bootvg --pesize=32768 pv.01
             ''' % '\n'.join(payload), self.system)
         ks = recipe.installation.rendered_kickstart.kickstart
         ks_lines = ks.splitlines()
-        for actual, expected in izip_longest(payload, ks_lines):
+        for actual, expected in six.moves.zip_longest(payload, ks_lines):
             self.assert_(actual == expected, ks)

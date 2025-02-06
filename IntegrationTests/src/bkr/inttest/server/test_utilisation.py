@@ -5,11 +5,15 @@
 # (at your option) any later version.
 
 import datetime
+
+import six
 from turbogears.database import session
+
 from bkr.server.model import SystemStatus, SystemStatusDuration, System, Arch
 from bkr.server.utilisation import system_utilisation, \
         system_utilisation_counts, system_utilisation_counts_by_group
 from bkr.inttest import data_setup, DatabaseTestCase
+
 
 class SystemUtilisationTest(DatabaseTestCase):
 
@@ -54,7 +58,7 @@ class SystemUtilisationTest(DatabaseTestCase):
         self.assertEqual(u['idle_automated'], datetime.timedelta(days=2))
         self.assertEqual(u['idle_broken'], datetime.timedelta(days=1))
         self.assertEqual(u['idle_removed'], datetime.timedelta(0))
-        self.assertEqual(sum((v for k, v in u.iteritems()), datetime.timedelta(0)),
+        self.assertEqual(sum((v for k, v in six.iteritems(u)), datetime.timedelta(0)),
                 datetime.timedelta(days=4))
 
     def test_idle_with_status_duration_covering_entire_period(self):
@@ -80,7 +84,7 @@ class SystemUtilisationTest(DatabaseTestCase):
         u = system_utilisation(system, datetime.datetime(2010, 1, 1, 0, 0, 0),
                 datetime.datetime(2010, 1, 5, 0, 0, 0))
         self.assertEqual(u['idle_automated'], datetime.timedelta(days=2))
-        self.assertEqual(sum((v for k, v in u.iteritems()), datetime.timedelta(0)),
+        self.assertEqual(sum((v for k, v in six.iteritems(u)), datetime.timedelta(0)),
                 datetime.timedelta(days=2))
 
     def test_system_removed_during_period(self):
@@ -99,7 +103,7 @@ class SystemUtilisationTest(DatabaseTestCase):
                 datetime.datetime(2010, 1, 5, 0, 0, 0))
         self.assertEqual(u['idle_automated'], datetime.timedelta(days=2))
         self.assertEqual(u['idle_removed'], datetime.timedelta(days=2))
-        self.assertEqual(sum((v for k, v in u.iteritems()), datetime.timedelta(0)),
+        self.assertEqual(sum((v for k, v in six.iteritems(u)), datetime.timedelta(0)),
                 datetime.timedelta(days=4))
 
     def test_counts(self):
@@ -150,7 +154,7 @@ class SystemUtilisationTest(DatabaseTestCase):
         counts = system_utilisation_counts_by_group(Arch.arch,
                 System.query.join(System.arch)
                 .filter(System.lab_controller == lc))
-        print counts
+        print(counts)
         self.assertEqual(counts['ia64']['recipe'], 1)
         self.assertEqual(counts['ia64']['manual'], 1)
         self.assertEqual(counts['ppc']['manual'], 1)

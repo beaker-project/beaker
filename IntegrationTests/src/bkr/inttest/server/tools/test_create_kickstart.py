@@ -5,11 +5,8 @@
 # (at your option) any later version.
 
 import os
-import sys
 import tempfile
 import shutil
-import subprocess
-from cStringIO import StringIO
 from turbogears.database import session
 from bkr.common import __version__
 from bkr.inttest import data_setup, DatabaseTestCase
@@ -17,9 +14,8 @@ from bkr.inttest.kickstart_helpers import create_rhel62, create_rhel62_server_x8
     create_lab_controller, create_x86_64_automated, compare_expected, \
     jinja_choice_loader, create_user
 from bkr.inttest.server.tools import run_command, CommandError
-from bkr.server.tools import create_kickstart
-from bkr.server.kickstart import template_env
 from bkr.server.model import Task, User, Recipe, Provision, Arch, OSMajorInstallOptions
+
 
 class CreateKickstartTest(DatabaseTestCase):
 

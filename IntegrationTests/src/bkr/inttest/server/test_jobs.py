@@ -6,14 +6,11 @@
 
 import datetime
 import lxml.etree
-import os.path
 import pkg_resources
 from turbogears import testutil
 from turbogears.database import session
 from bkr.server.bexceptions import BX
 from bkr.inttest import data_setup, with_transaction, DatabaseTestCase, get_server_base
-from bkr.server.model import TaskPackage
-
 
 class TestJobsController(DatabaseTestCase):
 

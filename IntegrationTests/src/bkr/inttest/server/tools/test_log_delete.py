@@ -50,7 +50,7 @@ class LogDelete(DatabaseTestCase):
     def make_dir(self, dir):
         try:
             os.makedirs(dir)
-        except OSError, e:
+        except OSError as e:
             if e.errno == errno.EEXIST:
                 pass
             else:
@@ -232,7 +232,7 @@ class RemoteLogDeletionTest(DatabaseTestCase):
             self.addCleanup(self.archive_server.stop)
         try:
             os.mkdir(self.recipe_logs_dir)
-        except OSError, e:
+        except OSError as e:
             if e.errno == errno.EEXIST:
                 # perhaps something else created it and did not clean it up
                 pass

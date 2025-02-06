@@ -9,7 +9,6 @@
 import os, os.path
 import time
 import pkg_resources
-import gevent.hub
 from turbogears.database import session
 from bkr.common.helpers import makedirs_ignore
 from bkr.labcontroller.config import get_conf

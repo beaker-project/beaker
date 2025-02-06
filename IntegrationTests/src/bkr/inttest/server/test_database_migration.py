@@ -21,6 +21,7 @@ from bkr.server.model import (
     RecipeTaskResult, Command, CommandStatus, LogRecipeTaskResult, DataMigration, Job,
     SystemSchedulerStatus, Permission, Installation, Arch
 )
+import six
 
 
 def has_initial_sublist(larger, prefix):
@@ -383,7 +384,7 @@ class MigrationTest(unittest.TestCase):
             if table_name == 'command_queue':
                 # may be left over from 22
                 actual_indexes = dict((name, cols) for name, cols
-                                      in actual_indexes.iteritems()
+                                      in six.iteritems(actual_indexes)
                                       if cols != ['distro_tree_id'])
             if table_name == 'virt_resource':
                 if 'ix_virt_resource_mac_address' in actual_indexes:
@@ -455,7 +456,7 @@ class MigrationTest(unittest.TestCase):
                 if has_initial_sublist(table.primary_key.columns.values(),
                                        constraint.columns.values()):
                     continue
-                name = constraint.name or constraint.columns.values()[0].name
+                name = constraint.name or list(constraint.columns.values())[0].name
                 expected_indexes[name] = cols
         # Similarly, if we have defined a foreign key without an
         # explicit index, InnoDB creates one implicitly.
@@ -463,7 +464,7 @@ class MigrationTest(unittest.TestCase):
             if any(index_cols[0] == fk.parent.name
                    for index_cols in expected_indexes.values()):
                 continue
-            if table.primary_key.columns.values()[0] == fk.parent:
+            if list(table.primary_key.columns.values())[0] == fk.parent:
                 continue
             expected_indexes[fk.name or fk.parent.name] = [fk.parent.name]
         return expected_indexes

@@ -16,7 +16,6 @@ core functions.
 from turbogears.database import session, metadata
 from bkr.common import __version__
 from bkr.server.model import User, Group
-from bkr.server.tools.init import populate_db
 from bkr.inttest import data_setup, DatabaseTestCase
 from bkr.inttest.server.tools import run_command
 

@@ -400,7 +400,7 @@ class GroupMembershipNotificationTest(DatabaseTestCase):
         try:
             bkr.server.mail.group_membership_notify(member, group, owner, 'Unchanged')
             self.fail('Must fail or die')
-        except ValueError, e:
+        except ValueError as e:
             self.assert_('Unknown action' in str(e))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1136748

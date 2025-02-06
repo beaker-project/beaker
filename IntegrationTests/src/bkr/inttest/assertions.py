@@ -8,6 +8,9 @@ import difflib
 import time
 import datetime
 
+from six.moves import range
+
+
 def assert_sorted(things, key=None):
     """
     Asserts that the given sequence is in sorted order.
@@ -15,7 +18,7 @@ def assert_sorted(things, key=None):
     if len(things) == 0: return
     if key is not None:
         things = map(key, things)
-    for n in xrange(1, len(things)):
+    for n in range(1, len(things)):
         if things[n] < things[n - 1]:
             raise AssertionError('Not in sorted order, found %r after %r' %
                     (things[n], things[n - 1]))

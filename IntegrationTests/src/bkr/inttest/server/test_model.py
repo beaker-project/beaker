@@ -4,16 +4,15 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import sys
+import six
+from six.moves import urllib
 import re
 import time
 import datetime
 import unittest
 import pkg_resources
 import shutil
-import urlparse
 import lxml.etree
-import email
 from decimal import Decimal
 from mock import patch
 import inspect
@@ -21,7 +20,6 @@ import kid
 from turbogears.database import session
 from bkr.server.installopts import InstallOptions
 from bkr.server import model, identity
-from bkr.server.app import app
 from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         SystemType, Job, JobCc, Key, Key_Value_Int, Key_Value_String, \
         Cpu, Numa, Provision, Arch, DistroTree, \
@@ -40,7 +38,6 @@ from sqlalchemy.sql import not_
 from sqlalchemy.exc import OperationalError, IntegrityError
 import netaddr
 from bkr.inttest import data_setup, DatabaseTestCase, get_server_base
-from bkr.inttest.assertions import assert_datetime_within
 import turbogears
 import os
 import dnf
@@ -839,7 +836,7 @@ class TestBrokenSystemDetection(DatabaseTestCase):
         self.system.activity.append(SystemActivity(service=u'WEBUI',
                 action=u'Changed', field_name=u'Status',
                 old_value=u'Broken',
-                new_value=unicode(self.system.status)))
+                new_value=six.text_type(self.system.status)))
         session.flush()
         time.sleep(1)
         # another recipe aborts...
@@ -1785,7 +1782,7 @@ class RecipeSetTest(DatabaseTestCase):
         recipeset.comments.append(RecipeSetComment(user=commenter,
                 created=datetime.datetime(2015, 11, 13, 11, 54, 26),
                 comment=u'is free'))
-        xml = lxml.etree.tostring(recipeset.to_xml(clone=False), encoding=unicode)
+        xml = lxml.etree.tostring(recipeset.to_xml(clone=False), encoding=six.text_type)
         self.assertIn(u'<comments>'
                 u'<comment user="cpscott" created="2015-11-13 11:54:26">'
                 u'is free'
@@ -1817,7 +1814,7 @@ class RecipeTest(DatabaseTestCase):
         ])
         for i in range(3):
             data_setup.mark_recipe_running(job.recipesets[0].recipes[i], system=systems[i])
-        xml = lxml.etree.tostring(job.recipesets[0].recipes[0].to_xml(clone=False), encoding=unicode)
+        xml = lxml.etree.tostring(job.recipesets[0].recipes[0].to_xml(clone=False), encoding=six.text_type)
         self.assert_(u'<roles>'
                 u'<role value="CLIENTONE"><system value="clientone.roles-to-xml"/></role>'
                 u'<role value="CLIENTTWO"><system value="clienttwo.roles-to-xml"/></role>'
@@ -1854,7 +1851,7 @@ class RecipeTest(DatabaseTestCase):
 
         host_requires = u'<hostRequires force="{0}"/>'
         job.recipesets[0].recipes[0]._host_requires = host_requires.format(system.fqdn)
-        xml = lxml.etree.tostring(job.recipesets[0].recipes[0].to_xml(clone=True), encoding=unicode)
+        xml = lxml.etree.tostring(job.recipesets[0].recipes[0].to_xml(clone=True), encoding=six.text_type)
         self.assertIn(host_requires.format(system.fqdn), xml)
 
     def test_recipe_reservesys_clone(self):
@@ -1869,12 +1866,12 @@ class RecipeTest(DatabaseTestCase):
             reservesys=True,
             reservesys_duration=3600)
         job = data_setup.create_job_for_recipes([recipe1, recipe2])
-        xml = lxml.etree.tostring(job.recipesets[0].recipes[0].to_xml(clone=True), encoding=unicode)
+        xml = lxml.etree.tostring(job.recipesets[0].recipes[0].to_xml(clone=True), encoding=six.text_type)
         reservation_string = u'<task name="/distribution/check-install" role="STANDALONE"/>' +  \
                              u'<task name="/distribution/check-install" role="STANDALONE"/>' + \
                              u'<reservesys duration="86400" when="always"/>'
         self.assertIn(reservation_string, xml)
-        xml = lxml.etree.tostring(job.recipesets[0].recipes[1].to_xml(clone=True), encoding=unicode)
+        xml = lxml.etree.tostring(job.recipesets[0].recipes[1].to_xml(clone=True), encoding=six.text_type)
         reservation_string = u'<task name="/distribution/check-install" role="STANDALONE"/>' +  \
                              u'<task name="/distribution/check-install" role="STANDALONE"/>' + \
                              u'<reservesys duration="3600" when="always"/>'
@@ -1947,11 +1944,11 @@ class RecipeTest(DatabaseTestCase):
         job = data_setup.create_completed_job(server_log=True)
         all_logs = job.recipesets[0].recipes[0].all_logs()
         self.assertEqual('http://dummy-archive-server/beaker/recipe_path/dummy.txt',
-                         all_logs.next().absolute_url)
+                         next(all_logs).absolute_url)
         self.assertEqual('http://dummy-archive-server/beaker/tasks/dummy.txt',
-                         all_logs.next().absolute_url)
+                         next(all_logs).absolute_url)
         self.assertEqual('http://dummy-archive-server/beaker/result.txt',
-                         all_logs.next().absolute_url)
+                         next(all_logs).absolute_url)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=915319
     def test_logs_appear_in_results_xml(self):
@@ -1962,7 +1959,7 @@ class RecipeTest(DatabaseTestCase):
         logs = root.findall('recipeSet/recipe/logs/log')
         self.assertEqual(logs[0].get('name'), 'asdf/log.txt')
         self.assertEqual(
-                urlparse.urljoin(logs[0].base, logs[0].get('href')),
+                urllib.parse.urljoin(logs[0].base, logs[0].get('href')),
                 get_server_base() + 'recipes/%s/logs/asdf/log.txt' % recipe.id)
 
     def test_clear_candidate_systems(self):
@@ -2425,8 +2422,8 @@ class LogRecipeTest(DatabaseTestCase):
                 LogRecipe.lazy_create(path=u'/', filename=u'dummy3.log',
                         recipe_id=self.recipe.id)
                 self.fail('We should only allow %s attempts' % _max_valid_attempts)
-            except OperationalError, e:
-                if '(OperationalError) (1213, blahlbha' not in unicode(e):
+            except OperationalError as e:
+                if '(OperationalError) (1213, blahlbha' not in six.text_type(e):
                     raise
             self.assertEquals(_raise_counter, _max_valid_attempts)
         finally:
@@ -2646,7 +2643,7 @@ class RecipeTaskTest(DatabaseTestCase):
         logs = root.find('logs').findall('log')
         self.assertEqual(logs[0].get('name'), 'asdf/log.txt')
         self.assertEqual(
-                urlparse.urljoin(logs[0].base, logs[0].get('href')),
+                urllib.parse.urljoin(logs[0].base, logs[0].get('href')),
                 get_server_base() + 'recipes/%s/tasks/%s/logs/asdf/log.txt'
                     % (self.recipetask.recipe.id, self.recipetask.id))
 
@@ -2725,7 +2722,7 @@ class RecipeTaskResultTest(DatabaseTestCase):
         logs = root.find('logs').findall('log')
         self.assertEqual(logs[0].get('name'), 'asdf/log.txt')
         self.assertEqual(
-                urlparse.urljoin(logs[0].base, logs[0].get('href')),
+                urllib.parse.urljoin(logs[0].base, logs[0].get('href')),
                 get_server_base() + 'recipes/%s/tasks/%s/results/%s/logs/asdf/log.txt'
                     % (self.recipe.id, self.recipe_task.id, rtr.id))
 

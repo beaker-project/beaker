@@ -9,7 +9,6 @@ from __future__ import absolute_import
 import json
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support.ui import Select, WebDriverWait
-from selenium import webdriver
 from bkr.inttest import data_setup, get_server_base
 
 def delete_and_confirm(browser, ancestor_xpath, delete_text='Delete'):

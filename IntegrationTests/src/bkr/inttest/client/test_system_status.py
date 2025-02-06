@@ -11,10 +11,7 @@ from json import loads
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError, ClientTestCase
 
-try:
-    unicode('')
-except:
-    unicode = str
+import six
 
 
 class SystemStatusTest(ClientTestCase):
@@ -44,7 +41,7 @@ class SystemStatusTest(ClientTestCase):
         json_out = loads(json_out)
         current_reservation = json_out.get('current_reservation')
         self.assertEqual(current_reservation.get('user_name'),
-            unicode(system.user))
+            six.text_type(system.user))
         self.assertEqual(current_reservation.get('recipe_id'), '%s' % \
             system.open_reservation.recipe.id)
         self.assertEqual(json_out.get('condition'), '%s' % system.status)
@@ -76,7 +73,7 @@ class SystemStatusTest(ClientTestCase):
             '--format', 'json'])
         json_out = loads(json_out)
         current_reservation = json_out['current_reservation']
-        self.assertEqual(current_reservation.get('user_name'), unicode(user))
+        self.assertEqual(current_reservation.get('user_name'), six.text_type(user))
         self.assertEqual(json_out.get('current_loan'), None)
         self.assertEqual(json_out.get('condition'), '%s' % SystemStatus.manual)
 
@@ -100,7 +97,7 @@ class SystemStatusTest(ClientTestCase):
         json_out = loads(json_out)
         self.assertEqual(json_out.get('current_reservation'), None)
         self.assertEqual(json_out.get('current_loan'), None)
-        self.assertEqual(json_out.get('condition'), unicode(system.status))
+        self.assertEqual(json_out.get('condition'), six.text_type(system.status))
 
         # Human friendly output
         human_out = run_client(['bkr', 'system-status', system.fqdn])

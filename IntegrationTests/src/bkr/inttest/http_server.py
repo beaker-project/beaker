@@ -21,13 +21,14 @@ It also treats the following paths specially:
     path information is ignored.
 """
 
-import os, os.path
+import os
+import os.path
 import re
 import time
 import shutil
-import urlparse
 import mimetypes
-import wsgiref.util, wsgiref.simple_server
+import wsgiref.util
+import wsgiref.simple_server
 
 class Application(object):
 
