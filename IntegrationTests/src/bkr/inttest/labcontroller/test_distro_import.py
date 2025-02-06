@@ -741,8 +741,6 @@ class DistroImportTest(LabControllerTestCase):
                                                    u'type': u'uimage'},
                                                   {u'path': u'images/pxeboot/uInitrd',
                                                    u'type': u'uinitrd'},],
-                                      u'arches': [
-                                                  ],
                                       u'arches': [],
                                       u'urls': [u'http://localhost:19998/Fedora-rawhide/armhfp/os/'],
                                       u'arch': u'armhfp',

@@ -5,12 +5,12 @@
 # (at your option) any later version.
 
 import pkg_resources
-import urlparse
-import re
 import jinja2
-import tempfile
 import difflib
+import six
+from six.moves import urllib
 from sqlalchemy.orm.exc import NoResultFound
+
 from bkr.inttest import data_setup, get_server_base
 from bkr.server.bexceptions import DatabaseLookupError
 from bkr.server.model import session, Distro, DistroTree, Arch, DistroTreeRepo
@@ -80,10 +80,10 @@ def compare_expected(name, recipe_id, actual):
     vars = {
         '@RECIPEID@': str(recipe_id),
         '@BEAKER@': get_server_base(),
-        '@REPOS@': urlparse.urljoin(get_server_base(), '/repos/'),
-        '@HARNESS@': urlparse.urljoin(get_server_base(), '/harness/'),
+        '@REPOS@': urllib.parse.urljoin(get_server_base(), '/repos/'),
+        '@HARNESS@': urllib.parse.urljoin(get_server_base(), '/harness/'),
     }
-    for var, value in vars.iteritems():
+    for var, value in six.iteritems(vars):
         expected = expected.replace(var, value)
     expected = expected.rstrip('\n')
     actual = actual.rstrip('\n')

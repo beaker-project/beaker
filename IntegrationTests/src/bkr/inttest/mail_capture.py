@@ -12,8 +12,8 @@ See bkr.server.test.selenium.test_systems for an example of how to use this.
 """
 
 import threading
-import smtpd
-import asyncore
+import smtpd  # TODO: Removed in Python 3.12
+import asyncore  # TODO: Removed in Python 3.12
 import logging
 
 log = logging.getLogger(__name__)

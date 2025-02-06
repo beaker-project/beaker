@@ -9,7 +9,6 @@ import datetime
 from decimal import Decimal
 from turbogears.database import session
 from sqlalchemy.sql import text
-from bkr.server import dynamic_virt
 from bkr.server.model import System, RecipeTask, Cpu, SystemStatus, \
     SystemActivity, TaskPriority, RecipeSetActivity, VirtResource, \
     GuestResource

@@ -6,12 +6,10 @@
 
 from turbogears.database import session
 from turbogears import config
-from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError, ClientTestCase
 import pkg_resources
 from os import path
 from bkr.server.model import Task, OSMajor
-from bkr.server.model.tasklibrary import TaskLibrary
 
 
 class TaskAddTest(ClientTestCase):

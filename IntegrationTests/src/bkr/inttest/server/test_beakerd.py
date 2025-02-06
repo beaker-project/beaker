@@ -6,12 +6,10 @@
 
 import datetime
 import os
-import threading
 import shutil
 import logging
 import pkg_resources
 from mock import patch
-import bkr
 
 from bkr.server.model import TaskStatus, Job, System, User, \
         Group, SystemStatus, SystemActivity, Recipe, Cpu, LabController, \
@@ -20,7 +18,6 @@ from bkr.server.model import TaskStatus, Job, System, User, \
         TaskResult, Command, CommandStatus, GroupMembershipType, \
         RecipeVirtStatus, Arch
 from bkr.server.installopts import InstallOptions
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import not_
 from turbogears import config
 from turbogears.database import session, get_engine
@@ -32,9 +29,10 @@ from bkr.server.tools import beakerd
 from bkr.server.jobs import Jobs
 from bkr.server import dynamic_virt
 from bkr.server.model import OSMajor
-from bkr.server.model.installation import RenderedKickstart
 from bkr.inttest.assertions import assert_datetime_within
 from unittest import SkipTest
+import six
+
 
 log = logging.getLogger(__name__)
 
@@ -2071,7 +2069,7 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
         try:
             self.virt_manager.novaclient.servers.get(recipe.resource.instance_id)
             self.fail('should raise')
-        except Exception, e:
+        except Exception as e:
             self.assertIn('Instance %s could not be found' % recipe.resource.instance_id,
                     e.message)
         if self.virt_manager.is_create_floating_ip:
@@ -2079,7 +2077,7 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
             try:
                 self.virt_manager.neutronclient.show_network(recipe.resource.network_id)
                 self.fail('should raise')
-            except Exception, e:
+            except Exception as e:
                 # neutronclient on RHEL7+ raise NetworkNotFoundClient for missing nets
                 if hasattr(e, 'status_code'):
                     self.assertEquals(e.status_code, 404)
@@ -2089,7 +2087,7 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
             try:
                 self.virt_manager.neutronclient.show_subnet(recipe.resource.subnet_id)
                 self.fail('should raise')
-            except Exception, e:
+            except Exception as e:
                 if hasattr(e, 'status_code'):
                     self.assertEquals(e.status_code, 404)
                 else:
@@ -2098,7 +2096,7 @@ class TestProvisionVirtRecipes(DatabaseTestCase):
             try:
                 self.virt_manager.neutronclient.show_router(recipe.resource.router_id)
                 self.fail('should raise')
-            except Exception, e:
+            except Exception as e:
                 if hasattr(e, 'status_code'):
                     self.assertEquals(e.status_code, 404)
                 else:
@@ -2132,7 +2130,7 @@ class TestBeakerdMetrics(DatabaseTestCase):
             for recipe in running:
                 recipe.recipeset.cancel()
                 recipe.recipeset.job.update_status()
-        except Exception, e:
+        except Exception:
             session.rollback()
             raise
 
@@ -2175,7 +2173,7 @@ class TestBeakerdMetrics(DatabaseTestCase):
                                   status=SystemStatus.removed)
         session.flush()
         beakerd.system_count_metrics()
-        for name, value in expected.iteritems():
+        for name, value in six.iteritems(expected):
             mock_metrics.measure.assert_any_call(name, value)
 
     def test_system_count_metrics_uses_active_access_policy(self, mock_metrics):
@@ -2233,7 +2231,7 @@ class TestBeakerdMetrics(DatabaseTestCase):
             expected['gauges.recipes_new.by_arch.%s' % arch] += 1
         session.flush()
         beakerd.recipe_count_metrics()
-        for name, value in expected.iteritems():
+        for name, value in six.iteritems(expected):
             mock_metrics.measure.assert_any_call(name, value)
         # Processing the recipes should set their virt status correctly
         mock_metrics.reset_mock()
@@ -2250,7 +2248,7 @@ class TestBeakerdMetrics(DatabaseTestCase):
             recipe.recipeset.job.update_status()
         session.flush()
         beakerd.recipe_count_metrics()
-        for name, value in expected.iteritems():
+        for name, value in six.iteritems(expected):
             mock_metrics.measure.assert_any_call(name, value)
 
     def test_dirty_job_metrics(self, mock_metrics):
