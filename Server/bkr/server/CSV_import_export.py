@@ -102,14 +102,14 @@ class CSV(RPCRoot):
         'import',
         fields = [upload],
         action = 'import data',
-        submit_text = _(u'Import CSV'),
+        submit_text = u'Import CSV',
     )
 
     exportform = HorizontalForm(
         'export',
         fields = [download],
         action = 'export data',
-        submit_text = _(u'Export CSV'),
+        submit_text = u'Export CSV',
     )
 
     @expose(template='bkr.server.templates.form')
@@ -117,7 +117,7 @@ class CSV(RPCRoot):
     def index(self, **kw):
         return dict(
             form = self.exportform,
-            title=_(u'CSV Export'),
+            title=u'CSV Export',
             action = './action_export',
             options = {},
             value = kw,
@@ -128,7 +128,7 @@ class CSV(RPCRoot):
     def csv_import(self, **kw):
         return dict(
             form = self.importform,
-            title=_(u'CSV Import'),
+            title=u'CSV Import',
             action = './action_import',
             options = {},
             value = kw,

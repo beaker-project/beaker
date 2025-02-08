@@ -28,12 +28,12 @@ class Preferences(RPCRoot):
         try:
             submission_delegate = User.by_user_name(delegate_name)
         except NoResultFound:
-            raise BX(_(u'%s is not a valid user name' % delegate_name))
+            raise BX(u'%s is not a valid user name' % delegate_name)
         try:
             user.remove_submission_delegate(submission_delegate, service=service)
         except ValueError:
-            raise BX(_(u'%s is not a submission delegate of %s' % \
-                (delegate_name, user)))
+            raise BX(u'%s is not a submission delegate of %s' % \
+                (delegate_name, user))
         return delegate_name
 
     # XMLRPC Interface
@@ -44,7 +44,7 @@ class Preferences(RPCRoot):
         user = identity.current.user
         new_delegate = User.by_user_name(new_delegate_name)
         if not new_delegate:
-            raise BX(_(u'%s is not a valid user' % new_delegate_name))
+            raise BX(u'%s is not a valid user' % new_delegate_name)
         user.add_submission_delegate(new_delegate, service)
         return new_delegate_name
 

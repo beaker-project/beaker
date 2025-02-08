@@ -138,11 +138,11 @@ class SystemsController(controllers.Controller):
         system = System.by_fqdn(fqdn, identity.current.user)
         if not system.can_power(identity.current.user):
             raise InsufficientSystemPermissions(
-                _(u'User %s does not have permission to power system %s')
+                u'User %s does not have permission to power system %s'
                 % (identity.current.user, system))
         if not force and system.user is not None \
                 and system.user != identity.current.user:
-            raise BX(_(u'System is in use'))
+            raise BX(u'System is in use')
         if clear_netboot:
             system.clear_netboot(service=u'XMLRPC')
         system.action_power(action, service=u'XMLRPC', delay=delay)
@@ -200,24 +200,24 @@ class SystemsController(controllers.Controller):
         """
         system = System.by_fqdn(fqdn, identity.current.user)
         if not system.user == identity.current.user:
-            raise BX(_(u'Reserve a system before provisioning'))
+            raise BX(u'Reserve a system before provisioning')
         distro_tree = DistroTree.by_id(distro_tree_id)
 
         # sanity check: does the distro tree apply to this system?
         if not system.compatible_with_distro_tree(arch=distro_tree.arch,
                                                   osmajor=distro_tree.distro.osversion.osmajor.osmajor,
                                                   osminor=distro_tree.distro.osversion.osminor):
-            raise BX(_(u'Distro tree %s cannot be provisioned on %s')
+            raise BX(u'Distro tree %s cannot be provisioned on %s'
                      % (distro_tree, system.fqdn))
         if not system.lab_controller:
-            raise BX(_(u'System is not attached to a lab controller'))
+            raise BX(u'System is not attached to a lab controller')
         if not distro_tree.url_in_lab(system.lab_controller):
-            raise BX(_(u'Distro tree %s is not available in lab %s')
+            raise BX(u'Distro tree %s is not available in lab %s'
                      % (distro_tree, system.lab_controller))
 
         if identity.current.user.rootpw_expired:
-            raise BX(_(
-                'Your root password has expired, please change or clear it in order to submit jobs.'))
+            raise BX(
+                'Your root password has expired, please change or clear it in order to submit jobs.')
 
         # ensure system-specific defaults are used
         # (overriden by this method's arguments)

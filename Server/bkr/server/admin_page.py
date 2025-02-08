@@ -49,7 +49,7 @@ class AdminPage(RPCRoot):
                                                 result_name = self.result_name)
         self.search_widget_form = InlineForm('Search', fields=[self.search_auto],
                 method='get', action=self.widget_action,
-                submit_text=_(u'Search'))
+                submit_text=u'Search')
         if getattr(self,'join',None) is None:
             self.join = []
         self.add = True

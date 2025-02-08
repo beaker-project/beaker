@@ -817,11 +817,11 @@ class System(DeclarativeMappedObject, ActivityMixin):
     def unreserve_manually_reserved(self, *args, **kw):
         open_reservation = self.open_reservation
         if not open_reservation:
-            raise BX(_(u'System %s is not currently reserved' % self.fqdn))
+            raise BX(u'System %s is not currently reserved' % self.fqdn)
         reservation_type = open_reservation.type
         if reservation_type == 'recipe':
             recipe_id = open_reservation.recipe.id
-            raise BX(_(u'Currently running R:%s' % recipe_id))
+            raise BX(u'Currently running R:%s' % recipe_id)
         self.unreserve(reservation=open_reservation, *args, **kw)
         return open_reservation
 
@@ -1699,8 +1699,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
         if count >= 2:
             # Broken!
             metrics.increment('counters.suspicious_aborts')
-            reason = six.text_type(_(u'System has a run of aborted recipes '
-                    'with reliable distros'))
+            reason = six.text_type(u'System has a run of aborted recipes '
+                    'with reliable distros')
             log.warn(reason)
             self.mark_broken(reason=reason)
 
@@ -1709,8 +1709,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
             user = identity.current.user
         self._check_can_reserve(user)
         if not self.can_reserve_manually(user):
-            raise BX(_(u'Cannot manually reserve automated system, '
-                    'without borrowing it first. Schedule a job instead'))
+            raise BX(u'Cannot manually reserve automated system, '
+                    'without borrowing it first. Schedule a job instead')
         return self._reserve(service, user, u'manual')
 
     def reserve_for_recipe(self, service, user=None):
@@ -1722,16 +1722,16 @@ class System(DeclarativeMappedObject, ActivityMixin):
     def _check_can_reserve(self, user):
         # Throw an exception if the given user can't reserve the system.
         if self.user is not None and self.user == user:
-            raise StaleSystemUserException(_(u'User %s has already reserved '
-                'system %s') % (user, self))
+            raise StaleSystemUserException(u'User %s has already reserved '
+                'system %s' % (user, self))
         if not self.can_reserve(user):
-            raise InsufficientSystemPermissions(_(u'User %s cannot '
-                'reserve system %s') % (user, self))
+            raise InsufficientSystemPermissions(u'User %s cannot '
+                'reserve system %s' % (user, self))
         if self.loaned:
             # loans give exclusive rights to reserve
             if user != self.loaned and user != self.owner:
-                raise InsufficientSystemPermissions(_(u'User %s cannot reserve '
-                        'system %s while it is loaned to user %s')
+                raise InsufficientSystemPermissions(u'User %s cannot reserve '
+                        'system %s while it is loaned to user %s'
                         % (user, self, self.loaned))
 
     def _reserve(self, service, user, reservation_type):
@@ -1741,8 +1741,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
                 and_(System.id == self.id,
                      System.user_id == None)),
                 user_id=user.user_id).rowcount != 1:
-            raise StaleSystemUserException(_(u'System %r is already '
-                'reserved') % self)
+            raise StaleSystemUserException(u'System %r is already '
+                'reserved' % self)
         self.user = user # do it here too, so that the ORM is aware
         self.scheduler_status = SystemSchedulerStatus.reserved
         reservation = Reservation(user=user, type=reservation_type)
@@ -1759,10 +1759,10 @@ class System(DeclarativeMappedObject, ActivityMixin):
             user = identity.current.user
 
         if self.user is None:
-            raise BX(_(u'System is not reserved'))
+            raise BX(u'System is not reserved')
         if not self.can_unreserve(user):
             raise InsufficientSystemPermissions(
-                    _(u'User %s cannot unreserve system %s, reserved by %s')
+                    u'User %s cannot unreserve system %s, reserved by %s'
                     % (user, self, self.user))
 
         # Update reservation atomically first, to avoid races
@@ -1772,7 +1772,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
                 and_(Reservation.id == my_reservation_id,
                      Reservation.finish_time == None)),
                 finish_time=datetime.utcnow()).rowcount != 1:
-            raise BX(_(u'System does not have an open reservation'))
+            raise BX(u'System does not have an open reservation')
         session.expire(reservation, ['finish_time'])
         old_user = self.user
         self.user = None

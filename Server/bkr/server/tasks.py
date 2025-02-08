@@ -53,7 +53,7 @@ class Tasks(RPCRoot):
         'task',
         fields = [_upload],
         action = 'save_data',
-        submit_text = _(u'Upload')
+        submit_text = u'Upload'
     )
     del _upload
 
@@ -114,7 +114,7 @@ class Tasks(RPCRoot):
             try:
                 osmajor = OSMajor.by_name(filter['osmajor'])
             except InvalidRequestError:
-                raise BX(_('Invalid OSMajor: %s' % filter['osmajor']))
+                raise BX('Invalid OSMajor: %s' % filter['osmajor'])
             tasks = tasks.filter(Task.compatible_with_osmajor(osmajor))
 
         # Filter by valid task if requested
@@ -157,7 +157,7 @@ class Tasks(RPCRoot):
                 try:
                     tasktype = TaskType.by_name(type)
                 except InvalidRequestError as err:
-                    raise BX(_('Invalid Task Type: %s' % type))
+                    raise BX('Invalid Task Type: %s' % type)
                 or_types.append(TaskType.id==tasktype.id)
             tasks = tasks.filter(or_(*or_types))
 
@@ -189,9 +189,9 @@ class Tasks(RPCRoot):
         # we do it here, since we do not want to proceed
         # any further
         if len(task_rpm_name) > 255:
-            raise BX(_("Task RPM name should be <= 255 characters"))
+            raise BX("Task RPM name should be <= 255 characters")
         if os.path.exists("%s" % rpm_path):
-            raise BX(_(u'Cannot import duplicate task %s') % task_rpm_name)
+            raise BX(u'Cannot import duplicate task %s' % task_rpm_name)
 
         def write_data(f):
             f.write(task_rpm_data.data)
@@ -207,18 +207,17 @@ class Tasks(RPCRoot):
         rpm_path = Task.get_rpm_path(task_rpm.filename)
 
         if not task_rpm.filename:
-            flash(_(u'No task RPM specified'))
+            flash(u'No task RPM specified')
             redirect(url("./new"))
 
         # we do it here, since we do not want to proceed
         # any further
         if len(task_rpm.filename) > 255:
-            flash(_(u"Task RPM name should be <= 255 characters"))
+            flash(u"Task RPM name should be <= 255 characters")
             redirect(url("./new"))
 
         if os.path.exists("%s" % rpm_path):
-            flash(_(u'Failed to import because we already have %s' % 
-                                                     task_rpm.filename ))
+            flash(u'Failed to import because we already have %s' % task_rpm.filename )
             redirect(url("./new"))
 
         try:
@@ -228,7 +227,7 @@ class Tasks(RPCRoot):
         except Exception as err:
             session.rollback()
             log.exception('Failed to import %s', task_rpm.filename)
-            flash(_(u'Failed to import task: %s' % err))
+            flash(u'Failed to import task: %s' % err)
             redirect(url("./new"))
         redirect("/tasks/%s" % task.id)
 

@@ -418,18 +418,18 @@ class Task(DeclarativeMappedObject):
         tinfo = testinfo.parse_string(raw_taskinfo['desc'].decode('utf8'))
 
         if len(tinfo.test_name) > 255:
-            raise BX(_("Task name should be <= 255 characters"))
+            raise BX("Task name should be <= 255 characters")
         if tinfo.test_name.endswith('/'):
-            raise BX(_(u'Task name must not end with slash'))
+            raise BX(u'Task name must not end with slash')
         if '//' in tinfo.test_name: # pylint:disable=unsupported-membership-test
-            raise BX(_(u'Task name must not contain redundant slashes'))
+            raise BX(u'Task name must not contain redundant slashes')
 
         existing_task = Task.query.filter(Task.name == tinfo.test_name).first()
         if existing_task is not None:
             task = existing_task
             # RPM is the same version we have. don't process
             if existing_task.version == raw_taskinfo['hdr']['ver']:
-                raise BX(_("Failed to import,  %s is the same version we already have" % task.version))
+                raise BX("Failed to import,  %s is the same version we already have" % task.version)
             # if the task is already present, check if a downgrade has been requested
             downgrade = cls.check_downgrade(task.version, raw_taskinfo['hdr']['ver'])
         else:

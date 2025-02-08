@@ -233,7 +233,7 @@ class DeleteLinkWidget(Widget):
     css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     params = ['msg', 'action_text', 'show_icon']
     msg = None
-    action_text = _(u'Delete')
+    action_text = u'Delete'
     show_icon = True
 
 class DoAndConfirmForm(Form):
@@ -682,24 +682,24 @@ class TaskSearchForm(RemoteForm):
               HiddenField(name='distro_id', validator=validators.Int()),
               HiddenField(name='distro_tree_id', validator=validators.Int()),
               HiddenField(name='task_id', validator=validators.Int()),
-              TextField(name='task', label=_(u'Task')),
-              TextField(name='version', label=_(u'Version')),
-              TextField(name='system', label=_(u'System')),
-              SingleSelectField(name='arch_id', label=_(u'Arch'),validator=validators.Int(),
+              TextField(name='task', label=u'Task'),
+              TextField(name='version', label=u'Version'),
+              TextField(name='system', label=u'System'),
+              SingleSelectField(name='arch_id', label=u'Arch',validator=validators.Int(),
                                 options=model.Arch.get_all),
-              TextField(name='distro', label=_(u'Distro')),
-              TextField(name='whiteboard', label=_(u'Recipe Whiteboard')),
-              SingleSelectField(name='osmajor_id', label=_(u'Family'),validator=validators.Int(),
+              TextField(name='distro', label=u'Distro'),
+              TextField(name='whiteboard', label=u'Recipe Whiteboard'),
+              SingleSelectField(name='osmajor_id', label=u'Family',validator=validators.Int(),
                                 options=lambda: [(0, 'All')] + [(m.id, m.osmajor) for m
                                     in model.OSMajor.ordered_by_osmajor(model.OSMajor.used_by_any_recipe())]),
-              SingleSelectField(name='status', label=_(u'Status'), validator=ValidEnumValue(model.TaskStatus),
+              SingleSelectField(name='status', label=u'Status', validator=ValidEnumValue(model.TaskStatus),
                                 options=lambda: [(None, 'All')] + [(status, status.value) for status in model.TaskStatus]),
-              SingleSelectField(name='result', label=_(u'Result'), validator=ValidEnumValue(model.TaskResult),
+              SingleSelectField(name='result', label=u'Result', validator=ValidEnumValue(model.TaskResult),
                                 options=lambda: [(None, 'All')] + [(result, result.value) for result in model.TaskResult]),
              ]
     before = 'task_search_before()'
     on_complete = 'task_search_complete()'
-    submit_text = _(u'Submit Query')
+    submit_text = u'Submit Query'
 
     def __init__(self, *args, **kw):
         super(TaskSearchForm,self).__init__(*args,**kw)
@@ -714,19 +714,19 @@ class LabInfoForm(HorizontalForm):
     fields = [
         HiddenField(name="id"),
         HiddenField(name="labinfo"),
-        TextField(name='orig_cost', label=_(u'Original Cost'),
+        TextField(name='orig_cost', label=u'Original Cost',
             validator=validators.Money()),
-        TextField(name='curr_cost', label=_(u'Current Cost'),
+        TextField(name='curr_cost', label=u'Current Cost',
             validator=validators.Money()),
-        TextField(name='dimensions', label=_(u'Dimensions')),
-        TextField(name='weight', label=_(u'Weight'),
+        TextField(name='dimensions', label=u'Dimensions'),
+        TextField(name='weight', label=u'Weight',
             validator=validators.Int()),
-        TextField(name='wattage', label=_(u'Wattage'),
+        TextField(name='wattage', label=u'Wattage',
             validator=validators.Int()),
-        TextField(name='cooling', label=_(u'Cooling'),
+        TextField(name='cooling', label=u'Cooling',
             validator=validators.Int()),
     ]
-    submit_text = _(u'Save Lab Info Changes')
+    submit_text = u'Save Lab Info Changes'
 
     def update_params(self, d):
         super(LabInfoForm, self).update_params(d)
@@ -909,8 +909,8 @@ class SystemKeys(Form):
     def __init__(self, *args, **kw):
         super(SystemKeys, self).__init__(*args, **kw)
         self.id = HiddenField(name="id")
-        self.key_name = TextField(name='key_name', label=_(u'Key'))
-        self.key_value = TextField(name='key_value', label=_(u'Value'))
+        self.key_name = TextField(name='key_name', label=u'Key')
+        self.key_value = TextField(name='key_value', label=u'Value')
 
     def update_params(self, d):
         super(SystemKeys, self).update_params(d)
@@ -958,24 +958,24 @@ class SystemInstallOptions(Form):
         super(SystemInstallOptions, self).__init__(*args, **kw)
         self.id                = HiddenField(name="id")
         self.prov_arch         = SingleSelectField(name='prov_arch',
-                                 label=_(u'Arch'),
+                                 label=u'Arch',
                                  options=[],
                                  validator=validators.NotEmpty())
         self.prov_osmajor      = SingleSelectField(name='prov_osmajor',
-                                 label=_(u'Family'),
+                                 label=u'Family',
                                  options=lambda: [(0, 'All')] +
                                     [(m.id, m.osmajor) for m in model.OSMajor.ordered_by_osmajor()],
                                  validator=validators.NotEmpty())
         self.prov_osversion    = SingleSelectField(name='prov_osversion',
-                                 label=_(u'Update'),
+                                 label=u'Update',
                                  options=[(0,u'All')],
                                  validator=validators.NotEmpty())
         self.prov_ksmeta       = TextField(name='prov_ksmeta', 
-                                     label=_(u'Kickstart Metadata'))
+                                     label=u'Kickstart Metadata')
         self.prov_koptions     = TextField(name='prov_koptions', 
-                                       label=_(u'Kernel Options'))
+                                       label=u'Kernel Options')
         self.prov_koptionspost = TextField(name='prov_koptionspost',
-                                           label=_(u'Kernel Options Post'))
+                                           label=u'Kernel Options Post')
 
     def update_params(self, d):
         super(SystemInstallOptions, self).update_params(d)

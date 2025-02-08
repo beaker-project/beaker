@@ -64,16 +64,16 @@ class Users(RPCRoot):
         try:
             user = User.by_user_name(username)
         except InvalidRequestError:
-            raise BX(_('Invalid User %s ' % username))
+            raise BX('Invalid User %s ' % username)
 
         if newowner:
             owner = User.by_user_name(newowner)
             if owner is None:
-                raise BX(_('Invalid user name for owner %s' % newowner))
+                raise BX('Invalid user name for owner %s' % newowner)
             kwargs['newowner'] = owner
 
         if user.removed:
-            raise BX(_('User already removed %s' % username))
+            raise BX('User already removed %s' % username)
 
         _remove(user=user, method='XMLRPC', **kwargs)
 
@@ -86,7 +86,7 @@ def _disable(user, method,
 
 def _remove(user, method, **kw):
     if user == identity.current.user:
-        raise BX(_('You cannot remove yourself'))
+        raise BX('You cannot remove yourself')
 
     # cancel all running and queued jobs
     Job.cancel_jobs_by_user(user, 'User %s removed' % user.user_name)

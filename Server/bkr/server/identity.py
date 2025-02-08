@@ -220,7 +220,7 @@ class IdentityFailure(cherrypy.HTTPRedirect, cherrypy.HTTPError):
     # For XML-RPC we instead catch it and return it as a fault.
 
     def __init__(self, message=None):
-        self._message = message or _(u'Please log in')
+        self._message = message or u'Please log in'
         self.args = [self._message]
         if cherrypy.request.method not in ('GET', 'HEAD'):
             # Other HTTP methods cannot be safely redirected through the login 
@@ -254,7 +254,7 @@ class NotAnonymousPredicate(IdentityPredicate):
 
     def check(self):
         if current.anonymous:
-            raise IdentityFailure(_(u'Anonymous access denied'))
+            raise IdentityFailure(u'Anonymous access denied')
 
 not_anonymous = NotAnonymousPredicate
 
@@ -265,9 +265,9 @@ class InGroupPredicate(IdentityPredicate):
 
     def check(self):
         if current.user is None:
-            raise IdentityFailure(_(u'Anonymous access denied'))
+            raise IdentityFailure(u'Anonymous access denied')
         if not current.user.in_group([self.group_name]):
-            raise IdentityFailure(_(u'Not member of group: %s') % self.group_name)
+            raise IdentityFailure(u'Not member of group: %s' % self.group_name)
 
 in_group = InGroupPredicate
 
@@ -280,7 +280,7 @@ class HasPermissionPredicate(IdentityPredicate):
         if current.user is None:
             raise IdentityFailure()
         if not current.user.has_permission(self.permission_name):
-            raise IdentityFailure(_(u'Permission denied: %s') % self.permission_name)
+            raise IdentityFailure(u'Permission denied: %s' % self.permission_name)
 
 has_permission = HasPermissionPredicate
 

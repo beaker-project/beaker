@@ -17,9 +17,9 @@ class KeyTypes(AdminPage):
     exposed = False
 
     id         = widgets.HiddenField(name='id')
-    key_name   = widgets.TextField(name='key_name', label=_(u'Name'))
+    key_name   = widgets.TextField(name='key_name', label=u'Name')
     numeric    = widgets.CheckBox(name='numeric',
-                                  label=_(u'Numeric'),
+                                  label=u'Numeric',
                                   default=False,
                                   validator=validators.StringBool(if_empty=False))
 
@@ -27,7 +27,7 @@ class KeyTypes(AdminPage):
         'keytypes',
         fields = [id, key_name, numeric],
         action = 'save_data',
-        submit_text = _(u'Submit Data'),
+        submit_text = u'Submit Data',
     )
 
     
@@ -43,7 +43,7 @@ class KeyTypes(AdminPage):
     @expose(template='bkr.server.templates.form')
     def new(self, **kw):
         return dict(
-            title=_(u'New Key Type'),
+            title=u'New Key Type',
             form = self.form,
             action = './save',
             options = {},
@@ -84,7 +84,7 @@ class KeyTypes(AdminPage):
             key = Key(key_name=kw['key_name'])
             session.add(key)
         key.numeric = kw['numeric']
-        flash( _(u"OK") )
+        flash( u"OK" )
         redirect(".")
 
     @expose(template="bkr.server.templates.admin_grid")
@@ -113,7 +113,7 @@ class KeyTypes(AdminPage):
     def remove(self, **kw):
         remove = Key.by_id(kw['id'])
         session.delete(remove)
-        flash( _(u"%s Deleted") % remove.key_name )
+        flash( u"%s Deleted" % remove.key_name )
         raise redirect(".")
 
     @expose(format='json')

@@ -488,7 +488,7 @@ class Modeller(object):
         try: 
             return op_dict[operator]
         except KeyError as e:
-            flash(_('%s is not a valid operator' % operator))
+            flash('%s is not a valid operator' % operator)
             raise
 
     def return_operators(self,field_type,loose_match=True): 
@@ -560,7 +560,7 @@ class Search(object):
         try:
             mycolumn = cls.searchable_columns[column]
         except KeyError as e:
-            flash(_(u'%s is not a valid search criteria' % column)) 
+            flash(u'%s is not a valid search criteria' % column)
             raise
         self.do_joins(mycolumn)
              

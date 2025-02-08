@@ -733,8 +733,8 @@ class Group(DeclarativeMappedObject, ActivityMixin):
         old_group_name = self.group_name
         if group_name != old_group_name:
             if self.is_protected_group():
-                raise BX(_(u'Cannot rename protected group %r as %r'
-                                              % (old_group_name, group_name)))
+                raise BX(u'Cannot rename protected group %r as %r'
+                                              % (old_group_name, group_name))
             self.group_name = group_name
             self.record_activity(user=user, service=service,
                                  field=u'Name',

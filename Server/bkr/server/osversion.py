@@ -35,13 +35,13 @@ class OSVersions(AdminPage):
 
     osmajor_form = HorizontalForm(
         fields      = [id, alias],
-        submit_text = _(u"Edit OSMajor"),
+        submit_text = u"Edit OSMajor",
     )
 
     osversion_form = HorizontalForm(
         fields      = [id, arches],
         action      = "edit osversion",
-        submit_text = _(u"Edit OSVersion"),
+        submit_text = u"Edit OSVersion",
     )
  
     def __init__(self,*args,**kw):
@@ -60,7 +60,7 @@ class OSVersions(AdminPage):
         try:
             osversion = OSVersion.by_id(id)
         except InvalidRequestError:
-            flash(_(u"Invalid OSVersion ID %s" % id))
+            flash(u"Invalid OSVersion ID %s" % id)
             redirect(".")
         return dict(title   = six.text_type(osversion),
                     value   = dict(id     = osversion.id,
@@ -75,7 +75,7 @@ class OSVersions(AdminPage):
         try:
             osmajor = OSMajor.by_id(id)
         except InvalidRequestError:
-            flash(_(u"Invalid OSMajor ID %s" % id))
+            flash(u"Invalid OSMajor ID %s" % id)
             redirect(".")
         return dict(title   = "OSMajor",
                     value   = osmajor,
@@ -90,7 +90,7 @@ class OSVersions(AdminPage):
         try:
             osmajor = OSMajor.by_id(id)
         except InvalidRequestError:
-            flash(_(u"Invalid OSMajor ID %s" % id))
+            flash(u"Invalid OSMajor ID %s" % id)
             redirect(".")
         if osmajor.alias != alias:
             if alias:
@@ -99,13 +99,13 @@ class OSVersions(AdminPage):
                 except NoResultFound:
                     pass
                 else:
-                    flash(_(u'Cannot save alias %s, it is already used by %s')
+                    flash(u'Cannot save alias %s, it is already used by %s'
                             % (alias, existing))
                     redirect('.')
             osmajor.alias = alias
-            flash(_(u"Changes saved for %s" % osmajor))
+            flash(u"Changes saved for %s" % osmajor)
         else:
-            flash(_(u"No changes for %s" % osmajor))
+            flash(u"No changes for %s" % osmajor)
         redirect(".")
 
     @identity.require(identity.in_group('admin'))
@@ -114,7 +114,7 @@ class OSVersions(AdminPage):
         try:
             osmajor = OSMajor.by_id(osmajor_id)
         except InvalidRequestError:
-            flash(_(u"Invalid OSMajor ID %s" % id))
+            flash(u"Invalid OSMajor ID %s" % id)
             redirect(".")
         for arch, options in six.iteritems(installopts):
             # arch=None means applied to all arches
@@ -123,7 +123,7 @@ class OSVersions(AdminPage):
             io.ks_meta = options['ks_meta']
             io.kernel_options = options['kernel_options']
             io.kernel_options_post = options['kernel_options_post']
-        flash(_(u'Install options saved for %s') % osmajor)
+        flash(u'Install options saved for %s' % osmajor)
         redirect('.')
 
     @identity.require(identity.in_group("admin"))
@@ -133,14 +133,14 @@ class OSVersions(AdminPage):
         try:
             osversion = OSVersion.by_id(id)
         except InvalidRequestError:
-            flash(_(u"Invalid OSVersion ID %s" % id))
+            flash(u"Invalid OSVersion ID %s" % id)
             redirect(".")
         arch_objects = [Arch.by_id(arch) for arch in arches]
         if osversion.arches != arch_objects:
             osversion.arches = arch_objects
-            flash(_(u"Changes Saved for %s" % osversion))
+            flash(u"Changes Saved for %s" % osversion)
         else:
-            flash(_(u"No Changes for %s" % osversion))
+            flash(u"No Changes for %s" % osversion)
         redirect(".")
 
     

@@ -74,7 +74,7 @@ class JobMatrix:
                 jobs = model.Job.by_whiteboard(kw.get('whiteboard')).filter(not_(model.Job.is_deleted))
                 job_count = jobs.count()
                 if job_count > model.Job.max_by_whiteboard:
-                    flash(_('Your whiteboard contains %s jobs, only %s will be used' % (job_count, model.Job.max_by_whiteboard)))
+                    flash('Your whiteboard contains %s jobs, only %s will be used' % (job_count, model.Job.max_by_whiteboard))
                 jobs = jobs.limit(model.Job.max_by_whiteboard)
                 job_ids = [str(j.id) for j in jobs]
                 self.job_ids = job_ids

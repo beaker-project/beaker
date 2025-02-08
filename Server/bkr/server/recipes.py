@@ -58,7 +58,7 @@ class Recipes(RPCRoot):
         'end_recipe_reservation',
         fields = [hidden_id, confirm],
         action = './really_return_reservation',
-        submit_text = _(u'Yes')
+        submit_text = u'Yes'
     )
 
     tasks = RecipeTasks()
@@ -100,7 +100,7 @@ class Recipes(RPCRoot):
         try:
             recipe = Recipe.by_id(recipe_id, lockmode='update')
         except NoResultFound:
-            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+            raise BX('Invalid recipe ID: %s' % recipe_id)
         if recipe.is_finished():
             raise BX('Cannot register file for finished recipe %s'
                     % recipe.t_id)
@@ -131,7 +131,7 @@ class Recipes(RPCRoot):
         try:
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
-            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+            raise BX('Invalid recipe ID: %s' % recipe_id)
         # Build a list of logs excluding duplicate paths, to mitigate:
         # https://bugzilla.redhat.com/show_bug.cgi?id=963492
         logdicts = []
@@ -161,7 +161,7 @@ class Recipes(RPCRoot):
         try:
             recipe = Recipe.by_id(recipe_id, lockmode='update')
         except NoResultFound:
-            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+            raise BX('Invalid recipe ID: %s' % recipe_id)
         for mylog in recipe.all_logs():
             mylog.server = '%s/%s/' % (server, mylog.parent.filepath)
             mylog.basepath = '%s/%s/' % (basepath, mylog.parent.filepath)
@@ -177,7 +177,7 @@ class Recipes(RPCRoot):
         try:
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
-            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+            raise BX('Invalid recipe ID: %s' % recipe_id)
         return recipe.extend(kill_time)
 
     @cherrypy.expose
@@ -188,7 +188,7 @@ class Recipes(RPCRoot):
         try:
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
-            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+            raise BX('Invalid recipe ID: %s' % recipe_id)
         manager = dynamic_virt.VirtManager(recipe.recipeset.job.owner)
         return manager.get_console_output(recipe.resource.instance_id, output_length)
 
@@ -197,7 +197,7 @@ class Recipes(RPCRoot):
         try:
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
-            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+            raise BX('Invalid recipe ID: %s' % recipe_id)
         return recipe.status_watchdog()
 
     @cherrypy.expose
@@ -209,10 +209,10 @@ class Recipes(RPCRoot):
         try:
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
-            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+            raise BX('Invalid recipe ID: %s' % recipe_id)
         if stop_type not in recipe.stop_types:
-            raise BX(_('Invalid stop_type: %s, must be one of %s' %
-                             (stop_type, recipe.stop_types)))
+            raise BX('Invalid stop_type: %s, must be one of %s' %
+                             (stop_type, recipe.stop_types))
         kwargs = dict(msg = msg)
         return getattr(recipe,stop_type)(**kwargs)
 
@@ -226,9 +226,9 @@ class Recipes(RPCRoot):
         try:
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
-            raise BX(_("Invalid Recipe ID %s" % recipe_id))
+            raise BX("Invalid Recipe ID %s" % recipe_id)
         if not recipe.installation:
-            raise BX(_('Recipe %s not provisioned yet') % recipe_id)
+            raise BX('Recipe %s not provisioned yet' % recipe_id)
 
         installation = recipe.installation
         if not installation.install_started:
@@ -251,9 +251,9 @@ class Recipes(RPCRoot):
         try:
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
-            raise BX(_("Invalid Recipe ID {}".format(recipe_id)))  # noqa: F821
+            raise BX("Invalid Recipe ID {}".format(recipe_id))  # noqa: F821
         if not recipe.installation:
-            raise BX(_("Recipe {} not provisioned yet".format(recipe_id)))  # noqa: F821
+            raise BX("Recipe {} not provisioned yet".format(recipe_id))  # noqa: F821
 
         return recipe.abort('Installation failed')
 
@@ -266,9 +266,9 @@ class Recipes(RPCRoot):
         try:
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
-            raise BX(_(u'Invalid Recipe ID %s' % recipe_id))
+            raise BX(u'Invalid Recipe ID %s' % recipe_id)
         if not recipe.installation:
-            raise BX(_('Recipe %s not provisioned yet') % recipe_id)
+            raise BX('Recipe %s not provisioned yet' % recipe_id)
         recipe.installation.postinstall_finished = datetime.utcnow()
         return True
 
@@ -280,14 +280,14 @@ class Recipes(RPCRoot):
         Report completion of installation with current FQDN
         """
         if not recipe_id:
-            raise BX(_("No recipe id provided!"))
+            raise BX("No recipe id provided!")
 
         try:
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
-            raise BX(_("Invalid Recipe ID %s" % recipe_id))
+            raise BX("Invalid Recipe ID %s" % recipe_id)
         if not recipe.installation:
-            raise BX(_('Recipe %s not provisioned yet') % recipe_id)
+            raise BX('Recipe %s not provisioned yet' % recipe_id)
 
         recipe.installation.install_finished = datetime.utcnow()
         # We don't want to change an existing FQDN, just set it
@@ -307,10 +307,10 @@ class Recipes(RPCRoot):
         try:
             recipe = Recipe.by_id(id)
         except InvalidRequestError:
-            raise BX(_("Invalid Recipe ID %s" % id))
+            raise BX("Invalid Recipe ID %s" % id)
         recipe.return_reservation()
 
-        flash(_(u"Successfully released reserved system for %s" % recipe.t_id))
+        flash(u"Successfully released reserved system for %s" % recipe.t_id)
         redirect('/jobs/mine')
 
     @expose(template="bkr.server.templates.form")
@@ -320,7 +320,7 @@ class Recipes(RPCRoot):
         End recipe reservation
         """
         if not recipe_id:
-            raise BX(_("No recipe id provided!"))
+            raise BX("No recipe id provided!")
 
         return dict(
             title = 'Release reserved system for Recipe %s' % recipe_id,
@@ -345,7 +345,7 @@ class Recipes(RPCRoot):
         try:
             recipe = Recipe.by_id(int(recipe_id))
         except (InvalidRequestError, NoResultFound, ValueError):
-            raise BX(_('Invalid recipe ID %s') % recipe_id)
+            raise BX('Invalid recipe ID %s' % recipe_id)
         if isinstance(recipe.resource, SystemResource):
             recipe.resource.system.action_power('reboot',
                     service=u'XMLRPC', delay=30)
@@ -357,12 +357,12 @@ class Recipes(RPCRoot):
             Pass in recipe id and you'll get that recipe's xml
         """
         if not recipe_id:
-            raise BX(_("No recipe id provided!"))
+            raise BX("No recipe id provided!")
         try:
             recipexml = etree.tostring(Recipe.by_id(recipe_id).to_xml(),
                                        pretty_print=True, encoding='utf8')
         except InvalidRequestError:
-            raise BX(_("Invalid Recipe ID %s" % recipe_id))
+            raise BX("Invalid Recipe ID %s" % recipe_id)
         return recipexml
 
     def _recipe_search(self,recipe,**kw):
@@ -464,7 +464,7 @@ class Recipes(RPCRoot):
                     title='Action', options=dict(sortable=False)),])
 
         search_bar = SearchBar(name='recipesearch',
-                           label=_(u'Recipe Search'),    
+                           label=u'Recipe Search',    
                            simplesearch_label = 'Lookup ID',
                            table = search_utility.Recipe.search.create_complete_search_table(),
                            search_controller=url("/get_search_options_recipe"), 
@@ -486,7 +486,7 @@ class Recipes(RPCRoot):
         try:
             recipe = Recipe.by_id(recipe_id)
         except NoResultFound:
-            flash(_(u"Invalid recipe id %s" % recipe_id))
+            flash(u"Invalid recipe id %s" % recipe_id)
             redirect(url("/recipes"))
         PDC = widgets.PaginateDataGrid.Column
         fields = [PDC(name='fqdn', getter=lambda x: x.link, title='Name'),
@@ -509,10 +509,10 @@ class Recipes(RPCRoot):
         try:
             recipe = Recipe.by_id(id)
         except InvalidRequestError:
-            flash(_(u"Invalid recipe id %s" % id))
+            flash(u"Invalid recipe id %s" % id)
             redirect(".")
         if recipe.is_deleted:
-            flash(_(u"Invalid %s, has been deleted" % recipe.t_id))
+            flash(u"Invalid %s, has been deleted" % recipe.t_id)
             redirect(".")
         if recipe.is_finished() or recipe.status == TaskStatus.reserved:
             recipe.set_reviewed_state(identity.current.user, True)

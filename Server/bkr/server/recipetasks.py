@@ -86,7 +86,7 @@ class RecipeTasks(RPCRoot):
         try:
             recipetask = RecipeTask.by_id(task_id, lockmode='update')
         except NoResultFound:
-            raise BX(_('Invalid task ID: %s' % task_id))
+            raise BX('Invalid task ID: %s' % task_id)
         Recipe.by_id(recipetask.recipe_id, lockmode='update')
         if recipetask.is_finished():
             raise BX('Cannot register file for finished task %s'
@@ -112,7 +112,7 @@ class RecipeTasks(RPCRoot):
         try:
             result = RecipeTaskResult.by_id(result_id, lockmode='update')
         except NoResultFound:
-            raise BX(_('Invalid result ID: %s' % result_id))
+            raise BX('Invalid result ID: %s' % result_id)
         RecipeTask.by_id(result.recipe_task_id, lockmode='update')
         Recipe.by_id(result.recipetask.recipe_id, lockmode='update')
         if result.recipetask.is_finished():
@@ -141,15 +141,15 @@ class RecipeTasks(RPCRoot):
             try:
                 labcontroller = identity.current.user.lab_controller
             except AttributeError:
-                raise BX(_('No lab controller passed in and not currently logged in'))
+                raise BX('No lab controller passed in and not currently logged in')
 
             if not labcontroller:
-                raise BX(_(u'Invalid login: %s, must log in as a lab controller' % identity.current.user))
+                raise BX(u'Invalid login: %s, must log in as a lab controller' % identity.current.user)
         else:
             try:
                 labcontroller = LabController.by_name(lc)
             except InvalidRequestError:
-                raise BX(_(u'Invalid lab controller: %s' % lc))
+                raise BX(u'Invalid lab controller: %s' % lc)
 
         return [dict(recipe_id = w.recipe.id,
                      system = w.recipe.resource.fqdn,
@@ -164,7 +164,7 @@ class RecipeTasks(RPCRoot):
         try:
             task = RecipeTask.by_id(task_id)
         except InvalidRequestError:
-            raise BX(_('Invalid task ID: %s' % task_id))
+            raise BX('Invalid task ID: %s' % task_id)
         return task.start(watchdog_override)
 
     @cherrypy.expose
@@ -176,7 +176,7 @@ class RecipeTasks(RPCRoot):
         try:
             task = RecipeTask.by_id(task_id)
         except InvalidRequestError:
-            raise BX(_('Invalid task ID: %s' % task_id))
+            raise BX('Invalid task ID: %s' % task_id)
         return task.extend(kill_time)
 
     @cherrypy.expose
@@ -187,7 +187,7 @@ class RecipeTasks(RPCRoot):
         try:
             task = RecipeTask.by_id(task_id)
         except InvalidRequestError:
-            raise BX(_('Invalid task ID: %s' % task_id))
+            raise BX('Invalid task ID: %s' % task_id)
         return task.status_watchdog()
 
     @cherrypy.expose
@@ -199,10 +199,10 @@ class RecipeTasks(RPCRoot):
         try:
             task = RecipeTask.by_id(task_id)
         except InvalidRequestError:
-            raise BX(_('Invalid task ID: %s' % task_id))
+            raise BX('Invalid task ID: %s' % task_id)
         if stop_type not in task.stop_types:
-            raise BX(_('Invalid stop_type: %s, must be one of %s' %
-                             (stop_type, task.stop_types)))
+            raise BX('Invalid stop_type: %s, must be one of %s' %
+                             (stop_type, task.stop_types))
         kwargs = dict(msg = msg)
         return getattr(task,stop_type)(**kwargs)
 
@@ -216,7 +216,7 @@ class RecipeTasks(RPCRoot):
         try:
             task = RecipeTask.by_id(task_id)
         except InvalidRequestError:
-            raise BX(_('Invalid task ID: %s' % task_id))
+            raise BX('Invalid task ID: %s' % task_id)
         if 'name' in data:
             task.name = data['name']
         if 'version' in data:
@@ -235,10 +235,10 @@ class RecipeTasks(RPCRoot):
         try:
             task = RecipeTask.by_id(task_id)
         except InvalidRequestError:
-            raise BX(_('Invalid task ID: %s' % task_id))
+            raise BX('Invalid task ID: %s' % task_id)
         if result_type not in task.result_types:
-            raise BX(_('Invalid result_type: %s, must be one of %s' %
-                             (result_type, task.result_types)))
+            raise BX('Invalid result_type: %s, must be one of %s' %
+                             (result_type, task.result_types))
         self._check_result_limit(task)
         kwargs = dict(path=path, score=score, summary=summary)
         return getattr(task,result_type)(**kwargs)
@@ -254,7 +254,7 @@ class RecipeTasks(RPCRoot):
         try:
             task = RecipeTask.by_id(task_id)
         except NoResultFound:
-            raise BX(_('Invalid task ID: %s') % task_id)
+            raise BX('Invalid task ID: %s' % task_id)
         # don't use set, we want to preserve ordering
         roles = {}
         for role, recipes in six.iteritems(task.recipe.peer_roles()):

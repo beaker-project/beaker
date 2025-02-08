@@ -124,7 +124,7 @@ class ReserveWorkflow:
                 distro=kwargs.get('distro'))
         options['lab'] = [lc.fqdn for lc in
                 LabController.query.filter(LabController.removed == None)]
-        return dict(title=_(u'Reserve Workflow'),
+        return dict(title=u'Reserve Workflow',
                 selection=kwargs, options=options)
 
     @expose(allow_json=True)

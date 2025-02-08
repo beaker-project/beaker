@@ -266,17 +266,17 @@ class Auth(RPCRoot):
         """
         user = User.by_user_name(username)
         if user is None:
-            raise LoginException(_(u'Invalid username or password'))
+            raise LoginException(u'Invalid username or password')
         if not user.can_log_in():
-            raise LoginException(_(u'Invalid username or password'))
+            raise LoginException(u'Invalid username or password')
         if not user.check_password(password):
-            raise LoginException(_(u'Invalid username or password'))
+            raise LoginException(u'Invalid username or password')
         if proxy_user:
             if not user.has_permission(u'proxy_auth'):
-                raise LoginException(_(u'%s does not have proxy_auth permission') % user.user_name)
+                raise LoginException(u'%s does not have proxy_auth permission' % user.user_name)
             proxied_user = User.by_user_name(proxy_user)
             if proxied_user is None:
-                raise LoginException(_(u'Proxy user %s does not exist') % proxy_user)
+                raise LoginException(u'Proxy user %s does not exist' % proxy_user)
             identity.set_authentication(proxied_user, proxied_by=user)
         else:
             identity.set_authentication(user)
@@ -304,26 +304,26 @@ class Auth(RPCRoot):
         token_info = token_info_resp.json()
 
         if not token_info['active']:
-            raise LoginException(_(u'Invalid token'))
+            raise LoginException(u'Invalid token')
 
         if not 'https://beaker-project.org/oidc/scope' in token_info.get('scope', '').split(' '):
-            raise LoginException(_(u'Token missing required scope'))
+            raise LoginException(u'Token missing required scope')
 
         username = token_info.get('sub')
         if not username:
-            raise LoginException(_(u'Token missing subject'))
+            raise LoginException(u'Token missing subject')
 
         user = User.by_user_name(username)
         if user is None:
-            raise LoginException(_(u'Invalid username'))
+            raise LoginException(u'Invalid username')
         if not user.can_log_in():
-            raise LoginException(_(u'Invalid username'))
+            raise LoginException(u'Invalid username')
         if proxy_user:
             if not user.has_permission(u'proxy_auth'):
-                raise LoginException(_(u'%s does not have proxy_auth permission') % user.user_name)
+                raise LoginException(u'%s does not have proxy_auth permission' % user.user_name)
             proxied_user = User.by_user_name(proxy_user)
             if proxied_user is None:
-                raise LoginException(_(u'Proxy user %s does not exist') % proxy_user)
+                raise LoginException(u'Proxy user %s does not exist' % proxy_user)
             identity.set_authentication(proxied_user, proxied_by=user)
         else:
             identity.set_authentication(user)
@@ -371,15 +371,15 @@ class Auth(RPCRoot):
         username = cprinc.name.split("@")[0]
         user = User.by_user_name(username)
         if user is None:
-            raise LoginException(_(u'Invalid username'))
+            raise LoginException(u'Invalid username')
         if not user.can_log_in():
-            raise LoginException(_(u'Invalid username'))
+            raise LoginException(u'Invalid username')
         if proxy_user:
             if not user.has_permission(u'proxy_auth'):
-                raise LoginException(_(u'%s does not have proxy_auth permission') % user.user_name)
+                raise LoginException(u'%s does not have proxy_auth permission' % user.user_name)
             proxied_user = User.by_user_name(proxy_user)
             if proxied_user is None:
-                raise LoginException(_(u'Proxy user %s does not exist') % proxy_user)
+                raise LoginException(u'Proxy user %s does not exist' % proxy_user)
             identity.set_authentication(proxied_user, proxied_by=user)
         else:
             identity.set_authentication(user)

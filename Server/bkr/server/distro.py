@@ -39,7 +39,7 @@ class Distros(RPCRoot):
         try:
             distro = Distro.by_id(id)
         except InvalidRequestError:
-            flash(_(u"Invalid distro id %s" % id))
+            flash(u"Invalid distro id %s" % id)
             redirect(".")
         is_admin = identity.current.user and identity.current.user.is_admin() or False
         task_form = TaskSearchForm(hidden=dict(distro=True, osmajor_id=True))
@@ -74,7 +74,7 @@ class Distros(RPCRoot):
         try:
             osmajor = '%s' % Distro.by_name(distro).osversion.osmajor
         except DatabaseLookupError:
-            raise BX(_('Invalid Distro: %s' % distro))
+            raise BX('Invalid Distro: %s' % distro)
         return osmajor
 
     get_family = get_osmajor
@@ -99,7 +99,7 @@ class Distros(RPCRoot):
         # approximates the behaviour of <distroRequires/>
         distro = distros.order_by(Distro.date_created.desc()).first()
         if distro is None:
-            raise BX(_('No distros match given filter: %r') % filter)
+            raise BX('No distros match given filter: %r' % filter)
         return [arch.arch for arch in distro.osversion.arches]
 
     @expose()
@@ -108,7 +108,7 @@ class Distros(RPCRoot):
         try:
             distro = Distro.by_id(id)
         except InvalidRequestError:
-            flash(_(u"Invalid distro id %s" % id))
+            flash(u"Invalid distro id %s" % id)
             redirect(".")
         if tag['text']:
             distro.tags.append(tag['text'])
@@ -116,7 +116,7 @@ class Distros(RPCRoot):
                     user=identity.current.user, service=u'WEBUI',
                     action=u'Added', field_name=u'Tag',
                     old_value=None, new_value=tag['text']))
-        flash(_(u"Added Tag %s" % tag['text']))
+        flash(u"Added Tag %s" % tag['text'])
         redirect("./view?id=%s" % id)
 
     @cherrypy.expose
@@ -132,7 +132,7 @@ class Distros(RPCRoot):
         try:
             distro = Distro.by_id(id)
         except InvalidRequestError:
-            flash(_(u"Invalid distro id %s" % id))
+            flash(u"Invalid distro id %s" % id)
             redirect(".")
         if tag:
             for dtag in distro.tags:
@@ -142,7 +142,7 @@ class Distros(RPCRoot):
                             user=identity.current.user, service=u'WEBUI',
                             action=u'Removed', field_name=u'Tag',
                             old_value=tag, new_value=None))
-                    flash(_(u"Removed Tag %s" % tag))
+                    flash(u"Removed Tag %s" % tag)
         redirect("./view?id=%s" % id)
 
     def _distros(self,distro,**kw):
@@ -215,7 +215,7 @@ class Distros(RPCRoot):
             hidden_fields = [('tag',kw['tag'])]
 
         search_bar = SearchBar(name='distrosearch',
-                           label=_(u'Distro Search'),    
+                           label=u'Distro Search',    
                            table=search_utility.Distro.search.create_complete_search_table(), 
                            search_controller=url("/get_search_options_distros"), 
                            extra_hiddens=hidden_fields,
