@@ -31,6 +31,9 @@ from bkr.server.model import (
 from bkr.server.util import absolute_url
 from bkr.server.xmlrpccontroller import RPCRoot
 
+import six
+
+
 log = logging.getLogger(__name__)
 
 
@@ -471,7 +474,7 @@ def add_submission_delegate(username):
     try:
         user.add_submission_delegate(submission_delegate, service=u'HTTP')
     except NoChangeException as e:
-        raise Conflict409(unicode(e))
+        raise Conflict409(six.text_type(e))
     return 'Added', 201
 
 
@@ -570,7 +573,7 @@ def _create_keystone_trust(user):
             trustor_project_domain_name=data.get('openstack_project_domain_name'))
     except ValueError as err:
         raise BadRequest400(
-            u'Could not authenticate with OpenStack using your credentials: %s' % unicode(err))
+            u'Could not authenticate with OpenStack using your credentials: %s' % six.text_type(err))
     user.openstack_trust_id = trust_id
     user.record_activity(user=identity.current.user, service=u'HTTP',
                          field=u'OpenStack Trust ID', action=u'Changed')

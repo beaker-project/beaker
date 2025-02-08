@@ -77,7 +77,7 @@ class Utility:
         if values_checked is not None:
             vals_to_set = values_checked
             response.simple_cookie['column_values'] = ','.join(values_checked)
-        elif request.simple_cookie.has_key('column_values'):
+        elif 'column_values' in request.simple_cookie:
             text = request.simple_cookie['column_values'].value
             vals_to_set = text.split(',')
         else:

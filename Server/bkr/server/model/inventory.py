@@ -10,7 +10,6 @@ from datetime import datetime, timedelta
 from hashlib import md5
 from itertools import chain
 from collections import defaultdict
-import urllib
 import xml.dom.minidom
 import lxml.etree
 from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
@@ -34,7 +33,7 @@ from bkr.server.bexceptions import (BX, InsufficientSystemPermissions,
 from bkr.server.helpers import make_link
 from bkr.server.hybrid import hybrid_property, hybrid_method
 from bkr.server.installopts import InstallOptions
-from bkr.server.util import is_valid_fqdn, convert_db_lookup_error
+from bkr.server.util import is_valid_fqdn, convert_db_lookup_error, ensure_str
 from .base import DeclarativeMappedObject
 from .types import (SystemType, SystemStatus, ReleaseAction, CommandStatus,
         SystemPermission, TaskStatus, SystemSchedulerStatus, ImageType)
@@ -42,7 +41,11 @@ from .activity import Activity, ActivityMixin
 from .identity import User, Group
 from .lab import LabController
 from .distrolibrary import (Arch, KernelType, OSMajor, OSVersion, Distro, DistroTree,
-        LabControllerDistroTree, install_options_for_distro)
+                            LabControllerDistroTree, install_options_for_distro)
+
+import six
+from six.moves import urllib
+
 
 try:
     #pylint: disable=E0611
@@ -144,7 +147,7 @@ class Command(DeclarativeMappedObject):
             'service': self.service,
             'action': self.action,
             'message': self.error_message,
-            'status': unicode(self.status),
+            'status': six.text_type(self.status),
         }
 
     @hybrid_property
@@ -188,7 +191,7 @@ class Command(DeclarativeMappedObject):
         self.system.record_activity(user=self.user, service=self.service,
                 action=self.action, field=u'Power', old=u'',
                 new=self.error_message and u'%s: %s' % (self.status, self.error_message)
-                    or unicode(self.status))
+                    or six.text_type(self.status))
 
     def abort(self, msg=None):
         log.error('Command %s aborted: %s', self.id, msg)
@@ -444,7 +447,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             require = xmldoc.createElement(key)
             require.setAttribute('op', '=')
             value = getattr(self, fields[key], None) or u''
-            require.setAttribute('value', unicode(value))
+            require.setAttribute('value', six.text_type(value))
             xmland.appendChild(require)
         host_requires.appendChild(xmland)
         return host_requires
@@ -1234,7 +1237,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
                 if key.numeric:
                     new_int_kvs.add((key, int(value)))
                 else:
-                    new_string_kvs.add((key, unicode(value)))
+                    new_string_kvs.add((key, six.text_type(value)))
 
         # Examine existing key-values to find what we already have, and what 
         # needs to be removed
@@ -1340,13 +1343,13 @@ class System(DeclarativeMappedObject, ActivityMixin):
                 self.disks.remove(olddisk)
                 self.record_activity(user=identity.current.user,
                         service=u'XMLRPC', action=u'Removed',
-                        field=u'Disk:size', old=unicode(olddisk.size))
+                        field=u'Disk:size', old=six.text_type(olddisk.size))
                 self.record_activity(user=identity.current.user,
                         service=u'XMLRPC', action=u'Removed',
-                        field=u'Disk:sector_size', old=unicode(olddisk.sector_size))
+                        field=u'Disk:sector_size', old=six.text_type(olddisk.sector_size))
                 self.record_activity(user=identity.current.user,
                         service=u'XMLRPC', action=u'Removed',
-                        field=u'Disk:phys_sector_size', old=unicode(olddisk.phys_sector_size))
+                        field=u'Disk:phys_sector_size', old=six.text_type(olddisk.phys_sector_size))
                 self.record_activity(user=identity.current.user,
                         service=u'XMLRPC', action=u'Removed',
                         field=u'Disk:model', old=olddisk.model)
@@ -1361,17 +1364,17 @@ class System(DeclarativeMappedObject, ActivityMixin):
                 self.disks.append(Disk(**newdisk))
                 self.record_activity(user=identity.current.user,
                         service=u'XMLRPC', action=u'Added',
-                        field=u'Disk:size', new=unicode(newdisk['size']))
+                        field=u'Disk:size', new=six.text_type(newdisk['size']))
                 self.record_activity(user=identity.current.user,
                         service=u'XMLRPC', action=u'Added',
-                        field=u'Disk:sector_size', new=unicode(newdisk['sector_size']))
+                        field=u'Disk:sector_size', new=six.text_type(newdisk['sector_size']))
                 self.record_activity(user=identity.current.user,
                         service=u'XMLRPC', action=u'Added',
                         field=u'Disk:phys_sector_size',
-                        new=unicode(newdisk['phys_sector_size']))
+                        new=six.text_type(newdisk['phys_sector_size']))
                 self.record_activity(user=identity.current.user,
                         service=u'XMLRPC', action=u'Added',
-                        field=u'Disk:model', new=unicode(newdisk['model']))
+                        field=u'Disk:model', new=six.text_type(newdisk['model']))
 
     def updateDevices(self, deviceinfo):
         currentDevices = []
@@ -1635,7 +1638,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
     @property
     def href(self):
         """Returns a relative URL for this system's page."""
-        return urllib.quote((u'/view/%s' % self.fqdn).encode('utf8'))
+        return urllib.parse.quote((u'/view/%s' % self.fqdn).encode('utf8'))
 
     def link(self):
         """ Return a link to this system
@@ -1656,7 +1659,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             user = None
         log.warning('Marking system %s as broken' % self.fqdn)
         self.record_activity(user=user, service=service, action=u'Changed',
-                field=u'Status', old=unicode(self.status), new=u'Broken')
+                field=u'Status', old=six.text_type(self.status), new=u'Broken')
         self.status = SystemStatus.broken
         self.date_modified = datetime.utcnow()
         mail.broken_system_notify(self, reason, recipe)
@@ -1696,7 +1699,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
         if count >= 2:
             # Broken!
             metrics.increment('counters.suspicious_aborts')
-            reason = unicode(_(u'System has a run of aborted recipes '
+            reason = six.text_type(_(u'System has a run of aborted recipes '
                     'with reliable distros'))
             log.warn(reason)
             self.mark_broken(reason=reason)
@@ -1968,7 +1971,7 @@ class SystemPool(DeclarativeMappedObject, ActivityMixin):
         return self.name
 
     def __str__(self):
-        return unicode(self).encode('utf8')
+        return ensure_str(six.text_type(self))
 
     def __repr__(self):
         return 'SystemPool(name=%r, owning_user=%r, owning_group=%r)' % \
@@ -2038,7 +2041,7 @@ class SystemPool(DeclarativeMappedObject, ActivityMixin):
     @property
     def href(self):
         """Returns a relative URL for this system pool's page."""
-        return urllib.quote((u'/pools/%s/' % self.name).encode('utf8'))
+        return urllib.parse.quote((u'/pools/%s/' % self.name).encode('utf8'))
 
     @property
     def owner(self):
@@ -2090,10 +2093,10 @@ class Hypervisor(DeclarativeMappedObject):
         return self.hypervisor
 
     def __str__(self):
-        return unicode(self).encode('utf8')
+        return ensure_str(six.text_type(self))
 
     def __json__(self):
-        return unicode(self)
+        return six.text_type(self)
 
     @classmethod
     def get_all_types(cls):
@@ -2140,13 +2143,13 @@ class SystemAccessPolicy(DeclarativeMappedObject):
             'id': self.id,
             'rules': self.rules,
             'possible_permissions': [
-                {'value': unicode(permission),
-                 'label': unicode(permission.label)}
+                {'value': six.text_type(permission),
+                 'label': six.text_type(permission.label)}
                 for permission in SystemPermission],
         }
 
     def __str__(self):
-        return unicode(self).encode('utf8')
+        return ensure_str(six.text_type(self))
 
     def __unicode__(self):
         if self.system:
@@ -2164,8 +2167,8 @@ class SystemAccessPolicy(DeclarativeMappedObject):
             'id': None,
             'rules': [],
             'possible_permissions': [
-                {'value': unicode(permission),
-                 'label': unicode(permission.label)}
+                {'value': six.text_type(permission),
+                 'label': six.text_type(permission.label)}
                 for permission in SystemPermission],
         }
 
@@ -2256,7 +2259,7 @@ class SystemAccessPolicyRule(DeclarativeMappedObject):
             'user': self.user.user_name if self.user else None,
             'group': self.group.group_name if self.group else None,
             'everybody': self.everybody,
-            'permission': unicode(self.permission),
+            'permission': six.text_type(self.permission),
         }
 
     @hybrid_property

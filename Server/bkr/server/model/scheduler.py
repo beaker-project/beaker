@@ -12,8 +12,6 @@ import random
 import re
 import shutil
 import string
-import urllib
-import urlparse
 import uuid
 import xml.dom.minidom
 from collections import defaultdict
@@ -44,7 +42,7 @@ from bkr.server.helpers import make_link, make_fake_link
 from bkr.server.hybrid import hybrid_method, hybrid_property
 from bkr.server.installopts import InstallOptions
 from bkr.server.messaging import send_scheduler_update
-from bkr.server.util import absolute_url
+from bkr.server.util import absolute_url, ensure_str
 from .activity import Activity, ActivityMixin
 from .base import DeclarativeMappedObject
 from .distrolibrary import (OSMajor, OSVersion, Distro, DistroTree,
@@ -57,6 +55,9 @@ from .tasklibrary import Task, TaskPackage
 from .types import (UUID, MACAddress, IPAddress, TaskResult, TaskStatus, TaskPriority,
                     ResourceType, RecipeVirtStatus, mac_unix_padded_dialect, SystemStatus,
                     RecipeReservationCondition, SystemSchedulerStatus, ImageType)
+import six
+from six.moves import urllib
+
 
 log = logging.getLogger(__name__)
 
@@ -357,7 +358,7 @@ class Log(DeclarativeMappedObject):
                 url += '/'
             return '%s%s' % (url, self.combined_path)
         else:
-            return urlparse.urljoin(absolute_url('/'),
+            return urllib.parse.urljoin(absolute_url('/'),
                                     os.path.join('/logs', self.parent.filepath, self.combined_path))
 
     @property
@@ -625,7 +626,7 @@ class TaskBase(DeclarativeMappedObject):
         return container
 
     def t_id(self):
-        for t, class_ in self.t_id_types.iteritems():
+        for t, class_ in six.iteritems(self.t_id_types):
             if self.__class__.__name__ == class_:
                 return '%s:%s' % (t, self.id)
 
@@ -849,9 +850,9 @@ class Job(TaskBase, ActivityMixin):
     def by_tag(cls, tag, query=None):
         if query is None:
             query = cls.query
-        if isinstance(tag, basestring):
+        if isinstance(tag, six.string_types):
             tag = [tag]
-        tag_query = cls.retention_tag_id.in_([RetentionTag.by_tag(unicode(t)).id for t in tag])
+        tag_query = cls.retention_tag_id.in_([RetentionTag.by_tag(six.text_type(t)).id for t in tag])
 
         return query.filter(tag_query)
 
@@ -859,7 +860,7 @@ class Job(TaskBase, ActivityMixin):
     def by_product(cls, product, query=None):
         if query is None:
             query = cls.query
-        if isinstance(product, basestring):
+        if isinstance(product, six.string_types):
             product = [product]
         product_query = cls.product_id.in_([Product.by_name(p).id for p in product])
 
@@ -869,7 +870,7 @@ class Job(TaskBase, ActivityMixin):
     def by_owner(cls, owner, query=None):
         if query is None:
             query = cls.query
-        if isinstance(owner, basestring):
+        if isinstance(owner, six.string_types):
             owner = [owner]
         # by_user_name() returns None for non-existent users
         for o in owner:
@@ -883,7 +884,7 @@ class Job(TaskBase, ActivityMixin):
     def by_groups(cls, groups, query=None):
         if query is None:
             query = cls.query
-        if isinstance(groups, basestring):
+        if isinstance(groups, six.string_types):
             groups = [groups]
         groups_query = cls.group_id.in_([Group.by_name(g).id for g in groups])
         return query.join('group').filter(groups_query)
@@ -921,7 +922,7 @@ class Job(TaskBase, ActivityMixin):
             recipeSet = RecipeSet(ttasks=2)
             recipe = MachineRecipe(ttasks=2)
             # Inlcude the XML definition so that cloning this job will act as expected.
-            recipe.distro_requires = etree.tostring(distro_tree.to_xml(), encoding=unicode)
+            recipe.distro_requires = etree.tostring(distro_tree.to_xml(), encoding=six.text_type)
             recipe.distro_tree = distro_tree
             recipe.installation = recipe.distro_tree.create_installation_from_tree()
             # Don't report panic's for reserve workflow.
@@ -1014,7 +1015,7 @@ class Job(TaskBase, ActivityMixin):
             recipe.whiteboard = kw.get('whiteboard')
 
         # Include the XML definition so that cloning this job will act as expected.
-        recipe.distro_requires = etree.tostring(distro_tree.to_xml(), encoding=unicode)
+        recipe.distro_requires = etree.tostring(distro_tree.to_xml(), encoding=six.text_type)
         recipe.distro_tree = distro_tree
         system = kw.get('system')
         recipe.installation = Installation(distro_tree=recipe.distro_tree, arch=distro_tree.arch,
@@ -1038,7 +1039,7 @@ class Job(TaskBase, ActivityMixin):
         recipeSet.recipes.append(recipe)
         job.recipesets.append(recipeSet)
         job.ttasks += recipeSet.ttasks
-        job_xml = etree.tostring(job.to_xml(clone=True), encoding=unicode)
+        job_xml = etree.tostring(job.to_xml(clone=True), encoding=six.text_type)
         # We have the XML now, so if dry run, roll back
         if dryrun:
             session.rollback()
@@ -1151,7 +1152,7 @@ class Job(TaskBase, ActivityMixin):
     @property
     def href(self):
         """Returns a relative URL for job's page."""
-        return urllib.quote(u'/jobs/%s' % self.id)
+        return urllib.parse.quote(u'/jobs/%s' % self.id)
 
     def is_owner(self, user):
         if self.owner == user:
@@ -1194,7 +1195,7 @@ class Job(TaskBase, ActivityMixin):
         tags = RetentionTag.query.all()
         for t in tags:
             id = '%s%s' % (u'retentiontag_job_', self.id)
-            a_href = make_fake_link(unicode(t.id), id, t.tag)
+            a_href = make_fake_link(six.text_type(t.id), id, t.tag)
             content.append(a_href)
         span.append(title)
         span.append(content)
@@ -1441,7 +1442,7 @@ class Product(DeclarativeMappedObject):
         return self.name
 
     def __str__(self):
-        return unicode(self).encode('utf8')
+        return ensure_str(six.text_type(self))
 
     def __json__(self):
         return {'name': self.name}
@@ -1560,7 +1561,7 @@ class RetentionTag(BeakerTag):
         return self.tag
 
     def __str__(self):
-        return unicode(self).encode('utf8')
+        return ensure_str(six.text_type(self))
 
     def __json__(self):
         return {
@@ -1674,7 +1675,7 @@ class RecipeSet(TaskBase, ActivityMixin):
     def set_waived(self, waived):
         self.record_activity(user=identity.current.user, service=u'XMLRPC',
                              field=u'Waived', action=u'Changed',
-                             old=unicode(self.waived), new=unicode(waived))
+                             old=six.text_type(self.waived), new=six.text_type(waived))
         self.waived = waived
 
     def is_owner(self, user):
@@ -1713,7 +1714,7 @@ class RecipeSet(TaskBase, ActivityMixin):
 
     def to_xml(self, clone=False, include_enclosing_job=False, **kwargs):
         recipeSet = etree.Element("recipeSet")
-        recipeSet.set('priority', unicode(self.priority))
+        recipeSet.set('priority', six.text_type(self.priority))
         return_node = recipeSet
 
         if not clone:
@@ -1769,9 +1770,9 @@ class RecipeSet(TaskBase, ActivityMixin):
         if query is None:
             query = cls.query
         if type(tag) is list:
-            tag_query = cls.retention_tag_id.in_([RetentionTag.by_tag(unicode(t)).id for t in tag])
+            tag_query = cls.retention_tag_id.in_([RetentionTag.by_tag(six.text_type(t)).id for t in tag])
         else:
-            tag_query = cls.retention_tag == RetentionTag.by_tag(unicode(tag))
+            tag_query = cls.retention_tag == RetentionTag.by_tag(six.text_type(tag))
 
         return query.filter(tag_query)
 
@@ -1943,7 +1944,7 @@ class RecipeReservationRequest(DeclarativeMappedObject):
             'id': self.id,
             'recipe_id': self.recipe_id,
             'duration': self.duration,
-            'when': unicode(self.when),
+            'when': six.text_type(self.when),
         }
 
     @classmethod
@@ -2169,7 +2170,7 @@ class Recipe(TaskBase, ActivityMixin):
             recipe.set("job_id", "%s" % self.recipeset.job.id)
             recipe.set("recipe_set_id", "%s" % self.recipeset.id)
         autopick = etree.Element("autopick")
-        autopick.set("random", "%s" % unicode(self.autopick_random).lower())
+        autopick.set("random", "%s" % six.text_type(self.autopick_random).lower())
         recipe.append(autopick)
         recipe.set("whiteboard", "%s" % self.whiteboard and self.whiteboard or '')
         recipe.set("role", "%s" % self.role and self.role or 'RECIPE_MEMBERS')
@@ -2184,9 +2185,9 @@ class Recipe(TaskBase, ActivityMixin):
         recipe.set("kernel_options_post",
                    "%s" % self.kernel_options_post and self.kernel_options_post or '')
         if self.start_time and not clone:
-            recipe.set('start_time', unicode(self.start_time))
+            recipe.set('start_time', six.text_type(self.start_time))
         if self.finish_time and not clone:
-            recipe.set('finish_time', unicode(self.finish_time))
+            recipe.set('finish_time', six.text_type(self.finish_time))
         if self.duration and not clone:
             recipe.set("duration", "%s" % self.duration)
         if self.result and not clone:
@@ -2266,8 +2267,8 @@ class Recipe(TaskBase, ActivityMixin):
             recipe.append(t.to_xml(clone=clone, include_logs=include_logs, **kwargs))
         if self.reservation_request:
             reservesys = etree.Element("reservesys")
-            reservesys.set('duration', unicode(self.reservation_request.duration))
-            reservesys.set('when', unicode(self.reservation_request.when))
+            reservesys.set('duration', six.text_type(self.reservation_request.duration))
+            reservesys.set('when', six.text_type(self.reservation_request.when))
             recipe.append(reservesys)
         if include_enclosing_job:
             recipe = self._add_to_job_element(recipe, clone)
@@ -2318,10 +2319,10 @@ class Recipe(TaskBase, ActivityMixin):
                 and not hrs.findall('.//system/type')
                 and not hrs.get('force')):
             system_type = etree.Element('system_type')
-            system_type.set('value', unicode(self.systemtype))
+            system_type.set('value', six.text_type(self.systemtype))
             hrs.append(system_type)
 
-        return etree.tostring(hrs, encoding=unicode)
+        return etree.tostring(hrs, encoding=six.text_type)
 
     @host_requires.setter
     def host_requires(self, value):
@@ -2334,7 +2335,7 @@ class Recipe(TaskBase, ActivityMixin):
             prs = etree.fromstring(self._partitions)
         except ValueError:
             prs = etree.Element("partitions")
-        return etree.tostring(prs, encoding=unicode)
+        return etree.tostring(prs, encoding=six.text_type)
 
     @partitions.setter
     def partitions(self, value):
@@ -2404,7 +2405,7 @@ class Recipe(TaskBase, ActivityMixin):
         # The repo may already exist if beakerd.virt_recipes() creates a
         # repo but the subsequent virt provisioning fails and the recipe
         # falls back to being queued on a regular system
-        makedirs_ignore(snapshot_repo, 0755)
+        makedirs_ignore(snapshot_repo, 0o755)
         Task.make_snapshot_repo(snapshot_repo)
         # Record task versions as they existed at this point in time, since we
         # just created the task library snapshot for this recipe.
@@ -2717,7 +2718,7 @@ class Recipe(TaskBase, ActivityMixin):
             self.resource.system.record_activity(user=self.recipeset.job.owner,
                                                  service=u'Scheduler', action=u'Provision',
                                                  field=u'Distro Tree', old=u'',
-                                                 new=unicode(self.distro_tree))
+                                                 new=six.text_type(self.distro_tree))
         elif isinstance(self.resource, VirtResource):
             # Delayed import to avoid circular dependency
             from bkr.server import dynamic_virt
@@ -2879,7 +2880,7 @@ class Recipe(TaskBase, ActivityMixin):
     @property
     def href(self):
         """Returns a relative URL for recipe's page."""
-        return urllib.quote(u'/recipes/%s' % self.id)
+        return urllib.parse.quote(u'/recipes/%s' % self.id)
 
     def can_edit(self, user=None):
         """Returns True iff the given user can edit this recipe"""
@@ -3002,7 +3003,7 @@ class Recipe(TaskBase, ActivityMixin):
 
 
 def _roles_to_xml(recipe):
-    for key, recipes in sorted(recipe.peer_roles().iteritems()):
+    for key, recipes in sorted(six.iteritems(recipe.peer_roles())):
         role = etree.Element("role")
         role.set("value", "%s" % key)
         for r in recipes:
@@ -3083,9 +3084,9 @@ class GuestRecipe(Recipe):
             scheme_locations = {}
             for lca in self.distro_tree.lab_controller_assocs:
                 if lca.lab_controller == self.recipeset.lab_controller:
-                    scheme = urlparse.urlparse(lca.url).scheme
+                    scheme = urllib.parse.urlparse(lca.url).scheme
                     scheme_locations[scheme] = lca.url
-            for scheme, location in sorted(scheme_locations.iteritems()):
+            for scheme, location in sorted(six.iteritems(scheme_locations)):
                 attr = '%s_location' % re.sub(r'[^a-z0-9]+', '_', scheme.lower())
                 recipe.set(attr, location)
         return node
@@ -3103,7 +3104,7 @@ class GuestRecipe(Recipe):
             drs = etree.fromstring(self._distro_requires)
         except TypeError:
             drs = etree.Element("distroRequires")
-        return etree.tostring(drs, encoding=unicode)
+        return etree.tostring(drs, encoding=six.text_type)
 
     def _set_distro_requires(self, value):
         self._distro_requires = value
@@ -3186,7 +3187,7 @@ class MachineRecipe(Recipe):
         """Check if tree_url can be run as a virt guest"""
         url_compatible = False
         if self.installation.tree_url:
-            url_compatible = urlparse.urlparse(self.installation.tree_url).scheme in ['http', 'ftp']
+            url_compatible = urllib.parse.urlparse(self.installation.tree_url).scheme in ['http', 'ftp']
         elif self.distro_tree and not self.recipeset.lab_controller:
             # No way to determine now
             url_compatible = True
@@ -3490,7 +3491,7 @@ class RecipeTask(TaskBase):
             'id': self.id,
             'name': self.name,
             'version': self.version,
-            'status': unicode(self.status),
+            'status': six.text_type(self.status),
             'recipe_id': self.recipe_id,
             't_id': self.t_id,
             'is_finished': self.is_finished(),
@@ -3530,9 +3531,9 @@ class RecipeTask(TaskBase):
                 rpm.set("path", "%s" % self.task.path)
                 task.append(rpm)
             if self.start_time:
-                task.set('start_time', unicode(self.start_time))
+                task.set('start_time', six.text_type(self.start_time))
             if self.finish_time:
-                task.set('finish_time', unicode(self.finish_time))
+                task.set('finish_time', six.text_type(self.finish_time))
             if self.duration:
                 task.set("duration", "%s" % self.duration)
         if self.fetch_url:
@@ -3757,7 +3758,7 @@ class RecipeTask(TaskBase):
         # int value, and silently capping it at the maximum representable
         # value, whereas MariaDB (strict) will raise an error. This is a
         # backwards compatible "hack" for the same MySQL 5.x behaviour.
-        if isinstance(score, basestring):
+        if isinstance(score, six.string_types):
             number_match = re.match('-?\d+(\.\d+)?', score)
             if not number_match:
                 score = 0
@@ -4001,12 +4002,12 @@ class RecipeTaskResult(TaskBase):
         Return result in xml
         """
         result = E.result(
-            unicode(self.log),
-            id=unicode(self.id),
-            path=unicode(self.path),
-            result=unicode(self.result),
-            score=unicode(self.score),
-            start_time=unicode(self.start_time),
+            six.text_type(self.log),
+            id=six.text_type(self.id),
+            path=six.text_type(self.path),
+            result=six.text_type(self.result),
+            score=six.text_type(self.score),
+            start_time=six.text_type(self.start_time),
         )
         if include_logs and self.logs:
             logs = E.logs()
@@ -4127,10 +4128,10 @@ class RecipeResource(DeclarativeMappedObject):
     __mapper_args__ = {'polymorphic_on': type, 'polymorphic_identity': None}
 
     def __str__(self):
-        return unicode(self).encode('utf8')
+        return ensure_str(six.text_type(self))
 
     def __unicode__(self):
-        return unicode(self.fqdn)
+        return six.text_type(self.fqdn)
 
     def __json__(self):
         return {
@@ -4258,23 +4259,23 @@ class VirtResource(RecipeResource):
 
     @classmethod
     def by_instance_id(cls, instance_id):
-        if isinstance(instance_id, basestring):
+        if isinstance(instance_id, six.string_types):
             instance_id = uuid.UUID(instance_id)
         return cls.query.filter(cls.instance_id == instance_id).one()
 
     def __init__(self, instance_id, network_id, subnet_id, router_id, floating_ip,
                  lab_controller):
         super(VirtResource, self).__init__()
-        if isinstance(instance_id, basestring):
+        if isinstance(instance_id, six.string_types):
             instance_id = uuid.UUID(instance_id)
         self.instance_id = instance_id
-        if isinstance(network_id, basestring):
+        if isinstance(network_id, six.string_types):
             network_id = uuid.UUID(network_id)
         self.network_id = network_id
-        if isinstance(subnet_id, basestring):
+        if isinstance(subnet_id, six.string_types):
             subnet_id = uuid.UUID(subnet_id)
         self.subnet_id = subnet_id
-        if isinstance(router_id, basestring):
+        if isinstance(router_id, six.string_types):
             router_id = uuid.UUID(router_id)
         self.router_id = router_id
         self.floating_ip = floating_ip
@@ -4311,8 +4312,8 @@ class VirtResource(RecipeResource):
 
     def __json__(self):
         data = super(VirtResource, self).__json__()
-        data['instance_id'] = unicode(self.instance_id)
-        data['floating_ip'] = unicode(self.floating_ip)
+        data['instance_id'] = six.text_type(self.instance_id)
+        data['floating_ip'] = six.text_type(self.floating_ip)
         data['instance_created'] = self.instance_created
         data['instance_deleted'] = self.instance_deleted
         data['href'] = self.href
@@ -4324,14 +4325,14 @@ class VirtResource(RecipeResource):
         span.text = u''
         if self.fqdn:
             if self.fqdn.endswith('.openstacklocal'):
-                span.text += unicode(self.floating_ip) + u' '
+                span.text += six.text_type(self.floating_ip) + u' '
             else:
                 span.text += self.fqdn + u' '
         span.text += u'(OpenStack instance '
         if not self.href:
-            span.text += unicode(self.instance_id) + u')'
+            span.text += six.text_type(self.instance_id) + u')'
         else:
-            a = make_link(url=self.href, text=unicode(self.instance_id))
+            a = make_link(url=self.href, text=six.text_type(self.instance_id))
             a.tail = u')'
             span.append(a)
         return span
@@ -4344,7 +4345,7 @@ class VirtResource(RecipeResource):
         # don't hyperlink it if the instance is deleted
         if self.recipe.is_finished():
             return None
-        return urlparse.urljoin(get('openstack.dashboard_url'),
+        return urllib.parse.urljoin(get('openstack.dashboard_url'),
                                 'project/instances/%s/' % self.instance_id)
 
     def install_options(self, arch, osmajor, osminor):

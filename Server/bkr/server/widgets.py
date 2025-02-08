@@ -34,6 +34,10 @@ from bkr.server.bexceptions import BeakerException
 from bkr.server.helpers import make_link
 from bkr.server.util import VALID_FQDN_REGEX
 import logging
+
+import six
+
+
 log = logging.getLogger(__name__)
 
 class AutoCompleteTextField(widgets.AutoCompleteTextField):
@@ -390,7 +394,7 @@ class MatrixDataGrid(DataGrid):
                 try:
                     orders_used.index(order)
                     raise BeakerException('Order number %s has already been specified,it cannot be specified twice' % order)
-                except ValueError, e:
+                except ValueError:
                     orders_used.append(order)
             try:
                 header_order[col.outer_header] = order
@@ -428,7 +432,7 @@ class SingleSelectFieldJSON(SingleSelectField):
     def __init__(self,*args,**kw):
         super(SingleSelectFieldJSON, self).__init__(*args, **kw)
 
-        if kw.has_key('for_column'):
+        if 'for_column' in kw:
             self.for_column = kw['for_column']
 
     def __json__(self):
@@ -585,7 +589,7 @@ class SearchBar(RepeatingFormField):
         if extra_selects is not None: 
             new_class = [] 
             for elem in extra_selects:
-                if elem.has_key('display'):
+                if 'display' in elem:
                     if elem['display'] == 'none':
                         new_class.append('hide_parent')
                 callback = elem.get('callback',None)
@@ -595,7 +599,7 @@ class SearchBar(RepeatingFormField):
                 if elem['name'] == 'keyvalue':
                     self.keyvaluevalue = new_select
  
-                if elem.has_key('pos'):
+                if 'pos' in elem:
                     self.fields.insert(elem['pos'] - 1,new_select)
                 else:
                     self.fields.append(new_select) 
@@ -649,7 +653,7 @@ class SearchBar(RepeatingFormField):
             if 'enable_custom_columns' in params['options']:
                 params['enable_custom_columns'] = params['options']['enable_custom_columns']
             if 'extra_hiddens' in params['options']:
-                params['extra_hiddens'] = [(k,v) for k,v in params['options']['extra_hiddens'].iteritems()] 
+                params['extra_hiddens'] = [(k,v) for k,v in six.iteritems(params['options']['extra_hiddens'])] 
 
         if value and not 'simplesearch' in params:
             params['advanced'] = 'True'
@@ -861,13 +865,13 @@ class ExcludedFamilies(FormField):
             for option in arch_options:
                 soptions = []
                 option_attrs = dict(option[3]) if len(option) == 4 else {}
-                if d['attrs'].has_key('readonly'):
+                if 'readonly' in d['attrs']:
                     option_attrs['readonly'] = 'readonly'
                 if self._is_selected(option[0], d['value'][0][arch]):
                     option_attrs[self._selected_verb] = self._selected_verb
                 for soption in option[2]:
                     soption_attrs = dict(soption[2]) if len(soption) == 3 else {}
-                    if d['attrs'].has_key('readonly'):
+                    if 'readonly' in d['attrs']:
                         soption_attrs['readonly'] = 'readonly'
                     if self._is_selected(soption[0], d['value'][1][arch]):
                         soption_attrs[self._selected_verb] = self._selected_verb

@@ -12,6 +12,10 @@ from kid import Element, SubElement
 from bkr.server.widgets import JobMatrixReport as JobMatrixWidget, MatrixDataGrid
 from bkr.server import model
 import logging
+
+import six
+
+
 log = logging.getLogger(__name__)
 
 class TaskR:
@@ -134,7 +138,7 @@ class JobMatrix:
                 for d in dyn_objs:
                     if d.arch == arch and d.whiteboard == whiteboard:
                         return self.make_result_box(d)
-            except Exception, (e):
+            except Exception as e:
                 log.error('Error %s' % e)
         return f
 
@@ -183,7 +187,7 @@ class JobMatrix:
         whiteboard_data = {}
         # If somehow both are passed, use the whiteboard
         if whiteboard:
-            if isinstance(whiteboard, basestring):
+            if isinstance(whiteboard, six.string_types):
                 whiteboards = [whiteboard]
             else:
                 whiteboards = whiteboard
@@ -245,7 +249,7 @@ class JobMatrix:
         #eng = database.get_engine()
         #c = s2.compile(eng) 
         #eng.execute("CREATE VIEW foobar AS %s" % c)
-        for arch_val,whiteboard_set in whiteboard_data.iteritems():
+        for arch_val,whiteboard_set in six.iteritems(whiteboard_data):
             for whiteboard_val in whiteboard_set:
                 if whiteboard_val is not None:
                     my_and = [model.RecipeSet.job_id.in_(job_ids),

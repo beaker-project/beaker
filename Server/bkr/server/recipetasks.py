@@ -12,7 +12,6 @@ from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot
 #from bkr.server.helpers import *
 from bkr.common.bexceptions import BX
-import urlparse
 #from turbogears.scheduler import add_interval_task
 
 import cherrypy
@@ -26,6 +25,11 @@ from flask import redirect, request, jsonify
 from bkr.server.app import app
 from bkr.server.flask_util import auth_required, convert_internal_errors, \
     BadRequest400, NotFound404, Forbidden403, read_json_request
+
+import six
+from six.moves import urllib
+
+
 
 class RecipeTasks(RPCRoot):
     # For XMLRPC methods in this class.
@@ -96,7 +100,7 @@ class RecipeTasks(RPCRoot):
                                               )
         log_recipe.server = server
         log_recipe.basepath = basepath
-        recipetask.recipe.log_server = urlparse.urlparse(server)[1]
+        recipetask.recipe.log_server = urllib.parse.urlparse(server)[1]
         return '%s' % recipetask.filepath
 
     @cherrypy.expose
@@ -122,7 +126,7 @@ class RecipeTasks(RPCRoot):
                                                     )
         log_recipe.server = server
         log_recipe.basepath = basepath
-        result.recipetask.recipe.log_server = urlparse.urlparse(server)[1]
+        result.recipetask.recipe.log_server = urllib.parse.urlparse(server)[1]
         return '%s' % result.filepath
 
 
@@ -220,7 +224,7 @@ class RecipeTasks(RPCRoot):
         return {'id': task.id,
                 'name': task.name,
                 'version': task.version,
-                'status': unicode(task.status)}
+                'status': six.text_type(task.status)}
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
@@ -253,20 +257,20 @@ class RecipeTasks(RPCRoot):
             raise BX(_('Invalid task ID: %s') % task_id)
         # don't use set, we want to preserve ordering
         roles = {}
-        for role, recipes in task.recipe.peer_roles().iteritems():
-            fqdns = roles.setdefault(unicode(role), [])
+        for role, recipes in six.iteritems(task.recipe.peer_roles()):
+            fqdns = roles.setdefault(six.text_type(role), [])
             for recipe in recipes:
                 if not recipe.resource or not recipe.resource.fqdn:
                     continue
-                fqdn = unicode(recipe.resource.fqdn)
+                fqdn = six.text_type(recipe.resource.fqdn)
                 if fqdn not in fqdns:
                     fqdns.append(fqdn)
-        for role, tasks in task.peer_roles().iteritems():
-            fqdns = roles.setdefault(unicode(role), [])
+        for role, tasks in six.iteritems(task.peer_roles()):
+            fqdns = roles.setdefault(six.text_type(role), [])
             for task in tasks:
                 if not task.recipe.resource or not task.recipe.resource.fqdn:
                     continue
-                fqdn = unicode(task.recipe.resource.fqdn)
+                fqdn = six.text_type(task.recipe.resource.fqdn)
                 if fqdn not in fqdns:
                     fqdns.append(fqdn)
         return roles

@@ -151,7 +151,7 @@ class TaskLibrary(object):
 
     def _link_rpms(self, dst):
         """Hardlink the task rpms into dst"""
-        makedirs_ignore(dst, 0755)
+        makedirs_ignore(dst, 0o755)
         for srcpath, name in self._all_rpms():
             dstpath = os.path.join(dst, name)
             unlink_ignore(dstpath)
@@ -207,7 +207,7 @@ class TaskLibrary(object):
                 f = upgrade.create_temp()
                 write_rpm(f)
                 f.flush()
-        except Exception, e:
+        except Exception as e:
             log.error('Error: Failed to copy task %s, aborting.' % rpm_name)
             for __, atomic_file in to_sync:
                 atomic_file.destroy_temp()

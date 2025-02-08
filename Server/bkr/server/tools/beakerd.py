@@ -35,7 +35,6 @@ from bkr.server.recipetasks import RecipeTasks
 from turbogears.database import session, get_engine
 from turbogears import config
 from turbomail.control import interface
-from xmlrpclib import ProtocolError
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import func, select, and_, or_, not_
@@ -61,6 +60,10 @@ event = threading.Event()
 _threadpool_executor = None
 
 from optparse import OptionParser
+
+import six
+from six.moves.xmlrpc_client import ProtocolError
+
 
 __description__ = 'Beaker Scheduler'
 
@@ -102,7 +105,7 @@ def update_dirty_jobs():
         try:
             update_dirty_job(job_id)
             session.commit()
-        except Exception as e:
+        except Exception:
             log.exception('Error in update_dirty_job(%s)', job_id)
             session.rollback()
         finally:
@@ -132,7 +135,7 @@ def process_new_recipes(*args):
         try:
             process_new_recipe(recipe_id)
             session.commit()
-        except Exception as e:
+        except Exception:
             log.exception('Error in process_new_recipe(%s)', recipe_id)
             session.rollback()
         finally:
@@ -177,7 +180,7 @@ def process_new_recipe(recipe_id):
             log.info("recipe ID %s matches one system, bumping priority" % recipe.id)
             recipe.recipeset.record_activity(user=None, service=u'Scheduler',
                     action=u'Changed', field=u'Priority',
-                    old=unicode(old_prio), new=unicode(new_prio))
+                    old=six.text_type(old_prio), new=six.text_type(new_prio))
             recipe.recipeset.priority = new_prio
     recipe.virt_status = recipe.check_virtualisability()
     if not recipe.systems and not _virt_possible(recipe):
@@ -204,7 +207,7 @@ def queue_processed_recipesets(*args):
         try:
             queue_processed_recipeset(rs_id)
             session.commit()
-        except Exception as e:
+        except Exception:
             log.exception('Error in queue_processed_recipeset(%s)', rs_id)
             session.rollback()
         finally:
@@ -381,7 +384,7 @@ def abort_dead_recipes(*args):
         try:
             abort_dead_recipe(recipe_id)
             session.commit()
-        except exceptions.Exception as e:
+        except exceptions.Exception:
             log.exception('Error in abort_dead_recipe(%s)', recipe_id)
             session.rollback()
         finally:
@@ -417,7 +420,7 @@ def schedule_pending_systems():
         try:
             schedule_pending_system(system_id)
             session.commit()
-        except Exception as e:
+        except Exception:
             log.exception('Error in schedule_pending_system(%s)', system_id)
             session.rollback()
         finally:
@@ -551,9 +554,9 @@ def provision_virt_recipe(recipe_id):
                 log.exception('Failed to clean up VM %s during provision_virt_recipe, leaked!',
                               vm.instance_id)
                 # suppress this exception so the original one is not masked
-            raise exc_type, exc_value, exc_tb
+            six.reraise(exc_type, exc_value, exc_tb)
         session.commit()
-    except Exception as e:
+    except Exception:
         log.exception('Error in provision_virt_recipe(%s)', recipe_id)
         session.rollback()
         # As an added precaution, let's try and avoid this recipe in future
@@ -632,8 +635,8 @@ def _recipe_count_metrics_for_query(name, query=None):
 
 def _recipe_count_metrics_for_query_grouped(name, grouping, query):
     group_counts = MachineRecipe.get_queue_stats_by_group(grouping, query)
-    for group, counts in group_counts.iteritems():
-        for status, count in counts.iteritems():
+    for group, counts in six.iteritems(group_counts):
+        for status, count in six.iteritems(counts):
             metrics.measure('gauges.recipes_%s.%s.%s' %
                                    (status, name, group), count)
 
@@ -652,14 +655,14 @@ def recipe_count_metrics():
 # System utilisation
 def _system_count_metrics_for_query(name, query):
     counts = utilisation.system_utilisation_counts(query)
-    for state, count in counts.iteritems():
+    for state, count in six.iteritems(counts):
         if state != 'idle_removed':
             metrics.measure('gauges.systems_%s.%s' % (state, name), count)
 
 def _system_count_metrics_for_query_grouped(name, grouping, query):
     group_counts = utilisation.system_utilisation_counts_by_group(grouping, query)
-    for group, counts in group_counts.iteritems():
-        for state, count in counts.iteritems():
+    for group, counts in six.iteritems(group_counts):
+        for state, count in six.iteritems(counts):
             if state != 'idle_removed':
                 metrics.measure('gauges.systems_%s.%s.%s' % (state, name,
                         group.replace('.', '_')), count)
@@ -681,8 +684,8 @@ def _system_command_metrics_for_query(name, query):
 
 def _system_command_metrics_for_query_grouped(name, grouping, query):
     group_counts = Command.get_queue_stats_by_group(grouping, query)
-    for group, counts in group_counts.iteritems():
-        for status, count in counts.iteritems():
+    for group, counts in six.iteritems(group_counts):
+        for status, count in six.iteritems(counts):
             metrics.measure('gauges.system_commands_%s.%s.%s'
                     % (status, name, group.replace('.', '_')), count)
 

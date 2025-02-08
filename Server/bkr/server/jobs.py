@@ -52,6 +52,9 @@ from bkr.server.job_utilities import Utility
 from bkr.server.bexceptions import DatabaseLookupError
 from bkr.server.model import Installation
 
+import six
+
+
 log = logging.getLogger(__name__)
 
 __all__ = ['JobForm', 'Jobs']
@@ -160,7 +163,7 @@ class Jobs(RPCRoot):
         try:
             self._delete_job(t_id)
             return [t_id]
-        except (BeakerException, TypeError), e:
+        except (BeakerException, TypeError) as e:
             log.debug(str(e))
             response.status = 400
             return ['Unable to delete %s' % t_id]
@@ -268,7 +271,7 @@ class Jobs(RPCRoot):
 
         if my_groups:
             if group:
-                if isinstance(group, basestring):
+                if isinstance(group, six.string_types):
                     group = [group]
                 group.extend([g.group_name for g in identity.current.user.groups])
             else:
@@ -373,7 +376,7 @@ class Jobs(RPCRoot):
             unknown tasks to be silently discarded (default is False)
         :type ignore_missing_tasks: bool
         """
-        if isinstance(jobxml, unicode):
+        if isinstance(jobxml, six.text_type):
             jobxml = jobxml.encode('utf8')
         xmljob = parse_untrusted_xml(jobxml)
         job = self.process_xmljob(xmljob, identity.current.user,
@@ -399,7 +402,7 @@ class Jobs(RPCRoot):
                 flash(_(u"Invalid job id %s" % job_id))
                 redirect(".")
             textxml = lxml.etree.tostring(job.to_xml(clone=True),
-                                          pretty_print=True, encoding=unicode)
+                                          pretty_print=True, encoding=six.text_type)
         elif recipeset_id:
             title = 'Clone Recipeset %s' % recipeset_id
             try:
@@ -409,12 +412,12 @@ class Jobs(RPCRoot):
                 redirect(".")
             textxml = lxml.etree.tostring(
                     recipeset.to_xml(clone=True, include_enclosing_job=True),
-                    pretty_print=True, encoding=unicode)
+                    pretty_print=True, encoding=six.text_type)
         elif isinstance(filexml, cgi.FieldStorage):
             # Clone from file
             try:
                 textxml = filexml.value.decode('utf8')
-            except UnicodeDecodeError, e:
+            except UnicodeDecodeError as e:
                 flash(_(u'Invalid job XML: %s') % e)
                 redirect('.')
         elif textxml:
@@ -434,7 +437,7 @@ class Jobs(RPCRoot):
                 xmljob = parse_untrusted_xml(textxml.encode('utf8'))
                 job = self.process_xmljob(xmljob, identity.current.user)
                 session.flush()
-            except Exception,err:
+            except Exception as err:
                 session.rollback()
                 flash(_(u'Failed to import job because of: %s' % err))
                 return dict(
@@ -537,7 +540,7 @@ class Jobs(RPCRoot):
         if group_name:
             try:
                 group = Group.by_name(group_name)
-            except NoResultFound, e:
+            except NoResultFound as e:
                 raise ValueError('%s is not a valid group' % group_name)
             if group not in owner.groups:
                 raise BX(_(u'User %s is not a member of group %s' % (owner.user_name, group.group_name)))
@@ -552,7 +555,7 @@ class Jobs(RPCRoot):
                   )
         extra_xml = xmljob.xpath('*[namespace-uri()]')
         if extra_xml is not None:
-            job.extra_xml = u''.join([lxml.etree.tostring(x, encoding=unicode).strip() for x in extra_xml])
+            job.extra_xml = u''.join([lxml.etree.tostring(x, encoding=six.text_type).strip() for x in extra_xml])
         job.product = product
         job.retention_tag = tag
         email_validator = validators.Email(not_empty=True)
@@ -561,7 +564,7 @@ class Jobs(RPCRoot):
                 addr = email_validator.to_python(addr.text.strip())
                 if addr not in job.cc:
                     job.cc.append(addr)
-            except Invalid, e:
+            except Invalid as e:
                 raise BX(_('Invalid e-mail address %r in <cc/>: %s') % (addr, str(e)))
         for xmlrecipeSet in xmljob.iter('recipeSet'):
             recipe_set = self._handle_recipe_set(xmlrecipeSet, owner,
@@ -627,12 +630,12 @@ class Jobs(RPCRoot):
             recipe = GuestRecipe(ttasks=0)
             recipe.guestname = xmlrecipe.get('guestname')
             recipe.guestargs = xmlrecipe.get('guestargs')
-        recipe.host_requires = lxml.etree.tostring(xmlrecipe.find('hostRequires'), encoding=unicode)
+        recipe.host_requires = lxml.etree.tostring(xmlrecipe.find('hostRequires'), encoding=six.text_type)
         partitions = xmlrecipe.find('partitions')
         if partitions is not None:
-            recipe.partitions = lxml.etree.tostring(partitions, encoding=unicode)
+            recipe.partitions = lxml.etree.tostring(partitions, encoding=six.text_type)
         if xmlrecipe.find('distroRequires') is not None:
-            recipe.distro_requires = lxml.etree.tostring(xmlrecipe.find('distroRequires'), encoding=unicode)
+            recipe.distro_requires = lxml.etree.tostring(xmlrecipe.find('distroRequires'), encoding=six.text_type)
             recipe.distro_tree = DistroTree.by_filter(recipe.distro_requires).first()
             if recipe.distro_tree is None:
                 raise BX(_('No distro tree matches Recipe: %s') % recipe.distro_requires)
@@ -646,7 +649,7 @@ class Jobs(RPCRoot):
         try:
             # try evaluating the host_requires, to make sure it's valid
             XmlHost.from_string(recipe.host_requires).apply_filter(System.query)
-        except StandardError, e:
+        except StandardError as e:
             raise BX(_('Error in hostRequires: %s' % e))
         recipe.whiteboard = xmlrecipe.get('whiteboard')
         recipe.kickstart = xmlrecipe.findtext('kickstart')
@@ -962,7 +965,7 @@ class Jobs(RPCRoot):
 
         try:
             job.cancel(msg)
-        except StaleTaskStatusException, e:
+        except StaleTaskStatusException as e:
             log.warn(str(e))
             session.rollback()
             flash(_(u"Could not cancel job id %s. Please try later" % id))
@@ -1194,7 +1197,7 @@ def update_job(id):
                 record_activity(u'Product', job.product, product)
                 job.product = product
         if 'cc' in data:
-            if isinstance(data['cc'], basestring):
+            if isinstance(data['cc'], six.string_types):
                 # Supposed to be a list, fix it up for them.
                 data['cc'] = [data['cc']]
             email_validator = validators.Email(not_empty=True)

@@ -29,10 +29,10 @@ def _get_serializer():
         # just a convenience so that Beaker is usable with a default config.
         try:
             key = open(_fallback_key_path, 'r').read()
-        except IOError, e:
+        except IOError as e:
             if e.errno != errno.ENOENT:
                 raise
-            with AtomicFileReplacement(_fallback_key_path, mode=0600) as f:
+            with AtomicFileReplacement(_fallback_key_path, mode=0o600) as f:
                 key = os.urandom(64)
                 f.write(key)
     return itsdangerous.URLSafeTimedSerializer(key)

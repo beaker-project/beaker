@@ -9,10 +9,8 @@ __requires__=['TurboGears']
 import pwd
 import os
 import sys
-import xmlrpclib
 import lxml.etree as ET
 import logging
-import urllib2
 from optparse import OptionParser
 
 import turbogears.config
@@ -23,6 +21,13 @@ from bkr.server.model import TaskLibrary, Task
 from bkr.server.util import load_config
 
 from bkr.common import __version__
+
+import six
+from six.moves import input
+from six.moves import urllib
+from six.moves import xmlrpc_client
+
+
 __description__ = 'Script to sync local task RPMs from a remote Beaker instance'
 
 # Helper function which doesn't need to be a class method
@@ -50,7 +55,7 @@ class TaskLibrarySync:
         # Initialize core attributes
         if remote:
             self.remote = remote.rstrip("/")
-            self.proxy = xmlrpclib.ServerProxy(self.remote + '/RPC2')
+            self.proxy = xmlrpc_client.ServerProxy(self.remote + '/RPC2')
 
         self.tasks_added = []
         self.t_downloaded = 0
@@ -96,7 +101,7 @@ class TaskLibrarySync:
         try:
             self.logger.debug('Getting task XML for %s from %s' % (task, getattr(self, server)))
             return self.proxy.tasks.to_xml(task, False)
-        except (xmlrpclib.Fault, xmlrpclib.ProtocolError) as e:
+        except (xmlrpc_client.Fault, xmlrpc_client.ProtocolError) as e:
             # If something goes wrong with this task, for example:
             # https://bugzilla.redhat.com/show_bug.cgi?id=915549
             # we do our best to continue anyway...
@@ -114,7 +119,7 @@ class TaskLibrarySync:
         def write_data_from_url(task_url):
 
             def _write_data_from_url(f):
-                siphon(urllib2.urlopen(task_url), f)
+                siphon(urllib.request.urlopen(task_url), f)
                 f.flush()
 
             return _write_data_from_url
@@ -134,10 +139,10 @@ class TaskLibrarySync:
                 tasks_and_writes_current_batch = \
                     tasks_and_writes[rpms_synced:rpms_synced+self.batch_size]
                 self.tasklib.update_tasks(tasks_and_writes_current_batch)
-            except Exception, e:
+            except Exception as e:
                 session.rollback()
                 session.close()
-                self.logger.exception('Error syncing tasks. Got error %s' % (unicode(e)))
+                self.logger.exception('Error syncing tasks. Got error %s' % (six.text_type(e)))
                 break
             session.commit()
             self.logger.debug('Synced %s tasks' % len(tasks_and_writes_current_batch))
@@ -173,8 +178,8 @@ class TaskLibrarySync:
         self.logger.info('Syncing %s tasks in total' % number_of_tasks_to_sync)
         try:
             self.sync_tasks(tasks_to_sync)
-        except Exception, e:
-            self.logger.exception(unicode(e))
+        except Exception as e:
+            self.logger.exception(six.text_type(e))
             self.logger.info('Failed to sync all tasks')
         else:
             self.logger.info('Synced all tasks')
@@ -236,7 +241,7 @@ def main():
                                      'with the version from %s if the two versions are different' %
                                      (len(old_tasks), task_sync.remote))
 
-        proceed = raw_input('Proceed with task addition? (y/n) ')
+        proceed = input('Proceed with task addition? (y/n) ')
         if proceed.lower() == 'y':
             proceed = True
         else:

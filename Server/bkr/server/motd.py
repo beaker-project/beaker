@@ -19,7 +19,7 @@ _motd = None
 def _load_motd(filename):
     try:
         f = open(filename, 'rb')
-    except IOError, e:
+    except IOError as e:
         if e.errno == errno.ENOENT:
             log.info('Motd not found at %s, ignoring', filename)
             return None

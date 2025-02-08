@@ -18,11 +18,13 @@ from optparse import OptionParser
 from turbogears.config import get
 import os
 import sys
-import urlparse
 import dnf
-import urllib
 import requests
 import logging
+
+import six
+from six.moves import urllib
+
 
 __description__ = 'Script to update harness repos'
 
@@ -46,7 +48,7 @@ def get_parser():
 
 
 def usage():
-    print USAGE_TEXT
+    print(USAGE_TEXT)
     sys.exit(-1)
 
 # Use a single global requests.Session for this process
@@ -90,7 +92,7 @@ class RepoSyncer(dnf.Base):
 
     def sync(self):
         # First check if the harness repo exists.
-        response = requests_session.head(urlparse.urljoin(self.repo_url, 'repodata/repomd.xml'))
+        response = requests_session.head(urllib.parse.urljoin(self.repo_url, 'repodata/repomd.xml'))
         if response.status_code != 200:
             raise HarnessRepoNotFoundError()
 
@@ -128,11 +130,11 @@ def update_repos(baseurl, basepath):
     # We only sync repos for the OS majors that have existing trees in the lab controllers.
     for osmajor in OSMajor.in_any_lab():
         # urlgrabber < 3.9.1 doesn't handle unicode urls
-        osmajor = unicode(osmajor).encode('utf8')
+        osmajor = six.text_type(osmajor).encode('utf8')
         dest = "%s/%s" % (basepath,osmajor)
         if os.path.islink(dest):
             continue # skip symlinks
-        syncer = RepoSyncer(urlparse.urljoin(baseurl, '%s/' % urllib.quote(osmajor)), dest)
+        syncer = RepoSyncer(urllib.parse.urljoin(baseurl, '%s/' % urllib.parse.quote(osmajor)), dest)
         try:
             syncer.sync()
         except KeyboardInterrupt:

@@ -125,7 +125,7 @@ def main(*args):
     testing = options.testing
 
     if testing:
-        print 'Dry run only, nothing will be sent\n'
+        print('Dry run only, nothing will be sent\n')
 
     for user in User.query:
         beaker_usage = BeakerUsage(user, reservation_expiry, reservation_length,

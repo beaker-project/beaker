@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 # encoding: utf8
 
@@ -24,6 +25,9 @@
 import re
 import sys
 import codecs
+
+import six
+
 
 namespaces = [ ('desktop', ['evolution', 'openoffice.org', 'poppler', 'shared-mime-info']),
                ('tools', ['gcc']),
@@ -309,7 +313,7 @@ class Parser:
             return
         k, v = kv
         d = getattr(self.info, dictFieldName)
-        if d.has_key(k):
+        if k in d:
             self.handle_error("%s: Duplicate entry for %r" % (fileFieldName, k))
             return
         if key_validator and not key_validator.is_valid(k):
@@ -344,13 +348,12 @@ class Parser:
                 
         name_frags= value.split('/')
         
-        #print name_frags
         root_ns = name_frags[1]
         
         self.info.test_name_root_ns = root_ns
         self.info.test_name_under_root_ns = "/".join(name_frags[2:])
         self.info.expected_path_under_mnt_tests_from_name = self.info.test_name_under_root_ns
-        # print "name_under_root_ns: %s"%self.info.test_name_under_root_ns            
+        # print("name_under_root_ns: %s"%self.info.test_name_under_root_ns)
         self.info.test_name_frags = name_frags
 
     def handle_desc(self, key, value):
@@ -379,17 +382,16 @@ class Parser:
 
         releases = []
         for release in value.split(" "):
-            #print "Got release: release"
 
             releases.append(release)
             m = re.match('^-(.*)', release)
             if m:
                 cleaned_release = m.group(1)
-                # print "Got negative release: %s"%cleaned_release
+                # print("Got negative release: %s"%cleaned_release)
                 num_negative_releases+=1
             else:
                 cleaned_release = release
-                # print "Got positive release: %s"%release
+                # print("Got positive release: %s"%release)
                 num_positive_releases+=1
 
             if num_negative_releases>0 and num_positive_releases>0:
@@ -457,7 +459,7 @@ class Parser:
     
     def handle_bug(self, key, value):
         for bug in value.split(" "):
-            # print "Got bug: %s"%bug
+            # print("Got bug: %s"%bug)
 
             m = re.match('^([1-9][0-9]*)$', bug)
             if m:
@@ -522,9 +524,9 @@ class Parser:
         self.info.siteconfig.append( (absPath, value) )
     
     def __handle_declaration(self, decl, arg, value):
-        # print 'decl:  "%s"'%decl
-        # print 'arg:   "%s"'%arg
-        # print 'value: "%s"'%value
+        # print('decl:  "%s"'%decl)
+        # print('arg:   "%s"'%arg)
+        # print('value: "%s"'%value)
 
         if decl=="SiteConfig":
             self.__handle_siteconfig(arg, value)
@@ -562,11 +564,11 @@ class Parser:
                   'Provides': self.handle_provides,
                   }
 
-        self.lineNum = 0;
+        self.lineNum = 0
         for line in lines:
             self.lineNum+=1
 
-            # print $line_num," ",$line;
+            # print($line_num," ",$line;)
 
             # Skip comment lines:
             if re.match('^#', line):
@@ -628,8 +630,7 @@ class PrintingParser(Parser):
     def handle_message(self, message, severity):
         # Try to mimic the format of a GCC output line, e.g.:
         # tmp.c:1: error: your code sucks
-        print >> self.outputFileObj, "%s:%i: %s: %s"%(self.inputFilename, self.lineNum, severity, message)
-
+        print("%s:%i: %s: %s" % (self.inputFilename, self.lineNum, severity, message), file=self.outputFileObj)
     def handle_error(self, message):
         self.handle_message(message, "error")
         self.numErrors+=1
@@ -672,10 +673,10 @@ class StrictParser(Parser):
         if self.raise_errors:
             raise ParserWarning(message)
 
-def parse_string(string, raise_errors = True):
-    assert isinstance(string, unicode)
+def parse_string(raw_string, raise_errors = True):
+    assert isinstance(raw_string, six.text_type)
     p = StrictParser(raise_errors)
-    p.parse(string.split("\n"))
+    p.parse(raw_string.split("\n"))
     return p.info
 
 def parse_file(filename, raise_errors = True):

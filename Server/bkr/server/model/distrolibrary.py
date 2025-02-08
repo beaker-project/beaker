@@ -6,11 +6,12 @@
 
 import re
 from datetime import datetime
-import urlparse
 import xml.dom.minidom
 import lxml.etree
 from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Integer,
         String, Unicode, DateTime, UnicodeText, Boolean)
+import six
+from six.moves import urllib
 from sqlalchemy.sql import select, exists, or_
 from sqlalchemy.orm import (relationship, backref, dynamic_loader, synonym,
                             validates)
@@ -20,7 +21,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from turbogears.database import session
 from bkr.server import identity
 from bkr.server.helpers import make_link
-from bkr.server.util import convert_db_lookup_error
+from bkr.server.util import convert_db_lookup_error, ensure_str
 from bkr.server.installopts import InstallOptions, global_install_options
 from .sql import ConditionalInsert
 from .base import DeclarativeMappedObject
@@ -295,10 +296,10 @@ class KernelType(DeclarativeMappedObject):
         return self.kernel_type
 
     def __str__(self):
-        return unicode(self).encode('utf8')
+        return ensure_str(six.text_type(self))
 
     def __json__(self):
-        return unicode(self)
+        return six.text_type(self)
 
     @classmethod
     def get_all_types(cls):
@@ -338,10 +339,10 @@ class Arch(DeclarativeMappedObject):
         return self.arch
 
     def __str__(self):
-        return unicode(self).encode('utf8')
+        return ensure_str(six.text_type(self))
 
     def __json__(self):
-        return unicode(self)
+        return six.text_type(self)
 
     @classmethod
     def get_all(cls):
@@ -630,7 +631,7 @@ class Distro(DeclarativeMappedObject, ActivityMixin):
         return self.name
 
     def __str__(self):
-        return unicode(self).encode('utf8')
+        return ensure_str(six.text_type(self))
 
     def __repr__(self):
         return '%s(name=%r)' % (self.__class__.__name__, self.name)
@@ -754,7 +755,7 @@ class DistroTree(DeclarativeMappedObject, ActivityMixin):
 
     @property
     def link(self):
-        return make_link(url='/distrotrees/%s' % self.id, text=unicode(self))
+        return make_link(url='/distrotrees/%s' % self.id, text=six.text_type(self))
 
     def __unicode__(self):
         if self.variant:
@@ -763,7 +764,7 @@ class DistroTree(DeclarativeMappedObject, ActivityMixin):
             return u'%s %s' % (self.distro, self.arch)
 
     def __str__(self):
-        return str(unicode(self))
+        return str(six.text_type(self))
 
     def __repr__(self):
         return '%s(distro=%r, variant=%r, arch=%r)' % (
@@ -782,9 +783,9 @@ class DistroTree(DeclarativeMappedObject, ActivityMixin):
         returned if this distro tree is not in the given lab. If *required* is
         true, then an exception will be raised.
         """
-        if isinstance(scheme, basestring):
+        if isinstance(scheme, six.string_types):
             scheme = [scheme]
-        urls = dict((urlparse.urlparse(lca.url).scheme, lca.url)
+        urls = dict((urllib.parse.urlparse(lca.url).scheme, lca.url)
                 for lca in self.lab_controller_assocs
                 if lca.lab_controller.fqdn == lab_controller.fqdn)
         if scheme is not None:
@@ -797,7 +798,7 @@ class DistroTree(DeclarativeMappedObject, ActivityMixin):
                     return urls[s]
             # caller didn't specify any schemes, so pick anything if we have it
             if urls:
-                return urls.itervalues().next()
+                return next(six.itervalues(urls))
         # nothing suitable found
         if required:
             raise ValueError('No usable URL found for %r in %r' % (self, lab_controller))

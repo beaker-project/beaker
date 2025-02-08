@@ -24,6 +24,10 @@ from bkr.server.flask_util import auth_required, \
     json_collection
 
 import logging
+
+import six
+
+
 log = logging.getLogger(__name__)
 
 class GroupOwnerModificationForbidden(BX):
@@ -789,7 +793,7 @@ def add_permission(group_name):
         group.permissions.append(permission)
         group.record_activity(user=u, service=u'HTTP',
                              action=u'Added', field=u'Permission', old=None,
-                             new=unicode(permission))
+                             new=six.text_type(permission))
     return '', 204
 
 @app.route('/groups/<group_name>/permissions/', methods=['DELETE'])
@@ -814,7 +818,7 @@ def remove_permission(group_name):
         group.permissions.remove(permission)
         group.record_activity(user=u, service=u'HTTP',
                              action=u'Removed', field=u'Permission',
-                             old=unicode(permission), new=None)
+                             old=six.text_type(permission), new=None)
     else:
         raise Conflict409('Group %s does not have permission %s' % (group_name, permission_name))
     return '', 204

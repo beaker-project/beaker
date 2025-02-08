@@ -7,6 +7,9 @@
 import unittest
 from bkr.server import needpropertyxml
 
+import six
+
+
 decimal_prefixes = {
     'k': 10**3,
     'K': 10**3,
@@ -24,9 +27,9 @@ binary_prefixes = {
 def test_bytes_multiplier():
     yield check_bytes_multiplier, 'bytes', 1
     yield check_bytes_multiplier, 'B', 1
-    for prefix, multiplier in decimal_prefixes.iteritems():
+    for prefix, multiplier in six.iteritems(decimal_prefixes):
         yield check_bytes_multiplier, prefix + 'B', multiplier
-    for prefix, multiplier in binary_prefixes.iteritems():
+    for prefix, multiplier in six.iteritems(binary_prefixes):
         yield check_bytes_multiplier, prefix + 'B', multiplier
 
 def check_bytes_multiplier(units, expected):

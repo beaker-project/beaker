@@ -15,12 +15,12 @@ confusing because there is also at least three other projects named XUnit which
 have their own *different* XML formats.
 """
 
-import urlparse
 import lxml.etree
 from lxml.builder import E
 from bkr.common.helpers import total_seconds
 from bkr.server.util import absolute_url
 from bkr.server.model import TaskStatus, TaskResult
+
 
 def _systemout_for_task(task):
     return '\n'.join(absolute_url(log.href) for log in task.logs)

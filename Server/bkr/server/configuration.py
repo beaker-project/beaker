@@ -113,7 +113,7 @@ class Configuration(AdminPage):
 
         try:
             item.set(kw['value'], valid_from, identity.current.user)
-        except Exception, msg:
+        except Exception as msg:
             flash(_(u"Failed to save setting: %s" % msg))
             raise redirect("/configuration/edit?id=%d" % item.id)
 

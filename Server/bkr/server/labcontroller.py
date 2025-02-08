@@ -15,7 +15,6 @@ from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm.exc import NoResultFound
 import cherrypy
 from datetime import datetime, timedelta
-import urlparse
 
 from flask import request, jsonify
 from bkr.server.app import app
@@ -30,6 +29,11 @@ from bkr.server.model import \
     System, SystemStatus, Watchdog, Command, CommandStatus
 
 import logging
+
+import six
+from six.moves import urllib
+
+
 log = logging.getLogger(__name__)
 
 
@@ -51,10 +55,10 @@ def restore_labcontroller(labcontroller):
 
     labcontroller.record_activity(
         user=identity.current.user, service=u'HTTP',
-        field=u'Disabled', action=u'Changed', old=unicode(True), new=unicode(False))
+        field=u'Disabled', action=u'Changed', old=six.text_type(True), new=six.text_type(False))
     labcontroller.record_activity(
         user=identity.current.user, service=u'HTTP',
-        field=u'Removed', action=u'Changed', old=unicode(True), new=unicode(False))
+        field=u'Removed', action=u'Changed', old=six.text_type(True), new=six.text_type(False))
 
 def remove_labcontroller(labcontroller):
     """
@@ -93,10 +97,10 @@ def remove_labcontroller(labcontroller):
     labcontroller.disabled = True
     labcontroller.record_activity(
         user=identity.current.user, service=u'HTTP',
-        field=u'Disabled', action=u'Changed', old=unicode(False), new=unicode(True))
+        field=u'Disabled', action=u'Changed', old=six.text_type(False), new=six.text_type(True))
     labcontroller.record_activity(
         user=identity.current.user, service=u'HTTP',
-        field=u'Removed', action=u'Changed', old=unicode(False), new=unicode(True))
+        field=u'Removed', action=u'Changed', old=six.text_type(False), new=six.text_type(True))
 
 def find_user_or_create(user_name):
     user = User.by_user_name(user_name)
@@ -194,7 +198,7 @@ def update_labcontroller(fqdn):
             labcontroller.record_activity(
                 user=identity.current.user, service=u'HTTP',
                 field=u'disabled', action=u'Changed',
-                old=unicode(labcontroller.disabled), new=data['disabled'])
+                old=six.text_type(labcontroller.disabled), new=data['disabled'])
             labcontroller.disabled = data['disabled']
 
     response = jsonify(labcontroller.__json__())
@@ -266,7 +270,7 @@ def _create_labcontroller_helper(data):
         # For backwards compatibility
         labcontroller.record_activity(
             user=identity.current.user, service=u'HTTP',
-            action=u'Changed', field=u'Disabled', old=u'', new=unicode(labcontroller.disabled))
+            action=u'Changed', field=u'Disabled', old=u'', new=six.text_type(labcontroller.disabled))
 
         session.add(labcontroller)
         # flush it so we return an id, otherwise we'll end up back in here from
@@ -445,12 +449,12 @@ class LabControllers(RPCRoot):
                     continue
 
                 d['netboot'] = {
-                    'kernel_url': urlparse.urljoin(distro_tree_url, installation.kernel_path),
-                    'initrd_url': urlparse.urljoin(distro_tree_url, installation.initrd_path),
+                    'kernel_url': urllib.parse.urljoin(distro_tree_url, installation.kernel_path),
+                    'initrd_url': urllib.parse.urljoin(distro_tree_url, installation.initrd_path),
                     'kernel_options': installation.kernel_options or '',
                 }
                 if installation.image_path:
-                    d["netboot"]["image_url"] = urlparse.urljoin(
+                    d["netboot"]["image_url"] = urllib.parse.urljoin(
                         distro_tree_url, installation.image_path
                     )
                 else:
@@ -493,8 +497,8 @@ class LabControllers(RPCRoot):
         if not initrd:
             raise ValueError('Initrd image not found for distro tree %s' % distro_tree.id)
         return {
-            'kernel_url': urlparse.urljoin(distro_tree_url, kernel.path),
-            'initrd_url': urlparse.urljoin(distro_tree_url, initrd.path),
+            'kernel_url': urllib.parse.urljoin(distro_tree_url, kernel.path),
+            'initrd_url': urllib.parse.urljoin(distro_tree_url, initrd.path),
             'kernel_options': installation.kernel_options or '',
             'distro_tree_urls': [lca.url for lca in distro_tree.lab_controller_assocs
                     if lca.lab_controller == system.lab_controller],

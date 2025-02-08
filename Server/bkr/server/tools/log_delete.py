@@ -15,7 +15,6 @@ import os, os.path
 import errno
 import datetime
 import shutil
-import urlparse
 import warnings
 import requests
 from turbogears import config
@@ -27,6 +26,9 @@ from bkr.server.model import Job
 from bkr.server.util import load_config_or_exit
 from turbogears.database import session
 import logging
+
+from six.moves import urllib
+
 
 try:
     import requests_kerberos
@@ -164,7 +166,7 @@ def log_delete(print_logs=False, dry=False, limit=None):
             log_dirs = (os.path.dirname(log.full_path) + '/' for log in all_logs)
             for path in remove_descendants(log_dirs):
                 if not dry:
-                    if urlparse.urlparse(path).scheme:
+                    if urllib.parse.urlparse(path).scheme:
                         # We need to handle redirects ourselves, since requests
                         # turns DELETE into GET on 302 which we do not want.
                         response = requests_session.delete(path, allow_redirects=False)
@@ -180,18 +182,18 @@ def log_delete(print_logs=False, dry=False, limit=None):
                     else:
                         try:
                             shutil.rmtree(path)
-                        except OSError, e:
+                        except OSError as e:
                             if e.errno == errno.ENOENT:
                                 pass
                 if print_logs:
-                    print path
+                    print(path)
             job.purge()
             if not dry:
                 session.commit()
             else:
                 session.rollback()
             session.close()
-        except Exception, e:
+        except Exception as e:
             logger.exception('Exception while purging logs for job %s', jobid)
             failed = True
             session.close()

@@ -5,12 +5,14 @@
 # (at your option) any later version.
 
 from decimal import Decimal
-import urllib
 from itertools import chain
 from rdflib.namespace import Namespace, RDF, RDFS, XSD
 import rdflib.term
 from rdflib.term import URIRef, Literal, BNode
 from bkr.server.util import absolute_url
+
+from six.moves import urllib
+
 
 DC = Namespace('http://purl.org/dc/terms/')
 FOAF = Namespace('http://xmlns.com/foaf/0.1/')
@@ -41,14 +43,14 @@ def bind_namespaces(graph):
 
 def describe_lab_controller(lab_controller, graph):
     concept = URIRef(
-            absolute_url('/lc/%s' % urllib.quote(lab_controller.fqdn.encode('utf8'), ''))
+            absolute_url('/lc/%s' % urllib.parse.quote(lab_controller.fqdn.encode('utf8'), ''))
             + '#lc')
     graph.add((concept, RDF.type, INV.LabController))
     return concept
 
 def describe_user(user, graph):
     concept = URIRef(
-            absolute_url('/users/%s' % urllib.quote(user.user_name.encode('utf8'), ''))
+            absolute_url('/users/%s' % urllib.parse.quote(user.user_name.encode('utf8'), ''))
             + '#user')
     graph.add((concept, RDF.type, FOAF.User))
     graph.add((concept, FOAF.name, Literal(user.display_name)))
@@ -57,7 +59,7 @@ def describe_user(user, graph):
 
 def describe_key(key, graph):
     concept = URIRef(
-            absolute_url('/keys/%s' % urllib.quote(key.key_name.encode('utf8'), ''))
+            absolute_url('/keys/%s' % urllib.parse.quote(key.key_name.encode('utf8'), ''))
             + '#key')
     graph.add((concept, RDF.type, RDF.Property))
     graph.add((concept, RDFS.label, Literal(key.key_name)))
@@ -65,7 +67,7 @@ def describe_key(key, graph):
 
 def describe_arch(arch, graph):
     concept = URIRef(
-            absolute_url('/arch/%s' % urllib.quote(arch.arch.encode('utf8'), ''))
+            absolute_url('/arch/%s' % urllib.parse.quote(arch.arch.encode('utf8'), ''))
             + '#arch')
     graph.add((concept, RDF.type, INV.Arch))
     graph.add((concept, RDFS.label, Literal(arch.arch)))
@@ -93,7 +95,7 @@ def describe_device(device, graph):
 
 def describe_device_class(device_class, graph):
     concept = URIRef(
-            absolute_url('/devices/%s' % urllib.quote(device_class.device_class.encode('utf8'), ''))
+            absolute_url('/devices/%s' % urllib.parse.quote(device_class.device_class.encode('utf8'), ''))
             + '#class')
     graph.add((concept, RDF.type, INV.DeviceClass))
     graph.add((concept, RDFS.label, Literal(device_class.device_class)))
@@ -101,7 +103,7 @@ def describe_device_class(device_class, graph):
 
 def describe_bus_type(bus_type, graph):
     concept = URIRef(
-            absolute_url('/devices/bus/%s' % urllib.quote(bus_type.encode('utf8'), ''))
+            absolute_url('/devices/bus/%s' % urllib.parse.quote(bus_type.encode('utf8'), ''))
             + '#bus')
     graph.add((concept, RDF.type, INV.BusType))
     graph.add((concept, RDFS.label, Literal(bus_type)))

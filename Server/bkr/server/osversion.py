@@ -17,6 +17,9 @@ from bkr.server.admin_page import AdminPage
 
 from bkr.server.model import Arch, OSMajor, OSVersion, OSMajorInstallOptions
 
+import six
+
+
 # Validation Schemas
 
 class OSVersions(AdminPage):
@@ -59,7 +62,7 @@ class OSVersions(AdminPage):
         except InvalidRequestError:
             flash(_(u"Invalid OSVersion ID %s" % id))
             redirect(".")
-        return dict(title   = unicode(osversion),
+        return dict(title   = six.text_type(osversion),
                     value   = dict(id     = osversion.id,
                                    arches = [arch.id for arch in osversion.arches]),
                     form    = self.osversion_form,
@@ -113,7 +116,7 @@ class OSVersions(AdminPage):
         except InvalidRequestError:
             flash(_(u"Invalid OSMajor ID %s" % id))
             redirect(".")
-        for arch, options in installopts.iteritems():
+        for arch, options in six.iteritems(installopts):
             # arch=None means applied to all arches
             io = OSMajorInstallOptions.lazy_create(osmajor_id=osmajor.id,
                     arch_id=Arch.by_name(arch).id if arch else None)

@@ -9,6 +9,9 @@ from sqlalchemy.sql import text as sqltext
 from sqlalchemy.ext import compiler
 from sqlalchemy.dialects.mysql.base import MySQLDialect
 
+import six
+
+
 class ConditionalInsert(Insert):
     def __init__(self, table, unique_values, extra_values=()):
         """
@@ -22,7 +25,7 @@ class ConditionalInsert(Insert):
         values.update(extra_values)
         super(ConditionalInsert, self).__init__(table, values)
         self.unique_condition = and_(*[col == value
-                for col, value in unique_values.iteritems()])
+                for col, value in six.iteritems(unique_values)])
 
 @compiler.compiles(ConditionalInsert)
 def visit_conditional_insert(element, compiler, **kwargs):

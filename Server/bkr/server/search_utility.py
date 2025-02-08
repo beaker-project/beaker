@@ -22,6 +22,10 @@ from turbogears.database import session
 from bkr.server.model import Key as KeyModel
 from bkr.common.bexceptions import BeakerException
 import logging
+
+import six
+
+
 log = logging.getLogger(__name__)
 
 def get_alias_target(aliased_class):
@@ -273,7 +277,7 @@ class CpuColumn(MyColumn):
     CpuColumn defines a relationship to system
     """
     def __init__(self,**kw):
-        if not kw.has_key('relations'):
+        if 'relations' not in kw:
             kw['relations'] = 'cpu'
         super(CpuColumn,self).__init__(**kw)
 
@@ -282,7 +286,7 @@ class DeviceColumn(MyColumn):
     DeviceColumn defines a relationship to system
     """
     def __init__(self,**kw):
-        if not kw.has_key('relations'):
+        if 'relations' not in kw:
             kw['relations'] = 'devices'
         super(DeviceColumn,self).__init__(**kw)        
 
@@ -421,7 +425,7 @@ class Modeller(object):
                                        'less than' : lambda x,y: self.less_than(x,y),
                                        'greater than' : lambda x,y: self.greater_than(x,y), },
                              
-                          'unicode' : {'is' : lambda x,y: self.equals(x,y),
+                          'six.text_type' : {'is' : lambda x,y: self.equals(x,y),
                                        'is not' : lambda x,y: self.not_equal(x,y),
                                        'contains' : lambda x,y: self.contains(x,y), },
                           
@@ -476,14 +480,14 @@ class Modeller(object):
         """
         try:
             op_dict = self.structure[type]   
-        except KeyError, (error):
+        except KeyError:
             if loose_match:
                 op_dict = self.loose_type_match(type)            
             if not op_dict: 
                 op_dict = self.structure['generic']
         try: 
             return op_dict[operator]
-        except KeyError,e:
+        except KeyError as e:
             flash(_('%s is not a valid operator' % operator))
             raise
 
@@ -496,7 +500,7 @@ class Modeller(object):
         field_type = field_type.lower()
         try:
             operators = self.structure[field_type] 
-        except KeyError, (error):
+        except KeyError:
             if loose_match: 
                 operators = self.loose_type_match(field_type)    
             if operators is None:
@@ -555,7 +559,7 @@ class Search(object):
         cls = globals()[cls_name]  
         try:
             mycolumn = cls.searchable_columns[column]
-        except KeyError,e:
+        except KeyError as e:
             flash(_(u'%s is not a valid search criteria' % column)) 
             raise
         self.do_joins(mycolumn)
@@ -566,10 +570,10 @@ class Search(object):
                 filter_final = lambda: filter_func(mycolumn.column,value)
             else: 
                 filter_final = self.return_standard_filter(mycolumn,operation,value)
-        except KeyError,e:
+        except KeyError as e:
             log.error(e)
             return self.queri
-        except AttributeError,e:
+        except AttributeError as e:
             log.error(e)
             return self.queri
         self.queri = self.queri.filter(filter_final())
@@ -595,7 +599,7 @@ class Search(object):
                         else:
                             self.queri = self.queri.outerjoin(*relations, aliased=aliased)
                             break
-            except TypeError, (error):
+            except TypeError as error:
                 log.error('Column %s has not specified joins validly:%s' % (mycolumn, error))
 
     def return_standard_filter(self,mycolumn,operation,value,loose_match=True):  
@@ -623,7 +627,7 @@ class Search(object):
                 #if We are searchong on a searchable_column that is something like 'System/Name' 
                 #and the 'is not' operation, it will look for the SystemName_is_not_filter method
                 column_mod = '%s%s' % (column_match.group(1).capitalize(),column_match.group(2).capitalize()) 
-        except AttributeError, (error):
+        except AttributeError:
             column_mod = column.lower()
          
         col_op_filter = getattr(cls_ref,'%s_%s_filter' % (column_mod,underscored_operation),None)
@@ -653,7 +657,7 @@ class Search(object):
                 vals = cls_ref.search_values(field)
             except AttributeError:
                 log.debug('Not using predefined search values for %s->%s' % (cls_ref.__name__,field))  
-        except AttributeError, (error):
+        except AttributeError as error:
             log.error('Error accessing attribute within search_on: %s' % (error))
         else: 
             return dict(operators = cls_ref.search_operators(field_type), values=vals)
@@ -830,7 +834,7 @@ class SystemSearch(Search):
             #using just the regular filter operations from Modeller
             try:
                 col_type = mycolumn.type
-            except AttributeError, (error):
+            except AttributeError as error:
                 log.error('Error accessing attribute type within append_results: %s' % (error))
             modeller = Modeller()
             filter_func = modeller.return_function(col_type,operation,loose_match=True)
@@ -937,9 +941,9 @@ class SystemSearch(Search):
         if lookup_table != None:
            lookup_table = []       
         for i in options:
-            for class_ref ,v in i.iteritems():
+            for class_ref ,v in six.iteritems(i):
                 display_name = cls.translate_class_to_name(class_ref)
-                for rule,v1 in v.iteritems():  
+                for rule,v1 in six.iteritems(v):  
                     searchable = class_ref.get_searchable()
                     if rule == 'all':
                         for item in searchable: 
@@ -1010,7 +1014,7 @@ class SystemSearch(Search):
                 vals = class_ref.search_values(field)
             except AttributeError:
                 log.debug('Not using predefined search values for %s->%s' % (class_ref.__name__,field))
-        except AttributeError, (error):
+        except AttributeError as error:
             log.error('Error accessing attribute within search_on: %s' % (error))
         else:
             return dict(operators = class_ref.search_operators(field_type), values = vals)
@@ -1037,14 +1041,14 @@ class SystemObject(object):
             try:
                 field_type = mycolumn.type 
                 return field_type
-            except AttributeError, (error):
+            except AttributeError as error:
                 log.error('No type specified for %s in searchable_columns:%s' % (field,error))
         else:
             log.error('Column %s is not a mapped column nor is it part of searchable_columns' % field)
                     
     @classmethod
     def search_values(cls,col):  
-       if cls.search_values_dict.has_key(col):
+       if col in cls.search_values_dict:
            return cls.search_values_dict[col]()
        
     @classmethod
@@ -1054,14 +1058,14 @@ class SystemObject(object):
         of fields that can be searched after any field filtering has
         been applied
         """
-        searchable_columns = [k for (k,v) in cls.searchable_columns.iteritems()
+        searchable_columns = [k for (k,v) in six.iteritems(cls.searchable_columns)
                 if v is None or not v.hidden]
         if 'exclude' in kw:
             if type(kw['without']) == type(()):
                 for i in kw['exclude']:
                     try:
                         del searchable_columns[i]
-                    except KeyError,e:
+                    except KeyError as e:
                         log.error('Cannot remove column %s from searchable column in class %s as it is not a searchable column in the first place' % (i,cls.__name__))
         return searchable_columns
 
@@ -1075,7 +1079,7 @@ class SystemObject(object):
     
         try: 
             return m.return_operators(field)
-        except KeyError, (e): 
+        except KeyError as e:
             log.error('Failed to find operators for field %s, got error: %s' % (field,e))
 
 
@@ -1254,8 +1258,8 @@ class DistroTree(SystemObject):
                             relations=['distro', '_tags']),
     }
     search_values_dict = {
-        'Arch':    lambda: [unicode(arch) for arch in model.Arch.query.order_by(model.Arch.arch)],
-        'Tag':     lambda: [unicode(tag) for tag in model.DistroTag.query.order_by(model.DistroTag.tag)],
+        'Arch':    lambda: [six.text_type(arch) for arch in model.Arch.query.order_by(model.Arch.arch)],
+        'Tag':     lambda: [six.text_type(tag) for tag in model.DistroTag.query.order_by(model.DistroTag.tag)],
     }
 
     tag_is_not_filter = Distro.tag_is_not_filter
@@ -1379,7 +1383,7 @@ class Key(SystemObject):
     @classmethod
     def value_pre(cls,value,**kw): 
         if not kw.get('keyvalue'):
-            raise Exception, 'value_pre needs a keyvalue. keyvalue not found' 
+            raise Exception('value_pre needs a keyvalue. keyvalue not found')
         result = model.Key.by_name(kw['keyvalue']) 
         int_table = result.numeric
         key_id = result.id
