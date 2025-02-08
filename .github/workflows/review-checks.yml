@@ -223,3 +223,134 @@ jobs:
         run: |
           pushd ${{ matrix.test-target }}
           ./run-tests.sh
+
+
+  selenium-integration-tests:
+    runs-on: ubuntu-latest
+    env:
+      MYSQL_USER: beaker
+      MYSQL_PASSWORD: beaker
+      MYSQL_ROOT_PASSWORD: toor
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [
+          "test_activity,test_add_system,test_csv_export,test_csv_import,test_csv_roundtrip,test_distro_family,test_distro_search,test_distro_trees,test_distros,test_grid,test_group_edit",
+          "test_groups,test_help,test_item_count,test_job_ack,test_job_cancel,test_job_delete,test_job_delete_xmlrpc,test_job_export_xml,test_job_matrix,test_job_search,test_jobs",
+          "test_jobs_old,test_jobs_xmlrpc,test_keytypes,test_labcontrollers,test_log_upload,test_login,test_motd,test_my_menu_tests,test_osversions,test_power_types,test_prefs",
+          "test_product,test_recipe_search,test_recipes,test_recipes_old,test_recipes_xmlrpc,test_recipetasks,test_recipetasks_xmlrpc,test_reserve_report,test_reserve_system,test_retentiontag,test_system_access_policies",
+          "test_system_actions,test_system_availability,test_system_commands,test_system_loan,test_system_menu_tests,test_system_note,test_system_pools,test_system_provision,test_system_quickinfo,test_system_return,test_system_search",
+          "test_system_view,test_systems,test_systems_xmlrpc,test_task_by_name,test_task_search,test_taskactions_xmlrpc,test_tasks,test_users,test_watchdogs,test_xmlrpc"
+        ]
+        test-target: ["bkr.inttest.server.selenium"]
+    container:
+      image: centos:7
+      options: --init
+      volumes:
+        - /node20217:/node20217:rw,rshared
+        - /node20217:/__e/node20:ro,rshared
+    services:
+      database:
+        image: mariadb:10-ubi
+        env:
+          MYSQL_USER: ${{ env.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ env.MYSQL_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ env.MYSQL_ROOT_PASSWORD }}
+        ports:
+          - 3306
+    steps:
+      - name: Fetch Node 20
+        run: |
+          curl -LO https://unofficial-builds.nodejs.org/download/release/v20.9.0/node-v20.9.0-linux-x64-glibc-217.tar.xz
+          tar -xf node-v20.9.0-linux-x64-glibc-217.tar.xz --strip-components 1 -C /node20217
+      - name: Fixup CentOS repo files
+        run: |
+          sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo
+          sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo
+          sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo
+
+      # We have to install git 2.18+ to perform checkout via git
+      # This is possible only via IUS repositories
+      - name: Install git to allow checkout
+        run: |
+          yum install https://repo.ius.io/ius-release-el7.rpm epel-release -y
+          yum install git236-core -y
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Remove custom git from the IUS repository - git will be reinstalled later as it is needed by beaker itself.
+      - name: Remove git236 and YUM repositories
+        run: yum remove git236-core ius-release epel-release -y
+
+      - name: Add Beaker Server YUM repository
+        run: |
+          curl -o /etc/yum.repos.d/beaker-server.repo https://beaker-project.org/yum/beaker-server-RedHatEnterpriseLinux.repo
+
+      - name: Install Beaker dependencies
+        run: |
+          yum install bzip2 ca-certificates wget epel-release mariadb beaker-integration-tests -y
+          yum-builddep beaker.spec -y
+          yum remove beaker-common \
+              beaker-client \
+              beaker-lab-controller \
+              beaker-server \
+              beaker-integration-tests -y
+
+      - name: Checkout submodules
+        run: |
+          git submodule update --init --recursive
+
+      - name: Configure database for testing
+        run: |
+          cat <<EOT > init.sql
+          CREATE DATABASE beaker_test;
+          CREATE DATABASE beaker_migration_test;
+          GRANT ALL PRIVILEGES ON beaker_test.* TO 'beaker'@'%';
+          GRANT ALL PRIVILEGES ON beaker_migration_test.* TO 'beaker'@'%';
+          SET GLOBAL max_allowed_packet=1073741824;
+          SET GLOBAL character_set_server=utf8;
+          EOT
+
+          mysql -uroot -p${{ env.MYSQL_ROOT_PASSWORD }} -h database < init.sql
+          sed -i 's/@localhost/@database/g' IntegrationTests/server-test.cfg
+
+      - name: Update version
+        run: |
+          # Update the version in common/__init__.py, as this file is used in the application and tests to determine the version
+          current_version=$(grep -oE "__version__ = '[^']+'" Common/bkr/common/__init__.py | cut -d "'" -f 2)
+          new_version="$current_version.git.$(git rev-parse --short HEAD)"
+          sed -i "s/__version__ = '$current_version'/__version__ = '$new_version'/" Common/bkr/common/__init__.py
+
+      - name: Install Firefox
+        run: |
+          yum remove firefox -y
+          yum install gtk2 -y
+
+          # Downloading Firefox from the official website
+          wget https://download-installer.cdn.mozilla.net/pub/firefox/releases/43.0.4/linux-x86_64/en-US/firefox-43.0.4.tar.bz2
+          # Extract the tarball
+          tar xvjf firefox-43.0.4.tar.bz2
+
+          # Move Firefox to a directory in PATH
+          mv firefox /usr/local/bin/
+
+          # Link the firefox binary to a location in PATH
+          ln -s /usr/local/bin/firefox/firefox /usr/bin/firefox
+
+      - name: Run integration tests for ${{ matrix.test-target }}
+        run: |
+          pushd IntegrationTests
+          mkdir -p results
+          rc=0
+          for test_file in $(echo "${{ matrix.group }}" | tr ',' '\n'); do
+            ./run-tests.sh --with-xunit --xunit-file=results/${test_file}.xml -v ${{ matrix.test-target }}.${test_file} || rc=1
+          done
+          exit $rc
+
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v5
+        if: success() || failure()
+        with:
+          report_paths: '**/results/test_*.xml'
+          annotate_only: true
