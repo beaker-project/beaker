@@ -28,19 +28,19 @@ class TagFormSchema(validators.Schema):
 class RetentionTag(AdminPage):
     exposed = False
 
-    tag = widgets.TextField(name='tag', label=_(u'Tag'))
+    tag = widgets.TextField(name='tag', label=u'Tag')
     default = widgets.SingleSelectField(name='default', label=(u'Default'),
             options=[(0,'False'),(1,'True')])
     id = widgets.HiddenField(name='id') 
-    expire_in_days = widgets.TextField(name='expire_in_days', label=_(u'Expire In Days'),
-            help_text=_(u'Number of days after which jobs will expire'))
+    expire_in_days = widgets.TextField(name='expire_in_days', label=u'Expire In Days',
+            help_text=u'Number of days after which jobs will expire')
     needs_product = widgets.CheckBox('needs_product', label=u'Needs Product')
 
     tag_form = HorizontalForm(
         'Retention Tag',
         fields = [tag, default, expire_in_days, needs_product, id],
         action = 'save_data',
-        submit_text = _(u'Save'),
+        submit_text = u'Save',
     )
 
     def __init__(self,*args,**kw):
@@ -71,7 +71,7 @@ class RetentionTag(AdminPage):
                 needs_product=kw['needs_product'],
                 expire_in_days=kw['expire_in_days'])
         session.add(retention_tag)
-        flash(_(u"OK"))
+        flash(u"OK")
         redirect("./admin")
 
     @expose(format='json')
@@ -110,7 +110,7 @@ class RetentionTag(AdminPage):
         tag = Tag.by_id(id) 
         return dict(
             form = self.tag_form,
-            title=_(u'Retention tag %s' % tag.tag),
+            title=u'Retention tag %s' % tag.tag,
             action = './save_edit',
             options = {},
             value = tag,
@@ -127,7 +127,7 @@ class RetentionTag(AdminPage):
         retention_tag.default = kw['default']
         retention_tag.expire_in_days = kw['expire_in_days']
         retention_tag.needs_product = kw['needs_product']
-        flash(_(u"OK"))
+        flash(u"OK")
         redirect("./admin")
 
     @expose(template="bkr.server.templates.grid")

@@ -69,10 +69,10 @@ class ConfigItem(DeclarativeMappedObject):
             try:
                 user = identity.current.user
             except AttributeError:
-                raise BX(_('Settings may not be changed anonymously'))
+                raise BX('Settings may not be changed anonymously')
         if valid_from:
             if valid_from < datetime.utcnow():
-                raise BX(_('%s is in the past') % valid_from)
+                raise BX('%s is in the past' % valid_from)
         self.value_class(self, value, user, valid_from)
 
 class ConfigValueString(DeclarativeMappedObject):

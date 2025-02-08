@@ -19,24 +19,24 @@ class Configuration(AdminPage):
     exposed = False
 
     id         = widgets.HiddenField(name='id')
-    value_str  = widgets.TextArea(name='value', label=_(u'Value'))
-    value_int  = widgets.TextField(name='value', label=_(u'Value'), validator=validators.Int())
+    value_str  = widgets.TextArea(name='value', label=u'Value')
+    value_int  = widgets.TextField(name='value', label=u'Value', validator=validators.Int())
     valid_from = widgets.TextField(name='valid_from',
-                                   label=_(u'Effective from date'),
+                                   label=u'Effective from date',
                                    help_text=u"Enter date and time (YYYY-MM-DD HH:MM) in the future or leave blank for setting to take immediate effect")
 
     string_form = HorizontalForm(
         'configitem',
         fields = [id, value_str, valid_from],
         action = 'save_data',
-        submit_text = _(u'Save'),
+        submit_text = u'Save',
     )
 
     int_form = HorizontalForm(
         'configitem',
         fields = [id, value_int, valid_from],
         action = 'save_data',
-        submit_text = _(u'Save'),
+        submit_text = u'Save',
     )
 
     value_grid = BeakerDataGrid(fields=[
@@ -67,7 +67,7 @@ class Configuration(AdminPage):
                 value      = item.current_value()
             )
         else:
-            flash(_(u"Error: No item ID specified"))
+            flash(u"Error: No item ID specified")
             raise redirect(".")
 
         # Show all future values, and the previous five
@@ -100,13 +100,13 @@ class Configuration(AdminPage):
         if 'id' in kw and kw['id']:
             item = ConfigItem.by_id(kw['id'])
         else:
-            flash(_(u"Error: No item ID"))
+            flash(u"Error: No item ID")
             raise redirect(".")
         if kw['valid_from']:
             try:
                 valid_from = datetime.strptime(kw['valid_from'], '%Y-%m-%d %H:%M')
             except ValueError:
-                flash(_(u"Invalid date and time specification, use: YYYY-MM-DD HH:MM"))
+                flash(u"Invalid date and time specification, use: YYYY-MM-DD HH:MM")
                 raise redirect("/configuration/edit?id=%d" % item.id)
         else:
             valid_from = None
@@ -114,10 +114,10 @@ class Configuration(AdminPage):
         try:
             item.set(kw['value'], valid_from, identity.current.user)
         except Exception as msg:
-            flash(_(u"Failed to save setting: %s" % msg))
+            flash(u"Failed to save setting: %s" % msg)
             raise redirect("/configuration/edit?id=%d" % item.id)
 
-        flash(_(u"%s saved" % item.name))
+        flash(u"%s saved" % item.name)
         redirect(".")
 
     @identity.require(identity.in_group("admin"))
@@ -151,7 +151,7 @@ class Configuration(AdminPage):
         item.set(None, None, identity.current.user)
         session.add(item)
         session.flush()
-        flash(_(u"%s cleared") % item.description)
+        flash(u"%s cleared" % item.description)
         raise redirect(".")
 
     @identity.require(identity.in_group("admin"))
@@ -160,11 +160,11 @@ class Configuration(AdminPage):
         item = ConfigItem.by_id(kw['item'])
         val = item.value_class.by_id(kw['id'])
         if val.valid_from <= datetime.utcnow():
-            flash(_(u"Cannot remove past value of %s") % item.name)
+            flash(u"Cannot remove past value of %s" % item.name)
             raise redirect("/configuration/edit?id=%d" % item.id)
         session.delete(val)
         session.flush()
-        flash(_(u"Future value of %s cleared") % item.name)
+        flash(u"Future value of %s cleared" % item.name)
         raise redirect(".")
 
     @identity.require(identity.in_group("admin"))

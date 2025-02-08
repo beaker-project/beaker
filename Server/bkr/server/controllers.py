@@ -361,7 +361,7 @@ class Root(RPCRoot):
             try:
                 distro_tree = DistroTree.by_id(kw['distro_tree_id'])
             except NoResultFound:
-                flash(_(u'Invalid distro tree id %s') % kw['distro_tree_id'])
+                flash(u'Invalid distro tree id %s' % kw['distro_tree_id'])
                 redirect(url('/reserveworkflow/', **kw))
         else:
             distro_tree = None
@@ -460,7 +460,7 @@ class Root(RPCRoot):
             extra_hiddens['distro_tree_id'] = kw['distro_tree_id']
 
         search_bar = SearchBar(name='systemsearch',
-                               label=_(u'System Search'),
+                               label=u'System Search',
                                enable_custom_columns=True,
                                extra_selects=[{'name': 'keyvalue',
                                                'column': 'key/value',
@@ -589,10 +589,10 @@ class Root(RPCRoot):
             try:
                 system = System.by_id(system_id, identity.current.user)
             except NoResultFound:
-                flash(_(u"Invalid Permission"))
+                flash(u"Invalid Permission")
                 redirect("/")
         else:
-            flash(_(u"system_id, key_value_id and key_type must be provided"))
+            flash(u"system_id, key_value_id and key_type must be provided")
             redirect("/")
 
         if system.can_edit(identity.current.user):
@@ -614,9 +614,9 @@ class Root(RPCRoot):
 
         if removed:
             system.date_modified = datetime.utcnow()
-            flash(_(u"removed %s/%s" % (removed.key.key_name, removed.key_value)))
+            flash(u"removed %s/%s" % (removed.key.key_name, removed.key_value))
         else:
-            flash(_(u"Key_Value_Id not Found"))
+            flash(u"Key_Value_Id not Found")
         redirect("./view/%s" % system.fqdn)
 
     @expose(template="bkr.server.templates.system")
@@ -625,16 +625,16 @@ class Root(RPCRoot):
             try:
                 system = System.by_fqdn(fqdn, identity.current.user)
             except DatabaseLookupError:
-                flash(_(u"Unable to find %s" % fqdn))
+                flash(u"Unable to find %s" % fqdn)
                 redirect("/")
         elif kw.get('id'):
             try:
                 system = System.by_id(kw['id'], identity.current.user)
             except InvalidRequestError:
-                flash(_(u"Unable to find system with id of %s" % kw['id']))
+                flash(u"Unable to find system with id of %s" % kw['id'])
                 redirect("/")
         else:
-            flash(_(u"No given system to view"))
+            flash(u"No given system to view")
             redirect("/")
         our_user = identity.current.user
         if our_user:
@@ -751,7 +751,7 @@ class Root(RPCRoot):
         try:
             system = System.by_id(kw['id'], identity.current.user)
         except InvalidRequestError:
-            flash(_(u"Unable to save Lab Info for %s" % kw['id']))
+            flash(u"Unable to save Lab Info for %s" % kw['id'])
             redirect("/")
         if system.labinfo:
             labinfo = system.labinfo
@@ -773,7 +773,7 @@ class Root(RPCRoot):
                     setattr(labinfo, field, kw[field])
         system.labinfo = labinfo
         system.date_modified = datetime.utcnow()
-        flash(_(u"Saved Lab Info"))
+        flash(u"Saved Lab Info")
         redirect("/view/%s" % system.fqdn)
 
     @expose()
@@ -782,7 +782,7 @@ class Root(RPCRoot):
         try:
             system = System.by_id(id, identity.current.user)
         except InvalidRequestError:
-            flash(_(u"Unable to Add Key for %s" % id))
+            flash(u"Unable to Add Key for %s" % id)
             redirect("/")
         # Add a Key/Value Pair
         if kw.get('key_name') and kw.get('key_value'):
@@ -790,7 +790,7 @@ class Root(RPCRoot):
                 key = Key.by_name(kw['key_name'])
             except InvalidRequestError:
                 # FIXME allow user to create new keys
-                flash(_(u"Invalid key %s" % kw['key_name']))
+                flash(u"Invalid key %s" % kw['key_name'])
                 redirect("/view/%s" % system.fqdn)
             if key.numeric:
                 key_value = Key_Value_Int(key, kw['key_value'])
@@ -810,7 +810,7 @@ class Root(RPCRoot):
         try:
             system = System.by_id(id, identity.current.user)
         except InvalidRequestError:
-            flash(_(u"Unable to save Exclude flags for %s" % id))
+            flash(u"Unable to save Exclude flags for %s" % id)
             redirect("/")
         for arch in system.arch:
             # Update Excluded Families
@@ -873,12 +873,12 @@ class Root(RPCRoot):
         try:
             system = System.by_id(system_id, identity.current.user)
         except InvalidRequestError:
-            flash(_(u"Unable to remove Install Option for %s" % system_id))
+            flash(u"Unable to remove Install Option for %s" % system_id)
             redirect("/")
         try:
             arch = Arch.by_id(arch_id)
         except InvalidRequestError:
-            flash(_(u"Unable to lookup arch for %s" % arch_id))
+            flash(u"Unable to lookup arch for %s" % arch_id)
             redirect("/")
 
         if kw.get('osversion_id'):
@@ -946,7 +946,7 @@ class Root(RPCRoot):
         try:
             system = System.by_id(id, identity.current.user)
         except InvalidRequestError:
-            flash(_(u"Unable to save Install Options for %s" % id))
+            flash(u"Unable to save Install Options for %s" % id)
             redirect("/")
         # Add an install option
         if kw.get('prov_ksmeta') or kw.get('prov_koptions') or \
@@ -1060,7 +1060,7 @@ class Root(RPCRoot):
         try:
             system = System.query.filter(System.fqdn == fqdn.decode('ascii')).one()
         except InvalidRequestError:
-            raise BX(_('No such system %s') % fqdn)
+            raise BX('No such system %s' % fqdn)
         return system.update_legacy(inventory)
 
     @expose()
@@ -1068,7 +1068,7 @@ class Root(RPCRoot):
         try:
             task = TaskBase.get_by_t_id(taskid)
         except Exception:
-            flash(_('Invalid Task: %s' % taskid))
+            flash('Invalid Task: %s' % taskid)
             redirect(url('/'))
         xml_text = lxml.etree.tostring(task.to_xml(), pretty_print=pretty, encoding='utf8')
 
@@ -1091,7 +1091,7 @@ class Root(RPCRoot):
         try:
             system = System.query.filter(System.fqdn == fqdn.decode('ascii')).one()
         except InvalidRequestError:
-            raise BX(_('No such system %s') % fqdn)
+            raise BX('No such system %s' % fqdn)
         return system.update(inventory)
 
     @expose(template='bkr.server.templates.forbidden')
@@ -1116,10 +1116,9 @@ class Root(RPCRoot):
                 identity.set_authentication(user)
                 raise cherrypy.HTTPRedirect(forward_url)
             else:
-                msg = _('The credentials you supplied were not correct or '
-                        'did not grant access to this resource.')
+                msg = ('The credentials you supplied were not correct or did not grant access to this resource.')
         else:
-            msg = _('Please log in.')
+            msg = 'Please log in.'
         response.status = 403
         return dict(message=msg, action='', forward_url=forward_url)
 

@@ -193,12 +193,12 @@ class RecipeSets(RPCRoot):
 
     hidden_id = widgets.HiddenField(name='id')
     confirm = widgets.Label(name='confirm', default="Are you sure you want to cancel?")
-    message = widgets.TextArea(name='msg', label=_(u'Reason?'), help_text=_(u'Optional'))
+    message = widgets.TextArea(name='msg', label=u'Reason?', help_text=u'Optional')
     cancel_form = widgets.TableForm(
         'cancel_recipeset',
         fields = [hidden_id, message, confirm],
         action = 'really_cancel',
-        submit_text = _(u'Yes')
+        submit_text = u'Yes'
     )
     @identity.require(identity.not_anonymous())
     @expose(template="bkr.server.templates.form")
@@ -209,10 +209,10 @@ class RecipeSets(RPCRoot):
         try:
             recipeset = RecipeSet.by_id(id)
         except InvalidRequestError:
-            flash(_(u"Invalid recipeset id %s" % id))
+            flash(u"Invalid recipeset id %s" % id)
             redirect("/jobs/%s" % recipeset.job.id)
         if not recipeset.can_cancel(identity.current.user):
-            flash(_(u"You don't have permission to cancel recipeset id %s" % id))
+            flash(u"You don't have permission to cancel recipeset id %s" % id)
             redirect("/jobs/%s" % recipeset.job.id)
         return dict(
             title = 'Cancel RecipeSet %s' % id,
@@ -231,16 +231,16 @@ class RecipeSets(RPCRoot):
         try:
             recipeset = RecipeSet.by_id(id)
         except InvalidRequestError:
-            flash(_(u"Invalid recipeset id %s" % id))
+            flash(u"Invalid recipeset id %s" % id)
             redirect("/jobs/%s" % recipeset.job.id)
         if not recipeset.can_cancel(identity.current.user):
-            flash(_(u"You don't have permission to cancel recipeset id %s" % id))
+            flash(u"You don't have permission to cancel recipeset id %s" % id)
             redirect("/jobs/%s" % recipeset.job.id)
         recipeset.cancel(msg)
         recipeset.record_activity(user=identity.current.user, service=u'WEBUI',
                                   field=u'Status', action=u'Cancelled', old='',
                                   new='')
-        flash(_(u"Successfully cancelled recipeset %s" % id))
+        flash(u"Successfully cancelled recipeset %s" % id)
         redirect("/jobs/%s" % recipeset.job.id)
 
     @cherrypy.expose
@@ -252,9 +252,9 @@ class RecipeSets(RPCRoot):
         try:
             recipeset = RecipeSet.by_id(recipeset_id)
         except InvalidRequestError:
-            raise BX(_('Invalid recipeset ID: %s' % recipeset_id))
+            raise BX('Invalid recipeset ID: %s' % recipeset_id)
         if stop_type not in recipeset.stop_types:
-            raise BX(_('Invalid stop_type: %s, must be one of %s' %
-                             (stop_type, recipeset.stop_types)))
+            raise BX('Invalid stop_type: %s, must be one of %s' %
+                             (stop_type, recipeset.stop_types))
         kwargs = dict(msg = msg)
         return getattr(recipeset,stop_type)(**kwargs)

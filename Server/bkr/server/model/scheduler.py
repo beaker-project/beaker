@@ -489,13 +489,13 @@ class TaskBase(DeclarativeMappedObject):
         try:
             class_str = cls.t_id_types[task_type]
         except KeyError:
-            raise BeakerException(_('You have specified an invalid task type:%s' % task_type))
+            raise BeakerException('You have specified an invalid task type:%s' % task_type)
 
         class_ref = globals()[class_str]
         try:
             obj_ref = class_ref.by_id(id)
         except InvalidRequestError:
-            raise BeakerException(_('%s is not a valid %s id' % (id, class_str)))
+            raise BeakerException('%s is not a valid %s id' % (id, class_str))
 
         return obj_ref
 
@@ -915,8 +915,8 @@ class Job(TaskBase, ActivityMixin):
         if kw.get('whiteboard'):
             job.whiteboard = kw.get('whiteboard')
         if job.owner.rootpw_expired:
-            raise BX(_(
-                u"Your root password has expired, please change or clear it in order to submit jobs."))
+            raise BX(
+                u"Your root password has expired, please change or clear it in order to submit jobs.")
 
         for distro_tree in distro_trees:
             recipeSet = RecipeSet(ttasks=2)
@@ -931,30 +931,30 @@ class Job(TaskBase, ActivityMixin):
                 system = kw.get('system')
                 # Some extra sanity checks, to help out the user
                 if system.status == SystemStatus.removed:
-                    raise BX(_(u'%s is removed' % system))
+                    raise BX(u'%s is removed' % system)
                 if not system.can_reserve(job.owner):
-                    raise BX(_(u'You do not have access to reserve %s' % system))
+                    raise BX(u'You do not have access to reserve %s' % system)
                 if not system.in_lab_with_distro_tree(distro_tree):
-                    raise BX(_(u'%s is not available on %s'
-                               % (distro_tree, system.lab_controller)))
+                    raise BX(u'%s is not available on %s'
+                               % (distro_tree, system.lab_controller))
                 if not system.compatible_with_distro_tree(
                         arch=distro_tree.arch,
                         osmajor=distro_tree.distro.osversion.osmajor.osmajor,
                         osminor=distro_tree.distro.osversion.osminor):
-                    raise BX(_(u'%s does not support %s' % (system, distro_tree)))
+                    raise BX(u'%s does not support %s' % (system, distro_tree))
                 # Inlcude the XML definition so that cloning this job will act as expected.
                 recipe.host_requires = u'<hostRequires force="%s" />' % system.fqdn
                 recipe.systems.append(system)
             elif pick == 'lab':
                 lab_controller = kw.get('lab')
                 if not distro_tree.url_in_lab(lab_controller):
-                    raise BX(_(u'%s is not available on %s'
-                               % (distro_tree, lab_controller)))
+                    raise BX(u'%s is not available on %s'
+                               % (distro_tree, lab_controller))
                 if not MachineRecipe.hypothetical_candidate_systems(job.owner,
                                                                     distro_tree=distro_tree,
                                                                     lab_controller=lab_controller).count():
-                    raise BX(_(u'No available systems compatible with %s on %s'
-                               % (distro_tree, lab_controller)))
+                    raise BX(u'No available systems compatible with %s on %s'
+                               % (distro_tree, lab_controller))
                 recipe.host_requires = (u'<hostRequires>'
                                         u'<labcontroller op="=" value="%s" />'
                                         u'<system_type op="=" value="Machine" />'
@@ -964,8 +964,8 @@ class Job(TaskBase, ActivityMixin):
             else:
                 if not MachineRecipe.hypothetical_candidate_systems(job.owner,
                                                                     distro_tree=distro_tree).count():
-                    raise BX(_(u'No available systems compatible with %s'
-                               % distro_tree))
+                    raise BX(u'No available systems compatible with %s'
+                               % distro_tree)
                 pass  # leave hostrequires completely unset
             if kw.get('ks_meta'):
                 recipe.ks_meta = kw.get('ks_meta')
@@ -1065,7 +1065,7 @@ class Job(TaskBase, ActivityMixin):
             try:
                 OSMajor.by_name(family)
             except NoResultFound:
-                err_msg = _(u'Family is invalid: %s') % family
+                err_msg = u'Family is invalid: %s' % family
                 log.exception(err_msg)
                 raise BX(err_msg)
 
@@ -1076,7 +1076,7 @@ class Job(TaskBase, ActivityMixin):
             try:
                 query = cls.by_tag(tag, query)
             except NoResultFound:
-                err_msg = _('Tag is invalid: %s') % tag
+                err_msg = 'Tag is invalid: %s' % tag
                 log.exception(err_msg)
                 raise BX(err_msg)
 
@@ -1086,14 +1086,14 @@ class Job(TaskBase, ActivityMixin):
             try:
                 query = cls.by_product(product, query)
             except NoResultFound:
-                err_msg = _('Product is invalid: %s') % product
+                err_msg = 'Product is invalid: %s' % product
                 log.exception(err_msg)
                 raise BX(err_msg)
         if owner:
             try:
                 query = cls.by_owner(owner, query)
             except NoResultFound:
-                err_msg = _('Owner is invalid: %s') % owner
+                err_msg = 'Owner is invalid: %s' % owner
                 log.exception(err_msg)
                 raise BX(err_msg)
         return query
@@ -2775,7 +2775,7 @@ class Recipe(TaskBase, ActivityMixin):
         Extend the watchdog by kill_time seconds
         """
         if not self.watchdog:
-            raise BX(_('No watchdog exists for recipe %s' % self.id))
+            raise BX('No watchdog exists for recipe %s' % self.id)
         if not isinstance(kill_time, numbers.Number):
             raise TypeError('Pass number of seconds to extend the watchdog by')
         if kill_time:
@@ -3638,9 +3638,9 @@ class RecipeTask(TaskBase):
          of seconds
         """
         if self.is_finished():
-            raise BX(_('Cannot restart finished task'))
+            raise BX('Cannot restart finished task')
         if not self.recipe.watchdog:
-            raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
+            raise BX('No watchdog exists for recipe %s' % self.recipe.id)
         if not self.start_time:
             self.start_time = datetime.utcnow()
         self._change_status(TaskStatus.running)
@@ -3672,9 +3672,9 @@ class RecipeTask(TaskBase):
         Record the completion of this task
         """
         if not self.recipe.watchdog:
-            raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
+            raise BX('No watchdog exists for recipe %s' % self.recipe.id)
         if not self.start_time:
-            raise BX(_('recipe task %s was never started' % self.id))
+            raise BX('recipe task %s was never started' % self.id)
         if self.is_finished():
             raise ValueError('Cannot change status for finished task %s' % self.t_id)
         if self.start_time and not self.finish_time:

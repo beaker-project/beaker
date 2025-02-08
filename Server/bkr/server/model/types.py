@@ -147,22 +147,22 @@ class RecipeVirtStatus(DeclEnum):
 class SystemPermission(DeclEnum):
 
     symbols = [
-        ('view',           u'view',           dict(label=_(u'View'))),
-        ('view_power',     u'view_power',     dict(label=_(u'View power settings'))),
-        ('edit_policy',    u'edit_policy',    dict(label=_(u'Edit this policy'))),
-        ('edit_system',    u'edit_system',    dict(label=_(u'Edit system details'))),
-        ('loan_any',       u'loan_any',       dict(label=_(u'Loan to anyone'))),
-        ('loan_self',      u'loan_self',      dict(label=_(u'Loan to self'))),
-        ('control_system', u'control_system', dict(label=_(u'Control power'))),
-        ('reserve',        u'reserve',        dict(label=_(u'Reserve'))),
+        ('view',           u'view',           dict(label=u'View')),
+        ('view_power',     u'view_power',     dict(label=u'View power settings')),
+        ('edit_policy',    u'edit_policy',    dict(label=u'Edit this policy')),
+        ('edit_system',    u'edit_system',    dict(label=u'Edit system details')),
+        ('loan_any',       u'loan_any',       dict(label=u'Loan to anyone')),
+        ('loan_self',      u'loan_self',      dict(label=u'Loan to self')),
+        ('control_system', u'control_system', dict(label=u'Control power')),
+        ('reserve',        u'reserve',        dict(label=u'Reserve')),
     ]
 
 class GroupMembershipType(DeclEnum):
 
     symbols = [
-        ('normal',   u'normal',   dict(label=_(u'Normal'))),
-        ('ldap',     u'ldap',     dict(label=_(u'LDAP'))),
-        ('inverted', u'inverted', dict(label=_(u'Inverted'))),
+        ('normal',   u'normal',   dict(label=u'Normal')),
+        ('ldap',     u'ldap',     dict(label=u'LDAP')),
+        ('inverted', u'inverted', dict(label=u'Inverted')),
     ]
 
 class RecipeReservationCondition(DeclEnum):

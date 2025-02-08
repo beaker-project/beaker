@@ -63,7 +63,7 @@ class JobForm(widgets.Form):
 
     template = 'bkr.server.templates.job_form'
     name = 'job'
-    submit_text = _(u'Queue')
+    submit_text = u'Queue'
     fields = [widgets.TextArea(name='textxml')]
     hidden_fields = [widgets.HiddenField(name='confirmed', validator=validators.StringBool())]
     params = ['xsd_errors']
@@ -73,7 +73,7 @@ class JobForm(widgets.Form):
         super(JobForm, self).update_params(d)
         if 'xsd_errors' in d['options']:
             d['xsd_errors'] = d['options']['xsd_errors']
-            d['submit_text'] = _(u'Queue despite validation errors')
+            d['submit_text'] = u'Queue despite validation errors'
 
 class Jobs(RPCRoot):
     # For XMLRPC methods in this class.
@@ -92,14 +92,14 @@ class Jobs(RPCRoot):
 
     hidden_id = widgets.HiddenField(name='id')
     confirm = widgets.Label(name='confirm', default="Are you sure you want to cancel?")
-    message = widgets.TextArea(name='msg', label=_(u'Reason?'), help_text=_(u'Optional'))
+    message = widgets.TextArea(name='msg', label=u'Reason?', help_text=u'Optional')
 
     _upload = widgets.FileField(name='filexml', label='Job XML')
     form = HorizontalForm(
         'jobs',
         fields = [_upload],
         action = 'save_data',
-        submit_text = _(u'Submit Data')
+        submit_text = u'Submit Data'
     )
     del _upload
 
@@ -107,7 +107,7 @@ class Jobs(RPCRoot):
         'cancel_job',
         fields = [hidden_id, message, confirm],
         action = 'really_cancel',
-        submit_text = _(u'Yes')
+        submit_text = u'Yes'
     )
 
     job_form = JobForm()
@@ -117,7 +117,7 @@ class Jobs(RPCRoot):
 
     @classmethod
     def success_redirect(cls, id, url='/jobs/mine', *args, **kw):
-        flash(_(u'Success! job id: %s' % id))
+        flash(u'Success! job id: %s' % id)
         redirect('%s' % url)
 
     @expose(template='bkr.server.templates.form-post')
@@ -135,7 +135,7 @@ class Jobs(RPCRoot):
         if not isinstance(job, Job):
             raise TypeError('%s is not of type %s' % (t_id, Job.__name__))
         if not job.can_delete(identity.current.user):
-            raise BeakerException(_(u'You do not have permission to delete %s' % t_id))
+            raise BeakerException(u'You do not have permission to delete %s' % t_id)
 
     def _delete_job(self, t_id):
         job = TaskBase.get_by_t_id(t_id)
@@ -150,9 +150,9 @@ class Jobs(RPCRoot):
     def delete_job_page(self, t_id):
         try:
             self._delete_job(t_id)
-            flash(_(u'Succesfully deleted %s' % t_id))
+            flash(u'Succesfully deleted %s' % t_id)
         except (BeakerException, TypeError):
-            flash(_(u'Unable to delete %s' % t_id))
+            flash(u'Unable to delete %s' % t_id)
             redirect('.')
         redirect('./mine')
 
@@ -258,7 +258,7 @@ class Jobs(RPCRoot):
 
         # identity.not_anonymous() wrongly returns True for anonymous XML-RPC
         if (mine or my_groups) and not identity.current.user:
-            raise BX(_('You need to be authenticated to use the --mine or --my_groups filter.'))
+            raise BX('You need to be authenticated to use the --mine or --my_groups filter.')
 
         if mine:
             if owner:
@@ -292,7 +292,7 @@ class Jobs(RPCRoot):
             try:
                 jobs = Job.by_groups(group, jobs)
             except NoResultFound:
-                raise BX(_('No such group %r' % group))
+                raise BX('No such group %r' % group)
         if whiteboard:
             jobs = jobs.filter(Job.whiteboard.like(u'%%%s%%' % whiteboard))
         # is_finished is a tri-state value, True limit finished job, False limit unfinished job, None don't limit
@@ -399,7 +399,7 @@ class Jobs(RPCRoot):
             try:
                 job = Job.by_id(job_id)
             except InvalidRequestError:
-                flash(_(u"Invalid job id %s" % job_id))
+                flash(u"Invalid job id %s" % job_id)
                 redirect(".")
             textxml = lxml.etree.tostring(job.to_xml(clone=True),
                                           pretty_print=True, encoding=six.text_type)
@@ -408,7 +408,7 @@ class Jobs(RPCRoot):
             try:
                 recipeset = RecipeSet.by_id(recipeset_id)
             except InvalidRequestError:
-                flash(_(u"Invalid recipeset id %s" % recipeset_id))
+                flash(u"Invalid recipeset id %s" % recipeset_id)
                 redirect(".")
             textxml = lxml.etree.tostring(
                     recipeset.to_xml(clone=True, include_enclosing_job=True),
@@ -418,7 +418,7 @@ class Jobs(RPCRoot):
             try:
                 textxml = filexml.value.decode('utf8')
             except UnicodeDecodeError as e:
-                flash(_(u'Invalid job XML: %s') % e)
+                flash(u'Invalid job XML: %s' % e)
                 redirect('.')
         elif textxml:
             try:
@@ -439,7 +439,7 @@ class Jobs(RPCRoot):
                 session.flush()
             except Exception as err:
                 session.rollback()
-                flash(_(u'Failed to import job because of: %s' % err))
+                flash(u'Failed to import job because of: %s' % err)
                 return dict(
                     title = title,
                     form = self.job_form,
@@ -468,7 +468,7 @@ class Jobs(RPCRoot):
             try:
                 my_priority = TaskPriority.from_string(recipeset_priority)
             except InvalidRequestError:
-                raise BX(_('You have specified an invalid recipeSet priority:%s' % recipeset_priority))
+                raise BX('You have specified an invalid recipeSet priority:%s' % recipeset_priority)
             allowed_priorities = RecipeSet.allowed_priorities_initial(user)
             if my_priority in allowed_priorities:
                 recipeSet.priority = my_priority
@@ -489,7 +489,7 @@ class Jobs(RPCRoot):
                 guest.ttasks = len(guest.tasks)
                 recipeSet.ttasks += guest.ttasks
         if not recipeSet.recipes:
-            raise BX(_('No Recipes! You can not have a recipeSet with no recipes!'))
+            raise BX('No Recipes! You can not have a recipeSet with no recipes!')
         return recipeSet
 
     def _process_job_tag_product(self, retention_tag=None, product=None, *args, **kw):
@@ -500,12 +500,12 @@ class Jobs(RPCRoot):
         try:
             tag = RetentionTag.by_tag(retention_tag.lower())
         except InvalidRequestError:
-            raise BX(_("Invalid retention_tag attribute passed. Needs to be one of %s. You gave: %s" % (','.join([x.tag for x in RetentionTag.get_all()]), retention_tag)))
+            raise BX("Invalid retention_tag attribute passed. Needs to be one of %s. You gave: %s" % (','.join([x.tag for x in RetentionTag.get_all()]), retention_tag))
         if product is None and tag.requires_product():
-            raise BX(_("You've selected a tag which needs a product associated with it, \
-            alternatively you could use one of the following tags %s" % ','.join([x.tag for x in RetentionTag.get_all() if not x.requires_product()])))
+            raise BX("You've selected a tag which needs a product associated with it, \
+            alternatively you could use one of the following tags %s" % ','.join([x.tag for x in RetentionTag.get_all() if not x.requires_product()]))
         elif product is not None and not tag.requires_product():
-            raise BX(_("Cannot specify a product with tag %s, please use %s as a tag " % (retention_tag,','.join([x.tag for x in RetentionTag.get_all() if x.requires_product()]))))
+            raise BX("Cannot specify a product with tag %s, please use %s as a tag " % (retention_tag,','.join([x.tag for x in RetentionTag.get_all() if x.requires_product()])))
         else:
             pass
 
@@ -515,7 +515,7 @@ class Jobs(RPCRoot):
 
                 return (tag, product)
             except ValueError:
-                raise BX(_("You entered an invalid product name: %s" % product))
+                raise BX("You entered an invalid product name: %s" % product)
         else:
             return tag, None
 
@@ -524,7 +524,7 @@ class Jobs(RPCRoot):
         # we see otherwise.
         submitter = user
         if user.rootpw_expired:
-            raise BX(_('Your root password has expired, please change or clear it in order to submit jobs.'))
+            raise BX('Your root password has expired, please change or clear it in order to submit jobs.')
         owner_name = xmljob.get('user')
         if owner_name:
             owner = User.by_user_name(owner_name)
@@ -543,7 +543,7 @@ class Jobs(RPCRoot):
             except NoResultFound as e:
                 raise ValueError('%s is not a valid group' % group_name)
             if group not in owner.groups:
-                raise BX(_(u'User %s is not a member of group %s' % (owner.user_name, group.group_name)))
+                raise BX(u'User %s is not a member of group %s' % (owner.user_name, group.group_name))
         job_retention = xmljob.get('retention_tag')
         job_product = xmljob.get('product')
         tag, product = self._process_job_tag_product(retention_tag=job_retention, product=job_product)
@@ -565,7 +565,7 @@ class Jobs(RPCRoot):
                 if addr not in job.cc:
                     job.cc.append(addr)
             except Invalid as e:
-                raise BX(_('Invalid e-mail address %r in <cc/>: %s') % (addr, str(e)))
+                raise BX('Invalid e-mail address %r in <cc/>: %s' % (addr, str(e)))
         for xmlrecipeSet in xmljob.iter('recipeSet'):
             recipe_set = self._handle_recipe_set(xmlrecipeSet, owner,
                                                  ignore_missing_tasks=ignore_missing_tasks)
@@ -573,7 +573,7 @@ class Jobs(RPCRoot):
             job.ttasks += recipe_set.ttasks
 
         if not job.recipesets:
-            raise BX(_('No RecipeSets! You can not have a Job with no recipeSets!'))
+            raise BX('No RecipeSets! You can not have a Job with no recipeSets!')
         session.add(job)
         metrics.measure('counters.recipes_submitted', len(list(job.all_recipes)))
         return job
@@ -638,19 +638,19 @@ class Jobs(RPCRoot):
             recipe.distro_requires = lxml.etree.tostring(xmlrecipe.find('distroRequires'), encoding=six.text_type)
             recipe.distro_tree = DistroTree.by_filter(recipe.distro_requires).first()
             if recipe.distro_tree is None:
-                raise BX(_('No distro tree matches Recipe: %s') % recipe.distro_requires)
+                raise BX('No distro tree matches Recipe: %s' % recipe.distro_requires)
             # The attributes "tree", "initrd" and "kernel" in the installation table are populated later by the
             # scheduler during provisioning time, when the recipe has been allocated a system to provision
             recipe.installation = recipe.distro_tree.create_installation_from_tree()
         elif xmlrecipe.find('distro') is not None:
             recipe.installation = self.handle_distro(xmlrecipe.find('distro'))
         else:
-            raise BX(_('You must define either <distroRequires/> or <distro/> element'))
+            raise BX('You must define either <distroRequires/> or <distro/> element')
         try:
             # try evaluating the host_requires, to make sure it's valid
             XmlHost.from_string(recipe.host_requires).apply_filter(System.query)
         except StandardError as e:
-            raise BX(_('Error in hostRequires: %s' % e))
+            raise BX('Error in hostRequires: %s' % e)
         recipe.whiteboard = xmlrecipe.get('whiteboard')
         recipe.kickstart = xmlrecipe.findtext('kickstart')
 
@@ -672,7 +672,7 @@ class Jobs(RPCRoot):
             InstallOptions.from_strings(recipe.ks_meta,
                                         recipe.kernel_options, recipe.kernel_options_post)
         except Exception as e:
-            raise BX(_('Error parsing ks_meta: %s' % e))
+            raise BX('Error parsing ks_meta: %s' % e)
         recipe.role = xmlrecipe.get('role', u'None')
 
         reservesys = xmlrecipe.find('reservesys')
@@ -710,7 +710,7 @@ class Jobs(RPCRoot):
             else:
                 invalid_tasks.append(xmltask.get('name', ''))
         if invalid_tasks and not ignore_missing_tasks:
-            raise BX(_('Invalid task(s): %s') % ', '.join(invalid_tasks))
+            raise BX('Invalid task(s): %s' % ', '.join(invalid_tasks))
         for xmltask in xmltasks:
             fetch = xmltask.find('fetch')
             if fetch is not None:
@@ -725,7 +725,7 @@ class Jobs(RPCRoot):
                 recipetask.params.append(param)
             recipe.tasks.append(recipetask)
         if not recipe.tasks:
-            raise BX(_('No Tasks! You can not have a recipe with no tasks!'))
+            raise BX('No Tasks! You can not have a recipe with no tasks!')
         return recipe
 
     @staticmethod
@@ -733,11 +733,11 @@ class Jobs(RPCRoot):
         try:
             arch = Arch.by_name(distro.find("arch").get("value"))
         except ValueError:
-            raise BX(_('No arch matches: %s') % distro.find("arch").get("value"))
+            raise BX('No arch matches: %s' % distro.find("arch").get("value"))
         missing_attribute = 'tree' if distro.find("tree") is None else 'initrd' if distro.find("initrd") is None else \
             'kernel' if distro.find("kernel") is None else 'osmajor' if distro.find("osversion") is None else None
         if missing_attribute:
-            raise BX(_('<%s/> element is required' % missing_attribute))
+            raise BX('<%s/> element is required' % missing_attribute)
         tree_url = distro.find("tree").get("url")
         initrd_path = distro.find("initrd").get("url")
         kernel_path = distro.find("kernel").get("url")
@@ -848,10 +848,10 @@ class Jobs(RPCRoot):
         try:
             job = Job.by_id(job_id)
         except InvalidRequestError:
-            raise BX(_('Invalid job ID: %s' % job_id))
+            raise BX('Invalid job ID: %s' % job_id)
         if stop_type not in job.stop_types:
-            raise BX(_('Invalid stop_type: %s, must be one of %s' %
-                             (stop_type, job.stop_types)))
+            raise BX('Invalid stop_type: %s, must be one of %s' %
+                             (stop_type, job.stop_types))
         kwargs = dict(msg = msg)
         return getattr(job,stop_type)(**kwargs)
 
@@ -932,7 +932,7 @@ class Jobs(RPCRoot):
                         title='Action', options=dict(sortable=False)))])
 
         search_bar = SearchBar(name='jobsearch',
-                           label=_(u'Job Search'),    
+                           label=u'Job Search',
                            simplesearch_label = 'Search',
                            table = search_utility.Job.search.create_complete_search_table(without=('Owner')),
                            search_controller=url("/get_search_options_job"),
@@ -957,10 +957,10 @@ class Jobs(RPCRoot):
         try:
             job = Job.by_id(id)
         except InvalidRequestError:
-            flash(_(u"Invalid job id %s" % id))
+            flash(u"Invalid job id %s" % id)
             redirect(".")
         if not job.can_cancel(identity.current.user):
-            flash(_(u"You don't have permission to cancel job id %s" % id))
+            flash(u"You don't have permission to cancel job id %s" % id)
             redirect(".")
 
         try:
@@ -968,12 +968,12 @@ class Jobs(RPCRoot):
         except StaleTaskStatusException as e:
             log.warn(str(e))
             session.rollback()
-            flash(_(u"Could not cancel job id %s. Please try later" % id))
+            flash(u"Could not cancel job id %s. Please try later" % id)
             redirect(".")
         else:
             job.record_activity(user=identity.current.user, service=u'WEBUI',
                                 field=u'Status', action=u'Cancelled', old='', new='')
-            flash(_(u"Successfully cancelled job %s" % id))
+            flash(u"Successfully cancelled job %s" % id)
             redirect('/jobs/mine')
 
     @identity.require(identity.not_anonymous())
@@ -985,10 +985,10 @@ class Jobs(RPCRoot):
         try:
             job = Job.by_id(id)
         except InvalidRequestError:
-            flash(_(u"Invalid job id %s" % id))
+            flash(u"Invalid job id %s" % id)
             redirect(".")
         if not job.can_cancel(identity.current.user):
-            flash(_(u"You don't have permission to cancel job id %s" % id))
+            flash(u"You don't have permission to cancel job id %s" % id)
             redirect(".")
         return dict(
             title = 'Cancel Job %s' % id,
@@ -1051,11 +1051,11 @@ class Jobs(RPCRoot):
         try:
             job = Job.by_id(id)
         except InvalidRequestError:
-            flash(_(u"Invalid job id %s" % id))
+            flash(u"Invalid job id %s" % id)
             redirect(".")
 
         if job.is_deleted:
-            flash(_(u'Invalid %s, has been deleted' % job.t_id))
+            flash(u'Invalid %s, has been deleted' % job.t_id)
             redirect(".")
 
         recipe_set_history = [RecipeSetActivity.query.with_parent(elem,"activity") for elem in job.recipesets]

@@ -83,7 +83,7 @@ class TaskActions(RPCRoot):
             try:
                 task = self.task_types[task_type.upper()].by_id(task_id)
             except InvalidRequestError:
-                raise BX(_("Invalid %s %s" % (task_type, task_id)))
+                raise BX("Invalid %s %s" % (task_type, task_id))
         return lxml.etree.tostring(
                 task.to_xml(clone=clone,
                             include_enclosing_job=not exclude_enclosing_job,
@@ -122,22 +122,22 @@ class TaskActions(RPCRoot):
             try:
                 task = self.stoppable_task_types[task_type.upper()].by_id(int(task_id))
             except (InvalidRequestError, ValueError):
-                raise BX(_("Invalid %s %s" % (task_type, task_id)))
+                raise BX("Invalid %s %s" % (task_type, task_id))
         else:
-            raise BX(_("Task type %s is not stoppable" % (task_type)))
+            raise BX("Task type %s is not stoppable" % (task_type))
         if stop_type not in task.stop_types:
-            raise BX(_('Invalid stop_type: %s, must be one of %s' %
-                             (stop_type, task.stop_types)))
+            raise BX('Invalid stop_type: %s, must be one of %s' %
+                             (stop_type, task.stop_types))
         if not task.can_stop(identity.current.user):
-            raise BX(_("You don't have permission to %s %s" % (stop_type,
-                                                               taskid)))
+            raise BX("You don't have permission to %s %s" % (stop_type,
+                                                               taskid))
         kwargs = dict(msg = msg)
         task.record_activity(user=identity.current.user, service=u'XMLRPC',
                              field=u'Status', action=u'Cancelled', old='', new='')
         try:
             return getattr(task, stop_type)(**kwargs)
         except StaleTaskStatusException:
-            raise BX(_(u"Could not cancel job id %s. Please try later" % task_id))
+            raise BX(u"Could not cancel job id %s. Please try later" % task_id)
 
 # for sphinx
 taskactions = TaskActions

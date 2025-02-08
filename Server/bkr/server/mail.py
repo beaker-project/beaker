@@ -83,9 +83,9 @@ def _sender_details(user):
 
 def system_loan_request(system, message, requester, requestee_email):
     sender = _sender_details(requester)
-    body = [_(u'A Beaker user has requested you loan them the system\n%s <%s>.\n'
+    body = [u'A Beaker user has requested you loan them the system\n%s <%s>.\n'
         'Here is a copy of their request:\n'
-        '%s\n Requested by: %s')
+        '%s\n Requested by: %s'
         % (system.fqdn, absolute_url('/view/%s' % system.fqdn),
         message, requester.display_name), '']
 
@@ -101,7 +101,7 @@ def system_loan_request(system, message, requester, requestee_email):
     arch_headers = [('X-Arch', arch) for arch in system.arch]
     headers.extend(arch_headers)
     cc = [requester.email_address] + system.cc
-    send_mail(sender, requestee_email, _(u'Loan request for %s') % system.fqdn,
+    send_mail(sender, requestee_email, u'Loan request for %s' % system.fqdn,
         '\n'.join(body), cc=cc, bulk=False, headers=headers)
 
 def system_problem_report(system, description, recipe=None, reporter=None):
@@ -112,14 +112,14 @@ def system_problem_report(system, description, recipe=None, reporter=None):
     if not sender:
         log.warning("beaker_email not defined in app.cfg; unable to send mail")
         return
-    body = [_(u'A Beaker user has reported a problem with system \n%s <%s>.')
+    body = [u'A Beaker user has reported a problem with system \n%s <%s>.'
             % (system.fqdn, absolute_url('/view/%s' % system.fqdn)), '']
     if reporter is not None:
-        body.append(_(u'Reported by: %s') % reporter.display_name)
+        body.append(u'Reported by: %s' % reporter.display_name)
     if recipe is not None:
-        body.append(_(u'Related to: %s <%s>') % (recipe.t_id,
+        body.append(u'Related to: %s <%s>' % (recipe.t_id,
                 absolute_url('/recipes/%s' % recipe.id)))
-    body.extend(['', six.text_type(_(u'Problem description:')), description])
+    body.extend(['', six.text_type(u'Problem description:'), description])
     headers=[('X-Beaker-Notification', 'system-problem'),
         ('X-Beaker-System', system.fqdn),
         ('X-Lender', system.lender or ''),
@@ -135,7 +135,7 @@ def system_problem_report(system, description, recipe=None, reporter=None):
         cc.append(reporter.email_address)
     cc.extend(system.cc)
     send_mail(sender, system.owner.email_address,
-            _(u'Problem reported for %s') % system.fqdn, '\n'.join(body),
+            u'Problem reported for %s' % system.fqdn, '\n'.join(body),
             cc=cc, bulk=False, headers=headers)
 
 def broken_system_notify(system, reason, recipe=None):
@@ -144,18 +144,18 @@ def broken_system_notify(system, reason, recipe=None):
         if not sender:
             log.warning("beaker_email not defined in app.cfg; unable to send mail")
             return
-        body = [_(u'Beaker has automatically marked system \n%s <%s> \nas broken, due to:')
+        body = [u'Beaker has automatically marked system \n%s <%s> \nas broken, due to:'
                 % (system.fqdn, absolute_url('/view/%s' % system.fqdn)), '', reason, '',
-                six.text_type(_(u'Please investigate this error and take appropriate action.')), '']
+                six.text_type(u'Please investigate this error and take appropriate action.'), '']
         if recipe:
-            body.extend([_(u'Failure occurred in %s <%s>') % (recipe.t_id,
+            body.extend([u'Failure occurred in %s <%s>' % (recipe.t_id,
                     absolute_url('/recipes/%s' % recipe.id)), ''])
         if system.power:
-            body.extend([_(u'Power type: %s') % system.power.power_type.name,
-                         _(u'Power address: %s') % system.power.power_address,
-                         _(u'Power id: %s') % system.power.power_id])
+            body.extend([u'Power type: %s' % system.power.power_type.name,
+                         u'Power address: %s' % system.power.power_address,
+                         u'Power id: %s' % system.power.power_id])
         send_mail(sender, system.owner.email_address,
-                _(u'System %s automatically marked broken') % system.fqdn,
+                u'System %s automatically marked broken' % system.fqdn,
                 '\n'.join(body),
                 cc=system.cc,
                 headers=[('X-Beaker-Notification', 'system-broken'),
@@ -181,9 +181,9 @@ def system_loan_notify(system, loanee, agent):
         return
     # loanee None means that the loan has been returned
     if loanee is None:
-        subject = _(u'System %s loan returned') % system.fqdn
+        subject = u'System %s loan returned' % system.fqdn
     else:
-        subject = _(u'System %s loaned to %s') % (system.fqdn, loanee.user_name)
+        subject = u'System %s loaned to %s' % (system.fqdn, loanee.user_name)
     template = template_env.get_template('system-loan.txt')
     body = template.render(system=system, loanee=loanee, agent=agent, absolute_url=absolute_url)
     send_mail(sender=sender, to=system.owner.email_address, cc=system.cc,

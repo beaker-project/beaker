@@ -311,8 +311,8 @@ class LabControllers(RPCRoot):
         except NoResultFound:
             pass
         else:
-            raise BX(_('Cannot import distro as %s: it is configured as an alias for %s'
-                       % (new_distro['osmajor'], osmajor.osmajor)))
+            raise BX('Cannot import distro as %s: it is configured as an alias for %s'
+                       % (new_distro['osmajor'], osmajor.osmajor))
 
         osversion = OSVersion.lazy_create(osmajor=osmajor, osminor=new_distro['osminor'])
         if 'arches' in new_distro:

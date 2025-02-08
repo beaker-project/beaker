@@ -162,9 +162,9 @@ class Groups(RPCRoot):
         password = kw.get('root_password')
 
         if ldap and not identity.current.user.is_admin():
-            raise BX(_(u'Only admins can create LDAP groups'))
+            raise BX(u'Only admins can create LDAP groups')
         if ldap and not config.get("identity.ldap.enabled", False):
-            raise BX(_(u'LDAP is not enabled'))
+            raise BX(u'LDAP is not enabled')
         try:
             group = Group.by_name(group_name)
         except NoResultFound:
@@ -184,7 +184,7 @@ class Groups(RPCRoot):
                         service=u'XMLRPC', agent=identity.current.user)
             return 'Group created: %s.' % group_name
         else:
-            raise BX(_(u'Group already exists: %s.' % group_name))
+            raise BX(u'Group already exists: %s.' % group_name)
 
     # XML-RPC method for modifying a group
     @identity.require(identity.not_anonymous())
@@ -216,22 +216,22 @@ class Groups(RPCRoot):
         """
         # if not called from the bkr group-modify
         if not kw:
-            raise BX(_('Please specify an attribute to modify.'))
+            raise BX('Please specify an attribute to modify.')
 
         try:
             group = Group.by_name(group_name)
         except NoResultFound:
-            raise BX(_(u'Group does not exist: %s.' % group_name))
+            raise BX(u'Group does not exist: %s.' % group_name)
 
         if group.membership_type == GroupMembershipType.ldap:
             if not identity.current.user.is_admin():
-                raise BX(_(u'Only admins can modify LDAP groups'))
+                raise BX(u'Only admins can modify LDAP groups')
             if kw.get('add_member', None) or kw.get('remove_member', None):
-                raise BX(_(u'Cannot edit membership of an LDAP group'))
+                raise BX(u'Cannot edit membership of an LDAP group')
 
         user = identity.current.user
         if not group.can_edit(user):
-            raise BX(_('You are not an owner of group %s' % group_name))
+            raise BX('You are not an owner of group %s' % group_name)
 
         group_name = kw.get('group_name', None)
         if group_name:
@@ -241,8 +241,8 @@ class Groups(RPCRoot):
                 pass
             else:
                 if group_name != group.group_name:
-                    raise BX(_(u'Failed to update group %s: Group name already exists: %s' %
-                               (group.group_name, group_name)))
+                    raise BX(u'Failed to update group %s: Group name already exists: %s' %
+                               (group.group_name, group_name))
 
             group.set_name(user, u'XMLRPC', kw.get('group_name', None))
 
@@ -258,9 +258,9 @@ class Groups(RPCRoot):
             username = kw.get('add_member')
             user = User.by_user_name(username)
             if user is None:
-                raise BX(_(u'User does not exist %s' % username))
+                raise BX(u'User does not exist %s' % username)
             if user.removed:
-                raise BX(_(u'Cannot add deleted user %s to group' % user.user_name))
+                raise BX(u'Cannot add deleted user %s to group' % user.user_name)
 
             if user not in group.users:
                 group.add_member(user, service=u'XMLRPC',
@@ -269,20 +269,20 @@ class Groups(RPCRoot):
                                                 agent = identity.current.user,
                                                 action='Added')
             else:
-                raise BX(_(u'User %s is already in group %s' % (username, group.group_name)))
+                raise BX(u'User %s is already in group %s' % (username, group.group_name))
 
         if kw.get('remove_member', None):
             username = kw.get('remove_member')
             user = User.by_user_name(username)
 
             if user is None:
-                raise BX(_(u'User does not exist %s' % username))
+                raise BX(u'User does not exist %s' % username)
 
             if user not in group.users:
-                raise BX(_(u'No user %s in group %s' % (username, group.group_name)))
+                raise BX(u'No user %s in group %s' % (username, group.group_name))
             else:
                 if not group.can_remove_member(identity.current.user, user.user_id):
-                    raise BX(_(u'Cannot remove member'))
+                    raise BX(u'Cannot remove member')
 
                 groupUsers = group.users
                 for usr in groupUsers:
@@ -315,7 +315,7 @@ class Groups(RPCRoot):
         try:
             group = Group.by_name(group_name)
         except NoResultFound:
-            raise BX(_(u'Group does not exist: %s.' % group_name))
+            raise BX(u'Group does not exist: %s.' % group_name)
 
         users=[]
         for u in group.users:

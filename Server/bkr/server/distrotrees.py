@@ -71,7 +71,7 @@ class DistroTrees(RPCRoot):
         ])
 
         search_bar = SearchBar(name='search',
-                label=_(u'Distro Tree Search'),
+                label=u'Distro Tree Search',
                 table=search_utility.DistroTree.search.create_complete_search_table(),
                 search_controller=None,
                 date_picker=['created'],
@@ -153,12 +153,12 @@ gpgcheck=0
         try:
             distro_tree = DistroTree.by_id(distro_tree_id)
         except NoResultFound:
-            flash(_(u'Invalid distro tree id %s') % distro_tree_id)
+            flash(u'Invalid distro tree id %s' % distro_tree_id)
             redirect('.')
         try:
             lab_controller = LabController.by_id(lab_controller_id)
         except ValueError:
-            flash(_(u'Invalid lab controller id %s') % lab_controller_id)
+            flash(u'Invalid lab controller id %s' % lab_controller_id)
             redirect(str(distro_tree.id))
 
         # make sure the url ends with /
@@ -166,10 +166,10 @@ gpgcheck=0
         try:
             self.add_distro_urls(distro_tree, lab_controller, [url])
         except ValueError as e:
-            flash(_(u'%s') % e)
+            flash(u'%s' % e)
             redirect(str(distro_tree.id))
 
-        flash(_(u'Changed/Added %s %s') % (lab_controller, url))
+        flash(u'Changed/Added %s %s' % (lab_controller, url))
         redirect(str(distro_tree.id))
 
     @expose()
@@ -179,7 +179,7 @@ gpgcheck=0
         try:
             lca = LabControllerDistroTree.by_id(id)
         except NoResultFound:
-            flash(_(u'Invalid lab_controller_assoc id %s') % id)
+            flash(u'Invalid lab_controller_assoc id %s' % id)
             redirect('.')
 
         session.delete(lca)
@@ -188,7 +188,7 @@ gpgcheck=0
                 action=u'Removed', field_name=u'lab_controller_assocs',
                 old_value=u'%s %s' % (lca.lab_controller, lca.url),
                 new_value=None))
-        flash(_(u'Deleted %s %s') % (lca.lab_controller, lca.url))
+        flash(u'Deleted %s %s' % (lca.lab_controller, lca.url))
         redirect(str(lca.distro_tree.id))
 
     @expose()
@@ -197,7 +197,7 @@ gpgcheck=0
         try:
             distro_tree = DistroTree.by_id(distro_tree_id)
         except NoResultFound:
-            flash(_(u'Invalid distro tree id %s') % distro_tree_id)
+            flash(u'Invalid distro tree id %s' % distro_tree_id)
             redirect('.')
         if 'ks_meta' in kwargs:
             distro_tree.activity.append(DistroTreeActivity(
@@ -220,7 +220,7 @@ gpgcheck=0
                     old_value=distro_tree.kernel_options_post,
                     new_value=kwargs['kernel_options_post']))
             distro_tree.kernel_options_post = kwargs['kernel_options_post']
-        flash(_(u'Updated install options'))
+        flash(u'Updated install options')
         redirect(str(distro_tree.id))
 
     @staticmethod
