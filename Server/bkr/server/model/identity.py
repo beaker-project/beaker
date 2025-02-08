@@ -12,11 +12,11 @@ import random
 import string
 import re
 import pwquality
-import urllib
 from kid import Element
 import passlib.context
 from sqlalchemy import (Table, Column, ForeignKey, Integer, Unicode,
         UnicodeText, String, DateTime, Boolean, UniqueConstraint)
+import six
 from sqlalchemy.orm import mapper, relationship, validates, synonym
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import not_, and_, or_, exists
@@ -25,13 +25,16 @@ from turbogears.database import session
 from turbogears import validators
 from formencode.api import Invalid
 from bkr.server.bexceptions import BX, NoChangeException
-from bkr.server.util import convert_db_lookup_error
+from bkr.server.util import convert_db_lookup_error, ensure_str
 from bkr.server import identity
 from bkr.server.hybrid import hybrid_method, hybrid_property
 from .base import DeclarativeMappedObject
 from .activity import Activity, ActivityMixin
 from .config import ConfigItem, ConfigValueInt, ConfigValueString
 from .types import GroupMembershipType
+
+from six.moves import urllib
+
 
 log = logging.getLogger(__name__)
 
@@ -256,7 +259,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
     @property
     def href(self):
         """Returns a relative URL for this user's page."""
-        return (u'/users/%s' % urllib.quote(self.user_name.encode('utf8')))
+        return (u'/users/%s' % urllib.parse.quote(self.user_name.encode('utf8')))
 
     @classmethod
     def by_id(cls, user_id):
@@ -576,7 +579,7 @@ class Group(DeclarativeMappedObject, ActivityMixin):
         return self.group_name
 
     def __str__(self):
-        return unicode(self).encode('utf8')
+        return ensure_str(six.text_type(self))
 
     def __repr__(self):
         return 'Group(group_name=%r, display_name=%r)' % (self.group_name, self.display_name)
@@ -675,7 +678,7 @@ class Group(DeclarativeMappedObject, ActivityMixin):
     @property
     def href(self):
         """Returns a relative URL for this group's page."""
-        return '/groups/%s' % urllib.quote(self.group_name.encode('utf8'), '')
+        return '/groups/%s' % urllib.parse.quote(self.group_name.encode('utf8'), '')
 
     def owners(self):
         return [uga.user
@@ -768,17 +771,17 @@ class Group(DeclarativeMappedObject, ActivityMixin):
         self.user_group_assocs.append(UserGroup(user=user, is_owner=is_owner))
         self.record_activity(user=agent, service=service,
                              action=u'Added', field=u'User', old=None,
-                             new=unicode(user))
+                             new=six.text_type(user))
         if is_owner:
             self.record_activity(user=agent, service=service,
                                  action=u'Added', field=u'Owner', old=None,
-                                 new=unicode(user))
+                                 new=six.text_type(user))
 
     def remove_member(self, user, service=u'HTTP', agent=None):
         assoc, = [a for a in self.user_group_assocs if a.user == user]
         self.user_group_assocs.remove(assoc)
         self.record_activity(user=agent, service=service,
-                             action=u'Removed', field=u'User', old=unicode(user),
+                             action=u'Removed', field=u'User', old=six.text_type(user),
                              new=None)
 
     def grant_ownership(self, user, service=u'HTTP', agent=None):
@@ -787,7 +790,7 @@ class Group(DeclarativeMappedObject, ActivityMixin):
             assoc.is_owner = True
             self.record_activity(user=agent, service=service,
                                  action=u'Added', field=u'Owner', old=None,
-                                 new=unicode(user))
+                                 new=six.text_type(user))
         else:
             self.add_member(user, is_owner=True, service=service, agent=agent)
 
@@ -804,7 +807,7 @@ class Group(DeclarativeMappedObject, ActivityMixin):
             self.revoke_ownership(user)
         self.excluded_user_group_assocs.append(ExcludedUserGroup(user=user))
         self.record_activity(user=agent, service=service, field=u'User',
-                             action=u'Excluded', old=None, new=unicode(user))
+                             action=u'Excluded', old=None, new=six.text_type(user))
 
     def readd_user(self, user, service=u'HTTP', agent=None):
         if not self.membership_type == GroupMembershipType.inverted:
@@ -814,7 +817,7 @@ class Group(DeclarativeMappedObject, ActivityMixin):
         self.excluded_user_group_assocs.remove(assoc)
         self.record_activity(user=agent, service=service,
                              action=u'Re-added', field=u'User',
-                             old=unicode(user), new=None)
+                             old=six.text_type(user), new=None)
 
     def refresh_ldap_members(self, ldapcon=None):
         """Refresh the group from LDAP and record changes as group activity"""

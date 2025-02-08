@@ -18,6 +18,9 @@ from bkr.server.bexceptions import BX, InsufficientSystemPermissions, DatabaseLo
 from bkr.server.search_utility import lucene_to_sqlalchemy
 from bkr.server.util import absolute_url, strip_webpath
 
+import six
+
+
 # http://flask.pocoo.org/snippets/45/
 def request_wants_json():
     best = request.accept_mimetypes.best_match(['application/json', 'text/html'])
@@ -199,11 +202,11 @@ def convert_internal_errors():
     try:
         yield
     except InsufficientSystemPermissions as exc:
-        raise Forbidden403(unicode(exc))
+        raise Forbidden403(six.text_type(exc))
     except StaleTaskStatusException as exc:
-        raise Conflict409(unicode(exc))
+        raise Conflict409(six.text_type(exc))
     except (BX, NoResultFound, ValueError, DatabaseLookupError) as exc:
-        raise BadRequest400(unicode(exc))
+        raise BadRequest400(six.text_type(exc))
 
 def auth_required(f):
     """Decorator that reports a 401 error if the user is not logged in"""

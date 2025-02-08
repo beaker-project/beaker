@@ -76,6 +76,9 @@ from bkr.server.widgets import TaskSearchForm, SearchBar, \
     LabInfoForm, myPaginateDataGrid
 from bkr.server.xmlrpccontroller import RPCRoot
 
+import six
+
+
 log = logging.getLogger("bkr.server.controllers")
 
 # This ridiculous hack gets us an HTML5 doctype in our Kid template output.
@@ -514,7 +517,7 @@ class Root(RPCRoot):
             try:
                 systems = XmlHost.from_string('<and>%s</and>' % kw['xmlsearch']).apply_filter(
                     systems)
-            except ValueError, e:
+            except ValueError as e:
                 raise PlainTextHTTPException(status=400, message=str(e))
 
         if kw.get("systemsearch"):
@@ -657,7 +660,7 @@ class Root(RPCRoot):
             attrs = dict()
         options = {}
         options['readonly'] = readonly
-        options['reprovision_distro_tree_id'] = [(dt.id, unicode(dt)) for dt in
+        options['reprovision_distro_tree_id'] = [(dt.id, six.text_type(dt)) for dt in
                                                  system.distro_trees().order_by(Distro.name,
                                                                                 DistroTree.variant,
                                                                                 DistroTree.arch_id)]

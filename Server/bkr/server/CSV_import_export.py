@@ -8,6 +8,7 @@ from turbogears.database import session
 from turbogears import expose, widgets
 from sqlalchemy.exc import InvalidRequestError
 from bkr.server import identity
+from bkr.server.util import ensure_str
 from bkr.server.xmlrpccontroller import RPCRoot
 from tempfile import NamedTemporaryFile
 from cherrypy.lib.cptools import serve_file
@@ -22,6 +23,7 @@ from bkr.server.model import (System, SystemType, Activity, SystemActivity,
                               SystemAccessPolicy, SystemPermission, SystemPool)
 from bkr.server.widgets import HorizontalForm, RadioButtonList
 from kid import XML
+import six
 
 import csv
 import datetime
@@ -31,7 +33,7 @@ logger = logging.getLogger(__name__)
 def smart_bool(s):
     if s is True or s is False:
         return s
-    t = unicode(s).strip().lower()
+    t = six.text_type(s).strip().lower()
     if t == 'true':
         return True
     if t == 'false':
@@ -46,9 +48,9 @@ class UnicodeDictReader():
         self.reader = csv.DictReader(f, **kw)
 
     def next(self):
-        row = self.reader.next()
+        row = next(self.reader)
         d = {}
-        for k, v in row.iteritems():
+        for k, v in six.iteritems(row):
 
             if isinstance(k, str):
                 k = k.decode('utf8')
@@ -203,8 +205,8 @@ class CSV(RPCRoot):
                     log.append('Too many fields on line %s (expecting %s)'
                             % (reader.line_num, len(reader.fieldnames)))
                     continue
-                if any(value is missing for value in data.itervalues()):
-                    missing_fields = [field for field, value in data.iteritems()
+                if any(value is missing for value in six.itervalues(data)):
+                    missing_fields = [field for field, value in six.iteritems(data)
                             if value is missing]
                     log.append('Missing fields on line %s: %s' % (reader.line_num,
                             ', '.join(missing_fields)))
@@ -215,14 +217,14 @@ class CSV(RPCRoot):
                 try:
                     with session.begin_nested():
                         self._import_row(data, log)
-                except Exception, e:
+                except Exception as e:
                     # log and continue processing more rows
                     log.append('Error importing line %s: %s' % (reader.line_num, e))
 
             if is_empty:
                 log.append('Empty CSV file supplied')
 
-        except csv.Error, e:
+        except csv.Error as e:
             session.rollback()
             log.append('Error parsing CSV file: %s' % e)
 
@@ -258,8 +260,7 @@ class CSV(RPCRoot):
         for item in cls.query():
             for data in cls.to_datastruct(item):
                 data['csv_type'] = cls.csv_type
-                # XXX remove encoding in Python 3...
-                writer.writerow(dict((k, unicode(v).encode('utf8')) for k, v in data.iteritems()))
+                writer.writerow(dict((k, ensure_str(six.text_type(v))) for k, v in six.iteritems(data)))
 
     @classmethod
     def from_csv(cls, system, data, log):
@@ -288,7 +289,7 @@ class CSV(RPCRoot):
                     newdata = smart_bool(data[key])
                 else:
                     newdata = None
-                if unicode(newdata) != unicode(current_data):
+                if six.text_type(newdata) != six.text_type(current_data):
                     system.record_activity(user=identity.current.user, service=u'CSV',
                             action=u'Changed', field=key,
                             old=u'%s' % current_data, new=u'%s' % newdata)
@@ -300,7 +301,7 @@ class CSV(RPCRoot):
             val = getattr(self, csv_key, None)
             if val is None:
                 val = ''
-            datastruct[csv_key] = unicode(val)
+            datastruct[csv_key] = six.text_type(val)
         yield datastruct
 
 class CSV_System(CSV):
@@ -331,7 +332,7 @@ class CSV_System(CSV):
                 else:
                     newdata = None
                 current_data = getattr(system, key, None)
-                if unicode(newdata) != unicode(current_data):
+                if six.text_type(newdata) != six.text_type(current_data):
                     setattr(system,key,newdata)
                     system.record_activity(user=identity.current.user,
                             service=u'CSV', action=u'Changed', field=key,
@@ -508,7 +509,7 @@ class CSV_Power(CSV):
                 else:
                     newdata = None
                 current_data = getattr(csv_object, key, None)
-                if unicode(newdata) != unicode(current_data):
+                if six.text_type(newdata) != six.text_type(current_data):
                     system.record_activity(user=identity.current.user, service=u'CSV',
                             action=u'Changed', field=key, old=u'***', new=u'***')
                     setattr(csv_object,key,newdata)
@@ -607,8 +608,8 @@ class CSV_Exclude(CSV):
 
         if data['update'] and data['family']:
             try:
-                osversion = OSVersion.by_name(OSMajor.by_name(unicode(data['family'])),
-                                                            unicode(data['update']))
+                osversion = OSVersion.by_name(OSMajor.by_name(six.text_type(data['family'])),
+                                                            six.text_type(data['update']))
             except InvalidRequestError:
                 log.append("%s: Invalid Family %s Update %s" % (system.fqdn,
                                                         data['family'],
@@ -674,7 +675,7 @@ class CSV_Install(CSV):
     @classmethod
     def query(cls):
         for system in System.all(identity.current.user):
-            for install in system.provisions.itervalues():
+            for install in six.itervalues(system.provisions):
                 yield CSV_Install(install)
 
     @classmethod
@@ -713,7 +714,7 @@ class CSV_Install(CSV):
                     log.append("%s: Error! You must specify Family along with Update" % system.fqdn)
                     return False
                 try:
-                    update = OSVersion.by_name(family, unicode(update))
+                    update = OSVersion.by_name(family, six.text_type(update))
                 except InvalidRequestError:
                     log.append("%s: Error! Invalid update %s" % (system.fqdn,
                                                              data['update']))
@@ -721,19 +722,19 @@ class CSV_Install(CSV):
 
         #Import Update specific
         if update and family:
-            if system.provisions.has_key(arch):
+            if arch in system.provisions:
                 system_arch = system.provisions[arch]
             else:
                 system_arch = Provision(arch=arch)
                 system.provisions[arch] = system_arch
 
-            if system_arch.provision_families.has_key(family):
+            if family in system_arch.provision_families:
                 system_provfam = system_arch.provision_families[family]
             else:
                 system_provfam = ProvisionFamily(osmajor=family)
                 system_arch.provision_families[family] = system_provfam
 
-            if system_provfam.provision_family_updates.has_key(update):
+            if update in system_provfam.provision_family_updates:
                 prov = system_provfam.provision_family_updates[update]
             else:
                 prov = ProvisionFamilyUpdate(osversion=update)
@@ -742,13 +743,13 @@ class CSV_Install(CSV):
                        
         #Import Family specific
         if family and not update:
-            if system.provisions.has_key(arch):
+            if arch in system.provisions:
                 system_arch = system.provisions[arch]
             else:
                 system_arch = Provision(arch=arch)
                 system.provisions[arch] = system_arch
 
-            if system_arch.provision_families.has_key(family):
+            if family in system_arch.provision_families:
                 prov = system_arch.provision_families[family]
             else:
                 prov = ProvisionFamily(osmajor=family)
@@ -757,7 +758,7 @@ class CSV_Install(CSV):
                        
         #Import Arch specific
         if not family and not update:
-            if system.provisions.has_key(arch):
+            if arch in system.provisions:
                 prov = system.provisions[arch]
             else:
                 prov = Provision(arch=arch)

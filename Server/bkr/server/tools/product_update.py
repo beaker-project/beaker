@@ -22,6 +22,9 @@ import requests
 from optparse import OptionParser
 from turbogears.database import session
 
+import six
+
+
 __description__ = 'Update CPE identifiers for products in Beaker'
 
 def get_parser():
@@ -55,7 +58,7 @@ def update_products_from_json(json_file):
     entries = json.load(json_file)
     for entry in entries:
         if isinstance(entry, dict) and entry.get('cpe'):
-            assert isinstance(entry['cpe'], unicode)
+            assert isinstance(entry['cpe'], six.text_type)
             Product.lazy_create(name=entry['cpe'])
 
 def main():

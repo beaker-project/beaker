@@ -32,6 +32,9 @@ except ImportError:
 
 from bkr.server.model import ConfigItem, VirtResource, OpenStackRegion
 
+import six
+
+
 log = logging.getLogger(__name__)
 
 
@@ -154,7 +157,7 @@ class VirtManager(object):
                     log.exception('Failed to clean up %r during create_vm, leaked!',
                                   instance)
                 # suppress instance.delete exception so the original one is not masked
-                raise exc_type, exc_value, exc_tb
+                six.reraise(exc_type, exc_value, exc_tb)
 
     def get_vm_ipv4_address(self, instance, network_name):
         """
@@ -202,7 +205,7 @@ class VirtManager(object):
                 log.exception('Failed to clean up %r during create_vm, leaked!',
                               instance)
             # suppress instance.delete exception so the original one is not masked
-            raise exc_type, exc_value, exc_tb
+            six.reraise(exc_type, exc_value, exc_tb)
 
     def _wait_for_build(self, instance):
         for __ in range(20):

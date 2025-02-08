@@ -30,6 +30,9 @@ from bkr.server.bexceptions import BX, StaleTaskStatusException
 from bkr.server.xmlrpccontroller import RPCRoot
 import cherrypy
 
+import six
+
+
 __all__ = ['TaskActions']
 
 class TaskActions(RPCRoot):
@@ -43,7 +46,7 @@ class TaskActions(RPCRoot):
                       T  = RecipeTask,
                       TR = RecipeTaskResult)
 
-    stoppable_task_types = dict([(rep, obj) for rep,obj in task_types.iteritems() if obj not in unstoppable_task_types])
+    stoppable_task_types = dict([(rep, obj) for rep,obj in six.iteritems(task_types) if obj not in unstoppable_task_types])
 
     @cherrypy.expose
     def task_info(self, taskid,flat=True):

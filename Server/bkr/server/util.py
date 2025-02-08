@@ -17,6 +17,7 @@ import sys
 from collections import namedtuple
 
 import lxml.etree
+import six
 import turbogears
 from sqlalchemy import create_engine
 from sqlalchemy.orm.exc import NoResultFound
@@ -101,21 +102,20 @@ def load_config(configfile=None):
     turbogears.update_config(configfile=configfile, modulename="bkr.server.config")
     _config_loaded = configfile
 
-
-def to_unicode(obj, encoding='utf-8'):
-    # TODO: Not needed for Python 3
-    if isinstance(obj, basestring):
-        if not isinstance(obj, unicode):
-            obj = unicode(obj, encoding, 'replace')
-    return obj
-
-
 def strip_webpath(url):
     webpath = (config.get('server.webpath') or '').rstrip('/')
     if webpath and url.startswith(webpath):
         return url[len(webpath):]
     return url
 
+def ensure_str(s, encoding='utf-8', errors='strict'):
+    if six.PY2 and isinstance(s, six.text_type):
+        return s.encode(encoding, errors)
+    elif six.PY3 and isinstance(s, six.binary_type):
+        return s.decode(encoding, errors)
+    elif not isinstance(s, (six.text_type, six.binary_type)):
+        raise TypeError("not expecting type '%s'" % type(s))
+    return s
 
 # TG1.1 has this: http://docs.turbogears.org/1.1/URLs#turbogears-absolute-url
 def absolute_url(tgpath, tgparams=None, scheme=None,
@@ -162,7 +162,7 @@ def get_reports_engine():
         if not _reports_engine:
             # same logic as in turbogears.database.get_engine
             engine_args = dict()
-            for k, v in app.config.iteritems():
+            for k, v in six.iteritems(app.config):
                 if k.startswith('reports_engine.'):
                     engine_args[k[len('reports_engine.'):]] = v
             dburi = engine_args.pop('dburi')

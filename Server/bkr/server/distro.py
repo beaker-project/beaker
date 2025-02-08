@@ -21,7 +21,10 @@ from bkr.common.bexceptions import BX
 from bkr.server.bexceptions import DatabaseLookupError
 
 from bkr.server.model import (OSMajor, OSVersion, Distro, DistroTree,
-                             DistroTag, DistroActivity)
+                              DistroTag, DistroActivity)
+
+import six
+
 
 __all__ = ['Distros']
 
@@ -284,8 +287,8 @@ class Distros(RPCRoot):
             distros = distros[:limit]
         return [{'distro_id': distro.id,
                  'distro_name': distro.name,
-                 'distro_version': unicode(distro.osversion),
-                 'distro_tags': [unicode(tag) for tag in distro.tags],
+                 'distro_version': six.text_type(distro.osversion),
+                 'distro_tags': [six.text_type(tag) for tag in distro.tags],
                 } for distro in distros]
 
     @cherrypy.expose
@@ -301,7 +304,7 @@ class Distros(RPCRoot):
             'RedHatEnterpriseLinuxServer5.6' or 'Fedora14'
         :type version: string
         """
-        distros = Distro.query.filter(Distro.name.like(unicode(name)))
+        distros = Distro.query.filter(Distro.name.like(six.text_type(name)))
         edited = []
 
         os_major = version.split('.')[0]
@@ -324,8 +327,8 @@ class Distros(RPCRoot):
                 edited.append('%s' % distro.name)
                 distro.activity.append(DistroActivity(user=identity.current.user,
                         service=u'XMLRPC', field_name=u'osversion', action=u'Changed',
-                        old_value=unicode(distro.osversion),
-                        new_value=unicode(osversion)))
+                        old_value=six.text_type(distro.osversion),
+                        new_value=six.text_type(osversion)))
                 distro.osversion = osversion
         return edited
 

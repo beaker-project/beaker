@@ -144,7 +144,7 @@ def main(*args):
                                                 ks_appends=ks_appends)
         kickstart = rendered_kickstart.kickstart
 
-    print kickstart
+    print(kickstart)
 
 
 if __name__ in ('main', '__main__'):

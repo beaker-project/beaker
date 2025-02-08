@@ -14,6 +14,10 @@ import logging
 from bkr.server.util import absolute_url
 from datetime import datetime
 from jinja2 import Environment, PackageLoader
+
+import six
+
+
 # configure Jinja2 to load email templates
 template_env = Environment(loader=PackageLoader('bkr.server', 'mail-templates'), trim_blocks=True)
 
@@ -115,7 +119,7 @@ def system_problem_report(system, description, recipe=None, reporter=None):
     if recipe is not None:
         body.append(_(u'Related to: %s <%s>') % (recipe.t_id,
                 absolute_url('/recipes/%s' % recipe.id)))
-    body.extend(['', unicode(_(u'Problem description:')), description])
+    body.extend(['', six.text_type(_(u'Problem description:')), description])
     headers=[('X-Beaker-Notification', 'system-problem'),
         ('X-Beaker-System', system.fqdn),
         ('X-Lender', system.lender or ''),
@@ -142,7 +146,7 @@ def broken_system_notify(system, reason, recipe=None):
             return
         body = [_(u'Beaker has automatically marked system \n%s <%s> \nas broken, due to:')
                 % (system.fqdn, absolute_url('/view/%s' % system.fqdn)), '', reason, '',
-                unicode(_(u'Please investigate this error and take appropriate action.')), '']
+                six.text_type(_(u'Please investigate this error and take appropriate action.')), '']
         if recipe:
             body.extend([_(u'Failure occurred in %s <%s>') % (recipe.t_id,
                     absolute_url('/recipes/%s' % recipe.id)), ''])
@@ -235,7 +239,10 @@ def reservesys_notify(recipe):
                   headers=[('X-Beaker-Notification', 'system-reservation'),
                            ('X-Beaker-Job-ID', job.id)])
 
-def send_usage_reminder(user, data={}, testing=False):
+def send_usage_reminder(user, data=None, testing=False):
+    if data is None:
+        data = {}
+
     sender = config.get('beaker_email')
     if not sender:
         log.warning("beaker_email not defined in app.cfg; unable to send mail")
@@ -245,7 +252,7 @@ def send_usage_reminder(user, data={}, testing=False):
     subject = u'[Beaker] Usage report for %s (%s)' % (user.user_name, datetime.utcnow().strftime("%Y-%m-%d"))
     body = template.render(data)
     if testing:
-        print "From: %s\nTo: %s\nSubject: %s\nBody: %s\n\n" % (sender, recipient, subject, body)
+        print("From: %s\nTo: %s\nSubject: %s\nBody: %s\n\n" % (sender, recipient, subject, body))
     else:
         send_mail(sender=sender, to=recipient, subject=subject, body=body,
                   headers=[('X-Beaker-Notification', 'usage-report')])

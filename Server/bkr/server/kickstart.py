@@ -7,13 +7,14 @@ import logging
 import pipes  # For pipes.quote, since it isn't available in shlex until 3.3
 import re
 import string
-import urlparse
 
 import jinja2.ext
 import jinja2.nodes
 import jinja2.sandbox
 import netaddr
 from flask import redirect, abort, Response
+import six
+from six.moves import urllib
 from sqlalchemy.exc import DataError
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -21,6 +22,8 @@ from bkr.server.app import app
 from bkr.server.model import session, RenderedKickstart
 from bkr.server.model.distrolibrary import split_osmajor_name_version
 from bkr.server.util import absolute_url
+
+from six.moves.urllib import parse as urlparse
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +44,7 @@ class SnippetExtension(jinja2.ext.Extension):
     tags = set(['snippet'])
 
     def parse(self, parser):
-        lineno = parser.stream.next().lineno
+        lineno = next(parser.stream).lineno
         snippet_name = parser.parse_expression()
         node = jinja2.nodes.Output([
             jinja2.nodes.Call(jinja2.nodes.Name('snippet', 'load'),
@@ -111,10 +114,10 @@ class TemplateRenderingEnvironment(object):
 # access to the real model objects because it is more powerful.
 class RestrictedOSMajor(object):
     def __init__(self, osmajor, name=None, number=None):
-        self.osmajor = unicode(osmajor)
+        self.osmajor = six.text_type(osmajor)
         name, number = split_osmajor_name_version(osmajor)
-        self.name = unicode(name)
-        self.number = unicode(number)
+        self.name = six.text_type(name)
+        self.number = six.text_type(number)
 
 
 class RestrictedOSVersion(object):
@@ -123,18 +126,18 @@ class RestrictedOSVersion(object):
         if osminor is None:
             self.osminor = None
         else:
-            self.osminor = unicode(osminor)
+            self.osminor = six.text_type(osminor)
 
 
 class RestrictedDistro(object):
     def __init__(self, osmajor, osminor, name):
         self.osversion = RestrictedOSVersion(osmajor, osminor)
-        self.name = unicode(name)
+        self.name = six.text_type(name)
 
 
 class RestrictedArch(object):
     def __init__(self, arch):
-        self.arch = unicode(arch)
+        self.arch = six.text_type(arch)
 
 
 class RestrictedDistroTree(object):
@@ -143,7 +146,7 @@ class RestrictedDistroTree(object):
         if variant is None:
             self.variant = None
         else:
-            self.variant = unicode(variant)
+            self.variant = six.text_type(variant)
         self.arch = RestrictedArch(arch)
         self.distro_tree = distro_tree
         self.tree_url = tree_url
@@ -159,7 +162,7 @@ class RestrictedDistroTree(object):
 
 class RestrictedLabController(object):
     def __init__(self, lab_controller):
-        self.fqdn = unicode(lab_controller.fqdn)
+        self.fqdn = six.text_type(lab_controller.fqdn)
 
 
 class RestrictedRecipe(object):
@@ -179,7 +182,7 @@ def dictsplit(s, delim=',', pairsep=':'):
 
 
 template_env.filters.update({
-    'split': string.split,
+    'split': lambda x, sep=' ': x.split(sep),
     'dictsplit': dictsplit,
     'urljoin': urlparse.urljoin,
     'parsed_url': urlparse.urlparse,

@@ -32,6 +32,10 @@ from bkr.server.model import (Distro, Task, OSMajor, Recipe, RecipeSet,
                               SystemResource, RecipeResource)
 
 import logging
+
+import six
+
+
 log = logging.getLogger(__name__)
 
 __all__ = ['Tasks']
@@ -152,7 +156,7 @@ class Tasks(RPCRoot):
             for type in filter['types']:
                 try:
                     tasktype = TaskType.by_name(type)
-                except InvalidRequestError, err:
+                except InvalidRequestError as err:
                     raise BX(_('Invalid Task Type: %s' % type))
                 or_types.append(TaskType.id==tasktype.id)
             tasks = tasks.filter(or_(*or_types))
@@ -221,7 +225,7 @@ class Tasks(RPCRoot):
             def write_data(f):
                 siphon(task_rpm.file, f)
             task = Task.update_task(task_rpm.filename, write_data)
-        except Exception, err:
+        except Exception as err:
             session.rollback()
             log.exception('Failed to import %s', task_rpm.filename)
             flash(_(u'Failed to import task: %s' % err))
@@ -253,7 +257,7 @@ class Tasks(RPCRoot):
 
         recipe_task_id = kw.get('recipe_task_id')
         if recipe_task_id:
-            if isinstance(recipe_task_id, basestring):
+            if isinstance(recipe_task_id, six.string_types):
                 tasks = tasks.filter(RecipeTask.id == recipe_task_id)
             elif isinstance(recipe_task_id, list):
                 tasks = tasks.filter(RecipeTask.id.in_(recipe_task_id))
@@ -325,10 +329,10 @@ class Tasks(RPCRoot):
         try:
             self._disable(t_id)
             to_return['success'] = True
-        except Exception, e:
+        except Exception as e:
             log.exception('Unable to disable task:%s' % t_id)
             to_return['success'] = False
-            to_return['err_msg'] = unicode(e)
+            to_return['err_msg'] = six.text_type(e)
             session.rollback()
         return to_return
 

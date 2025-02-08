@@ -16,6 +16,9 @@
 from sqlalchemy.types import SchemaType, TypeDecorator, Enum
 import re
 
+import six
+
+
 class EnumSymbol(object):
     """Define a fixed symbol tied to a parent class."""
 
@@ -23,7 +26,7 @@ class EnumSymbol(object):
         self.cls_ = cls_
         self.name = name # in Python land
         self.value = value # in DB land
-        for k, v in kwargs.iteritems():
+        for k, v in six.iteritems(kwargs):
             setattr(self, k, v)
 
     def __reduce__(self):
@@ -111,7 +114,7 @@ class DeclEnumType(SchemaType, TypeDecorator):
     def process_bind_param(self, value, dialect):
         if value is None:
             return None
-        if isinstance(value, basestring):
+        if isinstance(value, six.string_types):
             return value
         if value.cls_ != self.enum:
             raise TypeError('Cannot use %r as bind parameter for column '

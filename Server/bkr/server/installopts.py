@@ -9,10 +9,14 @@ import shlex
 # pipes.quote has been moved to the more reasonable shlex.quote in Python 3.3:
 # http://bugs.python.org/issue9723
 import pipes
+from six.moves import reduce
+
+import six
+
 
 def _parse(s): # based on Cobbler's string_to_hash
     result = {}
-    if isinstance(s, unicode):
+    if isinstance(s, six.text_type):
         s = s.encode('utf8') # shlex.split can't handle unicode :-(
     for token in shlex.split(s or ''):
         if '=' not in token:
@@ -37,11 +41,11 @@ def _unparse(d, quote=True):
     # items are sorted for predictable ordering of the output,
     # but a better solution would be to use OrderedDict in Python 2.7+
     if quote:
-        quoted_value = lambda value: pipes.quote(unicode(value))
+        quoted_value = lambda value: pipes.quote(six.text_type(value))
     else:
-        quoted_value = lambda value: unicode(value)
+        quoted_value = lambda value: six.text_type(value)
     items = []
-    for key, value in sorted(d.iteritems()):
+    for key, value in sorted(six.iteritems(d)):
         if value is None:
             items.append(key)
         else:
@@ -55,7 +59,7 @@ def _unparse(d, quote=True):
 
 def _consolidate(base, other): # based on Cobbler's consolidate
     result = dict(base)
-    for key, value in other.iteritems():
+    for key, value in six.iteritems(other):
         if key.startswith(u'!'):
             result.pop(key[1:], None)
         else:

@@ -8,6 +8,7 @@ import operator
 
 import datetime
 from lxml import etree
+import six
 from sqlalchemy import or_, and_, not_, exists, func
 from sqlalchemy.orm import aliased
 from sqlalchemy.orm.exc import NoResultFound
@@ -278,8 +279,8 @@ class XmlDistroArch(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         query = None
         if op and value:
             joins = joins.join(DistroTree.arch)
@@ -293,8 +294,8 @@ class XmlDistroFamily(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         query = None
         if op and value:
             joins = joins.join(DistroTree.distro, Distro.osversion, OSVersion.osmajor)
@@ -312,8 +313,8 @@ class XmlDistroTag(ElementWrapper):
                 '!=': '__ne__'}
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         query = None
         if value:
             joins = joins.join(DistroTree.distro)
@@ -330,8 +331,8 @@ class XmlDistroVariant(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         query = None
         if op and value:
             query = getattr(DistroTree.variant, op)(value)
@@ -344,8 +345,8 @@ class XmlDistroName(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         query = None
         if op and value:
             joins = joins.join(DistroTree.distro)
@@ -370,8 +371,8 @@ class XmlPool(ElementWrapper):
                 '!=': '__ne__'}
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         if value:
             # - '==' - search for system which is member of given pool
             # - '!=' - search for system which is not member of given pool
@@ -399,9 +400,9 @@ class XmlKeyValue(ElementWrapper):
     """
 
     def filter(self, joins):
-        key = self.get_xml_attr('key', unicode, None)
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        key = self.get_xml_attr('key', six.text_type, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         try:
             _key = Key.by_name(key)
         except NoResultFound:
@@ -445,7 +446,7 @@ class XmlAutoProv(ElementWrapper):
     """
 
     def filter(self, joins):
-        value = self.get_xml_attr('value', unicode, False)
+        value = self.get_xml_attr('value', six.text_type, False)
         query = None
         if value:
             joins = joins.join(System.power)
@@ -462,8 +463,8 @@ class XmlHostLabController(ElementWrapper):
                 '!=': '__ne__'}
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         query = None
         if value:
             joins = joins.join(System.lab_controller)
@@ -471,8 +472,8 @@ class XmlHostLabController(ElementWrapper):
         return (joins, query)
 
     def filter_openstack_flavors(self, flavors, lab_controller):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         if not value:
             return []
         matched = getattr(lab_controller.fqdn, op)(value)
@@ -494,8 +495,8 @@ class XmlDistroLabController(ElementWrapper):
                 '!=': '__ne__'}
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         if not value:
             return (joins, None)
         if op == '__eq__':
@@ -519,8 +520,8 @@ class XmlHypervisor(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, '')
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, '')
         joins = joins.outerjoin(System.hypervisor)
         query = getattr(func.coalesce(Hypervisor.hypervisor, ''), op)(value)
         return (joins, query)
@@ -537,8 +538,8 @@ class XmlHypervisor(ElementWrapper):
     def _matches_kvm(self):
         # XXX 'KVM' is hardcoded here assuming that is what OpenStack is using,
         # but we should have a better solution
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, '')
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, '')
         return getattr(operator, op)('KVM', value)
 
 
@@ -548,7 +549,7 @@ class XmlSystemType(ElementWrapper):
     """
 
     def filter(self, joins):
-        value = self.get_xml_attr('value', unicode, None)
+        value = self.get_xml_attr('value', six.text_type, None)
         query = None
         if value:
             query = System.type == value
@@ -564,7 +565,7 @@ class XmlSystemType(ElementWrapper):
         return self._matches_machine()
 
     def _matches_machine(self):
-        value = self.get_xml_attr('value', unicode, None)
+        value = self.get_xml_attr('value', six.text_type, None)
         return value == 'Machine'
 
 
@@ -574,7 +575,7 @@ class XmlSystemStatus(ElementWrapper):
     """
 
     def filter(self, joins):
-        value = self.get_xml_attr('value', unicode, None)
+        value = self.get_xml_attr('value', six.text_type, None)
         query = None
         if value:
             query = System.status == value
@@ -587,8 +588,8 @@ class XmlHostName(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         query = None
         if value:
             query = getattr(System.fqdn, op)(value)
@@ -609,8 +610,8 @@ class XmlLastInventoried(ElementWrapper):
 
     def filter(self, joins):
         col = System.date_lastcheckin
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
 
         if value:
             clause = date_filter(col, op, value)
@@ -626,15 +627,15 @@ class XmlSystemCompatibleWithDistro(ElementWrapper):
     """
 
     def filter(self, joins):
-        arch_name = self.get_xml_attr('arch', unicode, None)
+        arch_name = self.get_xml_attr('arch', six.text_type, None)
         try:
             arch = Arch.by_name(arch_name)
         except ValueError:
             return (joins, false())
-        osmajor = self.get_xml_attr('osmajor', unicode, None)
+        osmajor = self.get_xml_attr('osmajor', six.text_type, None)
         if not osmajor:
             return (joins, false())
-        osminor = self.get_xml_attr('osminor', unicode, None) or None
+        osminor = self.get_xml_attr('osminor', six.text_type, None) or None
         clause = System.compatible_with_distro_tree(arch, osmajor, osminor)
         return (joins, clause)
 
@@ -645,8 +646,8 @@ class XmlSystemLender(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         query = None
         if value:
             query = getattr(System.lender, op)(value)
@@ -659,8 +660,8 @@ class XmlSystemVendor(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         query = None
         if value:
             query = getattr(System.vendor, op)(value)
@@ -673,8 +674,8 @@ class XmlSystemLocation(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         query = None
         if value:
             query = getattr(System.location, op)(value)
@@ -687,8 +688,8 @@ class XmlSystemSerial(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         query = None
         if value:
             query = getattr(System.serial, op)(value)
@@ -701,8 +702,8 @@ class XmlSystemModel(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         query = None
         if value:
             query = getattr(System.model, op)(value)
@@ -715,7 +716,7 @@ class XmlMemory(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
         value = self.get_xml_attr('value', int, None)
         query = None
         if value:
@@ -723,7 +724,7 @@ class XmlMemory(ElementWrapper):
         return (joins, query)
 
     def filter_openstack_flavors(self, flavors, lab_controller):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
         value = self.get_xml_attr('value', int, None)
         if value:
             flavors = [flavor for flavor in flavors
@@ -740,8 +741,8 @@ class XmlSystemOwner(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         query = None
         if value:
             owner_alias = aliased(User)
@@ -756,8 +757,8 @@ class XmlSystemUser(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         query = None
         if value:
             user_alias = aliased(User)
@@ -772,8 +773,8 @@ class XmlSystemLoaned(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         query = None
         if value:
             loaned_alias = aliased(User)
@@ -796,8 +797,8 @@ class XmlSystemAdded(ElementWrapper):
 
     def filter(self, joins):
         col = System.date_added
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         clause = None
 
         if value:
@@ -812,8 +813,8 @@ class XmlSystemPowertype(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         query = None
         if value:
             joins = joins.join(System.power, Power.power_type)
@@ -827,7 +828,7 @@ class XmlCpuProcessors(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
         value = self.get_xml_attr('value', int, None)
         query = None
         if value:
@@ -839,7 +840,7 @@ class XmlCpuProcessors(ElementWrapper):
         # We treat an OpenStack flavor with N vcpus as having N single-core
         # processors. Not sure how realistic that is but we have to pick
         # something...
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
         value = self.get_xml_attr('value', int, None)
         if value:
             flavors = [flavor for flavor in flavors
@@ -856,7 +857,7 @@ class XmlCpuCores(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
         value = self.get_xml_attr('value', int, None)
         query = None
         if value:
@@ -865,7 +866,7 @@ class XmlCpuCores(ElementWrapper):
         return (joins, query)
 
     def filter_openstack_flavors(self, flavors, lab_controller):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
         value = self.get_xml_attr('value', int, None)
         if value:
             flavors = [flavor for flavor in flavors
@@ -882,7 +883,7 @@ class XmlCpuFamily(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
         value = self.get_xml_attr('value', int, None)
         query = None
         if value:
@@ -897,7 +898,7 @@ class XmlCpuModel(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
         value = self.get_xml_attr('value', int, None)
         query = None
         if value:
@@ -912,8 +913,8 @@ class XmlCpuModelName(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         query = None
         if value:
             joins = joins.join(System.cpu)
@@ -927,7 +928,7 @@ class XmlCpuSockets(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
         value = self.get_xml_attr('value', int, None)
         query = None
         if value:
@@ -942,7 +943,7 @@ class XmlCpuSpeed(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
         value = self.get_xml_attr('value', float, None)
         query = None
         if value:
@@ -957,7 +958,7 @@ class XmlCpuStepping(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
         value = self.get_xml_attr('value', int, None)
         query = None
         if value:
@@ -972,8 +973,8 @@ class XmlCpuVendor(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         query = None
         if value:
             joins = joins.join(System.cpu)
@@ -988,7 +989,7 @@ class XmlCpuHyper(ElementWrapper):
 
     def filter(self, joins):
         op = '__eq__'
-        uvalue = self.get_xml_attr('value', unicode, False).lower()
+        uvalue = self.get_xml_attr('value', six.text_type, False).lower()
         value = uvalue in ('true', '1') and True or False
         query = None
         if value:
@@ -1008,9 +1009,9 @@ class XmlCpuFlag(ElementWrapper):
                 '!=': '__ne__'}
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
         equal = op == '__ne__' and '__eq__' or op
-        value = self.get_xml_attr('value', unicode, None)
+        value = self.get_xml_attr('value', six.text_type, None)
         query = None
         if value:
             joins = joins.join(System.cpu)
@@ -1032,8 +1033,8 @@ class XmlArch(ElementWrapper):
                 '!=': '__ne__'}
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         query = None
         if value:
             # As per XmlPool above,
@@ -1059,8 +1060,8 @@ class XmlArch(ElementWrapper):
         return self._matches_x86()
 
     def _matches_x86(self):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         return (getattr(operator, op)('x86_64', value) or
                 getattr(operator, op)('i386', value))
 
@@ -1071,7 +1072,7 @@ class XmlNumaNodeCount(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
         value = self.get_xml_attr('value', int, None)
         query = None
         if value:
@@ -1091,19 +1092,19 @@ class XmlDevice(ElementWrapper):
                 '!=': '__ne__'}
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
         equal = op == '__ne__' and '__eq__' or op
         query = None
         filter_clauses = []
         for attr in ['bus', 'driver', 'vendor_id', 'device_id',
                      'subsys_vendor_id', 'subsys_device_id', 'description']:
-            value = self.get_xml_attr(attr, unicode, None)
+            value = self.get_xml_attr(attr, six.text_type, None)
             if value:
                 filter_clauses.append(getattr(getattr(Device, attr), equal)(value))
-        if self.get_xml_attr('type', unicode, None):
+        if self.get_xml_attr('type', six.text_type, None):
             filter_clauses.append(Device.device_class.has(
                 DeviceClass.device_class ==
-                self.get_xml_attr('type', unicode, None)))
+                self.get_xml_attr('type', six.text_type, None)))
         if filter_clauses:
             if op == '__ne__':
                 query = not_(System.devices.any(and_(*filter_clauses)))
@@ -1121,8 +1122,8 @@ class XmlDiskModel(ElementWrapper):
                 '!=': '__ne__'}
 
     def filter_disk(self):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
+        value = self.get_xml_attr('value', six.text_type, None)
         if value:
             return getattr(Disk.model, op)(value)
         return None
@@ -1132,19 +1133,19 @@ class XmlDiskSize(ElementWrapper):
 
     def _bytes_value(self):
         value = self.get_xml_attr('value', int, None)
-        units = self.get_xml_attr('units', unicode, 'bytes')
+        units = self.get_xml_attr('units', six.text_type, 'bytes')
         if value:
             return value * bytes_multiplier(units)
 
     def filter_disk(self):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
         value = self._bytes_value()
         if value:
             return getattr(Disk.size, op)(value)
         return None
 
     def filter_openstack_flavors(self, flavors, lab_controller):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
         value = self._bytes_value()
         if value:
             flavors = [flavor for flavor in flavors
@@ -1157,9 +1158,9 @@ class XmlDiskSize(ElementWrapper):
 
 class XmlDiskSectorSize(ElementWrapper):
     def filter_disk(self):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
         value = self.get_xml_attr('value', int, None)
-        units = self.get_xml_attr('units', unicode, 'bytes')
+        units = self.get_xml_attr('units', six.text_type, 'bytes')
         if value:
             return getattr(Disk.sector_size, op)(
                 value * bytes_multiplier(units))
@@ -1168,9 +1169,9 @@ class XmlDiskSectorSize(ElementWrapper):
 
 class XmlDiskPhysSectorSize(ElementWrapper):
     def filter_disk(self):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
         value = self.get_xml_attr('value', int, None)
-        units = self.get_xml_attr('units', unicode, 'bytes')
+        units = self.get_xml_attr('units', six.text_type, 'bytes')
         if value:
             return getattr(Disk.phys_sector_size, op)(
                 value * bytes_multiplier(units))
@@ -1207,12 +1208,12 @@ class XmlDiskSpace(ElementWrapper):
 
     def _bytes_value(self):
         value = self.get_xml_attr('value', int, None)
-        units = self.get_xml_attr('units', unicode, 'bytes')
+        units = self.get_xml_attr('units', six.text_type, 'bytes')
         if value:
             return value * bytes_multiplier(units)
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
         value = self._bytes_value()
         query = None
         if value:
@@ -1226,7 +1227,7 @@ class XmlDiskCount(ElementWrapper):
     """
 
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        op = self.op_table[self.get_xml_attr('op', six.text_type, '==')]
         value = self.get_xml_attr('value', int, None)
         query = None
         if value:
@@ -1320,7 +1321,7 @@ class XmlHost(XmlAnd):
         <hostRequires force="$FQDN"/> means to skip all normal host filtering
         and always use the named system.
         """
-        return self.get_xml_attr('force', unicode, None)
+        return self.get_xml_attr('force', six.text_type, None)
 
     def virtualisable(self):
         if self.force:
@@ -1360,7 +1361,7 @@ class XmlDistro(XmlAnd):
 
 
 def apply_distro_filter(filter, query):
-    if isinstance(filter, basestring):
+    if isinstance(filter, six.string_types):
         filter = XmlDistro(etree.fromstring(filter))
     clauses = []
     for child in filter:

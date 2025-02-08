@@ -24,7 +24,6 @@ from bkr.server.reserve_workflow import MAX_SECONDS_PROVISION, MAX_HOURS_PROVISI
 from bkr.server.controller_utilities import _custom_status, _custom_result
 from bkr.server.junitxml import recipe_to_junit_xml
 from datetime import timedelta
-import urlparse
 
 import cherrypy
 
@@ -42,6 +41,11 @@ from bkr.server.bexceptions import BeakerException
 
 import logging
 import lxml.etree
+
+import six
+from six.moves import urllib
+
+
 logger = logging.getLogger(__name__)
 
 class Recipes(RPCRoot):
@@ -109,7 +113,7 @@ class Recipes(RPCRoot):
         log_recipe.server = server
         log_recipe.basepath = basepath
         # Pull log_server out of server_url.
-        recipe.log_server = urlparse.urlparse(server)[1]
+        recipe.log_server = urllib.parse.urlparse(server)[1]
         return '%s' % recipe.filepath
 
     @cherrypy.expose
@@ -161,7 +165,7 @@ class Recipes(RPCRoot):
         for mylog in recipe.all_logs():
             mylog.server = '%s/%s/' % (server, mylog.parent.filepath)
             mylog.basepath = '%s/%s/' % (basepath, mylog.parent.filepath)
-        recipe.log_server = urlparse.urlparse(server)[1]
+        recipe.log_server = urllib.parse.urlparse(server)[1]
         return True
 
     @cherrypy.expose
@@ -367,7 +371,7 @@ class Recipes(RPCRoot):
             col = search['table']      
             try:
                 recipe_search.append_results(search['value'],col,search['operation'],**kw)
-            except KeyError,e:
+            except KeyError as e:
                 logger.error(e)
                 return recipe_search.return_results()
 
@@ -713,7 +717,7 @@ def extend_watchdog_by_taskspec(taskspec):
     try:
         obj = TaskBase.get_by_t_id(taskspec)
     except BeakerException as exc:
-        raise NotFound404(unicode(exc))
+        raise NotFound404(six.text_type(exc))
 
     if isinstance(obj, Recipe):
         recipe = obj

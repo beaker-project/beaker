@@ -12,6 +12,9 @@ from turbogears.database import session
 from bkr.server import identity
 from .base import DeclarativeMappedObject
 
+import six
+
+
 log = logging.getLogger(__name__)
 
 class Activity(DeclarativeMappedObject):
@@ -54,9 +57,9 @@ class Activity(DeclarativeMappedObject):
         self.action = action
 
         if old_value is not None:
-            old_value = unicode(old_value)[:old_value_max_length]
+            old_value = six.text_type(old_value)[:old_value_max_length]
         if new_value is not None:
-            new_value = unicode(new_value)[:new_value_max_length]
+            new_value = six.text_type(new_value)[:new_value_max_length]
 
         self.old_value = old_value
         self.new_value = new_value

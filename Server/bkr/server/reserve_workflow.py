@@ -20,6 +20,10 @@ from bkr.server.util import absolute_url
 from bkr.server.bexceptions import DatabaseLookupError
 
 import logging
+
+import six
+
+
 log = logging.getLogger(__name__)
 
 MAX_HOURS_PROVISION = 99
@@ -170,4 +174,4 @@ class ReserveWorkflow:
             except DatabaseLookupError:
                 return []
             trees = system.distro_trees(query=trees)
-        return [(tree.id, unicode(tree)) for tree in trees]
+        return [(tree.id, six.text_type(tree)) for tree in trees]

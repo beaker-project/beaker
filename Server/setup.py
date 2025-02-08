@@ -145,7 +145,7 @@ class InstallAssets(Command):
         for filename in assets.list_asset_sources(self.source_dir):
             source_path = os.path.join(self.source_dir, filename)
             dest_path = os.path.join(self.install_dir, filename)
-            self.mkpath(os.path.dirname(dest_path), mode=0755)
+            self.mkpath(os.path.dirname(dest_path), mode=0o755)
             self.copy_file(source_path, dest_path)
 
 

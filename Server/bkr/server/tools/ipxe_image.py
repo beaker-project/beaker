@@ -152,7 +152,7 @@ def main():
         with session.begin():
             upload_image(glance, visibility=options.image_visibility)
     else:
-        print generate_image(delete=False).name
+        print(generate_image(delete=False).name)
 
 if __name__ == '__main__':
     main()

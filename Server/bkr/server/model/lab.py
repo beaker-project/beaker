@@ -5,7 +5,6 @@
 # (at your option) any later version.
 
 import logging
-import urllib
 from sqlalchemy import (Column, ForeignKey, Integer, Unicode, Boolean,
         DateTime, event)
 from sqlalchemy.orm import relationship, synonym, validates
@@ -15,6 +14,9 @@ from .base import DeclarativeMappedObject
 from .types import SystemSchedulerStatus
 from .activity import Activity, ActivityMixin
 from .identity import User
+
+from six.moves import urllib
+
 
 log = logging.getLogger(__name__)
 
@@ -101,7 +103,7 @@ class LabController(DeclarativeMappedObject, ActivityMixin):
     @property
     def href(self):
         """Returns a relative URL."""
-        return urllib.quote((u'/labcontrollers/%s' % self.fqdn).encode('utf8'))
+        return urllib.parse.quote((u'/labcontrollers/%s' % self.fqdn).encode('utf8'))
 
     @validates('fqdn')
     def validate_fqdn(self, key, fqdn):

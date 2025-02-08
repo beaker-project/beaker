@@ -4,7 +4,6 @@
 # (at your option) any later version.
 
 import logging
-import urlparse
 
 import cherrypy
 import datetime
@@ -34,6 +33,10 @@ from bkr.server.model import System, SystemActivity, SystemStatus, SystemPool, \
     TaskStatus, \
     Note
 from bkr.server.util import absolute_url
+
+import six
+from six.moves import urllib
+
 
 log = logging.getLogger(__name__)
 
@@ -505,8 +508,8 @@ def _update_system(system, data=None):
                 new_rpdt = DistroTree.by_id(data['reprovision_distro_tree']['id'])
             if new_rpdt != system.reprovision_distro_tree:
                 record_activity(u'reprovision_distro_tree',
-                                unicode(system.reprovision_distro_tree),
-                                unicode(new_rpdt))
+                                six.text_type(system.reprovision_distro_tree),
+                                six.text_type(new_rpdt))
                 system.reprovision_distro_tree = new_rpdt
                 changed = True
         if 'location' in data:
@@ -881,7 +884,7 @@ def grant_loan(fqdn):
     recipient = data.get("recipient")
     if recipient is None:
         user_name = identity.current.user.user_name
-    elif isinstance(recipient, basestring):
+    elif isinstance(recipient, six.string_types):
         user_name = recipient
     else:
         user_name = recipient.get('user_name')
@@ -943,11 +946,11 @@ def filtered_policy(policy):
              'user': rule.user.user_name if rule.user else None,
              'group': rule.group.group_name if rule.group else None,
              'everybody': rule.everybody,
-             'permission': unicode(rule.permission)}
+             'permission': six.text_type(rule.permission)}
             for rule in query],
         'possible_permissions': [
-            {'value': unicode(permission),
-             'label': unicode(permission.label)}
+            {'value': six.text_type(permission),
+             'label': six.text_type(permission.label)}
             for permission in SystemPermission],
     })
 
@@ -1237,7 +1240,7 @@ def provision_system(fqdn):
         system.configure_netboot(installation=installation, service=u'HTTP')
         system.record_activity(user=identity.current.user, service=u'HTTP',
                                action=u'Provision', field=u'Distro Tree',
-                               new=unicode(distro_tree))
+                               new=six.text_type(distro_tree))
         if data.get('reboot'):
             system.action_power(action=u'reboot', installation=installation,
                                 service=u'HTTP')
@@ -1569,10 +1572,10 @@ def ipxe_script(uuid):
         distro_tree_url = recipe.installation.tree_url
         # This should actually never happen, since we are testing before
         # already for compatibility.
-        if urlparse.urlparse(distro_tree_url).scheme not in ['http', 'ftp']:
+        if urllib.parse.urlparse(distro_tree_url).scheme not in ['http', 'ftp']:
             raise NotFound404('Given tree URL %s incompatible with iPXE' % distro_tree_url)
-    kernel_url = urlparse.urljoin(distro_tree_url, recipe.installation.kernel_path)
-    initrd_url = urlparse.urljoin(distro_tree_url, recipe.installation.initrd_path)
+    kernel_url = urllib.parse.urljoin(distro_tree_url, recipe.installation.kernel_path)
+    initrd_url = urllib.parse.urljoin(distro_tree_url, recipe.installation.initrd_path)
     kernel_options = recipe.installation.kernel_options + ' netboot_method=ipxe'
 
     # strip out netbootloader=.. string since it doesn't make sense for

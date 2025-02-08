@@ -21,6 +21,10 @@ from bkr.server.bexceptions import BeakerException
 import cherrypy
 
 import logging
+
+import six
+
+
 log = logging.getLogger(__name__)
 
 def _get_rs_by_id(id):
@@ -55,7 +59,7 @@ def _update_recipeset(recipeset, data=None):
                 if priority not in allowed:
                     raise Forbidden403('Cannot set recipe set %s priority to %s, '
                             'permitted priorities are: %s'
-                            % (recipeset.id, priority, ' '.join(unicode(pri) for pri in allowed)))
+                            % (recipeset.id, priority, ' '.join(six.text_type(pri) for pri in allowed)))
                 record_activity(u'Priority', old=recipeset.priority.value, new=priority.value)
                 recipeset.priority = priority
         if 'waived' in data:
@@ -65,7 +69,7 @@ def _update_recipeset(recipeset, data=None):
             if waived != recipeset.waived:
                 if not recipeset.can_waive(identity.current.user):
                     raise Forbidden403('Cannot waive recipe set %s' % recipeset.id)
-                record_activity(u'Waived', old=unicode(recipeset.waived), new=unicode(waived))
+                record_activity(u'Waived', old=six.text_type(recipeset.waived), new=six.text_type(waived))
                 recipeset.waived = waived
 
 @app.route('/recipesets/<int:id>', methods=['PATCH'])
@@ -112,7 +116,7 @@ def update_recipeset_by_taskspec(taskspec):
     try:
         obj = TaskBase.get_by_t_id(taskspec)
     except BeakerException as exc:
-        raise NotFound404(unicode(exc))
+        raise NotFound404(six.text_type(exc))
     data = read_json_request(request)
     if isinstance(obj, Job):
         for rs in obj.recipesets:

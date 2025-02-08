@@ -6,7 +6,6 @@
 
 import sys
 import logging
-import xmlrpclib
 from datetime import datetime
 import cherrypy, cherrypy.config
 import turbogears
@@ -15,9 +14,13 @@ from turbogears.database import session
 from bkr.server import identity
 from formencode.api import Invalid
 
+from six.moves import xmlrpc_client
+
+
 log = logging.getLogger(__name__)
 
-class XMLRPCMethodDoesNotExist(TypeError): pass
+class XMLRPCMethodDoesNotExist(TypeError):
+    pass
 
 class RPCRoot(controllers.Controller):
 
@@ -46,7 +49,7 @@ class RPCRoot(controllers.Controller):
 
     @turbogears.expose()
     def RPC2(self, *args, **kw):
-        params, method = xmlrpclib.loads(cherrypy.request.body.read(), use_datetime=True) # pylint:disable=no-member
+        params, method = xmlrpc_client.loads(cherrypy.request.body.read(), use_datetime=True) # pylint:disable=no-member
         if str(method).startswith('auth.'):
             log.debug('Handling %s', str(method))
         else:
@@ -57,29 +60,29 @@ class RPCRoot(controllers.Controller):
                 # prevent recursion
                 raise AssertionError("method cannot be 'RPC2'")
             response = self.process_rpc(method,params)
-            response = xmlrpclib.dumps((response,), methodresponse=1, allow_none=True)
+            response = xmlrpc_client.dumps((response,), methodresponse=1, allow_none=True)
             session.flush()
-        except identity.IdentityFailure, e:
+        except identity.IdentityFailure as e:
             session.rollback()
-            response = xmlrpclib.dumps(xmlrpclib.Fault(1,"%s: %s" % (e.__class__, str(e))))
-        except xmlrpclib.Fault, fault:
+            response = xmlrpc_client.dumps(xmlrpc_client.Fault(1,"%s: %s" % (e.__class__, str(e))))
+        except xmlrpc_client.Fault as fault:
             session.rollback()
             log.exception('Error handling XML-RPC method')
             # Can't marshal the result
-            response = xmlrpclib.dumps(fault)
+            response = xmlrpc_client.dumps(fault)
         except XMLRPCMethodDoesNotExist as e:
             session.rollback()
-            response = xmlrpclib.dumps(xmlrpclib.Fault(1,
+            response = xmlrpc_client.dumps(xmlrpc_client.Fault(1,
                     'XML-RPC method %s not implemented by this server' % e.args[0]))
-        except Invalid, e:
+        except Invalid as e:
              session.rollback()
-             response = xmlrpclib.dumps(xmlrpclib.Fault(1, str(e)))
+             response = xmlrpc_client.dumps(xmlrpc_client.Fault(1, str(e)))
         except Exception:
             session.rollback()
             log.exception('Error handling XML-RPC method')
             # Some other error; send back some error info
-            response = xmlrpclib.dumps(
-                xmlrpclib.Fault(1, "%s:%s" % sys.exc_info()[:2])
+            response = xmlrpc_client.dumps(
+                xmlrpc_client.Fault(1, "%s:%s" % sys.exc_info()[:2])
                 )
 
         if str(method).startswith('auth.'):

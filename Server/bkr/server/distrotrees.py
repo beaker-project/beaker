@@ -4,7 +4,6 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import urlparse
 import cherrypy
 import os
 from kid import Element
@@ -16,7 +15,10 @@ from bkr.server.model import session, DistroTree, Distro, OSVersion, OSMajor, \
         LabController, LabControllerDistroTree, DistroTreeActivity, \
         Arch, DistroTag
 from bkr.server.widgets import TaskSearchForm, myPaginateDataGrid, SearchBar, \
-        DistroTreeInstallOptionsWidget, DeleteLinkWidgetForm
+    DistroTreeInstallOptionsWidget, DeleteLinkWidgetForm
+
+import six
+from six.moves import urllib
 from bkr.server.helpers import make_link
 from bkr.server.controller_utilities import Utility, restrict_http_method
 from bkr.server.xmlrpccontroller import RPCRoot
@@ -142,7 +144,7 @@ name=%s
 baseurl=%s
 enabled=1
 gpgcheck=0
-''' % (repo.repo_id, repo.repo_id, urlparse.urljoin(base, repo.path)))
+''' % (repo.repo_id, repo.repo_id, urllib.parse.urljoin(base, repo.path)))
         return '\n'.join(sections)
 
     @expose()
@@ -229,14 +231,14 @@ gpgcheck=0
         """
         unrecognized_scheme = ''
         new_urls_by_scheme = dict(
-            (urlparse.urlparse(url, scheme=unrecognized_scheme).scheme, url) for url in urls)
+            (urllib.parse.urlparse(url, scheme=unrecognized_scheme).scheme, url) for url in urls)
 
         if unrecognized_scheme in new_urls_by_scheme:
             raise ValueError('URL %s is not absolute' % new_urls_by_scheme[unrecognized_scheme])
 
         for lca in distro_tree.lab_controller_assocs:
             if lca.lab_controller == lab_controller:
-                scheme = urlparse.urlparse(lca.url).scheme
+                scheme = urllib.parse.urlparse(lca.url).scheme
                 new_url = new_urls_by_scheme.pop(scheme, None)
                 # replace old url if it's the same scheme
                 if new_url is not None and lca.url != new_url:
@@ -348,12 +350,12 @@ gpgcheck=0
         return [{'distro_tree_id': dt.id,
                  'distro_id': dt.distro.id,
                  'distro_name': dt.distro.name,
-                 'distro_osversion': unicode(dt.distro.osversion),
-                 'distro_osmajor' : unicode(dt.distro.osversion.osmajor),
-                 'distro_tags': [unicode(tag) for tag in dt.distro.tags],
-                 'arch': unicode(dt.arch),
+                 'distro_osversion': six.text_type(dt.distro.osversion),
+                 'distro_osmajor' : six.text_type(dt.distro.osversion.osmajor),
+                 'distro_tags': [six.text_type(tag) for tag in dt.distro.tags],
+                 'arch': six.text_type(dt.arch),
                  'variant': dt.variant,
-                 'images' : [(unicode(image.image_type), image.path) for image in dt.images],
+                 'images' : [(six.text_type(image.image_type), image.path) for image in dt.images],
                  'kernel_options': dt.kernel_options or u'',
                  'kernel_options_post': dt.kernel_options_post or u'',
                  'ks_meta': dt.ks_meta or u'',

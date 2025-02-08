@@ -10,6 +10,7 @@ from bkr.server import identity
 from bkr.server.app import app
 from bkr.server.model import System, SystemPool, SystemAccessPolicy, \
     SystemAccessPolicyRule, User, Group, SystemPermission, Activity
+import six
 from bkr.server.flask_util import auth_required, \
     convert_internal_errors, read_json_request, BadRequest400, \
     Forbidden403, MethodNotAllowed405, NotFound404, Conflict409, \
@@ -176,7 +177,7 @@ def create_pool():
         pool.access_policy.add_rule(SystemPermission.view, everybody=True)
         pool.record_activity(user=u, service=u'HTTP',
                      action=u'Created', field=u'Pool',
-                     new=unicode(pool))
+                     new=six.text_type(pool))
     response = jsonify(pool.__json__())
     response.status_code = 201
     response.headers.add('Location', absolute_url(pool.href))
@@ -261,12 +262,12 @@ def add_system_to_pool(pool_name):
             system.record_activity(user=u, service=u'HTTP',
                                    action=u'Added', field=u'Pool',
                                    old=None,
-                                   new=unicode(pool))
+                                   new=six.text_type(pool))
             system.pools.append(pool)
             system.date_modified = datetime.datetime.utcnow()
             pool.record_activity(user=u, service=u'HTTP',
                                  action=u'Added', field=u'System', old=None,
-                                 new=unicode(system))
+                                 new=six.text_type(system))
         else:
             if not pool.can_edit(u):
                 raise Forbidden403('You do not have permission to '
@@ -304,10 +305,10 @@ def remove_system_from_pool(pool_name):
                                        new = system.custom_access_policy)
             system.pools.remove(pool)
             system.record_activity(user=u, service=u'HTTP',
-                                   action=u'Removed', field=u'Pool', old=unicode(pool), new=None)
+                                   action=u'Removed', field=u'Pool', old=six.text_type(pool), new=None)
             system.date_modified = datetime.datetime.utcnow()
             pool.record_activity(user=u, service=u'HTTP',
-                       action=u'Removed', field=u'System', old=unicode(system), new=None)
+                       action=u'Removed', field=u'System', old=six.text_type(system), new=None)
         else:
             raise Forbidden403('You do not have permission to modify system %s'
                                'or remove systems from pool %s' % (system.fqdn, pool.name))
@@ -332,11 +333,11 @@ def get_access_policy(pool_name):
              'user': rule.user.user_name if rule.user else None,
              'group': rule.group.group_name if rule.group else None,
              'everybody': rule.everybody,
-             'permission': unicode(rule.permission)}
+             'permission': six.text_type(rule.permission)}
             for rule in rules],
         'possible_permissions': [
-            {'value': unicode(permission),
-             'label': unicode(permission.label)}
+            {'value': six.text_type(permission),
+             'label': six.text_type(permission.label)}
             for permission in SystemPermission],
     })
 
@@ -460,7 +461,7 @@ def delete_pool(pool_name):
     System.record_bulk_activity(systems, user=identity.current.user,
                                 service=u'HTTP', action=u'Removed',
                                 field=u'Pool',
-                                old=unicode(pool),
+                                old=six.text_type(pool),
                                 new=None)
     # Since we are deleting the pool, we will have to change the active
     # access policy for all systems using the pool's policy to their

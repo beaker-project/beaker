@@ -15,6 +15,9 @@ from sqlalchemy.orm import class_mapper, object_mapper, ColumnProperty
 from sqlalchemy.ext.declarative import declarative_base
 from .sql import ConditionalInsert
 
+import six
+
+
 log = logging.getLogger(__name__)
 
 class MappedObject(object):
@@ -39,7 +42,7 @@ class MappedObject(object):
         # scan the class for any validators that need triggering
         for key, method in util.iterate_attributes(cls):
             if hasattr(method, '__sa_validators__'):
-                for arg_key, arg_val in kwargs.iteritems():
+                for arg_key, arg_val in six.iteritems(kwargs):
                     if arg_key in method.__sa_validators__:
                         method(cls, arg_key, arg_val)
 
@@ -52,9 +55,9 @@ class MappedObject(object):
         extra_params = {}
         assert len(class_mapper(cls).tables) == 1
         table = class_mapper(cls).tables[0]
-        for k, v in kwargs.iteritems():
+        for k, v in six.iteritems(kwargs):
             unique_params[table.c[k]] = v
-        for k, v in _extra_attrs.iteritems():
+        for k, v in six.iteritems(_extra_attrs):
             extra_params[table.c[k]] = v
         succeeded = False
         for attempt in range(1, 7):
@@ -67,11 +70,11 @@ class MappedObject(object):
                     unique_params, extra_params))
                 succeeded = True
                 break
-            except OperationalError, e:
+            except OperationalError as e:
                 # This seems like a reasonable way to check the string.
                 # We could use a regex, but this is more straightforward.
                 # XXX MySQL-specific
-                if '(OperationalError) (1213' not in unicode(e):
+                if '(OperationalError) (1213' not in six.text_type(e):
                     raise
         if not succeeded:
             log.debug('Exhausted maximum attempts of conditional insert')
@@ -80,7 +83,7 @@ class MappedObject(object):
         if extra_params:
             session.connection(cls).execute(table.update()
                     .values(extra_params)
-                    .where(and_(*[col == value for col, value in unique_params.iteritems()])))
+                    .where(and_(*[col == value for col, value in six.iteritems(unique_params)])))
 
         return cls.query.with_lockmode('update').filter_by(**kwargs).one()
 
@@ -100,7 +103,7 @@ class MappedObject(object):
             else:
                 default_value = default.arg
             setattr(self, prop.key, default_value)
-        for k, v in kwargs.iteritems():
+        for k, v in six.iteritems(kwargs):
             setattr(self, k, v)
 
     def __repr__(self):

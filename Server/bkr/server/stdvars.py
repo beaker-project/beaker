@@ -4,12 +4,14 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import urllib
 import turbogears
 from turbojson import jsonify
 from flask import request
 import bkr.common
 from bkr.server import identity
+
+from six.moves import urllib
+
 
 def jsonify_for_html(obj):
     json = jsonify.encode(obj)
@@ -24,11 +26,11 @@ def jsonify_for_html(obj):
 def beaker_version():
    try: 
         return bkr.common.__version__
-   except AttributeError, (e): 
+   except AttributeError:
         return 'devel-version'   
 
 def login_url():
-    forward_url = urllib.quote(request.path.encode('utf8'))
+    forward_url = urllib.parse.quote(request.path.encode('utf8'))
     if request.query_string:
         forward_url += '?%s' % request.query_string
     return turbogears.url('/login', forward_url=forward_url)

@@ -14,6 +14,7 @@ import datetime
 import lxml.etree
 import mock
 import netaddr
+import six
 import turbogears.config
 import turbogears.database
 import uuid
@@ -69,7 +70,7 @@ def unique_name(pattern):
     # time.time() * 1000 is no good, KVM guest wall clock is too dodgy
     # so we just use a global counter instead
     # http://29a.ch/2009/2/20/atomic-get-and-increment-in-python
-    return pattern % _counter.next()
+    return pattern % next(_counter)
 
 def create_product(product_name=None):
     if product_name is None:
@@ -295,7 +296,7 @@ def create_system(arch=u'i386', type=SystemType.machine, status=None,
     if System.query.filter(System.fqdn == fqdn).count():
         if return_existing:
             system = System.query.filter(System.fqdn == fqdn).first()
-            for property, value in kw.iteritems():
+            for property, value in six.iteritems(kw):
                setattr(system, property, value)
         else:
             raise ValueError('Attempted to create duplicate system %s' % fqdn)
@@ -476,7 +477,7 @@ def create_recipe(distro_tree=None, task_list=None,
             distro_tree = create_distro_tree(**kwargs)
         recipe.distro_tree = distro_tree
         recipe.installation = recipe.distro_tree.create_installation_from_tree()
-        recipe.distro_requires = lxml.etree.tostring(recipe.distro_tree.to_xml(), encoding=unicode)
+        recipe.distro_requires = lxml.etree.tostring(recipe.distro_tree.to_xml(), encoding=six.text_type)
     else:
         name = kwargs.get('distro_name', u'MyAwesomeLinux1.0')
         tree_url = kwargs.get('tree_url', u'ftp://dummylab.example.com/distros/MyAwesomeLinux1/')
