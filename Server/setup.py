@@ -4,13 +4,16 @@ from setuptools import setup, find_packages
 import glob
 import re
 import os
-import commands
-from distutils import log
+import subprocess
 from distutils.core import Command
-from distutils.util import change_root
 from distutils.command.build_py import build_py
 from distutils.command.build import build as _build
 from setuptools.command.install import install as _install
+
+try:
+    from commands import getstatusoutput
+except ImportError:
+    from subprocess import getstatusoutput
 
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'Common'))
@@ -21,14 +24,14 @@ poFiles = filter(os.path.isfile, glob.glob('po/*.po'))
 SUBSTFILES = ('bkr/server/config/app.cfg')
 
 def systemd_unit_dir():
-    status, output = commands.getstatusoutput('pkg-config --variable systemdsystemunitdir systemd')
+    status, output = getstatusoutput('pkg-config --variable systemdsystemunitdir systemd')
     if status or not output:
         return None # systemd not found
     return output.strip()
 
 def systemd_tmpfiles_dir():
     # There doesn't seem to be a specific pkg-config variable for this
-    status, output = commands.getstatusoutput('pkg-config --variable prefix systemd')
+    status, output = getstatusoutput('pkg-config --variable prefix systemd')
     if status or not output:
         return None # systemd not found
     return output.strip() + '/lib/tmpfiles.d'
@@ -65,12 +68,12 @@ class Build(_build, object):
             if not os.path.exists(infile):
                 continue
             try:
-                f = file(infile, 'r')
+                f = open(infile, 'r')
             except IOError:
                 if not self.dry_run:
                     raise
                 f = None
-            outf = file(filename, 'w')
+            outf = open(filename, 'w')
             for line in f.readlines():
                 matches = self.subRE.search(line)
                 if matches:
