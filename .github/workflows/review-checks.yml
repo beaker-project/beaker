@@ -93,9 +93,8 @@ jobs:
           yum install https://repo.ius.io/ius-release-el7.rpm epel-release -y
           yum install git236-core -y
 
-      # Do not upgrade to @v4 as node 20 is incompatible with CentOS 7
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Remove custom git from the IUS repository - git will be reinstalled later as it is needed by beaker itself.
       - name: Remove git236 and YUM repositories
@@ -210,7 +209,7 @@ jobs:
 
       # Do not upgrade to @v4 as node 20 is incompatible with CentOS 7
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Add Beaker Server YUM repository
         if: matrix.os-target.name == 'centos:7'
