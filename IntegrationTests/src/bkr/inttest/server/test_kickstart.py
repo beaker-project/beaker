@@ -4331,5 +4331,5 @@ volgroup bootvg --pesize=32768 pv.01
             ''' % '\n'.join(payload), self.system)
         ks = recipe.installation.rendered_kickstart.kickstart
         ks_lines = ks.splitlines()
-        for actual, expected in izip_longest(payload, ks_lines):
-            self.assertTrue(actual == expected, ks)
+        for actual, expected in six.moves.zip_longest(payload, ks_lines):
+            self.assert_(actual == expected, ks)

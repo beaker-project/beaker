@@ -269,8 +269,8 @@ class TaskResultTest(LabControllerTestCase):
             session.expire(self.recipe.tasks[0])
             self.assertEqual(len(self.recipe.tasks[0].results), 7500)
         # Test XMLRPC endpoint
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
-        with assertRaisesRegex(self, xmlrpclib.Fault, 'Too many results'):
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url())
+        with self.assertRaisesRegexp(xmlrpc_client.Fault, 'Too many results'):
             s.task_result(self.recipe.tasks[0].id, 'pass_', '/', 0, 'Should fail')
         # Test POST endpoint
         results_url = '%srecipes/%s/tasks/%s/results/' % (self.get_proxy_url(),
