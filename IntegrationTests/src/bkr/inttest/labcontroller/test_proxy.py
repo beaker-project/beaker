@@ -929,7 +929,7 @@ class LogUploadTest(LabControllerTestCase):
             s.recipe_upload_file(self.recipe.id, '/', 'recipe-log', 10, None, 0,
                     b64encode('a' * 10))
             self.fail('should raise')
-        except xmlrpclib.Fault as fault:
+        except xmlrpc_client.Fault as fault:
             self.assertTrue('Cannot register file for finished recipe'
                     in fault.faultString)
 
@@ -1007,7 +1007,7 @@ class LogUploadTest(LabControllerTestCase):
             s.task_upload_file(task.id, '/', 'task-log', 10, None, 0,
                     b64encode('a' * 10))
             self.fail('should raise')
-        except xmlrpclib.Fault as fault:
+        except xmlrpc_client.Fault as fault:
             self.assertTrue('Cannot register file for finished task'
                     in fault.faultString)
 
@@ -1090,7 +1090,7 @@ class LogUploadTest(LabControllerTestCase):
             s.result_upload_file(result.id, '/', 'result-log-after-finished',
                     10, None, 0, b64encode('a' * 10))
             self.fail('should raise')
-        except xmlrpclib.Fault as fault:
+        except xmlrpc_client.Fault as fault:
             self.assertTrue('Cannot register file for finished task'
                     in fault.faultString)
 
@@ -1164,7 +1164,7 @@ class LogUploadTest(LabControllerTestCase):
             s.task_upload_file(123, 'debug', '.task_beah_raw', 4096, '', 1024,
                     'a' * (1024 * 1024 * 10 + 1))
             self.fail('should raise')
-        except xmlrpclib.ProtocolError as e:
+        except xmlrpc_client.ProtocolError as e:
             self.assertEqual(e.errcode, 413)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1003454
@@ -1203,8 +1203,8 @@ class LogUploadTest(LabControllerTestCase):
             session.expire(result)
             self.assertEqual(len(result.logs), 3500)
         # Test XMLRPC endpoint for result logs
-        s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
-        with assertRaisesRegex(self, xmlrpclib.Fault, 'Too many logs'):
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
+        with assertRaisesRegex(self, xmlrpc_client.Fault, 'Too many logs'):
             s.result_upload_file(result.id, '/', 'result-log', 10, None, 0,
                     b64encode('a' * 10))
         # Test POST endpoint for result logs
@@ -1214,8 +1214,8 @@ class LogUploadTest(LabControllerTestCase):
         self.assertEqual(response.status_code, 403)
         self.assertIn('Too many logs in recipe', response.text)
         # Test XMLRPC endpoint for task logs
-        s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
-        with assertRaisesRegex(self, xmlrpclib.Fault, 'Too many logs'):
+        s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
+        with assertRaisesRegex(self, xmlrpc_client.Fault, 'Too many logs'):
             s.task_upload_file(task.id, '/', 'task-log', 10, None, 0,
                     b64encode('a' * 10))
         # Test POST endpoint for task logs
