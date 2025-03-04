@@ -24,6 +24,11 @@ from bkr.common.pyconfig import PyConfigParser
 def get_user_config_file():
     user_config_file = os.environ.get('BEAKER_CLIENT_CONF', None)
     if user_config_file:
+        if not os.path.exists(user_config_file):
+            sys.stderr.write(
+                "File at '%s' indicated by BEAKER_CLIENT_CONF does not exist"
+            )
+            raise SystemExit(1)
         return user_config_file
 
     user_config_file = os.path.expanduser('~/.beaker_client/config')
