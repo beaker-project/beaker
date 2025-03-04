@@ -31,15 +31,32 @@ def get_user_config_file():
             raise SystemExit(1)
         return user_config_file
 
-    user_config_file = os.path.expanduser('~/.beaker_client/config')
+    # ~/.config/beaker-client.conf
+    xdg_config_home = os.environ.get(
+        'XDG_CONFIG_HOME', os.path.expanduser('~/.config')
+    )
+    user_config_file = os.path.join(xdg_config_home, 'beaker-client.conf')
     if os.path.exists(user_config_file):
         return user_config_file
 
+    # ~/.beaker-client/config
+    user_config_file = os.path.expanduser('~/.beaker_client/config')
+    if os.path.exists(user_config_file):
+        sys.stderr.write(
+            '%s is deprecated for config, please use %s instead\n' % (
+                user_config_file,
+                os.path.join(xdg_config_home, 'beaker-client.conf')
+            )
+        )
+        return user_config_file
+
+    # ~/.beaker
     user_config_file = os.path.expanduser('~/.beaker')
     if os.path.exists(user_config_file):
         sys.stderr.write(
             '%s is deprecated for config, please use %s instead\n' % (
-                user_config_file, os.path.expanduser('~/.beaker_client/config')
+                user_config_file,
+                os.path.join(xdg_config_home, 'beaker-client.conf')
             )
         )
         return user_config_file
