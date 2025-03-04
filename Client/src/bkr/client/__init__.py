@@ -20,22 +20,37 @@ from six.moves.urllib_parse import urljoin
 from bkr.client.command import Command
 from bkr.common.pyconfig import PyConfigParser
 
-user_config_file = os.environ.get("BEAKER_CLIENT_CONF", None)
-if not user_config_file:
-    user_conf = os.path.expanduser('~/.beaker_client/config')
-    old_conf = os.path.expanduser('~/.beaker')
-    if os.path.exists(user_conf):
-        user_config_file = user_conf
-    elif os.path.exists(old_conf):
-        user_config_file = old_conf
-        sys.stderr.write(
-            "%s is deprecated for config, please use %s instead\n" % (old_conf, user_conf))
-    else:
-        pass
 
-system_config_file = None
-if os.path.exists('/etc/beaker/client.conf'):
-    system_config_file = '/etc/beaker/client.conf'
+def get_user_config_file():
+    user_config_file = os.environ.get('BEAKER_CLIENT_CONF', None)
+    if user_config_file:
+        return user_config_file
+
+    user_config_file = os.path.expanduser('~/.beaker_client/config')
+    if os.path.exists(user_config_file):
+        return user_config_file
+
+    user_config_file = os.path.expanduser('~/.beaker')
+    if os.path.exists(user_config_file):
+        sys.stderr.write(
+            '%s is deprecated for config, please use %s instead\n' % (
+                user_config_file, os.path.expanduser('~/.beaker_client/config')
+            )
+        )
+        return user_config_file
+
+    return None
+
+
+def get_system_config_file():
+    if os.path.exists('/etc/beaker/client.conf'):
+        return '/etc/beaker/client.conf'
+
+    return None
+
+
+user_config_file = get_user_config_file()
+system_config_file = get_system_config_file()
 
 conf = PyConfigParser()
 if system_config_file:
