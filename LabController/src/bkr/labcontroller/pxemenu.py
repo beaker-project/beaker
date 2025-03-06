@@ -141,13 +141,22 @@ def write_menus(tftp_root, tags, xml_filter):
         existing_tree_ids = []
 
     proxy = xmlrpc_client.ServerProxy('http://localhost:8000', allow_none=True)
-    distro_trees = proxy.get_distro_trees({
-        'arch': ['x86_64', 'i386', 'aarch64', 'ppc64', 'ppc64le'],
-        'tags': tags,
-        'xml': xml_filter,
-    })
-    current_tree_ids = set(str(dt['distro_tree_id'])
-                           for dt in distro_trees)
+    arch_list = ['x86_64', 'i386', 'aarch64', 'ppc64', 'ppc64le']
+
+    # build a dictionary of distros trees for each arch and
+    # a full unique set of the current tree IDs for all archs
+    arch_distrotrees = dict()
+    current_tree_ids = set()
+    for arch in arch_list:
+        arch_distrotrees[arch] = proxy.get_distro_trees({
+            'arch': [ arch ],
+            'tags': tags,
+            'xml': xml_filter,
+        })
+        for dt in arch_distrotrees[arch]:
+            current_tree_ids.add(str(dt['distro_tree_id']))
+
+    # determine which of existing tree ids are no longer valid
     obsolete_tree_ids = set(existing_tree_ids).difference(current_tree_ids)
     print('Removing images for %s obsolete distro trees' % len(obsolete_tree_ids))
     for obs in obsolete_tree_ids:
@@ -155,21 +164,23 @@ def write_menus(tftp_root, tags, xml_filter):
 
     # Fetch images for all the distro trees first.
     print('Fetching images for all the distro trees')
-    distro_trees = _get_all_images(tftp_root, distro_trees)
+    for arch in arch_list:
+        arch_distrotrees[arch] = _get_all_images(tftp_root, arch_distrotrees[arch])
 
-    x86_distrotrees = [distro for distro in distro_trees if distro['arch'] in ['x86_64', 'i386']]
+    x86_distrotrees = arch_distrotrees['x86_64'] + arch_distrotrees['i386']
     print('Generating PXELINUX menus for %s distro trees' % len(x86_distrotrees))
     makedirs_ignore(os.path.join(tftp_root, 'pxelinux.cfg'), mode=0o755)
     pxe_menu = atomically_replaced_file(os.path.join(tftp_root, 'pxelinux.cfg', 'beaker_menu'))
     write_menu(pxe_menu, u'pxelinux-menu', x86_distrotrees)
 
-    ipxe_distrotrees = [distro for distro in distro_trees if distro['arch'] in ['x86_64', 'i386', 'aarch64']]
+    ipxe_distrotrees = arch_distrotrees['x86_64'] + arch_distrotrees['aarch64'] + \
+                       arch_distrotrees['i386']
     print('Generating iPXE menus for %s distro trees' % len(ipxe_distrotrees))
     makedirs_ignore(os.path.join(tftp_root, 'ipxe'), mode=0o755)
     pxe_menu = atomically_replaced_file(os.path.join(tftp_root, 'ipxe', 'beaker_menu'))
     write_menu(pxe_menu, u'ipxe-menu', ipxe_distrotrees)
 
-    x86_efi_distrotrees = [distro for distro in distro_trees if distro['arch'] == 'x86_64']
+    x86_efi_distrotrees = arch_distrotrees['x86_64']
     # Regardless of any filtering options selected by the admin, we always
     # filter out certain distros which are known not to have EFI support. This
     # is a space saving measure for the EFI GRUB menu, which can't be nested so
@@ -190,7 +201,7 @@ def write_menus(tftp_root, tags, xml_filter):
                                                            'beaker_menu_x86.cfg'))
     write_menu(x86_grub2_menu, u'grub2-menu', x86_efi_distrotrees)
 
-    ppc64_distrotrees = [distro for distro in distro_trees if distro['arch'] == 'ppc64']
+    ppc64_distrotrees = arch_distrotrees['ppc64']
     if ppc64_distrotrees:
         print('Generating GRUB2 menus for PPC64 EFI for %s distro trees' % len(ppc64_distrotrees))
         makedirs_ignore(os.path.join(tftp_root, 'boot', 'grub2'), mode=0o755)
@@ -198,7 +209,7 @@ def write_menus(tftp_root, tags, xml_filter):
                                                                  'beaker_menu_ppc64.cfg'))
         write_menu(ppc64_grub2_menu, u'grub2-menu', ppc64_distrotrees)
 
-    ppc64le_distrotrees = [distro for distro in distro_trees if distro['arch'] == 'ppc64le']
+    ppc64le_distrotrees = arch_distrotrees['ppc64le']
     if ppc64le_distrotrees:
         print('Generating GRUB2 menus for PPC64LE EFI for %s distro trees' % len(ppc64_distrotrees))
         makedirs_ignore(os.path.join(tftp_root, 'boot', 'grub2'), mode=0o755)
@@ -207,14 +218,13 @@ def write_menus(tftp_root, tags, xml_filter):
         write_menu(ppc64le_grub2_menu, u'grub2-menu', ppc64le_distrotrees)
 
     # XXX: would be nice if we can find a good time to move this into boot/grub2
-    aarch64_distrotrees = [distro for distro in distro_trees if distro['arch'] == 'aarch64']
+    aarch64_distrotrees = arch_distrotrees['aarch64']
     if aarch64_distrotrees:
         print('Generating GRUB2 menus for aarch64 for %s distro trees' % len(aarch64_distrotrees))
         makedirs_ignore(os.path.join(tftp_root, 'aarch64'), mode=0o755)
         aarch64_menu = atomically_replaced_file(
             os.path.join(tftp_root, 'aarch64', 'beaker_menu.cfg'))
         write_menu(aarch64_menu, u'grub2-menu', aarch64_distrotrees)
-
 
 def main():
     parser = OptionParser(description='''Writes a netboot menu to the TFTP root
