@@ -26,6 +26,8 @@ jobs:
         run: uv python install --python-preference only-managed ${{ matrix.env }}
       - name: Install tox
         run: uv tool install --python-preference only-managed --python ${{ matrix.env }} tox --with ${{ matrix.library }}/
+      - name: Install libkrb5-dev
+        run: apt-get install -y libkrb5-dev
       - name: Setup test suite
         run: tox run -vv --notest --skip-missing-interpreters false -e ${{ matrix.env }}
         env:
