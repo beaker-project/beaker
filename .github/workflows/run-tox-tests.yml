@@ -1,0 +1,42 @@
+name: run unit tests with tox
+run-name: ${{ github.actor }} run unit tests with tox
+on: [push]
+jobs:
+  run-tox:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        env:
+          - "3.10"
+          - "3.9"
+        library:
+          - "Common"
+          - "Server"
+          - "LabController"
+          - "Client"
+    steps:
+      - uses: actions/checkout@v4
+      # Use uv instead of actions/setup-python and setuptools/etc
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Install Python
+        run: uv python install --python-preference only-managed ${{ matrix.env }}
+      - name: Install libkrb5-dev
+        run: sudo apt-get install -y libkrb5-dev
+      - name: Install tox
+        run: uv tool install --python-preference only-managed --python ${{ matrix.env }} tox --with ${{ matrix.library }}/ --with Common/
+      - name: Setup test suite
+        run: tox run -vv --notest --skip-missing-interpreters false -e ${{ matrix.env }}
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
+
+      - name: Run test suite
+        run: tox run --skip-pkg-install -e ${{ matrix.env }}
+        env:
+          PYTEST_ADDOPTS: "-vv"
+          UV_PYTHON_PREFERENCE: "only-managed"
+          TOXLIB: ${{ matrix.library }}
+
