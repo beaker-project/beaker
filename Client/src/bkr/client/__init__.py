@@ -1041,7 +1041,7 @@ EOF
 
     addDistroRequires = add_distro_requires
 
-    def add_task(self, task, role='STANDALONE', paramNodes=None, taskParams=None):
+    def add_task(self, task, role='STANDALONE', paramNodes=None, taskParams=None, fetch_url=None):
 
         if taskParams is None:
             taskParams = []
@@ -1060,6 +1060,10 @@ EOF
             param.setAttribute('value', taskParam.split('=', 1)[1])
             params.appendChild(param)
         recipeTask.appendChild(params)
+        if fetch_url:
+            fetch = self.doc.createElement('fetch')
+            fetch.setAttribute('url', '%s' % fetch_url)
+            recipeTask.appendChild(fetch)
         self.node.appendChild(recipeTask)
 
     addTask = add_task
