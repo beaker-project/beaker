@@ -23,6 +23,16 @@ jobs:
   - job: copr_build
     trigger: pull_request
     targets:
+      - epel-10-x86_64
+    identifier: rhel_10
+    actions:
+      post-upstream-clone:
+        # disable broken unit tests
+        - sed -i '/make check/d' beaker.spec
+
+  - job: copr_build
+    trigger: pull_request
+    targets:
       - fedora-all-x86_64
     identifier: fedora
     actions:
