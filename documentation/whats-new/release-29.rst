@@ -47,3 +47,9 @@ Beaker 29.1
     Fixed invalid escape sequences in Python 3.12 across various client code.
   | (Contributed by `Michael Hofmann <https://github.com/mh21>`_)
 
+Beaker 29.2
+~~~~~~~~~~~
+* | `GH#258 <https://github.com/beaker-project/beaker/issues/258>`_:
+    Beaker Client now allows to define `fetch_url` parameter when adding a new task.
+    (Contributed by `skycastlelily <https://github.com/skycastlelily>`_)
+
