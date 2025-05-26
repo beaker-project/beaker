@@ -22,7 +22,7 @@ Version:        29.2
 Release:        1%{?dist}
 Summary:        Full-stack software and hardware integration testing system
 Group:          Applications/Internet
-License:        GPLv2+ and BSD
+License:        GPL-2.0-or-later
 URL:            https://beaker-project.org/
 
 Source0:        https://github.com/beaker-project/beaker/archive/%{name}-%{upstream_version}.tar.gz
