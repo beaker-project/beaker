@@ -49,7 +49,7 @@ class Preferences(RPCRoot):
         return new_delegate_name
 
     #XMLRPC method for updating user preferences
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     @validate(validators=dict(email_address=validators.Email()))
     def update(self, email_address=None, tg_errors=None):

@@ -243,7 +243,7 @@ class RecipeSets(RPCRoot):
         flash(u"Successfully cancelled recipeset %s" % id)
         redirect("/jobs/%s" % recipeset.job.id)
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def stop(self, recipeset_id, stop_type, msg=None):
         """

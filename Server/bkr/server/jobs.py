@@ -168,7 +168,7 @@ class Jobs(RPCRoot):
             response.status = 400
             return ['Unable to delete %s' % t_id]
 
-    @cherrypy.expose
+    @expose()
     def list(self, tags, days_complete_for, family, product, **kw):
         """
         Lists Jobs, filtered by the given criteria.
@@ -195,7 +195,7 @@ class Jobs(RPCRoot):
 
         return self.filter(jobs)
 
-    @cherrypy.expose
+    @expose()
     def filter(self, filters):
         """
         Returns a list of details for jobs filtered by the given criteria.
@@ -311,7 +311,7 @@ class Jobs(RPCRoot):
         return_value = ['J:%s' % j[0] for j in jobs]
         return return_value
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def delete_jobs(self, jobs=None, tag=None, complete_days=None, family=None, dryrun=False, product=None):
         """
@@ -364,7 +364,7 @@ class Jobs(RPCRoot):
         return '%s: %s' % (msg, [j.t_id for j in deleted_jobs])
 
     # XMLRPC method
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def upload(self, jobxml, ignore_missing_tasks=False):
         """
@@ -762,7 +762,7 @@ class Jobs(RPCRoot):
                                new=response)
         return {'success': 1, 'rs_id': recipe_set_id}
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def set_retention_product(self, job_t_id, retention_tag_name, product_name):
         """
@@ -813,11 +813,11 @@ class Jobs(RPCRoot):
             raise BeakerException('No permission to modify %s' % job)
 
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def set_response(self, taskid, response):
         """
-        Updates the response (ack/nak) for a recipe set, or for all recipe sets 
+        Updates the response (ack/nak) for a recipe set, or for all recipe sets
         in a job.
 
         Deprecated: setting 'nak' is a backwards compatibility alias for 
@@ -839,7 +839,7 @@ class Jobs(RPCRoot):
             raise ValueError('Unrecognised response %r' % response)
         job.set_waived(waived)
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def stop(self, job_id, stop_type, msg=None):
         """

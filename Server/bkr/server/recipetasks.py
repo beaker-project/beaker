@@ -77,7 +77,7 @@ class RecipeTasks(RPCRoot):
             self._warn_once(recipetask, u'Too many results in recipe')
             raise ValueError(u'Too many results in recipe %s' % recipetask.recipe_id)
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def register_file(self, server, task_id, path, filename, basepath):
         """
@@ -103,7 +103,7 @@ class RecipeTasks(RPCRoot):
         recipetask.recipe.log_server = urllib.parse.urlparse(server)[1]
         return '%s' % recipetask.filepath
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def register_result_file(self, server, result_id, path, filename, basepath):
         """
@@ -130,7 +130,7 @@ class RecipeTasks(RPCRoot):
         return '%s' % result.filepath
 
 
-    @cherrypy.expose
+    @expose()
     def watchdogs(self, status='active',lc=None):
         """ Return all active/expired tasks for this lab controller
             The lab controllers login with host/fqdn
@@ -155,7 +155,7 @@ class RecipeTasks(RPCRoot):
                      system = w.recipe.resource.fqdn,
                      is_virt_recipe = (w.recipe.resource.type == ResourceType.virt)) for w in Watchdog.by_status(labcontroller, status)]
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def start(self, task_id, watchdog_override=None):
         """
@@ -167,7 +167,7 @@ class RecipeTasks(RPCRoot):
             raise BX('Invalid task ID: %s' % task_id)
         return task.start(watchdog_override)
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def extend(self, task_id, kill_time):
         """
@@ -179,7 +179,7 @@ class RecipeTasks(RPCRoot):
             raise BX('Invalid task ID: %s' % task_id)
         return task.extend(kill_time)
 
-    @cherrypy.expose
+    @expose()
     def watchdog(self, task_id):
         """
         Returns number of seconds left on task_id watchdog, or False if it doesn't exist.
@@ -190,7 +190,7 @@ class RecipeTasks(RPCRoot):
             raise BX('Invalid task ID: %s' % task_id)
         return task.status_watchdog()
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def stop(self, task_id, stop_type, msg=None):
         """
@@ -206,11 +206,11 @@ class RecipeTasks(RPCRoot):
         kwargs = dict(msg = msg)
         return getattr(task,stop_type)(**kwargs)
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def update(self, task_id, data):
         """
-        XML-RPC method used by the lab controller harness API to update 
+        XML-RPC method used by the lab controller harness API to update
         a recipe-task's attributes.
         """
         try:
@@ -226,7 +226,7 @@ class RecipeTasks(RPCRoot):
                 'version': task.version,
                 'status': six.text_type(task.status)}
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def result(self, task_id, result_type, path=None, score=None, summary=None):
         """
@@ -248,7 +248,7 @@ class RecipeTasks(RPCRoot):
         taskxml = RecipeTask.by_id(id).to_xml().toprettyxml()
         return dict(xml=taskxml)
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def peer_roles(self, task_id):
         try:

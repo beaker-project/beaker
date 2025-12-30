@@ -119,7 +119,7 @@ class Distros(RPCRoot):
         flash(u"Added Tag %s" % tag['text'])
         redirect("./view?id=%s" % id)
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.has_permission('distro_expire'))
     def expire(self, name, service=u'XMLRPC'):
         distro = Distro.by_name(name)
@@ -231,7 +231,7 @@ class Distros(RPCRoot):
                     list=distros)
 
     #XMLRPC method for listing distros
-    @cherrypy.expose
+    @expose()
     def filter(self, filter):
         """
         .. seealso:: :meth:`distrotrees.filter`
@@ -291,7 +291,7 @@ class Distros(RPCRoot):
                  'distro_tags': [six.text_type(tag) for tag in distro.tags],
                 } for distro in distros]
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def edit_version(self, name, version):
         """
@@ -333,7 +333,7 @@ class Distros(RPCRoot):
         return edited
 
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.has_permission('tag_distro'))
     def tag(self, name, tag):
         """
@@ -360,7 +360,7 @@ class Distros(RPCRoot):
                 distro.tags.append(tag)
         return added
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.has_permission('tag_distro'))
     def untag(self, name, tag):
         """

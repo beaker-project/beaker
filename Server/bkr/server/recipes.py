@@ -70,7 +70,7 @@ class Recipes(RPCRoot):
                      E = LogRecipeTaskResult,
                     )
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def by_log_server(self, server, limit=50):
         """
@@ -91,7 +91,7 @@ class Recipes(RPCRoot):
                 .limit(limit)
         return [recipe_id for recipe_id, in recipes.values(Recipe.id)]
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def register_file(self, server, recipe_id, path, filename, basepath):
         """
@@ -116,7 +116,7 @@ class Recipes(RPCRoot):
         recipe.log_server = urllib.parse.urlparse(server)[1]
         return '%s' % recipe.filepath
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def files(self, recipe_id):
         """
@@ -151,7 +151,7 @@ class Recipes(RPCRoot):
                 logdicts.append(logdict)
         return logdicts
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.in_group('lab_controller'))
     def change_files(self, recipe_id, server, basepath):
         """
@@ -168,7 +168,7 @@ class Recipes(RPCRoot):
         recipe.log_server = urllib.parse.urlparse(server)[1]
         return True
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def extend(self, recipe_id, kill_time):
         """
@@ -180,10 +180,10 @@ class Recipes(RPCRoot):
             raise BX('Invalid recipe ID: %s' % recipe_id)
         return recipe.extend(kill_time)
 
-    @cherrypy.expose
+    @expose()
     def console_output(self, recipe_id, output_length=None, offset=None):
         """
-        Get text console log output from OpenStack 
+        Get text console log output from OpenStack
         """
         try:
             recipe = Recipe.by_id(recipe_id)
@@ -192,7 +192,7 @@ class Recipes(RPCRoot):
         manager = dynamic_virt.VirtManager(recipe.recipeset.job.owner)
         return manager.get_console_output(recipe.resource.instance_id, output_length)
 
-    @cherrypy.expose
+    @expose()
     def watchdog(self, recipe_id):
         try:
             recipe = Recipe.by_id(recipe_id)
@@ -200,7 +200,7 @@ class Recipes(RPCRoot):
             raise BX('Invalid recipe ID: %s' % recipe_id)
         return recipe.status_watchdog()
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def stop(self, recipe_id, stop_type, msg=None):
         """
@@ -216,11 +216,11 @@ class Recipes(RPCRoot):
         kwargs = dict(msg = msg)
         return getattr(recipe,stop_type)(**kwargs)
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def install_start(self, recipe_id=None):
         """
-        Records the start of a recipe's installation. The watchdog is extended 
+        Records the start of a recipe's installation. The watchdog is extended
         by 3 hours to allow the installation to complete.
         """
         try:
@@ -242,7 +242,7 @@ class Recipes(RPCRoot):
             logger.debug('Already recorded install_started for %s', recipe.t_id)
             return False
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def install_fail(self, recipe_id=None):
         """
@@ -257,7 +257,7 @@ class Recipes(RPCRoot):
 
         return recipe.abort('Installation failed')
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def postinstall_done(self, recipe_id=None):
         """
@@ -273,7 +273,7 @@ class Recipes(RPCRoot):
         return True
 
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def install_done(self, recipe_id=None, fqdn=None):
         """
@@ -330,7 +330,7 @@ class Recipes(RPCRoot):
             value = dict(id=recipe_id),
         )
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def postreboot(self, recipe_id=None):
         # Backwards compat only, delete this after 0.10:
@@ -351,9 +351,9 @@ class Recipes(RPCRoot):
                     service=u'XMLRPC', delay=30)
         return True
 
-    @cherrypy.expose
+    @expose()
     def to_xml(self, recipe_id=None):
-        """ 
+        """
             Pass in recipe id and you'll get that recipe's xml
         """
         if not recipe_id:

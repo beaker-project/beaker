@@ -20,6 +20,7 @@ from bkr.server.model import User
 # deprecated
 __all__ = ['Auth']
 import cherrypy
+from turbogears import expose
 from turbogears.config import get
 from bkr.server.xmlrpccontroller import RPCRoot
 
@@ -224,7 +225,7 @@ class Auth(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def who_am_i(self):
         """
@@ -244,7 +245,7 @@ class Auth(RPCRoot):
             retval['proxied_by_username'] = identity.current.proxied_by_user.user_name
         return retval
 
-    @cherrypy.expose
+    @expose()
     def renew_session(self, *args, **kw):
         """
         Renew session, here to support the login method
@@ -254,7 +255,7 @@ class Auth(RPCRoot):
             return True
         return False
 
-    @cherrypy.expose
+    @expose()
     def login_password(self, username, password, proxy_user=None):
         """
         Authenticates the current session using the given username and password.
@@ -282,7 +283,7 @@ class Auth(RPCRoot):
             identity.set_authentication(user)
         return user.user_name
 
-    @cherrypy.expose
+    @expose()
     def login_oauth2(self, access_token, proxy_user=None):
         """
         Authenticates the current session using OAuth2.
@@ -329,7 +330,7 @@ class Auth(RPCRoot):
             identity.set_authentication(user)
         return username
 
-    @cherrypy.expose
+    @expose()
     def login_krbV(self, krb_request, proxy_user=None):
         """
         Authenticates the current session using Kerberos.
@@ -388,7 +389,7 @@ class Auth(RPCRoot):
     # Alias kerberos login
     login_krbv = login_krbV
 
-    @cherrypy.expose
+    @expose()
     def logout(self, *args):
         """
         Invalidates the current session.

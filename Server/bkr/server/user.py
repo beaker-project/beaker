@@ -11,7 +11,7 @@ from datetime import datetime
 from flask import request, jsonify, redirect as flask_redirect
 from sqlalchemy import not_
 from sqlalchemy.exc import InvalidRequestError
-from turbogears import config
+from turbogears import config, expose
 from turbogears.database import session
 
 from bkr.common.bexceptions import BX
@@ -41,7 +41,7 @@ class Users(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.in_group('admin'))
     def remove_account(self, username, newowner=None):
         """

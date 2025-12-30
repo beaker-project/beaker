@@ -69,7 +69,7 @@ class Tasks(RPCRoot):
         )
         return return_dict
 
-    @cherrypy.expose
+    @expose()
     def filter(self, filter):
         """
         Returns a list of tasks filtered by the given criteria.
@@ -173,7 +173,7 @@ class Tasks(RPCRoot):
             result.append({'name': task.name, 'arches': excluded_arches})
         return result
 
-    @cherrypy.expose
+    @expose()
     @identity.require(identity.not_anonymous())
     def upload(self, task_rpm_name, task_rpm_data):
         """
@@ -385,14 +385,14 @@ class Tasks(RPCRoot):
         task = task.lower()
         return dict(tasks=[(task.name) for task in Task.query.filter(Task.name.like('%s%%' % task))])
 
-    @cherrypy.expose
+    @expose()
     def to_xml(self, name, pretty, valid=True):
         """
         Returns task details as xml
         """
         return Task.by_name(name, valid).to_xml(pretty)
 
-    @cherrypy.expose
+    @expose()
     def to_dict(self, name, valid=None):
         """
         Returns an XML-RPC structure (dict) with details about the given task.

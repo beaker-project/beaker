@@ -313,7 +313,7 @@ class SystemsController(controllers.Controller):
                      )
                 for a in activities]
 
-    @cherrypy.expose()
+    @expose()
     @identity.require(identity.not_anonymous())
     def get_osmajor_arches(self, fqdn, tags=None):
         """

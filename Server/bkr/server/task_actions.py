@@ -23,6 +23,7 @@ values for *type*:
 
 import lxml.etree
 from sqlalchemy.exc import InvalidRequestError
+from turbogears import expose
 from bkr.server import identity
 from bkr.server.model import (Job, RecipeSet, Recipe,
                               RecipeTask, RecipeTaskResult, TaskBase)
@@ -48,7 +49,7 @@ class TaskActions(RPCRoot):
 
     stoppable_task_types = dict([(rep, obj) for rep,obj in six.iteritems(task_types) if obj not in unstoppable_task_types])
 
-    @cherrypy.expose
+    @expose()
     def task_info(self, taskid,flat=True):
         """
         Returns an XML-RPC structure (dict) describing the current state of the 
@@ -59,7 +60,7 @@ class TaskActions(RPCRoot):
         """
         return TaskBase.get_by_t_id(taskid).task_info()
 
-    @cherrypy.expose
+    @expose()
     def to_xml(self, taskid, clone=False, exclude_enclosing_job=True, include_logs=True):
         """
         Returns an XML representation of the given job component, including its 
@@ -90,7 +91,7 @@ class TaskActions(RPCRoot):
                             include_logs=include_logs),
                 xml_declaration=False, encoding='UTF-8')
 
-    @cherrypy.expose
+    @expose()
     def files(self, taskid):
         """
         Returns an array of XML-RPC structures (dicts) describing each of the 
@@ -102,7 +103,7 @@ class TaskActions(RPCRoot):
         return [l.dict for l in TaskBase.get_by_t_id(taskid).all_logs()]
 
     @identity.require(identity.not_anonymous())
-    @cherrypy.expose
+    @expose()
     def stop(self, taskid, stop_type, msg):
         """
         Cancels the given job. Note that when cancelling some part of a job 

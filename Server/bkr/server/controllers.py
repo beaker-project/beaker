@@ -732,7 +732,7 @@ class Root(RPCRoot):
             cherrypy.response.headers['Content-Type'] = 'application/rdf+xml'
             return graph.serialize(format='pretty-xml')
 
-    @cherrypy.expose
+    @expose()
     def view(self, fqdn=None, **kwargs):
         if isinstance(fqdn, str):
             fqdn = fqdn.decode('utf8')  # for virtual paths like /view/asdf.example.com
@@ -1045,12 +1045,12 @@ class Root(RPCRoot):
             system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
 
-    @cherrypy.expose
+    @expose()
     def lab_controllers(self):
         query = LabController.query.filter(LabController.removed == None)
         return [lc.fqdn for lc in query]
 
-    @cherrypy.expose
+    @expose()
     def legacypush(self, fqdn=None, inventory=None):
         if not fqdn:
             return 0, "You must supply a FQDN"
@@ -1082,7 +1082,7 @@ class Root(RPCRoot):
 
         return xml_text
 
-    @cherrypy.expose
+    @expose()
     def push(self, fqdn=None, inventory=None):
         if not fqdn:
             return 0, "You must supply a FQDN"

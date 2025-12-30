@@ -49,7 +49,7 @@ class Watchdogs(RPCRoot):
     # TODO: future cleanup so that the correct error message
     # is given to the client code.
     @identity.require(identity.in_group('admin'))
-    @cherrypy.expose
+    @expose()
     def extend(self, time):
         '''Allow admins to push watchdog times out after an outage'''
 

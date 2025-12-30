@@ -257,7 +257,7 @@ gpgcheck=0
                 old_value=None, new_value=u'%s %s' % (lab_controller, url)))
 
     # XMLRPC method for listing distro trees
-    @cherrypy.expose
+    @expose()
     def filter(self, filter):
         """
         Returns a list of details for distro trees filtered by the given criteria.
