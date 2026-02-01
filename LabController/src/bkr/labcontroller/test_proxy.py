@@ -6,7 +6,7 @@
 import unittest
 
 from bkr.labcontroller.config import _conf
-from bkr.labcontroller.proxy import PanicDetector
+from bkr.labcontroller.proxy import PanicDetector, ConsoleLogHelper, InstallFailureDetector
 
 
 class TestPanicDetector(unittest.TestCase):
@@ -49,3 +49,38 @@ class TestPanicDetector(unittest.TestCase):
                             "Panic detector erroneously detected: %r" % (line))
             self.assertIsNone(match,
                             "feed result ( %r ) wasn't NoneType" % (match))
+
+
+class TestConsoleLogHelper(unittest.TestCase):
+
+    def test_strip_cntrl_regex(self):
+        helper = ConsoleLogHelper(
+            watchdog={'recipe_id': 1},
+            proxy=None,
+            panic=_conf["PANIC_REGEX"],
+        )
+        self.assertIsNone(helper.strip_cntrl.search('\t'))
+        self.assertIsNone(helper.strip_cntrl.search('\n'))
+        self.assertIsNotNone(helper.strip_cntrl.search('\x00'))
+        self.assertIsNotNone(helper.strip_cntrl.search('\x01'))
+        self.assertIsNotNone(helper.strip_cntrl.search('\x7f'))
+
+
+class TestInstallFailureDetector(unittest.TestCase):
+
+    def test_loads_patterns(self):
+        detector = InstallFailureDetector()
+        self.assertTrue(len(detector.patterns) > 0)
+
+    def test_detects_dracut_failure(self):
+        detector = InstallFailureDetector()
+        match = detector.feed(
+            'dracut-initqueue[123]: Warning: /dev/root does not exist')
+        self.assertTrue(detector.fired)
+        self.assertIsNotNone(match)
+
+    def test_ignores_normal_output(self):
+        detector = InstallFailureDetector()
+        match = detector.feed('Starting installation process')
+        self.assertFalse(detector.fired)
+        self.assertIsNone(match)

@@ -196,7 +196,7 @@ class ConsoleLogHelper(object):
         self.proxy = proxy
         self.logfile_name = logfile_name if logfile_name is not None else "console.log"
         self.strip_ansi = re.compile("(\033\[[0-9;\?]*[ABCDHfsnuJKmhr])")
-        ascii_control_chars = map(chr, range(0, 32) + [127])
+        ascii_control_chars = [chr(c) for c in list(range(0, 32)) + [127]]
         keep_chars = '\t\n'
         strip_control_chars = [c for c in ascii_control_chars if c not in keep_chars]
         self.strip_cntrl = re.compile('[%s]' % re.escape(''.join(strip_control_chars)))
@@ -410,8 +410,11 @@ class InstallFailureDetector(object):
                 else:
                     raise
         for p in package_patterns:
-            patterns.append(pkg_resources.resource_string('bkr.labcontroller',
-                    'install-failure-patterns/' + p))
+            raw = pkg_resources.resource_string('bkr.labcontroller',
+                    'install-failure-patterns/' + p)
+            if not isinstance(raw, str):
+                raw = raw.decode('utf-8')
+            patterns.append(raw)
         return patterns
 
     def feed(self, line):
