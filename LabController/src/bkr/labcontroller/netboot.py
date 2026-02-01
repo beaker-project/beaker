@@ -110,7 +110,7 @@ def copy_default_loader_images():
 def fetch_bootloader_image(fqdn, fqdn_dir, distro_tree_id, image_url):
     timeout = get_conf().get('IMAGE_FETCH_TIMEOUT')
     logger.debug('Fetching bootloader image %s for %s', image_url, fqdn)
-    with atomically_replaced_file(os.path.join(fqdn_dir, 'image')) as dest:
+    with atomically_replaced_file(os.path.join(fqdn_dir, 'image'), binary=True) as dest:
         try:
             siphon(urllib.request.urlopen(image_url, timeout=timeout), dest)
         except Exception as e:
@@ -146,13 +146,13 @@ def fetch_images(distro_tree_id, kernel_url, initrd_url, fqdn):
 
     timeout = get_conf().get('IMAGE_FETCH_TIMEOUT')
     logger.debug('Fetching kernel %s for %s', kernel_url, fqdn)
-    with atomically_replaced_file(os.path.join(images_dir, 'kernel')) as dest:
+    with atomically_replaced_file(os.path.join(images_dir, 'kernel'), binary=True) as dest:
         try:
             siphon(urllib.request.urlopen(kernel_url, timeout=timeout), dest)
         except Exception as e:
             raise ImageFetchingError(kernel_url, distro_tree_id, e)
     logger.debug('Fetching initrd %s for %s', initrd_url, fqdn)
-    with atomically_replaced_file(os.path.join(images_dir, 'initrd')) as dest:
+    with atomically_replaced_file(os.path.join(images_dir, 'initrd'), binary=True) as dest:
         try:
             siphon(urllib.request.urlopen(initrd_url, timeout=timeout), dest)
         except Exception as e:

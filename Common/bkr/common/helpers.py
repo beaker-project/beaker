@@ -135,9 +135,10 @@ class AtomicFileReplacement(object):
     and replace_dest can also be called directly if needed
     """
 
-    def __init__(self, dest_path, mode=0o644):
+    def __init__(self, dest_path, mode=0o644, binary=False):
         self.dest_path = dest_path
         self.mode = mode
+        self.binary = binary
         self._temp_info = None
 
     @property
@@ -152,7 +153,7 @@ class AtomicFileReplacement(object):
         dirname, basename = os.path.split(self.dest_path)
         fd, temp_path = tempfile.mkstemp(prefix='.' + basename, dir=dirname)
         try:
-            f = os.fdopen(fd, 'w')
+            f = os.fdopen(fd, 'wb' if self.binary else 'w')
         except:
             os.unlink(temp_path)
             raise
@@ -247,7 +248,8 @@ def siphon(src, dest):
             break
 
         if six.PY3 and isinstance(chunk, bytes):
-            chunk = chunk.decode('utf-8')
+            if not hasattr(dest, 'mode') or 'b' not in dest.mode:
+                chunk = chunk.decode('utf-8')
 
         dest.write(chunk)
 
