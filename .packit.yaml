@@ -13,13 +13,13 @@ notifications:
     successful_build: false
 
 jobs:
-  - &copr_rhel_8_9
+  - &copr_rhel_9_10
     job: copr_build
     trigger: pull_request
     targets:
-      - epel-8-x86_64
       - epel-9-x86_64
-    identifier: rhel_8_9
+      - epel-10-x86_64
+    identifier: rhel_9_10
 
   - &copr_fedora
     job: copr_build
@@ -42,7 +42,7 @@ jobs:
         # Use gevent from base repositories during packit builds
         # gevent112 is our custom build with some backports to improve socket management
         - sed -i 's/python2-gevent112/python-gevent/g' beaker.spec
-  - <<: *copr_rhel_8_9
+  - <<: *copr_rhel_9_10
     trigger: commit
     branch: python-3
 
