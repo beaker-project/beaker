@@ -216,7 +216,7 @@ def build_power_env(command):
     }
 
     for k, v in six.iteritems(power_mapping):
-        env[v] = _decode(command["power"].get(k, ""))
+        env[v] = _decode(command["power"].get(k, "") or "")
 
     env["power_mode"] = _decode(command["action"])
 
