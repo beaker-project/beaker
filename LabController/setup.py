@@ -43,14 +43,6 @@ if systemd_unit_dir():
         (systemd_tmpfiles_dir(), ['tmpfiles.d/beaker-lab-controller.conf']),
         ('/run/beaker-lab-controller', []),
     ])
-else:
-    data_files.extend([
-        ('/etc/init.d', ['init.d/beaker-proxy',
-                         'init.d/beaker-transfer',
-                         'init.d/beaker-provision',
-                         'init.d/beaker-watchdog']),
-        ('/var/run/beaker-lab-controller', []),
-    ])
 
 setup(
     name='beaker-lab-controller',
