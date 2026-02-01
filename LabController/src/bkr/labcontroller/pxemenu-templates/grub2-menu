@@ -4,10 +4,10 @@ menuentry "Exit PXE" {
     exit
 }
 
-{% for osmajor, osversions in osmajors.iteritems()|sort(reverse=True) %}
+{% for osmajor, osversions in osmajors.items()|sort(reverse=True) %}
 submenu "{{ osmajor }}" {
 
-{% for osversion, distro_trees in osversions.iteritems()|sort(reverse=True) %}
+{% for osversion, distro_trees in osversions.items()|sort(reverse=True) %}
 submenu "{{ osversion }}" {
 
 {% for distro_tree in distro_trees %}
