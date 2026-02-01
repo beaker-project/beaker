@@ -52,3 +52,25 @@ class TestBuildPowerEnv(unittest.TestCase):
 
         for key, value in six.iteritems(expected):
             self.assertEqual(expected[key], actual[key])
+
+    def test_build_power_env_with_none_values(self):
+        t_command = {
+            "power": {
+                "address": u"/var/run/docker.sock",
+                "id": u"beaker-machine-1",
+                "user": None,
+                "passwd": None,
+            },
+            "action": u"interrupt",
+        }
+
+        actual = build_power_env(t_command)
+
+        self.assertEqual(actual["power_user"], "")
+        self.assertEqual(actual["power_pass"], "")
+        self.assertEqual(actual["power_address"], "/var/run/docker.sock")
+        self.assertEqual(actual["power_id"], "beaker-machine-1")
+        self.assertEqual(actual["power_mode"], "interrupt")
+        for key, value in six.iteritems(actual):
+            self.assertIsInstance(value, str,
+                                 "env[%r] is %r, expected str" % (key, value))
