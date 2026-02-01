@@ -88,7 +88,7 @@ def _get_images(tftp_root, distro_tree_id, url, images):
             else:
                 image_url = urllib.parse.urljoin(url, path)
                 print('Fetching %s %s for distro tree %s' % (image_type, image_url, distro_tree_id))
-                with atomically_replaced_file(dest_path) as dest:
+                with atomically_replaced_file(dest_path, binary=True) as dest:
                     siphon(urllib.request.urlopen(image_url), dest)
 
 
