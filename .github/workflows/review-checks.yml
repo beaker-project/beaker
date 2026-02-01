@@ -188,6 +188,9 @@ jobs:
           - name: quay.io/centos/centos:stream9
             additional_repos: "crb"
             additional_packages: "epel-release"
+          - name: quay.io/centos/centos:stream10
+            additional_repos: "crb"
+            additional_packages: "epel-release"
         exclude:
           - test-target: Server
             os-target:
@@ -198,6 +201,9 @@ jobs:
           - test-target: Server
             os-target:
               name: quay.io/centos/centos:stream9
+          - test-target: Server
+            os-target:
+              name: quay.io/centos/centos:stream10
     steps:
       - name: Fixup CentOS repo files
         if: matrix.os-target.name == 'centos:7'
