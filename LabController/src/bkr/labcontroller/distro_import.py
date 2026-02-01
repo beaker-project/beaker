@@ -16,8 +16,12 @@ from bkr.common.bexceptions import BX
 import pprint
 import time
 import json
-import dnf
 import uuid
+
+try:
+    import dnf
+except ImportError:
+    dnf = None
 
 from six.moves import configparser
 from six.moves import urllib
@@ -1549,6 +1553,8 @@ class TreeInfoRHVH4(TreeInfoMixin, Importer):
         self.tree["ks_meta"] = "{} {} {}".format(ks_meta, autopart_type, ks_keyword)
 
     def _find_image_update_rpm(self):
+        if dnf is None:
+            raise ImportError('dnf module is required for RHVH imports')
         base = dnf.Base()
         base.repos.add_new_repo(uuid.uuid4().hex, base.conf, baseurl=[self.parser.url])
         base.fill_sack(load_system_repo=False)
