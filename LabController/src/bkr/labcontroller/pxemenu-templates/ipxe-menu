@@ -5,7 +5,7 @@ chain /ipxe/${ip:hexraw} ||
 :main_menu
 menu Beaker
 item local (local)
-{% for osmajor, osversions in osmajors.iteritems()|sort(reverse=True) %}
+{% for osmajor, osversions in osmajors.items()|sort(reverse=True) %}
 item {{ osmajor }} {{ osmajor }} ->
 {% endfor %}
 choose --default local --timeout 600000 target && goto ${target} || goto local
@@ -16,16 +16,16 @@ iseq ${builtin/platform} pcbios && sanboot --no-describe --drive 0x80 ||
 # exit 1 generates an error message but req'd for some systems to fall through
 exit 1 || goto main_menu
 
-{% for osmajor, osversions in osmajors.iteritems()|sort(reverse=True) %}
+{% for osmajor, osversions in osmajors.items()|sort(reverse=True) %}
 :{{ osmajor }}
 menu {{ osmajor }}
-{% for osversion, distro_trees in osversions.iteritems()|sort(reverse=True) %}
+{% for osversion, distro_trees in osversions.items()|sort(reverse=True) %}
 item {{ osversion }} {{ osversion }} ->
 {% endfor %}
 item main_menu back <-
 choose target && goto ${target} || goto main_menu
 
-{% for osversion, distro_trees in osversions.iteritems()|sort(reverse=True) %}
+{% for osversion, distro_trees in osversions.items()|sort(reverse=True) %}
 :{{ osversion }}
 menu {{ osversion }}
 {% for distro_tree in distro_trees %}

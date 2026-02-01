@@ -1,5 +1,5 @@
-{% for osmajor, osversions in osmajors.iteritems()|sort(reverse=True) %}
-{% for osversion, distro_trees in osversions.iteritems()|sort(reverse=True) %}
+{% for osmajor, osversions in osmajors.items()|sort(reverse=True) %}
+{% for osversion, distro_trees in osversions.items()|sort(reverse=True) %}
 {% for distro_tree in distro_trees %}
 
 title {{ distro_tree.distro_name }} {{ distro_tree.variant }} {{ distro_tree.arch }}
