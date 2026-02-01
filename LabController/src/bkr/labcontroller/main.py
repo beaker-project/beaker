@@ -134,6 +134,7 @@ class WSGIApplication(object):
         try:
             # Limit request data in all cases.
             if req.max_content_length is not None and \
+                req.content_length is not None and \
                 req.content_length > req.max_content_length:
                     raise RequestEntityTooLarge()
             if req.path in ('/', '/RPC2', '/server'):
