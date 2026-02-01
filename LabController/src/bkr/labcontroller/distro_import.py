@@ -7,6 +7,7 @@
 import sys, os
 import glob
 import getopt
+import io
 from optparse import OptionParser, OptionGroup
 import logging
 import socket
@@ -155,9 +156,13 @@ class Parser(object):
         self.url = url
         try:
             f = urllib.request.urlopen('%s/%s' % (self.url, self.infofile))
-            self.parser = configparser.ConfigParser()
-            self.parser.readfp(f)
+            data = f.read()
             f.close()
+            if isinstance(data, bytes):
+                data = data.decode('utf-8', errors='replace')
+            self.parser = configparser.ConfigParser()
+            reader = getattr(self.parser, 'read_file', None) or self.parser.readfp
+            reader(io.StringIO(data))
         except urllib.error.URLError:
             return False
         except configparser.MissingSectionHeaderError as e:
@@ -168,8 +173,11 @@ class Parser(object):
         if self.discinfo:
             try:
                 f = urllib.request.urlopen('%s/%s' % (self.url, self.discinfo))
-                self.last_modified = f.read().split("\n")[0]
+                data = f.read()
                 f.close()
+                if isinstance(data, bytes):
+                    data = data.decode('utf-8', errors='replace')
+                self.last_modified = data.split("\n")[0]
             except urllib.error.URLError:
                 pass
         return True
@@ -295,11 +303,11 @@ class ComposeInfoLegacy(ComposeInfoMixin, Importer):
         """
         specific_arches = self.options.arch
         if specific_arches:
-            return filter(lambda x: url_exists(os.path.join(self.parser.url,x)) \
-                      and x, [arch for arch in specific_arches])
+            return list(filter(lambda x: url_exists(os.path.join(self.parser.url,x)) \
+                      and x, [arch for arch in specific_arches]))
         else:
-            return filter(lambda x: url_exists(os.path.join(self.parser.url,x)) \
-                      and x, [arch for arch in self.arches])
+            return list(filter(lambda x: url_exists(os.path.join(self.parser.url,x)) \
+                      and x, [arch for arch in self.arches]))
 
     def get_os_dir(self, arch):
         """ Return path to os directory
@@ -802,8 +810,8 @@ class TreeInfoMixin(object):
         This is just a sanity check, the parser's URL should be the os dir.
         """
         try:
-            os_dir = filter(lambda x: url_exists(x) \
-                            and x, [self.parser.url])[0]
+            os_dir = list(filter(lambda x: url_exists(x) \
+                            and x, [self.parser.url]))[0]
         except IndexError as e:
             raise BX('%s no os_dir found: %s' % (self.parser.url, e))
         return os_dir
@@ -908,7 +916,7 @@ class TreeInfoMixin(object):
             self.tree['osminor'] = '0'
 
         arches = self.parser.get('general', 'arches','')
-        self.tree['arches'] = map(lambda arch: arch.strip(), arches and arches.split(',') or [])
+        self.tree['arches'] = list(map(lambda arch: arch.strip(), arches and arches.split(',') or []))
         full_os_dir = self.get_os_dir()
         # These would have been passed from the Compose*.process()
         common_repos = repos
