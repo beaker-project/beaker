@@ -106,8 +106,9 @@ import sys
 import xml.dom.minidom
 
 import lxml.etree
-import pkg_resources
 import six
+
+from bkr.common.resources import resource_stream
 
 from bkr.client import BeakerCommand
 from bkr.client.convert import Convert
@@ -211,7 +212,7 @@ stdin."""
         if not jobs:
             jobs = ['-'] # read one job from stdin by default
         job_schema = lxml.etree.RelaxNG(lxml.etree.parse(
-                pkg_resources.resource_stream('bkr.common', 'schema/beaker-job.rng')))
+                resource_stream('bkr.common', 'schema/beaker-job.rng')))
 
         self.set_hub(**kwargs)
         submitted_jobs = []
