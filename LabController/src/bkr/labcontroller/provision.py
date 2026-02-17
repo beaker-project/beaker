@@ -13,7 +13,6 @@ import random
 import signal
 import daemon
 import datetime
-import pkg_resources
 import subprocess
 from daemon import pidfile
 from optparse import OptionParser
@@ -189,13 +188,15 @@ class CommandQueuePoller(ProxyHelper):
                 self.last_command_datetime[command['fqdn']] = datetime.datetime.utcnow()
         logger.debug('Finished handling command %s', command['id'])
 
+_package_dir = os.path.dirname(os.path.abspath(__file__))
+
 def find_power_script(power_type):
     customised = '/etc/beaker/power-scripts/%s' % power_type
     if os.path.exists(customised) and os.access(customised, os.X_OK):
         return customised
-    resource = 'power-scripts/%s' % power_type
-    if pkg_resources.resource_exists('bkr.labcontroller', resource):
-        return pkg_resources.resource_filename('bkr.labcontroller', resource)
+    packaged = os.path.join(_package_dir, 'power-scripts', power_type)
+    if os.path.exists(packaged):
+        return packaged
     raise ValueError('Invalid power type %r' % power_type)
 
 
