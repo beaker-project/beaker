@@ -183,8 +183,10 @@ jobs:
           - Server
         os-target:
           - name: centos:7
-          - name: fedora:43
-          - name: fedora:42
+          - name: quay.io/fedora/fedora:rawhide
+          - name: quay.io/fedora/fedora:44
+          - name: quay.io/fedora/fedora:43
+          - name: quay.io/fedora/fedora:42
           - name: quay.io/centos/centos:stream9
             additional_repos: "crb"
             additional_packages: "epel-release"
@@ -194,10 +196,16 @@ jobs:
         exclude:
           - test-target: Server
             os-target:
-              name: fedora:43
+              name: quay.io/fedora/fedora:rawhide
           - test-target: Server
             os-target:
-              name: fedora:42
+              name: quay.io/fedora/fedora:44
+          - test-target: Server
+            os-target:
+              name: quay.io/fedora/fedora:43
+          - test-target: Server
+            os-target:
+              name: quay.io/fedora/fedora:42
           - test-target: Server
             os-target:
               name: quay.io/centos/centos:stream9
