@@ -14,8 +14,9 @@ from optparse import Option
 from optparse import SUPPRESS_HELP
 
 import gssapi
-import pkg_resources
 from six.moves.xmlrpc_client import Fault
+
+from bkr.common.resources import iter_entry_points
 
 from bkr.client.command import BeakerClientConfigurationError
 from bkr.client.command import ClientCommandContainer
@@ -41,7 +42,7 @@ class BeakerCommandContainer(ClientCommandContainer):
         # Load subcommands from setuptools entry points in the bkr.client.commands
         # group. This is the new, preferred way for other packages to provide their
         # own bkr subcommands.
-        for entrypoint in pkg_resources.iter_entry_points('bkr.client.commands'):
+        for entrypoint in iter_entry_points('bkr.client.commands'):
             cls.register_plugin(entrypoint.load(), name=entrypoint.name)
 
 
