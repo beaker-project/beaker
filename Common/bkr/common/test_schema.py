@@ -5,8 +5,9 @@
 # (at your option) any later version.
 
 import unittest
-import pkg_resources
 import lxml.etree
+
+from bkr.common.resources import resource_stream
 
 class SchemaTestBase(unittest.TestCase):
 
@@ -26,7 +27,7 @@ class TaskSchemaTest(SchemaTestBase):
 
     @classmethod
     def setUpClass(cls):
-        cls.schema_doc = lxml.etree.parse(pkg_resources.resource_stream(
+        cls.schema_doc = lxml.etree.parse(resource_stream(
         'bkr.common', 'schema/beaker-task.rng'))
 
     def test_minimal_task(self):
@@ -86,7 +87,7 @@ class JobSchemaTest(SchemaTestBase):
 
     @classmethod
     def setUpClass(cls):
-        cls.schema_doc = lxml.etree.parse(pkg_resources.resource_stream(
+        cls.schema_doc = lxml.etree.parse(resource_stream(
             'bkr.common', 'schema/beaker-job.rng'))
 
     def test_minimal_job(self):

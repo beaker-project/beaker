@@ -14,8 +14,9 @@ import sys
 import xml.dom.minidom
 from optparse import OptionGroup
 
-import pkg_resources
 from six.moves.urllib_parse import urljoin
+
+from bkr.common.resources import resource_listdir, resource_string
 
 from bkr.client.command import Command
 from bkr.common.pyconfig import PyConfigParser
@@ -52,9 +53,15 @@ def host_filter_presets():
         return _host_filter_presets
 
     _host_filter_presets = {}
-    config_files = (
-            sorted(glob.glob(pkg_resources.resource_filename('bkr.client', 'host-filters/*.conf')))
-            + sorted(glob.glob('/etc/beaker/host-filters/*.conf')))
+    for name in sorted(resource_listdir('bkr.client', 'host-filters')):
+        if name.endswith('.conf'):
+            content = resource_string('bkr.client', 'host-filters/' + name).decode('utf-8', errors='replace')
+            for line in content.splitlines():
+                matched = re.match(r'^(\w+)\s+(\S+.*)$', line)
+                if matched:
+                    preset, xml = matched.groups()
+                    _host_filter_presets[preset] = xml
+    config_files = sorted(glob.glob('/etc/beaker/host-filters/*.conf'))
     user_config_file = os.path.expanduser('~/.beaker_client/host-filter')
     if os.path.exists(user_config_file):
         config_files.append(user_config_file)
