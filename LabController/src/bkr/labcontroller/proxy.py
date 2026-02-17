@@ -17,7 +17,6 @@ import shutil
 import tempfile
 import xmlrpclib
 import subprocess
-import pkg_resources
 import shlex
 from xml.sax.saxutils import escape as xml_escape, quoteattr as xml_quoteattr
 from werkzeug.wrappers import Response
@@ -27,6 +26,7 @@ from werkzeug.utils import redirect
 from werkzeug.http import parse_content_range_header
 from werkzeug.wsgi import wrap_file
 from bkr.common.hub import HubProxy
+from bkr.common.resources import resource_listdir, resource_string
 from bkr.labcontroller.config import get_conf
 from bkr.labcontroller.log_storage import LogStorage
 import utils
@@ -391,7 +391,7 @@ class InstallFailureDetector(object):
                 site_patterns = []
             else:
                 raise
-        package_patterns = pkg_resources.resource_listdir('bkr.labcontroller',
+        package_patterns = resource_listdir('bkr.labcontroller',
                 'install-failure-patterns')
         # site patterns override package patterns of the same name
         for p in site_patterns:
@@ -407,7 +407,7 @@ class InstallFailureDetector(object):
                 else:
                     raise
         for p in package_patterns:
-            patterns.append(pkg_resources.resource_string('bkr.labcontroller',
+            patterns.append(resource_string('bkr.labcontroller',
                     'install-failure-patterns/' + p))
         return patterns
 
