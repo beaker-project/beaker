@@ -849,6 +849,8 @@ class Jobs(RPCRoot):
             job = Job.by_id(job_id)
         except InvalidRequestError:
             raise BX('Invalid job ID: %s' % job_id)
+        if not job.can_stop(identity.current.user):
+            raise BX("You don't have permission to stop job %s" % job_id)
         if stop_type not in job.stop_types:
             raise BX('Invalid stop_type: %s, must be one of %s' %
                              (stop_type, job.stop_types))

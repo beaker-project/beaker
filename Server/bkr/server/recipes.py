@@ -210,6 +210,9 @@ class Recipes(RPCRoot):
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
             raise BX('Invalid recipe ID: %s' % recipe_id)
+        if not recipe.recipeset.can_stop(identity.current.user):
+            raise BX("You don't have permission to stop recipe %s"
+                     % recipe_id)
         if stop_type not in recipe.stop_types:
             raise BX('Invalid stop_type: %s, must be one of %s' %
                              (stop_type, recipe.stop_types))
