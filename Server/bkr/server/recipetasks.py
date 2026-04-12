@@ -201,6 +201,9 @@ class RecipeTasks(RPCRoot):
             task = RecipeTask.by_id(task_id)
         except InvalidRequestError:
             raise BX('Invalid task ID: %s' % task_id)
+        if not task.can_stop(identity.current.user):
+            raise BX("You don't have permission to stop task %s"
+                     % task_id)
         if stop_type not in task.stop_types:
             raise BX('Invalid stop_type: %s, must be one of %s' %
                              (stop_type, task.stop_types))
