@@ -34,17 +34,22 @@ SPHINXBUILD ?= $(firstword $(shell command -v sphinx-1.0-build sphinx-build))
 #
 # Also see: https://bitbucket.org/pypa/setuptools/issue/6/
 
-SPHINXREQUIRES = "Sphinx >= 1.0",
-ifeq (0,$(shell $(python_command) -c '__requires__ = ["CherryPy < 3.0"]; import pkg_resources' &>/dev/null ; echo $$?))
-    SPHINXREQUIRES += "CherryPy < 3.0",
-endif
 BKR_PATH_INJECTED = $(bkr_path_injected)
 
 # You can set these variables from the command line.
 SPHINXOPTS    =
+ifeq ($(BKR_PY3),0)
+SPHINXREQUIRES = "Sphinx >= 1.0",
+ifeq (0,$(shell $(python_command) -c '__requires__ = ["CherryPy < 3.0"]; import pkg_resources' &>/dev/null ; echo $$?))
+    SPHINXREQUIRES += "CherryPy < 3.0",
+endif
 SPHINXBUILD  := $(python_command) -c '__requires__ = [$(SPHINXREQUIRES)]; import pkg_resources; \
     import bkr; bkr.__path__ = [$(BKR_PATH_INJECTED)]; \
     exec(open("$(SPHINXBUILD)").read())'
+else
+SPHINXBUILD  := $(python_command) -c 'import bkr; bkr.__path__ = [$(BKR_PATH_INJECTED)]; \
+    exec(open("$(SPHINXBUILD)").read())'
+endif
 PAPER         =
 BUILDDIR      = _build
 
