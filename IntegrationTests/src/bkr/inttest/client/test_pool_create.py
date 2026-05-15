@@ -19,9 +19,9 @@ class CreateSystemPool(ClientTestCase):
             self.assertFalse(pool.description)
             self.assertFalse(pool.owning_group)
             self.assertTrue(pool.owning_user.user_name, "admin")
-            self.assertEquals(pool.activity[-1].field_name, u'Pool')
-            self.assertEquals(pool.activity[-1].action, u'Created')
-            self.assertEquals(pool.activity[-1].new_value, pool_name)
+            self.assertEqual(pool.activity[-1].field_name, u'Pool')
+            self.assertEqual(pool.activity[-1].action, u'Created')
+            self.assertEqual(pool.activity[-1].new_value, pool_name)
         # duplicate
         try:
             run_client(['bkr', 'pool-create', pool_name])
@@ -38,7 +38,7 @@ class CreateSystemPool(ClientTestCase):
 
         with session.begin():
             pool = SystemPool.by_name(pool_name)
-            self.assertEquals(pool.description, 'My Pool')
+            self.assertEqual(pool.description, 'My Pool')
 
     def test_create_pool_set_owner(self):
         pool_name = data_setup.unique_name(u'mypool%s')

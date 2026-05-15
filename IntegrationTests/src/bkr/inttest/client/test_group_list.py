@@ -30,8 +30,8 @@ class GroupList(ClientTestCase):
         groups1 = out1.split()
         out2 = run_client(['bkr', 'group-list', '--limit=1'])
         groups2 = out2.split()
-        self.assertEquals(len(groups2), 1)
-        self.assertEquals(groups1[0], groups2[0])
+        self.assertEqual(len(groups2), 1)
+        self.assertEqual(groups1[0], groups2[0])
 
     def test_list_group_of_owner_that_has_no_group(self):
         with session.begin():

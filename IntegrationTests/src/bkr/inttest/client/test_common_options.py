@@ -23,7 +23,7 @@ class CommonOptionsTest(ClientTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=862146
     def test_version(self):
         out = run_client(['bkr', '--version'])
-        self.assert_(re.match(r'\d+\.[.a-zA-Z0-9]+$', out), out)
+        self.assertTrue(re.match(r'\d+\.[.a-zA-Z0-9]+$', out), out)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1345735
     def test_insecure(self):
@@ -49,7 +49,7 @@ class CommonOptionsTest(ClientTestCase):
             self.fail('should raise')
         except ClientError as e:
             error_lines = e.stderr_output.splitlines()
-            self.assertEquals(error_lines[0],
+            self.assertEqual(error_lines[0],
                     'WARNING: client version is %s but server version is 999.3'
                     % __version__)
             self.assertIn('HTTP error: 404 Client Error: Not Found',

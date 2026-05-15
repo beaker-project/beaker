@@ -74,7 +74,7 @@ class RemoveAccountTest(ClientTestCase):
             self.assertIsNotNone(user.removed)
             # running jobs should be cancelled
             job.update_status()
-            self.assertEquals(job.status, TaskStatus.cancelled)
+            self.assertEqual(job.status, TaskStatus.cancelled)
             self.assertIn('User %s removed' % user.user_name,
                           job.recipesets[0].recipes[0].tasks[0].results[0].log)
             # reservations should be released

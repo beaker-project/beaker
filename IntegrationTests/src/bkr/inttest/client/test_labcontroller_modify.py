@@ -21,7 +21,7 @@ class LabControllerModifyTest(ClientTestCase):
                     lc.fqdn])
         with session.begin():
             session.refresh(lc)
-            self.assertEquals(lc.fqdn, new_fqdn)
+            self.assertEqual(lc.fqdn, new_fqdn)
 
     def test_change_fqdn_being_used_by_another_lab_controller(self):
         with session.begin():

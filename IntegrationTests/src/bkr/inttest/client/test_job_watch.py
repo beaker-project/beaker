@@ -15,15 +15,15 @@ class JobWatchTest(ClientTestCase):
         with session.begin():
             job = data_setup.create_job(whiteboard=u'jobwb')
         p = start_client(['bkr', 'job-watch', job.t_id])
-        self.assertEquals(p.stdout.readline(),
+        self.assertEqual(p.stdout.readline(),
                 'Watching tasks (this may be safely interrupted)...\n')
-        self.assertEquals(p.stdout.readline(), '%s jobwb: New\n' % job.t_id)
-        self.assertEquals(p.stdout.readline(), '--> New: 1 [total: 1]\n')
+        self.assertEqual(p.stdout.readline(), '%s jobwb: New\n' % job.t_id)
+        self.assertEqual(p.stdout.readline(), '--> New: 1 [total: 1]\n')
         with session.begin():
             data_setup.mark_job_complete(job)
         out, err = p.communicate()
-        self.assertEquals(p.returncode, 0, err)
-        self.assertEquals(out,
+        self.assertEqual(p.returncode, 0, err)
+        self.assertEqual(out,
                 '%s jobwb: New -> Completed\n'
                 '--> Completed: 1 [total: 1]\n' % job.t_id)
 
@@ -33,15 +33,15 @@ class JobWatchTest(ClientTestCase):
             job = data_setup.create_job(recipe_whiteboard=u'recipewb')
             recipe = job.recipesets[0].recipes[0]
         p = start_client(['bkr', 'job-watch', recipe.t_id])
-        self.assertEquals(p.stdout.readline(),
+        self.assertEqual(p.stdout.readline(),
                 'Watching tasks (this may be safely interrupted)...\n')
-        self.assertEquals(p.stdout.readline(), '%s recipewb: New\n' % recipe.t_id)
-        self.assertEquals(p.stdout.readline(), '--> New: 1 [total: 1]\n')
+        self.assertEqual(p.stdout.readline(), '%s recipewb: New\n' % recipe.t_id)
+        self.assertEqual(p.stdout.readline(), '--> New: 1 [total: 1]\n')
         with session.begin():
             data_setup.mark_job_complete(job)
         out, err = p.communicate()
-        self.assertEquals(p.returncode, 0, err)
-        self.assertEquals(out,
+        self.assertEqual(p.returncode, 0, err)
+        self.assertEqual(out,
                 '%s recipewb: New -> Completed (%s)\n'
                 '--> Completed: 1 [total: 1]\n'
                 % (recipe.t_id, recipe.resource.fqdn))
@@ -52,16 +52,16 @@ class JobWatchTest(ClientTestCase):
             job = data_setup.create_job()
             recipetask = job.recipesets[0].recipes[0].tasks[0]
         p = start_client(['bkr', 'job-watch', recipetask.t_id])
-        self.assertEquals(p.stdout.readline(),
+        self.assertEqual(p.stdout.readline(),
                 'Watching tasks (this may be safely interrupted)...\n')
-        self.assertEquals(p.stdout.readline(),
+        self.assertEqual(p.stdout.readline(),
                 '%s /distribution/reservesys: New\n' % recipetask.t_id)
-        self.assertEquals(p.stdout.readline(), '--> New: 1 [total: 1]\n')
+        self.assertEqual(p.stdout.readline(), '--> New: 1 [total: 1]\n')
         with session.begin():
             data_setup.mark_job_complete(job)
         out, err = p.communicate()
-        self.assertEquals(p.returncode, 0, err)
-        self.assertEquals(out,
+        self.assertEqual(p.returncode, 0, err)
+        self.assertEqual(out,
                 '%s /distribution/reservesys: New -> Completed (%s)\n'
                 '--> Completed: 1 [total: 1]\n'
                 % (recipetask.t_id, recipetask.recipe.resource.fqdn))
@@ -72,16 +72,16 @@ class JobWatchTest(ClientTestCase):
             run_client(['bkr', 'job-watch', '12345'])
             self.fail('should raise')
         except ClientError as e:
-            self.assert_('Invalid taskspec' in e.stderr_output)
+            self.assertTrue('Invalid taskspec' in e.stderr_output)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1415104
     def test_exits_141_when_pipe_is_closed(self):
         with session.begin():
             job = data_setup.create_job(whiteboard=u'jobwb')
         p = start_client(['bkr', 'job-watch', job.t_id])
-        self.assertEquals(p.stdout.readline(),
+        self.assertEqual(p.stdout.readline(),
                 'Watching tasks (this may be safely interrupted)...\n')
         p.stdout.close()
         err = p.stderr.read()
         p.wait()
-        self.assertEquals(p.returncode, 141, err)
+        self.assertEqual(p.returncode, 141, err)

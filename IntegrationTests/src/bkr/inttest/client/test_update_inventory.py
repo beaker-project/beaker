@@ -34,7 +34,7 @@ class UpdateInventoryTest(ClientTestCase):
             session.flush()
             c2 = Job.query.count()
         # Make sure no new jobs was submitted
-        self.assertEquals(c1, c2)
+        self.assertEqual(c1, c2)
 
     def test_update_inventory_dryrun_with_update_job_already_submitted(self):
         '''
@@ -54,7 +54,7 @@ class UpdateInventoryTest(ClientTestCase):
             session.flush()
             c2 = Job.query.count()
         # Make sure no new jobs were submitted
-        self.assertEquals(c1, c2)
+        self.assertEqual(c1, c2)
 
     def test_update_inventory_xml(self):
         out = run_client(['bkr', 'update-inventory', '--prettyxml', self.system1.fqdn])
@@ -68,15 +68,15 @@ class UpdateInventoryTest(ClientTestCase):
                 '--wait', self.system1.fqdn]
         proc = start_client(args)
         out = proc.stdout.readline().rstrip()
-        self.assert_(out.startswith('Submitted:'), out)
-        m = re.search(r'J:(\d+)', out)
+        self.assertTrue(out.startswith('Submitted:'), out)
+        m = re.search('J:(\d+)', out)
         job_id = m.group(1)
         out = proc.stdout.readline().rstrip()
-        self.assert_('Watching tasks (this may be safely interrupted)...' == out)
+        self.assertTrue('Watching tasks (this may be safely interrupted)...' == out)
         with session.begin():
             job = Job.by_id(job_id)
             job.cancel()
             job.update_status()
         returncode = proc.wait()
-        self.assertEquals(returncode, 1)
+        self.assertEqual(returncode, 1)
 

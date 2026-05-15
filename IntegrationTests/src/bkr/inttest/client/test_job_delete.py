@@ -31,14 +31,14 @@ class JobDeleteTest(ClientTestCase):
             password='password')
         out = run_client(['bkr', 'job-delete', self.job.t_id],
                 config=client_config)
-        self.assert_(out.startswith('Jobs deleted:'), out)
-        self.assert_(self.job.t_id in out, out)
+        self.assertTrue(out.startswith('Jobs deleted:'), out)
+        self.assertTrue(self.job.t_id in out, out)
 
     def test_delete_job(self):
         out = run_client(['bkr', 'job-delete', self.job.t_id],
                 config=self.client_config)
-        self.assert_(out.startswith('Jobs deleted:'), out)
-        self.assert_(self.job.t_id in out, out)
+        self.assertTrue(out.startswith('Jobs deleted:'), out)
+        self.assertTrue(self.job.t_id in out, out)
 
     def test_delete_others_job(self):
         with session.begin():
@@ -49,7 +49,7 @@ class JobDeleteTest(ClientTestCase):
                              config=self.client_config)
             self.fail('should raise')
         except ClientError as e:
-            self.assert_("don't have permission" in e.stderr_output)
+            self.assertTrue("don't have permission" in e.stderr_output)
 
     def test_cant_delete_group_mates_job(self):
         # The test_delete_group_job case above is similar, but here the job is
@@ -81,13 +81,13 @@ class JobDeleteTest(ClientTestCase):
         # As the default admin user
         # Admin can delete other's job with job ID
         out = run_client(['bkr', 'job-delete', job1.t_id])
-        self.assert_(out.startswith('Jobs deleted:'), out)
-        self.assert_(job1.t_id in out, out)
+        self.assertTrue(out.startswith('Jobs deleted:'), out)
+        self.assertTrue(job1.t_id in out, out)
 
         # Admin can not delete other's job with tags
         out = run_client(['bkr', 'job-delete', '-t%s' % tag.tag])
-        self.assert_(out.startswith('Jobs deleted:'), out)
-        self.assert_(job2.t_id not in out, out)
+        self.assertTrue(out.startswith('Jobs deleted:'), out)
+        self.assertTrue(job2.t_id not in out, out)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=595512
     def test_invalid_taskspec(self):
@@ -95,7 +95,7 @@ class JobDeleteTest(ClientTestCase):
             run_client(['bkr', 'job-delete', '12345'])
             self.fail('should raise')
         except ClientError as e:
-            self.assert_('Invalid taskspec' in e.stderr_output)
+            self.assertTrue('Invalid taskspec' in e.stderr_output)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=990943
     def test_zero_value_completeDays(self):

@@ -10,6 +10,7 @@ from bkr.server.model import SystemPermission
 from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client, create_client_config, ClientError, \
         ClientTestCase
+from six import assertRegex
 
 class SystemLoanTest(ClientTestCase):
     # This test checks the loan management CLI is wired up correctly
@@ -55,19 +56,19 @@ class SystemLoanTest(ClientTestCase):
             self.fail('Permissions error expected')
         except ClientError as e:
             self.assertEqual(e.status, 1)
-            self.assertRegexpMatches(e.stderr_output, expected_error)
+            assertRegex(self, e.stderr_output, expected_error)
 
     def test_owner_can_borrow_system(self):
         # user1 should be able to lend the system to themselves
         out = run_client(['bkr', 'loan-grant', self.system.fqdn],
                 config=self.client_config)
-        self.assertRegexpMatches('^Borrowed %s' % self.system.fqdn, out)
+        assertRegex(self, '^Borrowed %s' % self.system.fqdn, out)
         self.assertLoanedTo(self.user)
 
         out = run_client(['bkr', 'loan-return', self.system.fqdn],
                 config=self.client_config)
-        self.assertRegexpMatches('^Returned loan for %s' % self.system.fqdn,
-                                 out)
+        assertRegex(self, '^Returned loan for %s' % self.system.fqdn,
+                    out)
         self.assertNotLoaned()
 
     def test_loan_comment(self):
@@ -76,13 +77,13 @@ class SystemLoanTest(ClientTestCase):
                           '--comment', 'Mine! All mine!',
                           self.system.fqdn],
                 config=self.client_config)
-        self.assertRegexpMatches('^Borrowed %s' % self.system.fqdn, out)
+        assertRegex(self, '^Borrowed %s' % self.system.fqdn, out)
         self.assertLoanedTo(self.user, "Mine! All mine!")
 
         out = run_client(['bkr', 'loan-return', self.system.fqdn],
                 config=self.client_config)
-        self.assertRegexpMatches('^Returned loan for %s' % self.system.fqdn,
-                                 out)
+        assertRegex(self, '^Returned loan for %s' % self.system.fqdn,
+                    out)
         with session.begin():
             session.refresh(self.system)
             self.assertIsNone(self.system.loaned)
@@ -94,9 +95,9 @@ class SystemLoanTest(ClientTestCase):
                           '--recipient', self.user2.user_name,
                           self.system.fqdn],
                 config=self.client_config)
-        self.assertRegexpMatches('^Loaned %s to %s' %
-                                    (self.system.fqdn, self.user2.user_name),
-                                 out)
+        assertRegex(self, '^Loaned %s to %s' %
+                    (self.system.fqdn, self.user2.user_name),
+                    out)
         self.assertLoanedTo(self.user2)
         # user2 still isn't allowed to modify the loan
         details = "%s cannot borrow this system" % self.user2.user_name
@@ -109,8 +110,8 @@ class SystemLoanTest(ClientTestCase):
         # However, user2 should now be able to return it
         out = run_client(['bkr', 'loan-return', self.system.fqdn],
                 config=self.client_config2)
-        self.assertRegexpMatches('^Returned loan for %s' % self.system.fqdn,
-                                 out)
+        assertRegex(self, '^Returned loan for %s' % self.system.fqdn,
+                    out)
         self.assertNotLoaned()
 
     def test_owner_can_replace_existing_loan(self):
@@ -119,20 +120,20 @@ class SystemLoanTest(ClientTestCase):
                           '--recipient', self.user2.user_name,
                           self.system.fqdn],
                 config=self.client_config)
-        self.assertRegexpMatches('^Loaned %s to %s' %
-                                    (self.system.fqdn, self.user2.user_name),
-                                 out)
+        assertRegex(self, '^Loaned %s to %s' %
+                    (self.system.fqdn, self.user2.user_name),
+                    out)
         self.assertLoanedTo(self.user2)
         # Now claim it for ourselves
         out = run_client(['bkr', 'loan-grant', self.system.fqdn],
                 config=self.client_config)
-        self.assertRegexpMatches('^Borrowed %s' % self.system.fqdn, out)
+        assertRegex(self, '^Borrowed %s' % self.system.fqdn, out)
         self.assertLoanedTo(self.user)
         # Return the system
         out = run_client(['bkr', 'loan-return', self.system.fqdn],
                 config=self.client_config)
-        self.assertRegexpMatches('^Returned loan for %s' % self.system.fqdn,
-                                 out)
+        assertRegex(self, '^Returned loan for %s' % self.system.fqdn,
+                    out)
         self.assertNotLoaned()
 
     def test_admin_can_lend_system(self):
@@ -141,9 +142,9 @@ class SystemLoanTest(ClientTestCase):
                           '--recipient', self.user.user_name,
                           self.system.fqdn],
                 config=self.admin_config)
-        self.assertRegexpMatches('^Loaned %s to %s' %
-                                    (self.system.fqdn, self.user2.user_name),
-                                 out)
+        assertRegex(self, '^Loaned %s to %s' %
+                    (self.system.fqdn, self.user2.user_name),
+                    out)
         self.assertLoanedTo(self.user)
         # user2 cannot return a system loaned to someone else
         details = "%s cannot return system loan" % self.user2.user_name
@@ -154,8 +155,8 @@ class SystemLoanTest(ClientTestCase):
         # Admin should be able to return it
         out = run_client(['bkr', 'loan-return', self.system.fqdn],
                 config=self.admin_config)
-        self.assertRegexpMatches('^Returned loan for %s' % self.system.fqdn,
-                                 out)
+        assertRegex(self, '^Returned loan for %s' % self.system.fqdn,
+                    out)
         self.assertNotLoaned()
 
     def test_user_cannot_borrow_system(self):
@@ -175,13 +176,13 @@ class SystemLoanTest(ClientTestCase):
         # user2 should now be able to borrow and return the system
         out = run_client(['bkr', 'loan-grant', self.system.fqdn],
                 config=self.client_config2)
-        self.assertRegexpMatches('^Borrowed %s' % self.system.fqdn, out)
+        assertRegex(self, '^Borrowed %s' % self.system.fqdn, out)
         self.assertLoanedTo(self.user2)
 
         out = run_client(['bkr', 'loan-return', self.system.fqdn],
                 config=self.client_config2)
-        self.assertRegexpMatches('^Returned loan for %s' % self.system.fqdn,
-                                out)
+        assertRegex(self, '^Returned loan for %s' % self.system.fqdn,
+                    out)
         self.assertNotLoaned()
         # user2 should still not be able to lend the system to anyone else
         details = "%s cannot lend this system" % self.user2.user_name
@@ -204,9 +205,9 @@ class SystemLoanTest(ClientTestCase):
         # when there actually wasn't a loan in place at all is a bit weird
         out = run_client(['bkr', 'loan-return', self.system.fqdn],
                          config=self.client_config)
-        self.assertRegexpMatches('^Returned loan for %s' % self.system.fqdn,
-                                 out)
+        assertRegex(self, '^Returned loan for %s' % self.system.fqdn,
+                    out)
         out = run_client(['bkr', 'loan-return', self.system.fqdn],
                          config=self.admin_config)
-        self.assertRegexpMatches('^Returned loan for %s' % self.system.fqdn,
-                                 out)
+        assertRegex(self, '^Returned loan for %s' % self.system.fqdn,
+                    out)
