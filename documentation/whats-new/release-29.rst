@@ -53,3 +53,15 @@ Beaker 29.2
     Beaker Client now allows to define `fetch_url` parameter when adding a new task.
     (Contributed by `skycastlelily <https://github.com/skycastlelily>`_)
 
+Beaker 29.3
+~~~~~~~~~~~
+* | Beaker Common and Lab Controller no longer depend on the deprecated ``pkg_resources``
+    module. Resources are now loaded via an in-tree ``bkr.common.resources`` helper, which
+    keeps the client and common packages working on Python distributions where
+    ``pkg_resources`` is no longer shipped by default.
+  | (Contributed by `Martin Styk <https://github.com/StykMartin>`_)
+* | Fixed a ``NameError`` in the XML-RPC GSSAPI cleanup error path. When the Kerberos
+    context cleanup failed, the error handler referenced an undefined variable and crashed
+    instead of raising the intended ``ProtocolError``.
+  | (Contributed by `Ian Wienand <https://github.com/iwienand>`_)
+
