@@ -212,6 +212,24 @@ jobs:
           - test-target: Server
             os-target:
               name: quay.io/centos/centos:stream10
+          - test-target: LabController
+            os-target:
+              name: quay.io/fedora/fedora:rawhide
+          - test-target: LabController
+            os-target:
+              name: quay.io/fedora/fedora:44
+          - test-target: LabController
+            os-target:
+              name: quay.io/fedora/fedora:43
+          - test-target: LabController
+            os-target:
+              name: quay.io/fedora/fedora:42
+          - test-target: LabController
+            os-target:
+              name: quay.io/centos/centos:stream9
+          - test-target: LabController
+            os-target:
+              name: quay.io/centos/centos:stream10
     steps:
       - name: Fixup CentOS repo files
         if: matrix.os-target.name == 'centos:7'
