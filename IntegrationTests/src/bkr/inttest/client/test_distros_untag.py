@@ -16,4 +16,4 @@ class DistrosUntagTest(ClientTestCase):
         run_client(['bkr', 'distros-untag', '--name', self.distro.name, 'RELEASED'])
         with session.begin():
             session.refresh(self.distro)
-            self.assertEquals(self.distro.tags, [u'STABLE'])
+            self.assertEqual(self.distro.tags, [u'STABLE'])

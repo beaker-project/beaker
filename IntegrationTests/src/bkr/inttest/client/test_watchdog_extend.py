@@ -25,20 +25,20 @@ class WatchdogExtend(ClientTestCase):
             run_client(['bkr','watchdog-extend'])
             self.fail('Must fail')
         except ClientError as e:
-            self.assert_('Please either specify one or more <taskspec> arguments or system FQDNs' in e.stderr_output)
+            self.assertTrue('Please either specify one or more <taskspec> arguments or system FQDNs' in e.stderr_output)
 
         try:
             run_client(['bkr','watchdog-extend', '--by=ABC'])
             self.fail('Must fail')
         except ClientError as e:
-            self.assert_("invalid integer value: 'ABC'" in e.stderr_output)
+            self.assertTrue("invalid integer value: 'ABC'" in e.stderr_output)
 
     def test_invalid_taskspec(self):
         try:
             run_client(['bkr','watchdog-extend', 'J:123'])
             self.fail('Must fail')
         except ClientError as e:
-            self.assert_('Taskspec type must be one of [R, T]' in e.stderr_output)
+            self.assertTrue('Taskspec type must be one of [R, T]' in e.stderr_output)
 
     def test_nonexistent_watchdog(self):
         with session.begin():

@@ -5,8 +5,9 @@
 # (at your option) any later version.
 
 import unittest
-import pkg_resources
 import lxml.etree
+
+from bkr.common.resources import resource_stream
 
 class SchemaTestBase(unittest.TestCase):
 
@@ -18,15 +19,15 @@ class SchemaTestBase(unittest.TestCase):
 
     def assert_not_valid(self, xml, error_message):
         schema = lxml.etree.RelaxNG(self.schema_doc)
-        self.assert_(not schema.validate(lxml.etree.fromstring(xml)))
+        self.assertTrue(not schema.validate(lxml.etree.fromstring(xml)))
         messages = [str(e.message) for e in schema.error_log]
-        self.assert_(error_message in messages, messages)
+        self.assertTrue(error_message in messages, messages)
 
 class TaskSchemaTest(SchemaTestBase):
 
     @classmethod
     def setUpClass(cls):
-        cls.schema_doc = lxml.etree.parse(pkg_resources.resource_stream(
+        cls.schema_doc = lxml.etree.parse(resource_stream(
         'bkr.common', 'schema/beaker-task.rng'))
 
     def test_minimal_task(self):
@@ -86,7 +87,7 @@ class JobSchemaTest(SchemaTestBase):
 
     @classmethod
     def setUpClass(cls):
-        cls.schema_doc = lxml.etree.parse(pkg_resources.resource_stream(
+        cls.schema_doc = lxml.etree.parse(resource_stream(
             'bkr.common', 'schema/beaker-job.rng'))
 
     def test_minimal_job(self):

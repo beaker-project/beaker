@@ -19,14 +19,14 @@ class SystemDetailsTest(ClientTestCase):
         out = run_client(['bkr', 'system-details', self.system.fqdn])
         g = rdflib.Graph()
         g.parse(data=out)
-        self.assert_(len(g) > 0)
+        self.assertTrue(len(g) > 0)
 
     def test_system_details_json(self):
         out = run_client(['bkr', 'system-details', '--format', 'json',
                          self.system.fqdn])
-        self.assert_(len(out) > 0)
+        self.assertTrue(len(out) > 0)
 
         # Make sure you got what you asked for
         payload = json.loads(out)
-        self.assertEquals(payload['fqdn'],
+        self.assertEqual(payload['fqdn'],
                           self.system.fqdn)

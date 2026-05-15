@@ -356,7 +356,7 @@ class CookieTransport(xmlrpclib.Transport):
         rc = kerberos.authGSSClientClean(vc)
         if rc != 1:
             errcode = 401
-            errmsg = "KERBEROS: Could not clean-up GSSAPI: %s/%s" % (ex[0][0], ex[1][0])
+            errmsg = "KERBEROS: Could not clean-up GSSAPI"
             raise xmlrpclib.ProtocolError(host + handler, errcode, errmsg, headers)
 
     def single_request(self, host, handler, request_body, verbose=0):

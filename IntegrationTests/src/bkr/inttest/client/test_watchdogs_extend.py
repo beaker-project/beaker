@@ -16,7 +16,7 @@ class WatchdogsExtend(ClientTestCase):
 
         # As the default admin user
         out = run_client(['bkr', 'watchdogs-extend'])
-        self.assert_(out.rstrip('\n') == 'No active watchdogs found' \
+        self.assertTrue(out.rstrip('\n') == 'No active watchdogs found' \
                         or 'watchdog moved from' in out)
 
         # As a non-admin user
@@ -26,4 +26,4 @@ class WatchdogsExtend(ClientTestCase):
             run_client(['bkr', 'watchdogs-extend',
                         '--username',user1.user_name,'--password','abc'])
         except ClientError as e:
-            self.assert_('Not member of group: admin' in e.stderr_output)
+            self.assertTrue('Not member of group: admin' in e.stderr_output)

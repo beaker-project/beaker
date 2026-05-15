@@ -42,8 +42,8 @@ class PoolList(ClientTestCase):
         pools1 = out1.split()
         out2 = run_client(['bkr', 'pool-list', '--limit=1'])
         pools2 = out2.split()
-        self.assertEquals(len(pools2), 1)
-        self.assertEquals(pools1[0], pools2[0])
+        self.assertEqual(len(pools2), 1)
+        self.assertEqual(pools1[0], pools2[0])
 
     def test_list_pools_by_owner_and_group(self):
         with session.begin():

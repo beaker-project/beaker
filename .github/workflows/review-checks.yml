@@ -87,10 +87,22 @@ jobs:
           sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo
 
       # We have to install git 2.18+ to perform checkout via git
-      # This is possible only via IUS repositories
+      # IUS is no longer maintained, use vault.ius.io for archived packages
+      # EPEL 7 is also archived, fix repos to point to archive
       - name: Install git to allow checkout
         run: |
-          yum install https://repo.ius.io/ius-release-el7.rpm epel-release -y
+          yum install epel-release -y
+          # Fix EPEL repos to use archive (EL7 is EOL)
+          sed -i 's|^metalink=|#metalink=|g' /etc/yum.repos.d/epel*.repo
+          sed -i 's|^#\?baseurl=.*|baseurl=https://archives.fedoraproject.org/pub/archive/epel/7/$basearch|g' /etc/yum.repos.d/epel*.repo
+          cat > /etc/yum.repos.d/ius-vault.repo << 'EOF'
+          [ius-vault]
+          name=IUS Vault for Enterprise Linux 7 - $basearch
+          baseurl=https://vault.ius.io/el7/$basearch/
+          enabled=1
+          gpgcheck=1
+          gpgkey=https://vault.ius.io/RPM-GPG-KEY-IUS-7
+          EOF
           yum install git236-core -y
 
       # Do not upgrade to @v4 as node 20 is incompatible with CentOS 7
@@ -99,7 +111,9 @@ jobs:
 
       # Remove custom git from the IUS repository - git will be reinstalled later as it is needed by beaker itself.
       - name: Remove git236 and YUM repositories
-        run: yum remove git236-core ius-release epel-release -y
+        run: |
+          yum remove git236-core epel-release -y
+          rm -f /etc/yum.repos.d/ius-vault.repo
 
       - name: Add Beaker Server YUM repository
         run: |
@@ -107,7 +121,11 @@ jobs:
 
       - name: Install Beaker dependencies
         run: |
-          yum install epel-release mariadb beaker-integration-tests -y
+          yum install epel-release -y
+          # Fix EPEL repos to use archive (EL7 is EOL)
+          sed -i 's|^metalink=|#metalink=|g' /etc/yum.repos.d/epel*.repo
+          sed -i 's|^#\?baseurl=.*|baseurl=https://archives.fedoraproject.org/pub/archive/epel/7/$basearch|g' /etc/yum.repos.d/epel*.repo
+          yum install mariadb beaker-integration-tests -y
           yum-builddep beaker.spec -y
           yum remove beaker-common \
               beaker-client \
@@ -165,13 +183,53 @@ jobs:
           - Server
         os-target:
           - name: centos:7
+          - name: quay.io/fedora/fedora:rawhide
+          - name: quay.io/fedora/fedora:44
+          - name: quay.io/fedora/fedora:43
+          - name: quay.io/fedora/fedora:42
+          - name: quay.io/centos/centos:stream9
+            additional_repos: "crb"
+            additional_packages: "epel-release"
+          - name: quay.io/centos/centos:stream10
+            additional_repos: "crb"
+            additional_packages: "epel-release"
         exclude:
           - test-target: Server
             os-target:
-              name: fedora:41
+              name: quay.io/fedora/fedora:rawhide
+          - test-target: Server
+            os-target:
+              name: quay.io/fedora/fedora:44
+          - test-target: Server
+            os-target:
+              name: quay.io/fedora/fedora:43
+          - test-target: Server
+            os-target:
+              name: quay.io/fedora/fedora:42
           - test-target: Server
             os-target:
               name: quay.io/centos/centos:stream9
+          - test-target: Server
+            os-target:
+              name: quay.io/centos/centos:stream10
+          - test-target: LabController
+            os-target:
+              name: quay.io/fedora/fedora:rawhide
+          - test-target: LabController
+            os-target:
+              name: quay.io/fedora/fedora:44
+          - test-target: LabController
+            os-target:
+              name: quay.io/fedora/fedora:43
+          - test-target: LabController
+            os-target:
+              name: quay.io/fedora/fedora:42
+          - test-target: LabController
+            os-target:
+              name: quay.io/centos/centos:stream9
+          - test-target: LabController
+            os-target:
+              name: quay.io/centos/centos:stream10
     steps:
       - name: Fixup CentOS repo files
         if: matrix.os-target.name == 'centos:7'

@@ -14,14 +14,14 @@ class TaskListTest(ClientTestCase):
         with session.begin():
             task = data_setup.create_task()
         out = run_client(['bkr', 'task-list'])
-        self.assert_(task.name in out.splitlines(), out)
+        self.assertTrue(task.name in out.splitlines(), out)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=720559
     def test_xml_works(self):
         with session.begin():
             task = data_setup.create_task()
         out = run_client(['bkr', 'task-list', '--xml'])
-        self.assert_('<task name="%s">\n\t<params/>\n</task>\n' % task.name
+        self.assertTrue('<task name="%s">\n\t<params/>\n</task>\n' % task.name
                 in out, out)
 
     def test_destructive_only(self):
@@ -31,8 +31,8 @@ class TaskListTest(ClientTestCase):
             task2 = data_setup.create_task()
             task2.destructive = False
         out = run_client(['bkr', 'task-list', '--destructive'])
-        self.assert_(task1.name in out.splitlines(), out)
-        self.assert_(task2.name not in out.splitlines(), out)
+        self.assertTrue(task1.name in out.splitlines(), out)
+        self.assertTrue(task2.name not in out.splitlines(), out)
 
     def test_non_destructive_only(self):
         with session.begin():
@@ -41,8 +41,8 @@ class TaskListTest(ClientTestCase):
             task2 = data_setup.create_task()
             task2.destructive = False
         out = run_client(['bkr', 'task-list', '--non-destructive'])
-        self.assert_(task1.name not in out.splitlines(), out)
-        self.assert_(task2.name in out.splitlines(), out)
+        self.assertTrue(task1.name not in out.splitlines(), out)
+        self.assertTrue(task2.name in out.splitlines(), out)
 
     def test_destructive_all(self):
         with session.begin():
@@ -51,13 +51,13 @@ class TaskListTest(ClientTestCase):
             task2 = data_setup.create_task()
             task2.destructive = False
         out = run_client(['bkr', 'task-list'])
-        self.assert_(task1.name in out.splitlines(), out)
-        self.assert_(task2.name in out.splitlines(), out)
+        self.assertTrue(task1.name in out.splitlines(), out)
+        self.assertTrue(task2.name in out.splitlines(), out)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=728227
     def test_nonexistent_package(self):
         out = run_client(['bkr', 'task-list', '--package', 'notexist'])
-        self.assertEquals(out, '')
+        self.assertEqual(out, '')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1073280
     def test_by_distro(self):

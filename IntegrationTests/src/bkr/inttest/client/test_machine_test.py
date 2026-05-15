@@ -21,7 +21,7 @@ class MachineTestTest(ClientTestCase):
         out = run_client(['bkr', 'machine-test', '--inventory',
                 '--machine', self.system.fqdn, '--arch', 'i386',
                 '--family', self.distro.osversion.osmajor.osmajor])
-        self.assert_(out.startswith('Submitted:'), out)
+        self.assertTrue(out.startswith('Submitted:'), out)
 
         with session.begin():
             new_job = Job.query.order_by(Job.id.desc()).first()
@@ -64,14 +64,14 @@ class MachineTestTest(ClientTestCase):
                     osmajor=OSMajor.by_name(u'RedHatEnterpriseLinux3')),
             ])
         out = run_client(['bkr', 'machine-test', '--machine', system.fqdn])
-        self.assert_(out.startswith('Submitted:'), out)
+        self.assertTrue(out.startswith('Submitted:'), out)
         with session.begin():
             new_job = Job.query.order_by(Job.id.desc()).first()
             distro_trees = [recipe.distro_tree for recipe in new_job.all_recipes]
-            self.assert_(rhel3_i386 in distro_trees, distro_trees)
-            self.assert_(rhel3_x86_64 not in distro_trees, distro_trees)
-            self.assert_(rhel4_i386 not in distro_trees, distro_trees)
-            self.assert_(rhel4_x86_64 in distro_trees, distro_trees)
+            self.assertTrue(rhel3_i386 in distro_trees, distro_trees)
+            self.assertTrue(rhel3_x86_64 not in distro_trees, distro_trees)
+            self.assertTrue(rhel4_i386 not in distro_trees, distro_trees)
+            self.assertTrue(rhel4_x86_64 in distro_trees, distro_trees)
 
     def test_ignore_system_status(self):
         with session.begin():

@@ -49,7 +49,7 @@ else:
 
 setup(
     name='beaker-lab-controller',
-    version='29.2',
+    version='29.3',
     description='Daemons for controlling a Beaker lab',
     author='Red Hat, Inc.',
     author_email='beaker-devel@lists.fedorahosted.org',
@@ -74,10 +74,18 @@ setup(
         ],
     },
 
+    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*, !=3.6.*, !=3.7.*, !=3.8.*',
     classifiers = [
         'Development Status :: 5 - Production/Stable',
         'Operating System :: POSIX :: Linux',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
+        'Programming Language :: Python :: 3.14',
+        'Programming Language :: Python :: 3.15',
         'License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)',
     ],
 
