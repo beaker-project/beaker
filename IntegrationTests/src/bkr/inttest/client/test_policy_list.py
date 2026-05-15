@@ -49,7 +49,7 @@ class PolicyListTest(ClientTestCase):
              ['control_system', self.user2.user_name, 'X', 'No'],
              ['edit_system', self.user1.user_name, 'X', 'No'],
              ['view', 'X', 'X', 'Yes'])) + '\n'
-        self.assertEquals(out, expected_output)
+        self.assertEqual(out, expected_output)
 
         # For the second system
         out = run_client(['bkr', 'policy-list', self.system_public.fqdn,
@@ -58,13 +58,13 @@ class PolicyListTest(ClientTestCase):
             (['control_system', 'X', 'X', 'Yes'],
              ['view', 'X', 'X', 'Yes'])) + '\n'
 
-        self.assertEquals(out, expected_output)
+        self.assertEqual(out, expected_output)
 
         # print the policies as JSON object
         out = run_client(['bkr', 'policy-list', self.system.fqdn,
                           '--format','json'])
         out = json.loads(out)
-        self.assertEquals(len(out['rules']), 4)
+        self.assertEqual(len(out['rules']), 4)
 
         # change active policy
         with session.begin():
@@ -72,7 +72,7 @@ class PolicyListTest(ClientTestCase):
         out = run_client(['bkr', 'policy-list', self.system.fqdn,
                           '--format','json'])
         out = json.loads(out)
-        self.assertEquals(len(out['rules']), 2)
+        self.assertEqual(len(out['rules']), 2)
 
         # --custom should return the custom access policy rules
         out = run_client(['bkr', 'policy-list', self.system.fqdn, '--custom'])
@@ -81,7 +81,7 @@ class PolicyListTest(ClientTestCase):
              ['control_system', self.user2.user_name, 'X', 'No'],
              ['edit_system', self.user1.user_name, 'X', 'No'],
              ['view', 'X', 'X', 'Yes'])) + '\n'
-        self.assertEquals(out, expected_output)
+        self.assertEqual(out, expected_output)
 
     def test_list_policy_non_existent_system(self):
 
@@ -123,7 +123,7 @@ class PolicyListTest(ClientTestCase):
                           '--mine', self.system.fqdn])
         expected_output = self.gen_expected_pretty_table(
             (['edit_system', 'admin', 'X', 'No'], )) + '\n'
-        self.assertEquals(out, expected_output)
+        self.assertEqual(out, expected_output)
 
     def test_list_policy_filter_user(self):
 
@@ -134,7 +134,7 @@ class PolicyListTest(ClientTestCase):
         expected_output = self.gen_expected_pretty_table(
             (['control_system', self.user2.user_name, 'X', 'No'],
              ['edit_system', self.user1.user_name, 'X', 'No'])) + '\n'
-        self.assertEquals(out, expected_output)
+        self.assertEqual(out, expected_output)
 
         # change active policy
         with session.begin():
@@ -144,7 +144,7 @@ class PolicyListTest(ClientTestCase):
                           self.system.fqdn])
         expected_output = self.gen_expected_pretty_table(
             (['edit_system', self.user3.user_name, 'X', 'No'],)) + '\n'
-        self.assertEquals(out, expected_output)
+        self.assertEqual(out, expected_output)
 
     def test_list_policy_filter_group(self):
 
@@ -159,7 +159,7 @@ class PolicyListTest(ClientTestCase):
         expected_output = self.gen_expected_pretty_table(
             (['control_system', 'X', self.group.group_name, 'No'],
              ['edit_system', 'X', group.group_name, 'No'])) + '\n'
-        self.assertEquals(out, expected_output)
+        self.assertEqual(out, expected_output)
 
     def test_list_policy_filter_multiple(self):
         try:

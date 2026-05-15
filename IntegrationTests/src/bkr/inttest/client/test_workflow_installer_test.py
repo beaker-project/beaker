@@ -22,7 +22,7 @@ class WorkflowInstallerTest(ClientTestCase):
             '--debug',
             '--task', self.task.name])
         out, err = p.communicate()
-        self.assertEquals(p.returncode, 0)
+        self.assertEqual(p.returncode, 0)
         self.assertIn('key --skip', out)
         self.assertIn('Submitted:', out)
 
@@ -39,5 +39,5 @@ class WorkflowInstallerTest(ClientTestCase):
                           self.task.name,
                           '--dryrun'])
         out, err = p.communicate()
-        self.assertEquals(p.returncode, 0)
-        self.assertEquals('', out)
+        self.assertEqual(p.returncode, 0)
+        self.assertEqual('', out)

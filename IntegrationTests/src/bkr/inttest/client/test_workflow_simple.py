@@ -102,14 +102,14 @@ class WorkflowSimpleTest(ClientTestCase):
         job_id = m.group(1)
         with session.begin():
             job = Job.by_id(job_id)
-            self.assertEquals(job.owner, user)
+            self.assertEqual(job.owner, user)
 
     def test_submit_job(self):
         out = run_client(['bkr', 'workflow-simple', '--random',
                           '--arch', self.distro_tree.arch.arch,
                           '--family', self.distro.osversion.osmajor.osmajor,
                           '--task', self.task.name])
-        self.assert_(out.startswith('Submitted:'), out)
+        self.assertTrue(out.startswith('Submitted:'), out)
 
     def test_submit_job_wait(self):
         args = ['bkr', 'workflow-simple', '--random',
@@ -119,12 +119,12 @@ class WorkflowSimpleTest(ClientTestCase):
                 '--wait']
         proc = start_client(args)
         out = proc.stdout.readline().rstrip()
-        self.assert_(out.startswith('Submitted:'), out)
-        m = re.search(r'J:(\d+)', out)
+        self.assertTrue(out.startswith('Submitted:'), out)
+        m = re.search('J:(\d+)', out)
         job_id = m.group(1)
 
         out = proc.stdout.readline().rstrip()
-        self.assert_('Watching tasks (this may be safely interrupted)...' == out)
+        self.assertTrue('Watching tasks (this may be safely interrupted)...' == out)
 
         with session.begin():
             job = Job.by_id(job_id)
@@ -132,7 +132,7 @@ class WorkflowSimpleTest(ClientTestCase):
             job.update_status()
 
         returncode = proc.wait()
-        self.assert_(returncode == 1)
+        self.assertTrue(returncode == 1)
 
     def test_clean_defaults(self):
         out = run_client(['bkr', 'workflow-simple',
@@ -257,7 +257,7 @@ class WorkflowSimpleTest(ClientTestCase):
                           '--task', self.task.name])
 
         out, err = p.communicate()
-        self.assertEquals(p.returncode, 0, err)
+        self.assertEqual(p.returncode, 0, err)
         self.assertIn('Warning: Ignoring --hostrequire because '
                       '--machine was specified', err.split('\n'))
         self.assertIn('Warning: Ignoring --random because '
@@ -338,10 +338,10 @@ class WorkflowSimpleTest(ClientTestCase):
         job_id = m.group(1)
         with session.begin():
             job = Job.by_id(job_id)
-            self.assertEquals(len(job.recipesets), 1)
-            self.assertEquals(len(job.recipesets[0].recipes), 2)
-            self.assertEquals(job.recipesets[0].recipes[0].tasks[1].role, 'CLIENTS')
-            self.assertEquals(job.recipesets[0].recipes[1].tasks[1].role, 'CLIENTS')
+            self.assertEqual(len(job.recipesets), 1)
+            self.assertEqual(len(job.recipesets[0].recipes), 2)
+            self.assertEqual(job.recipesets[0].recipes[0].tasks[1].role, 'CLIENTS')
+            self.assertEqual(job.recipesets[0].recipes[1].tasks[1].role, 'CLIENTS')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=972417
     def test_clients_default_zero(self):
@@ -353,10 +353,10 @@ class WorkflowSimpleTest(ClientTestCase):
         job_id = m.group(1)
         with session.begin():
             job = Job.by_id(job_id)
-            self.assertEquals(len(job.recipesets), 1)
-            self.assertEquals(len(job.recipesets[0].recipes), 2)
-            self.assertEquals(job.recipesets[0].recipes[0].tasks[1].role, 'SERVERS')
-            self.assertEquals(job.recipesets[0].recipes[1].tasks[1].role, 'SERVERS')
+            self.assertEqual(len(job.recipesets), 1)
+            self.assertEqual(len(job.recipesets[0].recipes), 2)
+            self.assertEqual(job.recipesets[0].recipes[0].tasks[1].role, 'SERVERS')
+            self.assertEqual(job.recipesets[0].recipes[1].tasks[1].role, 'SERVERS')
 
     def submit_job_and_check_arches(self, workflow_options, expected_arches):
         out = run_client(['bkr', 'workflow-simple', '--task', self.task.name]
@@ -439,7 +439,7 @@ class WorkflowSimpleTest(ClientTestCase):
         job_id = m.group(1)
         with session.begin():
             job = Job.by_id(job_id)
-            self.assertEquals(job.recipesets[0].recipes[0].kickstart,
+            self.assertEqual(job.recipesets[0].recipes[0].kickstart,
                               template_contents)
 
     def test_kickstart_template_with_kernel_options(self):
@@ -460,7 +460,7 @@ install
         job_id = m.group(1)
         with session.begin():
             job = Job.by_id(job_id)
-            self.assertEquals(job.recipesets[0].recipes[0].kernel_options,
+            self.assertEqual(job.recipesets[0].recipes[0].kernel_options,
                               "sshd=1")
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=856687
@@ -488,7 +488,7 @@ install
         job_id = m.group(1)
         with session.begin():
             job = Job.by_id(job_id)
-            self.assertEquals(job.recipesets[0].recipes[0].ks_meta, u'')
+            self.assertEqual(job.recipesets[0].recipes[0].ks_meta, u'')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1323921
     def test_can_do_dry_run_anonymously(self):

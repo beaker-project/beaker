@@ -17,5 +17,5 @@ class DistrosEditVersionTest(ClientTestCase):
                     'SillyVersion2.1'])
         with session.begin():
             session.refresh(distro)
-            self.assertEquals(distro.osversion.osmajor.osmajor, u'SillyVersion2')
-            self.assertEquals(distro.osversion.osminor, u'1')
+            self.assertEqual(distro.osversion.osmajor.osmajor, u'SillyVersion2')
+            self.assertEqual(distro.osversion.osminor, u'1')

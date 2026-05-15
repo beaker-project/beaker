@@ -13,6 +13,7 @@ import shutil
 import tempfile
 import textwrap
 import unittest
+from six import assertRegex
 
 from bkr.inttest.client import run_wizard
 
@@ -33,13 +34,13 @@ class TestWizard(BaseWizardTestCase):
 
     def test_shows_help_successfully(self):
         out = run_wizard(['beaker-wizard', '--help'])
-        self.assertRegexpMatches(out, re.compile(r'\bBeaker Wizard\b', re.I), out)
+        assertRegex(self, out, re.compile(r'\bBeaker Wizard\b', re.I), out)
 
     def test_shows_help_with_nonexistend_command(self):
         """Tests that we don't get a traceback if the user invokes the wizard
         with a nonexistend command."""
         out = run_wizard(['beaker-wizard', 'bogus', '--help'], cwd=self.tempdir)
-        self.assertRegexpMatches(out, re.compile(r'\bBeaker Wizard\b', re.I), out)
+        assertRegex(self, out, re.compile(r'\bBeaker Wizard\b', re.I), out)
 
     def test_wizard_guesses_package_from_cwd(self):
         # When run with no args, beaker-wizard guesses the package from the cwd
