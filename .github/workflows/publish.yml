@@ -56,13 +56,11 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: artifact-${{ matrix.component }}
-    - name: Display structure of downloaded files
-      run: ls -R
+        path: dist
     - name: Publish package distributions to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
-        print-hash: false
-        packages-dir: "./"
+        packages-dir: dist
 
   release-rpm:
     runs-on: ubuntu-latest
