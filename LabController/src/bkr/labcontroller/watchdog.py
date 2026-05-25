@@ -91,7 +91,7 @@ class Watchdog(ProxyHelper):
         logger.info('External Watchdog Expired for recipe %s on system %s', recipe_id, system)
         if self.conf.get("WATCHDOG_SCRIPT"):
             job = lxml.etree.fromstring(self.get_my_recipe(dict(recipe_id=recipe_id)))
-            recipe = job.find('recipeSet/guestrecipe')
+            recipe = job.find('recipeSet/recipe/guestrecipe')
             if recipe is None:
                 recipe = job.find('recipeSet/recipe')
             for task in recipe.iterfind('task'):
