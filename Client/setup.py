@@ -48,7 +48,6 @@ setup(
     package_data={
         'bkr.client': ['host-filters/*']
     },
-    namespace_packages=['bkr'],
 
     data_files=[
         ('/etc/beaker', []),

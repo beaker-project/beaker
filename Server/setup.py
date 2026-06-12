@@ -185,7 +185,6 @@ else:
     ])
 setup(
     name='beaker-server',
-    namespace_packages = ['bkr'],
     version='29.3',
     description='Beaker scheduler and web interface',
     long_description=
