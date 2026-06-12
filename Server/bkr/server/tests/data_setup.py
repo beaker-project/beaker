@@ -15,7 +15,7 @@ import lxml.etree
 import mock
 import netaddr
 import six
-import turbogears.config
+from bkr.server import config
 import uuid
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server.database import session, metadata, get_engine
@@ -195,7 +195,7 @@ def create_distro(name=None, osmajor=u'DansAwesomeLinux6', osminor=u'9',
 
     log.debug('Created distro %r', distro)
     if harness_dir:
-        harness_dir = os.path.join(turbogears.config.get('basepath.harness'), distro.osversion.osmajor.osmajor)
+        harness_dir = os.path.join(config.get('basepath.harness'), distro.osversion.osmajor.osmajor)
         if not os.path.exists(harness_dir):
             os.makedirs(harness_dir)
     return distro

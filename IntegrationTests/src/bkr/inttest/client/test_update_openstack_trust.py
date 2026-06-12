@@ -7,7 +7,7 @@
 import os
 from unittest import SkipTest
 
-from turbogears import config
+from bkr.server import config
 from bkr.server.database import session
 
 from bkr.inttest import data_setup

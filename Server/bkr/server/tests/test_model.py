@@ -19,7 +19,7 @@ from sqlalchemy.dialects.mysql.base import MySQLDialect
 from sqlalchemy.dialects.sqlite.base import SQLiteDialect
 from sqlalchemy.schema import MetaData, Table, Column
 from sqlalchemy.types import Integer, Unicode
-from turbogears.config import update
+from bkr.server.config import update
 
 from bkr.server.model.sql import ConditionalInsert
 from bkr.server.model.tasklibrary import TaskLibrary

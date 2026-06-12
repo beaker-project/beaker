@@ -15,7 +15,7 @@ from bkr.log import log_to_stream
 from bkr.server.model import OSMajor
 from bkr.server.util import load_config_or_exit, run_createrepo
 from optparse import OptionParser
-from turbogears.config import get
+from bkr.server.config import get
 import os
 import sys
 import dnf

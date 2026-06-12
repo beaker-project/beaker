@@ -4,7 +4,8 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from turbogears import validators, url, config
+from turbogears import validators, url
+from bkr.server import config
 from kid import Element
 import time
 import turbogears as tg

@@ -1,0 +1,39 @@
+name: act-server-unit
+
+# Local-only workflow for running the Server unit tests under `act` on
+# CentOS 7 / Python 2. It avoids two act limitations: it has no matrix (act
+# mishandles the upstream exclude: on nested os-target objects) and no JS
+# actions like actions/checkout (act's node20 will not run on CentOS 7's
+# glibc 2.17), relying on `act --bind` to mount the repo instead.
+#
+# Run:
+#   DOCKER_HOST=unix://$HOME/.rd/docker.sock \
+#   act -W .github/workflows/act-server-unit.yml --bind \
+#       --container-architecture linux/amd64 \
+#       -P ubuntu-latest=catthehacker/ubuntu:act-latest
+
+on: [push]
+
+jobs:
+  server-unit-py2:
+    runs-on: ubuntu-latest
+    container:
+      image: centos:7
+    steps:
+      - name: Fixup CentOS 7 + EPEL repos (EOL -> vault/archive)
+        run: |
+          sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo
+          sed -i 's/^#.*baseurl=http/baseurl=http/g' /etc/yum.repos.d/*.repo
+          sed -i 's/^mirrorlist=http/#mirrorlist=http/g' /etc/yum.repos.d/*.repo
+          yum install -y dnf 'dnf-command(builddep)' git
+          yum install -y epel-release || true
+          sed -i 's|^metalink=|#metalink=|g' /etc/yum.repos.d/epel*.repo 2>/dev/null || true
+          sed -i 's|^#\?baseurl=.*|baseurl=https://archives.fedoraproject.org/pub/archive/epel/7/$basearch|g' /etc/yum.repos.d/epel*.repo 2>/dev/null || true
+      - name: Add Beaker Server YUM repository
+        run: curl -fsSL -o /etc/yum.repos.d/beaker-server.repo https://beaker-project.org/yum/beaker-server-RedHatEnterpriseLinux.repo
+      - name: Install build dependencies
+        run: dnf builddep -y *.spec
+      - name: Run Server unit tests (native database.py, python2, sqlite)
+        run: |
+          cd Server
+          ./run-tests.sh -v --traverse-namespace bkr.server.tests

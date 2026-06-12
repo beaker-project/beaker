@@ -5,7 +5,7 @@
 # (at your option) any later version.
 
 from bkr.server.database import session
-from turbogears import config
+from bkr.server import config
 from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.distrotrees import DistroTrees

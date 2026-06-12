@@ -32,7 +32,7 @@ try:
     has_glanceclient = True
 except ImportError:
     has_glanceclient = False
-from turbogears import config
+from bkr.server import config
 from bkr.log import log_to_stream
 from bkr.server.util import load_config_or_exit, absolute_url
 from bkr.server.model import session, OpenStackRegion

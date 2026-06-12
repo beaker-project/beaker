@@ -5,7 +5,7 @@
 
 import re
 
-from turbogears import config
+from bkr.server import config
 from bkr.server.database import session
 from unittest import SkipTest
 

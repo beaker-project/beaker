@@ -11,7 +11,7 @@ Routines for sending Beaker metrics to Graphite.
 import socket
 import time
 import logging
-from turbogears import config
+from bkr.server import config
 
 log = logging.getLogger(__name__)
 

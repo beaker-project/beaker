@@ -20,7 +20,8 @@ from sqlalchemy import or_
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
 from turbogears import expose, flash, widgets, validate, error_handler, paginate, url
-from turbogears import redirect, config
+from turbogears import redirect
+from bkr.server import config
 from bkr.server.database import session
 
 import bkr

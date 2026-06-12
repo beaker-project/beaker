@@ -11,7 +11,7 @@ from datetime import datetime
 from flask import request, jsonify, redirect as flask_redirect
 from sqlalchemy import not_
 from sqlalchemy.exc import InvalidRequestError
-from turbogears import config
+from bkr.server import config
 from bkr.server.database import session
 
 from bkr.common.bexceptions import BX

@@ -18,7 +18,7 @@ from bkr.log import log_to_stream
 from bkr.server.model import User, System, Reservation, Recipe, \
     RecipeSet, Job, Watchdog, RecipeTask, Task, TaskStatus, RecipeResource
 from bkr.server.util import load_config_or_exit
-from turbogears import config
+from bkr.server import config
 from turbomail.control import interface
 from bkr.server import mail
 from sqlalchemy.orm import joinedload

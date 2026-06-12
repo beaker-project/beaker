@@ -4,7 +4,8 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from turbogears import expose, config
+from turbogears import expose
+from bkr.server import config
 from sqlalchemy.sql import func
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound

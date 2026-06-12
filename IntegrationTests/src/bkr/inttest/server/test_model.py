@@ -20,6 +20,7 @@ import kid
 from six import assertRegex
 from bkr.server.database import session
 from bkr.server.installopts import InstallOptions
+from bkr.server import config
 from bkr.server import model, identity
 from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         SystemType, Job, JobCc, Key, Key_Value_Int, Key_Value_String, \
@@ -2560,7 +2561,7 @@ class TaskLibraryTest(DatabaseTestCase):
 
     def query_task_repo(self, task_name):
 
-        task_dir = turbogears.config.get('basepath.rpms')
+        task_dir = config.get('basepath.rpms')
         base = dnf.Base()
         cachedir = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, cachedir)

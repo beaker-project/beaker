@@ -16,7 +16,7 @@ import sys
 import logging
 import optparse
 import ldap
-from turbogears import config
+from bkr.server import config
 from bkr.common import __version__
 from bkr.log import log_to_stream
 from bkr.server.util import load_config_or_exit

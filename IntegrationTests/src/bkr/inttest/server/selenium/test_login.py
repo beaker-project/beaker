@@ -3,7 +3,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import turbogears.config
+from bkr.server import config
 from bkr.server.database import session
 import xmlrpclib
 import urllib
@@ -166,7 +166,7 @@ class XmlRpcLoginTest(XmlRpcTestCase):
     def test_krb_login(self):
         if not krbV:
             raise SkipTest('krbV module not found')
-        server_princ_name = turbogears.config.get(
+        server_princ_name = config.get(
             'identity.krb_auth_principal', None)
         if not server_princ_name:  # XXX FIXME dead test
             raise SkipTest('server not configured for krbV')

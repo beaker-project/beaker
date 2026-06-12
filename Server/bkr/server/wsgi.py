@@ -27,7 +27,7 @@ del orig_signal_signal
 import os
 import sys
 import logging
-from turbogears import config
+from bkr.server import config
 from bkr.server.database import session
 import cherrypy
 import cherrypy._cpwsgi

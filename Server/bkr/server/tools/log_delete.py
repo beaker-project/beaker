@@ -17,7 +17,7 @@ import datetime
 import shutil
 import warnings
 import requests
-from turbogears import config
+from bkr.server import config
 from sqlalchemy.sql import and_
 from bkr.common import __version__
 from bkr.log import log_to_stream

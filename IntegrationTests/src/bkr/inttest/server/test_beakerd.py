@@ -19,7 +19,7 @@ from bkr.server.model import TaskStatus, Job, System, User, \
         RecipeVirtStatus, Arch
 from bkr.server.installopts import InstallOptions
 from sqlalchemy.sql import not_
-from turbogears import config
+from bkr.server import config
 from bkr.server.database import session, get_engine
 import lxml.etree
 from bkr.inttest import data_setup, fix_beakerd_repodata_perms, DatabaseTestCase

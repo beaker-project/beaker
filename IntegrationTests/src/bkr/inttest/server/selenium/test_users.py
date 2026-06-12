@@ -14,7 +14,7 @@ from bkr.inttest.server.requests_utils import (login as requests_login, patch_js
                                                post_json, put_json, xmlrpc as requests_xmlrpc)
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, check_user_search_results
-from turbogears import config
+from bkr.server import config
 
 
 class UsersGridTest(WebDriverTestCase):

@@ -40,6 +40,7 @@ from bkr.server.database import session
 from bkr.server.controllers import Root
 from bkr.server.model import OpenStackRegion, ConfigItem, User, LabController, Task, Distro
 from bkr.server.util import load_config
+from bkr.server import config
 from bkr.server.tools import ipxe_image
 from bkr.server.tests import data_setup
 from bkr.log import log_to_stream
@@ -105,7 +106,7 @@ log = logging.getLogger(__name__)
 
 def get_server_base():
     return os.environ.get('BEAKER_SERVER_BASE_URL',
-                          'http://localhost:%s/' % turbogears.config.get('server.socket_port'))
+                          'http://localhost:%s/' % config.get('server.socket_port'))
 
 
 def with_transaction(func):
@@ -131,7 +132,7 @@ def fix_beakerd_repodata_perms():
     # The hacky fix is to just delete the repodata at the end of the test, and
     # let the application (running as apache) re-create it later.
     # Call this in a tearDown or tearDownClass method.
-    repodata = os.path.join(turbogears.config.get('basepath.rpms'), 'repodata')
+    repodata = os.path.join(config.get('basepath.rpms'), 'repodata')
     shutil.rmtree(repodata, ignore_errors=True)
 
 
@@ -324,7 +325,7 @@ def _glance():
     username = os.environ['OPENSTACK_DUMMY_USERNAME']
     password = os.environ['OPENSTACK_DUMMY_PASSWORD']
     project_name = os.environ['OPENSTACK_DUMMY_PROJECT_NAME']
-    auth_url = turbogears.config.get('openstack.identity_api_url')
+    auth_url = config.get('openstack.identity_api_url')
     user_domain_name = os.environ.get('OPENSTACK_DUMMY_USER_DOMAIN_NAME')
     project_domain_name = os.environ.get('OPENSTACK_DUMMY_PROJECT_DOMAIN_NAME')
 
@@ -425,19 +426,19 @@ def setup_package():
             data_setup.create_distro_tree(osmajor=u'BlueShoeLinux5',
                                           distro_name=u'BlueShoeLinux5-5')
 
-    if os.path.exists(turbogears.config.get('basepath.rpms')):
+    if os.path.exists(config.get('basepath.rpms')):
         # Remove any task RPMs left behind by previous test runs
-        for entry in os.listdir(turbogears.config.get('basepath.rpms')):
+        for entry in os.listdir(config.get('basepath.rpms')):
             shutil.rmtree(os.path.join(
-                turbogears.config.get('basepath.rpms'),
+                config.get('basepath.rpms'),
                 entry), ignore_errors=True)
     else:
-        os.mkdir(turbogears.config.get('basepath.rpms'))
+        os.mkdir(config.get('basepath.rpms'))
 
     setup_slapd()
     mail_capture_thread.start()
 
-    if turbogears.config.get('openstack.identity_api_url'):
+    if config.get('openstack.identity_api_url'):
         setup_openstack()
 
     turbogears.testutil.make_app(Root)
@@ -454,10 +455,10 @@ def setup_package():
             Process('gunicorn', args=[sys.executable, '-c',
                                       '__requires__ = ["CherryPy < 3.0"]; import pkg_resources; '
                                       'from gunicorn.app.wsgiapp import run; run()',
-                                      '--bind', ':%s' % turbogears.config.get('server.socket_port'),
+                                      '--bind', ':%s' % config.get('server.socket_port'),
                                       '--workers', '8', '--access-logfile', '-', '--preload',
                                       'bkr.server.wsgi:application'],
-                    listen_port=turbogears.config.get('server.socket_port')),
+                    listen_port=config.get('server.socket_port')),
         ])
     processes.extend([
         Process('slapd', args=['slapd', '-d0', '-F' + slapd_config_dir,
@@ -479,7 +480,7 @@ def teardown_package():
 
     turbogears.testutil.stop_server()
 
-    if turbogears.config.get('openstack.identity_api_url'):
+    if config.get('openstack.identity_api_url'):
         cleanup_openstack()
 
     mail_capture_thread.stop()

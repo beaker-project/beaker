@@ -11,7 +11,7 @@ import webassets
 from webassets.bundle import get_all_bundle_files
 from webassets.filter.jst import JST
 import threading
-from turbogears import config
+from bkr.server import config
 
 # Custom filter to use external ycssmin
 # (There is a python cssmin implementation, we could use that instead)
