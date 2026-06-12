@@ -39,7 +39,6 @@ setup(
     data_files=[
         ('beaker-integration-tests', ['motd.xml']),
     ],
-    namespace_packages=['bkr'],
     install_requires=[
         'beaker-server',
         'beaker-client',

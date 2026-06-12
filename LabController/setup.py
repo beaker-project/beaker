@@ -62,8 +62,6 @@ setup(
     packages=find_packages('src'),
     package_dir = {'':'src'},
 
-    namespace_packages = ['bkr'],
-
     data_files=data_files,
     package_data = {
         'bkr.labcontroller': [

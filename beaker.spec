@@ -363,6 +363,24 @@ make check
 unlink %{buildroot}/nosetests-3
 %endif
 
+%if %{with python3}
+%{__python3} -W error -c '
+import sys, site, importlib.util
+site.addsitedir("%{buildroot}%{python3_sitelib}")
+for name in ("bkr", "bkr.common", "bkr.client"):
+    if importlib.util.find_spec(name) is None:
+        sys.exit("cannot resolve " + name)
+'
+%else
+%{__python2} -c '
+import sys, site, imp
+site.addsitedir("%{buildroot}%{python2_sitelib}")
+import bkr
+for name in ("common", "client", "server", "labcontroller"):
+    imp.find_module(name, bkr.__path__)
+'
+%endif
+
 %if %{without python3}
 %post server
 %systemd_post beakerd.service
@@ -433,7 +451,6 @@ chmod go-w %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 %dir %{_sysconfdir}/%{name}
 %doc documentation/_build/text/whats-new/
 %{python2_sitelib}/bkr/server/
-%{python2_sitelib}/beaker_server-*-nspkg.pth
 %{python2_sitelib}/beaker_server-*.egg-info/
 %{_bindir}/beaker-init
 %{_bindir}/beaker-usage-reminder
@@ -476,7 +493,6 @@ chmod go-w %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 %if %{without python3}
 %files integration-tests
 %{python2_sitelib}/bkr/inttest/
-%{python2_sitelib}/beaker_integration_tests-*-nspkg.pth
 %{python2_sitelib}/beaker_integration_tests-*.egg-info/
 %{_datadir}/beaker-integration-tests
 %endif
@@ -486,11 +502,9 @@ chmod go-w %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 %doc Client/client.conf.example
 %if %{with python3}
 %{python3_sitelib}/bkr/client/
-%{python3_sitelib}/%{name}_client-*-nspkg.pth
 %{python3_sitelib}/%{name}_client-*.egg-info/
 %else
 %{python2_sitelib}/bkr/client/
-%{python2_sitelib}/beaker_client-*-nspkg.pth
 %{python2_sitelib}/beaker_client-*.egg-info/
 %endif
 %{_bindir}/beaker-wizard
@@ -511,7 +525,6 @@ chmod go-w %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 %{_sysconfdir}/%{name}/power-scripts/
 %{_sysconfdir}/%{name}/install-failure-patterns/
 %{python2_sitelib}/bkr/labcontroller/
-%{python2_sitelib}/beaker_lab_controller-*-nspkg.pth
 %{python2_sitelib}/beaker_lab_controller-*.egg-info/
 %{_bindir}/beaker-proxy
 %{_bindir}/beaker-watchdog
