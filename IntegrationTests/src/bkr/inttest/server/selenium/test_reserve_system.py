@@ -13,7 +13,7 @@ from bkr.server.model import Arch, ExcludeOSMajor, SystemType, \
         LabControllerDistroTree, SystemPermission, TaskBase, SystemStatus
 from selenium.webdriver.support.ui import Select
 import unittest, time, re, os
-from turbogears.database import session
+from bkr.server.database import session
 
 WORKFLOW_DESCR = "Reserve Workflow provision of distro %s on %s for %s seconds"
 

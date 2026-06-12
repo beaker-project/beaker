@@ -9,7 +9,7 @@ import os
 import subprocess
 from bkr.inttest import Process
 from six import assertRegex
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.common import __version__
 from bkr.server.tools.sync_tasks import TaskLibrarySync
 from bkr.server.model import Task

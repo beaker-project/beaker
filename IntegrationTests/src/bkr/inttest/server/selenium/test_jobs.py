@@ -11,7 +11,7 @@ import lxml.etree
 import time
 import tempfile
 import pkg_resources
-from turbogears.database import session
+from bkr.server.database import session
 from selenium.webdriver.common.keys import Keys
 from bkr.inttest.assertions import wait_for_condition
 from bkr.inttest.server.selenium import WebDriverTestCase

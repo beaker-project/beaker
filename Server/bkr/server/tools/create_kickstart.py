@@ -13,7 +13,7 @@ __requires__ = ['TurboGears']
 from itertools import chain
 import sys
 import optparse
-from turbogears.database import session
+from bkr.server.database import session
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.common import __version__
 from bkr.server.model import DistroTree, System, User, Recipe, \

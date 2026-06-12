@@ -7,7 +7,7 @@
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base
 from bkr.inttest.server.webdriver_utils import check_recipe_search_results
-from turbogears.database import session
+from bkr.server.database import session
 
 class SearchRecipes(WebDriverTestCase):
 

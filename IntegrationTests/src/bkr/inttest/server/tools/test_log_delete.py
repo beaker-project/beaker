@@ -19,7 +19,7 @@ from bkr.server.model import (LogRecipe, Job, RenderedKickstart,
 from bkr.inttest import data_setup, with_transaction, Process, DatabaseTestCase
 from bkr.inttest.server.tools import run_command
 from bkr.server.tools import log_delete
-from turbogears.database import session
+from bkr.server.database import session
 from turbogears import config
 
 

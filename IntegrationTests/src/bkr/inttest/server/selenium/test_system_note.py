@@ -14,7 +14,7 @@ from bkr.inttest.assertions import wait_for_condition, assert_datetime_within
 from bkr.inttest import data_setup, with_transaction, get_server_base, \
         DatabaseTestCase
 from bkr.server.model import SystemPermission, Note
-from turbogears.database import session
+from bkr.server.database import session
 
 class SystemNoteTests(WebDriverTestCase):
 

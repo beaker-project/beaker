@@ -13,7 +13,7 @@ from urlparse import urljoin
 from urllib import urlencode, urlopen
 import uuid
 import lxml.etree
-from turbogears.database import session
+from bkr.server.database import session
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium.webdriver.support.expected_conditions import staleness_of

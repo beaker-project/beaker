@@ -7,7 +7,7 @@
 import os
 from datetime import datetime
 from lxml import etree
-from turbogears.database import session
+from bkr.server.database import session
 from turbogears import expose, flash, widgets, redirect, paginate, url
 from sqlalchemy import not_, and_
 from sqlalchemy.exc import InvalidRequestError

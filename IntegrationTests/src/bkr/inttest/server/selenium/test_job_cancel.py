@@ -9,7 +9,7 @@ from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import is_text_present, login, \
     wait_for_animation
 from bkr.inttest import data_setup, get_server_base
-from turbogears.database import session
+from bkr.server.database import session
 
 # OLD, DEPRECATED JOB PAGE ONLY
 

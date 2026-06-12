@@ -9,7 +9,7 @@ import unittest
 import logging
 import time
 import tempfile
-from turbogears.database import session
+from bkr.server.database import session
 from selenium.webdriver.support.ui import Select
 from bkr.server.model import TaskResult
 from bkr.inttest.server.webdriver_utils import login, is_text_present, \

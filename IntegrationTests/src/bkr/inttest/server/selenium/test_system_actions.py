@@ -5,7 +5,7 @@
 # (at your option) any later version.
 
 import email
-from turbogears.database import session
+from bkr.server.database import session
 from selenium.common.exceptions import NoSuchElementException
 from bkr.inttest.assertions import wait_for_condition
 from bkr.inttest.server.selenium import WebDriverTestCase

@@ -36,7 +36,7 @@ try:
 except ImportError:
     has_keystoneauth1 = False
 
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server.controllers import Root
 from bkr.server.model import OpenStackRegion, ConfigItem, User, LabController, Task, Distro
 from bkr.server.util import load_config

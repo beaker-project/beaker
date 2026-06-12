@@ -8,7 +8,7 @@ import os
 from unittest import SkipTest
 
 from turbogears import config
-from turbogears.database import session
+from bkr.server.database import session
 
 from bkr.inttest import data_setup
 from bkr.inttest.client import ClientError, ClientTestCase

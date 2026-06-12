@@ -8,7 +8,7 @@ from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import wait_for_animation, \
     check_job_search_results
 from bkr.inttest import data_setup, with_transaction, get_server_base
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server.model import Product, RetentionTag
 
 class SearchJobsWD(WebDriverTestCase):

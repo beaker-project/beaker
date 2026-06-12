@@ -6,7 +6,7 @@
 
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server.model import Job
 import requests
 import lxml.etree

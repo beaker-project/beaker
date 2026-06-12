@@ -7,7 +7,7 @@
 import os
 import tempfile
 import shutil
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.common import __version__
 from bkr.inttest import data_setup, DatabaseTestCase
 from bkr.inttest.kickstart_helpers import create_rhel62, create_rhel62_server_x86_64, \

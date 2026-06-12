@@ -9,7 +9,7 @@ from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import delete_and_confirm, \
     get_server_base, is_text_present, login, wait_for_animation
 from bkr.inttest import data_setup, with_transaction
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server.model import Group
 
 # XXX Merge into test_jobs.py

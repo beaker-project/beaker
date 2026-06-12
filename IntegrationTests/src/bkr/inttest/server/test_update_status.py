@@ -8,7 +8,7 @@ import datetime
 from threading import Thread, Event
 import pkg_resources
 import lxml.etree
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server.bexceptions import StaleTaskStatusException
 from bkr.inttest import data_setup, fix_beakerd_repodata_perms, DatabaseTestCase
 from bkr.server.model import TaskStatus, TaskResult, Watchdog, RecipeSet, \

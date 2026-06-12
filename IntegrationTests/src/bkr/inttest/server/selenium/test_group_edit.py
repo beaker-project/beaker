@@ -12,7 +12,7 @@ import datetime
 import requests
 from six import assertRaisesRegex
 import xmlrpclib
-from turbogears.database import session
+from bkr.server.database import session
 
 from bkr.inttest import data_setup, get_server_base, mail_capture_thread, DatabaseTestCase
 from bkr.inttest.server.requests_utils import post_json, patch_json, login as requests_login

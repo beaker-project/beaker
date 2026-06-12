@@ -8,7 +8,7 @@ import logging
 from datetime import datetime
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, Unicode
 from sqlalchemy.orm import object_mapper, relationship
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server import identity
 from .base import DeclarativeMappedObject
 

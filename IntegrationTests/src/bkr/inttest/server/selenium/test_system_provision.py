@@ -12,7 +12,7 @@ from bkr.server.model import SystemStatus, SSHPubKey, RenderedKickstart, \
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, BootstrapSelect
 from bkr.inttest.server.requests_utils import post_json
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.inttest import data_setup, get_server_base
 
 

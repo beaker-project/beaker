@@ -9,7 +9,7 @@ from decimal import Decimal
 from tempfile import NamedTemporaryFile
 
 import pkg_resources
-from turbogears.database import session
+from bkr.server.database import session
 
 from bkr.inttest import data_setup, get_server_base
 from bkr.inttest.assertions import assert_has_key_with_value

@@ -5,7 +5,7 @@
 # (at your option) any later version.
 
 from turbogears import url
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.bexceptions import BeakerException
 from bkr.server.widgets import AlphaNavBar, AutoCompleteField, InlineForm

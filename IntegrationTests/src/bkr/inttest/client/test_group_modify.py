@@ -7,7 +7,7 @@
 import email
 import re
 
-from turbogears.database import session
+from bkr.server.database import session
 
 from bkr.inttest import data_setup, mail_capture_thread
 from bkr.inttest.client import run_client, ClientError, create_client_config, ClientTestCase

@@ -5,7 +5,7 @@
 # (at your option) any later version.
 
 import datetime
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server.model import TaskStatus, TaskResult
 from bkr.inttest import data_setup
 from bkr.inttest.assertions import assert_datetime_within

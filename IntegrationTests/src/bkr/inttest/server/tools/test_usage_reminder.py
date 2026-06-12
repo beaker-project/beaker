@@ -5,7 +5,7 @@
 # (at your option) any later version.
 
 from datetime import datetime, timedelta
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.common import __version__
 from bkr.inttest import data_setup, DatabaseTestCase
 from bkr.server.tools.usage_reminder import BeakerUsage

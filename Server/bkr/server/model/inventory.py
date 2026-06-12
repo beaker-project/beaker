@@ -26,7 +26,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.associationproxy import association_proxy
 from turbogears import url, config
 from turbogears.config import get
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server import identity, metrics, mail
 from bkr.server.bexceptions import (BX, InsufficientSystemPermissions,
         StaleCommandStatusException, StaleSystemUserException)

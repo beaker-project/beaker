@@ -15,7 +15,7 @@ from bkr.inttest.server.requests_utils import login as requests_login, post_json
 from bkr.inttest.server.webdriver_utils import login, logout
 from bkr.inttest import data_setup, with_transaction, get_server_base, DatabaseTestCase, \
         mail_capture_thread
-from turbogears.database import session
+from bkr.server.database import session
 
 class SystemLoanTest(WebDriverTestCase):
 

@@ -9,7 +9,7 @@ import os
 import shutil
 import signal
 from bkr.labcontroller.config import load_conf, get_conf
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server.model import LabController, Watchdog, Recipe, RecipeSet, \
         System, SystemStatus
 from bkr.inttest import data_setup, Process, DatabaseTestCase

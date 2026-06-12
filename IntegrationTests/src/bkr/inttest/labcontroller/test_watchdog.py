@@ -9,7 +9,7 @@
 import os, os.path
 import time
 import pkg_resources
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.common.helpers import makedirs_ignore
 from bkr.labcontroller.config import get_conf
 from bkr.labcontroller.proxy import ConsoleWatchFile, InstallFailureDetector, \

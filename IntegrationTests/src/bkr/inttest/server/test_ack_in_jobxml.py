@@ -4,7 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.inttest import data_setup, with_transaction, DatabaseTestCase
 
 class TestAckJobXml(DatabaseTestCase):

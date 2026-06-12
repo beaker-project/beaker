@@ -7,7 +7,7 @@
 from sqlalchemy import select
 from sqlalchemy.sql.expression import case, func, and_, bindparam, not_
 from turbogears import expose, url, flash
-from turbogears.database import session
+from bkr.server.database import session
 from kid import Element, SubElement
 from bkr.server.widgets import JobMatrixReport as JobMatrixWidget, MatrixDataGrid
 from bkr.server import model

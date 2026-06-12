@@ -7,7 +7,7 @@ import sys
 import time
 import logging
 import pkg_resources
-from turbogears.database import session
+from bkr.server.database import session
 from unittest import SkipTest, TestCase
 from bkr.server.model import PowerType, CommandStatus, System, User, SystemStatus
 from bkr.labcontroller.config import get_conf

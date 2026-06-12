@@ -13,7 +13,7 @@ import datetime
 import xmlrpclib
 import crypt
 from six import assertRaisesRegex
-from turbogears.database import session
+from bkr.server.database import session
 
 from bkr.inttest.server.selenium import XmlRpcTestCase
 from bkr.inttest.assertions import assert_datetime_within, \

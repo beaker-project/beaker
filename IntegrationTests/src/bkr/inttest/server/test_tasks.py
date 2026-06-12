@@ -5,7 +5,7 @@
 # (at your option) any later version.
 
 import lxml.etree
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server.bexceptions import BX
 from bkr.inttest import data_setup, DatabaseTestCase
 

@@ -5,7 +5,7 @@
 # (at your option) any later version.
 
 import textwrap
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server.model import SystemStatus, Recipe
 from json import loads
 from bkr.inttest import data_setup

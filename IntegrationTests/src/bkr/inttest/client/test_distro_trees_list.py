@@ -6,7 +6,7 @@
 
 import datetime
 import json
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.inttest import data_setup, with_transaction, DatabaseTestCase
 from bkr.inttest.client import run_client, ClientError
 from bkr.server.model import LabControllerDistroTree, DistroTree

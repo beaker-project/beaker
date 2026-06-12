@@ -7,7 +7,7 @@
 
 import datetime
 import re
-from turbogears.database import session
+from bkr.server.database import session
 from six import assertRegex
 from unittest import SkipTest
 

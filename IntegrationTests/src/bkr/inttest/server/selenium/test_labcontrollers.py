@@ -9,7 +9,7 @@ import requests
 import datetime
 import xmlrpclib
 from threading import Thread, Event
-from turbogears.database import session
+from bkr.server.database import session
 from six import assertRegex
 from sqlalchemy.orm.exc import NoResultFound
 
