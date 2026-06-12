@@ -13,7 +13,7 @@ from urlparse import urljoin
 from urllib import urlencode, quote
 import requests
 import rdflib.graph
-from turbogears.database import session
+from bkr.server.database import session
 
 from bkr.inttest import data_setup, get_server_base, \
         assertions, with_transaction, DatabaseTestCase

@@ -7,7 +7,7 @@
 import datetime
 
 import six
-from turbogears.database import session
+from bkr.server.database import session
 
 from bkr.server.model import SystemStatus, SystemStatusDuration, System, Arch
 from bkr.server.utilisation import system_utilisation, \

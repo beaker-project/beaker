@@ -8,7 +8,7 @@ from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base
 from bkr.inttest.server.webdriver_utils import is_text_present
 import unittest
-from turbogears.database import session
+from bkr.server.database import session
 import requests
 
 class TaskByName(WebDriverTestCase):

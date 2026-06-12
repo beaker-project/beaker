@@ -6,7 +6,7 @@
 import re
 
 from turbogears import config
-from turbogears.database import session
+from bkr.server.database import session
 from unittest import SkipTest
 
 from bkr.inttest import data_setup

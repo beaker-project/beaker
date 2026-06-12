@@ -7,7 +7,7 @@
 import pkg_resources
 import datetime
 from decimal import Decimal
-from turbogears.database import session
+from bkr.server.database import session
 from sqlalchemy.sql import text
 from bkr.server.model import System, RecipeTask, Cpu, SystemStatus, \
     SystemActivity, TaskPriority, RecipeSetActivity, VirtResource, \

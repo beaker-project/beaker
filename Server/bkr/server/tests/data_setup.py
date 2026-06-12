@@ -16,10 +16,9 @@ import mock
 import netaddr
 import six
 import turbogears.config
-import turbogears.database
 import uuid
 from sqlalchemy.orm.exc import NoResultFound
-from turbogears.database import session, metadata
+from bkr.server.database import session, metadata, get_engine
 
 from bkr.server import dynamic_virt
 from bkr.server.model import (
@@ -45,7 +44,7 @@ ADMIN_EMAIL_ADDRESS = u'admin@example.com'
 
 def setup_model(override=True):
     from bkr.server.tools.init import init_db, populate_db
-    engine = turbogears.database.get_engine()
+    engine = get_engine()
     db_name = engine.url.database
     if db_name: # it will be None for in-memory sqlite
         connection = engine.connect()

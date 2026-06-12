@@ -20,7 +20,7 @@ import lxml.etree
 import json
 import requests
 from optparse import OptionParser
-from turbogears.database import session
+from bkr.server.database import session
 
 import six
 

@@ -15,7 +15,7 @@ from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
 from bkr.inttest.server.requests_utils import login as requests_login, patch_json
 import unittest as unittest
 import pkg_resources
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server.model import TaskPackage, Task, OSMajor
 from sqlalchemy.sql import func
 import turbogears as tg

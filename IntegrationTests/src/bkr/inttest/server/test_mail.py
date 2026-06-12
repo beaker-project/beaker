@@ -7,7 +7,7 @@
 import email
 import re
 import uuid
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server.model import Arch, TaskResult
 from bkr.server.util import absolute_url
 from bkr.inttest import data_setup, mail_capture_thread, get_server_base, \

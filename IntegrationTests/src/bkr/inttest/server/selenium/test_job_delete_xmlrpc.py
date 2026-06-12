@@ -7,7 +7,7 @@
 import unittest
 import logging
 import xmlrpclib
-from turbogears.database import session
+from bkr.server.database import session
 
 from bkr.inttest.server.selenium import XmlRpcTestCase
 from bkr.inttest import data_setup

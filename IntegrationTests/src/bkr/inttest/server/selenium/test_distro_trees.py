@@ -7,7 +7,7 @@
 import urlparse
 import requests
 from datetime import datetime, timedelta
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.inttest.server.selenium import XmlRpcTestCase, WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, delete_and_confirm, \
         wait_for_animation, check_distro_search_results

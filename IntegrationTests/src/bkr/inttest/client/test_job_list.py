@@ -5,7 +5,7 @@
 # (at your option) any later version.
 
 from six import assertRaisesRegex
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client, create_client_config, ClientError, \
         ClientTestCase

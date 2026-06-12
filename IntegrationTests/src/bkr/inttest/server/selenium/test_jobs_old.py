@@ -7,7 +7,7 @@
 
 import time
 import re
-from turbogears.database import session
+from bkr.server.database import session
 from selenium.webdriver.support.ui import Select
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login

@@ -6,7 +6,7 @@
 
 import lxml.etree
 from bkr.server.model import TaskStatus, Job, LabControllerDistroTree
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.inttest import data_setup, with_transaction, fix_beakerd_repodata_perms, \
     DatabaseTestCase
 from bkr.server.tools import beakerd

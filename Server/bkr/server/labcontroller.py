@@ -4,7 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from turbogears.database import session
+from bkr.server.database import session
 from turbogears import config
 from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot

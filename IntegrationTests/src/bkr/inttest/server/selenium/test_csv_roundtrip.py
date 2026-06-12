@@ -10,7 +10,7 @@ from bkr.inttest.server.webdriver_utils import login, is_text_present
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.inttest.assertions import assert_has_key_with_value
 from bkr.server.model import Arch, System, OSMajor
-from turbogears.database import session
+from bkr.server.database import session
 import pkg_resources
 import unittest
 from tempfile import NamedTemporaryFile

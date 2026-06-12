@@ -4,7 +4,7 @@
 # (at your option) any later version.
 
 import turbogears.config
-from turbogears.database import session
+from bkr.server.database import session
 import xmlrpclib
 import urllib
 from hashlib import sha1

@@ -6,7 +6,7 @@
 
 import xmlrpclib
 import requests
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.inttest.server.selenium import WebDriverTestCase, XmlRpcTestCase
 from bkr.inttest.server.webdriver_utils import login, delete_and_confirm
 from bkr.inttest import data_setup, with_transaction, get_server_base

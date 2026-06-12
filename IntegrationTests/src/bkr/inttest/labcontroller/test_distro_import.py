@@ -13,7 +13,7 @@ from copy import deepcopy
 from bkr.inttest import Process
 from bkr.inttest.labcontroller import LabControllerTestCase
 from bkr.server.model import OSMajor
-from turbogears.database import session
+from bkr.server.database import session
 
 from six.moves import urllib
 

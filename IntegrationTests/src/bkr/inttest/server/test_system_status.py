@@ -6,7 +6,7 @@
 
 import logging
 from threading import Thread, Event
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server.model import System, SystemStatus, CommandStatus
 from bkr.inttest import data_setup, DatabaseTestCase
 

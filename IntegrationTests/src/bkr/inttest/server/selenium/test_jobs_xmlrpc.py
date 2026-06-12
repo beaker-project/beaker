@@ -10,7 +10,7 @@ import unittest
 import logging
 import xmlrpclib
 import datetime
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.inttest.server.selenium import XmlRpcTestCase
 from bkr.inttest import data_setup
 from bkr.server.model import Job, Distro, ConfigItem, User, TaskBase

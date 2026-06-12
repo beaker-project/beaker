@@ -9,7 +9,7 @@ import unittest
 import pkg_resources
 import sqlalchemy
 from turbogears import config
-from turbogears.database import metadata
+from bkr.server.database import metadata
 from bkr.common import __version__
 from bkr.server.tools.init import upgrade_db, downgrade_db, check_db, doit, init_db
 from sqlalchemy import UnicodeText

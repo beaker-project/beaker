@@ -8,7 +8,7 @@ import datetime
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import check_task_search_results
 from bkr.inttest import data_setup, get_server_base, DatabaseTestCase
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server.model import OSMajor
 from bkr.server.tasks import Tasks
 

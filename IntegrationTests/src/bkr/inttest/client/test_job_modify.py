@@ -4,7 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.inttest import with_transaction, data_setup
 from bkr.inttest.client import run_client, create_client_config, ClientError, \
         ClientTestCase, start_client

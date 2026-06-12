@@ -9,7 +9,7 @@ import lxml.etree
 import pkg_resources
 from six import assertRaisesRegex
 from turbogears import testutil
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server.bexceptions import BX
 from bkr.inttest import data_setup, with_transaction, DatabaseTestCase, get_server_base
 

@@ -18,7 +18,7 @@ from mock import patch
 import inspect
 import kid
 from six import assertRegex
-from turbogears.database import session
+from bkr.server.database import session
 from bkr.server.installopts import InstallOptions
 from bkr.server import model, identity
 from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \

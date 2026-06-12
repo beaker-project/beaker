@@ -10,7 +10,7 @@ from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import get_server_base, is_text_present, \
         wait_for_animation, check_distro_search_results
 from bkr.inttest import data_setup, with_transaction
-from turbogears.database import session
+from bkr.server.database import session
 
 
 class Search(WebDriverTestCase):

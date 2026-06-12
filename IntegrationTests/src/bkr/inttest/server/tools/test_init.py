@@ -13,7 +13,7 @@ So here in this module, we are just testing extra niceties on top of those two
 core functions.
 """
 
-from turbogears.database import session, metadata
+from bkr.server.database import session, metadata
 from bkr.common import __version__
 from bkr.server.model import User, Group
 from bkr.inttest import data_setup, DatabaseTestCase

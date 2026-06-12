@@ -15,7 +15,7 @@ from bkr.inttest.server.webdriver_utils import get_server_base, login, \
 from bkr.inttest.assertions import assert_sorted
 from bkr.inttest import data_setup, with_transaction, get_server_base
 import unittest, time, re, os, datetime
-from turbogears.database import session
+from bkr.server.database import session
 from urlparse import urljoin
 
 class SearchColumns(WebDriverTestCase):

@@ -12,7 +12,7 @@ import urlparse
 import requests
 from six import assertRegex
 import lxml.etree
-from turbogears.database import session
+from bkr.server.database import session
 
 from bkr.server.model import TaskStatus, TaskResult, RecipeTaskResult, \
     Task, RecipeTaskComment, RecipeTaskResultComment, RecipeTask, \

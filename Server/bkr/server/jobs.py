@@ -5,7 +5,7 @@
 # (at your option) any later version.
 
 import datetime
-from turbogears.database import session
+from bkr.server.database import session
 from turbogears import expose, flash, widgets, validate, validators, redirect, paginate, url
 from cherrypy import response
 from formencode.api import Invalid
