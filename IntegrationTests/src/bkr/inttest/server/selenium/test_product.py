@@ -22,8 +22,10 @@ class TestProduct(WebDriverTestCase):
     def test_product_ordering(self):
         with session.begin():
             job = data_setup.create_job()
-            product_before = data_setup.create_product()
-            product_after = data_setup.create_product()
+            product_before = data_setup.create_product(
+                    product_name=data_setup.unique_name(u'aaa-product%s'))
+            product_after = data_setup.create_product(
+                    product_name=data_setup.unique_name(u'zzz-product%s'))
         b = self.browser
         login(b, user=self.user.user_name, password='password')
         b.get(get_server_base() + 'jobs/%s' % job.id)

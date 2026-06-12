@@ -260,3 +260,160 @@ jobs:
         run: |
           pushd ${{ matrix.test-target }}
           ./run-tests.sh
+
+  selenium-integration-tests:
+    runs-on: ubuntu-latest
+    env:
+      MYSQL_USER: beaker
+      MYSQL_PASSWORD: beaker
+      MYSQL_ROOT_PASSWORD: toor
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5]
+    container:
+      image: centos:7
+      options: --init
+      volumes:
+        - /node20217:/node20217:rw,rshared
+        - /node20217:/__e/node20:ro,rshared
+    services:
+      database:
+        image: mariadb:10-ubi
+        env:
+          MYSQL_USER: ${{ env.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ env.MYSQL_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ env.MYSQL_ROOT_PASSWORD }}
+        ports:
+          - 3306
+    steps:
+      - name: Fetch Node 20
+        run: |
+          curl -LO https://unofficial-builds.nodejs.org/download/release/v20.9.0/node-v20.9.0-linux-x64-glibc-217.tar.xz
+          tar -xf node-v20.9.0-linux-x64-glibc-217.tar.xz --strip-components 1 -C /node20217
+      - name: Fixup CentOS repo files
+        run: |
+          sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo
+          sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo
+          sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo
+
+      - name: Install git to allow checkout
+        run: |
+          yum install epel-release -y
+          sed -i 's|^metalink=|#metalink=|g' /etc/yum.repos.d/epel*.repo
+          sed -i 's|^#\?baseurl=.*|baseurl=https://archives.fedoraproject.org/pub/archive/epel/7/$basearch|g' /etc/yum.repos.d/epel*.repo
+          cat > /etc/yum.repos.d/ius-vault.repo << 'EOF'
+          [ius-vault]
+          name=IUS Vault for Enterprise Linux 7 - $basearch
+          baseurl=https://vault.ius.io/el7/$basearch/
+          enabled=1
+          gpgcheck=1
+          gpgkey=https://vault.ius.io/RPM-GPG-KEY-IUS-7
+          EOF
+          yum install git236-core -y
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Remove git236 and YUM repositories
+        run: |
+          yum remove git236-core epel-release -y
+          rm -f /etc/yum.repos.d/ius-vault.repo
+
+      - name: Add Beaker Server YUM repository
+        run: |
+          curl -o /etc/yum.repos.d/beaker-server.repo https://beaker-project.org/yum/beaker-server-RedHatEnterpriseLinux.repo
+
+      - name: Install Beaker dependencies
+        run: |
+          yum install epel-release -y
+          sed -i 's|^metalink=|#metalink=|g' /etc/yum.repos.d/epel*.repo
+          sed -i 's|^#\?baseurl=.*|baseurl=https://archives.fedoraproject.org/pub/archive/epel/7/$basearch|g' /etc/yum.repos.d/epel*.repo
+          yum install mariadb beaker-integration-tests wget bzip2 -y
+          yum-builddep beaker.spec -y
+          yum remove beaker-common \
+              beaker-client \
+              beaker-lab-controller \
+              beaker-server \
+              beaker-integration-tests -y
+
+      - name: Checkout submodules
+        run: |
+          git submodule update --init --recursive
+
+      - name: Configure database for testing
+        run: |
+          cat <<EOT > init.sql
+          CREATE DATABASE beaker_test;
+          CREATE DATABASE beaker_migration_test;
+          GRANT ALL PRIVILEGES ON beaker_test.* TO 'beaker'@'%';
+          GRANT ALL PRIVILEGES ON beaker_migration_test.* TO 'beaker'@'%';
+          SET GLOBAL max_allowed_packet=1073741824;
+          SET GLOBAL character_set_server=utf8;
+          EOT
+
+          mysql -uroot -p${{ env.MYSQL_ROOT_PASSWORD }} -h database < init.sql
+          sed -i 's/@localhost/@database/g' IntegrationTests/server-test.cfg
+
+      - name: Update version
+        run: |
+          current_version=$(grep -oE "__version__ = '[^']+'" Common/bkr/common/__init__.py | cut -d "'" -f 2)
+          new_version="$current_version.git.$(git rev-parse --short HEAD)"
+          sed -i "s/__version__ = '$current_version'/__version__ = '$new_version'/" Common/bkr/common/__init__.py
+
+      - name: Install Firefox and Xvfb
+        run: |
+          yum remove firefox -y
+          yum install -y \
+            gtk2 gtk3 dbus-glib \
+            libXt libXtst libXrender libXrandr libXfixes libXext libXdamage \
+            libXcursor libXcomposite libXi libXScrnSaver libX11 \
+            gdk-pixbuf2 cairo cairo-gobject pango atk \
+            fontconfig freetype alsa-lib nss nspr \
+            dejavu-sans-fonts dejavu-serif-fonts \
+            xorg-x11-server-Xvfb
+          wget https://download-installer.cdn.mozilla.net/pub/firefox/releases/43.0.4/linux-x86_64/en-US/firefox-43.0.4.tar.bz2
+          tar xjf firefox-43.0.4.tar.bz2
+          mv firefox /usr/local/firefox
+          printf '#!/bin/sh\nexec /usr/local/firefox/firefox "$@"\n' > /usr/bin/firefox
+          chmod +x /usr/bin/firefox
+          ldd /usr/local/firefox/firefox | grep "not found" && exit 1 || echo "firefox libs resolved"
+
+      - name: Smoke test Firefox
+        run: |
+          export DISPLAY=:99
+          Xvfb :99 -screen 0 1280x1024x24 >/tmp/xvfb.log 2>&1 &
+          sleep 3
+          firefox --version || echo "firefox --version exited $?"
+          firefox about:blank >/tmp/firefox.log 2>&1 &
+          ff_pid=$!
+          sleep 10
+          if kill -0 $ff_pid 2>/dev/null; then
+            echo "Firefox launched and stayed up"
+            kill $ff_pid
+          else
+            echo "Firefox exited early; firefox log:"; cat /tmp/firefox.log
+            echo "xvfb log:"; cat /tmp/xvfb.log
+            exit 1
+          fi
+
+      - name: Run selenium tests (shard ${{ matrix.shard }} of 6)
+        run: |
+          pushd IntegrationTests
+          mkdir -p results
+          modules=$(ls src/bkr/inttest/server/selenium/test_*.py \
+            | xargs -n1 basename | sed 's/\.py$//' | sort \
+            | awk -v s=${{ matrix.shard }} -v n=6 'NR % n == s')
+          echo "Shard ${{ matrix.shard }} modules:"; echo "$modules"
+          rc=0
+          for m in $modules; do
+            ./run-tests.sh --with-xunit --xunit-file=results/${m}.xml -v bkr.inttest.server.selenium.${m} || rc=1
+          done
+          exit $rc
+
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v5
+        if: success() || failure()
+        with:
+          report_paths: '**/results/*.xml'
+          annotate_only: true
