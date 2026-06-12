@@ -3,7 +3,8 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from turbogears import expose, config
+from turbogears import expose
+from bkr.server import config
 from bkr.server.database import session
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound

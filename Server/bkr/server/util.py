@@ -21,7 +21,8 @@ import six
 import turbogears
 from sqlalchemy import create_engine
 from sqlalchemy.orm.exc import NoResultFound
-from turbogears import config, url
+from turbogears import url
+from bkr.server import config
 from bkr.server.database import get_engine
 
 from bkr.server.app import app
@@ -96,6 +97,8 @@ def load_config(configfile=None):
     if not 'global' in configdata:
         raise RuntimeError('Config file is missing section [global]')
 
+    appcfg = os.path.join(os.path.dirname(__file__), 'config', 'app.cfg')
+    app.config.update(ConfigObj(appcfg, unrepr=True)['global'])
     # Read our beaker config and store it to Flask config
     app.config.update(configdata['global'])
     # Keep this until we completely remove TurboGears

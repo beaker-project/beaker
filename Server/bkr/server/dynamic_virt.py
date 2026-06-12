@@ -8,7 +8,7 @@ import sys
 import logging
 import time
 import uuid
-from turbogears import config
+from bkr.server import config
 
 try:
     import keystoneclient.v3.client

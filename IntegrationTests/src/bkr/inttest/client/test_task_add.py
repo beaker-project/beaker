@@ -5,7 +5,7 @@
 # (at your option) any later version.
 
 from bkr.server.database import session
-from turbogears import config
+from bkr.server import config
 from bkr.inttest.client import run_client, ClientError, ClientTestCase
 import pkg_resources
 from os import path

@@ -1,0 +1,82 @@
+name: act-server-inttest
+
+# Local-only workflow for running the Server integration tests
+# (bkr.inttest.server) under `act` on CentOS 7 / Python 2 against a real
+# MariaDB. Mirrors the integration-tests job in review-checks.yml but strips
+# the bits that break under act/Rancher: no actions/checkout + node20 volume
+# dance, no matrix. Run WITHOUT --bind so the destructive steps (selenium
+# removal, config rewrite) operate on act's copy, not your working tree:
+#
+#   DOCKER_HOST=unix://$HOME/.rd/docker.sock \
+#   act -W .github/workflows/act-server-inttest.yml \
+#       --container-architecture linux/amd64 \
+#       --container-daemon-socket - \
+#       -P ubuntu-latest=catthehacker/ubuntu:act-latest
+
+on: [push]
+
+jobs:
+  inttest-server-py2:
+    runs-on: ubuntu-latest
+    env:
+      MYSQL_USER: beaker
+      MYSQL_PASSWORD: beaker
+      MYSQL_ROOT_PASSWORD: toor
+    container:
+      image: centos:7
+      options: --init
+    services:
+      database:
+        image: mariadb:10-ubi
+        env:
+          MYSQL_USER: beaker
+          MYSQL_PASSWORD: beaker
+          MYSQL_ROOT_PASSWORD: toor
+        ports:
+          - 3306
+    steps:
+      - name: Copy source into a container-local tree (protect host working tree)
+        run: |
+          mkdir -p /src
+          cp -a "$GITHUB_WORKSPACE/." /src/
+      - name: Fixup CentOS 7 + EPEL repos (EOL -> vault/archive)
+        run: |
+          sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo
+          sed -i 's/^#.*baseurl=http/baseurl=http/g' /etc/yum.repos.d/*.repo
+          sed -i 's/^mirrorlist=http/#mirrorlist=http/g' /etc/yum.repos.d/*.repo
+          yum install -y dnf 'dnf-command(builddep)' git
+          yum install -y epel-release || true
+          sed -i 's|^metalink=|#metalink=|g' /etc/yum.repos.d/epel*.repo 2>/dev/null || true
+          sed -i 's|^#\?baseurl=.*|baseurl=https://archives.fedoraproject.org/pub/archive/epel/7/$basearch|g' /etc/yum.repos.d/epel*.repo 2>/dev/null || true
+      - name: Add Beaker Server YUM repository
+        run: curl -fsSL -o /etc/yum.repos.d/beaker-server.repo https://beaker-project.org/yum/beaker-server-RedHatEnterpriseLinux.repo
+      - name: Install runtime + build dependencies (slapd, krb5, etc. via beaker-integration-tests)
+        run: |
+          cd /src
+          yum install -y mariadb beaker-integration-tests openldap-servers openldap-clients
+          dnf builddep -y *.spec || yum-builddep -y *.spec
+          # Run the tests from source, not the installed RPMs
+          yum remove -y beaker-common beaker-client beaker-lab-controller beaker-server beaker-integration-tests
+      - name: Wait for database and create schemas
+        run: |
+          for i in $(seq 1 60); do
+            if mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -h database -e 'SELECT 1' >/dev/null 2>&1; then break; fi
+            echo "waiting for database ($i/60)"; sleep 5
+          done
+          mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -h database <<'EOSQL'
+          CREATE DATABASE IF NOT EXISTS beaker_test;
+          CREATE DATABASE IF NOT EXISTS beaker_migration_test;
+          GRANT ALL PRIVILEGES ON beaker_test.* TO 'beaker'@'%';
+          GRANT ALL PRIVILEGES ON beaker_migration_test.* TO 'beaker'@'%';
+          SET GLOBAL max_allowed_packet=1073741824;
+          SET GLOBAL character_set_server=utf8;
+          EOSQL
+      - name: Run server integration tests (native database.py, python2)
+        run: |
+          cd /src
+          sed -i 's/@localhost/@database/g' IntegrationTests/server-test.cfg
+          cd IntegrationTests
+          rm -rf src/bkr/inttest/server/selenium
+          # Default to the model suite (the database validation). Override the
+          # whole target with: act ... --env TEST_TARGET=bkr.inttest.server
+          ./run-tests.sh -v "${TEST_TARGET:-bkr.inttest.server.test_model}"

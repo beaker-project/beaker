@@ -21,7 +21,7 @@ except ImportError:
     MessagingHandler = object
 
 # XXX replace turbogears with beaker prefixed flask when migration is done
-from turbogears.config import get
+from bkr.server.config import get
 
 log = logging.getLogger(__name__)
 

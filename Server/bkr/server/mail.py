@@ -8,7 +8,7 @@
 mail methods for Beaker
 """
 
-from turbogears import config
+from bkr.server import config
 import turbomail
 import logging
 from bkr.server.util import absolute_url

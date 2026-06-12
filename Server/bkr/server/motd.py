@@ -5,7 +5,7 @@
 # (at your option) any later version.
 
 import errno
-from turbogears import config
+from bkr.server import config
 from lxml import etree
 import logging
 log = logging.getLogger(__name__)

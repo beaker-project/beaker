@@ -13,7 +13,7 @@ import lxml.etree as ET
 import logging
 from optparse import OptionParser
 
-import turbogears.config
+from bkr.server import config
 from bkr.server.database import session
 
 from bkr.common.helpers import siphon
@@ -48,7 +48,7 @@ class TaskLibrarySync:
         load_config()
 
         # setup, sanity checks
-        self.task_dir = turbogears.config.get("basepath.rpms")
+        self.task_dir = config.get("basepath.rpms")
 
         self._setup_logging()
 

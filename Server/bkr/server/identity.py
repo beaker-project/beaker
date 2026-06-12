@@ -11,7 +11,7 @@ from decorator import decorator
 import itsdangerous
 import cherrypy
 import flask
-from turbogears import config
+from bkr.server import config
 from bkr.common.helpers import AtomicFileReplacement
 from bkr.server.util import absolute_url
 

@@ -20,7 +20,7 @@ from bkr.server.model import User
 # deprecated
 __all__ = ['Auth']
 import cherrypy
-from turbogears.config import get
+from bkr.server.config import get
 from bkr.server.xmlrpccontroller import RPCRoot
 
 

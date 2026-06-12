@@ -20,7 +20,7 @@ from bkr.inttest import data_setup, with_transaction, Process, DatabaseTestCase
 from bkr.inttest.server.tools import run_command
 from bkr.server.tools import log_delete
 from bkr.server.database import session
-from turbogears import config
+from bkr.server import config
 
 
 def setUpModule():

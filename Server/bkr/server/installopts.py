@@ -4,7 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from turbogears import config
+from bkr.server import config
 import shlex
 # pipes.quote has been moved to the more reasonable shlex.quote in Python 3.3:
 # http://bugs.python.org/issue9723

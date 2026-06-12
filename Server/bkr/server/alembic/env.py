@@ -8,7 +8,7 @@ from __future__ import with_statement
 from alembic import context
 from bkr.server.database import get_engine
 from bkr.server.util import load_config_or_exit
-from turbogears import config
+from bkr.server import config
 
 # add your model's MetaData object here
 # for 'autogenerate' support
