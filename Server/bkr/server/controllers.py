@@ -19,7 +19,7 @@ from flask import redirect as flask_redirect
 from sqlalchemy import or_
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
-from turbogears import expose, flash, widgets, validate, error_handler, paginate, url
+from turbogears import expose, flash, widgets, validate, error_handler, paginate
 from turbogears import redirect
 from bkr.server import config
 from bkr.server.database import session
@@ -69,7 +69,7 @@ from bkr.server.tag import Tags
 from bkr.server.task_actions import TaskActions
 from bkr.server.tasks import Tasks
 from bkr.server.user import Users
-from bkr.server.util import absolute_url
+from bkr.server.util import absolute_url, url
 from bkr.server.watchdog import Watchdogs
 from bkr.server.widgets import TaskSearchForm, SearchBar, \
     SystemInstallOptions, \

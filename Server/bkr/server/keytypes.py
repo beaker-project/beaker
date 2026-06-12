@@ -5,7 +5,8 @@
 # (at your option) any later version.
 
 from bkr.server.database import session
-from turbogears import expose, flash, widgets, error_handler, redirect, paginate, url, validators, validate
+from turbogears import expose, flash, widgets, error_handler, redirect, paginate, validators, validate
+from bkr.server.util import url
 from bkr.server.helpers import make_edit_link, make_remove_link
 from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar, HorizontalForm
 from bkr.server.admin_page import AdminPage

@@ -4,7 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from turbogears import validators, url
+from turbogears import validators
 from bkr.server import config
 from kid import Element
 import time
@@ -33,7 +33,7 @@ from bkr.server.model import TaskStatus
 from bkr.server.assets import get_assets_env
 from bkr.server.bexceptions import BeakerException
 from bkr.server.helpers import make_link
-from bkr.server.util import VALID_FQDN_REGEX
+from bkr.server.util import VALID_FQDN_REGEX, url
 import logging
 
 import six

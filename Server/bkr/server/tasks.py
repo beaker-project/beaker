@@ -5,7 +5,8 @@
 # (at your option) any later version.
 
 from bkr.server.database import session
-from turbogears import expose, flash, widgets, validate, redirect, paginate, url
+from turbogears import expose, flash, widgets, validate, redirect, paginate
+from bkr.server.util import url
 from flask import jsonify, request
 from bkr.server import search_utility, identity
 from bkr.server.widgets import TasksWidget, TaskSearchForm, \

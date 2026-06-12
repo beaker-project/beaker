@@ -8,7 +8,8 @@ import os
 from datetime import datetime
 from lxml import etree
 from bkr.server.database import session
-from turbogears import expose, flash, widgets, redirect, paginate, url
+from turbogears import expose, flash, widgets, redirect, paginate
+from bkr.server.util import url
 from sqlalchemy import not_, and_
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound

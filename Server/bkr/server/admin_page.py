@@ -4,7 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from turbogears import url
+from bkr.server.util import url
 from bkr.server.database import session
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.bexceptions import BeakerException

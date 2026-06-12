@@ -6,6 +6,7 @@
 
 import turbogears
 from turbojson import jsonify
+from bkr.server.util import url
 from flask import request
 import bkr.common
 from bkr.server import identity
@@ -33,7 +34,7 @@ def login_url():
     forward_url = urllib.parse.quote(request.path.encode('utf8'))
     if request.query_string:
         forward_url += '?%s' % request.query_string
-    return turbogears.url('/login', forward_url=forward_url)
+    return url('/login', forward_url=forward_url)
 
 def add_custom_stdvars(vars):
     return vars.update({

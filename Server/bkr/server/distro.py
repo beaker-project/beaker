@@ -5,7 +5,8 @@
 # (at your option) any later version.
 
 from bkr.server.database import session
-from turbogears import expose, flash, redirect, paginate, url
+from turbogears import expose, flash, redirect, paginate
+from bkr.server.util import url
 from sqlalchemy.exc import InvalidRequestError
 
 import cherrypy

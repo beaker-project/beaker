@@ -19,9 +19,9 @@ from collections import namedtuple
 import lxml.etree
 import six
 import turbogears
+from six.moves.urllib.parse import urlencode
 from sqlalchemy import create_engine
 from sqlalchemy.orm.exc import NoResultFound
-from turbogears import url
 from bkr.server import config
 from bkr.server.database import get_engine
 
@@ -119,6 +119,28 @@ def ensure_str(s, encoding='utf-8', errors='strict'):
     elif not isinstance(s, (six.text_type, six.binary_type)):
         raise TypeError("not expecting type '%s'" % type(s))
     return s
+
+def _query_arg(value):
+    if six.PY2 and isinstance(value, six.text_type):
+        return value.encode('utf-8')
+    return value
+
+
+def url(tgpath, tgparams=None, **kw):
+    if not isinstance(tgpath, six.string_types):
+        tgpath = '/'.join(tgpath)
+    if tgpath.startswith('/'):
+        webpath = (config.get('server.webpath') or '').rstrip('/')
+        tgpath = webpath + tgpath
+    if tgparams is not None and not isinstance(tgparams, dict):
+        raise TypeError('url() expects a dictionary for query parameters')
+    params = dict(tgparams or {}, **kw)
+    query = urlencode([(key, _query_arg(value)) for key, value
+                       in six.iteritems(params) if value is not None], doseq=True)
+    if query:
+        tgpath += ('&' if '?' in tgpath else '?') + query
+    return tgpath
+
 
 # TG1.1 has this: http://docs.turbogears.org/1.1/URLs#turbogears-absolute-url
 def absolute_url(tgpath, tgparams=None, scheme=None,

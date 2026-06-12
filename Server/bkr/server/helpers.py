@@ -5,7 +5,7 @@
 # (at your option) any later version.
 
 from kid import Element, XML
-import turbogears
+from bkr.server import util
 from markdown import markdown
 from xml.sax.saxutils import escape as xml_escape
 import lxml.etree
@@ -26,7 +26,7 @@ def markdown_first_paragraph(text):
 
 def make_link(url, text, elem_class=None, **kwargs):
     # make an <a> element
-    a = Element('a', href=turbogears.url(url))
+    a = Element('a', href=util.url(url))
     a.text = text
     if elem_class:
         a.attrib['class'] = elem_class
