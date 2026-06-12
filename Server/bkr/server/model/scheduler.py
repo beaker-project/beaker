@@ -31,7 +31,7 @@ from sqlalchemy.orm import (relationship, object_mapper,
                             dynamic_loader, validates, synonym, contains_eager, aliased)
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import select, union, and_, or_, not_, func, literal, exists, delete
-from turbogears import url
+from bkr.server.util import url
 from bkr.server.config import get
 from bkr.server.database import session
 

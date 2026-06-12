@@ -6,7 +6,8 @@
 
 from kid import XML
 from bkr.server.database import session
-from turbogears import expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
+from turbogears import expose, flash, widgets, validate, error_handler, validators, redirect, paginate
+from bkr.server.util import url
 from bkr.server import identity
 from bkr.server.widgets import myPaginateDataGrid, HorizontalForm
 from bkr.server.admin_page import AdminPage

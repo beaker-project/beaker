@@ -6,7 +6,7 @@
 
 import datetime
 from bkr.server.database import session
-from turbogears import expose, flash, widgets, validate, validators, redirect, paginate, url
+from turbogears import expose, flash, widgets, validate, validators, redirect, paginate
 from cherrypy import response
 from formencode.api import Invalid
 from sqlalchemy import and_, not_
@@ -46,7 +46,7 @@ from bkr.server.flask_util import auth_required, convert_internal_errors, \
     BadRequest400, NotFound404, Forbidden403, Conflict409, request_wants_json, \
     read_json_request, render_tg_template, stringbool
 from flask import request, jsonify, make_response
-from bkr.server.util import parse_untrusted_xml
+from bkr.server.util import parse_untrusted_xml, url
 import cgi
 from bkr.server.job_utilities import Utility
 from bkr.server.bexceptions import DatabaseLookupError

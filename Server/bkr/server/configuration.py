@@ -5,7 +5,8 @@
 # (at your option) any later version.
 
 from bkr.server.database import session
-from turbogears import expose, flash, widgets, error_handler, validators, redirect, paginate, url
+from turbogears import expose, flash, widgets, error_handler, validators, redirect, paginate
+from bkr.server.util import url
 from bkr.server import identity
 from bkr.server.helpers import make_link, make_edit_link
 from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, AlphaNavBar, \

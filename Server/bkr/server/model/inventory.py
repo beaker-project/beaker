@@ -24,7 +24,7 @@ from sqlalchemy.orm.attributes import NEVER_SET
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.associationproxy import association_proxy
-from turbogears import url
+from bkr.server.util import url
 from bkr.server import config
 from bkr.server.config import get
 from bkr.server.database import session
