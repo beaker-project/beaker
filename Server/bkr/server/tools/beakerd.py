@@ -34,7 +34,6 @@ from bkr.server.util import load_config_or_exit, log_traceback, \
 from bkr.server.recipetasks import RecipeTasks
 from bkr.server.database import session, get_engine
 from bkr.server import config
-from turbomail.control import interface
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import func, select, and_, or_, not_
@@ -775,8 +774,6 @@ def schedule():
     if _outstanding_data_migrations:
         log.debug('Incomplete data migrations will be run: %s',
                 ', '.join(m.name for m in _outstanding_data_migrations))
-
-    interface.start(config)
 
     if config.get('carbon.address'):
         log.debug('starting metrics thread')

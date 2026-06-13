@@ -144,7 +144,6 @@ BuildRequires:  python-sqlalchemy >= 0.9
 BuildRequires:  python-lxml
 BuildRequires:  python-ldap
 BuildRequires:  python-rdflib >= 3.2.0
-BuildRequires:  python-TurboMail >= 3.0
 BuildRequires:  python-pwquality
 BuildRequires:  rpm-python
 BuildRequires:  python-netaddr
@@ -167,7 +166,6 @@ Requires:       python-rdflib >= 3.2.0
 Requires:       python-daemon
 Requires:       python-lockfile >= 0.9
 Requires:       python-gssapi
-Requires:       python-TurboMail >= 3.0
 Requires:       python-pwquality
 Requires:       python-jinja2
 Requires:       python-netaddr
