@@ -1471,9 +1471,9 @@ class TestJobsGrid(WebDriverTestCase):
         b.get(get_server_base() + 'jobs/')
         whiteboard_cell = b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[1]/td[2]')
         self.assertEqual(whiteboard_cell.text, 'hello & here is a link lol')
-        self.assertEqual(whiteboard_cell.find_element_by_xpath('./em').text, 'here')
+        self.assertEqual(whiteboard_cell.find_element_by_xpath('.//em').text, 'here')
         self.assertEqual(
-            whiteboard_cell.find_element_by_xpath('./a').get_attribute('href'),
+            whiteboard_cell.find_element_by_xpath('.//a').get_attribute('href'),
             'http://example.com/')
 
 

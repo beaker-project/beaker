@@ -22,7 +22,7 @@ from bkr.server.model import (System, SystemType, Activity, SystemActivity,
                               Key, Key_Value_Int, Key_Value_String,
                               SystemAccessPolicy, SystemPermission, SystemPool)
 from bkr.server.widgets import HorizontalForm, RadioButtonList
-from kid import XML
+import lxml.etree
 import six
 
 import csv
@@ -76,12 +76,12 @@ class CSV(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = False
 
-    export_help_text = XML(u'<span>Refer to the <a href="http://beaker-project.org/docs/'
+    export_help_text = lxml.etree.fromstring(u'<span>Refer to the <a href="http://beaker-project.org/docs/'
                            'admin-guide/interface.html#export" target="_blank">'
-                           'documentation</a> to learn more about the exported data.</span>').expand()
-    import_help_text = XML(u'<span>Refer to the <a href="http://beaker-project.org/docs/'
+                           'documentation</a> to learn more about the exported data.</span>')
+    import_help_text = lxml.etree.fromstring(u'<span>Refer to the <a href="http://beaker-project.org/docs/'
                            'admin-guide/interface.html#import" target="_blank">'
-                           'documentation</a> for details about the supported CSV format.</span>').expand()
+                           'documentation</a> for details about the supported CSV format.</span>')
 
     upload     = widgets.FileField(name='csv_file', label='Import CSV', \
                                    help_text = import_help_text)
