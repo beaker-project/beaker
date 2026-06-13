@@ -22,7 +22,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import not_, and_, or_, exists
 from bkr.server.config import get
 from bkr.server.database import session
-from turbogears import validators
+from formencode import validators
 from formencode.api import Invalid
 from bkr.server.bexceptions import BX, NoChangeException
 from bkr.server.util import convert_db_lookup_error, ensure_str
