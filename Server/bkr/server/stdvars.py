@@ -5,7 +5,7 @@
 # (at your option) any later version.
 
 import turbogears
-from turbojson import jsonify
+from bkr.server import jsonify
 from bkr.server.util import url
 from flask import request
 import bkr.common

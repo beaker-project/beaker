@@ -7,7 +7,7 @@
 import os
 from flask import Flask, send_from_directory
 from bkr.server import config
-import turbojson.jsonify
+from bkr.server import jsonify
 
 # This is NOT the right way to do this, we should just use SCRIPT_NAME properly instead.
 # But this is needed to line up with TurboGears server.webpath way of doing things.
@@ -18,8 +18,8 @@ class PrefixedFlask(Flask):
 
 app = PrefixedFlask('bkr.server')
 
-# Make flask.jsonify use TurboJson
-app.json_encoder = turbojson.jsonify.GenericJSON
+# Make flask.jsonify use our JSON encoder
+app.json_encoder = jsonify.GenericJSON
 
 # URL rules for serving static assets. The same URL paths are mapped in the 
 # Apache config, so in production the Python application will never see these 

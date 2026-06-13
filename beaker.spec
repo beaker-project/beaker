@@ -140,7 +140,6 @@ Requires:       /usr/bin/cssmin
 Requires:       /usr/bin/uglifyjs
 BuildRequires:  python-requests
 BuildRequires:  TurboGears >= 1.1.3
-BuildRequires:  python-turbojson
 BuildRequires:  python-sqlalchemy >= 0.9
 BuildRequires:  python-lxml
 BuildRequires:  python-ldap
@@ -153,13 +152,13 @@ BuildRequires:  python-itsdangerous
 BuildRequires:  python-decorator
 BuildRequires:  python-webassets
 BuildRequires:  python-flask
+BuildRequires:  python-simplejson
 BuildRequires:  python-markdown
 BuildRequires:  python-passlib
 BuildRequires:  python-alembic
 BuildRequires:  python-daemon
 BuildRequires:  python-futures
 Requires:       TurboGears >= 1.1.3
-Requires:       python-turbojson
 Requires:       python-sqlalchemy >= 0.9
 Requires:       python-decorator
 Requires:       python-lxml
@@ -177,6 +176,7 @@ Requires:       python-requests-kerberos
 Requires:       python-itsdangerous
 Requires:       python-decorator
 Requires:       python-flask
+Requires:       python-simplejson
 Requires:       python-markdown
 Requires:       python-webassets
 Requires:       python-passlib
