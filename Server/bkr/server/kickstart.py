@@ -4,7 +4,6 @@
 # (at your option) any later version.
 
 import logging
-import pipes  # For pipes.quote, since it isn't available in shlex until 3.3
 import re
 import string
 
@@ -14,7 +13,7 @@ import jinja2.sandbox
 import netaddr
 from flask import redirect, abort, Response
 import six
-from six.moves import urllib
+from six.moves import urllib, shlex_quote
 from sqlalchemy.exc import DataError
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -186,7 +185,7 @@ template_env.filters.update({
     'dictsplit': dictsplit,
     'urljoin': urlparse.urljoin,
     'parsed_url': urlparse.urlparse,
-    'shell_quoted': pipes.quote,
+    'shell_quoted': shlex_quote,
 })
 
 
