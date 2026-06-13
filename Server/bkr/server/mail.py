@@ -9,8 +9,10 @@ mail methods for Beaker
 """
 
 from bkr.server import config
-import turbomail
 import logging
+import smtplib
+from email.mime.text import MIMEText
+from email.utils import formataddr, formatdate, make_msgid
 from bkr.server.util import absolute_url
 from datetime import datetime
 from jinja2 import Environment, PackageLoader
@@ -24,19 +26,36 @@ template_env = Environment(loader=PackageLoader('bkr.server', 'mail-templates'),
 log = logging.getLogger(__name__)
 
 
-def send_mail(sender, to, subject, body, bulk=True, **kwargs):
-    from turbomail import MailNotEnabledException
+def send_mail(sender, to, subject, body, bulk=True, cc=None, headers=None):
+    if not config.get('mail.on'):
+        log.warning("Mail is not enabled, not sending mail")
+        return
+    cc = cc or []
+    all_headers = [
+        ('From', sender),
+        ('To', to),
+        ('Subject', subject),
+        ('Date', formatdate(localtime=True)),
+        ('Message-ID', make_msgid('beaker')),
+    ]
+    if cc:
+        all_headers.append(('Cc', ', '.join(cc)))
+    if bulk:
+        all_headers.append(('Auto-Submitted', 'auto-generated'))
+        all_headers.append(('Precedence', 'bulk'))
+    all_headers.extend(headers or [])
+
+    message = MIMEText(body, 'plain', config.get('mail.message.encoding', 'utf-8'))
+    for name, value in all_headers:
+        message[name] = six.text_type(value)
+
+    host, _, port = config.get('mail.smtp.server', 'localhost').partition(':')
     try:
-        message = turbomail.Message(sender, to, subject, **kwargs)
-        if bulk:
-            message.headers.extend([
-                ('Auto-Submitted', 'auto-generated'),
-                ('Precedence', 'bulk'),
-            ])
-        message.plain = body
-        turbomail.send(message)
-    except MailNotEnabledException:
-        log.warning("TurboMail is not enabled!")
+        smtp = smtplib.SMTP(host, int(port) if port else 0)
+        try:
+            smtp.sendmail(sender, [to] + cc, message.as_string())
+        finally:
+            smtp.quit()
     except Exception:
         log.exception("Exception thrown when trying to send mail")
 
@@ -79,7 +98,7 @@ def job_notify(job, sender=None):
                            ('X-Beaker-Job-ID', job.id)])
 
 def _sender_details(user):
-    return u'%s (via Beaker) <%s>' % (user.display_name, user.email_address)
+    return formataddr((u'%s (via Beaker)' % user.display_name, user.email_address))
 
 def system_loan_request(system, message, requester, requestee_email):
     sender = _sender_details(requester)

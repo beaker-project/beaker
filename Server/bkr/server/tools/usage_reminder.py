@@ -19,7 +19,6 @@ from bkr.server.model import User, System, Reservation, Recipe, \
     RecipeSet, Job, Watchdog, RecipeTask, Task, TaskStatus, RecipeResource
 from bkr.server.util import load_config_or_exit
 from bkr.server import config
-from turbomail.control import interface
 from bkr.server import mail
 from sqlalchemy.orm import joinedload
 from optparse import OptionParser
@@ -117,7 +116,6 @@ def main(*args):
     (options, args) = parser.parse_args(*args)
     load_config_or_exit(options.configfile)
     log_to_stream(sys.stderr)
-    interface.start(config)
     reservation_expiry = options.reservation_expiry
     reservation_length = options.reservation_length
     waiting_recipe_age = options.waiting_recipe_age
