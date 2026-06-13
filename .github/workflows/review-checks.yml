@@ -383,7 +383,12 @@ jobs:
         run: |
           export DISPLAY=:99
           Xvfb :99 -screen 0 1280x1024x24 >/tmp/xvfb.log 2>&1 &
-          sleep 3
+          xvfb_pid=$!
+          for i in $(seq 1 30); do
+            [ -S /tmp/.X11-unix/X99 ] && break
+            kill -0 "$xvfb_pid" 2>/dev/null || { echo "Xvfb failed to start"; cat /tmp/xvfb.log; exit 1; }
+            sleep 0.5
+          done
           firefox --version || echo "firefox --version exited $?"
           firefox about:blank >/tmp/firefox.log 2>&1 &
           ff_pid=$!
