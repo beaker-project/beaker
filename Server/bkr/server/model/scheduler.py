@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 from itertools import chain
 
 import netaddr
-from kid import Element
+from lxml.etree import Element
 from lxml import etree
 from lxml.builder import E
 from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,

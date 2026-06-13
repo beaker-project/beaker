@@ -9,7 +9,7 @@ from sqlalchemy.sql.expression import case, func, and_, bindparam, not_
 from turbogears import expose, flash
 from bkr.server.util import url
 from bkr.server.database import session
-from kid import Element, SubElement
+from lxml.etree import Element, SubElement
 from bkr.server.widgets import JobMatrixReport as JobMatrixWidget, MatrixDataGrid
 from bkr.server import model
 import logging

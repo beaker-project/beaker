@@ -6,7 +6,6 @@
 
 import cherrypy
 import os
-from kid import Element
 from sqlalchemy.sql import exists
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm.exc import NoResultFound

@@ -16,6 +16,7 @@ import time
 from cherrypy import request, response
 from datetime import datetime
 from flask import redirect as flask_redirect
+from lxml.etree import Element
 from sqlalchemy import or_
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
@@ -387,7 +388,7 @@ class Root(RPCRoot):
                 label = 'Reserve Now'
             else:
                 label = 'Queue Reservation'
-            a = kid.Element('a', href=href)
+            a = Element('a', href=href)
             a.attrib['class'] = 'btn'
             a.text = label
             return a
