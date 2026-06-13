@@ -10,7 +10,6 @@ import bkr.server.model as model
 import re
 import sqlalchemy
 from copy import copy
-from turbogears import flash
 import sqlalchemy.types
 from sqlalchemy import or_, and_, not_
 from sqlalchemy.sql import visitors, select
@@ -488,7 +487,6 @@ class Modeller(object):
         try: 
             return op_dict[operator]
         except KeyError as e:
-            flash('%s is not a valid operator' % operator)
             raise
 
     def return_operators(self,field_type,loose_match=True): 
@@ -560,7 +558,6 @@ class Search(object):
         try:
             mycolumn = cls.searchable_columns[column]
         except KeyError as e:
-            flash(u'%s is not a valid search criteria' % column)
             raise
         self.do_joins(mycolumn)
              
