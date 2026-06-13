@@ -6,10 +6,7 @@
 
 from bkr.server import config
 import shlex
-# pipes.quote has been moved to the more reasonable shlex.quote in Python 3.3:
-# http://bugs.python.org/issue9723
-import pipes
-from six.moves import reduce
+from six.moves import reduce, shlex_quote
 
 import six
 
@@ -41,7 +38,7 @@ def _unparse(d, quote=True):
     # items are sorted for predictable ordering of the output,
     # but a better solution would be to use OrderedDict in Python 2.7+
     if quote:
-        quoted_value = lambda value: pipes.quote(six.text_type(value))
+        quoted_value = lambda value: shlex_quote(six.text_type(value))
     else:
         quoted_value = lambda value: six.text_type(value)
     items = []
