@@ -12,7 +12,7 @@ import random
 import string
 import re
 import pwquality
-from kid import Element
+from lxml.etree import Element
 import passlib.context
 from sqlalchemy import (Table, Column, ForeignKey, Integer, Unicode,
         UnicodeText, String, DateTime, Boolean, UniqueConstraint)

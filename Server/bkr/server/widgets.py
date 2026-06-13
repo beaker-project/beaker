@@ -6,7 +6,6 @@
 
 from turbogears import validators
 from bkr.server import config
-from kid import Element
 import time
 import turbogears as tg
 from bkr.server.stdvars import jsonify_for_html

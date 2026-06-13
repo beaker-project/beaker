@@ -5,11 +5,12 @@
 # (at your option) any later version.
 
 from turbogears import widgets
-from kid.element import Element
+from lxml.etree import Element
 from cherrypy import request, response, HTTPError
 from bkr.server import search_utility
 from bkr.server.helpers import make_link
 
+import six
 import logging
 log = logging.getLogger("bkr.server.controllers")
 
@@ -20,12 +21,12 @@ def _custom_status(x):
         e.text = u'Updating\u2026'
         return e
     e = Element('span', {'class' : 'status%s' % x.status})
-    e.text = x.status
+    e.text = six.text_type(x.status)
     return e
 
 def _custom_result(x):
     e = Element('span', {'class' : 'result%s' % x.result})
-    e.text = x.result
+    e.text = six.text_type(x.result)
     return e
 
 
