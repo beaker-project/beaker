@@ -18,7 +18,6 @@ from collections import namedtuple
 
 import lxml.etree
 import six
-import turbogears
 from six.moves.urllib.parse import urlencode
 from sqlalchemy import create_engine
 from sqlalchemy.orm.exc import NoResultFound
@@ -102,7 +101,11 @@ def load_config(configfile=None):
     # Read our beaker config and store it to Flask config
     app.config.update(configdata['global'])
     # Keep this until we completely remove TurboGears
-    turbogears.update_config(configfile=configfile, modulename="bkr.server.config")
+    try:
+        import turbogears
+        turbogears.update_config(configfile=configfile, modulename="bkr.server.config")
+    except ImportError:
+        pass
     _config_loaded = configfile
 
 def strip_webpath(url):
