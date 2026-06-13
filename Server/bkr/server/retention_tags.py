@@ -4,7 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from kid import XML
+import lxml.etree
 from bkr.server.database import session
 from turbogears import expose, flash, widgets, validate, error_handler, validators, redirect, paginate
 from bkr.server.util import url
@@ -142,7 +142,7 @@ class RetentionTag(AdminPage):
 
         def show_delete(x):
             if x.can_delete():
-                return XML('<a class="btn" href="./delete/%s">'
+                return lxml.etree.fromstring('<a class="btn" href="./delete/%s">'
                         '<i class="fa fa-times"/> Delete</a>' % x.id)
             else:
                 return None

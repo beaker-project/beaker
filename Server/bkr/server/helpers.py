@@ -4,7 +4,6 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from kid import XML
 from lxml.etree import Element
 from bkr.server import util
 from markdown import markdown
@@ -22,7 +21,7 @@ def markdown_first_paragraph(text):
                 [xml_escape(first_para.text or '')] +
                 [lxml.etree.tostring(child) for child in first_para.iterchildren()] +
                 [xml_escape(first_para.tail or '')])
-        return XML(html_content)
+        return lxml.etree.fromstring(u'<span>' + html_content + u'</span>')
     except Exception:
         return text
 
@@ -42,7 +41,7 @@ def make_edit_link(name, id):
 
 def make_remove_link(id):
     # make a remove link
-    return XML('<a class="btn" href="remove?id=%s">'
+    return lxml.etree.fromstring('<a class="btn" href="remove?id=%s">'
             '<i class="fa fa-times"/> Remove</a>' % id)
 
 def make_fake_link(name=None,id=None,text=None,attrs=None):
