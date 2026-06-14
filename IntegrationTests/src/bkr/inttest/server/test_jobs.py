@@ -19,7 +19,7 @@ class TestJobsController(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
-        from bkr.server.jobs import Jobs
+        from bkr.server.rpc.jobs import Jobs
         self.controller = Jobs()
         self.user = data_setup.create_user(user_name=u'test-job-owner',
                 email_address=u'test-job-owner@example.com')

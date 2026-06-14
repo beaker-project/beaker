@@ -46,7 +46,7 @@ from bkr.server.distrotrees import DistroTrees
 from bkr.server.rpc.group import Groups
 from bkr.server.helpers import make_link
 from bkr.server.job_matrix import JobMatrix
-from bkr.server.jobs import Jobs
+from bkr.server.rpc.jobs import Jobs
 from bkr.server.keytypes import KeyTypes
 from bkr.server.rpc.labcontroller import LabControllers
 from bkr.server.model import (TaskBase, Device, System,

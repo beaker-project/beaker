@@ -13,7 +13,7 @@ class TestTasks(DatabaseTestCase):
 
     def setUp(self):
         session.begin()
-        from bkr.server.jobs import Jobs
+        from bkr.server.rpc.jobs import Jobs
         self.controller = Jobs()
         self.task = data_setup.create_task(name=u'/fake/task/here')
         distro_tree = data_setup.create_distro_tree()
