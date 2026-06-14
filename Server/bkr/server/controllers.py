@@ -33,7 +33,7 @@ import bkr.server.stdvars
 from bkr.server import metrics, identity
 from bkr.server.CSV_import_export import CSV
 from bkr.server.app import app
-from bkr.server.authentication import Auth
+from bkr.server.rpc.authentication import Auth
 from bkr.server.bexceptions import BX
 from bkr.server.bexceptions import DatabaseLookupError
 from bkr.server.cherrypy_util import PlainTextHTTPException

@@ -26,15 +26,15 @@ the :meth:`auth.login_*` methods below, the response will include an HTTP
 cookie identifying the session. The caller must use this cookie in 
 subsequent requests which belong with this session.
 
-.. currentmodule:: bkr.server.authentication
+.. currentmodule:: bkr.server.rpc.authentication
 
-.. automethod:: auth.login_krbV
+.. automethod:: Auth.login_krbV
 
-.. automethod:: auth.login_password
+.. automethod:: Auth.login_password
 
-.. automethod:: auth.logout()
+.. automethod:: Auth.logout()
 
-.. automethod:: auth.who_am_i
+.. automethod:: Auth.who_am_i
 
 User Preferences
 ----------------
