@@ -8,11 +8,11 @@ import sys
 import os.path
 import datetime
 import logging
-import imp
 import pkg_resources
 from sqlalchemy import Column, Integer, Unicode, DateTime
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.inspection import inspect
+from bkr.common.helpers import load_source
 from bkr.server.database import session, get_engine
 from .base import DeclarativeMappedObject
 
@@ -39,7 +39,8 @@ class DataMigration(DeclarativeMappedObject):
             name, extension = os.path.splitext(filename)
             if extension != '.py':
                 continue
-            name = name.decode(sys.getfilesystemencoding())
+            if isinstance(name, bytes):
+                name = name.decode(sys.getfilesystemencoding())
             names.append(name)
         return names
 
@@ -65,9 +66,9 @@ class DataMigration(DeclarativeMappedObject):
     def module(self):
         if not hasattr(self, '_module'):
             module_path = pkg_resources.resource_filename('bkr.server',
-                    'data-migrations/%s.py' % self.name.encode(sys.getfilesystemencoding()))
+                    'data-migrations/%s.py' % self.name)
             logger.debug('Loading data migration %s from %s', self.name, module_path)
-            self._module = imp.load_source(self.name.encode(sys.getfilesystemencoding()), module_path)
+            self._module = load_source(self.name, module_path)
         return self._module
 
     def migrate_one_batch(self, engine):

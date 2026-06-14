@@ -293,3 +293,16 @@ def total_seconds(td):
     represented by the given timedelta.
     """
     return (float(td.microseconds) + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
+
+
+def load_source(name, path):
+    # TODO: drop the imp fallback once the server runs on Python 3 only
+    try:
+        from importlib.util import spec_from_file_location, module_from_spec
+    except ImportError:
+        import imp
+        return imp.load_source(name, path)
+    spec = spec_from_file_location(name, path)
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
