@@ -3,12 +3,15 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import sys
 import pkg_resources
 
-pkg_resources.require('SQLAlchemy >= 0.6')
-pkg_resources.require('TurboGears >= 1.1')
+PY2 = sys.version_info[0] == 2
 
-import sys
+pkg_resources.require('SQLAlchemy >= 0.6')
+if PY2:
+    pkg_resources.require('TurboGears >= 1.1')
+
 import os
 import datetime
 import time
@@ -21,7 +24,8 @@ import re
 import logging, logging.config
 import signal
 import unittest
-import turbogears
+if PY2:
+    import turbogears
 
 try:
     import glanceclient.v2.client
@@ -37,7 +41,8 @@ except ImportError:
     has_keystoneauth1 = False
 
 from bkr.server.database import session
-from bkr.server.controllers import Root
+if PY2:
+    from bkr.server.controllers import Root
 from bkr.server.model import OpenStackRegion, ConfigItem, User, LabController, Task, Distro
 from bkr.server.util import load_config
 from bkr.server import config
@@ -47,11 +52,12 @@ from bkr.log import log_to_stream
 from bkr.inttest.mail_capture import MailCaptureThread
 
 # hack to make turbogears.testutil not do dumb stuff at import time
-orig_cwd = os.getcwd()
-os.chdir('/tmp')
-import turbogears.testutil
+if PY2:
+    orig_cwd = os.getcwd()
+    os.chdir('/tmp')
+    import turbogears.testutil
 
-os.chdir(orig_cwd)
+    os.chdir(orig_cwd)
 
 CONFIG_FILE = os.environ.get('BEAKER_CONFIG_FILE')
 
@@ -441,23 +447,32 @@ def setup_package():
     if config.get('openstack.identity_api_url'):
         setup_openstack()
 
-    turbogears.testutil.make_app(Root)
-    turbogears.testutil.start_server()
+    if PY2:
+        turbogears.testutil.make_app(Root)
+        turbogears.testutil.start_server()
 
     global processes
     processes = []
     if 'BEAKER_SERVER_BASE_URL' not in os.environ:
         # need to start the server ourselves
-        # Usual pkg_resources ugliness is needed to ensure gunicorn doesn't
-        # import pkg_resources before we get a chance to specify our
-        # requirements in bkr.server.wsgi
+        if PY2:
+            # Usual pkg_resources ugliness is needed to ensure gunicorn doesn't
+            # import pkg_resources before we get a chance to specify our
+            # requirements in bkr.server.wsgi
+            gunicorn_args = [sys.executable, '-c',
+                             '__requires__ = ["CherryPy < 3.0"]; import pkg_resources; '
+                             'from gunicorn.app.wsgiapp import run; run()',
+                             '--bind', ':%s' % config.get('server.socket_port'),
+                             '--workers', '8', '--access-logfile', '-', '--preload',
+                             'bkr.server.wsgi:application']
+        else:
+            gunicorn_args = [sys.executable, '-c',
+                             'from gunicorn.app.wsgiapp import run; run()',
+                             '--bind', ':%s' % config.get('server.socket_port'),
+                             '--workers', '8', '--access-logfile', '-', '--preload',
+                             'bkr.server.wsgi_py3:application']
         processes.extend([
-            Process('gunicorn', args=[sys.executable, '-c',
-                                      '__requires__ = ["CherryPy < 3.0"]; import pkg_resources; '
-                                      'from gunicorn.app.wsgiapp import run; run()',
-                                      '--bind', ':%s' % config.get('server.socket_port'),
-                                      '--workers', '8', '--access-logfile', '-', '--preload',
-                                      'bkr.server.wsgi:application'],
+            Process('gunicorn', args=gunicorn_args,
                     listen_port=config.get('server.socket_port')),
         ])
     processes.extend([
@@ -478,7 +493,8 @@ def teardown_package():
     for process in processes:
         process.stop()
 
-    turbogears.testutil.stop_server()
+    if PY2:
+        turbogears.testutil.stop_server()
 
     if config.get('openstack.identity_api_url'):
         cleanup_openstack()
