@@ -1,0 +1,41 @@
+name: Build Python 2 test image
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - python-3
+    paths:
+      - .github/containers/test-py2/Dockerfile
+      - beaker.spec
+      - .github/workflows/build-test-image-py2.yml
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
+        with:
+          context: .
+          file: .github/containers/test-py2/Dockerfile
+          push: true
+          tags: ghcr.io/beaker-project/beaker/test-py2:latest
+      - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+        with:
+          subject-name: ghcr.io/beaker-project/beaker/test-py2
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true

@@ -1,0 +1,41 @@
+name: Build Python 3 test image
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'
+  push:
+    branches:
+      - python-3
+    paths:
+      - .github/containers/test-py3/Dockerfile
+      - .github/workflows/build-test-image-py3.yml
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
+        with:
+          context: .github/containers/test-py3
+          push: true
+          tags: ghcr.io/beaker-project/beaker/test-py3:latest
+      - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+        with:
+          subject-name: ghcr.io/beaker-project/beaker/test-py3
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
