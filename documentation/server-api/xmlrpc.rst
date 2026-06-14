@@ -75,19 +75,19 @@ Systems
 These XML-RPC methods allow the caller to query and manipulate systems in 
 Beaker's inventory.
 
-.. currentmodule:: bkr.server.systems
+.. currentmodule:: bkr.server.rpc.systems
 
-.. automethod:: systems.reserve
+.. automethod:: SystemsController.reserve
 
-.. automethod:: systems.release
+.. automethod:: SystemsController.release
 
-.. automethod:: systems.power
+.. automethod:: SystemsController.power
 
-.. automethod:: systems.provision
+.. automethod:: SystemsController.provision
 
-.. automethod:: systems.history
+.. automethod:: SystemsController.history
 
-.. automethod:: systems.get_osmajor_arches
+.. automethod:: SystemsController.get_osmajor_arches
 
 
 Distros and distro trees
