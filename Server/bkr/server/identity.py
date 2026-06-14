@@ -9,7 +9,10 @@ import errno
 import logging
 from decorator import decorator
 import itsdangerous
-import cherrypy
+try:
+    import cherrypy
+except ImportError:
+    cherrypy = None
 import flask
 from bkr.server import config
 from bkr.common.helpers import AtomicFileReplacement
@@ -213,9 +216,17 @@ current = CurrentIdentity()
 
 # Mimics the identity.require decorator and predicates from TurboGears:
 
-class IdentityFailure(cherrypy.HTTPRedirect, cherrypy.HTTPError):
+# TODO: drop this cherrypy conditional once the server runs on Python 3 only
+if cherrypy is not None:
+    class _IdentityFailureBase(cherrypy.HTTPRedirect, cherrypy.HTTPError):
+        pass
+else:
+    class _IdentityFailureBase(Exception):
+        pass
 
-    # This is a CherryPy exception, so normally it will be raised out to 
+class IdentityFailure(_IdentityFailureBase):
+
+    # This is a CherryPy exception, so normally it will be raised out to
     # CherryPy which will return a redirect or other response as appropriate. 
     # For XML-RPC we instead catch it and return it as a fault.
 
