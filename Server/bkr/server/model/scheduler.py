@@ -33,7 +33,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import select, union, and_, or_, not_, func, literal, exists, delete
 from bkr.server.util import url
 from bkr.server.config import get
-from bkr.server.database import session
+from bkr.server.database import session, session_connection
 
 from bkr.common.helpers import makedirs_ignore, total_seconds
 from bkr.server import identity, metrics, mail
@@ -1883,7 +1883,7 @@ class RecipeSet(TaskBase, ActivityMixin):
                        group_by=[Recipe.id],
                        order_by='count')
         return map(lambda x: MachineRecipe.query.filter_by(id=x[0]).first(),
-                   session.connection(RecipeSet).execute(query).fetchall())
+                   session_connection(RecipeSet).execute(query).fetchall())
 
     def task_info(self):
         """
@@ -2124,7 +2124,7 @@ class Recipe(TaskBase, ActivityMixin):
         query = delete(RecipeTaskResult.__table__.join(RecipeTask),
                        prefixes=[RecipeTaskResult.__table__.name]) \
             .where(RecipeTask.recipe_id == self.id)
-        session.connection(RecipeTaskResult).execute(query)
+        session_connection(RecipeTaskResult).execute(query)
 
     def task_repo(self):
         return ('beaker-tasks', absolute_url('/repos/%s' % self.id,
@@ -2745,7 +2745,7 @@ class Recipe(TaskBase, ActivityMixin):
         # and then a DELETE of each one indvidually. This is faster.
         query = delete(system_recipe_map) \
             .where(system_recipe_map.c.recipe_id == self.id)
-        session.connection(self.__class__).execute(query)
+        session_connection(self.__class__).execute(query)
         session.expire(self, ['systems'])
 
     def task_info(self):

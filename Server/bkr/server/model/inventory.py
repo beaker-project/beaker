@@ -27,7 +27,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from bkr.server.util import url
 from bkr.server import config
 from bkr.server.config import get
-from bkr.server.database import session
+from bkr.server.database import session, session_connection
 from bkr.server import identity, metrics, mail
 from bkr.server.bexceptions import (BX, InsufficientSystemPermissions,
         StaleCommandStatusException, StaleSystemUserException)
@@ -161,7 +161,7 @@ class Command(DeclarativeMappedObject):
 
     def change_status(self, new_status):
         current_status = self.status
-        if session.connection(Command).execute(Command.__table__.update(
+        if session_connection(Command).execute(Command.__table__.update(
                 and_(Command.__table__.c.id == self.id,
                      Command.status == current_status)),
                 status=new_status).rowcount != 1:
@@ -1738,7 +1738,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
     def _reserve(self, service, user, reservation_type):
         # Atomic operation to reserve the system
         session.flush()
-        if session.connection(System).execute(System.__table__.update(
+        if session_connection(System).execute(System.__table__.update(
                 and_(System.id == self.id,
                      System.user_id == None)),
                 user_id=user.user_id).rowcount != 1:
@@ -1769,7 +1769,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
         # Update reservation atomically first, to avoid races
         session.flush()
         my_reservation_id = reservation.id
-        if session.connection(System).execute(Reservation.__table__.update(
+        if session_connection(System).execute(Reservation.__table__.update(
                 and_(Reservation.id == my_reservation_id,
                      Reservation.finish_time == None)),
                 finish_time=datetime.utcnow()).rowcount != 1:

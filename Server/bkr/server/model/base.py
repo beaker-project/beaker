@@ -7,7 +7,7 @@
 import logging
 import random
 import time
-from bkr.server.database import metadata, session
+from bkr.server.database import metadata, session, session_connection
 from sqlalchemy import util
 from sqlalchemy.sql import and_
 from sqlalchemy.exc import OperationalError
@@ -66,7 +66,7 @@ class MappedObject(object):
                 log.debug('Backing off %0.3f seconds for insertion into table %s' % (delay, table))
                 time.sleep(delay)
             try:
-                session.connection(cls).execute(ConditionalInsert(table,
+                session_connection(cls).execute(ConditionalInsert(table,
                     unique_params, extra_params))
                 succeeded = True
                 break
@@ -81,7 +81,7 @@ class MappedObject(object):
             raise e
 
         if extra_params:
-            session.connection(cls).execute(table.update()
+            session_connection(cls).execute(table.update()
                     .values(extra_params)
                     .where(and_(*[col == value for col, value in six.iteritems(unique_params)])))
 
