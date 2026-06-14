@@ -31,6 +31,7 @@ application = app
 
 import bkr.server.activity
 import bkr.server.power
+import bkr.server.user
 
 
 @app.before_request
