@@ -15,6 +15,7 @@ import sys
 import datetime
 import re
 import logging
+import six
 from sqlalchemy.inspection import inspect
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import create_session
@@ -106,13 +107,13 @@ def populate_db(user_name=None, password=None, user_display_name=None,
 
     # Setup User account
     if user_name:
-        user = User.lazy_create(user_name=user_name.decode('utf8'))
+        user = User.lazy_create(user_name=six.ensure_text(user_name))
         if password:
-            user.password = password.decode('utf8')
+            user.password = six.ensure_text(password)
         if user_display_name:
-            user.display_name = user_display_name.decode('utf8')
+            user.display_name = six.ensure_text(user_display_name)
         if user_email_address:
-            user.email_address = user_email_address.decode('utf8')
+            user.email_address = six.ensure_text(user_email_address)
         # Ensure the user is in the 'admin' group as an owner.
         # Flush for lazy_create.
         session.flush()
