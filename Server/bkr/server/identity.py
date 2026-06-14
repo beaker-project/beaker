@@ -16,7 +16,7 @@ except ImportError:
 import flask
 from bkr.server import config
 from bkr.common.helpers import AtomicFileReplacement
-from bkr.server.util import absolute_url
+from bkr.server.util import absolute_url, ensure_text
 
 log = logging.getLogger(__name__)
 
@@ -76,9 +76,9 @@ def _try_autocreate(user_name):
                 user_name)
         return
     user = User()
-    user.user_name = user_name.decode('utf8')
-    user.display_name = flask.request.environ['REMOTE_USER_FULLNAME'].decode('utf8')
-    user.email_address = flask.request.environ['REMOTE_USER_EMAIL'].decode('utf8')
+    user.user_name = ensure_text(user_name, 'utf8')
+    user.display_name = ensure_text(flask.request.environ['REMOTE_USER_FULLNAME'], 'utf8')
+    user.email_address = ensure_text(flask.request.environ['REMOTE_USER_EMAIL'], 'utf8')
     session.add(user)
     session.flush()
     log.debug('Autocreated user %s', user)
@@ -97,7 +97,7 @@ def check_authentication():
     if 'REMOTE_USER' in flask.request.environ:
         # strip realm if present
         user_name, _, realm = flask.request.environ['REMOTE_USER'].partition('@')
-        user = User.by_user_name(user_name.decode('utf8'))
+        user = User.by_user_name(ensure_text(user_name, 'utf8'))
         if user is None and config.get('identity.autocreate', True):
             # handle automatic user creation if possible
             user = _try_autocreate(user_name)
@@ -113,7 +113,7 @@ def check_authentication():
         if not token_value or 'user_name' not in token_value:
             return
         user_name = token_value['user_name']
-        user = User.by_user_name(user_name.decode('utf8'))
+        user = User.by_user_name(ensure_text(user_name, 'utf8'))
         if user is None:
             log.warning('Token claimed to be for non-existent user %r',
                     user_name)
@@ -121,7 +121,7 @@ def check_authentication():
         # handle "proxy authentication" support
         proxied_by_user_name = token_value.get('proxied_by_user_name', None)
         if proxied_by_user_name:
-            proxied_by_user = User.by_user_name(proxied_by_user_name.decode('utf8'))
+            proxied_by_user = User.by_user_name(ensure_text(proxied_by_user_name, 'utf8'))
             if proxied_by_user is None:
                 log.warning('Token for %r claimed to be proxied by non-existent user %r',
                         user_name, proxied_by_user_name)
