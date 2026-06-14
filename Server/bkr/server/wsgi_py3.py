@@ -33,6 +33,7 @@ import bkr.server.authentication
 import bkr.server.activity
 import bkr.server.power
 import bkr.server.user
+import bkr.server.labcontroller
 
 
 @app.before_request

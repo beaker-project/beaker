@@ -48,7 +48,7 @@ from bkr.server.helpers import make_link
 from bkr.server.job_matrix import JobMatrix
 from bkr.server.jobs import Jobs
 from bkr.server.keytypes import KeyTypes
-from bkr.server.labcontroller import LabControllers
+from bkr.server.rpc.labcontroller import LabControllers
 from bkr.server.model import (TaskBase, Device, System,
                               Key, OSMajor, DistroTree, Arch, TaskPriority,
                               RecipeSet, User, LabInfo,

@@ -433,7 +433,7 @@ class AddDistroTreeXmlRpcTest(XmlRpcTestCase):
         # This doesn't actually call through XML-RPC, it calls the 
         # controller directly in two separate threads, in order to simulate two 
         # lab controllers importing the same distro tree at the same instant.
-        from bkr.server.labcontroller import LabControllers
+        from bkr.server.rpc.labcontroller import LabControllers
         controller = LabControllers()
         class DistroImportThread(Thread):
             def __init__(self, lc_user_name=None, distro_data=None, **kwargs):
