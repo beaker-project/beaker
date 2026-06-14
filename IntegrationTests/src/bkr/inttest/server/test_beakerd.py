@@ -26,7 +26,7 @@ from bkr.inttest import data_setup, fix_beakerd_repodata_perms, DatabaseTestCase
 from bkr.inttest.assertions import assert_datetime_within, \
         assert_durations_not_overlapping, wait_for_condition
 from bkr.server.tools import beakerd
-from bkr.server.jobs import Jobs
+from bkr.server.rpc.jobs import Jobs
 from bkr.server import dynamic_virt
 from bkr.server.model import OSMajor
 from bkr.inttest.assertions import assert_datetime_within

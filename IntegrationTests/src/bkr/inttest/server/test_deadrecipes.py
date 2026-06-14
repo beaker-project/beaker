@@ -10,7 +10,7 @@ from bkr.server.database import session
 from bkr.inttest import data_setup, with_transaction, fix_beakerd_repodata_perms, \
     DatabaseTestCase
 from bkr.server.tools import beakerd
-from bkr.server.jobs import Jobs
+from bkr.server.rpc.jobs import Jobs
 
 
 class TestBeakerd(DatabaseTestCase):

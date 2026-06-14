@@ -23,7 +23,7 @@ from bkr.inttest.kickstart_helpers import (
     create_rhel62, create_rhel62_server_x86_64, create_x86_64_automated, create_lab_controller,
     compare_expected, jinja_choice_loader, create_user
 )
-from bkr.server.jobs import Jobs
+from bkr.server.rpc.jobs import Jobs
 from bkr.server.kickstart import template_env, generate_kickstart
 from bkr.server.model import (
     session, DistroTreeRepo, LabControllerDistroTree, Provision, SSHPubKey, ProvisionFamily,

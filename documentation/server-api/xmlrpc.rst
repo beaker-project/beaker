@@ -132,15 +132,15 @@ These XML-RPC methods fetch and manipulate tasks in the Beaker task library.
 Running jobs
 ------------
 
-.. currentmodule:: bkr.server.jobs
+.. currentmodule:: bkr.server.rpc.jobs
 
-.. automethod:: jobs.upload
+.. automethod:: Jobs.upload
 
-.. automethod:: jobs.list
+.. automethod:: Jobs.list
 
-.. automethod:: jobs.filter
+.. automethod:: Jobs.filter
 
-.. automethod:: jobs.delete_jobs
+.. automethod:: Jobs.delete_jobs
 
 .. automodule:: bkr.server.recipes
 
@@ -178,9 +178,9 @@ Running jobs
 .. jobs.set_response should actually be in tasksactions namespace, it takes 
    a taskspec/taskid/tid like J:123
 
-.. currentmodule:: bkr.server.jobs
+.. currentmodule:: bkr.server.rpc.jobs
 
-.. automethod:: jobs.set_response
+.. automethod:: Jobs.set_response
 
 
 General Beaker information
