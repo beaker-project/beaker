@@ -83,8 +83,8 @@ class DatabaseTestCase(unittest.TestCase):
         # We clear __dict__ as a kind of hack, to try and drop references to
         # ORM instances which the test has stored as attributes on itself
         # (TestCase instances are kept for the life of the test runner!)
-        for name in self.__dict__.keys():
-            if not name.startswith('_'):
+        for name in list(self.__dict__.keys()):
+            if not name.startswith('_') and not hasattr(type(self), name):
                 del self.__dict__[name]
         session.close()
 
