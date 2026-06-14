@@ -20,7 +20,7 @@ from bkr.server.widgets import SearchBar
 from bkr.server import search_utility, identity, dynamic_virt
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
-from bkr.server.recipetasks import RecipeTasks
+from bkr.server.rpc.recipetasks import RecipeTasks
 from bkr.server.reserve_workflow import MAX_SECONDS_PROVISION, MAX_HOURS_PROVISION
 from bkr.server.controller_utilities import _custom_status, _custom_result
 from bkr.server.junitxml import recipe_to_junit_xml
