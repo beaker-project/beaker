@@ -1972,7 +1972,7 @@ class SystemPool(DeclarativeMappedObject, ActivityMixin):
         return self.name
 
     def __str__(self):
-        return ensure_str(six.text_type(self))
+        return ensure_str(self.__unicode__())
 
     def __repr__(self):
         return 'SystemPool(name=%r, owning_user=%r, owning_group=%r)' % \
@@ -2094,7 +2094,7 @@ class Hypervisor(DeclarativeMappedObject):
         return self.hypervisor
 
     def __str__(self):
-        return ensure_str(six.text_type(self))
+        return ensure_str(self.__unicode__())
 
     def __json__(self):
         return six.text_type(self)
@@ -2150,7 +2150,7 @@ class SystemAccessPolicy(DeclarativeMappedObject):
         }
 
     def __str__(self):
-        return ensure_str(six.text_type(self))
+        return ensure_str(self.__unicode__())
 
     def __unicode__(self):
         if self.system:
