@@ -62,10 +62,9 @@ class EnumMeta(type):
     def __iter__(cls):
         return iter(cls._symbols)
 
-class DeclEnum(object):
+class DeclEnum(six.with_metaclass(EnumMeta, object)):
     """Declarative enumeration."""
 
-    __metaclass__ = EnumMeta
     _symbols = []
     _symbols_by_value = {}
 
