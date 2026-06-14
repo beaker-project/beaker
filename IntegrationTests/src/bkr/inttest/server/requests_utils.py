@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import os
 import json
 import requests
 from six.moves import xmlrpc_client
@@ -44,5 +45,10 @@ def login(session, user=None, password=None):
     if user is None and password is None:
         user = data_setup.ADMIN_USER
         password = data_setup.ADMIN_PASSWORD
-    session.post(get_server_base() + 'login',
-            data=dict(user_name=user, password=password)).raise_for_status()
+    if os.environ.get('BKR_PY3') == '1':
+        user_name = getattr(user, 'user_name', user)
+        session.post(get_server_base() + 'auth/login_password',
+                json=dict(username=user_name, password=password)).raise_for_status()
+    else:
+        session.post(get_server_base() + 'login',
+                data=dict(user_name=user, password=password)).raise_for_status()
