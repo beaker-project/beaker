@@ -113,7 +113,7 @@ def json_collection(query, columns=None, extra_sort_columns=None, max_page_size=
             result['page'] = page
             result['page_size'] = page_size
         result['entries'] = query.all()
-        if len(result['entries']) < page_size and 'count' not in result:
+        if page_size and len(result['entries']) < page_size and 'count' not in result:
             # Even if we're not counting rows for performance reason, we know 
             # we have reached the end of the rows if we returned fewer than the 
             # page size. In this case we can infer the total count and return 
