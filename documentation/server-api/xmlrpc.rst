@@ -56,17 +56,17 @@ Groups
 These XML-RPC methods allow the caller to query and manipulate groups
 in Beaker.
 
-.. currentmodule:: bkr.server.group
+.. currentmodule:: bkr.server.rpc.group
 
-.. automethod:: groups.create
+.. automethod:: Groups.create
 
-.. automethod:: groups.modify
+.. automethod:: Groups.modify
 
-.. automethod:: groups.grant_ownership
+.. automethod:: Groups.grant_ownership
 
-.. automethod:: groups.revoke_ownership
+.. automethod:: Groups.revoke_ownership
 
-.. automethod:: groups.members
+.. automethod:: Groups.members
 
 
 Systems

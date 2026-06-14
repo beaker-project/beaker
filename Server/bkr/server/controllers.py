@@ -43,7 +43,7 @@ from bkr.server.controller_utilities import Utility, \
 from bkr.server.distro import Distros
 from bkr.server.distro_family import DistroFamily
 from bkr.server.distrotrees import DistroTrees
-from bkr.server.group import Groups
+from bkr.server.rpc.group import Groups
 from bkr.server.helpers import make_link
 from bkr.server.job_matrix import JobMatrix
 from bkr.server.jobs import Jobs
