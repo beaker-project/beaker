@@ -120,13 +120,13 @@ Task library
 
 These XML-RPC methods fetch and manipulate tasks in the Beaker task library.
 
-.. currentmodule:: bkr.server.tasks
+.. currentmodule:: bkr.server.rpc.tasks
 
-.. automethod:: tasks.to_dict
+.. automethod:: Tasks.to_dict
 
-.. automethod:: tasks.filter
+.. automethod:: Tasks.filter
 
-.. automethod:: tasks.upload
+.. automethod:: Tasks.upload
 
 
 Running jobs

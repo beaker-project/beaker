@@ -68,7 +68,7 @@ from bkr.server.system_action import SystemAction as SystemActionController
 from bkr.server.rpc.systems import SystemsController
 from bkr.server.tag import Tags
 from bkr.server.task_actions import TaskActions
-from bkr.server.tasks import Tasks
+from bkr.server.rpc.tasks import Tasks
 from bkr.server.rpc.user import Users
 from bkr.server.util import absolute_url, url
 from bkr.server.watchdog import Watchdogs
