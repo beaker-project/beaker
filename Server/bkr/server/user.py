@@ -373,7 +373,7 @@ def add_ssh_public_key(username):
     if request.mimetype != 'text/plain':
         raise UnsupportedMediaType415('Request content type must be text/plain')
     with convert_internal_errors():
-        keytext = request.data.strip()
+        keytext = request.get_data(as_text=True).strip()
         if '\n' in keytext:
             raise ValueError('SSH public keys may not contain newlines')
         elements = keytext.split(None, 2)
@@ -556,10 +556,10 @@ def delete_keystone_trust(username):
     except ValueError as e:
         # If we can't create a VirtManager we presume that the trust has been
         # invalidated by different means.
-        log.debug(e.message)
+        log.debug(str(e))
     except RuntimeError as e:
         # Sanity check failed. Because OpenStack is not configured.
-        log.debug(e.message)
+        log.debug(str(e))
     old_trust_id = user.openstack_trust_id
     user.openstack_trust_id = None
     user.record_activity(user=identity.current.user, service=u'HTTP',
