@@ -12,7 +12,10 @@ import unittest
 
 import datetime
 import lxml.etree
-import mock
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 import netaddr
 import six
 from bkr.server import config
