@@ -9,7 +9,7 @@ from bkr.server.model import Task
 from bkr.server import testinfo
 
 def populate(task):
-    from bkr.server.tasks import Tasks
+    from bkr.server.rpc.tasks import Tasks
     controller = Tasks()
     filename = os.path.join(controller.task_dir, task.rpm)
     if not os.path.exists(filename):
