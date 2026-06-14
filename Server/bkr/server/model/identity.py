@@ -22,7 +22,7 @@ from sqlalchemy.orm import mapper, relationship, validates, synonym
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import not_, and_, or_, exists
 from bkr.server.config import get
-from bkr.server.database import session
+from bkr.server.database import session, query_with_lockmode
 from formencode import validators
 from formencode.api import Invalid
 from bkr.server.bexceptions import BX, NoChangeException
@@ -567,7 +567,7 @@ class Group(DeclarativeMappedObject, ActivityMixin):
     @classmethod
     def by_name(cls, name, lockmode=False):
         if lockmode:
-            return cls.query.with_lockmode(lockmode).filter(cls.group_name == name).one()
+            return query_with_lockmode(cls.query, lockmode).filter(cls.group_name == name).one()
         else:
             return cls.query.filter_by(group_name=name).one()
 
