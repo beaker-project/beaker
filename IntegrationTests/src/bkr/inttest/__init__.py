@@ -295,12 +295,13 @@ objectClass: olcDatabaseConfig
 olcDatabase: config
 olcAccess: to * by * none
 
-dn: olcDatabase=bdb,cn=config
+dn: olcDatabase=mdb,cn=config
 objectClass: olcDatabaseConfig
-objectClass: olcBdbConfig
-olcDatabase: bdb
+objectClass: olcMdbConfig
+olcDatabase: mdb
 olcSuffix: dc=example,dc=invalid
 olcDbDirectory: %s
+olcDbMaxSize: 1073741824
 olcDbIndex: objectClass eq
 olcAccess: to * by * read
 """ % slapd_data_dir)
