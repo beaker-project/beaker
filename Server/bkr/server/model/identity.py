@@ -371,7 +371,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
     )
 
     def _set_password(self, raw_password):
-        self._password = self._password_context.encrypt(raw_password).decode('ascii')
+        self._password = six.ensure_text(self._password_context.encrypt(raw_password))
 
     def _get_password(self):
         return self._password
