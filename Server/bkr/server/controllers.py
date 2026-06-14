@@ -65,7 +65,7 @@ from bkr.server.reports import Reports
 from bkr.server.reserve_workflow import ReserveWorkflow
 from bkr.server.retention_tags import RetentionTag as RetentionTagController
 from bkr.server.system_action import SystemAction as SystemActionController
-from bkr.server.systems import SystemsController
+from bkr.server.rpc.systems import SystemsController
 from bkr.server.tag import Tags
 from bkr.server.task_actions import TaskActions
 from bkr.server.tasks import Tasks
