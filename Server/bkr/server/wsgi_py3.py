@@ -34,6 +34,7 @@ import bkr.server.activity
 import bkr.server.power
 import bkr.server.user
 import bkr.server.labcontroller
+import bkr.server.systems
 
 
 @app.before_request
