@@ -7,7 +7,8 @@
 import logging
 from datetime import datetime, timedelta
 import ldap, ldap.filter
-import crypt
+# TODO: Use sha512_crypt after we finish the migration
+from passlib.hash import md5_crypt
 import random
 import string
 import re
@@ -457,7 +458,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
                     raise ValueError(msg)
                 salt = ''.join(random.choice(string.digits + string.ascii_letters)
                                 for i in range(8))
-                self._root_password = crypt.crypt(password, "$1$%s$" % salt)
+                self._root_password = md5_crypt.using(salt=salt).hash(password)
             else:
                 self._root_password = password
             self.rootpw_changed = datetime.utcnow()
@@ -473,7 +474,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
             if pw:
                 salt = ''.join(random.choice(string.digits + string.ascii_letters)
                                 for i in range(8))
-                return crypt.crypt(pw, "$1$%s$" % salt)
+                return md5_crypt.using(salt=salt).hash(pw)
 
     root_password = property(_get_root_password, _set_root_password)
 
