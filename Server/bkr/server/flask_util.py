@@ -32,7 +32,7 @@ class PaginationRequiredException(HTTPException):
     # delete the following when we have Werkzeug 0.9:
     def __init__(self, response):
         self.response = response
-    def get_response(self, environ):
+    def get_response(self, environ=None, scope=None):
         return self.response
 
 def json_collection(query, columns=None, extra_sort_columns=None, max_page_size=500,
@@ -158,9 +158,9 @@ def render_tg_template(template_name, data):
 
 class PlainTextHTTPException(HTTPException):
     """A base class for returning error details as plain text"""
-    def get_body(self, environ):
+    def get_body(self, environ=None, scope=None):
         return self.description
-    def get_headers(self, environ):
+    def get_headers(self, environ=None, scope=None):
         return [('Content-Type', 'text/plain; charset=UTF-8')]
 
 class BadRequest400(PlainTextHTTPException):
@@ -171,7 +171,7 @@ class Unauthorised401(PlainTextHTTPException):
 
 class Forbidden403(PlainTextHTTPException):
     code = 403
-    def get_body(self, environ):
+    def get_body(self, environ=None, scope=None):
         return ("Insufficient permissions: " + self.description)
 
 class NotFound404(PlainTextHTTPException):
