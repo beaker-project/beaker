@@ -165,6 +165,105 @@ jobs:
           rm -rf src/bkr/inttest/server/selenium
           ./run-tests.sh -v ${{ matrix.test-target }}
 
+  integration-tests-py3-client:
+    runs-on: ubuntu-latest
+    env:
+      MYSQL_USER: beaker
+      MYSQL_PASSWORD: beaker
+      MYSQL_ROOT_PASSWORD: toor
+    container:
+      image: centos:7
+      options: --init
+      volumes:
+        - /node20217:/node20217:rw,rshared
+        - /node20217:/__e/node20:ro,rshared
+    services:
+      database:
+        image: mariadb:10-ubi
+        env:
+          MYSQL_USER: ${{ env.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ env.MYSQL_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ env.MYSQL_ROOT_PASSWORD }}
+        ports:
+          - 3306
+    steps:
+      - name: Fetch Node 20
+        run: |
+          curl -LO https://unofficial-builds.nodejs.org/download/release/v20.9.0/node-v20.9.0-linux-x64-glibc-217.tar.xz
+          tar -xf node-v20.9.0-linux-x64-glibc-217.tar.xz --strip-components 1 -C /node20217
+      - name: Fixup CentOS repo files
+        run: |
+          sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo
+          sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo
+          sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo
+      - name: Install git to allow checkout
+        run: |
+          yum install epel-release -y
+          sed -i 's|^metalink=|#metalink=|g' /etc/yum.repos.d/epel*.repo
+          sed -i 's|^#\?baseurl=.*|baseurl=https://archives.fedoraproject.org/pub/archive/epel/7/$basearch|g' /etc/yum.repos.d/epel*.repo
+          cat > /etc/yum.repos.d/ius-vault.repo << 'EOF'
+          [ius-vault]
+          name=IUS Vault for Enterprise Linux 7 - $basearch
+          baseurl=https://vault.ius.io/el7/$basearch/
+          enabled=1
+          gpgcheck=1
+          gpgkey=https://vault.ius.io/RPM-GPG-KEY-IUS-7
+          EOF
+          yum install git236-core -y
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Remove git236 and YUM repositories
+        run: |
+          yum remove git236-core epel-release -y
+          rm -f /etc/yum.repos.d/ius-vault.repo
+      - name: Add Beaker Server YUM repository
+        run: |
+          curl -o /etc/yum.repos.d/beaker-server.repo https://beaker-project.org/yum/beaker-server-RedHatEnterpriseLinux.repo
+      - name: Install Beaker dependencies
+        run: |
+          yum install epel-release -y
+          sed -i 's|^metalink=|#metalink=|g' /etc/yum.repos.d/epel*.repo
+          sed -i 's|^#\?baseurl=.*|baseurl=https://archives.fedoraproject.org/pub/archive/epel/7/$basearch|g' /etc/yum.repos.d/epel*.repo
+          yum install mariadb beaker-integration-tests -y
+          yum-builddep beaker.spec -y
+          yum remove beaker-common \
+              beaker-client \
+              beaker-lab-controller \
+              beaker-server \
+              beaker-integration-tests -y
+      - name: Install Python 3 for the client
+        run: |
+          yum install -y gcc krb5-devel
+          curl -L -o /tmp/python3.tar.gz https://github.com/astral-sh/python-build-standalone/releases/download/20240224/cpython-3.11.8+20240224-x86_64-unknown-linux-gnu-install_only.tar.gz
+          tar -xf /tmp/python3.tar.gz -C /opt
+          /opt/python/bin/python3 -m pip install lxml six requests PrettyTable Jinja2 gssapi
+      - name: Checkout submodules
+        run: |
+          git submodule update --init --recursive
+      - name: Configure database for testing
+        run: |
+          cat <<EOT > init.sql
+          CREATE DATABASE beaker_test;
+          CREATE DATABASE beaker_migration_test;
+          GRANT ALL PRIVILEGES ON beaker_test.* TO 'beaker'@'%';
+          GRANT ALL PRIVILEGES ON beaker_migration_test.* TO 'beaker'@'%';
+          SET GLOBAL max_allowed_packet=1073741824;
+          SET GLOBAL character_set_server=utf8;
+          EOT
+
+          mysql -uroot -p${{ env.MYSQL_ROOT_PASSWORD }} -h database < init.sql
+          sed -i 's/@localhost/@database/g' IntegrationTests/server-test.cfg
+      - name: Update version
+        run: |
+          current_version=$(grep -oE "__version__ = '[^']+'" Common/bkr/common/__init__.py | cut -d "'" -f 2)
+          new_version="$current_version.git.$(git rev-parse --short HEAD)"
+          sed -i "s/__version__ = '$current_version'/__version__ = '$new_version'/" Common/bkr/common/__init__.py
+      - name: Run integration tests for bkr.inttest.client with the Python 3 client
+        run: |
+          pushd IntegrationTests
+          rm -rf src/bkr/inttest/server/selenium
+          BEAKER_CLIENT_PYTHON=/opt/python/bin/python3 ./run-tests.sh -v bkr.inttest.client
+
   unit-tests:
     runs-on: ubuntu-latest
     container:
