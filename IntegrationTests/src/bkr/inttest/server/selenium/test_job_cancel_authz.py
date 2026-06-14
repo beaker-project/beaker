@@ -102,8 +102,8 @@ class UnauthorizedCancelViaRecipeTasksStopTest(XmlRpcTestCase):
 
     def test_recipetasks_stop_rejects_unauthorized_user(self):
         try:
-            self.server.recipetasks.stop(
+            self.server.recipes.tasks.stop(
                 self.task_id, 'cancel', 'authz test')
-            self.fail('recipetasks.stop should have denied the attacker')
+            self.fail('recipes.tasks.stop should have denied the attacker')
         except xmlrpclib.Fault, e:
             self.assertIn("don't have permission", e.faultString)
