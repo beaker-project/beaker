@@ -142,9 +142,9 @@ Running jobs
 
 .. automethod:: jobs.delete_jobs
 
-.. automodule:: bkr.server.recipes
+.. currentmodule:: bkr.server.rpc.recipes
 
-.. automethod:: recipes.files
+.. automethod:: Recipes.files
 
 .. currentmodule:: None
 
