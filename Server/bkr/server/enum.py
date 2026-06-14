@@ -18,6 +18,8 @@ import re
 
 import six
 
+from bkr.server.util import ensure_str
+
 
 class EnumSymbol(object):
     """Define a fixed symbol tied to a parent class."""
@@ -38,7 +40,7 @@ class EnumSymbol(object):
         return '%s.%s' % (self.cls_.__name__, self.name)
 
     def __str__(self):
-        return self.value.encode('utf8')
+        return ensure_str(self.value)
 
     def __unicode__(self):
         return self.value
