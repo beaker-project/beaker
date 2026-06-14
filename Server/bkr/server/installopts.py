@@ -10,18 +10,18 @@ from six.moves import reduce, shlex_quote
 
 import six
 
+from bkr.server.util import ensure_str, ensure_text
+
 
 def _parse(s): # based on Cobbler's string_to_hash
     result = {}
-    if isinstance(s, six.text_type):
-        s = s.encode('utf8') # shlex.split can't handle unicode :-(
-    for token in shlex.split(s or ''):
+    for token in shlex.split(ensure_str(s or '')):
         if '=' not in token:
             result.setdefault(token, None)
             continue
         name, value = token.split('=', 1)
-        name = name.decode('utf8')
-        value = value.decode('utf8')
+        name = ensure_text(name)
+        value = ensure_text(value)
         if not name:
             continue
 
