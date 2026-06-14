@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.sql.expression import case, func, and_, bindparam, not_
 from turbogears import expose, flash
 from bkr.server.util import url
-from bkr.server.database import session
+from bkr.server.database import session, session_connection
 from lxml.etree import Element, SubElement
 from bkr.server.widgets import JobMatrixReport as JobMatrixWidget, MatrixDataGrid
 from bkr.server import model
@@ -282,7 +282,7 @@ class JobMatrix:
                               s2.c.arch_id,
                               s2.c.name.label('task_name')],
                               from_obj=[s2]).group_by(s2.c.name).order_by(s2.c.name).alias()
-                results = session.connection(model.Recipe).execute(s1)
+                results = session_connection(model.Recipe).execute(s1)
                 for task_details in results:
                     if task_details.arch in the_tasks[task_details.task_name]:
                         if (whiteboard_val not in

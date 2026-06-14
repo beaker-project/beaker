@@ -18,7 +18,7 @@ from sqlalchemy.orm import (relationship, backref, dynamic_loader, synonym,
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.associationproxy import association_proxy
-from bkr.server.database import session
+from bkr.server.database import session, session_connection
 from bkr.server import identity
 from bkr.server.helpers import make_link
 from bkr.server.util import convert_db_lookup_error, ensure_str
@@ -562,7 +562,7 @@ class OSVersion(DeclarativeMappedObject):
         """
         Adds the given arch to this OSVersion if it's not already present.
         """
-        session.connection(self.__class__).execute(ConditionalInsert(
+        session_connection(self.__class__).execute(ConditionalInsert(
                 osversion_arch_map,
                 {osversion_arch_map.c.osversion_id: self.id,
                  osversion_arch_map.c.arch_id: arch.id}))
@@ -659,7 +659,7 @@ class Distro(DeclarativeMappedObject, ActivityMixin):
         Adds the given tag to this distro if it's not already present.
         """
         tagobj = DistroTag.lazy_create(tag=tag)
-        session.connection(self.__class__).execute(ConditionalInsert(
+        session_connection(self.__class__).execute(ConditionalInsert(
                 distro_tag_map,
                 {distro_tag_map.c.distro_id: self.id,
                  distro_tag_map.c.distro_tag_id: tagobj.id}))
