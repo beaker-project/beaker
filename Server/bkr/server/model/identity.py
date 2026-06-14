@@ -283,7 +283,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
         autocreate = get('identity.soldapprovider.autocreate', False)
         # Presence of '/' indicates a Kerberos service principal.
         if not user and ldapenabled and autocreate and '/' not in user_name:
-            filter = ldap.filter.filter_format('(uid=%s)', [user_name.encode('utf8')])
+            filter = ldap.filter.filter_format('(uid=%s)', [ensure_str(user_name)])
             ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
             objects = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
                     ldap.SCOPE_SUBTREE, filter,
@@ -318,7 +318,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
         ldap_users = []
         ldapenabled = get('identity.ldap.enabled', False)
         if ldapenabled and find_ldap_users is True:
-            filter = ldap.filter.filter_format('(uid=%s*)', [username.encode('utf8')])
+            filter = ldap.filter.filter_format('(uid=%s*)', [ensure_str(username)])
             ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
             objects = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
                     ldap.SCOPE_SUBTREE, filter,
@@ -383,7 +383,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
         Is the given user permitted to reset this user's password?
         """
         if get('identity.ldap.enabled', False):
-            filter = ldap.filter.filter_format('(uid=%s)', [self.user_name.encode('utf8')])
+            filter = ldap.filter.filter_format('(uid=%s)', [ensure_str(self.user_name)])
             ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
             objects = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
                     ldap.SCOPE_SUBTREE, filter,
@@ -419,7 +419,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
         ldapenabled = get('identity.ldap.enabled', False)
         # Presence of '/' indicates a Kerberos service principal.
         if ldapenabled and '/' not in self.user_name:
-            filter = ldap.filter.filter_format('(uid=%s)', [self.user_name.encode('utf8')])
+            filter = ldap.filter.filter_format('(uid=%s)', [ensure_str(self.user_name)])
             ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
             objects = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
                     ldap.SCOPE_SUBTREE, filter,
