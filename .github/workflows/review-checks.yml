@@ -165,6 +165,71 @@ jobs:
           rm -rf src/bkr/inttest/server/selenium
           ./run-tests.sh -v ${{ matrix.test-target }}
 
+  integration-tests-py3:
+    runs-on: ubuntu-latest
+    env:
+      MYSQL_USER: beaker
+      MYSQL_PASSWORD: beaker
+      MYSQL_ROOT_PASSWORD: toor
+    strategy:
+      fail-fast: false
+      matrix:
+        test-target: ["bkr.inttest.server.test_powertypes"]
+    container:
+      image: quay.io/centos/centos:stream9
+      options: --init
+    services:
+      database:
+        image: mariadb:10-ubi
+        env:
+          MYSQL_USER: ${{ env.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ env.MYSQL_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ env.MYSQL_ROOT_PASSWORD }}
+        ports:
+          - 3306
+    steps:
+      - name: Enable CRB + EPEL
+        run: |
+          dnf install -y 'dnf-command(config-manager)'
+          dnf config-manager --set-enabled crb
+          dnf install -y epel-release
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Python 3 server + test dependencies
+        run: |
+          dnf install -y \
+            python3 python3-pip python3-setuptools \
+            python3-sqlalchemy python3-alembic python3-daemon python3-flask \
+            python3-lxml python3-six python3-markdown python3-configobj \
+            python3-ldap python3-netaddr python3-passlib python3-pwquality \
+            python3-rpm python3-decorator python3-itsdangerous python3-werkzeug \
+            python3-requests python3-gssapi python3-simplejson python3-mysqlclient \
+            python3-pytest python3-gunicorn python3-formencode \
+            mariadb openldap-servers openldap-clients lsof
+      - name: Configure database for testing
+        run: |
+          cat <<EOT > init.sql
+          CREATE DATABASE beaker_test;
+          CREATE DATABASE beaker_migration_test;
+          GRANT ALL PRIVILEGES ON beaker_test.* TO 'beaker'@'%';
+          GRANT ALL PRIVILEGES ON beaker_migration_test.* TO 'beaker'@'%';
+          SET GLOBAL max_allowed_packet=1073741824;
+          SET GLOBAL character_set_server=utf8;
+          EOT
+
+          mysql -uroot -p${{ env.MYSQL_ROOT_PASSWORD }} -h database < init.sql
+          sed -i 's/@localhost/@database/g' IntegrationTests/server-test.cfg
+      - name: Update version
+        run: |
+          current_version=$(grep -oE "__version__ = '[^']+'" Common/bkr/common/__init__.py | cut -d "'" -f 2)
+          new_version="$current_version.git.${GITHUB_SHA::7}"
+          sed -i "s/__version__ = '$current_version'/__version__ = '$new_version'/" Common/bkr/common/__init__.py
+      - name: Run integration tests for ${{ matrix.test-target }} (Python 3)
+        run: |
+          pushd IntegrationTests
+          rm -rf src/bkr/inttest/server/selenium
+          BKR_PY3=1 ./run-tests.sh -v ${{ matrix.test-target }}
+
   unit-tests:
     runs-on: ubuntu-latest
     container:
