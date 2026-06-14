@@ -45,3 +45,16 @@ def session_connection(mapper):
     if _SQLALCHEMY_GE_14:
         return session.connection(bind_arguments={'mapper': mapper})
     return session.connection(mapper)
+
+
+def query_with_lockmode(query, mode):
+    # SQLAlchemy 1.4 removed Query.with_lockmode in favor of with_for_update.
+    if not _SQLALCHEMY_GE_14:
+        return query.with_lockmode(mode)
+    if not mode:
+        return query
+    if mode == 'read':
+        return query.with_for_update(read=True)
+    if mode == 'update_nowait':
+        return query.with_for_update(nowait=True)
+    return query.with_for_update()

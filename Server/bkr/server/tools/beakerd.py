@@ -32,7 +32,7 @@ from bkr.server.needpropertyxml import XmlHost
 from bkr.server.util import load_config_or_exit, log_traceback, \
         get_reports_engine
 from bkr.server.recipetasks import RecipeTasks
-from bkr.server.database import session, get_engine
+from bkr.server.database import session, get_engine, query_with_lockmode
 from bkr.server import config
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.sql import exists
@@ -116,7 +116,7 @@ def update_dirty_jobs():
 
 def update_dirty_job(job_id):
     log.debug('Updating dirty job %s', job_id)
-    job = Job.query.filter(Job.id == job_id).with_lockmode('update').one()
+    job = query_with_lockmode(Job.query.filter(Job.id == job_id), 'update').one()
     job.update_status()
 
 def process_new_recipes(*args):

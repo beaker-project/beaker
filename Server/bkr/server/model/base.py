@@ -7,7 +7,7 @@
 import logging
 import random
 import time
-from bkr.server.database import metadata, session, session_connection
+from bkr.server.database import metadata, session, session_connection, query_with_lockmode
 from sqlalchemy import util
 from sqlalchemy.sql import and_
 from sqlalchemy.exc import OperationalError
@@ -85,7 +85,7 @@ class MappedObject(object):
                     .values(extra_params)
                     .where(and_(*[col == value for col, value in six.iteritems(unique_params)])))
 
-        return cls.query.with_lockmode('update').filter_by(**kwargs).one()
+        return query_with_lockmode(cls.query, 'update').filter_by(**kwargs).one()
 
     def __init__(self, **kwargs):
         for prop in object_mapper(self).iterate_properties:
@@ -120,6 +120,6 @@ class MappedObject(object):
 
     @classmethod
     def by_id(cls, id, lockmode=False):
-        return cls.query.filter_by(id=id).with_lockmode(lockmode).one()
+        return query_with_lockmode(cls.query.filter_by(id=id), lockmode).one()
 
 DeclarativeMappedObject = declarative_base(cls=MappedObject, metadata=metadata, constructor=None)

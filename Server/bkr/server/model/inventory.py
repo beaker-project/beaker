@@ -27,7 +27,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from bkr.server.util import url
 from bkr.server import config
 from bkr.server.config import get
-from bkr.server.database import session, session_connection
+from bkr.server.database import session, session_connection, query_with_lockmode
 from bkr.server import identity, metrics, mail
 from bkr.server.bexceptions import (BX, InsufficientSystemPermissions,
         StaleCommandStatusException, StaleSystemUserException)
@@ -2021,7 +2021,7 @@ class SystemPool(DeclarativeMappedObject, ActivityMixin):
     @classmethod
     def by_name(cls, pool_name, lockmode=False):
         if lockmode:
-            return cls.query.with_lockmode(lockmode).filter(cls.name == pool_name).one()
+            return query_with_lockmode(cls.query, lockmode).filter(cls.name == pool_name).one()
         else:
             return cls.query.filter(cls.name == pool_name).one()
 
