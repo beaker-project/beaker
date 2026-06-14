@@ -26,7 +26,7 @@ from bkr.server.database import session, query_with_lockmode
 from formencode import validators
 from formencode.api import Invalid
 from bkr.server.bexceptions import BX, NoChangeException
-from bkr.server.util import convert_db_lookup_error, ensure_str
+from bkr.server.util import convert_db_lookup_error, ensure_str, ensure_text
 from bkr.server import identity
 from bkr.server.hybrid import hybrid_method, hybrid_property
 from .base import DeclarativeMappedObject
@@ -371,7 +371,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
     )
 
     def _set_password(self, raw_password):
-        self._password = six.ensure_text(self._password_context.encrypt(raw_password))
+        self._password = ensure_text(self._password_context.encrypt(raw_password))
 
     def _get_password(self):
         return self._password

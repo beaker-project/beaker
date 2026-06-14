@@ -15,7 +15,6 @@ import sys
 import datetime
 import re
 import logging
-import six
 from sqlalchemy.inspection import inspect
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import create_session
@@ -25,7 +24,7 @@ from bkr.log import log_to_stream, log_to_syslog
 from bkr.server.model import (User, Group, Permission, Hypervisor, KernelType,
                               Arch, PowerType, Key, RetentionTag, ConfigItem, UserGroup,
                               DataMigration)
-from bkr.server.util import load_config_or_exit, log_traceback
+from bkr.server.util import load_config_or_exit, log_traceback, ensure_text
 from bkr.server.database import session, metadata as tg_metadata
 from optparse import OptionParser
 import alembic.config, alembic.script, alembic.environment
@@ -107,13 +106,13 @@ def populate_db(user_name=None, password=None, user_display_name=None,
 
     # Setup User account
     if user_name:
-        user = User.lazy_create(user_name=six.ensure_text(user_name))
+        user = User.lazy_create(user_name=ensure_text(user_name))
         if password:
-            user.password = six.ensure_text(password)
+            user.password = ensure_text(password)
         if user_display_name:
-            user.display_name = six.ensure_text(user_display_name)
+            user.display_name = ensure_text(user_display_name)
         if user_email_address:
-            user.email_address = six.ensure_text(user_email_address)
+            user.email_address = ensure_text(user_email_address)
         # Ensure the user is in the 'admin' group as an owner.
         # Flush for lazy_create.
         session.flush()
