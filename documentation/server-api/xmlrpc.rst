@@ -46,9 +46,9 @@ User Preferences
 User Accounts
 -------------
 
-.. currentmodule:: bkr.server.user
+.. currentmodule:: bkr.server.rpc.user
 
-.. automethod:: users.remove_account
+.. automethod:: Users.remove_account
 
 Groups
 ------
