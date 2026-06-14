@@ -580,7 +580,7 @@ class Group(DeclarativeMappedObject, ActivityMixin):
         return self.group_name
 
     def __str__(self):
-        return ensure_str(six.text_type(self))
+        return ensure_str(self.__unicode__())
 
     def __repr__(self):
         return 'Group(group_name=%r, display_name=%r)' % (self.group_name, self.display_name)

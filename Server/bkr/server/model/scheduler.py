@@ -1442,7 +1442,7 @@ class Product(DeclarativeMappedObject):
         return self.name
 
     def __str__(self):
-        return ensure_str(six.text_type(self))
+        return ensure_str(self.__unicode__())
 
     def __json__(self):
         return {'name': self.name}
@@ -1561,7 +1561,7 @@ class RetentionTag(BeakerTag):
         return self.tag
 
     def __str__(self):
-        return ensure_str(six.text_type(self))
+        return ensure_str(self.__unicode__())
 
     def __json__(self):
         return {
@@ -4128,7 +4128,7 @@ class RecipeResource(DeclarativeMappedObject):
     __mapper_args__ = {'polymorphic_on': type, 'polymorphic_identity': None}
 
     def __str__(self):
-        return ensure_str(six.text_type(self))
+        return ensure_str(self.__unicode__())
 
     def __unicode__(self):
         return six.text_type(self.fqdn)

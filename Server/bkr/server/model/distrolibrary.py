@@ -296,7 +296,7 @@ class KernelType(DeclarativeMappedObject):
         return self.kernel_type
 
     def __str__(self):
-        return ensure_str(six.text_type(self))
+        return ensure_str(self.__unicode__())
 
     def __json__(self):
         return six.text_type(self)
@@ -339,7 +339,7 @@ class Arch(DeclarativeMappedObject):
         return self.arch
 
     def __str__(self):
-        return ensure_str(six.text_type(self))
+        return ensure_str(self.__unicode__())
 
     def __json__(self):
         return six.text_type(self)
@@ -631,7 +631,7 @@ class Distro(DeclarativeMappedObject, ActivityMixin):
         return self.name
 
     def __str__(self):
-        return ensure_str(six.text_type(self))
+        return ensure_str(self.__unicode__())
 
     def __repr__(self):
         return '%s(name=%r)' % (self.__class__.__name__, self.name)
@@ -764,7 +764,7 @@ class DistroTree(DeclarativeMappedObject, ActivityMixin):
             return u'%s %s' % (self.distro, self.arch)
 
     def __str__(self):
-        return str(six.text_type(self))
+        return str(self.__unicode__())
 
     def __repr__(self):
         return '%s(distro=%r, variant=%r, arch=%r)' % (
