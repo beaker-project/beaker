@@ -190,7 +190,8 @@ class Process(object):
             else:
                 self.popen = subprocess.Popen(
                     self.args, stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT, env=env, cwd=self.exec_dir)
+                    stderr=subprocess.STDOUT, env=env, cwd=self.exec_dir,
+                    universal_newlines=True)
                 self.communicate_thread = CommunicateThread(popen=self.popen)
                 self.communicate_thread.start()
         except:
@@ -274,7 +275,7 @@ def setup_slapd():
     slapd_data_dir = tempfile.mkdtemp(prefix='beaker-tests-slapd-data')
     log.info('Populating slapd config')
     slapadd = subprocess.Popen(['slapadd', '-F', slapd_config_dir, '-n0'],
-                               stdin=subprocess.PIPE)
+                               stdin=subprocess.PIPE, universal_newlines=True)
     slapadd.communicate("""
 dn: cn=config
 objectClass: olcGlobal
