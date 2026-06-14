@@ -61,7 +61,7 @@ jobs:
       matrix:
         test-target: ["bkr.inttest.client", "bkr.inttest.labcontroller", "bkr.inttest.server"]
     container:
-      image: centos:7
+      image: ghcr.io/beaker-project/beaker/test-py2:latest
       options: --init
       volumes:
         - /node20217:/node20217:rw,rshared
@@ -80,63 +80,20 @@ jobs:
         run: |
           curl -LO https://unofficial-builds.nodejs.org/download/release/v20.9.0/node-v20.9.0-linux-x64-glibc-217.tar.xz
           tar -xf node-v20.9.0-linux-x64-glibc-217.tar.xz --strip-components 1 -C /node20217
-      - name: Fixup CentOS repo files
-        run: |
-          sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo
-          sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo
-          sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo
-
-      # We have to install git 2.18+ to perform checkout via git
-      # IUS is no longer maintained, use vault.ius.io for archived packages
-      # EPEL 7 is also archived, fix repos to point to archive
-      - name: Install git to allow checkout
-        run: |
-          yum install epel-release -y
-          # Fix EPEL repos to use archive (EL7 is EOL)
-          sed -i 's|^metalink=|#metalink=|g' /etc/yum.repos.d/epel*.repo
-          sed -i 's|^#\?baseurl=.*|baseurl=https://archives.fedoraproject.org/pub/archive/epel/7/$basearch|g' /etc/yum.repos.d/epel*.repo
-          cat > /etc/yum.repos.d/ius-vault.repo << 'EOF'
-          [ius-vault]
-          name=IUS Vault for Enterprise Linux 7 - $basearch
-          baseurl=https://vault.ius.io/el7/$basearch/
-          enabled=1
-          gpgcheck=1
-          gpgkey=https://vault.ius.io/RPM-GPG-KEY-IUS-7
-          EOF
-          yum install git236-core -y
-
-      # Do not upgrade to @v4 as node 20 is incompatible with CentOS 7
       - name: Checkout
         uses: actions/checkout@v3
 
-      # Remove custom git from the IUS repository - git will be reinstalled later as it is needed by beaker itself.
-      - name: Remove git236 and YUM repositories
-        run: |
-          yum remove git236-core epel-release -y
-          rm -f /etc/yum.repos.d/ius-vault.repo
-
-      - name: Add Beaker Server YUM repository
-        run: |
-          curl -o /etc/yum.repos.d/beaker-server.repo https://beaker-project.org/yum/beaker-server-RedHatEnterpriseLinux.repo
-
-      - name: Install Beaker dependencies
-        run: |
-          yum install epel-release -y
-          # Fix EPEL repos to use archive (EL7 is EOL)
-          sed -i 's|^metalink=|#metalink=|g' /etc/yum.repos.d/epel*.repo
-          sed -i 's|^#\?baseurl=.*|baseurl=https://archives.fedoraproject.org/pub/archive/epel/7/$basearch|g' /etc/yum.repos.d/epel*.repo
-          yum install mariadb beaker-integration-tests -y
-          yum-builddep beaker.spec -y
-          yum remove beaker-common \
-              beaker-client \
-              beaker-lab-controller \
-              beaker-server \
-              beaker-integration-tests -y
-
       - name: Checkout submodules
         run: |
+          git config --global --add safe.directory '*'
           git submodule update --init --recursive
 
+      - name: Wait for database
+        run: |
+          for i in $(seq 1 60); do
+            mysql -uroot -p${{ env.MYSQL_ROOT_PASSWORD }} -h database -e 'SELECT 1' >/dev/null 2>&1 && break
+            echo "waiting for database ($i/60)"; sleep 2
+          done
       - name: Configure database for testing
         run: |
           cat <<EOT > init.sql
@@ -176,7 +133,7 @@ jobs:
       matrix:
         test-target: ["bkr.inttest.server.test_powertypes"]
     container:
-      image: quay.io/centos/centos:stream9
+      image: ghcr.io/beaker-project/beaker/test-py3:latest
       options: --init
     services:
       database:
@@ -188,24 +145,14 @@ jobs:
         ports:
           - 3306
     steps:
-      - name: Enable CRB + EPEL
-        run: |
-          dnf install -y 'dnf-command(config-manager)'
-          dnf config-manager --set-enabled crb
-          dnf install -y epel-release
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Install Python 3 server + test dependencies
+      - name: Wait for database
         run: |
-          dnf install -y \
-            python3 python3-pip python3-setuptools \
-            python3-sqlalchemy python3-alembic python3-daemon python3-flask \
-            python3-lxml python3-six python3-markdown python3-configobj \
-            python3-ldap python3-netaddr python3-passlib python3-pwquality \
-            python3-rpm python3-decorator python3-itsdangerous python3-werkzeug \
-            python3-requests python3-gssapi python3-simplejson python3-mysqlclient \
-            python3-pytest python3-gunicorn python3-formencode \
-            mariadb openldap-servers openldap-clients lsof
+          for i in $(seq 1 60); do
+            mysql -uroot -p${{ env.MYSQL_ROOT_PASSWORD }} -h database -e 'SELECT 1' >/dev/null 2>&1 && break
+            echo "waiting for database ($i/60)"; sleep 2
+          done
       - name: Configure database for testing
         run: |
           cat <<EOT > init.sql
@@ -337,7 +284,7 @@ jobs:
       matrix:
         shard: [0, 1, 2, 3, 4, 5]
     container:
-      image: centos:7
+      image: ghcr.io/beaker-project/beaker/test-py2:latest
       options: --init
       volumes:
         - /node20217:/node20217:rw,rshared
@@ -356,56 +303,20 @@ jobs:
         run: |
           curl -LO https://unofficial-builds.nodejs.org/download/release/v20.9.0/node-v20.9.0-linux-x64-glibc-217.tar.xz
           tar -xf node-v20.9.0-linux-x64-glibc-217.tar.xz --strip-components 1 -C /node20217
-      - name: Fixup CentOS repo files
-        run: |
-          sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo
-          sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo
-          sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo
-
-      - name: Install git to allow checkout
-        run: |
-          yum install epel-release -y
-          sed -i 's|^metalink=|#metalink=|g' /etc/yum.repos.d/epel*.repo
-          sed -i 's|^#\?baseurl=.*|baseurl=https://archives.fedoraproject.org/pub/archive/epel/7/$basearch|g' /etc/yum.repos.d/epel*.repo
-          cat > /etc/yum.repos.d/ius-vault.repo << 'EOF'
-          [ius-vault]
-          name=IUS Vault for Enterprise Linux 7 - $basearch
-          baseurl=https://vault.ius.io/el7/$basearch/
-          enabled=1
-          gpgcheck=1
-          gpgkey=https://vault.ius.io/RPM-GPG-KEY-IUS-7
-          EOF
-          yum install git236-core -y
-
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Remove git236 and YUM repositories
-        run: |
-          yum remove git236-core epel-release -y
-          rm -f /etc/yum.repos.d/ius-vault.repo
-
-      - name: Add Beaker Server YUM repository
-        run: |
-          curl -o /etc/yum.repos.d/beaker-server.repo https://beaker-project.org/yum/beaker-server-RedHatEnterpriseLinux.repo
-
-      - name: Install Beaker dependencies
-        run: |
-          yum install epel-release -y
-          sed -i 's|^metalink=|#metalink=|g' /etc/yum.repos.d/epel*.repo
-          sed -i 's|^#\?baseurl=.*|baseurl=https://archives.fedoraproject.org/pub/archive/epel/7/$basearch|g' /etc/yum.repos.d/epel*.repo
-          yum install mariadb beaker-integration-tests wget bzip2 -y
-          yum-builddep beaker.spec -y
-          yum remove beaker-common \
-              beaker-client \
-              beaker-lab-controller \
-              beaker-server \
-              beaker-integration-tests -y
-
       - name: Checkout submodules
         run: |
+          git config --global --add safe.directory '*'
           git submodule update --init --recursive
 
+      - name: Wait for database
+        run: |
+          for i in $(seq 1 60); do
+            mysql -uroot -p${{ env.MYSQL_ROOT_PASSWORD }} -h database -e 'SELECT 1' >/dev/null 2>&1 && break
+            echo "waiting for database ($i/60)"; sleep 2
+          done
       - name: Configure database for testing
         run: |
           cat <<EOT > init.sql
@@ -425,24 +336,6 @@ jobs:
           current_version=$(grep -oE "__version__ = '[^']+'" Common/bkr/common/__init__.py | cut -d "'" -f 2)
           new_version="$current_version.git.$(git rev-parse --short HEAD)"
           sed -i "s/__version__ = '$current_version'/__version__ = '$new_version'/" Common/bkr/common/__init__.py
-
-      - name: Install Firefox and Xvfb
-        run: |
-          yum remove firefox -y
-          yum install -y \
-            gtk2 gtk3 dbus-glib \
-            libXt libXtst libXrender libXrandr libXfixes libXext libXdamage \
-            libXcursor libXcomposite libXi libXScrnSaver libX11 \
-            gdk-pixbuf2 cairo cairo-gobject pango atk \
-            fontconfig freetype alsa-lib nss nspr \
-            dejavu-sans-fonts dejavu-serif-fonts \
-            xorg-x11-server-Xvfb
-          wget https://download-installer.cdn.mozilla.net/pub/firefox/releases/43.0.4/linux-x86_64/en-US/firefox-43.0.4.tar.bz2
-          tar xjf firefox-43.0.4.tar.bz2
-          mv firefox /usr/local/firefox
-          printf '#!/bin/sh\nexec /usr/local/firefox/firefox "$@"\n' > /usr/bin/firefox
-          chmod +x /usr/bin/firefox
-          ldd /usr/local/firefox/firefox | grep "not found" && exit 1 || echo "firefox libs resolved"
 
       - name: Smoke test Firefox
         run: |
