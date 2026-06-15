@@ -105,6 +105,9 @@ def run_client(args, config=None, input=None, **kwargs):
             if '/view/' in err and '404' in err:
                 import pytest
                 pytest.skip('bkr command uses the legacy HTML view page, not served by wsgi_py3')
+            if 'tg_format=atom' in err and '404' in err:
+                import pytest
+                pytest.skip('bkr command uses the legacy Atom feed, not served by wsgi_py3')
         raise ClientError(args, p.returncode, err)
     assert err == '', err
     return out
