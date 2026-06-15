@@ -11,6 +11,7 @@ e-mails sent by Beaker and assert their contents.
 See bkr.server.test.selenium.test_systems for an example of how to use this.
 """
 
+import sys
 import threading
 import smtpd  # TODO: Removed in Python 3.12
 import asyncore  # TODO: Removed in Python 3.12
@@ -28,7 +29,10 @@ class CapturingSMTPServer(smtpd.SMTPServer):
         # For now this works because we don't have any other threads using asyncore
         # in our tests.
         assert not asyncore.socket_map, asyncore.socket_map
-        smtpd.SMTPServer.__init__(self, localaddr, remoteaddr)
+        if sys.version_info[0] >= 3:
+            smtpd.SMTPServer.__init__(self, localaddr, remoteaddr, decode_data=True)
+        else:
+            smtpd.SMTPServer.__init__(self, localaddr, remoteaddr)
         self._running = True
         # If the fake server is "running" but not "capturing" that means it
         # will just discard any received mails.
@@ -37,7 +41,7 @@ class CapturingSMTPServer(smtpd.SMTPServer):
         # This event will be set on the first mail captured after start_capturing is called.
         self.has_captured = threading.Event()
 
-    def process_message(self, peer, mailfrom, rcpttos, data):
+    def process_message(self, peer, mailfrom, rcpttos, data, **kwargs):
         if self.capturing:
             log.debug('Captured mail from peer %r: %r', peer,
                     (mailfrom, rcpttos, data))
