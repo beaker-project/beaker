@@ -131,7 +131,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test-target: ["bkr.inttest.server.http"]
+        test-target: ["bkr.inttest.server.http", "bkr.inttest.client"]
     container:
       image: ghcr.io/beaker-project/beaker/test-py3:latest
       options: --init
