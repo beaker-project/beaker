@@ -10,6 +10,7 @@ import tempfile
 import logging
 import pipes
 import re
+from bkr.server.util import ensure_binary, ensure_str
 from bkr.inttest import get_server_base, data_setup, DatabaseTestCase
 from bkr.client import wizard
 
@@ -29,7 +30,8 @@ def create_client_config(username=data_setup.ADMIN_USER,
     if cacert is not None:
         cacert_conf = 'CA_CERT = "%s"' % cacert
 
-    config = tempfile.NamedTemporaryFile(prefix='bkr-inttest-client-conf-')
+    config = tempfile.NamedTemporaryFile(prefix='bkr-inttest-client-conf-',
+                                         mode='w')
     config.write('\n'.join([
                 'AUTH_METHOD = "%s"' % auth_method,
                 'USERNAME = "%s"' % username,
@@ -43,7 +45,8 @@ def create_client_config(username=data_setup.ADMIN_USER,
     return config
 
 def create_wizard_config():
-    config = tempfile.NamedTemporaryFile(prefix='bkr-inttest-wizard-conf-')
+    config = tempfile.NamedTemporaryFile(prefix='bkr-inttest-wizard-conf-',
+                                         mode='w')
     config.write(wizard.PreferencesTemplate)
     config.flush()
     return config
@@ -89,7 +92,9 @@ def run_client(args, config=None, input=None, **kwargs):
     if input is not None:
         kwargs.setdefault('stdin', subprocess.PIPE)
     p = start_client(args, config, **kwargs)
-    out, err = p.communicate(input)
+    out, err = p.communicate(ensure_binary(input) if input is not None else None)
+    out = ensure_str(out)
+    err = ensure_str(err)
     if p.returncode:
         raise ClientError(args, p.returncode, err)
     assert err == '', err
@@ -134,6 +139,8 @@ def run_wizard(args, **kwargs):
         raise RuntimeError('Stderr size limit exceeded when invoking %r:\n%s'
                 % (args, err))
     p.wait()
+    out = ensure_str(out)
+    err = ensure_str(err)
     if p.returncode:
         raise ClientError(args, p.returncode, err)
     assert err == '', err
