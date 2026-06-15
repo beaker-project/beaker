@@ -161,7 +161,7 @@ def create_pool():
         raise UnsupportedMediaType415
     with convert_internal_errors():
         if SystemPool.query.filter(SystemPool.name == new_name).count() != 0:
-            raise Conflict409('System pool with name %r already exists' % new_name)
+            raise Conflict409("System pool with name '%s' already exists" % new_name)
         pool = SystemPool(name=new_name, description=description)
         session.add(pool)
         if owner:
