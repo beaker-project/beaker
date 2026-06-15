@@ -8,6 +8,7 @@ import email
 import re
 
 from bkr.server.database import session
+from bkr.server.util import ensure_text
 
 from bkr.inttest import data_setup, mail_capture_thread
 from bkr.inttest.client import run_client, ClientError, create_client_config, ClientTestCase
@@ -51,7 +52,7 @@ class GroupModifyTest(ClientTestCase):
             self.assertTrue(keyword in msg['Subject'], msg['Subject'])
 
         # body
-        msg_payload = msg.get_payload(decode=True)
+        msg_payload = ensure_text(msg.get_payload(decode=True))
         action = action.lower()
         for keyword in [action, group.group_name]:
             self.assertTrue(keyword in msg_payload, (keyword, msg_payload))
