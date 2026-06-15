@@ -11,7 +11,7 @@ import pkg_resources
 from bkr.server.database import session
 from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client, start_client, \
-    create_client_config, ClientError, ClientTestCase
+    create_client_config, ClientError, ClientTestCase, xmlrpc
 from bkr.server.model import Job, SystemStatus
 
 
@@ -111,6 +111,7 @@ class WorkflowSimpleTest(ClientTestCase):
                           '--task', self.task.name])
         self.assertTrue(out.startswith('Submitted:'), out)
 
+    @xmlrpc
     def test_submit_job_wait(self):
         args = ['bkr', 'workflow-simple', '--random',
                 '--arch', self.distro_tree.arch.arch,
@@ -244,6 +245,7 @@ class WorkflowSimpleTest(ClientTestCase):
         self.assertIn('<reservesys duration="3600"/>', out)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1095026
+    @xmlrpc
     def test_machine_ignore_other_options(self):
         p = start_client(['bkr', 'workflow-simple',
                           '--dryrun', '--prettyxml',
@@ -531,6 +533,7 @@ install
         self.assertIn(included_task.name, out)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1197608
+    @xmlrpc
     def test_filters_task_by_osmajor_with_given_taskfile(self):
         with session.begin():
             ignored_task = data_setup.create_task(
