@@ -15,6 +15,7 @@ import textwrap
 import unittest
 from six import assertRegex
 
+from bkr.server.util import ensure_str, ensure_text
 from bkr.inttest.client import run_wizard
 
 
@@ -169,10 +170,10 @@ class TestWizard(BaseWizardTestCase):
     def test_accepts_non_ascii_names(self):
         out = run_wizard(['beaker-wizard',
                           '--current-directory',
-                          '-n', u'Gęśla Jaźń'.encode('utf8'),
+                          '-n', ensure_str(u'Gęśla Jaźń'),
                           '-m', 'gj@example.com'], cwd=self.tempdir)
         self.assertNotIn('is not a valid author', out)
-        self.assertIn(u'Author : Gęśla Jaźń', out.decode('utf8'))
+        self.assertIn(u'Author : Gęśla Jaźń', ensure_text(out))
         makefile_contents = open(os.path.join(self.tempdir, 'Makefile')).readlines()
         self.assertIn(
                 '\t@echo "Owner:           Gęśla Jaźń <gj@example.com>" > $(METADATA)\n',
@@ -184,12 +185,12 @@ class TestWizard(BaseWizardTestCase):
         passwd_file = tempfile.NamedTemporaryFile(prefix='beaker-inttest-passwd-', delete=True)
         passwd_file.write(textwrap.dedent(u"""\
             svejk:x:{0}:{0}:Josef Švejk:/home/svejk:/sbin/nologin
-            """.format(uid).encode('UTF-8')))
+            """).format(uid).encode('UTF-8'))
         passwd_file.flush()
         group_file = tempfile.NamedTemporaryFile(prefix='beaker-inttest-group-', delete=True)
         group_file.write(textwrap.dedent(u"""\
             svejk:x:{0}
-            """.format(uid).encode('UTF-8')))
+            """).format(uid).encode('UTF-8'))
         group_file.flush()
 
         # The bug only occurs on "first run", where beaker-wizard prompts you if
@@ -201,7 +202,7 @@ class TestWizard(BaseWizardTestCase):
                                     'LD_PRELOAD': 'libnss_wrapper.so',
                                     'NSS_WRAPPER_PASSWD': passwd_file.name,
                                     'NSS_WRAPPER_GROUP': group_file.name})
-        self.assertIn(u'Author : Josef Švejk', out.decode('utf8'))
+        self.assertIn(u'Author : Josef Švejk', ensure_text(out))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1624909
     def test_cve_number_syntax_change(self):

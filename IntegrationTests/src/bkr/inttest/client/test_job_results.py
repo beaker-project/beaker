@@ -7,6 +7,7 @@
 # (at your option) any later version.
 
 from bkr.server.database import session
+from bkr.server.util import ensure_text
 from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client, ClientError, ClientTestCase
 
@@ -48,9 +49,9 @@ class JobResultsTest(ClientTestCase):
             job = data_setup.create_completed_job(
                     whiteboard=u'Фёдор Михайлович Достоевский')
         out = run_client(['bkr', 'job-results', job.t_id])
-        self.assertIn(job.whiteboard, out.decode('utf8'))
+        self.assertIn(job.whiteboard, ensure_text(out))
         out = run_client(['bkr', 'job-results', '--prettyxml', job.t_id])
-        self.assertIn(job.whiteboard, out.decode('utf8'))
+        self.assertIn(job.whiteboard, ensure_text(out))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1123244
     def test_junit_xml(self):

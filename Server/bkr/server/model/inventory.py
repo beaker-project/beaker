@@ -2425,7 +2425,8 @@ class Cpu(DeclarativeMappedObject):
         self.processors = processors
         self.cores = cores
         self.sockets = sockets
-        if self.processors > self.cores:
+        if self.processors is not None and self.cores is not None \
+                and self.processors > self.cores:
             self.hyper = True
         else:
             self.hyper = False

@@ -1083,19 +1083,17 @@ EOF
         """
         Add a partition node
         """
-        if name:
-            partition = self.doc.createElement('partition')
-            partition.setAttribute('name', str(name))
-        else:
+        if not name:
             raise BeakerJobTemplateError(u'You must specify name when adding a partition')
-        if size:
-            partition.setAttribute('size', str(size))
-        else:
+        if not size:
             raise BeakerJobTemplateError(u'You must specify size when adding a partition')
-        if type:
-            partition.setAttribute('type', str(type))
+        partition = self.doc.createElement('partition')
         if fs:
             partition.setAttribute('fs', str(fs))
+        partition.setAttribute('name', str(name))
+        partition.setAttribute('size', str(size))
+        if type:
+            partition.setAttribute('type', str(type))
         self.partitions.appendChild(partition)
 
     addPartition = add_partition
