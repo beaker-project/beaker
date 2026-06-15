@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+from six import assertCountEqual
 from bkr.server.model import session
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError, ClientTestCase, create_client_config
@@ -21,7 +22,7 @@ class TestSystemPoolAdd(ClientTestCase):
                     '--system', s2.fqdn])
         with session.begin():
             session.refresh(pool)
-            self.assertItemsEqual([s1, s2], pool.systems)
+            assertCountEqual(self, [s1, s2], pool.systems)
 
     def test_add_systems_to_non_existent_pool(self):
         pool_name = data_setup.unique_name(u'mypool%s')
