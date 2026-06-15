@@ -62,7 +62,7 @@ from bkr.server.preferences import Preferences
 from bkr.server.rpc.recipes import Recipes
 from bkr.server.rpc.recipesets import RecipeSets
 from bkr.server.reports import Reports
-from bkr.server.reserve_workflow import ReserveWorkflow
+from bkr.server.rpc.reserve_workflow import ReserveWorkflow
 from bkr.server.retention_tags import RetentionTag as RetentionTagController
 from bkr.server.system_action import SystemAction as SystemActionController
 from bkr.server.rpc.systems import SystemsController
