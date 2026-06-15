@@ -14,5 +14,5 @@ RUN dnf install -y 'dnf-command(config-manager)' \
         python3-requests python3-gssapi python3-simplejson python3-mysqlclient \
         python3-pytest python3-gunicorn python3-formencode \
         python3-prettytable python3-jinja2 python3-rdflib \
-        mariadb openldap-servers openldap-clients lsof nss_wrapper \
+        mariadb openldap-servers openldap-clients lsof nss_wrapper cpio \
     && dnf clean all
