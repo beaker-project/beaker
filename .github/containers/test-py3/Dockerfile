@@ -15,4 +15,5 @@ RUN dnf install -y 'dnf-command(config-manager)' \
         python3-pytest python3-gunicorn python3-formencode \
         python3-prettytable python3-jinja2 python3-rdflib \
         mariadb openldap-servers openldap-clients lsof nss_wrapper cpio \
+        createrepo_c \
     && dnf clean all
