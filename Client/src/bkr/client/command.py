@@ -325,7 +325,32 @@ class ClientCommandContainer(CommandContainer):
             raise BeakerClientConfigurationError(
                 'CA_CERT configuration points to non-existing file: %s' % cacert)
 
-        self.hub = HubProxy(conf=self.conf, auto_login=auto_login)
+        if (auto_login and os.environ.get('BKR_PY3') == '1'
+                and self.conf.get('AUTH_METHOD') == 'password'):
+            self.hub = HubProxy(conf=self.conf, auto_login=False)
+            self._rest_login_password()
+        else:
+            self.hub = HubProxy(conf=self.conf, auto_login=auto_login)
+
+    def _rest_login_password(self):
+        import requests
+        payload = {
+            'username': self.conf.get('USERNAME'),
+            'password': self.conf.get('PASSWORD'),
+        }
+        proxy_user = self.conf.get('PROXY_USER')
+        if proxy_user:
+            payload['proxy_user'] = proxy_user
+        session = requests.Session()
+        session.cookies = self.hub._transport.cookiejar
+        ca_cert = self.conf.get('CA_CERT')
+        if not self.conf.get('SSL_VERIFY', True):
+            session.verify = False
+        elif ca_cert:
+            session.verify = ca_cert
+        url = self.conf['HUB_URL'].rstrip('/') + '/auth/login_password'
+        response = session.post(url, json=payload)
+        response.raise_for_status()
 
 
 class CommandOptionParser(optparse.OptionParser):
