@@ -27,7 +27,7 @@ class CreateSystemPool(ClientTestCase):
             run_client(['bkr', 'pool-create', pool_name])
             self.fail('Must fail')
         except ClientError as e:
-            self.assertIn("System pool with name u'%s' already exists" % pool_name,
+            self.assertIn("System pool with name '%s' already exists" % pool_name,
                           e.stderr_output)
 
     def test_create_pool_set_description(self):
