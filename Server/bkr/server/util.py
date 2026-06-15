@@ -130,6 +130,13 @@ def ensure_text(s, encoding='utf-8', errors='strict'):
         return s
     raise TypeError("not expecting type '%s'" % type(s))
 
+def ensure_binary(s, encoding='utf-8', errors='strict'):
+    if isinstance(s, six.text_type):
+        return s.encode(encoding, errors)
+    elif isinstance(s, six.binary_type):
+        return s
+    raise TypeError("not expecting type '%s'" % type(s))
+
 def _query_arg(value):
     if six.PY2 and isinstance(value, six.text_type):
         return value.encode('utf-8')

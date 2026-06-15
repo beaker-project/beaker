@@ -428,7 +428,7 @@ class WorkflowSimpleTest(ClientTestCase):
 
     def test_kickstart_template(self):
         template_contents = 'install\n%packages\n%end\n'
-        template_file = NamedTemporaryFile()
+        template_file = NamedTemporaryFile(mode='w')
         template_file.write(template_contents)
         template_file.flush()
         out = run_client(['bkr', 'workflow-simple', '--distro', self.distro.name,
@@ -449,7 +449,7 @@ install
 %packages
 %end
         """
-        template_file = NamedTemporaryFile()
+        template_file = NamedTemporaryFile(mode='w')
         template_file.write(template_contents)
         template_file.flush()
         out = run_client(['bkr', 'workflow-simple', '--distro', self.distro.name,
@@ -517,7 +517,7 @@ install
             ignored_task = data_setup.create_task(exclude_arches=[self.distro_tree.arch.arch])
             included_task = data_setup.create_task()
 
-        taskfile = NamedTemporaryFile()
+        taskfile = NamedTemporaryFile(mode='w')
         taskfile.write('\n'.join([ignored_task.name, included_task.name]))
         taskfile.flush()
 
@@ -537,7 +537,7 @@ install
                 exclude_osmajors=[self.distro.osversion.osmajor.osmajor])
             included_task = data_setup.create_task()
 
-        taskfile = NamedTemporaryFile()
+        taskfile = NamedTemporaryFile(mode='w')
         taskfile.write('\n'.join([ignored_task.name, included_task.name]))
         taskfile.flush()
 
