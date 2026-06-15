@@ -34,7 +34,7 @@ from bkr.server.bexceptions import (BX, InsufficientSystemPermissions,
 from bkr.server.helpers import make_link
 from bkr.server.hybrid import hybrid_property, hybrid_method
 from bkr.server.installopts import InstallOptions
-from bkr.server.util import is_valid_fqdn, convert_db_lookup_error, ensure_str
+from bkr.server.util import is_valid_fqdn, convert_db_lookup_error, ensure_str, ensure_text
 from .base import DeclarativeMappedObject
 from .types import (SystemType, SystemStatus, ReleaseAction, CommandStatus,
         SystemPermission, TaskStatus, SystemSchedulerStatus, ImageType)
@@ -1502,7 +1502,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
         supported_distro_trees = None
         inventory_osmajors = config.get('beaker.inventory_osmajors')
         for osmajor in inventory_osmajors:
-            supported_distro_trees = self.distro_trees(osmajor_name=osmajor.decode('utf8'))
+            supported_distro_trees = self.distro_trees(osmajor_name=ensure_text(osmajor))
             if supported_distro_trees.count():
                 break
         # if none of the "preferred" distro trees were found
