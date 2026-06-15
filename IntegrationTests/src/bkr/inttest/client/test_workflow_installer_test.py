@@ -1,7 +1,7 @@
 import pkg_resources
 from bkr.server.database import session
 from bkr.inttest import data_setup
-from bkr.inttest.client import start_client, ClientTestCase
+from bkr.inttest.client import start_client, ClientTestCase, xmlrpc
 
 
 class WorkflowInstallerTest(ClientTestCase):
@@ -11,6 +11,7 @@ class WorkflowInstallerTest(ClientTestCase):
             resource_filename('bkr.inttest.client', 'workflow_kickstart.cfg.tmpl')
         self.task = data_setup.create_task()
 
+    @xmlrpc
     def test_sanity(self):
         with session.begin():
             distro = data_setup.create_distro(tags=[u'STABLE'])
@@ -27,6 +28,7 @@ class WorkflowInstallerTest(ClientTestCase):
         self.assertIn('Submitted:', out)
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=1078610
+    @xmlrpc
     def test_dryrun(self):
         with session.begin():
             distro = data_setup.create_distro(tags=[u'STABLE'])

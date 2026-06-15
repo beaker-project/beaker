@@ -16,6 +16,13 @@ from bkr.client import wizard
 
 log = logging.getLogger(__name__)
 
+try:
+    import pytest
+    xmlrpc = pytest.mark.xmlrpc
+except ImportError:
+    def xmlrpc(func):
+        return func
+
 class ClientTestCase(DatabaseTestCase): pass
 
 def create_client_config(username=data_setup.ADMIN_USER,
