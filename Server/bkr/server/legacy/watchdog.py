@@ -5,18 +5,16 @@
 # (at your option) any later version.
 
 from turbogears import expose, paginate
-from sqlalchemy.orm import contains_eager, joinedload_all
-from bkr.server import identity
+from sqlalchemy.orm import joinedload_all
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.model import Watchdog, Recipe, RecipeSet, Job, System, RecipeTask
+from bkr.server.model import Watchdog, Recipe, RecipeSet, Job, RecipeTask
 from bkr.server.widgets import myPaginateDataGrid
-from datetime import timedelta
-import cherrypy
+from bkr.server.rpc.watchdogs import Watchdogs as WatchdogsRPC
 
 import logging
 log = logging.getLogger(__name__)
 
-class Watchdogs(RPCRoot):
+class Watchdogs(RPCRoot, WatchdogsRPC):
     exposed = True
 
     @expose('bkr.server.templates.grid')
@@ -44,23 +42,3 @@ class Watchdogs(RPCRoot):
                 grid=watchdog_grid,
                 search_bar=None,
                 list=query)
-
-
-    # TODO: future cleanup so that the correct error message
-    # is given to the client code.
-    @identity.require(identity.in_group('admin'))
-    @cherrypy.expose
-    def extend(self, time):
-        '''Allow admins to push watchdog times out after an outage'''
-
-        watchdogs = []
-        for w in Watchdog.by_status(status=u'active'):
-            n_kill_time = w.kill_time + timedelta(seconds=time)
-            watchdogs.append("R:%s watchdog moved from %s to %s" % (
-                              w.recipe_id, w.kill_time, n_kill_time))
-            w.kill_time = n_kill_time
-
-        if watchdogs:
-            return "\n".join(watchdogs)
-        else:
-            return 'No active watchdogs found'

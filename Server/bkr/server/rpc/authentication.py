@@ -7,13 +7,12 @@
 import socket
 
 import requests
-import cherrypy
 
 from bkr.common.bexceptions import BX
 from bkr.server import identity
 from bkr.server.config import get
 from bkr.server.model import User
-from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.server.rpc import expose, register
 from bkr.server.authentication import (
     OAUTH2_TOKEN_INFO_URL, OAUTH2_CLIENT_ID, OAUTH2_CLIENT_SECRET,
     KRB_AUTH_PRINCIPAL, KRB_AUTH_KEYTAB)
@@ -23,11 +22,12 @@ class LoginException(BX):
     pass
 
 
-class Auth(RPCRoot):
+@register('auth')
+class Auth(object):
     # For XMLRPC methods in this class.
     exposed = True
 
-    @cherrypy.expose
+    @expose
     @identity.require(identity.not_anonymous())
     def who_am_i(self):
         """
@@ -47,7 +47,7 @@ class Auth(RPCRoot):
             retval['proxied_by_username'] = identity.current.proxied_by_user.user_name
         return retval
 
-    @cherrypy.expose
+    @expose
     def renew_session(self, *args, **kw):
         """
         Renew session, here to support the login method
@@ -57,7 +57,7 @@ class Auth(RPCRoot):
             return True
         return False
 
-    @cherrypy.expose
+    @expose
     def login_password(self, username, password, proxy_user=None):
         """
         Authenticates the current session using the given username and password.
@@ -85,7 +85,7 @@ class Auth(RPCRoot):
             identity.set_authentication(user)
         return user.user_name
 
-    @cherrypy.expose
+    @expose
     def login_oauth2(self, access_token, proxy_user=None):
         """
         Authenticates the current session using OAuth2.
@@ -132,7 +132,7 @@ class Auth(RPCRoot):
             identity.set_authentication(user)
         return username
 
-    @cherrypy.expose
+    @expose
     def login_krbV(self, krb_request, proxy_user=None):
         """
         Authenticates the current session using Kerberos.
@@ -149,6 +149,7 @@ class Auth(RPCRoot):
         """
         import krbV
         import base64
+        import cherrypy
 
         context = krbV.default_context()
         server_principal = krbV.Principal(name=KRB_AUTH_PRINCIPAL, context=context)
@@ -191,7 +192,7 @@ class Auth(RPCRoot):
     # Alias kerberos login
     login_krbv = login_krbV
 
-    @cherrypy.expose
+    @expose
     def logout(self, *args):
         """
         Invalidates the current session.

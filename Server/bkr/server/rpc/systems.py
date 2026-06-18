@@ -1,3 +1,4 @@
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -5,9 +6,7 @@
 
 import datetime
 
-import cherrypy
 from sqlalchemy import and_
-from turbogears import expose, controllers
 
 from bkr.server.database import session
 from bkr.server import identity
@@ -16,13 +15,15 @@ from bkr.server.installopts import InstallOptions
 from bkr.server.kickstart import generate_kickstart
 from bkr.server.model import System, SystemActivity, DistroTree, OSMajor, \
     DistroTag, Arch, Distro, ImageType, KernelType
+from bkr.server.rpc import expose, register
 
 
-class SystemsController(controllers.Controller):
+@register('systems')
+class SystemsController(object):
     # For XMLRPC methods in this class.
     exposed = True
 
-    @expose()
+    @expose
     @identity.require(identity.not_anonymous())
     def reserve(self, fqdn):
         """
@@ -39,7 +40,7 @@ class SystemsController(controllers.Controller):
         system.reserve_manually(service=u'XMLRPC')
         return system.fqdn  # because turbogears makes us return something
 
-    @expose()
+    @expose
     @identity.require(identity.not_anonymous())
     def release(self, fqdn):
         """
@@ -55,7 +56,7 @@ class SystemsController(controllers.Controller):
         system.unreserve_manually_reserved(service=u'XMLRPC')
         return system.fqdn  # because turbogears makes us return something
 
-    @expose()
+    @expose
     @identity.require(identity.not_anonymous())
     def delete(self, fqdn):
         """
@@ -77,7 +78,7 @@ class SystemsController(controllers.Controller):
         session.delete(system)
         return 'Deleted %s' % fqdn
 
-    @expose()
+    @expose
     @identity.require(identity.not_anonymous())
     def power(self, action, fqdn, clear_netboot=False, force=False, delay=0):
         """
@@ -123,7 +124,7 @@ class SystemsController(controllers.Controller):
         system.action_power(action, service=u'XMLRPC', delay=delay)
         return system.fqdn  # because turbogears makes us return something
 
-    @expose()
+    @expose
     @identity.require(identity.not_anonymous())
     def clear_netboot(self, fqdn):
         """
@@ -136,7 +137,7 @@ class SystemsController(controllers.Controller):
         system.clear_netboot(service=u'XMLRPC')
         return system.fqdn  # because turbogears makes us return something
 
-    @expose()
+    @expose
     @identity.require(identity.not_anonymous())
     def provision(self, fqdn, distro_tree_id, ks_meta=None,
                   kernel_options=None, kernel_options_post=None, kickstart=None,
@@ -236,7 +237,7 @@ class SystemsController(controllers.Controller):
 
         return system.fqdn  # because turbogears makes us return something
 
-    @expose()
+    @expose
     def history(self, fqdn, since=None):
         """
         Returns the history for the given system.
@@ -288,7 +289,7 @@ class SystemsController(controllers.Controller):
                      )
                 for a in activities]
 
-    @cherrypy.expose()
+    @expose
     @identity.require(identity.not_anonymous())
     def get_osmajor_arches(self, fqdn, tags=None):
         """
