@@ -4,20 +4,20 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import cherrypy
 from sqlalchemy.exc import InvalidRequestError
 from bkr.common.bexceptions import BX
 from bkr.server import identity
-from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.model import User
 from bkr.server.user import _remove
+from bkr.server.rpc import expose, register
 
 
-class Users(RPCRoot):
+@register('users')
+class Users(object):
     # For XMLRPC methods in this class.
     exposed = True
 
-    @cherrypy.expose
+    @expose
     @identity.require(identity.in_group('admin'))
     def remove_account(self, username, newowner=None):
         """

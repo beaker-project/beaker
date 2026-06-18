@@ -7,7 +7,6 @@
 import logging
 from datetime import datetime, timedelta
 
-import cherrypy
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm.exc import NoResultFound
 from six.moves import urllib
@@ -17,8 +16,8 @@ from bkr.common.helpers import total_seconds
 from bkr.server import config
 from bkr.server import identity
 from bkr.server.database import session
-from bkr.server.distrotrees import DistroTrees
-from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.server.rpc.distrotrees import DistroTrees
+from bkr.server.rpc import expose, register
 from bkr.server.model import (
     Arch, OSMajor, OSVersion, Distro, DistroTree, DistroTreeRepo,
     DistroTreeImage, ImageType, KernelType, Command, CommandStatus,
@@ -28,11 +27,12 @@ from bkr.server.model import (
 log = logging.getLogger(__name__)
 
 
-class LabControllers(RPCRoot):
+@register('labcontrollers')
+class LabControllers(object):
     # For XMLRPC methods in this class.
     exposed = True
 
-    @cherrypy.expose
+    @expose
     @identity.require(identity.in_group("lab_controller"))
     def add_distro_tree(self, new_distro):
         lab_controller = identity.current.user.lab_controller
@@ -101,7 +101,7 @@ class LabControllers(RPCRoot):
 
         return distro_tree.id
 
-    @cherrypy.expose
+    @expose
     @identity.require(identity.in_group("lab_controller"))
     def remove_distro_trees(self, distro_tree_ids):
         lab_controller = identity.current.user.lab_controller
@@ -110,7 +110,7 @@ class LabControllers(RPCRoot):
             distro_tree.expire(lab_controller=lab_controller)
         return True
 
-    @cherrypy.expose
+    @expose
     @identity.require(identity.in_group('lab_controller'))
     def get_running_command_ids(self):
         lab_controller = identity.current.user.lab_controller
@@ -121,7 +121,7 @@ class LabControllers(RPCRoot):
             .values(Command.id)
         return [id for id, in running_commands]
 
-    @cherrypy.expose
+    @expose
     @identity.require(identity.in_group('lab_controller'))
     def get_queued_command_details(self):
         lab_controller = identity.current.user.lab_controller
@@ -206,7 +206,7 @@ class LabControllers(RPCRoot):
             result.append(d)
         return result
 
-    @cherrypy.expose
+    @expose
     def get_installation_for_system(self, fqdn):
         system = System.by_fqdn(fqdn, identity.current.user)
         if not system.installations:
@@ -239,7 +239,7 @@ class LabControllers(RPCRoot):
                     if lca.lab_controller == system.lab_controller],
         }
 
-    @cherrypy.expose
+    @expose
     @identity.require(identity.in_group('lab_controller'))
     def mark_command_running(self, command_id):
         lab_controller = identity.current.user.lab_controller
@@ -252,7 +252,7 @@ class LabControllers(RPCRoot):
         cmd.change_status(CommandStatus.running)
         return True
 
-    @cherrypy.expose
+    @expose
     @identity.require(identity.in_group('lab_controller'))
     def mark_command_completed(self, command_id):
         lab_controller = identity.current.user.lab_controller
@@ -271,7 +271,7 @@ class LabControllers(RPCRoot):
         cmd.log_to_system_history()
         return True
 
-    @cherrypy.expose
+    @expose
     @identity.require(identity.in_group('lab_controller'))
     def add_completed_command(self, fqdn, action):
         # Reports completion of a command that was executed
@@ -286,7 +286,7 @@ class LabControllers(RPCRoot):
         cmd.log_to_system_history()
         return True
 
-    @cherrypy.expose
+    @expose
     @identity.require(identity.in_group('lab_controller'))
     def mark_command_aborted(self, command_id, message=None):
         lab_controller = identity.current.user.lab_controller
@@ -304,7 +304,7 @@ class LabControllers(RPCRoot):
         return True
 
 
-    @cherrypy.expose
+    @expose
     @identity.require(identity.in_group('lab_controller'))
     def mark_command_failed(self, command_id, message=None, system_broken=True):
         lab_controller = identity.current.user.lab_controller
@@ -330,7 +330,7 @@ class LabControllers(RPCRoot):
         cmd.log_to_system_history()
         return True
 
-    @cherrypy.expose
+    @expose
     @identity.require(identity.in_group('lab_controller'))
     def clear_running_commands(self, message=None):
         """
@@ -366,7 +366,7 @@ class LabControllers(RPCRoot):
             cmd.abort(message)
         return True
 
-    @cherrypy.expose
+    @expose
     @identity.require(identity.in_group('lab_controller'))
     def get_distro_trees(self, filter=None):
         """

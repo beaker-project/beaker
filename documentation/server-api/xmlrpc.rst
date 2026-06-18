@@ -39,9 +39,9 @@ subsequent requests which belong with this session.
 User Preferences
 ----------------
 
-.. currentmodule:: bkr.server.preferences
+.. currentmodule:: bkr.server.rpc.prefs
 
-.. automethod:: prefs.update
+.. automethod:: Preferences.update
 
 User Accounts
 -------------
@@ -96,21 +96,21 @@ Distros and distro trees
 The following XML-RPC methods allow the caller to fetch and manipulate distros 
 and distro trees recorded in Beaker.
 
-.. currentmodule:: bkr.server.distrotrees
+.. currentmodule:: bkr.server.rpc.distrotrees
 
-.. automethod:: distrotrees.filter
+.. automethod:: DistroTrees.filter
 
-.. currentmodule:: bkr.server.distro
+.. currentmodule:: bkr.server.rpc.distros
 
-.. automethod:: distros.filter
+.. automethod:: Distros.filter
 
-.. automethod:: distros.get_osmajors
+.. automethod:: Distros.get_osmajors
 
-.. automethod:: distros.edit_version
+.. automethod:: Distros.edit_version
 
-.. automethod:: distros.tag
+.. automethod:: Distros.tag
 
-.. automethod:: distros.untag
+.. automethod:: Distros.untag
 
 
 .. _task-library:
@@ -165,15 +165,15 @@ Running jobs
    :param task_id: id of task
    :type task_id: integer
 
-.. automodule:: bkr.server.task_actions
+.. automodule:: bkr.server.rpc.taskactions
 
-.. automethod:: taskactions.task_info(taskid)
+.. automethod:: TaskActions.task_info(taskid)
 
-.. automethod:: taskactions.to_xml
+.. automethod:: TaskActions.to_xml
 
-.. automethod:: taskactions.files
+.. automethod:: TaskActions.files
 
-.. automethod:: taskactions.stop
+.. automethod:: TaskActions.stop
 
 .. jobs.set_response should actually be in tasksactions namespace, it takes 
    a taskspec/taskid/tid like J:123

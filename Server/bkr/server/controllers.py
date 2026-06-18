@@ -40,13 +40,13 @@ from bkr.server.cherrypy_util import PlainTextHTTPException
 from bkr.server.configuration import Configuration
 from bkr.server.controller_utilities import Utility, \
     restrict_http_method
-from bkr.server.distro import Distros
+from bkr.server.legacy.distro import Distros
 from bkr.server.distro_family import DistroFamily
-from bkr.server.distrotrees import DistroTrees
+from bkr.server.legacy.distrotrees import DistroTrees
 from bkr.server.rpc.group import Groups
 from bkr.server.helpers import make_link
 from bkr.server.job_matrix import JobMatrix
-from bkr.server.rpc.jobs import Jobs
+from bkr.server.legacy.jobs import Jobs
 from bkr.server.keytypes import KeyTypes
 from bkr.server.rpc.labcontroller import LabControllers
 from bkr.server.model import (TaskBase, Device, System,
@@ -58,20 +58,21 @@ from bkr.server.model import (TaskBase, Device, System,
                               DistroTag)
 from bkr.server.needpropertyxml import XmlHost
 from bkr.server.osversion import OSVersions
-from bkr.server.preferences import Preferences
-from bkr.server.rpc.recipes import Recipes
-from bkr.server.rpc.recipesets import RecipeSets
+from bkr.server.legacy.preferences import Preferences
+from bkr.server.legacy.recipes import Recipes
+from bkr.server.legacy.recipesets import RecipeSets
 from bkr.server.reports import Reports
 from bkr.server.rpc.reserve_workflow import ReserveWorkflow
+from bkr.server.rpc.root import Root as RootRPC
 from bkr.server.retention_tags import RetentionTag as RetentionTagController
 from bkr.server.system_action import SystemAction as SystemActionController
-from bkr.server.rpc.systems import SystemsController
+from bkr.server.legacy.systems import SystemsController
 from bkr.server.tag import Tags
-from bkr.server.task_actions import TaskActions
-from bkr.server.rpc.tasks import Tasks
+from bkr.server.legacy.task_actions import TaskActions
+from bkr.server.legacy.tasks import Tasks
 from bkr.server.rpc.user import Users
 from bkr.server.util import absolute_url, url
-from bkr.server.watchdog import Watchdogs
+from bkr.server.legacy.watchdog import Watchdogs
 from bkr.server.widgets import TaskSearchForm, SearchBar, \
     SystemInstallOptions, \
     SystemKeys, SystemExclude, SystemDetails, \
@@ -152,7 +153,7 @@ class Devices:
                     list=devices)
 
 
-class Root(RPCRoot):
+class Root(RPCRoot, RootRPC):
     keytypes = KeyTypes()
     devices = Devices()
     groups = Groups()
@@ -1046,11 +1047,6 @@ class Root(RPCRoot):
                 system.provisions[arch] = provision
             system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
-
-    @cherrypy.expose
-    def lab_controllers(self):
-        query = LabController.query.filter(LabController.removed == None)
-        return [lc.fqdn for lc in query]
 
     @cherrypy.expose
     def legacypush(self, fqdn=None, inventory=None):

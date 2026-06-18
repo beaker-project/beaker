@@ -3,7 +3,7 @@
 
 import unittest
 
-from bkr.server.distrotrees import DistroTrees
+from bkr.server.legacy.distrotrees import DistroTrees
 
 
 class CheckDistroTreeImportUnitTest(unittest.TestCase):

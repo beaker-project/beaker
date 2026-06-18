@@ -5,13 +5,13 @@
 # (at your option) any later version.
 
 """
-XML-RPC methods in the :mod:`taskactions` namespace can be applied to a running 
-job or any of its constituent parts (recipe sets, recipes, tasks, and task 
-results). For methods related to Beaker's task library, see the 
+XML-RPC methods in the :mod:`taskactions` namespace can be applied to a running
+job or any of its constituent parts (recipe sets, recipes, tasks, and task
+results). For methods related to Beaker's task library, see the
 :ref:`task-library` section.
 
-These methods accept a *taskid* argument, which must be a string of the form 
-*type*:*id*, for example ``'RS:4321'``. The server recognises the following 
+These methods accept a *taskid* argument, which must be a string of the form
+*type*:*id*, for example ``'RS:4321'``. The server recognises the following
 values for *type*:
 
 * J: Job
@@ -27,15 +27,12 @@ from bkr.server import identity
 from bkr.server.model import (Job, RecipeSet, Recipe,
                               RecipeTask, RecipeTaskResult, TaskBase)
 from bkr.server.bexceptions import BX, StaleTaskStatusException
-from bkr.server.xmlrpccontroller import RPCRoot
-import cherrypy
-
-import six
+from bkr.server.rpc import expose, register
+from bkr.server.util import ensure_str
 
 
-__all__ = ['TaskActions']
-
-class TaskActions(RPCRoot):
+@register('taskactions')
+class TaskActions(object):
     # For XMLRPC methods in this class.
     exposed = True
     unstoppable_task_types = [Recipe, RecipeTaskResult]
@@ -46,12 +43,16 @@ class TaskActions(RPCRoot):
                       T  = RecipeTask,
                       TR = RecipeTaskResult)
 
-    stoppable_task_types = dict([(rep, obj) for rep,obj in six.iteritems(task_types) if obj not in unstoppable_task_types])
+    stoppable_task_types = dict(task_types)
+    for _rep, _obj in list(task_types.items()):
+        if _obj in unstoppable_task_types:
+            del stoppable_task_types[_rep]
+    del _rep, _obj
 
-    @cherrypy.expose
+    @expose
     def task_info(self, taskid,flat=True):
         """
-        Returns an XML-RPC structure (dict) describing the current state of the 
+        Returns an XML-RPC structure (dict) describing the current state of the
         given job component.
 
         :param taskid: see above
@@ -59,22 +60,22 @@ class TaskActions(RPCRoot):
         """
         return TaskBase.get_by_t_id(taskid).task_info()
 
-    @cherrypy.expose
+    @expose
     def to_xml(self, taskid, clone=False, exclude_enclosing_job=True, include_logs=True):
         """
-        Returns an XML representation of the given job component, including its 
+        Returns an XML representation of the given job component, including its
         current state.
 
         :param taskid: see above
         :type taskid: string
-        :param clone: If True, returns XML suitable for submitting back to 
+        :param clone: If True, returns XML suitable for submitting back to
             Beaker. Otherwise, the XML includes results.
         :type clone: bool
-        :param exclude_enclosing_job: If False, returns <job> as the root 
-            element even when requesting a recipe set or recipe. This is useful 
+        :param exclude_enclosing_job: If False, returns <job> as the root
+            element even when requesting a recipe set or recipe. This is useful
             when cloning, in order to always produce a complete job definition.
         :type exclude_enclosing_job: bool
-        :param include_logs: If True (the default), the results XML includes 
+        :param include_logs: If True (the default), the results XML includes
             links to all logs. This can make the results XML substantially larger.
         :type include_logs: bool
         """
@@ -84,16 +85,16 @@ class TaskActions(RPCRoot):
                 task = self.task_types[task_type.upper()].by_id(task_id)
             except InvalidRequestError:
                 raise BX("Invalid %s %s" % (task_type, task_id))
-        return lxml.etree.tostring(
+        return ensure_str(lxml.etree.tostring(
                 task.to_xml(clone=clone,
                             include_enclosing_job=not exclude_enclosing_job,
                             include_logs=include_logs),
-                xml_declaration=False, encoding='UTF-8')
+                xml_declaration=False, encoding='UTF-8'))
 
-    @cherrypy.expose
+    @expose
     def files(self, taskid):
         """
-        Returns an array of XML-RPC structures (dicts) describing each of the 
+        Returns an array of XML-RPC structures (dicts) describing each of the
         result files for the given job component and its descendants.
 
         :param taskid: see above
@@ -102,16 +103,16 @@ class TaskActions(RPCRoot):
         return [l.dict for l in TaskBase.get_by_t_id(taskid).all_logs()]
 
     @identity.require(identity.not_anonymous())
-    @cherrypy.expose
+    @expose
     def stop(self, taskid, stop_type, msg):
         """
-        Cancels the given job. Note that when cancelling some part of a job 
-        (for example, by passing *taskid* starting with ``R:`` to indicate 
+        Cancels the given job. Note that when cancelling some part of a job
+        (for example, by passing *taskid* starting with ``R:`` to indicate
         a particular recipe within a job) the entire job is cancelled.
 
         :param taskid: see above
         :type taskid: string
-        :param stop_type: must be ``'cancel'`` (other values are reserved for 
+        :param stop_type: must be ``'cancel'`` (other values are reserved for
             Beaker's internal use)
         :type stop_type: string
         :param msg: reason for cancelling
@@ -138,6 +139,3 @@ class TaskActions(RPCRoot):
             return getattr(task, stop_type)(**kwargs)
         except StaleTaskStatusException:
             raise BX(u"Could not cancel job id %s. Please try later" % task_id)
-
-# for sphinx
-taskactions = TaskActions
