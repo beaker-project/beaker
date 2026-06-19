@@ -233,6 +233,9 @@ class IdentityFailure(_IdentityFailureBase):
     def __init__(self, message=None):
         self._message = message or u'Please log in'
         self.args = [self._message]
+        if cherrypy is None:
+            self.status = 403
+            return
         if cherrypy.request.method not in ('GET', 'HEAD'):
             # Other HTTP methods cannot be safely redirected through the login 
             # form, so we will just show a 403.

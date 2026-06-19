@@ -45,6 +45,22 @@ import bkr.server.recipetasks
 import bkr.server.reserve_workflow
 import bkr.server.kickstart
 
+import bkr.server.rpc.root
+import bkr.server.rpc.authentication
+import bkr.server.rpc.distrotrees
+import bkr.server.rpc.distros
+import bkr.server.rpc.labcontroller
+import bkr.server.rpc.prefs
+import bkr.server.rpc.taskactions
+import bkr.server.rpc.tasks
+import bkr.server.rpc.user
+import bkr.server.rpc.systems
+import bkr.server.rpc.jobs
+import bkr.server.rpc.recipes
+import bkr.server.rpc.recipesets
+import bkr.server.rpc.watchdogs
+import bkr.server.rpc.dispatch
+
 
 @app.before_request
 def begin_session():
