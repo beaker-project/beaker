@@ -729,25 +729,25 @@ class DistroTree(DeclarativeMappedObject, ActivityMixin):
 
     def to_xml(self, clone=False):
         """ Return xml describing this distro """
-        fields = dict(
-            distro_name=['distro', 'name'],
-            distro_arch=['arch', 'arch'],
-            distro_variant='variant',
-            distro_family=['distro', 'osversion', 'osmajor', 'osmajor'],
-        )
+        fields = [
+            ('distro_family', ['distro', 'osversion', 'osmajor', 'osmajor']),
+            ('distro_variant', 'variant'),
+            ('distro_name', ['distro', 'name']),
+            ('distro_arch', ['arch', 'arch']),
+        ]
 
         distro_requires = lxml.etree.Element('distroRequires')
         xmland = lxml.etree.Element('and')
-        for key in fields.keys():
+        for key, spec in fields:
             require = lxml.etree.Element(key)
             require.set('op', '=')
-            if isinstance(fields[key], list):
+            if isinstance(spec, list):
                 obj = self
-                for field in fields[key]:
+                for field in spec:
                     obj = getattr(obj, field, None)
                 require.set('value', obj or '')
             else:
-                value_text = getattr(self, fields[key], None) or ''
+                value_text = getattr(self, spec, None) or ''
                 require.set('value', str(value_text))
             xmland.append(require)
         distro_requires.append(xmland)
