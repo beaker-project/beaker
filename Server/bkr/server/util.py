@@ -241,21 +241,17 @@ def log_traceback(logger):
 
 def run_createrepo(cwd=None, update=False):
     createrepo_command = config.get('beaker.createrepo_command', 'createrepo_c')
-    args = [createrepo_command, '-q', '--no-database', '--checksum', 'sha']
+    args = [createrepo_command, '-q', '--no-database', '--checksum', 'sha256']
     if update:
         args.append('--update')
     args.append('.')
     log.debug('Running createrepo as %r in %s', args, cwd)
     p = subprocess.Popen(args, cwd=cwd, stderr=subprocess.PIPE,
                          stdout=subprocess.PIPE)
-    out, err = p.communicate()
-    # Perhaps a bit fragile, but maybe better than checking version?
-    if p.returncode != 0 and 'no such option: --no-database' in err:
-        args.remove('--no-database')
-        log.debug('Re-trying createrepo as %r in %s', args, cwd)
-        p = subprocess.Popen(args, cwd=cwd, stderr=subprocess.PIPE,
-                             stdout=subprocess.PIPE)
-        out, err = p.communicate()
+    out, err = p.communicate() 
+    out = ensure_str(out)
+    err = ensure_str(err)
+
     RepoCreate = namedtuple("RepoCreate", "command returncode out err")
     return RepoCreate(createrepo_command, p.returncode, out, err)
 
