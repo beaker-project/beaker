@@ -23,7 +23,7 @@ from bkr.common.helpers import (AtomicFileReplacement, Flock,
 from bkr.server import identity, testinfo
 from bkr.server.bexceptions import BX
 from bkr.server.hybrid import hybrid_method
-from bkr.server.util import absolute_url, run_createrepo, convert_db_lookup_error
+from bkr.server.util import absolute_url, run_createrepo, convert_db_lookup_error, ensure_text
 from .base import DeclarativeMappedObject
 from .identity import User
 from .distrolibrary import Arch, OSMajor
@@ -202,7 +202,7 @@ class TaskLibrary(object):
         try:
             for rpm_name, write_rpm in rpm_names_write_rpm:
                 rpm_path = self.get_rpm_path(rpm_name)
-                upgrade = AtomicFileReplacement(rpm_path)
+                upgrade = AtomicFileReplacement(rpm_path, binary=True)
                 to_sync.append((rpm_name, upgrade,))
                 f = upgrade.create_temp()
                 write_rpm(f)
@@ -415,7 +415,7 @@ class Task(DeclarativeMappedObject):
     def create_from_taskinfo(cls, raw_taskinfo):
         """Create a new task object based on details retrieved from an RPM"""
 
-        tinfo = testinfo.parse_string(raw_taskinfo['desc'].decode('utf8'))
+        tinfo = testinfo.parse_string(ensure_text(raw_taskinfo['desc']))
 
         if len(tinfo.test_name) > 255:
             raise BX("Task name should be <= 255 characters")
