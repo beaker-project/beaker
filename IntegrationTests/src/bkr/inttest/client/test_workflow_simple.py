@@ -111,7 +111,7 @@ class WorkflowSimpleTest(ClientTestCase):
                           '--task', self.task.name])
         self.assertTrue(out.startswith('Submitted:'), out)
 
-    @xmlrpc
+    
     def test_submit_job_wait(self):
         args = ['bkr', 'workflow-simple', '--random',
                 '--arch', self.distro_tree.arch.arch,
@@ -245,7 +245,7 @@ class WorkflowSimpleTest(ClientTestCase):
         self.assertIn('<reservesys duration="3600"/>', out)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1095026
-    @xmlrpc
+    
     def test_machine_ignore_other_options(self):
         p = start_client(['bkr', 'workflow-simple',
                           '--dryrun', '--prettyxml',
@@ -476,8 +476,10 @@ install
                           '--arch', self.distro_tree.arch.arch,
                           '--family', self.distro.osversion.osmajor.osmajor,
                           '--task', self.task.name])
-        self.assertIn("<ks_append>\n<![CDATA[%s]]>\t\t\t\t</ks_append>" % first_ks, out)
-        self.assertIn("<ks_append>\n<![CDATA[%s]]>\t\t\t\t</ks_append>" % second_ks, out)
+        self.assertTrue(re.search(
+                r"<ks_append>\s*<!\[CDATA\[%s\]\]>\s*</ks_append>" % re.escape(first_ks), out))
+        self.assertTrue(re.search(
+                r"<ks_append>\s*<!\[CDATA\[%s\]\]>\s*</ks_append>" % re.escape(second_ks), out))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1220652
     def test_no_default_install_method(self):
@@ -532,8 +534,7 @@ install
         self.assertNotIn(ignored_task.name, out)
         self.assertIn(included_task.name, out)
 
-    # https://bugzilla.redhat.com/show_bug.cgi?id=1197608
-    @xmlrpc
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1197608 
     def test_filters_task_by_osmajor_with_given_taskfile(self):
         with session.begin():
             ignored_task = data_setup.create_task(

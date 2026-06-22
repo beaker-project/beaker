@@ -79,7 +79,7 @@ class Application(object):
                 mimetype, encoding = mimetypes.guess_type(localpath)
                 response_headers.append(('Content-Type', mimetype or 'application/octet-stream'))
                 start_response('200 OK', response_headers)
-                return wsgiref.util.FileWrapper(open(localpath, 'r'))
+                return wsgiref.util.FileWrapper(open(localpath, 'rb'))
         elif environ['REQUEST_METHOD'] == 'DELETE' and self.writable:
             shutil.rmtree(localpath)
             start_response('204 No Content', response_headers)

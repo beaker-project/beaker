@@ -62,6 +62,10 @@ if PY2:
 CONFIG_FILE = os.environ.get('BEAKER_CONFIG_FILE')
 
 
+if not hasattr(unittest.TestCase, 'assertItemsEqual'):
+    unittest.TestCase.assertItemsEqual = unittest.TestCase.assertCountEqual
+
+
 class DatabaseTestCase(unittest.TestCase):
     """
     Tests which touch the database in any way (session.begin()) should inherit
