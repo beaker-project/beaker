@@ -106,9 +106,6 @@ def run_client(args, config=None, input=None, **kwargs):
     err = ensure_str(err)
     if p.returncode:
         if os.environ.get('BKR_PY3') == '1':
-            if 'ProtocolError' in err and '/client/' in err:
-                import pytest
-                pytest.skip('bkr command uses the XML-RPC endpoint, not served by wsgi_py3')
             if '/view/' in err and '404' in err:
                 import pytest
                 pytest.skip('bkr command uses the legacy HTML view page, not served by wsgi_py3')

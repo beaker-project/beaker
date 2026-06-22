@@ -11,7 +11,7 @@ from bkr.inttest.client import start_client, run_client, ClientError, \
 
 class JobWatchTest(ClientTestCase):
 
-    @xmlrpc
+    
     def test_watch_job(self):
         with session.begin():
             job = data_setup.create_job(whiteboard=u'jobwb')
@@ -29,7 +29,7 @@ class JobWatchTest(ClientTestCase):
                 '--> Completed: 1 [total: 1]\n' % job.t_id)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1066269
-    @xmlrpc
+    
     def test_watch_recipe(self):
         with session.begin():
             job = data_setup.create_job(recipe_whiteboard=u'recipewb')
@@ -49,7 +49,7 @@ class JobWatchTest(ClientTestCase):
                 % (recipe.t_id, recipe.resource.fqdn))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1066269
-    @xmlrpc
+    
     def test_watch_recipetask(self):
         with session.begin():
             job = data_setup.create_job()
@@ -77,8 +77,7 @@ class JobWatchTest(ClientTestCase):
         except ClientError as e:
             self.assertTrue('Invalid taskspec' in e.stderr_output)
 
-    # https://bugzilla.redhat.com/show_bug.cgi?id=1415104
-    @xmlrpc
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1415104 
     def test_exits_141_when_pipe_is_closed(self):
         with session.begin():
             job = data_setup.create_job(whiteboard=u'jobwb')

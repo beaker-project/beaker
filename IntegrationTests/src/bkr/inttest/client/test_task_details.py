@@ -50,7 +50,7 @@ class TaskDetailsTest(ClientTestCase):
         # pretty xml
         pretty_out = run_client(['bkr', 'task-details', '--prettyxml', task.name])
         pretty_minus_leading_name = re.sub(task.name, '', pretty_out, count=1)
-        task_elem_pretty = lxml.etree.tostring(task_elem, pretty_print=True, encoding='utf8')
+        task_elem_pretty = lxml.etree.tostring(task_elem, pretty_print=True, encoding='unicode')
         self.assertTrue(task_elem_pretty.strip() == pretty_minus_leading_name.strip())
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=624417
