@@ -8,6 +8,7 @@ import logging
 import os
 import shutil
 import signal
+import sys
 from bkr.labcontroller.config import load_conf, get_conf
 from bkr.server.database import session
 from bkr.server.model import LabController, Watchdog, Recipe, RecipeSet, \
@@ -107,16 +108,16 @@ def setup_package():
             lc = data_setup.create_labcontroller(fqdn=u'localhost', user=user)
         processes.extend([
             Process('beaker-proxy',
-                    args=['python', '../LabController/src/bkr/labcontroller/main.py',
+                    args=[sys.executable, '../LabController/src/bkr/labcontroller/main.py',
                           '-c', config_file, '-f'],
                     listen_port=8000,
                     stop_signal=signal.SIGTERM),
             Process('beaker-provision',
-                    args=['python', '../LabController/src/bkr/labcontroller/provision.py',
+                    args=[sys.executable, '../LabController/src/bkr/labcontroller/provision.py',
                           '-c', config_file, '-f'],
                     stop_signal=signal.SIGTERM),
             Process('beaker-watchdog',
-                    args=['python', '../LabController/src/bkr/labcontroller/watchdog.py',
+                    args=[sys.executable, '../LabController/src/bkr/labcontroller/watchdog.py',
                           '-c', config_file, '-f'],
                     stop_signal=signal.SIGTERM),
         ])
