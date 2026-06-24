@@ -9,6 +9,7 @@ import os
 import shutil
 import signal
 import sys
+from bkr.server.util import ensure_text
 from bkr.labcontroller.config import load_conf, get_conf
 from bkr.server.database import session
 from bkr.server.model import LabController, Watchdog, Recipe, RecipeSet, \
@@ -104,7 +105,7 @@ def setup_package():
     if not 'BEAKER_LABCONTROLLER_HOSTNAME' in os.environ:
         # Need to start the lab controller daemons ourselves
         with session.begin():
-            user = data_setup.create_user(user_name=conf.get('USERNAME').decode('utf8'), password=conf.get('PASSWORD'))
+            user = data_setup.create_user(user_name=ensure_text(conf.get('USERNAME')), password=conf.get('PASSWORD'))
             lc = data_setup.create_labcontroller(fqdn=u'localhost', user=user)
         processes.extend([
             Process('beaker-proxy',
@@ -125,7 +126,7 @@ def setup_package():
     else:
         _daemons_running_externally = True
         # We have been passed a space seperated list of LCs
-        lab_controllers = os.environ.get('BEAKER_LABCONTROLLER_HOSTNAME').decode('utf8')
+        lab_controllers = ensure_text(os.environ.get('BEAKER_LABCONTROLLER_HOSTNAME'))
         lab_controllers_list = lab_controllers.split()
         # Just get the last one, it shouldn't matter to us
         lab_controller = lab_controllers_list.pop()
