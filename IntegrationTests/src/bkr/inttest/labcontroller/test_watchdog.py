@@ -19,7 +19,10 @@ from bkr.server.model import LogRecipe, TaskResult, TaskStatus
 from bkr.inttest import data_setup
 from bkr.inttest.assertions import wait_for_condition
 from bkr.inttest.labcontroller import LabControllerTestCase
-from mock import patch
+try:
+    from unittest.mock import patch
+except ImportError:
+    from mock import patch
 
 
 class TestHelper(LabControllerTestCase):
