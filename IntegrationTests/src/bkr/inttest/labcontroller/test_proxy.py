@@ -14,7 +14,7 @@ from base64 import b64encode
 import lxml.etree, lxml.html
 import requests
 import time
-from nose.plugins.skip import SkipTest
+from unittest import SkipTest
 from six import assertRaisesRegex
 from bkr.common.helpers import total_seconds
 from bkr.server.model import session, TaskResult, TaskStatus, LogRecipe, \
