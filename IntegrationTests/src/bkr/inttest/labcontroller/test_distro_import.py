@@ -1218,7 +1218,7 @@ class DistroImportTest(LabControllerTestCase):
 
     def dry_run_import_trees(self, additional_import_args):
         trees, stderr = self._run_import(
-                ['python', _command, '--debug', '--json', '--dry-run']
+                [sys.executable, _command, '--debug', '--json', '--dry-run']
                 + additional_import_args)
         print(stderr)
         # check logging is working correctly
@@ -1229,7 +1229,7 @@ class DistroImportTest(LabControllerTestCase):
 
     def import_trees(self, additional_import_args):
         trees, stderr = self._run_import(
-                ['python', _command, '--debug', '--json']
+                [sys.executable, _command, '--debug', '--json']
                 + additional_import_args)
         # check logging is working correctly
         self.assertIn('Attempting to import: ', stderr)
