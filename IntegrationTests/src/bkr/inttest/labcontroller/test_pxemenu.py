@@ -47,7 +47,7 @@ class PxemenuTest(LabControllerTestCase):
                     urls=[u'barf://localhost:19998/error/404'])
         with self.assertRaises(ValueError) as exc:
             write_menus(self.tftp_dir, tags=[tag], xml_filter=None)
-        self.assertIn('Unrecognised URL scheme found in distro tree URL(s)', exc.exception.message)
+        self.assertIn('Unrecognised URL scheme found in distro tree URL(s)', str(exc.exception))
 
     def test_skip_distro_tree_for_which_image_cannot_be_fetched(self):
         with session.begin():

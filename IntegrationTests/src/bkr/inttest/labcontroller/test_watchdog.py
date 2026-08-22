@@ -9,6 +9,7 @@
 import os, os.path
 import time
 import pkg_resources
+from bkr.common.helpers import ensure_binary
 from bkr.server.database import session
 from bkr.common.helpers import makedirs_ignore
 from bkr.labcontroller.config import get_conf
@@ -40,7 +41,8 @@ class TestHelper(LabControllerTestCase):
                     filename=u'console.log').count() == 1
 
     def check_cached_log_contents(self, expected):
-        return open(self.cached_console_log, 'r').read() == expected
+        with open(self.cached_console_log, 'rb') as f:
+            return f.read() == ensure_binary(expected)
 
     def check_console_log2_registered(self):
         with session.begin():
@@ -48,7 +50,8 @@ class TestHelper(LabControllerTestCase):
                     filename=u'console-bmc.log').count() == 1
 
     def check_cached_log2_contents(self, expected):
-        return open(self.cached_console_log_2, 'r').read() == expected
+        with open(self.cached_console_log_2, 'rb') as f:
+            return f.read() == ensure_binary(expected)
 
 
 class WatchdogConsoleLogTest(TestHelper):
@@ -279,7 +282,7 @@ class WatchdogConsoleLogTest(TestHelper):
         # Anaconda, but the bug actually affects a wide range of characters, so 
         # we test an assortment of ones that might appear.
         line = u'┌───┤ Uničode röcks! аяяй 幸せ\n'.encode('utf8')
-        open(self.console_log, 'w').write(line)
+        open(self.console_log, 'wb').write(line)
         wait_for_condition(self.check_console_log_registered)
         wait_for_condition(lambda: self.check_cached_log_contents(line))
 
@@ -316,7 +319,8 @@ class WatchdogVirtConsoleLogTest(TestHelper):
         test_get_console_log.return_value = log_contents
         self.monitor.run()
         self.assertTrue(self.check_console_log_registered())
-        self.assertEqual(open(self.cached_console_log).read().decode('utf8'), log_contents)
+        self.assertEqual(open(self.cached_console_log, 'rb').read().decode('utf8'),
+                log_contents)
 
 
 # Class WatchdogGuestConsoleLogTest tests console log handling for Guest Recipes
@@ -439,7 +443,7 @@ def check_anaconda_failure_sample(filename):
 # https://bugzilla.redhat.com/show_bug.cgi?id=1040794
 def test_unrelated_Oops_string_is_not_detected_as_panic():
     # Sounds implausible, but this really happened...
-    line = "2013-11-19 05:47:48,109 backend __init__: INFO RPMTest some-test-rpm-name - /mnt/testarea/tmpnOopsn.sh ['some-test-rpm-name']  \n"
+    line = b"2013-11-19 05:47:48,109 backend __init__: INFO RPMTest some-test-rpm-name - /mnt/testarea/tmpnOopsn.sh ['some-test-rpm-name']  \n"
     detector = PanicDetector(get_conf().get('PANIC_REGEX'))
     failure_found = detector.feed(line)
     if failure_found:
@@ -447,7 +451,7 @@ def test_unrelated_Oops_string_is_not_detected_as_panic():
 
 # https://bugzilla.redhat.com/show_bug.cgi?id=1719829
 def test_general_protection__user_space_is_not_detected_as_panic():
-    line = "kvm-01-guest19 login: [   30.165967] traps: bz1172806[2463] general protection fault ip:804b000 sp:5aadc0de error:0 in bz1172806[8048000+5000] \n"
+    line = b"kvm-01-guest19 login: [   30.165967] traps: bz1172806[2463] general protection fault ip:804b000 sp:5aadc0de error:0 in bz1172806[8048000+5000] \n"
     detector = PanicDetector(get_conf().get('PANIC_REGEX'))
     failure_found = detector.feed(line)
     if failure_found:
