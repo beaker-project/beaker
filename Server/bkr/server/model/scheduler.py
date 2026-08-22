@@ -3764,7 +3764,8 @@ class RecipeTask(TaskBase):
                 score = 0
             else:
                 score = round(decimal.Decimal(number_match.group()))
-        score = min(score, RecipeTaskResult.max_score)
+        if score is not None:
+            score = min(score, RecipeTaskResult.max_score)
         recipeTaskResult = RecipeTaskResult(recipetask=self,
                                             path=path,
                                             result=result,
