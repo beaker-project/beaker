@@ -6,6 +6,8 @@
 import subprocess
 import unittest
 
+import six
+
 from bkr.server.tools import ipxe_image, log_delete
 
 
@@ -42,6 +44,7 @@ class IpxeImageTest(unittest.TestCase):
 
     def test_image_generation(self):
         f = ipxe_image.generate_image()
-        self.assertItemsEqual(
+        six.assertCountEqual(
+            self,
             list_msdos_filesystem(f.name),
             ['::/syslinux.cfg', '::/ipxe.lkrn'])
