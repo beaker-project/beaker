@@ -113,6 +113,35 @@ Requires:       python-jinja2
 # beaker-wizard was moved from rhts-devel to here in 4.52
 Conflicts:      rhts-devel < 4.52
 
+%if %{with python3}
+%if 0%{?rhel} >= 9
+BuildRequires:  createrepo_c
+BuildRequires:  ipxe-bootimgs
+BuildRequires:  syslinux
+BuildRequires:  mtools
+BuildRequires:  python3-requests
+BuildRequires:  python3-sqlalchemy
+BuildRequires:  python3-lxml
+BuildRequires:  python3-ldap
+BuildRequires:  python3-rdflib
+BuildRequires:  python3-pwquality
+BuildRequires:  python3-rpm
+BuildRequires:  python3-netaddr
+BuildRequires:  python3-itsdangerous
+BuildRequires:  python3-decorator
+BuildRequires:  python3-flask
+BuildRequires:  python3-simplejson
+BuildRequires:  python3-markdown
+BuildRequires:  python3-passlib
+BuildRequires:  python3-alembic
+BuildRequires:  python3-daemon
+BuildRequires:  python3-jinja2
+BuildRequires:  python3-gssapi
+BuildRequires:  python3-configobj
+BuildRequires:  python3-formencode
+%endif
+%endif
+
 %if %{without python3}
 %package server
 Summary:        Beaker scheduler and web interface
