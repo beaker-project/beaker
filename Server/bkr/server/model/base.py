@@ -110,7 +110,7 @@ class MappedObject(object):
         # pretty-print the attributes, so we can see what's getting autoloaded for us:
         attrStr = ""
         numAttrs = 0
-        for attr in self.__dict__:
+        for attr in sorted(self.__dict__):
             if attr[0] != '_':
                 if numAttrs>0:
                     attrStr += ', '
