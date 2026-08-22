@@ -24,12 +24,14 @@ from werkzeug.exceptions import BadRequest, NotAcceptable, NotFound, \
 from werkzeug.utils import redirect
 from werkzeug.http import parse_content_range_header
 from werkzeug.wsgi import wrap_file
+from bkr.common.helpers import ensure_binary, ensure_text
 from bkr.common.hub import HubProxy
 from bkr.common.resources import resource_listdir, resource_string
 from bkr.labcontroller import utils
 from bkr.labcontroller.config import get_conf
 from bkr.labcontroller.log_storage import LogStorage
 
+import six
 from six.moves import xmlrpc_client
 
 
@@ -42,7 +44,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 def replace_with_blanks(match):
-    return ' ' * (match.end() - match.start() - 1) + '\n'
+    return b' ' * (match.end() - match.start() - 1) + b'\n'
 
 
 class ProxyHelper(object):
@@ -195,15 +197,15 @@ class ConsoleLogHelper(object):
         self.watchdog = watchdog
         self.proxy = proxy
         self.logfile_name = logfile_name if logfile_name is not None else "console.log"
-        self.strip_ansi = re.compile("(\033\[[0-9;\?]*[ABCDHfsnuJKmhr])")
-        ascii_control_chars = [chr(c) for c in list(range(0, 32)) + [127]]
-        keep_chars = '\t\n'
+        self.strip_ansi = re.compile(b"(\033\[[0-9;\?]*[ABCDHfsnuJKmhr])")
+        ascii_control_chars = [six.int2byte(c) for c in list(range(0, 32)) + [127]]
+        keep_chars = [b'\t', b'\n']
         strip_control_chars = [c for c in ascii_control_chars if c not in keep_chars]
-        self.strip_cntrl = re.compile('[%s]' % re.escape(''.join(strip_control_chars)))
+        self.strip_cntrl = re.compile(b'[%s]' % re.escape(b''.join(strip_control_chars)))
         self.panic_detector = PanicDetector(panic)
         self.install_failure_detector = InstallFailureDetector()
         self.where = 0
-        self.incomplete_line = ''
+        self.incomplete_line = b''
 
     def process_log(self, block):
         # Sanitize control characters
@@ -213,18 +215,18 @@ class ConsoleLogHelper(object):
         if self.strip_ansi:
             block = self.strip_ansi.sub(replace_with_blanks, block)
         if self.strip_cntrl:
-            block = self.strip_cntrl.sub(' ', block)
+            block = self.strip_cntrl.sub(b' ', block)
         # Check for panics
         # Only feed the panic detector complete lines. If we have read a part
         # of a line, store it in self.incomplete_line and it will be prepended
         # to the subsequent block.
-        lines = (self.incomplete_line + block).split('\n')
+        lines = (self.incomplete_line + block).split(b'\n')
         self.incomplete_line = lines.pop()
         # Guard against a pathological case of the console filling up with
         # bytes but no newlines. Avoid buffering them into memory forever.
         if len(self.incomplete_line) > self.blocksize * 2:
             lines.append(self.incomplete_line)
-            self.incomplete_line = ''
+            self.incomplete_line = b''
         if self.panic_detector:
             for line in lines:
                 panic_found = self.panic_detector.feed(line)
@@ -295,7 +297,7 @@ class ConsoleWatchFile(ConsoleLogHelper):
         If the log exists and the file has grown then upload the new piece
         """
         try:
-            file = open(self.log, "r")
+            file = open(self.log, "rb")
         except (OSError, IOError) as e:
             if e.errno == errno.ENOENT:
                 return False # doesn't exist
@@ -315,7 +317,7 @@ class ConsoleWatchFile(ConsoleLogHelper):
 
     def truncate(self):
         try:
-            f = open(self.log, 'r+')
+            f = open(self.log, 'r+b')
         except IOError as e:
             if e.errno != errno.ENOENT:
                 raise
@@ -358,7 +360,7 @@ class ConsoleWatchVirt(ConsoleLogHelper):
 class PanicDetector(object):
 
     def __init__(self, pattern):
-        self.pattern = re.compile(pattern)
+        self.pattern = re.compile(ensure_binary(pattern))
         self.fired = False
 
     def feed(self, line):
@@ -369,18 +371,18 @@ class PanicDetector(object):
         match = self.pattern.search(line)
         if match:
             self.fired = True
-            return match.group()
+            return ensure_text(match.group(), errors='replace')
 
 class InstallFailureDetector(object):
 
     def __init__(self):
         self.patterns = []
         for raw_pattern in self._load_patterns():
-            pattern = re.compile(raw_pattern)
+            pattern = re.compile(ensure_binary(raw_pattern))
             # If the pattern is empty, it is either a mistake or the admin is
             # trying to override a package pattern to disable it. Either way,
             # exclude it from the list.
-            if pattern.search(''):
+            if pattern.search(b''):
                 continue
             self.patterns.append(pattern)
         self.fired = False
@@ -424,7 +426,7 @@ class InstallFailureDetector(object):
             match = pattern.search(line)
             if match:
                 self.fired = True
-                return match.group()
+                return ensure_text(match.group(), errors='replace')
 
 
 class LogArchiver(ProxyHelper):
@@ -555,8 +557,8 @@ class Monitor(ProxyHelper):
         logger.info('Panic detected for recipe %s on system %s: '
                 'console log contains string %r', watchdog['recipe_id'],
                 watchdog['system'], panic_message)
-        job = lxml.etree.fromstring(self.get_my_recipe(
-                dict(recipe_id=watchdog['recipe_id'])))
+        job = lxml.etree.fromstring(ensure_binary(self.get_my_recipe(
+                dict(recipe_id=watchdog['recipe_id']))))
         recipe = job.find('recipeSet/guestrecipe')
         if recipe is None:
             recipe = job.find('recipeSet/recipe')
@@ -582,8 +584,8 @@ class Monitor(ProxyHelper):
         logger.info('Install failure detected for recipe %s on system %s: '
                 'console log contains string %r', watchdog['recipe_id'],
                 watchdog['system'], failure_message)
-        job = lxml.etree.fromstring(self.get_my_recipe(
-                dict(recipe_id=watchdog['recipe_id'])))
+        job = lxml.etree.fromstring(ensure_binary(self.get_my_recipe(
+                dict(recipe_id=watchdog['recipe_id']))))
         recipe = job.find('recipeSet/guestrecipe')
         if recipe is None:
             recipe = job.find('recipeSet/recipe')
