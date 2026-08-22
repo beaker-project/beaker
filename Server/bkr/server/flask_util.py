@@ -17,6 +17,7 @@ from bkr.server.bexceptions import BX, InsufficientSystemPermissions, DatabaseLo
     StaleTaskStatusException
 from bkr.server.search_utility import lucene_to_sqlalchemy
 from bkr.server.util import absolute_url, strip_webpath
+from bkr.common.helpers import ensure_str
 
 import six
 
@@ -95,7 +96,8 @@ def json_collection(query, columns=None, extra_sort_columns=None, max_page_size=
             # a page_size= param added, as a way of indicating that they should 
             # be using paging. There's no point doing this for the web UI though.
             if request.query_string:
-                url = '%s?%s&page_size=%s' % (request.path, request.query_string, default_page_size)
+                url = '%s?%s&page_size=%s' % (request.path,
+                        ensure_str(request.query_string), default_page_size)
             else:
                 url = '%s?page_size=%s' % (request.path, default_page_size)
             # absolute_url() prepends webpath so strip it off first
