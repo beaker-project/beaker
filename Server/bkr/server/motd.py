@@ -5,6 +5,7 @@
 # (at your option) any later version.
 
 import errno
+from bkr.common.helpers import ensure_str
 from bkr.server import config
 from lxml import etree
 import logging
@@ -37,7 +38,7 @@ def _load_motd(filename):
         return None
     if tree.getroot() is None:
         return None
-    return etree.tostring(tree.getroot(), encoding='utf8')
+    return ensure_str(etree.tostring(tree.getroot(), encoding='utf8'))
 
 def get_motd():
     global _motd, _motd_loaded
