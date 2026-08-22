@@ -13,43 +13,31 @@
 __requires__ = ['CherryPy < 3.0']
 
 import sys
-import os
 import random
 from bkr.common import __version__
 from bkr.log import log_to_stream, log_to_syslog
-from bkr.server import needpropertyxml, utilisation, metrics, dynamic_virt
-from bkr.server.bexceptions import BX, \
-    StaleTaskStatusException, InsufficientSystemPermissions, \
-    StaleSystemUserException
+from bkr.server import utilisation, metrics, dynamic_virt
 from bkr.server.model import (Job, RecipeSet, Recipe, MachineRecipe,
-        GuestRecipe, RecipeVirtStatus, TaskStatus, TaskPriority, LabController,
-        Watchdog, System, DistroTree, LabControllerDistroTree, SystemStatus,
+        RecipeVirtStatus, TaskStatus, TaskPriority, LabController,
+        Watchdog, System, DistroTree, SystemStatus,
         SystemResource, GuestResource, Arch,
         SystemAccessPolicy, SystemPermission, ConfigItem, Command,
         Power, PowerType, DataMigration, SystemSchedulerStatus)
-from bkr.server.model.scheduler import machine_guest_map
 from bkr.server.needpropertyxml import XmlHost
 from bkr.server.util import load_config_or_exit, log_traceback, \
         get_reports_engine
-from bkr.server.rpc.recipetasks import RecipeTasks
 from bkr.server.database import session, get_engine, query_with_lockmode
 from bkr.server import config
-from sqlalchemy.exc import OperationalError
-from sqlalchemy.sql import exists
-from sqlalchemy.sql.expression import func, select, and_, or_, not_
+from sqlalchemy.sql.expression import and_, or_, not_
 from sqlalchemy.orm import create_session
 
-import socket
-import exceptions
-from datetime import datetime, timedelta
+from datetime import datetime
 import time
 import daemon
-import atexit
 import signal
 from lockfile import pidlockfile
 from daemon import pidfile
 import threading
-import os
 import concurrent.futures
 import logging
 
@@ -61,7 +49,6 @@ _threadpool_executor = None
 from optparse import OptionParser
 
 import six
-from six.moves.xmlrpc_client import ProtocolError
 
 
 __description__ = 'Beaker Scheduler'
@@ -383,7 +370,7 @@ def abort_dead_recipes(*args):
         try:
             abort_dead_recipe(recipe_id)
             session.commit()
-        except exceptions.Exception:
+        except Exception:
             log.exception('Error in abort_dead_recipe(%s)', recipe_id)
             session.rollback()
         finally:
@@ -582,7 +569,7 @@ def provision_scheduled_recipesets(*args):
         try:
             provision_scheduled_recipeset(rs_id)
             session.commit()
-        except exceptions.Exception:
+        except Exception:
             log.exception('Error in provision_scheduled_recipeset(%s)', rs_id)
             session.rollback()
         finally:
