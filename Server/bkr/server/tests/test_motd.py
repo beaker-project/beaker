@@ -20,13 +20,13 @@ class MotdTest(unittest.TestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=759269
     def test_comment_only(self):
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write('<!-- span>commented out</span -->\n')
             f.flush()
             self.assertEqual(_load_motd(f.name), None)
 
     def test_message(self):
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write('<span>Beaker is <em>awesome</em>!</span>\n')
             f.flush()
             self.assertEqual(_load_motd(f.name),

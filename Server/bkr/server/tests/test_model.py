@@ -13,6 +13,7 @@ import unittest
 from tempfile import mkdtemp
 
 import pkg_resources
+import six
 from lxml import etree
 from shutil import copy, rmtree
 from sqlalchemy.dialects.mysql.base import MySQLDialect
@@ -210,7 +211,7 @@ class TaskLibraryTest(unittest.TestCase):
         recipe_repo_dir = os.path.join(recipe_repo_parent, 'repodata')
         recipe_repo_dir_list = os.listdir(recipe_repo_dir)
         # Assert the contents at least appear to be the same
-        self.assertItemsEqual(recipe_repo_dir_list, repo_dir_list)
+        six.assertCountEqual(self, recipe_repo_dir_list, repo_dir_list)
         # Now test the actual content
         for filename in repo_dir_list:
             if filename.endswith(".gz"):
@@ -221,6 +222,6 @@ class TaskLibraryTest(unittest.TestCase):
                 raise AssertionError('Expected gzip or xml, not %r' % filename)
             repo_filename = os.path.join(repo_dir, filename)
             recipe_repo_filename = os.path.join(recipe_repo_dir, filename)
-            repo_file = open_file(repo_filename)
-            recipe_repo_file = open_file(recipe_repo_filename)
+            repo_file = open_file(repo_filename, 'rb')
+            recipe_repo_file = open_file(recipe_repo_filename, 'rb')
             self._assert_xml_equivalence(repo_file, recipe_repo_file)

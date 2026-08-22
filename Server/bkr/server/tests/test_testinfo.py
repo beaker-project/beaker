@@ -371,11 +371,12 @@ SiteConfig(tls/username): Username to use for TLS auth
 SiteConfig(tls/password): Password to use for TLS auth
 SiteConfig(/stable-servers/ldap/hostname): Location of stable LDAP server to use
         """, raise_errors=True)
-        file = tempfile.NamedTemporaryFile(mode='w')
+        file = tempfile.NamedTemporaryFile(mode='wb')
         ti1.output(file)
         file.flush()
 
-        ti2 = parse_string(open(file.name).read().decode('utf8'))
+        with open(file.name, 'rb') as f:
+            ti2 = parse_string(f.read().decode('utf8'))
         self.assertEqual(ti2.owner, u"Jane Doe <jdoe@redhat.com>")
         self.assertEqual(ti2.test_name, u"/examples/coreutils/example-simple-test")
         self.assertEqual(ti2.test_path, u"/mnt/tests/examples/coreutils/example-simple-test")
