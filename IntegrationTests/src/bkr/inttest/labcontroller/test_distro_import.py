@@ -10,6 +10,7 @@ import subprocess
 import json
 import pkg_resources
 from copy import deepcopy
+from bkr.common.helpers import ensure_text
 from bkr.inttest import Process
 from bkr.inttest.labcontroller import LabControllerTestCase
 from bkr.server.model import OSMajor
@@ -22,9 +23,12 @@ _current_dir = os.path.dirname(__file__)
 _compose_test_dir = pkg_resources.resource_filename('bkr.inttest.labcontroller', 'compose_layout')
 _git_root_dir = os.path.join(_current_dir, '..', '..', '..', '..', '..')
 
-if os.path.exists(os.path.join(_git_root_dir, '.git')):
-    # Looks like we are in a git checkout
-    _command = os.path.join(_git_root_dir, 'LabController/src/bkr/labcontroller/distro_import.py')
+_source_command = os.path.join(_git_root_dir,
+        'LabController/src/bkr/labcontroller/distro_import.py')
+
+if os.path.exists(_source_command):
+    # Looks like we are in a source checkout
+    _command = _source_command
 else:
     _command = '/usr/bin/beaker-import'
 
@@ -1210,6 +1214,7 @@ class DistroImportTest(LabControllerTestCase):
                              stderr=subprocess.PIPE,
                              env=dict(list(os.environ.items()) + [('PYTHONUNBUFFERED', '1')]))
         stdout, stderr = p.communicate()
+        stderr = ensure_text(stderr, errors='replace')
         if p.returncode:
             raise TreeImportError(import_args, p.returncode, stderr)
         json_trees = stdout.splitlines()
