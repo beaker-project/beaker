@@ -21,7 +21,7 @@ from bkr.common.helpers import (atomically_replaced_file, makedirs_ignore,
 from bkr.labcontroller.config import get_conf
 from six.moves import urllib
 
-from six.moves import cStringIO as StringIO
+from io import BytesIO
 
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ def copy_ignore(path, source_file):
     Creates and populates a file by copying from a source file object.
     The destination file will remain untouched if it already exists.
     """
-    mode = "x" if six.PY3 else "wx"
+    mode = "xb" if six.PY3 else "wxb"
     try:
         f = open(path, mode)
     except IOError as e:
@@ -66,7 +66,7 @@ def write_ignore(path, content):
     Creates and populates a file with the given string content.
     The destination file will remain untouched if it already exists.
     """
-    copy_ignore(path, StringIO(content))
+    copy_ignore(path, BytesIO(content.encode('utf-8')))
 
 
 def copy_path_ignore(dest_path, source_path):
