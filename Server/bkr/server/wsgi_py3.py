@@ -49,6 +49,7 @@ import bkr.server.rpc.root
 import bkr.server.rpc.authentication
 import bkr.server.rpc.distrotrees
 import bkr.server.rpc.distros
+import bkr.server.rpc.group
 import bkr.server.rpc.labcontroller
 import bkr.server.rpc.prefs
 import bkr.server.rpc.taskactions
