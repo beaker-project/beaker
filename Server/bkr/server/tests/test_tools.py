@@ -33,7 +33,8 @@ class LogDelete(unittest.TestCase):
 
 def list_msdos_filesystem(image_filename):
     mdir = subprocess.Popen(['mdir', '-i', image_filename, '-/', '-b', '::'],
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            universal_newlines=True)
     out, err = mdir.communicate()
     if mdir.returncode != 0:
         raise RuntimeError('mdir failed: %s' % err)
