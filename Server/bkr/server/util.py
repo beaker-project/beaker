@@ -21,6 +21,7 @@ import six
 from six.moves.urllib.parse import urlencode
 from sqlalchemy import create_engine
 from sqlalchemy.orm.exc import NoResultFound
+from bkr.common.helpers import ensure_str, ensure_text, ensure_binary
 from bkr.server import config
 from bkr.server.database import get_engine
 
@@ -113,29 +114,6 @@ def strip_webpath(url):
     if webpath and url.startswith(webpath):
         return url[len(webpath):]
     return url
-
-def ensure_str(s, encoding='utf-8', errors='strict'):
-    if six.PY2 and isinstance(s, six.text_type):
-        return s.encode(encoding, errors)
-    elif six.PY3 and isinstance(s, six.binary_type):
-        return s.decode(encoding, errors)
-    elif not isinstance(s, (six.text_type, six.binary_type)):
-        raise TypeError("not expecting type '%s'" % type(s))
-    return s
-
-def ensure_text(s, encoding='utf-8', errors='strict'):
-    if isinstance(s, six.binary_type):
-        return s.decode(encoding, errors)
-    elif isinstance(s, six.text_type):
-        return s
-    raise TypeError("not expecting type '%s'" % type(s))
-
-def ensure_binary(s, encoding='utf-8', errors='strict'):
-    if isinstance(s, six.text_type):
-        return s.encode(encoding, errors)
-    elif isinstance(s, six.binary_type):
-        return s
-    raise TypeError("not expecting type '%s'" % type(s))
 
 def _query_arg(value):
     if six.PY2 and isinstance(value, six.text_type):
