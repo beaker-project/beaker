@@ -3,13 +3,12 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from turbogears import expose
 from bkr.server import config, mail, identity
 from bkr.server.database import session
 from sqlalchemy.orm.exc import NoResultFound
-from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.bexceptions import BX
 from bkr.server.model import Group, GroupMembershipType, User
+from bkr.server.rpc import expose, register
 
 
 class GroupOwnerModificationForbidden(BX):
@@ -19,7 +18,8 @@ class GroupOwnerModificationForbidden(BX):
         self._message = message
         self.args = [message]
 
-class Groups(RPCRoot):
+@register('groups')
+class Groups(object):
     # For XMLRPC methods in this class.
     exposed = True
 
@@ -53,8 +53,8 @@ class Groups(RPCRoot):
             return str(identity.current.user.user_id)
 
     #XML-RPC interface
+    @expose
     @identity.require(identity.not_anonymous())
-    @expose(format='json')
     def revoke_ownership(self, group, kw):
         """
         Revoke group ownership from an existing group member
@@ -96,8 +96,8 @@ class Groups(RPCRoot):
             return ''
 
     #XML-RPC interface
+    @expose
     @identity.require(identity.not_anonymous())
-    @expose(format='json')
     def grant_ownership(self, group, kw):
         """
         Grant group ownership to an existing group member
@@ -115,8 +115,8 @@ class Groups(RPCRoot):
                            member_name=kw['member_name'])
 
     # XML-RPC method for creating a group
+    @expose
     @identity.require(identity.not_anonymous())
-    @expose(format='json')
     def create(self, kw):
         """
         Creates a new group.
@@ -169,8 +169,8 @@ class Groups(RPCRoot):
             raise BX(u'Group already exists: %s.' % group_name)
 
     # XML-RPC method for modifying a group
+    @expose
     @identity.require(identity.not_anonymous())
-    @expose(format='json')
     def modify(self, group_name, kw):
         """
         Modifies an existing group. You must be an owner of a group to modify any details.
@@ -281,7 +281,7 @@ class Groups(RPCRoot):
         return ['1']
 
     # XML-RPC method for listing a group's members
-    @expose(format='json')
+    @expose
     def members(self, group_name):
         """
         List the members of an existing group.
