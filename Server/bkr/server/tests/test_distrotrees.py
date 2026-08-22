@@ -3,10 +3,17 @@
 
 import unittest
 
-from bkr.server.legacy.distrotrees import DistroTrees
+try:
+    from bkr.server.legacy.distrotrees import DistroTrees
+except ImportError:
+    DistroTrees = None
 
 
 class CheckDistroTreeImportUnitTest(unittest.TestCase):
+
+    def setUp(self):
+        if DistroTrees is None:
+            raise unittest.SkipTest('bkr.server.legacy.distrotrees needs CherryPy')
 
     def test_undefined_schema_in_url(self):
         t_url = [
