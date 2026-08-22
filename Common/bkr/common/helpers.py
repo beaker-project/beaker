@@ -247,10 +247,6 @@ def siphon(src, dest):
         if not chunk:
             break
 
-        if six.PY3 and isinstance(chunk, bytes):
-            if not hasattr(dest, 'mode') or 'b' not in dest.mode:
-                chunk = chunk.decode('utf-8')
-
         dest.write(chunk)
 
 
