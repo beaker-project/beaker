@@ -54,7 +54,7 @@ def generate_image(delete=True):
     subprocess.check_call(['mcopy', '-i', f.name,
                            '/usr/share/ipxe/ipxe.lkrn', '::ipxe.lkrn'])
     mcopy = subprocess.Popen(['mcopy', '-i', f.name, '-', '::syslinux.cfg'],
-                             stdin=subprocess.PIPE)
+                             stdin=subprocess.PIPE, universal_newlines=True)
     mcopy.communicate("""\
 DEFAULT ipxe
 LABEL ipxe
