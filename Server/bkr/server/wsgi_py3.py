@@ -29,6 +29,7 @@ log = logging.getLogger(__name__)
 
 application = app
 
+import bkr.server.api.tags
 import bkr.server.authentication
 import bkr.server.activity
 import bkr.server.power
