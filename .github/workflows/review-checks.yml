@@ -223,9 +223,6 @@ jobs:
               name: quay.io/fedora/fedora:42
           - test-target: Server
             os-target:
-              name: quay.io/centos/centos:stream9
-          - test-target: Server
-            os-target:
               name: quay.io/centos/centos:stream10
     steps:
       - name: Fixup CentOS repo files
