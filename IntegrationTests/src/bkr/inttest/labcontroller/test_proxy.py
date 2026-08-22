@@ -16,7 +16,7 @@ import requests
 import time
 from unittest import SkipTest
 from six import assertRaisesRegex
-from bkr.common.helpers import total_seconds
+from bkr.common.helpers import ensure_binary, total_seconds
 from bkr.server.model import session, TaskResult, TaskStatus, LogRecipe, \
         LogRecipeTask, LogRecipeTaskResult, RecipeTask, RecipeTaskResult
 from bkr.labcontroller.proxy import ProxyHelper
@@ -68,7 +68,7 @@ class GetRecipeTest(LabControllerTestCase):
             data_setup.mark_recipe_running(self.recipe)
 
     def check_recipe_xml(self, xml):
-        root = lxml.etree.fromstring(xml)
+        root = lxml.etree.fromstring(ensure_binary(xml))
         self.assertEqual(root.tag, 'job')
         self.assertEqual(root.find('./recipeSet/recipe').get('id'),
                 str(self.recipe.id))
@@ -859,7 +859,7 @@ class LogUploadTestRestartProxy(LabControllerTestCase):
         contents = re.sub('URL_DOMAIN = "localhost"', '', contents)
         contents = contents + "\nURL_SCHEME='https'\n%s='testingme.com'\n" % \
             config_arg
-        tmp_config = tempfile.NamedTemporaryFile()
+        tmp_config = tempfile.NamedTemporaryFile('w')
         tmp_config.write(contents)
         tmp_config.flush()
         old_args = copy.copy(beaker_proxy_process.args)
@@ -873,7 +873,7 @@ class LogUploadTestRestartProxy(LabControllerTestCase):
         beaker_proxy_process.start()
         s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
         s.recipe_upload_file(self.recipe.id, '/', 'recipe-log', 10, None, 0,
-                b64encode('a' * 10))
+                b64encode(b'a' * 10).decode('ascii'))
 
         with session.begin():
             self.assertEqual(self.recipe.logs[0].server,
@@ -899,7 +899,7 @@ class LogUploadTest(LabControllerTestCase):
     def test_xmlrpc_recipe_log(self):
         s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
         s.recipe_upload_file(self.recipe.id, '/', 'recipe-log', 10, None, 0,
-                b64encode('a' * 10))
+                b64encode(b'a' * 10).decode('ascii'))
         local_log_dir = '%s/recipes/%s+/%s/' % (get_conf().get('CACHEPATH'),
                 self.recipe.id // 1000, self.recipe.id)
         with session.begin():
@@ -913,7 +913,7 @@ class LogUploadTest(LabControllerTestCase):
                     open(os.path.join(local_log_dir, 'recipe-log'), 'r').read(),
                     'aaaaaaaaaa')
         s.recipe_upload_file(self.recipe.id, '/', 'recipe-log', 10, None, 10,
-                b64encode('b' * 10))
+                b64encode(b'b' * 10).decode('ascii'))
         with session.begin():
             self.assertEqual(
                     open(os.path.join(local_log_dir, 'recipe-log'), 'r').read(),
@@ -927,7 +927,7 @@ class LogUploadTest(LabControllerTestCase):
         s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
         try:
             s.recipe_upload_file(self.recipe.id, '/', 'recipe-log', 10, None, 0,
-                    b64encode('a' * 10))
+                    b64encode(b'a' * 10).decode('ascii'))
             self.fail('should raise')
         except xmlrpc_client.Fault as fault:
             self.assertTrue('Cannot register file for finished recipe'
@@ -959,7 +959,7 @@ class LogUploadTest(LabControllerTestCase):
                     'aaaaaaaaaabbbbbbbbbb')
         response = requests.get(upload_url)
         response.raise_for_status()
-        self.assertEqual(response.content, 'aaaaaaaaaabbbbbbbbbb')
+        self.assertEqual(response.text, 'aaaaaaaaaabbbbbbbbbb')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=962253
     def test_PUT_recipe_log_after_finished(self):
@@ -976,7 +976,7 @@ class LogUploadTest(LabControllerTestCase):
             task = self.recipe.tasks[0]
         s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
         s.task_upload_file(task.id, '/', 'task-log', 10, None, 0,
-                b64encode('a' * 10))
+                b64encode(b'a' * 10).decode('ascii'))
         local_log_dir = '%s/tasks/%s+/%s/' % (get_conf().get('CACHEPATH'),
                 task.id // 1000, task.id)
         with session.begin():
@@ -990,7 +990,7 @@ class LogUploadTest(LabControllerTestCase):
                     open(os.path.join(local_log_dir, 'task-log'), 'r').read(),
                     'aaaaaaaaaa')
         s.task_upload_file(task.id, '/', 'task-log', 10, None, 10,
-                b64encode('b' * 10))
+                b64encode(b'b' * 10).decode('ascii'))
         with session.begin():
             self.assertEqual(
                     open(os.path.join(local_log_dir, 'task-log'), 'r').read(),
@@ -1005,7 +1005,7 @@ class LogUploadTest(LabControllerTestCase):
         s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
         try:
             s.task_upload_file(task.id, '/', 'task-log', 10, None, 0,
-                    b64encode('a' * 10))
+                    b64encode(b'a' * 10).decode('ascii'))
             self.fail('should raise')
         except xmlrpc_client.Fault as fault:
             self.assertTrue('Cannot register file for finished task'
@@ -1039,7 +1039,7 @@ class LogUploadTest(LabControllerTestCase):
                     'aaaaaaaaaabbbbbbbbbb')
         response = requests.get(upload_url)
         response.raise_for_status()
-        self.assertEqual(response.content, 'aaaaaaaaaabbbbbbbbbb')
+        self.assertEqual(response.text, 'aaaaaaaaaabbbbbbbbbb')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=962253
     def test_PUT_task_log_after_finished(self):
@@ -1058,7 +1058,7 @@ class LogUploadTest(LabControllerTestCase):
             result = self.recipe.tasks[0].results[0]
         s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
         s.result_upload_file(result.id, '/', 'result-log', 10, None, 0,
-                b64encode('a' * 10))
+                b64encode(b'a' * 10).decode('ascii'))
         local_log_dir = '%s/results/%s+/%s/' % (get_conf().get('CACHEPATH'),
                 result.id // 1000, result.id)
         with session.begin():
@@ -1072,7 +1072,7 @@ class LogUploadTest(LabControllerTestCase):
                     open(os.path.join(local_log_dir, 'result-log'), 'r').read(),
                     'aaaaaaaaaa')
         s.result_upload_file(result.id, '/', 'result-log', 10, None, 10,
-                b64encode('b' * 10))
+                b64encode(b'b' * 10).decode('ascii'))
         with session.begin():
             self.assertEqual(
                     open(os.path.join(local_log_dir, 'result-log'), 'r').read(),
@@ -1088,7 +1088,7 @@ class LogUploadTest(LabControllerTestCase):
         s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
         try:
             s.result_upload_file(result.id, '/', 'result-log-after-finished',
-                    10, None, 0, b64encode('a' * 10))
+                    10, None, 0, b64encode(b'a' * 10).decode('ascii'))
             self.fail('should raise')
         except xmlrpc_client.Fault as fault:
             self.assertTrue('Cannot register file for finished task'
@@ -1124,7 +1124,7 @@ class LogUploadTest(LabControllerTestCase):
                     'aaaaaaaaaabbbbbbbbbb')
         response = requests.get(upload_url)
         response.raise_for_status()
-        self.assertEqual(response.content, 'aaaaaaaaaabbbbbbbbbb')
+        self.assertEqual(response.text, 'aaaaaaaaaabbbbbbbbbb')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=962253
     def test_PUT_result_log_after_finished(self):
@@ -1206,7 +1206,7 @@ class LogUploadTest(LabControllerTestCase):
         s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
         with assertRaisesRegex(self, xmlrpc_client.Fault, 'Too many logs'):
             s.result_upload_file(result.id, '/', 'result-log', 10, None, 0,
-                    b64encode('a' * 10))
+                    b64encode(b'a' * 10).decode('ascii'))
         # Test POST endpoint for result logs
         upload_url = '%srecipes/%s/tasks/%s/results/%s/logs/too-many' % (
                 self.get_proxy_url(), self.recipe.id, task.id, result.id)
@@ -1217,7 +1217,7 @@ class LogUploadTest(LabControllerTestCase):
         s = xmlrpc_client.ServerProxy(self.get_proxy_url(), allow_none=True)
         with assertRaisesRegex(self, xmlrpc_client.Fault, 'Too many logs'):
             s.task_upload_file(task.id, '/', 'task-log', 10, None, 0,
-                    b64encode('a' * 10))
+                    b64encode(b'a' * 10).decode('ascii'))
         # Test POST endpoint for task logs
         upload_url = '%srecipes/%s/tasks/%s/logs/too-many' % (
                 self.get_proxy_url(), self.recipe.id, task.id)
@@ -1251,7 +1251,7 @@ class LogIndexTest(LabControllerTestCase):
     def check_html_index(self, response, logs):
         self.assertEqual(response.headers['Content-Type'], 'text/html')
         tree = lxml.html.fromstring(response.content)
-        links = tree.cssselect('ul li a')
+        links = tree.findall('.//ul/li/a')
         hrefs = [link.get('href') for link in links]
         self.assertEqual(hrefs, logs)
 

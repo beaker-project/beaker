@@ -29,6 +29,7 @@ import shutil
 import mimetypes
 import wsgiref.util
 import wsgiref.simple_server
+from bkr.common.helpers import ensure_binary
 
 class Application(object):
 
@@ -69,7 +70,7 @@ class Application(object):
             return []
         if environ['REQUEST_METHOD'] in ('GET', 'HEAD'):
             if os.path.isdir(localpath):
-                listing = '\n'.join(os.listdir(localpath))
+                listing = ensure_binary('\n'.join(os.listdir(localpath)))
                 response_headers.append(('Content-Length', str(len(listing))))
                 response_headers.append(('Content-Type', 'text/plain'))
                 start_response('200 OK', response_headers)
