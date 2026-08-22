@@ -270,7 +270,7 @@ jobs:
       # Build dependencies must be sufficient, the same is done during RPM build
       - name: Install Beaker dependency from specfile
         run: |
-          dnf builddep -y *.spec
+          dnf builddep -y --disablerepo=fedora-cisco-openh264 *.spec
       - name: Run unit tests
         run: |
           pushd ${{ matrix.test-target }}
