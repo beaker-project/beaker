@@ -66,6 +66,7 @@ if config.get('coverage', False):
 application = app
 
 # Register all routes.
+import bkr.server.api.tags
 import bkr.server.authentication
 import bkr.server.activity
 import bkr.server.user
