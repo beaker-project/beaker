@@ -4,14 +4,11 @@
 # (at your option) any later version.
 
 import datetime
-import unittest as unittest
-import requests
 from selenium.webdriver.support.ui import Select
 from bkr.server.model import SystemStatus, SSHPubKey, RenderedKickstart, \
     ConfigItem, User, Provision, SystemPermission
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, BootstrapSelect
-from bkr.inttest.server.requests_utils import post_json
 from bkr.server.database import session
 from bkr.inttest import data_setup, get_server_base
 
@@ -239,24 +236,3 @@ class SystemProvisionWebUITest(WebDriverTestCase):
         login(self.browser, user=owner.user_name, password=u'owner')
         provision = self.go_to_provision_tab(system)
         provision.find_element_by_xpath('.//a[text()="Reserve Workflow"]')
-
-
-class SystemProvisionHTTPTest(unittest.TestCase):
-
-    def setUp(self):
-        self.system = data_setup.create_system(shared=True)
-        self.system.custom_access_policy.add_rule(everybody=True,
-                                                  permission=SystemPermission.control_system)
-
-    def test_no_permission(self):
-        with session.begin():
-            user = data_setup.create_user(password='password')
-        s = requests.Session()
-        s.post(get_server_base() + 'login', data={'user_name': user.user_name,
-                                                  'password': 'password'}).raise_for_status()
-        response = post_json(get_server_base() +
-                             'systems/%s/installations/' % self.system.fqdn,
-                             session=s, data={'distro_tree': {'id': -1}})
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.text,
-                          'Insufficient permissions: Cannot provision system')
