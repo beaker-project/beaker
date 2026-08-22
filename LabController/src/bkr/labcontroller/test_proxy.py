@@ -16,18 +16,18 @@ class TestPanicDetector(unittest.TestCase):
         self.panic_detector = PanicDetector(self.conf["PANIC_REGEX"])
 
         self.should_panic = [
-            'Internal error: Oops - BUG: 0 [#2] PREEMPT ARM', # oops.kernel.org examples
-            'Oops: 0000 [#1] SMP\\',
-            'Oops[#1]',
-            'Oops - bad mode', # jbastian example bz:1538906
-            'kernel BUG at fs/ext4/super.c:1022!' # xifeng example bz:1778643
+            b'Internal error: Oops - BUG: 0 [#2] PREEMPT ARM', # oops.kernel.org examples
+            b'Oops: 0000 [#1] SMP\\',
+            b'Oops[#1]',
+            b'Oops - bad mode', # jbastian example bz:1538906
+            b'kernel BUG at fs/ext4/super.c:1022!' # xifeng example bz:1778643
         ]
 
         # From bz:1538906
         self.should_not_panic = [
-            'regression-bz123456789-Oops-when-some-thing-happens-',
-            'I can\'t believe it\'s not a panic',
-            'looking for a kernel BUG at my setup!'
+            b'regression-bz123456789-Oops-when-some-thing-happens-',
+            b'I can\'t believe it\'s not a panic',
+            b'looking for a kernel BUG at my setup!'
         ]
 
         self.acceptable_panic_matches = ['Oops:', 'Oops ', 'Oops[',
@@ -59,11 +59,11 @@ class TestConsoleLogHelper(unittest.TestCase):
             proxy=None,
             panic=_conf["PANIC_REGEX"],
         )
-        self.assertIsNone(helper.strip_cntrl.search('\t'))
-        self.assertIsNone(helper.strip_cntrl.search('\n'))
-        self.assertIsNotNone(helper.strip_cntrl.search('\x00'))
-        self.assertIsNotNone(helper.strip_cntrl.search('\x01'))
-        self.assertIsNotNone(helper.strip_cntrl.search('\x7f'))
+        self.assertIsNone(helper.strip_cntrl.search(b'\t'))
+        self.assertIsNone(helper.strip_cntrl.search(b'\n'))
+        self.assertIsNotNone(helper.strip_cntrl.search(b'\x00'))
+        self.assertIsNotNone(helper.strip_cntrl.search(b'\x01'))
+        self.assertIsNotNone(helper.strip_cntrl.search(b'\x7f'))
 
 
 class TestInstallFailureDetector(unittest.TestCase):
@@ -75,12 +75,12 @@ class TestInstallFailureDetector(unittest.TestCase):
     def test_detects_dracut_failure(self):
         detector = InstallFailureDetector()
         match = detector.feed(
-            'dracut-initqueue[123]: Warning: /dev/root does not exist')
+            b'dracut-initqueue[123]: Warning: /dev/root does not exist')
         self.assertTrue(detector.fired)
         self.assertIsNotNone(match)
 
     def test_ignores_normal_output(self):
         detector = InstallFailureDetector()
-        match = detector.feed('Starting installation process')
+        match = detector.feed(b'Starting installation process')
         self.assertFalse(detector.fired)
         self.assertIsNone(match)

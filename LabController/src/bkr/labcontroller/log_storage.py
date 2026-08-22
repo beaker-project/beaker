@@ -24,7 +24,7 @@ class LogFile(object):
         """
         If you just want to read the log, call this instead of entering the context manager.
         """
-        return open(self.path, 'r')
+        return open(self.path, 'rb')
 
     def __enter__(self):
         makedirs_ignore(os.path.dirname(self.path), 0o755)
@@ -42,7 +42,7 @@ class LogFile(object):
         else:
             fd = os.open(self.path, os.O_RDWR)
         try:
-            self.f = os.fdopen(fd, 'r+')
+            self.f = os.fdopen(fd, 'r+b')
         except Exception:
             os.close(fd)
             raise
