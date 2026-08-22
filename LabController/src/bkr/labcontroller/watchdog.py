@@ -16,6 +16,7 @@ import daemon
 from daemon import pidfile
 from optparse import OptionParser
 import gevent, gevent.hub, gevent.event, gevent.monkey
+from bkr.common.helpers import ensure_binary, ensure_text
 from bkr.labcontroller.proxy import ProxyHelper, Monitor
 from bkr.labcontroller.config import load_conf, get_conf
 from bkr.log import log_to_stream, log_to_syslog
@@ -92,7 +93,8 @@ class Watchdog(ProxyHelper):
         from bkr.labcontroller.concurrency import MonitoredSubprocess
         logger.info('External Watchdog Expired for recipe %s on system %s', recipe_id, system)
         if self.conf.get("WATCHDOG_SCRIPT"):
-            job = lxml.etree.fromstring(self.get_my_recipe(dict(recipe_id=recipe_id)))
+            job = lxml.etree.fromstring(ensure_binary(
+                    self.get_my_recipe(dict(recipe_id=recipe_id))))
             recipe = job.find('recipeSet/guestrecipe')
             if recipe is None:
                 recipe = job.find('recipeSet/recipe')
@@ -107,7 +109,7 @@ class Watchdog(ProxyHelper):
                     timeout=300)
             logger.debug('Waiting on external watchdog script pid %s', p.pid)
             p.dead.wait()
-            output = p.stdout_reader.get()
+            output = ensure_text(p.stdout_reader.get(), errors='replace')
             if p.returncode != 0:
                 logger.error('External watchdog script exited with status %s:\n%s',
                         p.returncode, output)

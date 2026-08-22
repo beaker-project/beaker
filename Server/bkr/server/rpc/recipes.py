@@ -17,6 +17,7 @@ from bkr.common.bexceptions import BX
 from bkr.server import identity, dynamic_virt
 from bkr.server.rpc import expose, register
 from bkr.server.rpc.recipetasks import RecipeTasks
+from bkr.server.util import ensure_str
 from bkr.server.model import (Recipe, RecipeSet, TaskStatus, Job, System,
                               SystemResource, VirtResource,
                               LogRecipe, LogRecipeTask, LogRecipeTaskResult,
@@ -306,4 +307,4 @@ class Recipes(object):
                                        pretty_print=True, encoding='utf8')
         except InvalidRequestError:
             raise BX("Invalid Recipe ID %s" % recipe_id)
-        return recipexml
+        return ensure_str(recipexml)
