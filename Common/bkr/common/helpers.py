@@ -306,3 +306,29 @@ def load_source(name, path):
     module = module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def ensure_str(s, encoding='utf-8', errors='strict'):
+    if six.PY2 and isinstance(s, six.text_type):
+        return s.encode(encoding, errors)
+    elif six.PY3 and isinstance(s, six.binary_type):
+        return s.decode(encoding, errors)
+    elif not isinstance(s, (six.text_type, six.binary_type)):
+        raise TypeError("not expecting type '%s'" % type(s))
+    return s
+
+
+def ensure_text(s, encoding='utf-8', errors='strict'):
+    if isinstance(s, six.binary_type):
+        return s.decode(encoding, errors)
+    elif isinstance(s, six.text_type):
+        return s
+    raise TypeError("not expecting type '%s'" % type(s))
+
+
+def ensure_binary(s, encoding='utf-8', errors='strict'):
+    if isinstance(s, six.text_type):
+        return s.encode(encoding, errors)
+    elif isinstance(s, six.binary_type):
+        return s
+    raise TypeError("not expecting type '%s'" % type(s))
