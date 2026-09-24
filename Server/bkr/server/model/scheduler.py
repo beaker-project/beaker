@@ -3,7 +3,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import crypt
+from passlib.hash import md5_crypt
 import decimal
 import logging
 import numbers
@@ -2050,7 +2050,7 @@ class Recipe(TaskBase, ActivityMixin):
                 if len(group_pw.split('$')) != 4:
                     salt = ''.join(random.choice(string.digits + string.ascii_letters)
                                    for i in range(8))
-                    return crypt.crypt(group_pw, "$1$%s$" % salt)
+                    return md5_crypt.using(salt=salt).hash(group_pw)
                 else:
                     return group_pw
         # if it is not a group job or the group password is not set
