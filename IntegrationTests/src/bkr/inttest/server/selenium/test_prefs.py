@@ -155,6 +155,20 @@ class UserPrefs(WebDriverTestCase):
         pane.find_element_by_xpath(
             '//li/span[@class="ident" and text()="this is my favourite key"]')
 
+    def test_ecdsa_ssh_key(self):
+        # ecdsa-sha2-nistp521 is longer than the old 16-char keytype column,
+        # which made saving the key fail with an internal server error
+        b = self.browser
+        key = 'ecdsa-sha2-nistp521 AAAAw00t me@example.com'
+        pane = self.go_to_prefs_tab('SSH Public Keys')
+        pane.find_element_by_name('key').send_keys(key)
+        pane.find_element_by_tag_name('form').submit()
+        pane.find_element_by_xpath(
+            '//li/span[@class="ident" and text()="me@example.com"]')
+        with session.begin():
+            self.assertEqual(self.user.sshpubkeys[-1].keytype,
+                             'ecdsa-sha2-nistp521')
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=830475
     def test_ssh_key_trailing_whitespace_is_stripped(self):
         b = self.browser

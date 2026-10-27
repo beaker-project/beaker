@@ -294,6 +294,55 @@ class UserHTTPTest(DatabaseTestCase):
             self.assertEqual(user.sshpubkeys[0].pubkey, u'abc')
             self.assertEqual(user.sshpubkeys[0].ident, u'dummypassword@example.invalid')
 
+    def test_add_ecdsa_ssh_public_key(self):
+        # ecdsa-sha2-nistp521 is longer than the old 16-char keytype column,
+        # which made the INSERT fail with an internal server error
+        with session.begin():
+            user = data_setup.create_user()
+        s = requests.Session()
+        requests_login(s)
+        response = s.post(get_server_base() + 'users/%s/ssh-public-keys/' % user.user_name,
+                          headers={'Content-Type': 'text/plain'},
+                          data='ecdsa-sha2-nistp521 AAAAE21zZHNhLXNoYTItbzlzdHAzMjE frodo@theshire.co.nz')
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(len(user.sshpubkeys), 1)
+            self.assertEqual(user.sshpubkeys[0].keytype, u'ecdsa-sha2-nistp521')
+            self.assertEqual(user.sshpubkeys[0].ident, u'frodo@theshire.co.nz')
+
+    def test_add_ssh_public_key_with_long_comment(self):
+        # longer than the old 63-char ident column
+        with session.begin():
+            user = data_setup.create_user()
+        s = requests.Session()
+        requests_login(s)
+        ident = u'this is a very long comment which exceeds the old sixty-three character column limit'
+        response = s.post(get_server_base() + 'users/%s/ssh-public-keys/' % user.user_name,
+                          headers={'Content-Type': 'text/plain'},
+                          data=u'ssh-rsa abc %s' % ident)
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assertEqual(len(user.sshpubkeys), 1)
+            self.assertEqual(user.sshpubkeys[0].ident, ident)
+
+    def test_does_not_add_ssh_public_key_with_too_long_fields(self):
+        with session.begin():
+            user = data_setup.create_user()
+        s = requests.Session()
+        requests_login(s)
+        response = s.post(get_server_base() + 'users/%s/ssh-public-keys/' % user.user_name,
+                          headers={'Content-Type': 'text/plain'},
+                          data='%s abc dummypassword@example.invalid' % ('x' * 256))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text, 'SSH public key type is too long')
+        response = s.post(get_server_base() + 'users/%s/ssh-public-keys/' % user.user_name,
+                          headers={'Content-Type': 'text/plain'},
+                          data='ssh-rsa abc %s' % ('x' * 256))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text, 'SSH public key identity is too long')
+
     def test_delete_ssh_public_key(self):
         with session.begin():
             user = data_setup.create_user()

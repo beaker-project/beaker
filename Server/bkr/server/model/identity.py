@@ -997,9 +997,9 @@ class SSHPubKey(DeclarativeMappedObject):
     user_id = Column(Integer, ForeignKey('tg_user.user_id',
             onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
     user = relationship(User, back_populates='sshpubkeys')
-    keytype = Column(Unicode(16), nullable=False)
+    keytype = Column(Unicode(255), nullable=False)
     pubkey = Column(UnicodeText, nullable=False)
-    ident = Column(Unicode(63), nullable=False)
+    ident = Column(Unicode(255), nullable=False)
 
     def __init__(self, keytype, pubkey, ident):
         super(SSHPubKey, self).__init__()

@@ -145,6 +145,9 @@ class MigrationTest(unittest.TestCase):
             connection.execute(pkg_resources.resource_string(
                 'bkr.inttest.server', dump_filename))
         downgrade_db(self.migration_metadata, major_version_to_test)
+        # The dump is frozen at its release revision, so the schema only
+        # matches the model once the later migrations have been applied.
+        upgrade_db(self.migration_metadata)
         self.check_migrated_schema()
 
     def test_full_upgrade(self):

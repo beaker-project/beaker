@@ -382,6 +382,10 @@ def add_ssh_public_key(username):
         # 0 - key type; 1 - key; 2 - identity
         if elements[1] in [ssh_key.pubkey for ssh_key in user.sshpubkeys]:
             raise ValueError('Duplicate SSH public key')
+        if len(elements[0]) > SSHPubKey.__table__.c.keytype.type.length:
+            raise ValueError('SSH public key type is too long')
+        if len(elements[2]) > SSHPubKey.__table__.c.ident.type.length:
+            raise ValueError('SSH public key identity is too long')
         key = SSHPubKey(*elements)
         user.sshpubkeys.append(key)
         session.flush()  # to populate id
